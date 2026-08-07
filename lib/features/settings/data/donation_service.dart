@@ -18,16 +18,17 @@ class DonationService {
 
   // ── In-App Purchase product IDs (must match App Store Connect exactly) ────
   //
-  // Bundle ID: com.matthw.1.seekarr — the app's iOS identifier before the
-  // Cupola rebrand, kept verbatim here on purpose: these IDs are only safe
-  // to change once it's confirmed whether they're already live in App
-  // Store Connect (renaming an active product ID there breaks it) or free
-  // to move to com.matthwlabs.cupola.tip.* to match the new identifier.
+  // Bundle ID: com.matthwlabs.cupola
   // Product type: Consumable (allows repeated purchases)
+  //
+  // Moved from the pre-rebrand com.matthw.1.seekarr.tip.* ids. If those were
+  // ever live in App Store Connect, they're now orphaned there — harmless,
+  // but the equivalent com.matthwlabs.cupola.tip.* products need creating
+  // fresh in App Store Connect before a real purchase can succeed.
 
-  static const String tipSmallId = 'com.matthw.1.seekarr.tip.small';
-  static const String tipMediumId = 'com.matthw.1.seekarr.tip.medium';
-  static const String tipLargeId = 'com.matthw.1.seekarr.tip.large';
+  static const String tipSmallId = 'com.matthwlabs.cupola.tip.small';
+  static const String tipMediumId = 'com.matthwlabs.cupola.tip.medium';
+  static const String tipLargeId = 'com.matthwlabs.cupola.tip.large';
 
   static const Set<String> productIds = {tipSmallId, tipMediumId, tipLargeId};
 
