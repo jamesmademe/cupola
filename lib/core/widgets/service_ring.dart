@@ -615,10 +615,10 @@ class _ServiceRingPainter extends CustomPainter {
 /// `/services`' empty state shows the same claim under the same ring.
 ///
 /// Two accents, and they are the mark's own two — the ribbon "S" runs cyan to
-/// blue, so the sentence takes the blue end for the app and the cyan end for the
-/// stack. The cyan is a `nav-*` section accent rather than a service's, because
-/// colouring "them all" with one service's identity would privilege it over the
-/// other fourteen.
+/// blue, so the sentence takes the blue end for the product's own name and the
+/// cyan end for the user's own lab. The cyan is a `nav-*` section accent rather
+/// than a service's, because colouring "your lab" with one service's identity
+/// would privilege it over the other fourteen.
 class OnePunchline extends StatelessWidget {
   const OnePunchline({super.key, this.style}) : assembling = false;
 
@@ -653,12 +653,12 @@ class OnePunchline extends StatelessWidget {
 
   static const _appInk = AppColors.primary;
   static const _stackInk = AppColors.navActivity;
-  static const _spoken = 'One app to rule them all.';
+  static const _spoken = 'A Cupola over your lab.';
 
   /// The two painted lines, longest first. The assemble's landing beat is
   /// aligned off the longest one.
-  static const _leadLine = 'One app to rule';
-  static const _markedLine = 'them all.';
+  static const _leadLine = 'A Cupola over';
+  static const _markedLine = 'your lab.';
 
   /// Marker alpha per brightness. Two values, not one: 12% is invisible on a
   /// light ground and 20% is a block on a near-black one.
@@ -690,11 +690,12 @@ class OnePunchline extends StatelessWidget {
 
     final leadSpan = TextSpan(
       children: [
+        const TextSpan(text: 'A '),
         TextSpan(
-          text: 'One',
+          text: 'Cupola',
           style: TextStyle(color: appInk),
         ),
-        const TextSpan(text: ' app to rule'),
+        const TextSpan(text: ' over'),
       ],
     );
 
@@ -712,8 +713,8 @@ class OnePunchline extends StatelessWidget {
       excludeSemantics: true,
       // **One decision for the whole claim, taken here rather than per line.**
       // Each line used to gate itself on whether it fit, and at a 1.8x reading
-      // size that produced the worst of both: "One app to rule" was too wide to
-      // roll so it wrapped and rendered plainly, while "them all." still fit and
+      // size that produced the worst of both: "A Cupola over" was too wide to
+      // roll so it wrapped and rendered plainly, while "your lab." still fit and
       // duly sat there as `gurz nyy.` above the real sentence. Half a settled
       // claim beside half a scrambled one is worse than either whole. So the
       // composition assembles only if *every* line — and every line's mask — can
@@ -765,7 +766,7 @@ class OnePunchline extends StatelessWidget {
 /// One line of the claim, flipping from a filler board into its real glyphs.
 ///
 /// Mounts showing [_mask] — the claim's own letters rotated half the alphabet,
-/// so `One app to rule` starts as `Bar ncc gb ehyr` — and rolls to the real span
+/// so `A Cupola over` starts as `N Phcbyn bire` — and rolls to the real span
 /// one [delay] later. A same-length mask rather than an empty string is what
 /// keeps the line's *height* constant from the very first frame: an empty
 /// [ReelText] measures no line box, so starting blank would shift the whole
@@ -872,17 +873,47 @@ class _AssemblingLineState extends State<_AssemblingLine> {
     super.dispose();
   }
 
+  /// The line's settled single-line height, from [widget.style]'s font metrics
+  /// alone rather than from whichever glyphs are on screen — so it is identical
+  /// for the mask and the real span, and for every frame of the roll between
+  /// them.
+  double _settledHeight(BuildContext context) {
+    final painter = TextPainter(
+      text: TextSpan(text: widget.plain, style: widget.style),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final height = painter.height;
+    painter.dispose();
+    return height;
+  }
+
   @override
-  // Clipped for the same reason every other roll in the app is — see [ReelLine].
-  // Here it matters most: the claim's two lines are set at 1.02 leading, so
-  // unclipped they would draw straight through each other. It is also what makes
-  // the flaps read as flaps, turning over behind the edge of their own housing.
-  Widget build(BuildContext context) => ClipRect(
-    child: ReelText.rich(
-      _settled ? widget.span : _AssemblingLine._mask(widget.span),
-      style: widget.style,
-      options: ReelMotion.headline,
-      semanticsLabel: widget.plain,
+  // Pinned to its settled height, because `ReelText` paints its travelling
+  // glyphs outside its own layout bounds mid-roll (see [ReelLine]) and the
+  // claim's beat is bottom-anchored (`MainAxisAlignment.end` in
+  // `OnboardingBeat`) — so a roll whose box is even briefly a different height
+  // reflows the paragraph and buttons below it the instant the box snaps back
+  // to size. `OverflowBox` lets `ReelText` lay out, and bleed paint, at
+  // whatever height the roll wants without that height ever reaching this
+  // widget's own parent; `ClipRect` still does the painting clip [ReelLine]
+  // describes — here against the fixed settled height rather than the child's
+  // own, possibly transient, size.
+  Widget build(BuildContext context) => SizedBox(
+    height: _settledHeight(context),
+    child: ClipRect(
+      child: OverflowBox(
+        alignment: Alignment.topLeft,
+        minHeight: 0,
+        maxHeight: double.infinity,
+        child: ReelText.rich(
+          _settled ? widget.span : _AssemblingLine._mask(widget.span),
+          style: widget.style,
+          options: ReelMotion.headline,
+          semanticsLabel: widget.plain,
+        ),
+      ),
     ),
   );
 }

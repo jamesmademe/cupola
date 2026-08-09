@@ -25,13 +25,13 @@ void main() {
     testWidgets('picking nothing still reaches the close', (tester) async {
       await _pumpOnboarding(tester);
 
-      expect(_semantics('One app to rule them all.'), findsOneWidget);
+      expect(_semantics('A Cupola over your lab.'), findsOneWidget);
       await _tap(tester, 'Set up my stack');
       // The headline carries an accented word now (`Bring` in the brand
       // indigo), so it is a `Text.rich`/`TextSpan` tree rather than a single
       // `Text` — matched by its rendered content, not by `find.text`.
       expect(find.textContaining('Bring'), findsOneWidget);
-      expect(find.textContaining('them all.'), findsOneWidget);
+      expect(find.textContaining('your stack into view.'), findsOneWidget);
 
       await _tap(tester, 'Continue');
 

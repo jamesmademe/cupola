@@ -170,9 +170,9 @@ class OnboardingDoor extends StatelessWidget {
 }
 
 /// One word of a headline in an accent, resolved against the surface it sits
-/// on — the same move as [OnePunchline]'s "One" and "them all", carried to the
-/// two headlines either side of it so the claim's colour vocabulary threads
-/// through the whole flow rather than living on the door alone.
+/// on — the same move as [OnePunchline]'s "Cupola" and "your lab.", carried to
+/// the two headlines either side of it so the claim's colour vocabulary
+/// threads through the whole flow rather than living on the door alone.
 class _AccentedHeadline extends StatelessWidget {
   const _AccentedHeadline({
     required this.before,
@@ -238,7 +238,7 @@ class OnboardingPick extends StatelessWidget {
         _AccentedHeadline(
           before: '',
           accent: 'Bring',
-          after: ' them all.',
+          after: ' your stack into view.',
           accentColor: AppColors.primary,
           style: theme.textTheme.headlineMedium!
               .weight(FontWeight.w800)
@@ -980,9 +980,9 @@ class OnboardingClose extends StatelessWidget {
           Text('Nothing connected yet.', style: headlineStyle)
         else
           _AccentedHeadline(
-            before: "They're all ",
-            accent: 'bound',
-            after: ' now.',
+            before: 'Nothing left in the ',
+            accent: 'dark',
+            after: '.',
             accentColor: AppColors.navActivity,
             style: headlineStyle,
           ),

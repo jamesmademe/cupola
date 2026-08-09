@@ -1,5 +1,7 @@
 # Cupola
 
+**A Cupola over your lab.**
+
 A Flutter app for managing your self-hosted media stack from anywhere.  
 One client for **Seerr**, **Radarr**, **Sonarr**, **Lidarr**, and **qBittorrent** on macOS, iOS, and Android.
 
