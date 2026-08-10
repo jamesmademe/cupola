@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/unraid/data/unraid_client.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 
@@ -10,7 +11,7 @@ import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 /// `settings.isServiceConfigured(ServiceKey.unraid)` before reading.
 final unraidClientProvider = Provider<UnraidClient>((ref) {
   final settings = ref.watch(currentSettingsProvider);
-  if (settings.unraidUrl.isEmpty || settings.unraidApiKey.isEmpty) {
+  if (!settings.isServiceConfigured(ServiceKey.unraid)) {
     throw Exception('Unraid not configured');
   }
   final client = UnraidClient(

@@ -14,6 +14,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
@@ -38,9 +39,9 @@ class JellyfinPublicSystemInfo {
 
   factory JellyfinPublicSystemInfo.fromJson(Map<String, dynamic> json) {
     return JellyfinPublicSystemInfo(
-      version: _nonEmpty(json['Version']),
-      serverName: _nonEmpty(json['ServerName']),
-      id: _nonEmpty(json['Id']),
+      version: stringOrNull(json['Version']),
+      serverName: stringOrNull(json['ServerName']),
+      id: stringOrNull(json['Id']),
     );
   }
 
@@ -136,14 +137,14 @@ class JellyfinVirtualFolder {
     return JellyfinVirtualFolder(
       itemId: json['ItemId']?.toString() ?? '',
       name: json['Name']?.toString() ?? '',
-      collectionType: _nonEmpty(json['CollectionType'])?.toLowerCase(),
+      collectionType: stringOrNull(json['CollectionType'])?.toLowerCase(),
       locations: locations is List
           ? locations.map((value) => value.toString()).toList(growable: false)
           : const [],
       refreshProgress: progress is num
           ? progress.toDouble()
           : double.tryParse(progress?.toString() ?? ''),
-      refreshStatus: _nonEmpty(json['RefreshStatus']),
+      refreshStatus: stringOrNull(json['RefreshStatus']),
     );
   }
 
@@ -210,43 +211,18 @@ class JellyfinVirtualFolder {
   );
 }
 
-String? _nonEmpty(Object? raw) {
-  final value = raw?.toString().trim() ?? '';
-  return value.isEmpty ? null : value;
-}
-
 /// Jellyfin timestamps are ISO-8601 with a `Z` or an offset; anything else is
 /// treated as absent rather than throwing inside a list mapper.
 DateTime? _parseDate(Object? raw) {
-  final value = _nonEmpty(raw);
+  final value = stringOrNull(raw);
   if (value == null) return null;
   return DateTime.tryParse(value);
-}
-
-/// Shared by both list endpoints: skip anything that is not a JSON object.
-///
-/// `jsonDecode` hands back `List<dynamic>`, and a single malformed element must
-/// not take the whole page down — a browse that degrades to `[]` is the
-/// convention, but a browse that drops one row and renders the other 49 is
-/// better still.
-List<T> jellyfinMapObjects<T>(
-  Object? raw,
-  T Function(Map<String, dynamic>) fromJson,
-) {
-  if (raw is! List) return const [];
-  final mapped = <T>[];
-  for (final element in raw) {
-    if (element is Map) {
-      mapped.add(fromJson(element.cast<String, dynamic>()));
-    }
-  }
-  return mapped;
 }
 
 /// Top-level entry points for `Isolate.run` — a closure would capture the
 /// enclosing service and fail to send.
 List<JellyfinUserDto> jellyfinUsersFromJson(Object? raw) =>
-    jellyfinMapObjects(raw, JellyfinUserDto.fromJson);
+    jsonObjects(raw, JellyfinUserDto.fromJson);
 
 List<JellyfinVirtualFolder> jellyfinVirtualFoldersFromJson(Object? raw) =>
-    jellyfinMapObjects(raw, JellyfinVirtualFolder.fromJson);
+    jsonObjects(raw, JellyfinVirtualFolder.fromJson);

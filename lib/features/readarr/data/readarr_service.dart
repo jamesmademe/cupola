@@ -21,16 +21,6 @@ class ReadarrService with ArrActivityMixin {
     return fetchAllItems('author', ReadarrAuthor.fromJson);
   }
 
-  /// Fetches a single author by id, or null if unknown.
-  Future<ReadarrAuthor?> getAuthorById(int authorId) async {
-    try {
-      final response = await client.get('/api/v1/author/$authorId');
-      return ReadarrAuthor.fromJson(response.data as Map<String, dynamic>);
-    } catch (_) {
-      return null;
-    }
-  }
-
   /// Fetches recent history mapped to typed items for the dashboard.
   Future<List<ReadarrHistoryItem>> getRecentHistory({int pageSize = 20}) async {
     final records = await getHistory(page: 1, pageSize: pageSize);
@@ -38,18 +28,5 @@ class ReadarrService with ArrActivityMixin {
         .whereType<Map>()
         .map((e) => ReadarrHistoryItem.fromJson(Map<String, dynamic>.from(e)))
         .toList(growable: false);
-  }
-
-  /// Triggers an automatic search for an author's missing books.
-  Future<void> searchAuthor(int authorId) async {
-    await client.post(
-      '/api/v1/command',
-      data: {'name': 'AuthorSearch', 'authorId': authorId},
-    );
-  }
-
-  /// Updates an author's monitored state.
-  Future<void> updateAuthorMonitored(int authorId, bool monitored) async {
-    await updateItemMonitored('author', authorId, monitored);
   }
 }

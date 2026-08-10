@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
-import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
@@ -44,27 +43,13 @@ class UnraidClient {
     String? certFingerprint,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        _apiKey = apiKey.trim() {
-    _dio =
-        dio ??
-        Dio(
-          BaseOptions(
-            baseUrl: baseUrl,
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 15),
-            // Follow redirects manually so `x-api-key` is never replayed to an
-            // unconfigured host (a 303 would also downgrade this POST to GET).
-            followRedirects: false,
-            validateStatus: allowRedirectStatus,
-          ),
-        );
-    if (dio == null) {
-      _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
-      final adapter = pinnedHttpClientAdapterFor(
-        baseUrl,
-        pinnedFingerprint: certFingerprint,
-      );
-      if (adapter != null) _dio.httpClientAdapter = adapter;
-    }
+    // Redirects are followed manually so `x-api-key` is never replayed to an
+    // unconfigured host (a 303 would also downgrade this POST to GET).
+    _dio = guardedDio(
+      baseUrl: baseUrl,
+      injected: dio,
+      certFingerprint: certFingerprint,
+    );
   }
 
   final String baseUrl;

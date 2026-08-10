@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 
@@ -17,7 +18,7 @@ import 'package:cupola/features/transmission/domain/models/transmission_models.d
 /// it. A fresh client per request would throw both away every tick.
 final transmissionClientProvider = Provider<TransmissionClient>((ref) {
   final settings = ref.watch(currentSettingsProvider);
-  if (settings.transmissionUrl.isEmpty) {
+  if (!settings.isServiceConfigured(ServiceKey.transmission)) {
     throw Exception('Transmission not configured');
   }
   final client = TransmissionClient(

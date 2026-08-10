@@ -9,16 +9,13 @@
 library;
 
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
+/// SABnzbd reports decimals with the server's locale separator, so a comma has
+/// to become a dot before parsing — which is why this is not `doubleOrNull`.
 double _asDouble(dynamic value) {
   if (value is num) return value.toDouble();
   return double.tryParse('$value'.replaceAll(',', '.')) ?? 0;
-}
-
-bool _asBool(dynamic value) {
-  if (value is bool) return value;
-  final s = '$value'.toLowerCase();
-  return s == 'true' || s == '1';
 }
 
 /// The download queue (`mode=queue`).
@@ -55,7 +52,7 @@ class SabnzbdQueue {
   factory SabnzbdQueue.fromJson(Map<String, dynamic> json) {
     final slots = (json['slots'] as List?) ?? const [];
     return SabnzbdQueue(
-      paused: _asBool(json['paused']),
+      paused: boolOrFalse(json['paused']),
       status: (json['status'] ?? '').toString(),
       kbPerSec: _asDouble(json['kbpersec']),
       mbLeft: _asDouble(json['mbleft']),
@@ -126,7 +123,6 @@ class SabnzbdServerStats {
   final int day;
 
   String get totalLabel => formatBytes(total);
-  String get monthLabel => formatBytes(month);
 
   factory SabnzbdServerStats.fromJson(Map<String, dynamic> json) {
     return SabnzbdServerStats(

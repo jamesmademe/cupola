@@ -60,35 +60,28 @@ enum ServiceDomain {
 
 extension ServiceKeyExtension on ServiceKey {
   /// Which [ServiceDomain] this service belongs to. See [ServiceDomain].
-  ServiceDomain get domain {
-    switch (this) {
-      case ServiceKey.seerr:
-      case ServiceKey.radarr:
-      case ServiceKey.sonarr:
-      case ServiceKey.lidarr:
-      case ServiceKey.bazarr:
-      case ServiceKey.readarr:
-        return ServiceDomain.media;
-      case ServiceKey.qbittorrent:
-      case ServiceKey.transmission:
-      case ServiceKey.prowlarr:
-      case ServiceKey.sabnzbd:
-      case ServiceKey.nzbget:
-        return ServiceDomain.downloads;
-      case ServiceKey.jellyfin:
-      case ServiceKey.plex:
-        return ServiceDomain.stream;
-      case ServiceKey.truenas:
-      case ServiceKey.dockge:
-      case ServiceKey.unraid:
-      // A reverse proxy is not a download client that happens to run on the
-      // box: it is the box's front door. Every other service in the app is
-      // usually reached *through* it, which is exactly why it belongs beside
-      // the NAS and the container manager rather than anywhere else.
-      case ServiceKey.nginxProxyManager:
-        return ServiceDomain.infrastructure;
-    }
-  }
+  ServiceDomain get domain => switch (this) {
+    ServiceKey.seerr ||
+    ServiceKey.radarr ||
+    ServiceKey.sonarr ||
+    ServiceKey.lidarr ||
+    ServiceKey.bazarr ||
+    ServiceKey.readarr => ServiceDomain.media,
+    ServiceKey.qbittorrent ||
+    ServiceKey.transmission ||
+    ServiceKey.prowlarr ||
+    ServiceKey.sabnzbd ||
+    ServiceKey.nzbget => ServiceDomain.downloads,
+    ServiceKey.jellyfin || ServiceKey.plex => ServiceDomain.stream,
+    ServiceKey.truenas ||
+    ServiceKey.dockge ||
+    ServiceKey.unraid ||
+    // A reverse proxy is not a download client that happens to run on the
+    // box: it is the box's front door. Every other service in the app is
+    // usually reached *through* it, which is exactly why it belongs beside
+    // the NAS and the container manager rather than anywhere else.
+    ServiceKey.nginxProxyManager => ServiceDomain.infrastructure,
+  };
 
   /// Whether tapping this service opens a full multi-screen console (with its
   /// own inner navigation) rather than a single detail screen. Heavy services
@@ -96,148 +89,79 @@ extension ServiceKeyExtension on ServiceKey {
   bool get isFullConsole =>
       this == ServiceKey.truenas || this == ServiceKey.dockge;
 
-  String get title {
-    switch (this) {
-      case ServiceKey.seerr:
-        return 'Seerr';
-      case ServiceKey.radarr:
-        return 'Radarr';
-      case ServiceKey.sonarr:
-        return 'Sonarr';
-      case ServiceKey.lidarr:
-        return 'Lidarr';
-      case ServiceKey.qbittorrent:
-        return 'qBittorrent';
-      case ServiceKey.transmission:
-        return 'Transmission';
-      case ServiceKey.nginxProxyManager:
-        return 'Nginx Proxy Manager';
-      case ServiceKey.bazarr:
-        return 'Bazarr';
-      case ServiceKey.truenas:
-        return 'TrueNAS';
-      case ServiceKey.dockge:
-        return 'Dockge';
-      case ServiceKey.prowlarr:
-        return 'Prowlarr';
-      case ServiceKey.readarr:
-        return 'Readarr';
-      case ServiceKey.sabnzbd:
-        return 'SABnzbd';
-      case ServiceKey.nzbget:
-        return 'NZBGet';
-      case ServiceKey.unraid:
-        return 'Unraid';
-      case ServiceKey.jellyfin:
-        return 'Jellyfin';
-      case ServiceKey.plex:
-        return 'Plex';
-    }
-  }
+  String get title => switch (this) {
+    ServiceKey.seerr => 'Seerr',
+    ServiceKey.radarr => 'Radarr',
+    ServiceKey.sonarr => 'Sonarr',
+    ServiceKey.lidarr => 'Lidarr',
+    ServiceKey.qbittorrent => 'qBittorrent',
+    ServiceKey.transmission => 'Transmission',
+    ServiceKey.nginxProxyManager => 'Nginx Proxy Manager',
+    ServiceKey.bazarr => 'Bazarr',
+    ServiceKey.truenas => 'TrueNAS',
+    ServiceKey.dockge => 'Dockge',
+    ServiceKey.prowlarr => 'Prowlarr',
+    ServiceKey.readarr => 'Readarr',
+    ServiceKey.sabnzbd => 'SABnzbd',
+    ServiceKey.nzbget => 'NZBGet',
+    ServiceKey.unraid => 'Unraid',
+    ServiceKey.jellyfin => 'Jellyfin',
+    ServiceKey.plex => 'Plex',
+  };
 
-  /// The name to use where a cell is too narrow to spell the full [title].
-  ///
-  /// Defaults to [title], because for fourteen of the sixteen services there is
-  /// nothing to shorten — this exists for the one name that does not fit the
-  /// folded matrix cell, which clips at one line with an ellipsis. "NPM" is
-  /// deliberately *not* the abbreviation used: on a developer's own homelab
-  /// that string already means npm the package manager, and a three-letter
-  /// label that resolves to the wrong tool is worse than a longer one that
-  /// resolves to the right one.
-  String get shortTitle =>
-      this == ServiceKey.nginxProxyManager ? 'Proxy Manager' : title;
+  IconData get icon => switch (this) {
+    ServiceKey.seerr => Icons.search_rounded,
+    ServiceKey.radarr => Icons.movie_rounded,
+    ServiceKey.sonarr => Icons.tv_rounded,
+    ServiceKey.lidarr => Icons.music_note_rounded,
+    ServiceKey.qbittorrent => Icons.download_rounded,
+    // Told apart from the three download clients by *direction*, not detail:
+    // theirs are all one-way arrows into the box, and a BitTorrent daemon is
+    // the one client in the group that is equally busy sending. The paired
+    // arrows survive the 18pt matrix glyph where a restyled download arrow
+    // would read as a second qBittorrent.
+    ServiceKey.transmission => Icons.swap_vert_rounded,
+    // A reverse proxy is a fork in the road — one address in, many services
+    // out. Distinct at glyph size from TrueNAS's drive stack, Dockge's
+    // layers and Unraid's board.
+    ServiceKey.nginxProxyManager => Icons.alt_route_rounded,
+    ServiceKey.bazarr => Icons.subtitles_rounded,
+    ServiceKey.truenas => Icons.storage_rounded,
+    ServiceKey.dockge => Icons.layers_rounded,
+    ServiceKey.prowlarr => Icons.travel_explore_rounded,
+    ServiceKey.readarr => Icons.menu_book_rounded,
+    ServiceKey.sabnzbd => Icons.cloud_download_rounded,
+    ServiceKey.nzbget => Icons.cloud_sync_rounded,
+    ServiceKey.unraid => Icons.developer_board_rounded,
+    // The two media servers do the same job, so they are told apart by
+    // *silhouette* rather than by detail: a circle against a rounded
+    // rectangle survives the 18pt glyph on an expanded matrix cell and the
+    // 32pt one on a folded card, where two screen-shaped glyphs would not.
+    // Neither may be `live_tv_rounded` — that is a TV outline with signal
+    // arcs and collides with Sonarr's `tv_rounded` at cell size.
+    ServiceKey.jellyfin => Icons.play_circle_rounded,
+    ServiceKey.plex => Icons.smart_display_rounded,
+  };
 
-  IconData get icon {
-    switch (this) {
-      case ServiceKey.seerr:
-        return Icons.search_rounded;
-      case ServiceKey.radarr:
-        return Icons.movie_rounded;
-      case ServiceKey.sonarr:
-        return Icons.tv_rounded;
-      case ServiceKey.lidarr:
-        return Icons.music_note_rounded;
-      case ServiceKey.qbittorrent:
-        return Icons.download_rounded;
-      // Told apart from the three download clients by *direction*, not detail:
-      // theirs are all one-way arrows into the box, and a BitTorrent daemon is
-      // the one client in the group that is equally busy sending. The paired
-      // arrows survive the 18pt matrix glyph where a restyled download arrow
-      // would read as a second qBittorrent.
-      case ServiceKey.transmission:
-        return Icons.swap_vert_rounded;
-      // A reverse proxy is a fork in the road — one address in, many services
-      // out. Distinct at glyph size from TrueNAS's drive stack, Dockge's
-      // layers and Unraid's board.
-      case ServiceKey.nginxProxyManager:
-        return Icons.alt_route_rounded;
-      case ServiceKey.bazarr:
-        return Icons.subtitles_rounded;
-      case ServiceKey.truenas:
-        return Icons.storage_rounded;
-      case ServiceKey.dockge:
-        return Icons.layers_rounded;
-      case ServiceKey.prowlarr:
-        return Icons.travel_explore_rounded;
-      case ServiceKey.readarr:
-        return Icons.menu_book_rounded;
-      case ServiceKey.sabnzbd:
-        return Icons.cloud_download_rounded;
-      case ServiceKey.nzbget:
-        return Icons.cloud_sync_rounded;
-      case ServiceKey.unraid:
-        return Icons.developer_board_rounded;
-      // The two media servers do the same job, so they are told apart by
-      // *silhouette* rather than by detail: a circle against a rounded
-      // rectangle survives the 18pt glyph on an expanded matrix cell and the
-      // 32pt one on a folded card, where two screen-shaped glyphs would not.
-      // Neither may be `live_tv_rounded` — that is a TV outline with signal
-      // arcs and collides with Sonarr's `tv_rounded` at cell size.
-      case ServiceKey.jellyfin:
-        return Icons.play_circle_rounded;
-      case ServiceKey.plex:
-        return Icons.smart_display_rounded;
-    }
-  }
-
-  Color get accent {
-    switch (this) {
-      case ServiceKey.seerr:
-        return AppColors.seerr;
-      case ServiceKey.radarr:
-        return AppColors.radarr;
-      case ServiceKey.sonarr:
-        return AppColors.sonarr;
-      case ServiceKey.lidarr:
-        return AppColors.lidarr;
-      case ServiceKey.qbittorrent:
-        return AppColors.qbittorrent;
-      case ServiceKey.transmission:
-        return AppColors.transmission;
-      case ServiceKey.nginxProxyManager:
-        return AppColors.nginxProxyManager;
-      case ServiceKey.bazarr:
-        return AppColors.bazarr;
-      case ServiceKey.truenas:
-        return AppColors.truenas;
-      case ServiceKey.dockge:
-        return AppColors.dockge;
-      case ServiceKey.prowlarr:
-        return AppColors.prowlarr;
-      case ServiceKey.readarr:
-        return AppColors.readarr;
-      case ServiceKey.sabnzbd:
-        return AppColors.sabnzbd;
-      case ServiceKey.nzbget:
-        return AppColors.nzbget;
-      case ServiceKey.unraid:
-        return AppColors.unraid;
-      case ServiceKey.jellyfin:
-        return AppColors.jellyfin;
-      case ServiceKey.plex:
-        return AppColors.plex;
-    }
-  }
+  Color get accent => switch (this) {
+    ServiceKey.seerr => AppColors.seerr,
+    ServiceKey.radarr => AppColors.radarr,
+    ServiceKey.sonarr => AppColors.sonarr,
+    ServiceKey.lidarr => AppColors.lidarr,
+    ServiceKey.qbittorrent => AppColors.qbittorrent,
+    ServiceKey.transmission => AppColors.transmission,
+    ServiceKey.nginxProxyManager => AppColors.nginxProxyManager,
+    ServiceKey.bazarr => AppColors.bazarr,
+    ServiceKey.truenas => AppColors.truenas,
+    ServiceKey.dockge => AppColors.dockge,
+    ServiceKey.prowlarr => AppColors.prowlarr,
+    ServiceKey.readarr => AppColors.readarr,
+    ServiceKey.sabnzbd => AppColors.sabnzbd,
+    ServiceKey.nzbget => AppColors.nzbget,
+    ServiceKey.unraid => AppColors.unraid,
+    ServiceKey.jellyfin => AppColors.jellyfin,
+    ServiceKey.plex => AppColors.plex,
+  };
 
   /// Whether this service authenticates with a single API key rather than a
   /// username and password.
@@ -251,36 +175,32 @@ extension ServiceKeyExtension on ServiceKey {
   /// Written as an exhaustive `switch` on purpose: a `!=` chain would silently
   /// class a newly added service as API-key authenticated, whereas this makes
   /// the compiler ask.
-  bool get usesApiKey {
-    switch (this) {
-      case ServiceKey.qbittorrent:
-      case ServiceKey.dockge:
-      case ServiceKey.nzbget:
-      // HTTP Basic, straight from `rpc-username`/`rpc-password`. Transmission
-      // mints no key of any kind.
-      case ServiceKey.transmission:
-      // Nginx Proxy Manager has **no long-lived API key at all**: the only
-      // credential it accepts is the account's own email and password, which
-      // `POST /api/tokens` exchanges for a short-lived bearer token. That is a
-      // property of the server, not a shortcut taken here — see [setupNote]
-      // for what it means for the user.
-      case ServiceKey.nginxProxyManager:
-        return false;
-      case ServiceKey.seerr:
-      case ServiceKey.radarr:
-      case ServiceKey.sonarr:
-      case ServiceKey.lidarr:
-      case ServiceKey.bazarr:
-      case ServiceKey.truenas:
-      case ServiceKey.prowlarr:
-      case ServiceKey.readarr:
-      case ServiceKey.sabnzbd:
-      case ServiceKey.unraid:
-      case ServiceKey.jellyfin:
-      case ServiceKey.plex:
-        return true;
-    }
-  }
+  bool get usesApiKey => switch (this) {
+    ServiceKey.qbittorrent ||
+    ServiceKey.dockge ||
+    ServiceKey.nzbget ||
+    // HTTP Basic, straight from `rpc-username`/`rpc-password`. Transmission
+    // mints no key of any kind.
+    ServiceKey.transmission ||
+    // Nginx Proxy Manager has **no long-lived API key at all**: the only
+    // credential it accepts is the account's own email and password, which
+    // `POST /api/tokens` exchanges for a short-lived bearer token. That is a
+    // property of the server, not a shortcut taken here — see [setupNote]
+    // for what it means for the user.
+    ServiceKey.nginxProxyManager => false,
+    ServiceKey.seerr ||
+    ServiceKey.radarr ||
+    ServiceKey.sonarr ||
+    ServiceKey.lidarr ||
+    ServiceKey.bazarr ||
+    ServiceKey.truenas ||
+    ServiceKey.prowlarr ||
+    ServiceKey.readarr ||
+    ServiceKey.sabnzbd ||
+    ServiceKey.unraid ||
+    ServiceKey.jellyfin ||
+    ServiceKey.plex => true,
+  };
 
   /// Whether the library this service serves has to be entered through a chosen
   /// person, so the settings screen offers a viewer picker once it connects.
@@ -304,46 +224,27 @@ extension ServiceKeyExtension on ServiceKey {
   /// services become a tap plus a pasted key. A suggestion only: a service
   /// behind a reverse proxy is reached on 443 with a path, and nothing here
   /// overwrites an address the user has already typed.
-  int get defaultPort {
-    switch (this) {
-      case ServiceKey.seerr:
-        return 5055;
-      case ServiceKey.radarr:
-        return 7878;
-      case ServiceKey.sonarr:
-        return 8989;
-      case ServiceKey.lidarr:
-        return 8686;
-      case ServiceKey.readarr:
-        return 8787;
-      case ServiceKey.prowlarr:
-        return 9696;
-      case ServiceKey.bazarr:
-        return 6767;
-      case ServiceKey.qbittorrent:
-      case ServiceKey.sabnzbd:
-        return 8080;
-      case ServiceKey.nzbget:
-        return 6789;
-      case ServiceKey.transmission:
-        return 9091;
-      // 81, not 80 or 443. Those two are the proxy *doing its job* — the
-      // hostnames it fronts. The admin interface, which is the only thing
-      // carrying an API, listens separately.
-      case ServiceKey.nginxProxyManager:
-        return 81;
-      case ServiceKey.jellyfin:
-        return 8096;
-      case ServiceKey.plex:
-        return 32400;
-      case ServiceKey.dockge:
-        return 5001;
-      // Both ship a TLS web UI on the standard port.
-      case ServiceKey.truenas:
-      case ServiceKey.unraid:
-        return 443;
-    }
-  }
+  int get defaultPort => switch (this) {
+    ServiceKey.seerr => 5055,
+    ServiceKey.radarr => 7878,
+    ServiceKey.sonarr => 8989,
+    ServiceKey.lidarr => 8686,
+    ServiceKey.readarr => 8787,
+    ServiceKey.prowlarr => 9696,
+    ServiceKey.bazarr => 6767,
+    ServiceKey.qbittorrent || ServiceKey.sabnzbd => 8080,
+    ServiceKey.nzbget => 6789,
+    ServiceKey.transmission => 9091,
+    // 81, not 80 or 443. Those two are the proxy *doing its job* — the
+    // hostnames it fronts. The admin interface, which is the only thing
+    // carrying an API, listens separately.
+    ServiceKey.nginxProxyManager => 81,
+    ServiceKey.jellyfin => 8096,
+    ServiceKey.plex => 32400,
+    ServiceKey.dockge => 5001,
+    // Both ship a TLS web UI on the standard port.
+    ServiceKey.truenas || ServiceKey.unraid => 443,
+  };
 
   /// What the credential is called in this service's own vocabulary.
   ///
@@ -369,35 +270,26 @@ extension ServiceKeyExtension on ServiceKey {
   /// A breadcrumb rather than prose, shown under the field it explains. Null for
   /// the services that authenticate with the web-UI login the user already
   /// knows, since there is nothing to go and find.
-  String? get credentialPath {
-    switch (this) {
-      case ServiceKey.radarr:
-      case ServiceKey.sonarr:
-      case ServiceKey.lidarr:
-      case ServiceKey.readarr:
-      case ServiceKey.prowlarr:
-      case ServiceKey.bazarr:
-      case ServiceKey.seerr:
-        return 'Settings → General → API Key';
-      case ServiceKey.sabnzbd:
-        return 'Config → General → API Key';
-      case ServiceKey.jellyfin:
-        return 'Dashboard → Advanced → API Keys';
-      case ServiceKey.truenas:
-        return 'Credentials → API Keys';
-      case ServiceKey.unraid:
-        return 'Settings → Management Access → Developer Options';
-      case ServiceKey.plex:
-        return 'any item → Get Info → View XML → copy X-Plex-Token';
-      // Web-UI login: the user already has these.
-      case ServiceKey.qbittorrent:
-      case ServiceKey.dockge:
-      case ServiceKey.nzbget:
-      case ServiceKey.transmission:
-      case ServiceKey.nginxProxyManager:
-        return null;
-    }
-  }
+  String? get credentialPath => switch (this) {
+    ServiceKey.radarr ||
+    ServiceKey.sonarr ||
+    ServiceKey.lidarr ||
+    ServiceKey.readarr ||
+    ServiceKey.prowlarr ||
+    ServiceKey.bazarr ||
+    ServiceKey.seerr => 'Settings → General → API Key',
+    ServiceKey.sabnzbd => 'Config → General → API Key',
+    ServiceKey.jellyfin => 'Dashboard → Advanced → API Keys',
+    ServiceKey.truenas => 'Credentials → API Keys',
+    ServiceKey.unraid => 'Settings → Management Access → Developer Options',
+    ServiceKey.plex => 'any item → Get Info → View XML → copy X-Plex-Token',
+    // Web-UI login: the user already has these.
+    ServiceKey.qbittorrent ||
+    ServiceKey.dockge ||
+    ServiceKey.nzbget ||
+    ServiceKey.transmission ||
+    ServiceKey.nginxProxyManager => null,
+  };
 
   /// Setup guidance shown above the address field, for the services where the
   /// API needs turning on first or the project itself carries a caveat worth
@@ -409,73 +301,70 @@ extension ServiceKeyExtension on ServiceKey {
   /// rest of its description, so adding a service is one entry rather than a
   /// hunt through the screens that render it. Null for the majority, which need
   /// nothing said.
-  String? get setupNote {
-    switch (this) {
-      case ServiceKey.truenas:
-        return 'Requires TrueNAS SCALE $kTrueNasMinVersion or newer. Create an '
-            'API key under Credentials → Local Users, and use the https:// '
-            'address of the web UI.';
-      case ServiceKey.unraid:
-        return 'Enable the Unraid API first: Settings → Management Access → '
-            'Developer Options → turn on the GraphQL sandbox, then create an '
-            'API key under API Keys. Without this the endpoint will not '
-            'respond.';
-      // Readarr development stopped upstream. Saying so here is the honest
-      // thing: the integration works against the last released API, but the
-      // user should know they are pointing at a project that will not receive
-      // fixes.
-      case ServiceKey.readarr:
-        return 'Readarr development has stopped upstream. Cupola targets its '
-            'last released API, so existing instances keep working, but expect '
-            'no new server-side fixes.';
-      case ServiceKey.jellyfin:
-        return 'Create an API key under Dashboard → Advanced → API Keys. The '
-            'key authenticates as an administrator but carries no user of its '
-            'own, so pick whose watch state to read below once the connection '
-            'works.';
-      // Naming the *kind* of token matters more than naming the place. Plex has
-      // two, and the modern one is a dead end here: a JWT expires after seven
-      // days and can only be refreshed through plex.tv, which Cupola never
-      // calls. Saying so up front beats a week of working software.
-      case ServiceKey.plex:
-        return 'Open any item in Plex Web, choose Get Info → View XML, and copy '
-            'the X-Plex-Token from the address bar. Cupola never contacts '
-            'plex.tv, so it needs a long-lived device token — not a temporary '
-            'one beginning "eyJ".';
-      // The single most common reason a Transmission daemon is reachable in a
-      // browser and not from a phone, and it is worth saying before the address
-      // is typed rather than after a mystifying 403.
-      case ServiceKey.transmission:
-        return 'Use the same username and password the Transmission web '
-            'interface asks for, and check that this device is allowed: '
-            '`rpc-whitelist` defaults to 127.0.0.1 only, so a phone on the same '
-            'network is refused until the range is widened. Note that '
-            'Transmission has one all-or-nothing credential and it can set the '
-            'script it runs when a download finishes — treat it as a login to '
-            'the machine itself, and do not reuse a password from anywhere '
-            'else.';
-      // Says the uncomfortable thing plainly, because the user cannot choose
-      // otherwise and deserves to know what they are handing over.
-      case ServiceKey.nginxProxyManager:
-        return 'Nginx Proxy Manager issues no API key — the only credential it '
-            'accepts is an account login, which Cupola exchanges for a '
-            'short-lived token it keeps in memory and never writes to disk. '
-            'Create a dedicated user for Cupola rather than using your admin '
-            'account, and point this at the admin interface (port 81 by '
-            'default), not at a hostname the proxy serves.';
-      case ServiceKey.seerr:
-      case ServiceKey.radarr:
-      case ServiceKey.sonarr:
-      case ServiceKey.lidarr:
-      case ServiceKey.qbittorrent:
-      case ServiceKey.bazarr:
-      case ServiceKey.dockge:
-      case ServiceKey.prowlarr:
-      case ServiceKey.sabnzbd:
-      case ServiceKey.nzbget:
-        return null;
-    }
-  }
+  String? get setupNote => switch (this) {
+    ServiceKey.truenas =>
+      'Requires TrueNAS SCALE $kTrueNasMinVersion or newer. Create an '
+          'API key under Credentials → Local Users, and use the https:// '
+          'address of the web UI.',
+    ServiceKey.unraid =>
+      'Enable the Unraid API first: Settings → Management Access → '
+          'Developer Options → turn on the GraphQL sandbox, then create an '
+          'API key under API Keys. Without this the endpoint will not '
+          'respond.',
+    // Readarr development stopped upstream. Saying so here is the honest
+    // thing: the integration works against the last released API, but the
+    // user should know they are pointing at a project that will not receive
+    // fixes.
+    ServiceKey.readarr =>
+      'Readarr development has stopped upstream. Cupola targets its '
+          'last released API, so existing instances keep working, but expect '
+          'no new server-side fixes.',
+    ServiceKey.jellyfin =>
+      'Create an API key under Dashboard → Advanced → API Keys. The '
+          'key authenticates as an administrator but carries no user of its '
+          'own, so pick whose watch state to read below once the connection '
+          'works.',
+    // Naming the *kind* of token matters more than naming the place. Plex has
+    // two, and the modern one is a dead end here: a JWT expires after seven
+    // days and can only be refreshed through plex.tv, which Cupola never
+    // calls. Saying so up front beats a week of working software.
+    ServiceKey.plex =>
+      'Open any item in Plex Web, choose Get Info → View XML, and copy '
+          'the X-Plex-Token from the address bar. Cupola never contacts '
+          'plex.tv, so it needs a long-lived device token — not a temporary '
+          'one beginning "eyJ".',
+    // The single most common reason a Transmission daemon is reachable in a
+    // browser and not from a phone, and it is worth saying before the address
+    // is typed rather than after a mystifying 403.
+    ServiceKey.transmission =>
+      'Use the same username and password the Transmission web '
+          'interface asks for, and check that this device is allowed: '
+          '`rpc-whitelist` defaults to 127.0.0.1 only, so a phone on the same '
+          'network is refused until the range is widened. Note that '
+          'Transmission has one all-or-nothing credential and it can set the '
+          'script it runs when a download finishes — treat it as a login to '
+          'the machine itself, and do not reuse a password from anywhere '
+          'else.',
+    // Says the uncomfortable thing plainly, because the user cannot choose
+    // otherwise and deserves to know what they are handing over.
+    ServiceKey.nginxProxyManager =>
+      'Nginx Proxy Manager issues no API key — the only credential it '
+          'accepts is an account login, which Cupola exchanges for a '
+          'short-lived token it keeps in memory and never writes to disk. '
+          'Create a dedicated user for Cupola rather than using your admin '
+          'account, and point this at the admin interface (port 81 by '
+          'default), not at a hostname the proxy serves.',
+    ServiceKey.seerr ||
+    ServiceKey.radarr ||
+    ServiceKey.sonarr ||
+    ServiceKey.lidarr ||
+    ServiceKey.qbittorrent ||
+    ServiceKey.bazarr ||
+    ServiceKey.dockge ||
+    ServiceKey.prowlarr ||
+    ServiceKey.sabnzbd ||
+    ServiceKey.nzbget => null,
+  };
 
   /// Whether the global search tab fans out to this service.
   ///
@@ -503,112 +392,119 @@ extension ServiceKeyExtension on ServiceKey {
         this == ServiceKey.lidarr;
   }
 
-  String get apiVersion {
-    switch (this) {
-      case ServiceKey.seerr:
-      case ServiceKey.lidarr:
-      case ServiceKey.readarr:
-        return 'v1';
-      case ServiceKey.radarr:
-      case ServiceKey.sonarr:
-        return 'v3';
-      case ServiceKey.qbittorrent:
-        return 'WebUI';
-      case ServiceKey.transmission:
-        return 'RPC';
-      case ServiceKey.nginxProxyManager:
-        return 'API';
-      case ServiceKey.bazarr:
-        return 'v1';
-      case ServiceKey.truenas:
-        return 'v25';
-      case ServiceKey.dockge:
-        return 'Socket.IO';
-      case ServiceKey.prowlarr:
-        return 'v1';
-      case ServiceKey.sabnzbd:
-        return 'API';
-      case ServiceKey.nzbget:
-        return 'JSON-RPC';
-      case ServiceKey.unraid:
-        return 'GraphQL';
-      case ServiceKey.jellyfin:
-        return 'v10';
-      case ServiceKey.plex:
-        return 'v1';
-    }
-  }
+  String get apiVersion => switch (this) {
+    ServiceKey.seerr || ServiceKey.lidarr || ServiceKey.readarr => 'v1',
+    ServiceKey.radarr || ServiceKey.sonarr => 'v3',
+    ServiceKey.qbittorrent => 'WebUI',
+    ServiceKey.transmission => 'RPC',
+    ServiceKey.nginxProxyManager => 'API',
+    ServiceKey.bazarr => 'v1',
+    ServiceKey.truenas => 'v25',
+    ServiceKey.dockge => 'Socket.IO',
+    ServiceKey.prowlarr => 'v1',
+    ServiceKey.sabnzbd => 'API',
+    ServiceKey.nzbget => 'JSON-RPC',
+    ServiceKey.unraid => 'GraphQL',
+    ServiceKey.jellyfin => 'v10',
+    ServiceKey.plex => 'v1',
+  };
 
-  String get itemLabel {
-    switch (this) {
-      case ServiceKey.seerr:
-        return 'requests';
-      case ServiceKey.radarr:
-        return 'movies';
-      case ServiceKey.sonarr:
-        return 'series';
-      case ServiceKey.lidarr:
-        return 'artists';
-      case ServiceKey.qbittorrent:
-      case ServiceKey.transmission:
-        return 'torrents';
-      // The hostnames it fronts. Not "hosts" on its own — a homelab already
-      // calls the physical boxes that, and this counts neither of them.
-      case ServiceKey.nginxProxyManager:
-        return 'proxy hosts';
-      case ServiceKey.bazarr:
-        return 'subtitles';
-      case ServiceKey.truenas:
-        return 'pools';
-      case ServiceKey.dockge:
-        return 'stacks';
-      case ServiceKey.prowlarr:
-        return 'indexers';
-      case ServiceKey.readarr:
-        return 'authors';
-      case ServiceKey.sabnzbd:
-        return 'downloads';
-      case ServiceKey.nzbget:
-        return 'downloads';
-      case ServiceKey.unraid:
-        return 'containers';
-      // The top-level thing you enumerate on a media server. Not "movies" —
-      // a single Jellyfin or Plex instance mixes films, shows and music, and
-      // naming one of them would both misdescribe the server and read as a
-      // duplicate of Radarr's or Sonarr's own label.
-      case ServiceKey.jellyfin:
-      case ServiceKey.plex:
-        return 'libraries';
-    }
-  }
+  /// The endpoint used to prove a service is answering.
+  ///
+  /// Empty for the services that verify over something other than REST —
+  /// TrueNAS (WebSocket JSON-RPC), Dockge (Socket.IO), SABnzbd (query-string
+  /// API), NZBGet (JSON-RPC) and Unraid (GraphQL), each handled by its own
+  /// branch in the version loader and in the credential verifier.
+  ///
+  /// Jellyfin's and Plex's entries are **reachability probes, not credential
+  /// checks**: both are anonymous endpoints, and neither server reads the
+  /// `X-Api-Key` header the shared `ApiClient` sends, so a 2xx here says nothing
+  /// at all about the pasted credential. That is why those two verify through
+  /// their own clients first and only fall back to this table to explain a
+  /// refusal — see `diagnoseCredentials`.
+  String get statusEndpoint => switch (this) {
+    ServiceKey.seerr => '/api/v1/status',
+    ServiceKey.radarr || ServiceKey.sonarr => '/api/v3/system/status',
+    ServiceKey.lidarr => '/api/v1/system/status',
+    ServiceKey.qbittorrent => '/api/v2/app/version',
+    ServiceKey.bazarr => '/api/system/status',
+    ServiceKey.prowlarr => '/api/v1/system/status',
+    ServiceKey.readarr => '/api/v1/system/status',
+    // Both media-server probes are deliberately the *unauthenticated* ones, so
+    // reachability separates cleanly from credentials: a 200 here with a 401
+    // elsewhere means "the box is up, the token is wrong", which is the single
+    // most common Stream misconfiguration and the one a generic timeout hides.
+    ServiceKey.jellyfin => '/System/Info/Public',
+    ServiceKey.plex => '/identity',
+    // Transmission (RPC envelope + session-id handshake) and Nginx Proxy
+    // Manager (token exchange) join this group for the same reason: no plain
+    // GET can separate "reachable" from "authenticated" for either.
+    //
+    // Handled over the RPC envelope in _loadVersion; the endpoint is a POST
+    // with a session-id handshake, not a GET.
+    ServiceKey.transmission ||
+    // Handled in _loadVersion, which reads the unauthenticated `GET /api/`
+    // through the client so the token exchange is not paid for a version
+    // string.
+    ServiceKey.nginxProxyManager ||
+    // Handled over WebSocket in _loadVersion; no REST endpoint.
+    ServiceKey.truenas ||
+    // Handled over Socket.IO in _loadVersion; no REST endpoint.
+    ServiceKey.dockge ||
+    // Handled over the query-string API in _loadVersion; no REST endpoint.
+    ServiceKey.sabnzbd ||
+    // Handled over JSON-RPC in _loadVersion; no REST endpoint.
+    ServiceKey.nzbget ||
+    // Handled over GraphQL in _loadVersion; no REST endpoint.
+    ServiceKey.unraid => '',
+  };
 
-  String get routeParam {
-    switch (this) {
-      case ServiceKey.seerr:
-        return 'seerr';
-      // The only service whose enum name is camelCase, and a URL is the one
-      // place that shows. Every other route segment is the lowercase name the
-      // user would type, so this one is spelled out rather than derived.
-      case ServiceKey.nginxProxyManager:
-        return 'npm';
-      case ServiceKey.radarr:
-      case ServiceKey.sonarr:
-      case ServiceKey.lidarr:
-      case ServiceKey.qbittorrent:
-      case ServiceKey.transmission:
-      case ServiceKey.bazarr:
-      case ServiceKey.truenas:
-      case ServiceKey.dockge:
-      case ServiceKey.prowlarr:
-      case ServiceKey.readarr:
-      case ServiceKey.sabnzbd:
-      case ServiceKey.nzbget:
-      case ServiceKey.unraid:
-      case ServiceKey.jellyfin:
-      case ServiceKey.plex:
-        return name;
-    }
-  }
+  String get itemLabel => switch (this) {
+    ServiceKey.seerr => 'requests',
+    ServiceKey.radarr => 'movies',
+    ServiceKey.sonarr => 'series',
+    ServiceKey.lidarr => 'artists',
+    ServiceKey.qbittorrent || ServiceKey.transmission => 'torrents',
+    // The hostnames it fronts. Not "hosts" on its own — a homelab already
+    // calls the physical boxes that, and this counts neither of them.
+    ServiceKey.nginxProxyManager => 'proxy hosts',
+    ServiceKey.bazarr => 'subtitles',
+    ServiceKey.truenas => 'pools',
+    ServiceKey.dockge => 'stacks',
+    ServiceKey.prowlarr => 'indexers',
+    ServiceKey.readarr => 'authors',
+    ServiceKey.sabnzbd => 'downloads',
+    ServiceKey.nzbget => 'downloads',
+    ServiceKey.unraid => 'containers',
+    // The top-level thing you enumerate on a media server. Not "movies" —
+    // a single Jellyfin or Plex instance mixes films, shows and music, and
+    // naming one of them would both misdescribe the server and read as a
+    // duplicate of Radarr's or Sonarr's own label.
+    ServiceKey.jellyfin || ServiceKey.plex => 'libraries',
+  };
+
+  String get routeParam => switch (this) {
+    ServiceKey.seerr => 'seerr',
+    // The only service whose enum name is camelCase, and a URL is the one
+    // place that shows. Every other route segment is the lowercase name the
+    // user would type, so this one is spelled out rather than derived.
+    ServiceKey.nginxProxyManager => 'npm',
+    ServiceKey.radarr ||
+    ServiceKey.sonarr ||
+    ServiceKey.lidarr ||
+    ServiceKey.qbittorrent ||
+    ServiceKey.transmission ||
+    ServiceKey.bazarr ||
+    ServiceKey.truenas ||
+    ServiceKey.dockge ||
+    ServiceKey.prowlarr ||
+    ServiceKey.readarr ||
+    ServiceKey.sabnzbd ||
+    ServiceKey.nzbget ||
+    ServiceKey.unraid ||
+    ServiceKey.jellyfin ||
+    ServiceKey.plex => name,
+  };
 
   String? extractHost(String? url) {
     final value = url?.trim() ?? '';

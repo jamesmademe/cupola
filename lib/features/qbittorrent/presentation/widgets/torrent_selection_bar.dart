@@ -55,7 +55,7 @@ class TorrentSelectionBar extends ConsumerWidget {
                       service.resumeTorrents(selectedHashes.toList()),
                   successMessage: 'Resumed',
                   failureMessage: 'Failed to resume',
-                  invalidate: [torrentsProvider],
+                  invalidate: [torrentsProvider, allTorrentsProvider],
                 ),
                 icon: const Icon(Icons.play_arrow_rounded, size: 18),
                 label: const Text('Resume'),
@@ -73,7 +73,7 @@ class TorrentSelectionBar extends ConsumerWidget {
                       service.setForceStart(selectedHashes.toList(), true),
                   successMessage: 'Force started',
                   failureMessage: 'Failed',
-                  invalidate: [torrentsProvider],
+                  invalidate: [torrentsProvider, allTorrentsProvider],
                 ),
               ),
               IconButton(
@@ -85,7 +85,7 @@ class TorrentSelectionBar extends ConsumerWidget {
                   action: (service) =>
                       service.pauseTorrents(selectedHashes.toList()),
                   failureMessage: 'Failed to pause',
-                  invalidate: [torrentsProvider],
+                  invalidate: [torrentsProvider, allTorrentsProvider],
                 ),
               ),
               IconButton(
@@ -132,7 +132,7 @@ Future<bool> confirmDeleteTorrents(
         ? 'Deleted $count torrent$plural and files'
         : 'Deleted $count torrent$plural',
     failureMessage: 'Failed to delete',
-    invalidate: [torrentsProvider],
+    invalidate: [torrentsProvider, allTorrentsProvider],
   );
   if (ok) {
     ref.read(selectedTorrentHashesProvider.notifier).state = {};

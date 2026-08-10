@@ -8,19 +8,11 @@ import 'package:cupola/features/truenas/domain/models/data_protection.dart';
 class TrueNasDataProtectionApi extends TrueNasApiBase {
   const TrueNasDataProtectionApi(super.client);
 
-  Future<List<TrueNasProtectionTask>> getTasks(TrueNasTaskKind kind) async {
-    final result = await client.call(kind.queryMethod);
-    if (result is! List) return const [];
-    return result
-        .whereType<Map>()
-        .map(
-          (m) => TrueNasProtectionTask.fromJson(
-            kind,
-            Map<String, dynamic>.from(m),
-          ),
-        )
-        .toList(growable: false);
-  }
+  Future<List<TrueNasProtectionTask>> getTasks(TrueNasTaskKind kind) =>
+      queryList(
+        kind.queryMethod,
+        (json) => TrueNasProtectionTask.fromJson(kind, json),
+      );
 
   /// Enables/disables a task. Scrub and periodic snapshot tasks use `enabled`.
   Future<void> setEnabled(TrueNasTaskKind kind, int id, bool enabled) =>
@@ -60,13 +52,4 @@ class TrueNasDataProtectionApi extends TrueNasApiBase {
 
   Future<void> delete(TrueNasTaskKind kind, int id) =>
       client.call(kind.deleteMethod, [id]);
-
-  Future<List<Map<String, dynamic>>> getCloudCredentials() async {
-    final result = await client.call('cloudsync.credentials.query');
-    if (result is! List) return const [];
-    return result
-        .whereType<Map>()
-        .map((m) => Map<String, dynamic>.from(m))
-        .toList();
-  }
 }

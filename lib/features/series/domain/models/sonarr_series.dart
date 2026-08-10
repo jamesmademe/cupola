@@ -82,9 +82,6 @@ class SonarrSeries {
   /// shapes.
   List<SonarrSeason> get seasonList => SonarrSeason.listFrom(seasons);
 
-  /// True while more episodes are still expected to air.
-  bool get isContinuing => status.toLowerCase() == 'continuing';
-
   factory SonarrSeries.fromJson(Map<String, dynamic> json) {
     final ratings = parseArrRatings(json['ratings'], singleSourceIcon: 'TVDB');
 

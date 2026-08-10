@@ -39,11 +39,10 @@ class ManualImportService {
 
   Future<List<ManualImportRootFolder>> getRootFolders() async {
     final response = await client.get('$_prefix/rootfolder');
-    return _mappedList(
+    return jsonObjects(
       response.data,
       ManualImportRootFolder.fromJson,
-      where: (folder) => folder.path.isNotEmpty,
-    );
+    ).where((folder) => folder.path.isNotEmpty).toList(growable: false);
   }
 
   Future<ManualImportFileSystemResult> getFileSystem(String path) async {
@@ -83,7 +82,7 @@ class ManualImportService {
       // file with MediaInfo before it answers — minutes, not seconds.
       receiveTimeout: kSlowScanReceiveTimeout,
     );
-    return _mappedList(response.data, ManualImportItem.fromJson);
+    return jsonObjects(response.data, ManualImportItem.fromJson);
   }
 
   Future<List<ManualImportLookupResult>> lookup(String term) async {
@@ -94,11 +93,10 @@ class ManualImportService {
       '$_prefix/${_lookupEndpoint()}',
       queryParameters: {'term': normalized},
     );
-    return _mappedList(
+    return jsonObjects(
       response.data,
       (item) => ManualImportLookupResult.fromJson(service, item),
-      where: (item) => item.id > 0,
-    );
+    ).where((item) => item.id > 0).toList(growable: false);
   }
 
   Future<List<ManualImportLookupResult>> getLibraryMatches() async {
@@ -107,11 +105,10 @@ class ManualImportService {
       // The whole library in one payload; large collections are slow to serialise.
       receiveTimeout: kSlowScanReceiveTimeout,
     );
-    return _mappedList(
+    return jsonObjects(
       response.data,
       (item) => ManualImportLookupResult.fromJson(service, item),
-      where: (item) => item.id > 0,
-    );
+    ).where((item) => item.id > 0).toList(growable: false);
   }
 
   Future<ManualImportCommandStatus> importItem(
@@ -141,11 +138,10 @@ class ManualImportService {
         if (seasonNumber != null) 'seasonNumber': seasonNumber,
       },
     );
-    return _mappedList(
+    return jsonObjects(
       response.data,
       ManualImportEpisode.fromJson,
-      where: (item) => item.id > 0,
-    );
+    ).where((item) => item.id > 0).toList(growable: false);
   }
 
   Future<List<ManualImportAlbum>> getAlbums(int artistId) async {
@@ -153,11 +149,10 @@ class ManualImportService {
       '$_prefix/album',
       queryParameters: {'artistId': artistId},
     );
-    return _mappedList(
+    return jsonObjects(
       response.data,
       ManualImportAlbum.fromJson,
-      where: (item) => item.id > 0,
-    );
+    ).where((item) => item.id > 0).toList(growable: false);
   }
 
   Future<List<ManualImportTrack>> getTracks({required int albumId}) async {
@@ -165,29 +160,26 @@ class ManualImportService {
       '$_prefix/track',
       queryParameters: {'albumId': albumId},
     );
-    return _mappedList(
+    return jsonObjects(
       response.data,
       ManualImportTrack.fromJson,
-      where: (item) => item.id > 0,
-    );
+    ).where((item) => item.id > 0).toList(growable: false);
   }
 
   Future<List<ManualImportQualityOption>> getQualityOptions() async {
     final response = await client.get('$_prefix/qualitydefinition');
-    return _mappedList(
+    return jsonObjects(
       response.data,
       ManualImportQualityOption.fromJson,
-      where: (item) => item.id > 0,
-    );
+    ).where((item) => item.id > 0).toList(growable: false);
   }
 
   Future<List<ManualImportLanguageOption>> getLanguageOptions() async {
     final response = await client.get('$_prefix/language');
-    return _mappedList(
+    return jsonObjects(
       response.data,
       ManualImportLanguageOption.fromJson,
-      where: (item) => item.id > 0,
-    );
+    ).where((item) => item.id > 0).toList(growable: false);
   }
 
   /// Hands [files] to the service as one `ManualImport` command.
@@ -240,21 +232,4 @@ class ManualImportService {
       _ => throw ArgumentError('${service.title} does not support lookup'),
     };
   }
-}
-
-List<Map<String, dynamic>> _listData(dynamic data) {
-  final list = data is List ? data : const [];
-  return list
-      .map(mapOrNull)
-      .whereType<Map<String, dynamic>>()
-      .toList(growable: false);
-}
-
-List<T> _mappedList<T>(
-  dynamic data,
-  T Function(Map<String, dynamic>) fromJson, {
-  bool Function(T item)? where,
-}) {
-  final items = _listData(data).map(fromJson);
-  return (where == null ? items : items.where(where)).toList(growable: false);
 }

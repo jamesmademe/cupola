@@ -57,10 +57,6 @@ class TrueNasWsClient {
   /// timeout uses to decide whether the connection is worth keeping.
   DateTime? _lastMessageAt;
 
-  /// Cached method names from `core.get_methods` (capability discovery).
-  Set<String>? _methods;
-  Future<Set<String>>? _methodsInFlight;
-
   TrueNasWsClient({
     required this.baseUrl,
     required this.apiKey,
@@ -217,38 +213,6 @@ class TrueNasWsClient {
         );
       }
       await Future<void>.delayed(pollInterval);
-    }
-  }
-
-  /// Returns the set of RPC method names the server exposes (via
-  /// `core.get_methods`), cached for the life of the connection. Used for
-  /// capability discovery so the UI can hide/disable unsupported actions.
-  Future<Set<String>> getMethods() {
-    final cached = _methods;
-    if (cached != null) return Future.value(cached);
-    return _methodsInFlight ??= _loadMethods()
-      ..whenComplete(() => _methodsInFlight = null);
-  }
-
-  Future<Set<String>> _loadMethods() async {
-    try {
-      final result = await call('core.get_methods');
-      final Set<String> names;
-      if (result is Map) {
-        names = result.keys.map((k) => k.toString()).toSet();
-      } else if (result is List) {
-        names = result.map((e) => e.toString()).toSet();
-      } else {
-        names = <String>{};
-      }
-      _methods = names;
-      return names;
-    } catch (_) {
-      // Discovery is best-effort; cache the empty result so a failed probe is
-      // not retried on every call. An empty set means "assume available".
-      final empty = <String>{};
-      _methods = empty;
-      return empty;
     }
   }
 

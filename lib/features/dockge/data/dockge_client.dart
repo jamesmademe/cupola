@@ -406,15 +406,6 @@ class DockgeClient {
     return DockgeServiceStatus.listFromMap(map);
   }
 
-  Future<List<String>> getDockerNetworkList() async {
-    final res = await _agent('getDockerNetworkList');
-    final list = res['dockerNetworkList'];
-    if (list is List) {
-      return list.map((e) => e.toString()).toList(growable: false);
-    }
-    return const [];
-  }
-
   /// Converts a `docker run ...` command into compose YAML via Dockge.
   Future<String?> composerize(String dockerRunCommand) async {
     final res = await _agent('composerize', args: [dockerRunCommand]);

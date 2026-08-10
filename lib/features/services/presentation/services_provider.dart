@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/api_client.dart';
@@ -158,11 +160,11 @@ Future<String?> _loadVersion(
       final version = await client.getVersion().timeout(
         const Duration(seconds: 5),
       );
-      client.close();
       return version.isNotEmpty ? version : null;
     } catch (_) {
-      client.close();
       return null;
+    } finally {
+      client.close();
     }
   }
 
@@ -187,14 +189,11 @@ Future<String?> _loadVersion(
       apiKey: settings.sabnzbdApiKey,
       certFingerprint: settings.pinForUrl(settings.sabnzbdUrl),
     );
-    try {
-      final version = await client.getVersion().timeout(
-        const Duration(seconds: 5),
-      );
-      return version.isNotEmpty ? version : null;
-    } finally {
-      client.close();
-    }
+    return _versionOrNull(
+      client.getVersion,
+      timeout: const Duration(seconds: 5),
+      close: client.close,
+    );
   }
 
   if (service == ServiceKey.nzbget) {
@@ -208,14 +207,11 @@ Future<String?> _loadVersion(
           : settings.nzbgetPassword,
       certFingerprint: settings.pinForUrl(settings.nzbgetUrl),
     );
-    try {
-      final version = await client.version().timeout(
-        const Duration(seconds: 5),
-      );
-      return version.isNotEmpty ? version : null;
-    } finally {
-      client.close();
-    }
+    return _versionOrNull(
+      client.version,
+      timeout: const Duration(seconds: 5),
+      close: client.close,
+    );
   }
 
   if (service == ServiceKey.transmission) {
@@ -229,16 +225,13 @@ Future<String?> _loadVersion(
           : settings.transmissionPassword,
       certFingerprint: settings.pinForUrl(settings.transmissionUrl),
     );
-    try {
-      // Two hops on a cold client — the 409 handshake, then the real call — so
-      // this gets the same headroom as qBittorrent's login-then-version pair.
-      final version = await client.version().timeout(
-        const Duration(seconds: 8),
-      );
-      return version.isNotEmpty ? version : null;
-    } finally {
-      client.close();
-    }
+    // Two hops on a cold client — the 409 handshake, then the real call — so
+    // this gets the same headroom as qBittorrent's login-then-version pair.
+    return _versionOrNull(
+      client.version,
+      timeout: const Duration(seconds: 8),
+      close: client.close,
+    );
   }
 
   if (service == ServiceKey.nginxProxyManager) {
@@ -248,17 +241,14 @@ Future<String?> _loadVersion(
       secret: settings.npmPassword.isEmpty ? null : settings.npmPassword,
       certFingerprint: settings.pinForUrl(settings.npmUrl),
     );
-    try {
-      // `GET /api/` is unauthenticated, so the reachability probe costs no
-      // token exchange — which matters because this provider re-runs on every
-      // settings change and NPM has no rate limiting to absorb a login storm.
-      final version = await client.version().timeout(
-        const Duration(seconds: 6),
-      );
-      return version.isNotEmpty ? version : null;
-    } finally {
-      client.close();
-    }
+    // `GET /api/` is unauthenticated, so the reachability probe costs no
+    // token exchange — which matters because this provider re-runs on every
+    // settings change and NPM has no rate limiting to absorb a login storm.
+    return _versionOrNull(
+      client.version,
+      timeout: const Duration(seconds: 6),
+      close: client.close,
+    );
   }
 
   if (service == ServiceKey.unraid) {
@@ -267,14 +257,11 @@ Future<String?> _loadVersion(
       apiKey: settings.unraidApiKey,
       certFingerprint: settings.pinForUrl(settings.unraidUrl),
     );
-    try {
-      final version = await client.version().timeout(
-        const Duration(seconds: 6),
-      );
-      return version.isNotEmpty ? version : null;
-    } finally {
-      client.close();
-    }
+    return _versionOrNull(
+      client.version,
+      timeout: const Duration(seconds: 6),
+      close: client.close,
+    );
   }
 
   final createClient = ref.watch(serviceStatusClientFactoryProvider);
@@ -287,7 +274,7 @@ Future<String?> _loadVersion(
 
   try {
     final response = await client
-        .get(_statusEndpointFor(service))
+        .get(service.statusEndpoint)
         .timeout(const Duration(seconds: 5));
     final data = response.data;
     if (data is Map<String, dynamic>) {
@@ -303,59 +290,32 @@ Future<String?> _loadVersion(
   }
 }
 
-String _statusEndpointFor(ServiceKey service) {
-  switch (service) {
-    case ServiceKey.seerr:
-      return '/api/v1/status';
-    case ServiceKey.radarr:
-    case ServiceKey.sonarr:
-      return '/api/v3/system/status';
-    case ServiceKey.lidarr:
-      return '/api/v1/system/status';
-    case ServiceKey.qbittorrent:
-      return '/api/v2/app/version';
-    case ServiceKey.bazarr:
-      return '/api/system/status';
-    case ServiceKey.truenas:
-      // Handled over WebSocket in _loadVersion; no REST endpoint.
-      return '';
-    case ServiceKey.dockge:
-      // Handled over Socket.IO in _loadVersion; no REST endpoint.
-      return '';
-    case ServiceKey.prowlarr:
-      return '/api/v1/system/status';
-    case ServiceKey.readarr:
-      return '/api/v1/system/status';
-    case ServiceKey.sabnzbd:
-      // Handled over the query-string API in _loadVersion; no REST endpoint.
-      return '';
-    case ServiceKey.nzbget:
-      // Handled over JSON-RPC in _loadVersion; no REST endpoint.
-      return '';
-    case ServiceKey.unraid:
-      // Handled over GraphQL in _loadVersion; no REST endpoint.
-      return '';
-    case ServiceKey.transmission:
-      // Handled over the RPC envelope in _loadVersion; the endpoint is a POST
-      // with a session-id handshake, not a GET.
-      return '';
-    case ServiceKey.nginxProxyManager:
-      // Handled in _loadVersion, which reads the unauthenticated `GET /api/`
-      // through the client so the token exchange is not paid for a version
-      // string.
-      return '';
-    // Both media-server probes are deliberately the *unauthenticated* ones, so
-    // reachability separates cleanly from credentials: a 200 here with a 401
-    // elsewhere means "the box is up, the token is wrong", which is the single
-    // most common Stream misconfiguration and the one a generic timeout hides.
-    case ServiceKey.jellyfin:
-      return '/System/Info/Public';
-    case ServiceKey.plex:
-      return '/identity';
+/// The envelope the per-client version reads share: one call under this
+/// service's own deadline, an empty string reported as no version at all, and
+/// the client closed whichever way it went.
+///
+/// Nothing is caught here, on purpose. A throw is what tells
+/// [_loadServiceSummary] the service is offline, so swallowing it would report
+/// an unreachable box as online with a blank version — which is exactly what
+/// the qBittorrent branch above does deliberately, and why that branch is not
+/// folded into this helper.
+///
+/// [close] is a `FutureOr` so a client with an asynchronous shutdown could share
+/// this path without the synchronous Dio ones changing shape.
+Future<String?> _versionOrNull(
+  Future<String> Function() read, {
+  required Duration timeout,
+  required FutureOr<void> Function() close,
+}) async {
+  try {
+    final version = await read().timeout(timeout);
+    return version.isNotEmpty ? version : null;
+  } finally {
+    final closing = close();
+    if (closing is Future) await closing;
   }
 }
 
-final servicesTrendingProvider = discoverTrendingProvider;
 final servicesRequestsProvider = requestsProvider;
 final servicesMoviesProvider = moviesProvider;
 final servicesSeriesProvider = seriesProvider;

@@ -17,9 +17,9 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 ///
 /// `jellyfinUserId` is read here rather than passed per call, so choosing a
 /// different household member in settings rebuilds this provider and invalidates
-/// every dependent lens. That is why the browse family below is keyed by
-/// (library, lens, page) and not by viewer: the viewer is part of *which client
-/// you are talking to*, not part of a page's identity.
+/// every dependent lens. That is why nothing downstream is keyed by viewer: the
+/// viewer is part of *which client you are talking to*, not part of a query's
+/// identity.
 /// Field-by-field `select`, not a bare `watch` of the whole `SettingsModel`, and
 /// that is a correctness point rather than a micro-optimisation: this provider
 /// closes a live `Dio` in `onDispose`, so rebuilding it cancels every in-flight
@@ -57,27 +57,11 @@ final jellyfinClientProvider = Provider<JellyfinClient>((ref) {
 /// business knowing whether it is talking to Jellyfin or Plex, and a screen that
 /// takes the interface can be reused for both — which is the entire point of
 /// having it. `cancelToken` now lives on `StreamServerClient` itself, so even the
-/// paged browse below goes through here; the concrete provider stays public only
-/// for the Jellyfin-specific extras (`getViewers` filtering, the raw item mapper)
-/// that genuinely have no cross-server meaning.
+/// cancellable per-item fetches below go through here; the concrete provider
+/// stays public only for the Jellyfin-specific extras (`getViewers` filtering,
+/// the raw item mapper) that genuinely have no cross-server meaning.
 final jellyfinServerProvider = Provider<StreamServerClient>((ref) {
   return ref.watch(jellyfinClientProvider);
-});
-
-/// Server version from the credential-free probe, or null when the box is not
-/// answering.
-///
-/// Deliberately separate from a credential check: this failing means the server
-/// is unreachable, whereas [jellyfinCredentialAcceptedProvider] failing means the
-/// API key is wrong. Collapsing the two is what makes Stream misconfiguration
-/// unreadable.
-final jellyfinVersionProvider = FutureProvider<String?>((ref) async {
-  return ref.watch(jellyfinServerProvider).probeVersion();
-});
-
-/// Whether the stored API key is accepted.
-final jellyfinCredentialAcceptedProvider = FutureProvider<bool>((ref) async {
-  return ref.watch(jellyfinServerProvider).verifyCredential();
 });
 
 /// Everything playing right now, most expensive first.
@@ -107,58 +91,13 @@ final jellyfinViewersProvider = FutureProvider<List<StreamViewer>>((ref) async {
   return ref.watch(jellyfinServerProvider).getViewers();
 });
 
-/// Rows per browse page.
-///
-/// Fifty is a screenful and change on the widest layout, and it stays under the
-/// isolate-mapping threshold so a page costs no port round trip.
-const int kJellyfinLibraryPageSize = 50;
-
-/// Identifies one page of one library under one lens.
-///
-/// A record, so the family key gets structural equality for free — the pattern
-/// `discoverByGenrePageProvider` already uses. The viewer is *not* part of it; see
-/// [jellyfinClientProvider].
-typedef JellyfinLibraryPageKey = ({
-  String libraryId,
-  StreamLibraryLens lens,
-  int page,
-});
-
-/// One page of a library under one lens.
-///
-/// [JellyfinLibraryPageKey.page] is zero-based and converted to the API's
-/// `startIndex` here, so no widget has to know that Jellyfin pages by offset
-/// rather than by page number.
-///
-/// The request is cancelled if the page is disposed before it lands, which for a
-/// list the user is scrolling quickly is most of them.
-///
-/// `autoDispose` is what makes that sentence true. Without it a family entry is
-/// never disposed, so the `onDispose` cancellation below was dead wiring *and*
-/// every page of every library the user ever scrolled — fifty `StreamItem`s
-/// each — stayed resident for the life of the app.
-final jellyfinLibraryItemsProvider = FutureProvider.autoDispose
-    .family<List<StreamItem>, JellyfinLibraryPageKey>((ref, key) async {
-      final client = ref.watch(jellyfinServerProvider);
-      final cancelToken = CancelToken();
-      ref.onDispose(cancelToken.cancel);
-      return client.getLibraryItems(
-        libraryId: key.libraryId,
-        lens: key.lens,
-        startIndex: key.page * kJellyfinLibraryPageSize,
-        limit: kJellyfinLibraryPageSize,
-        cancelToken: cancelToken,
-      );
-    });
-
 /// One item at any depth, by id.
 ///
 /// Resolves from the id alone so `ServiceRoutes.jellyfinItem` works as a deep
 /// link; `state.extra` stays preload/Hero data only.
 ///
-/// `autoDispose` for the same two reasons as the browse family above: every item
-/// ever opened would otherwise be retained forever, and the cancellation below
-/// would never fire.
+/// `autoDispose` for two reasons: every item ever opened would otherwise be
+/// retained forever, and the cancellation below would never fire.
 final jellyfinItemProvider = FutureProvider.autoDispose
     .family<StreamItem?, String>((ref, itemId) async {
       final client = ref.watch(jellyfinServerProvider);

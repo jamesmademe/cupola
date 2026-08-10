@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// NZBGet client bound to the current settings.
 ///
@@ -10,7 +11,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 /// `settings.isServiceConfigured(ServiceKey.nzbget)` before reading.
 final nzbgetClientProvider = Provider<NzbgetClient>((ref) {
   final settings = ref.watch(currentSettingsProvider);
-  if (settings.nzbgetUrl.isEmpty) {
+  if (!settings.isServiceConfigured(ServiceKey.nzbget)) {
     throw Exception('NZBGet not configured');
   }
   final client = NzbgetClient(

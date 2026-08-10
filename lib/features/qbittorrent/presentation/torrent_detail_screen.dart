@@ -666,7 +666,7 @@ class _ActionsTab extends ConsumerWidget {
             action: (service) => service.resumeTorrents([torrent.hash]),
             successMessage: 'Resumed',
             failureMessage: 'Failed to resume',
-            invalidate: [torrentsProvider],
+            invalidate: [torrentsProvider, allTorrentsProvider],
           ),
           icon: const Icon(Icons.play_arrow_rounded, size: 18),
           label: const Text('Resume'),
@@ -683,7 +683,7 @@ class _ActionsTab extends ConsumerWidget {
             action: (service) => service.setForceStart([torrent.hash], true),
             successMessage: 'Force started',
             failureMessage: 'Failed',
-            invalidate: [torrentsProvider],
+            invalidate: [torrentsProvider, allTorrentsProvider],
           ),
           icon: const Icon(Icons.flash_on_rounded, size: 18),
           label: const Text('Force Resume'),
@@ -700,7 +700,7 @@ class _ActionsTab extends ConsumerWidget {
             action: (service) => service.pauseTorrents([torrent.hash]),
             successMessage: 'Paused',
             failureMessage: 'Failed to pause',
-            invalidate: [torrentsProvider],
+            invalidate: [torrentsProvider, allTorrentsProvider],
           ),
           icon: const Icon(Icons.pause_rounded, size: 18),
           label: const Text('Pause'),
@@ -827,7 +827,7 @@ class _ActionsTab extends ConsumerWidget {
           ? 'Download limit set to $label'
           : 'Upload limit set to $label',
       failureMessage: 'Failed to set limit',
-      invalidate: [torrentsProvider],
+      invalidate: [torrentsProvider, allTorrentsProvider],
     );
   }
 
@@ -864,7 +864,7 @@ class _ActionsTab extends ConsumerWidget {
             ? 'Deleted torrent and files'
             : 'Deleted torrent',
         failureMessage: 'Failed to delete',
-        invalidate: [torrentsProvider],
+        invalidate: [torrentsProvider, allTorrentsProvider],
       );
       if (ok && context.mounted) context.pop();
     });

@@ -1,9 +1,15 @@
 import 'package:dio/dio.dart';
 
+import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 
 /// Status codes that carry a `Location` header we are expected to follow.
 const _redirectStatuses = {301, 302, 303, 307, 308};
+
+/// Shared by every client [guardedDio] builds, so a black-holed host fails in
+/// seconds instead of hanging on the socket defaults.
+const _connectTimeout = Duration(seconds: 10);
+const _receiveTimeout = Duration(seconds: 15);
 
 /// Headers that describe a request body. A redirect that downgrades to GET
 /// leaves the body behind, so these stop describing anything.
@@ -190,4 +196,60 @@ class SameOriginRedirectInterceptor extends Interceptor {
 
   static bool _isSameOrigin(Uri a, Uri b) =>
       a.scheme == b.scheme && a.host == b.host && a.port == b.port;
+}
+
+/// The [Dio] every client in this app is built on: redirects followed by hand,
+/// plus the ADR-6 pinned adapter when the user has trusted a certificate for
+/// [baseUrl]'s origin.
+///
+/// The three redirect settings are one decision rather than three.
+/// `followRedirects: false` is what hands a 3xx to
+/// [SameOriginRedirectInterceptor] instead of letting `dart:io` replay the
+/// request — and its credential — at a host the user never configured; the
+/// interceptor is what actually refuses the cross-origin case; and
+/// [allowRedirectStatus] is what stops Dio rejecting those statuses as failures
+/// before the interceptor ever runs. Set any two without the third and the
+/// result is either a leaked credential or a legitimate same-origin redirect
+/// (trailing slash, base-path normalisation) turned into an error. Minting them
+/// together here is what keeps seven call sites from drifting apart; the reason
+/// *each* service cannot afford the leak is documented at its own call site.
+///
+/// [injected] is returned untouched. A caller supplying its own transport — a
+/// test stub, in practice — owns redirect handling and TLS along with it, and
+/// installing a pinned adapter over it would replace the very thing it was
+/// injected to replace.
+///
+/// [certFingerprint], when non-empty, is a self-signed certificate the user
+/// explicitly trusted for this origin (trust-on-first-use, ADR-6). Null or empty
+/// leaves the connection on the platform trust store, which is what keeps every
+/// unpinned service byte-identical to its pre-ADR-6 behaviour. A followed
+/// same-origin redirect goes back out over this same Dio, so it inherits the pin
+/// with no extra wiring.
+Dio guardedDio({
+  required String baseUrl,
+  Dio? injected,
+  String? certFingerprint,
+  Duration? sendTimeout,
+  Map<String, dynamic>? headers,
+}) {
+  if (injected != null) return injected;
+
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: baseUrl,
+      connectTimeout: _connectTimeout,
+      receiveTimeout: _receiveTimeout,
+      sendTimeout: sendTimeout,
+      followRedirects: false,
+      validateStatus: allowRedirectStatus,
+      headers: headers,
+    ),
+  );
+  dio.interceptors.add(SameOriginRedirectInterceptor(dio));
+  final adapter = pinnedHttpClientAdapterFor(
+    baseUrl,
+    pinnedFingerprint: certFingerprint,
+  );
+  if (adapter != null) dio.httpClientAdapter = adapter;
+  return dio;
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Nginx Proxy Manager client bound to the current settings.
 ///
@@ -16,7 +17,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 /// route on the box.
 final npmClientProvider = Provider<NpmClient>((ref) {
   final settings = ref.watch(currentSettingsProvider);
-  if (settings.npmUrl.isEmpty) {
+  if (!settings.isServiceConfigured(ServiceKey.nginxProxyManager)) {
     throw Exception('Nginx Proxy Manager not configured');
   }
   final client = NpmClient(
@@ -52,12 +53,6 @@ final npmOtherHostsProvider = FutureProvider<List<NpmSimpleHost>>((ref) async {
     client.streams(),
   ]);
   return results.expand((hosts) => hosts).toList(growable: false);
-});
-
-/// Access lists, by name only — never with `?expand=items`, which would return
-/// the basic-auth credentials of the sites they protect.
-final npmAccessListsProvider = FutureProvider<List<NpmSimpleHost>>((ref) async {
-  return ref.watch(npmClientProvider).accessLists();
 });
 
 /// The unauthenticated health document — version, and whether this install is

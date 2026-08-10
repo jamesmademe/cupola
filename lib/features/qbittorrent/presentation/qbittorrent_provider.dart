@@ -12,10 +12,11 @@ import 'package:cupola/features/qbittorrent/domain/models/torrent_properties.dar
 import 'package:cupola/features/qbittorrent/domain/models/torrent_tracker.dart';
 import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
   final settings = ref.watch(currentSettingsProvider);
-  if (settings.qbittorrentUrl.isEmpty) {
+  if (!settings.isServiceConfigured(ServiceKey.qbittorrent)) {
     throw Exception('qBittorrent not configured');
   }
   final client = QbittorrentClient(
@@ -155,18 +156,6 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
       .trim()
       .toLowerCase();
 
-  final hasSubFilters =
-      (categoryFilter != null && categoryFilter.isNotEmpty) ||
-      (tagFilter != null && tagFilter.isNotEmpty) ||
-      trackerFilter != null;
-
-  // Fast path: when status filter is "All" and no sub-filters or search
-  // query are active, reuse allTorrentsProvider so we don't double-fetch
-  // /torrents/info.
-  if (filter == TorrentFilter.all && !hasSubFilters && searchQuery.isEmpty) {
-    return await ref.watch(allTorrentsProvider.future);
-  }
-
   final apiFilter = switch (filter) {
     TorrentFilter.downloading => 'downloading',
     TorrentFilter.seeding => 'seeding',
@@ -175,11 +164,20 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
     _ => 'all',
   };
 
-  var torrents = await service.getTorrents(
-    filter: apiFilter,
-    sort: sort.apiValue,
-    reverse: reverse,
-  );
+  // Whenever the server-side filter resolves to "all", reuse
+  // allTorrentsProvider — it requests the very same /torrents/info payload
+  // (no `filter` param, which qB's WebUI v2 defaults to `all`) with the same
+  // sort and direction, and it is already alive on this screen. Fetching
+  // separately here would download and parse the identical body twice on
+  // every 3s poll tick. Sub-filters and the search query are applied
+  // client-side below, so they do not need their own request.
+  var torrents = apiFilter == 'all'
+      ? await ref.watch(allTorrentsProvider.future)
+      : await service.getTorrents(
+          filter: apiFilter,
+          sort: sort.apiValue,
+          reverse: reverse,
+        );
 
   if (filter == TorrentFilter.queued) {
     torrents = torrents.where((t) => t.parsedState.isQueued).toList();

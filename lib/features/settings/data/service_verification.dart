@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/api_client.dart';
@@ -23,54 +25,7 @@ import 'package:cupola/features/unraid/data/unraid_client.dart';
 /// settings kept a separate reachability-only check, so the same instance could
 /// say "rejected the API key" during setup and a shrugging "could not reach it"
 /// afterwards. Both now run through this file, and the health-endpoint table
-/// exists once instead of twice.
-
-/// The endpoint used to prove a service is answering.
-///
-/// Empty for the services that verify over something other than REST — TrueNAS
-/// (WebSocket JSON-RPC), Dockge (Socket.IO), SABnzbd (query-string API), NZBGet
-/// (JSON-RPC) and Unraid (GraphQL), each handled by its own branch below.
-///
-/// Jellyfin's and Plex's entries are **reachability probes, not credential
-/// checks**: both are anonymous endpoints, and neither server reads the
-/// `X-Api-Key` header the shared [ApiClient] sends, so a 2xx here says nothing
-/// at all about the pasted credential. That is why those two verify through
-/// their own clients first and only fall back to this table to explain a
-/// refusal — see [diagnoseCredentials].
-String _healthEndpoint(ServiceKey service) {
-  switch (service) {
-    case ServiceKey.seerr:
-      return '/api/v1/status';
-    case ServiceKey.radarr:
-    case ServiceKey.sonarr:
-      return '/api/v3/system/status';
-    case ServiceKey.lidarr:
-      return '/api/v1/system/status';
-    case ServiceKey.qbittorrent:
-      return '/api/v2/app/version';
-    case ServiceKey.bazarr:
-      return '/api/system/status';
-    case ServiceKey.prowlarr:
-      return '/api/v1/system/status';
-    case ServiceKey.readarr:
-      return '/api/v1/system/status';
-    case ServiceKey.jellyfin:
-      return '/System/Info/Public';
-    case ServiceKey.plex:
-      return '/identity';
-    // Transmission (RPC envelope + session-id handshake) and Nginx Proxy
-    // Manager (token exchange) join this group for the same reason: no plain
-    // GET can separate "reachable" from "authenticated" for either.
-    case ServiceKey.transmission:
-    case ServiceKey.nginxProxyManager:
-    case ServiceKey.truenas:
-    case ServiceKey.dockge:
-    case ServiceKey.sabnzbd:
-    case ServiceKey.nzbget:
-    case ServiceKey.unraid:
-      return '';
-  }
-}
+/// lives once on the registry, as `ServiceKey.statusEndpoint`.
 
 /// The outcome of a connection attempt: the status, why it failed, and the
 /// certificate that explains the failure when one does.
@@ -167,14 +122,16 @@ Future<ServiceDiagnosis> diagnoseCredentials(
   String clientIdentifier = '',
 }) async {
   final pin = certFingerprint.trim().isEmpty ? null : certFingerprint.trim();
+  final user = username.trim().isEmpty ? null : username.trim();
+  final pass = password.isEmpty ? null : password;
   final urlTrimmed = url.trim();
 
   if (service == ServiceKey.dockge) {
     if (urlTrimmed.isEmpty) return const ServiceDiagnosis.notConfigured();
     final client = DockgeClient(
       baseUrl: urlTrimmed,
-      username: username.trim().isEmpty ? null : username.trim(),
-      password: password.isEmpty ? null : password,
+      username: user,
+      password: pass,
       certFingerprint: pin,
     );
     try {
@@ -197,61 +154,52 @@ Future<ServiceDiagnosis> diagnoseCredentials(
     if (urlTrimmed.isEmpty) return const ServiceDiagnosis.notConfigured();
     final client = NzbgetClient(
       url: urlTrimmed,
-      username: username.trim().isEmpty ? null : username.trim(),
-      password: password.isEmpty ? null : password,
+      username: user,
+      password: pass,
       certFingerprint: pin,
     );
-    try {
-      await client.testConnection().timeout(const Duration(seconds: 6));
-      return const ServiceDiagnosis.connected();
-    } catch (e) {
-      return ServiceDiagnosis.failed(e);
-    } finally {
-      client.close();
-    }
+    return _probe(
+      client.testConnection,
+      timeout: const Duration(seconds: 6),
+      close: client.close,
+    );
   }
 
   if (service == ServiceKey.nginxProxyManager) {
     if (urlTrimmed.isEmpty) return const ServiceDiagnosis.notConfigured();
     final client = NpmClient(
       url: urlTrimmed,
-      identity: username.trim().isEmpty ? null : username.trim(),
-      secret: password.isEmpty ? null : password,
+      identity: user,
+      secret: pass,
       certFingerprint: pin,
     );
-    try {
-      // Checks both halves: `GET /api/` proves an NPM is there, and the login
-      // proves the credential. Only the first would go green for a wrong
-      // password, since the admin port answers 200 with its SPA for almost any
-      // request.
-      await client.testConnection().timeout(const Duration(seconds: 10));
-      return const ServiceDiagnosis.connected();
-    } catch (e) {
-      return ServiceDiagnosis.failed(e);
-    } finally {
-      client.close();
-    }
+    // Checks both halves: `GET /api/` proves an NPM is there, and the login
+    // proves the credential. Only the first would go green for a wrong
+    // password, since the admin port answers 200 with its SPA for almost any
+    // request.
+    return _probe(
+      client.testConnection,
+      timeout: const Duration(seconds: 10),
+      close: client.close,
+    );
   }
 
   if (service == ServiceKey.transmission) {
     if (urlTrimmed.isEmpty) return const ServiceDiagnosis.notConfigured();
     final client = TransmissionClient(
       url: urlTrimmed,
-      username: username.trim().isEmpty ? null : username.trim(),
-      password: password.isEmpty ? null : password,
+      username: user,
+      password: pass,
       certFingerprint: pin,
     );
-    try {
-      // `session-get` in one round trip forces the CSRF handshake, validates
-      // the Basic credentials, and proves the rpc/host whitelists admit this
-      // device — the three ways a reachable Transmission still refuses to talk.
-      await client.testConnection().timeout(const Duration(seconds: 8));
-      return const ServiceDiagnosis.connected();
-    } catch (e) {
-      return ServiceDiagnosis.failed(e);
-    } finally {
-      client.close();
-    }
+    // `session-get` in one round trip forces the CSRF handshake, validates
+    // the Basic credentials, and proves the rpc/host whitelists admit this
+    // device — the three ways a reachable Transmission still refuses to talk.
+    return _probe(
+      client.testConnection,
+      timeout: const Duration(seconds: 8),
+      close: client.close,
+    );
   }
 
   // Named, not inferred. This used to read `if (!service.usesApiKey)`, which is
@@ -266,19 +214,16 @@ Future<ServiceDiagnosis> diagnoseCredentials(
     if (urlTrimmed.isEmpty) return const ServiceDiagnosis.notConfigured();
     final client = QbittorrentClient(
       url: urlTrimmed,
-      username: username.trim().isEmpty ? null : username.trim(),
-      password: password.isEmpty ? null : password,
+      username: user,
+      password: pass,
       certFingerprint: pin,
     );
-    try {
-      // Two round trips (login + version), so allow more than a single hop.
-      await client.getVersion().timeout(const Duration(seconds: 8));
-      return const ServiceDiagnosis.connected();
-    } catch (e) {
-      return ServiceDiagnosis.failed(e);
-    } finally {
-      client.close();
-    }
+    // Two round trips (login + version), so allow more than a single hop.
+    return _probe(
+      client.getVersion,
+      timeout: const Duration(seconds: 8),
+      close: client.close,
+    );
   }
 
   if (urlTrimmed.isEmpty || apiKey.trim().isEmpty) {
@@ -291,14 +236,11 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       apiKey: apiKey.trim(),
       certFingerprint: pin,
     );
-    try {
-      await client.testConnection().timeout(const Duration(seconds: 6));
-      return const ServiceDiagnosis.connected();
-    } catch (e) {
-      return ServiceDiagnosis.failed(e);
-    } finally {
-      client.close();
-    }
+    return _probe(
+      client.testConnection,
+      timeout: const Duration(seconds: 6),
+      close: client.close,
+    );
   }
 
   if (service == ServiceKey.unraid) {
@@ -307,14 +249,11 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       apiKey: apiKey.trim(),
       certFingerprint: pin,
     );
-    try {
-      await client.testConnection().timeout(const Duration(seconds: 6));
-      return const ServiceDiagnosis.connected();
-    } catch (e) {
-      return ServiceDiagnosis.failed(e);
-    } finally {
-      client.close();
-    }
+    return _probe(
+      client.testConnection,
+      timeout: const Duration(seconds: 6),
+      close: client.close,
+    );
   }
 
   if (service == ServiceKey.truenas) {
@@ -323,14 +262,11 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       apiKey: apiKey.trim(),
       certFingerprint: pin,
     );
-    try {
-      await client.call('core.ping').timeout(const Duration(seconds: 6));
-      return const ServiceDiagnosis.connected();
-    } catch (e) {
-      return ServiceDiagnosis.failed(e);
-    } finally {
-      await client.close();
-    }
+    return _probe(
+      () => client.call('core.ping'),
+      timeout: const Duration(seconds: 6),
+      close: client.close,
+    );
   }
 
   // The two media servers authenticate with a header the shared `ApiClient`
@@ -399,6 +335,34 @@ Future<ServiceDiagnosis> diagnoseCredentials(
   );
 }
 
+/// The envelope every single-call probe above shares: run it under this
+/// service's own deadline, turn anything thrown into a classified failure, and
+/// close the client whichever way it went.
+///
+/// [timeout] is a parameter rather than a constant because the deadlines are
+/// per-service and deliberate — a client that logs in before it can answer
+/// needs more than one hop's worth of headroom.
+///
+/// [close] is a `FutureOr` so the one asynchronous `close` (TrueNAS, which has a
+/// socket to shut down) and the synchronous Dio ones share this path without
+/// either being rewritten: awaiting a non-future would still be correct, but the
+/// explicit test keeps the sync branches exactly as they were.
+Future<ServiceDiagnosis> _probe(
+  Future<void> Function() run, {
+  required Duration timeout,
+  required FutureOr<void> Function() close,
+}) async {
+  try {
+    await run().timeout(timeout);
+    return const ServiceDiagnosis.connected();
+  } catch (e) {
+    return ServiceDiagnosis.failed(e);
+  } finally {
+    final closing = close();
+    if (closing is Future) await closing;
+  }
+}
+
 /// Reachability and status classification over the shared [ApiClient], which
 /// has been pin-aware since ADR-6 — this is the branch the pinning scope used
 /// to carve out. [pin] threads straight through; when it is null this is
@@ -409,16 +373,17 @@ Future<ServiceDiagnosis> _diagnoseOverApiClient(
   required String apiKey,
   required String? pin,
 }) async {
-  // Fails closed on a routing bug. An empty entry in [_healthEndpoint] means
-  // "this service is verified through its own client", and every one of those
-  // has a branch above. If a new service reaches here without one, the request
-  // below would be `GET ''` — a plain fetch of the base URL — which most of
-  // these servers answer 200 for with their own web UI, *whatever* credential
-  // was supplied. That is a green "Connected" tile for a wrong password: the
-  // exact bug that shipped once for Jellyfin and Plex. Reporting the service as
-  // unreachable is wrong too, but it is wrong in the direction that gets
-  // noticed and cannot mislead anyone into thinking a bad credential works.
-  final endpoint = _healthEndpoint(service);
+  // Fails closed on a routing bug. An empty entry in
+  // [ServiceKey.statusEndpoint] means "this service is verified through its own
+  // client", and every one of those has a branch above. If a new service
+  // reaches here without one, the request below would be `GET ''` — a plain
+  // fetch of the base URL — which most of these servers answer 200 for with
+  // their own web UI, *whatever* credential was supplied. That is a green
+  // "Connected" tile for a wrong password: the exact bug that shipped once for
+  // Jellyfin and Plex. Reporting the service as unreachable is wrong too, but
+  // it is wrong in the direction that gets noticed and cannot mislead anyone
+  // into thinking a bad credential works.
+  final endpoint = service.statusEndpoint;
   if (endpoint.isEmpty) {
     return const ServiceDiagnosis(
       ServiceConnectionStatus.disconnected,

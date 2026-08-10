@@ -5,10 +5,7 @@
 /// read-only dashboard (authors + recent history).
 library;
 
-int _asInt(dynamic value) {
-  if (value is num) return value.toInt();
-  return int.tryParse('$value') ?? 0;
-}
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// An author (the primary library entity in Readarr, analogous to a Lidarr
 /// artist). Books live under authors.
@@ -45,15 +42,16 @@ class ReadarrAuthor {
         ? stats
         : const <String, dynamic>{};
     return ReadarrAuthor(
-      id: _asInt(json['id']),
+      id: intOrNull(json['id']) ?? 0,
       authorName:
           (json['authorName'] ??
                   json['authorNameLastFirst'] ??
                   'Unknown author')
               .toString(),
       monitored: json['monitored'] == true,
-      bookCount: _asInt(statsMap['bookCount'] ?? statsMap['totalBookCount']),
-      bookFileCount: _asInt(statsMap['bookFileCount']),
+      bookCount:
+          intOrNull(statsMap['bookCount'] ?? statsMap['totalBookCount']) ?? 0,
+      bookFileCount: intOrNull(statsMap['bookFileCount']) ?? 0,
       overview: json['overview']?.toString(),
       status: json['status']?.toString(),
     );
@@ -81,7 +79,7 @@ class ReadarrHistoryItem {
   factory ReadarrHistoryItem.fromJson(Map<String, dynamic> json) {
     final author = json['author'];
     return ReadarrHistoryItem(
-      id: _asInt(json['id']),
+      id: intOrNull(json['id']) ?? 0,
       eventType: (json['eventType'] ?? 'unknown').toString(),
       sourceTitle: json['sourceTitle']?.toString(),
       date: DateTime.tryParse(json['date']?.toString() ?? ''),

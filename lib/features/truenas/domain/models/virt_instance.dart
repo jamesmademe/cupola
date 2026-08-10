@@ -92,9 +92,6 @@ class TrueNasVirtInstance {
   bool get isRunning => status.toUpperCase() == 'RUNNING';
   bool get isVm => type.toUpperCase() == 'VM';
 
-  /// Whether this is a legacy KVM VM (managed via the `vm.*` API).
-  bool get isLegacyVm => legacyVmId != null;
-
   /// A legacy KVM VM from `vm.query`. Memory there is in MiB and vCPU count is
   /// `vcpus * cores * threads`; state lives under `status.state`.
   factory TrueNasVirtInstance.fromLegacyVm(Map<String, dynamic> json) {

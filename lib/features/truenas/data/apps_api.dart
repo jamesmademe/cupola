@@ -8,17 +8,12 @@ class TrueNasAppsApi extends TrueNasApiBase {
   Future<List<TrueNasApp>> getApps() =>
       queryList('app.query', TrueNasApp.fromJson);
 
-  Future<TrueNasApp?> getApp(String name) async {
-    final result = await client.call('app.query', [
-      [
-        ['name', '=', name],
-      ],
-    ]);
-    if (result is! List || result.isEmpty) return null;
-    final map = result.first;
-    if (map is! Map) return null;
-    return TrueNasApp.fromJson(Map<String, dynamic>.from(map));
-  }
+  Future<TrueNasApp?> getApp(String name) =>
+      queryFirst('app.query', TrueNasApp.fromJson, [
+        [
+          ['name', '=', name],
+        ],
+      ]);
 
   Future<dynamic> start(String name) => client.callJob('app.start', [name]);
 

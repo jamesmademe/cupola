@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 
-import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
@@ -55,33 +54,19 @@ class SabnzbdClient {
     String? certFingerprint,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        _apiKey = apiKey.trim() {
-    _dio =
-        dio ??
-        Dio(
-          BaseOptions(
-            baseUrl: baseUrl,
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 15),
-            // Follow redirects by hand. This client is the one that most needs
-            // it: the API key travels in the **query string**, and a redirect
-            // is resolved against `$request_uri`, which includes the query by
-            // definition. `dart:io`'s only protection is a header filter — it
-            // cannot strip a credential that is part of the URL — so a single
-            // `return 301 https://elsewhere$request_uri;` in a reverse proxy
-            // delivers the key to another host, where it lands in that
-            // server's access log in plaintext.
-            followRedirects: false,
-            validateStatus: allowRedirectStatus,
-          ),
-        );
-    if (dio == null) {
-      _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
-      final adapter = pinnedHttpClientAdapterFor(
-        baseUrl,
-        pinnedFingerprint: certFingerprint,
-      );
-      if (adapter != null) _dio.httpClientAdapter = adapter;
-    }
+    // Redirects are followed by hand, and this client is the one that most
+    // needs it: the API key travels in the **query string**, and a redirect is
+    // resolved against `$request_uri`, which includes the query by definition.
+    // `dart:io`'s only protection is a header filter — it cannot strip a
+    // credential that is part of the URL — so a single
+    // `return 301 https://elsewhere$request_uri;` in a reverse proxy delivers
+    // the key to another host, where it lands in that server's access log in
+    // plaintext.
+    _dio = guardedDio(
+      baseUrl: baseUrl,
+      injected: dio,
+      certFingerprint: certFingerprint,
+    );
   }
 
   final String baseUrl;

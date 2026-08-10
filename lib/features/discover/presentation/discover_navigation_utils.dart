@@ -8,6 +8,7 @@ import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 Future<bool> openMediaInService({
   required BuildContext context,
@@ -51,7 +52,7 @@ Future<bool> _openMovieInService({
 }) async {
   if (showConfigurationAlert) {
     final settings = ref.read(currentSettingsProvider);
-    if (settings.radarrUrl.isEmpty || settings.radarrApiKey.isEmpty) {
+    if (!settings.isServiceConfigured(ServiceKey.radarr)) {
       _showNotConfiguredDialog(context, 'Radarr');
       return false;
     }
@@ -96,7 +97,7 @@ Future<bool> _openSeriesInService({
 }) async {
   if (showConfigurationAlert) {
     final settings = ref.read(currentSettingsProvider);
-    if (settings.sonarrUrl.isEmpty || settings.sonarrApiKey.isEmpty) {
+    if (!settings.isServiceConfigured(ServiceKey.sonarr)) {
       _showNotConfiguredDialog(context, 'Sonarr');
       return false;
     }

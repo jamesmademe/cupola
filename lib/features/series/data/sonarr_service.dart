@@ -6,19 +6,11 @@ import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 final sonarrServiceProvider = Provider<SonarrService>((ref) {
   final settings = ref.watch(currentSettingsProvider);
-  if (settings.sonarrUrl.isEmpty || settings.sonarrApiKey.isEmpty) {
-    throw Exception('Sonarr not configured');
-  }
-  return SonarrService(
-    ApiClient(
-      baseUrl: settings.sonarrUrl,
-      apiKey: settings.sonarrApiKey,
-      pinnedCertFingerprint: settings.pinForUrl(settings.sonarrUrl),
-    ),
-  );
+  return SonarrService(apiClientFor(settings, ServiceKey.sonarr));
 });
 
 /// Service for interacting with Sonarr API.
@@ -53,12 +45,7 @@ class SonarrService with ArrActivityMixin {
 
   /// Fetches a single series by its Sonarr ID.
   Future<SonarrSeries?> getSeriesById(int seriesId) async {
-    try {
-      final response = await client.get('/api/v3/series/$seriesId');
-      return SonarrSeries.fromJson(response.data as Map<String, dynamic>);
-    } catch (_) {
-      return null;
-    }
+    return fetchItem('series', seriesId, SonarrSeries.fromJson);
   }
 
   @override
@@ -114,16 +101,9 @@ class SonarrService with ArrActivityMixin {
 
   /// Fetches all episodes for a series.
   Future<List<SonarrEpisode>> getEpisodes(int seriesId) async {
-    final response = await client.get(
-      '/api/v3/episode',
-      queryParameters: {'seriesId': seriesId},
-    );
-    final data = response.data as List<dynamic>;
-    return data
-        .map(
-          (episode) => SonarrEpisode.fromJson(episode as Map<String, dynamic>),
-        )
-        .toList(growable: false);
+    return fetchListItems('episode', {
+      'seriesId': seriesId,
+    }, SonarrEpisode.fromJson);
   }
 
   /// Fetches releases for interactive search.

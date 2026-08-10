@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// SABnzbd client bound to the current settings.
 ///
@@ -10,7 +11,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 /// `settings.isServiceConfigured(ServiceKey.sabnzbd)` before reading.
 final sabnzbdClientProvider = Provider<SabnzbdClient>((ref) {
   final settings = ref.watch(currentSettingsProvider);
-  if (settings.sabnzbdUrl.isEmpty || settings.sabnzbdApiKey.isEmpty) {
+  if (!settings.isServiceConfigured(ServiceKey.sabnzbd)) {
     throw Exception('SABnzbd not configured');
   }
   final client = SabnzbdClient(

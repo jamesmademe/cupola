@@ -1,14 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
-import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
-
-/// Timeouts match the newer per-service clients (SABnzbd, NZBGet, Unraid) so a
-/// black-holed host fails in seconds instead of hanging on socket defaults.
-const _connectTimeout = Duration(seconds: 10);
-const _receiveTimeout = Duration(seconds: 15);
 
 /// For endpoints that do real server-side work before answering — Sonarr/Radarr/
 /// Lidarr's `manualimport` walks the folder, parses every release name and runs
@@ -84,32 +78,20 @@ class ApiClient {
     required String baseUrl,
     required Map<String, String> authHeaders,
     String? pinnedCertFingerprint,
-  }) : _dio = Dio(
-         BaseOptions(
-           baseUrl: UrlUtils.normalizeBaseUrl(baseUrl),
-           connectTimeout: _connectTimeout,
-           receiveTimeout: _receiveTimeout,
-           // Redirects are followed by SameOriginRedirectInterceptor instead, so
-           // the credential can never be replayed to an unconfigured host.
-           followRedirects: false,
-           validateStatus: allowRedirectStatus,
-           headers: {
-             ...authHeaders,
-             'Content-Type': 'application/json',
-             'Accept': 'application/json',
-           },
-         ),
-       ) {
-    // A followed same-origin redirect goes out over this same `_dio`, so it
-    // inherits the pinned adapter automatically — no extra wiring needed for
-    // SameOriginRedirectInterceptor to keep honouring the pin.
-    final adapter = pinnedHttpClientAdapterFor(
-      _dio.options.baseUrl,
-      pinnedFingerprint: pinnedCertFingerprint,
-    );
-    if (adapter != null) _dio.httpClientAdapter = adapter;
-    _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
-  }
+  }) : _dio = guardedDio(
+         // Redirects are followed by SameOriginRedirectInterceptor instead, so
+         // the credential header can never be replayed to an unconfigured host.
+         // `dart:io` would: its strip list covers `authorization` and the cookie
+         // headers only, so `X-Api-Key` — and `X-Plex-Token` on the
+         // [authenticatedBy] path — is copied to *any* redirect target.
+         baseUrl: UrlUtils.normalizeBaseUrl(baseUrl),
+         certFingerprint: pinnedCertFingerprint,
+         headers: {
+           ...authHeaders,
+           'Content-Type': 'application/json',
+           'Accept': 'application/json',
+         },
+       );
 
   /// Lets a test swap in a stub transport, the way the per-service clients take
   /// an injected `Dio`.

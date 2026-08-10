@@ -1,14 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 const int _lookupPageSize = 500;
 
 const int _defaultDashboardPageSize = 20;
-const int _defaultListPageSize = 50;
 
 /// Dashboard-ready alias for the underlying Bazarr service.
 ///
@@ -16,66 +15,13 @@ const int _defaultListPageSize = 50;
 /// `settings.isServiceConfigured(ServiceKey.bazarr)` before reading.
 final bazarrServiceProvider = Provider<BazarrService>((ref) {
   final settings = ref.watch(currentSettingsProvider);
-  if (settings.bazarrUrl.isEmpty || settings.bazarrApiKey.isEmpty) {
-    throw Exception('Bazarr not configured');
-  }
-  return BazarrService(
-    ApiClient(
-      baseUrl: settings.bazarrUrl,
-      apiKey: settings.bazarrApiKey,
-      pinnedCertFingerprint: settings.pinForUrl(settings.bazarrUrl),
-    ),
-  );
+  return BazarrService(apiClientFor(settings, ServiceKey.bazarr));
 });
 
 /// Aggregated counts for the Bazarr dashboard stat row.
 final bazarrBadgesProvider = FutureProvider<BazarrBadges>((ref) async {
   return ref.watch(bazarrServiceProvider).getBadges();
 });
-
-/// Paginated wanted episodes (missing subtitles).
-final bazarrWantedEpisodesProvider =
-    FutureProvider.family<BazarrPagedResult<BazarrWantedItem>, int>((
-      ref,
-      start,
-    ) async {
-      return ref
-          .watch(bazarrServiceProvider)
-          .getWantedEpisodes(start: start, length: _defaultDashboardPageSize);
-    });
-
-/// Paginated wanted movies (missing subtitles).
-final bazarrWantedMoviesProvider =
-    FutureProvider.family<BazarrPagedResult<BazarrWantedItem>, int>((
-      ref,
-      start,
-    ) async {
-      return ref
-          .watch(bazarrServiceProvider)
-          .getWantedMovies(start: start, length: _defaultDashboardPageSize);
-    });
-
-/// Library series paged.
-final bazarrSeriesPageProvider =
-    FutureProvider.family<BazarrPagedResult<BazarrSeries>, int>((
-      ref,
-      start,
-    ) async {
-      return ref
-          .watch(bazarrServiceProvider)
-          .getSeries(start: start, length: _defaultListPageSize);
-    });
-
-/// Library movies paged.
-final bazarrMoviesPageProvider =
-    FutureProvider.family<BazarrPagedResult<BazarrMovie>, int>((
-      ref,
-      start,
-    ) async {
-      return ref
-          .watch(bazarrServiceProvider)
-          .getMovies(start: start, length: _defaultListPageSize);
-    });
 
 /// Merged first page of wanted episodes + movies for the dashboard.
 final bazarrDashboardWantedProvider = FutureProvider<List<BazarrWantedItem>>((

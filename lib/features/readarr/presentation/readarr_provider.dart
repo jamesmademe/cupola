@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/features/readarr/data/readarr_service.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Dashboard-ready alias for the underlying Readarr service.
 ///
@@ -11,16 +11,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 /// `settings.isServiceConfigured(ServiceKey.readarr)` before reading.
 final readarrServiceProvider = Provider<ReadarrService>((ref) {
   final settings = ref.watch(currentSettingsProvider);
-  if (settings.readarrUrl.isEmpty || settings.readarrApiKey.isEmpty) {
-    throw Exception('Readarr not configured');
-  }
-  final service = ReadarrService(
-    ApiClient(
-      baseUrl: settings.readarrUrl,
-      apiKey: settings.readarrApiKey,
-      pinnedCertFingerprint: settings.pinForUrl(settings.readarrUrl),
-    ),
-  );
+  final service = ReadarrService(apiClientFor(settings, ServiceKey.readarr));
   // The provider is rebuilt whenever the config changes; close the previous
   // Dio instance so its connections are not leaked.
   ref.onDispose(() => service.client.close());

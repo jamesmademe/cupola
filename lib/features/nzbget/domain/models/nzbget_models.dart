@@ -11,21 +11,11 @@
 library;
 
 import 'package:cupola/core/utils/byte_format.dart';
-
-int _asInt(dynamic value) {
-  if (value is num) return value.toInt();
-  return int.tryParse('$value') ?? 0;
-}
-
-bool _asBool(dynamic value) {
-  if (value is bool) return value;
-  final s = '$value'.toLowerCase();
-  return s == 'true' || s == '1';
-}
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// Recomposes an unsigned 64-bit value from NZBGet's Hi/Lo 32-bit halves.
 int combineHiLo(dynamic hi, dynamic lo) {
-  return _asInt(hi) * (1 << 32) + _asInt(lo);
+  return (intOrNull(hi) ?? 0) * (1 << 32) + (intOrNull(lo) ?? 0);
 }
 
 /// Global download status (`status`).
@@ -50,13 +40,13 @@ class NzbgetStatus {
   factory NzbgetStatus.fromJson(Map<String, dynamic> json) {
     // Prefer the direct MB field; fall back to Hi/Lo bytes if absent.
     final remainingMb = json.containsKey('RemainingSizeMB')
-        ? _asInt(json['RemainingSizeMB'])
+        ? intOrNull(json['RemainingSizeMB']) ?? 0
         : combineHiLo(json['RemainingSizeHi'], json['RemainingSizeLo']) ~/
               (1024 * 1024);
     return NzbgetStatus(
-      downloadRateBytes: _asInt(json['DownloadRate']),
+      downloadRateBytes: intOrNull(json['DownloadRate']) ?? 0,
       remainingSizeMb: remainingMb,
-      paused: _asBool(json['DownloadPaused']),
+      paused: boolOrFalse(json['DownloadPaused']),
     );
   }
 }
@@ -89,14 +79,14 @@ class NzbgetGroup {
 
   factory NzbgetGroup.fromJson(Map<String, dynamic> json) {
     final fileMb = json.containsKey('FileSizeMB')
-        ? _asInt(json['FileSizeMB'])
+        ? intOrNull(json['FileSizeMB']) ?? 0
         : combineHiLo(json['FileSizeHi'], json['FileSizeLo']) ~/ (1024 * 1024);
     final remainingMb = json.containsKey('RemainingSizeMB')
-        ? _asInt(json['RemainingSizeMB'])
+        ? intOrNull(json['RemainingSizeMB']) ?? 0
         : combineHiLo(json['RemainingSizeHi'], json['RemainingSizeLo']) ~/
               (1024 * 1024);
     return NzbgetGroup(
-      nzbId: _asInt(json['NZBID']),
+      nzbId: intOrNull(json['NZBID']) ?? 0,
       name: (json['NZBName'] ?? json['NZBNicename'] ?? 'Unknown').toString(),
       status: (json['Status'] ?? '').toString(),
       category: (json['Category'] ?? '').toString(),
@@ -127,9 +117,9 @@ class NzbgetHistoryItem {
   bool get success => status.toUpperCase().startsWith('SUCCESS');
 
   factory NzbgetHistoryItem.fromJson(Map<String, dynamic> json) {
-    final historyTime = _asInt(json['HistoryTime']);
+    final historyTime = intOrNull(json['HistoryTime']) ?? 0;
     return NzbgetHistoryItem(
-      id: _asInt(json['ID']),
+      id: intOrNull(json['ID']) ?? 0,
       name: (json['Name'] ?? json['NZBName'] ?? 'Unknown').toString(),
       status: (json['Status'] ?? '').toString(),
       category: (json['Category'] ?? '').toString(),

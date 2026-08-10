@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
-import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
@@ -99,29 +98,15 @@ class TransmissionClient {
     String? certFingerprint,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        rpcPath = resolveRpcPath(url) {
-    _dio =
-        dio ??
-        Dio(
-          BaseOptions(
-            baseUrl: baseUrl,
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 15),
-            // Follow redirects by hand so the Basic credential is never
-            // replayed to a host the user did not configure — and so a 303
-            // cannot downgrade this POST to a GET, which Transmission answers
-            // with 405.
-            followRedirects: false,
-            validateStatus: allowRedirectStatus,
-          ),
-        );
-    if (dio == null) {
-      _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
-      final adapter = pinnedHttpClientAdapterFor(
-        baseUrl,
-        pinnedFingerprint: certFingerprint,
-      );
-      if (adapter != null) _dio.httpClientAdapter = adapter;
-    }
+    // Redirects are followed by hand so the Basic credential is never replayed
+    // to a host the user did not configure — `dart:io` copies `Authorization`
+    // from a subdomain to its parent domain — and so a 303 cannot downgrade
+    // this POST to a GET, which Transmission answers with 405.
+    _dio = guardedDio(
+      baseUrl: baseUrl,
+      injected: dio,
+      certFingerprint: certFingerprint,
+    );
   }
 
   /// Header Transmission uses for its CSRF token, in both directions.
@@ -469,11 +454,6 @@ class TransmissionClient {
     await _call('torrent-start', _idsArgument(ids));
   }
 
-  /// Starts immediately, bypassing the queue.
-  Future<void> startNow(List<String> ids) async {
-    await _call('torrent-start-now', _idsArgument(ids));
-  }
-
   Future<void> stop(List<String> ids) async {
     await _call('torrent-stop', _idsArgument(ids));
   }
@@ -559,35 +539,9 @@ class TransmissionClient {
     });
   }
 
-  /// Replaces a torrent's labels.
-  ///
-  /// Replace, not merge — that is what `torrent-set` does, and saying so here is
-  /// the guard: an *arr stack routinely tags its torrents, and a caller that
-  /// passes one new label wipes the rest.
-  Future<void> setLabels(List<String> ids, List<String> labels) async {
-    await _call('torrent-set', {..._idsArgument(ids), 'labels': labels});
-  }
-
   /// Moves torrents within the queue.
   Future<void> queueMove(List<String> ids, TransmissionQueueMove move) async {
     await _call(move.method, _idsArgument(ids));
-  }
-
-  /// Global speed limits, in **kilobytes** per second (see [setSpeedLimits]).
-  Future<void> setGlobalLimits({
-    int? downloadKbPerSec,
-    int? uploadKbPerSec,
-  }) async {
-    await _call('session-set', {
-      if (downloadKbPerSec != null) ...{
-        'speed-limit-down': downloadKbPerSec,
-        'speed-limit-down-enabled': downloadKbPerSec > 0,
-      },
-      if (uploadKbPerSec != null) ...{
-        'speed-limit-up': uploadKbPerSec,
-        'speed-limit-up-enabled': uploadKbPerSec > 0,
-      },
-    });
   }
 
   /// Turns the alternative ("turtle") speed limits on or off — Transmission's

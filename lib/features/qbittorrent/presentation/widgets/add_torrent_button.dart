@@ -217,6 +217,7 @@ class AddTorrentButton extends ConsumerWidget {
                         );
                       }
                       ref.invalidate(torrentsProvider);
+                      ref.invalidate(allTorrentsProvider);
                       Navigator.of(ctx2).pop();
                       if (context.mounted) {
                         SnackBarHelper.success(
