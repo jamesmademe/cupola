@@ -181,10 +181,61 @@ void main() {
       );
 
       expect(client.lastGetPath, '/api/v3/queue');
-      expect(client.lastGetQueryParameters, const {'includeMovie': true});
+      expect(client.lastGetQueryParameters, const {
+        'page': 1,
+        'pageSize': 200,
+        'includeMovie': true,
+      });
       expect(items, [
         {'id': 1, 'title': 'Queued'},
       ]);
+    });
+
+    test('getQueue pages through until totalRecords is reached', () async {
+      client.getResponseQueue.addAll([
+        {
+          'records': [
+            for (var id = 0; id < 200; id++) {'id': id, 'title': 'Queued'},
+          ],
+          'totalRecords': 250,
+        },
+        {
+          'records': [
+            for (var id = 200; id < 250; id++) {'id': id, 'title': 'Queued'},
+          ],
+          'totalRecords': 250,
+        },
+      ]);
+
+      final items = await service.getQueue();
+
+      expect(items, hasLength(250));
+      expect(client.getCallCount, 2);
+      expect(client.lastGetQueryParameters, containsPair('page', 2));
+      expect(items.last['id'], 249);
+    });
+
+    test('getBlocklist returns every page', () async {
+      client.getResponseQueue.addAll([
+        {
+          'records': [
+            for (var id = 0; id < 200; id++) {'id': id, 'sourceTitle': 'X'},
+          ],
+          'totalRecords': 210,
+        },
+        {
+          'records': [
+            for (var id = 200; id < 210; id++) {'id': id, 'sourceTitle': 'X'},
+          ],
+          'totalRecords': 210,
+        },
+      ]);
+
+      final items = await service.getBlocklist();
+
+      expect(items, hasLength(210));
+      expect(client.lastGetPath, '/api/v3/blocklist');
+      expect(client.getCallCount, 2);
     });
 
     test('getHistory forwards optional query parameters', () async {

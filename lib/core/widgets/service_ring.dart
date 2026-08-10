@@ -1,15 +1,11 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:reel_text/reel_text.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/reel_motion.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/widgets/reel_line.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The ring gives up size as the reading size grows, so the copy beside it never
@@ -620,59 +616,24 @@ class _ServiceRingPainter extends CustomPainter {
 /// than a service's, because colouring "your lab" with one service's identity
 /// would privilege it over the other fourteen.
 class OnePunchline extends StatelessWidget {
-  const OnePunchline({super.key, this.style}) : assembling = false;
-
-  /// The claim as a split-flap board resolving into itself, once, on mount.
-  ///
-  /// **This is the only decorative roll in the app, and it is deliberately not
-  /// available anywhere else.** Every other `reel_text` surface animates because
-  /// a value changed and the change is the information; this one animates a
-  /// string that never changes, which both this project's motion rule ("motion
-  /// is a response to the user, never ambient theatre") and the package's own
-  /// guidance would otherwise reject.
-  ///
-  /// It is allowed here on three conditions, all of which the door meets and no
-  /// other surface does. The onboarding door is the single **Persuade** moment
-  /// in an Operate product — its job is to make a claim, not to complete a task.
-  /// It plays **once per install**, so it is an entrance rather than a loop; the
-  /// beat is over before the first tap and can never be sat through twice. And
-  /// it is choreographed *with* the screen's existing authored moment rather
-  /// than beside it: the ring's `durationXl` entrance and this assemble share
-  /// one clock, so the room lights and the claim resolves as a single movement.
-  ///
-  /// `/services`' empty state uses the plain constructor. Same claim, same ring,
-  /// no assemble — that surface is a state the user can arrive at repeatedly.
-  const OnePunchline.assembling({super.key, this.style}) : assembling = true;
+  const OnePunchline({super.key, this.style});
 
   /// Defaults to `displayMedium` — the ramp's own step between a heading and a
   /// hero line. Pass a smaller role where the claim is a caption, not the door.
   final TextStyle? style;
 
-  /// Whether the claim rolls itself into place on mount.
-  final bool assembling;
-
   static const _appInk = AppColors.primary;
   static const _stackInk = AppColors.navActivity;
   static const _spoken = 'A Cupola over your lab.';
-
-  /// The two painted lines, longest first. The assemble's landing beat is
-  /// aligned off the longest one.
-  static const _leadLine = 'A Cupola over';
   static const _markedLine = 'your lab.';
-
-  /// Marker alpha per brightness. Two values, not one: 12% is invisible on a
-  /// light ground and 20% is a block on a near-black one.
-  static double _markerAlpha(bool isDark) => isDark ? 0.16 : 0.20;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final base = (style ?? theme.textTheme.displayMedium!)
         .weight(FontWeight.w800)
         .copyWith(color: scheme.onSurface, height: 1.02);
-    final alpha = _markerAlpha(isDark);
 
     // Both inks resolve against the composite they sit on. The cyan proves why
     // that is not optional: raw #06B6D4 measures 8.1:1 on `surface-dark` but
@@ -685,266 +646,31 @@ class OnePunchline extends StatelessWidget {
     final stackInk = ServiceTheme.onTint(
       _stackInk,
       surface: scheme.surface,
-      tintAlpha: alpha,
+      tintAlpha: 0,
     );
-
-    final leadSpan = TextSpan(
-      children: [
-        const TextSpan(text: 'A '),
-        TextSpan(
-          text: 'Cupola',
-          style: TextStyle(color: appInk),
-        ),
-        const TextSpan(text: ' over'),
-      ],
-    );
-
-    final markedStyle = base.copyWith(color: stackInk);
-    final markedSpan = TextSpan(text: _markedLine);
-
-    // Both lines land on the same beat: the shorter one starts later by exactly
-    // the stagger it saves, so the board finishes as one board. See
-    // `ReelMotion.headline`.
-    const lead = _leadLine.length;
-    const marked = _markedLine.length;
 
     return Semantics(
       label: _spoken,
       excludeSemantics: true,
-      // **One decision for the whole claim, taken here rather than per line.**
-      // Each line used to gate itself on whether it fit, and at a 1.8x reading
-      // size that produced the worst of both: "A Cupola over" was too wide to
-      // roll so it wrapped and rendered plainly, while "your lab." still fit and
-      // duly sat there as `gurz nyy.` above the real sentence. Half a settled
-      // claim beside half a scrambled one is worse than either whole. So the
-      // composition assembles only if *every* line — and every line's mask — can
-      // hold its own single line at the user's reading size.
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final canAssemble =
-              assembling &&
-              !MediaQuery.disableAnimationsOf(context) &&
-              _AssemblingLine.canRoll(
-                context,
-                lines: {leadSpan: base, markedSpan: markedStyle},
-                maxWidth: constraints.maxWidth,
-              );
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (canAssemble)
-                _AssemblingLine(
-                  span: leadSpan,
-                  plain: _leadLine,
-                  style: base,
-                  delay: ReelMotion.headlineLeadIn,
-                )
-              else
-                Text.rich(leadSpan, style: base),
-              _Marker(
-                fill: _stackInk.withValues(alpha: alpha),
-                child: canAssemble
-                    ? _AssemblingLine(
-                        span: markedSpan,
-                        plain: _markedLine,
-                        style: markedStyle,
-                        delay:
-                            ReelMotion.headlineLeadIn +
-                            ReelMotion.headlineStagger * (lead - marked),
-                      )
-                    : Text(_markedLine, style: markedStyle),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// One line of the claim, flipping from a filler board into its real glyphs.
-///
-/// Mounts showing [_mask] — the claim's own letters rotated half the alphabet,
-/// so `A Cupola over` starts as `N Phcbyn bire` — and rolls to the real span
-/// one [delay] later. A same-length mask rather than an empty string is what
-/// keeps the line's *height* constant from the very first frame: an empty
-/// [ReelText] measures no line box, so starting blank would shift the whole
-/// composition down as the text arrived, and the fix for that would be a
-/// hard-coded height wrapped around a `Text`, which this design system bans
-/// outright.
-///
-/// **A rotation rather than a filler glyph, and that is a width decision before
-/// it is an aesthetic one.** The first version masked every non-space character
-/// with `0`, on the assumption that a digit is about letter-width in Inter. It is
-/// not — Inter's digits are near-monospaced and markedly wider than average
-/// lowercase — so the mask measured wider than the line it stood in for and ran
-/// straight off the right edge of the phone. A rotation reuses the claim's own
-/// letters, which keeps the mask's width in the same neighbourhood as the target
-/// by construction. It also simply looks like what it is meant to look like: a
-/// flap board one turn away from settling, rather than a field of zeros that
-/// reads as a failed load.
-///
-/// Even so the mask is *measured*, not trusted: [build] gates on the wider of
-/// mask and target. Gating on the target alone is what let the zero mask through
-/// — the check passed on the string the widget ends at while the string it starts
-/// at overflowed.
-///
-/// The line does not assemble at all when either string would miss its single
-/// line at the user's reading size. `ReelText` cannot wrap, so the alternative is
-/// a display headline running off the screen — and a mask makes that failure
-/// worse than a plain overflow, because the first thing painted is filler with no
-/// animation yet to explain it.
-class _AssemblingLine extends StatefulWidget {
-  const _AssemblingLine({
-    required this.span,
-    required this.plain,
-    required this.style,
-    required this.delay,
-  });
-
-  final InlineSpan span;
-  final String plain;
-  final TextStyle style;
-  final Duration delay;
-
-  /// Rotates every ASCII letter by half the alphabet, leaving spaces and
-  /// punctuation alone and preserving span structure — so the accent colours are
-  /// already in place before the words are, and the word rhythm is legible before
-  /// a single word is.
-  static InlineSpan _mask(InlineSpan span) {
-    if (span is TextSpan) {
-      return TextSpan(
-        text: span.text == null ? null : _rot13(span.text!),
-        style: span.style,
-        children: span.children?.map(_mask).toList(growable: false),
-      );
-    }
-    return span;
-  }
-
-  static String _rot13(String value) => String.fromCharCodes([
-    for (final unit in value.codeUnits)
-      if (unit >= 0x61 && unit <= 0x7A) // a-z
-        (unit - 0x61 + 13) % 26 + 0x61
-      else if (unit >= 0x41 && unit <= 0x5A) // A-Z
-        (unit - 0x41 + 13) % 26 + 0x41
-      else
-        unit,
-  ]);
-
-  /// Whether every one of [lines] can assemble inside [maxWidth].
-  ///
-  /// Checks each line's target **and** its mask, because the widget paints both
-  /// and a gate on the target alone passes a mask that overflows — which is
-  /// exactly how a digit mask once ran off the right edge of a phone.
-  static bool canRoll(
-    BuildContext context, {
-    required Map<InlineSpan, TextStyle> lines,
-    required double maxWidth,
-  }) => lines.entries.every((line) {
-    bool fits(InlineSpan span) => ReelLine.fitsOneLine(
-      context,
-      span: TextSpan(style: line.value, children: [span]),
-      maxWidth: maxWidth,
-    );
-    return fits(line.key) && fits(_mask(line.key));
-  });
-
-  @override
-  State<_AssemblingLine> createState() => _AssemblingLineState();
-}
-
-class _AssemblingLineState extends State<_AssemblingLine> {
-  bool _settled = false;
-  Timer? _start;
-
-  @override
-  void initState() {
-    super.initState();
-    _start = Timer(widget.delay, () {
-      if (mounted) setState(() => _settled = true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _start?.cancel();
-    super.dispose();
-  }
-
-  /// The line's settled single-line height, from [widget.style]'s font metrics
-  /// alone rather than from whichever glyphs are on screen — so it is identical
-  /// for the mask and the real span, and for every frame of the roll between
-  /// them.
-  double _settledHeight(BuildContext context) {
-    final painter = TextPainter(
-      text: TextSpan(text: widget.plain, style: widget.style),
-      textDirection: Directionality.of(context),
-      textScaler: MediaQuery.textScalerOf(context),
-      maxLines: 1,
-    )..layout();
-    final height = painter.height;
-    painter.dispose();
-    return height;
-  }
-
-  @override
-  // Pinned to its settled height, because `ReelText` paints its travelling
-  // glyphs outside its own layout bounds mid-roll (see [ReelLine]) and the
-  // claim's beat is bottom-anchored (`MainAxisAlignment.end` in
-  // `OnboardingBeat`) — so a roll whose box is even briefly a different height
-  // reflows the paragraph and buttons below it the instant the box snaps back
-  // to size. `OverflowBox` lets `ReelText` lay out, and bleed paint, at
-  // whatever height the roll wants without that height ever reaching this
-  // widget's own parent; `ClipRect` still does the painting clip [ReelLine]
-  // describes — here against the fixed settled height rather than the child's
-  // own, possibly transient, size.
-  Widget build(BuildContext context) => SizedBox(
-    height: _settledHeight(context),
-    child: ClipRect(
-      child: OverflowBox(
-        alignment: Alignment.topLeft,
-        minHeight: 0,
-        maxHeight: double.infinity,
-        child: ReelText.rich(
-          _settled ? widget.span : _AssemblingLine._mask(widget.span),
-          style: widget.style,
-          options: ReelMotion.headline,
-          semanticsLabel: widget.plain,
-        ),
-      ),
-    ),
-  );
-}
-
-/// A quiet marker behind a phrase.
-///
-/// Drawn in a [Stack] rather than as padding on a container: padding insets the
-/// glyphs, which pushes the phrase off the left margin the line above it aligns
-/// to. The plate reaches past the text instead.
-class _Marker extends StatelessWidget {
-  const _Marker({required this.child, required this.fill});
-
-  final Widget child;
-  final Color fill;
-
-  @override
-  Widget build(BuildContext context) => Stack(
-    children: [
-      Positioned(
-        left: -7,
-        right: -7,
-        top: 5,
-        bottom: 5,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: fill,
-            borderRadius: BorderRadius.circular(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              children: [
+                const TextSpan(text: 'A '),
+                TextSpan(
+                  text: 'Cupola',
+                  style: TextStyle(color: appInk),
+                ),
+                const TextSpan(text: ' over'),
+              ],
+            ),
+            style: base,
           ),
-        ),
+          Text(_markedLine, style: base.copyWith(color: stackInk)),
+        ],
       ),
-      child,
-    ],
-  );
+    );
+  }
 }

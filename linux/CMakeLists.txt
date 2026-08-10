@@ -90,6 +90,8 @@ install(CODE "
 
 set(INSTALL_BUNDLE_DATA_DIR "${CMAKE_INSTALL_PREFIX}/data")
 set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib")
+set(INSTALL_DESKTOP_DIR "${CMAKE_INSTALL_PREFIX}/share/applications")
+set(INSTALL_ICON_DIR "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor")
 
 install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime)
@@ -120,6 +122,19 @@ install(CODE "
   " COMPONENT Runtime)
 install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
+
+# Install the freedesktop launcher alongside the relocatable application bundle.
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/runner/cupola.desktop"
+  DESTINATION "${INSTALL_DESKTOP_DIR}"
+  RENAME "${APPLICATION_ID}.desktop"
+  COMPONENT Runtime)
+
+foreach(icon_size 16 32 48 64 128 256)
+  install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/runner/icons/hicolor/${icon_size}x${icon_size}/apps/cupola.png"
+    DESTINATION "${INSTALL_ICON_DIR}/${icon_size}x${icon_size}/apps"
+    COMPONENT Runtime)
+endforeach()
 
 # Install the AOT library on non-Debug builds only.
 if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")

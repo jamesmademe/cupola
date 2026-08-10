@@ -17,11 +17,22 @@ import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 export 'package:cupola/features/activity/domain/global_activity_status.dart'
     show GlobalActivityKind;
 
 final activityRefreshVersionProvider = StateProvider<int>((ref) => 0);
+
+/// Bumped by the 15s "Now" poll, and only by it.
+///
+/// Separate from [activityRefreshVersionProvider] on purpose: a poll tick must
+/// reload the queues — the only rows that change by the second — without
+/// refetching the Seerr request history, which is settled until the user acts
+/// on it. Refetching every page of it every 15 seconds is a cost that grows
+/// with the library for a list that is usually identical to the one already on
+/// screen.
+final activityQueuePollVersionProvider = StateProvider<int>((ref) => 0);
 
 const _globalActivityPageSize = 50;
 
@@ -155,10 +166,11 @@ class GlobalActivityItem {
 /// `autoDispose` so the timer only runs while something is watching it — the
 /// screen watches it exclusively from the Now section, so leaving the tab or
 /// switching to History stops the polling instead of quietly refetching three
-/// services forever.
+/// services forever. Each tick bumps the queue-only version: the queues are
+/// live data, the Seerr requests are not.
 final activityNowPollingProvider = Provider.autoDispose<void>((ref) {
   final timer = Timer.periodic(_nowPollInterval, (_) {
-    ref.read(activityRefreshVersionProvider.notifier).state++;
+    ref.read(activityQueuePollVersionProvider.notifier).state++;
   });
   ref.onDispose(timer.cancel);
 });
@@ -185,6 +197,7 @@ final configuredActivityServicesProvider = Provider<List<ServiceKey>>((ref) {
 
 final globalActivityFeedProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
+  ref.watch(activityQueuePollVersionProvider);
   return _merge(
     await Future.wait([
       _loadRequestResult(ref),
@@ -196,6 +209,7 @@ final globalActivityFeedProvider = FutureProvider<ActivityFeed>((ref) async {
 
 final globalQueueItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
+  ref.watch(activityQueuePollVersionProvider);
   return _merge(
     await Future.wait(_loadArrResults(ref, GlobalActivityKind.queue)),
   );
@@ -203,8 +217,13 @@ final globalQueueItemsProvider = FutureProvider<ActivityFeed>((ref) async {
 
 /// "Now" bucket: active downloads (queue) plus current Seerr requests, so
 /// requests remain first-class in the unified view.
+///
+/// Watches both versions: the poll tick (queues only, requests served from the
+/// `requestsProvider` cache) and the manual refresh version (everything fresh,
+/// requests invalidated by the pull).
 final globalNowItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
+  ref.watch(activityQueuePollVersionProvider);
   return _merge(
     await Future.wait([
       _loadRequestResult(ref),
@@ -219,23 +238,9 @@ final globalRequestItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   return _merge([await _loadRequestResult(ref)]);
 });
 
-final globalHistoryItemsProvider = FutureProvider<ActivityFeed>((ref) async {
-  ref.watch(activityRefreshVersionProvider);
-  return _merge(
-    await Future.wait(_loadArrResults(ref, GlobalActivityKind.history)),
-  );
-});
-
-final globalWantedItemsProvider = FutureProvider<ActivityFeed>((ref) async {
-  ref.watch(activityRefreshVersionProvider);
-  return _merge(
-    await Future.wait([
-      ..._loadArrResults(ref, GlobalActivityKind.missing),
-      ..._loadArrResults(ref, GlobalActivityKind.cutoff),
-    ]),
-  );
-});
-
+/// Blocklist, complete: `getBlocklist` now pages every record, so a one-shot
+/// provider is all this bucket needs — blocklists are small enough that
+/// fetching them whole is one request, unlike History or Wanted.
 final globalBlocklistItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
   return _merge(
@@ -243,19 +248,312 @@ final globalBlocklistItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   );
 });
 
-final globalMissingItemsProvider = FutureProvider<ActivityFeed>((ref) async {
-  ref.watch(activityRefreshVersionProvider);
-  return _merge(
-    await Future.wait(_loadArrResults(ref, GlobalActivityKind.missing)),
-  );
-});
+/// History, paged: the first window loads, "load more" fetches the rest.
+///
+/// History is the one bucket whose full contents can be thousands of rows with
+/// embedded series/episode data — several megabytes and a dozen requests if
+/// fetched up front. The official web UI pages it, and so does this: a window
+/// of 50 per service, then explicit "load more" pages.
+final globalHistoryFeedProvider =
+    NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
+      () => PagedArrFeedNotifier(kinds: const [GlobalActivityKind.history]),
+    );
 
-final globalCutoffItemsProvider = FutureProvider<ActivityFeed>((ref) async {
-  ref.watch(activityRefreshVersionProvider);
-  return _merge(
-    await Future.wait(_loadArrResults(ref, GlobalActivityKind.cutoff)),
-  );
-});
+/// Wanted "All" bucket: missing and cutoff unmet, paged like History.
+final globalWantedFeedProvider =
+    NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
+      () => PagedArrFeedNotifier(
+        kinds: const [GlobalActivityKind.missing, GlobalActivityKind.cutoff],
+      ),
+    );
+
+final globalMissingFeedProvider =
+    NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
+      () => PagedArrFeedNotifier(kinds: const [GlobalActivityKind.missing]),
+    );
+
+final globalCutoffFeedProvider =
+    NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
+      () => PagedArrFeedNotifier(kinds: const [GlobalActivityKind.cutoff]),
+    );
+
+/// How many records the first page of a paged bucket asks for.
+///
+/// Matches the web UI's initial page size, so the first paint costs the same
+/// three requests it always did — just with pages big enough to matter.
+const _pagedInitialPageSize = 50;
+
+/// Page size for every "load more" page after the first.
+///
+/// 200 is the server's own cap for the queue and sits well inside every
+/// endpoint's tolerance, which makes a huge list close in one or two taps
+/// instead of a dozen.
+const _pagedMorePageSize = 200;
+
+/// One (kind, service) pair's progress through a paged bucket.
+class PagedCursor {
+  final int fetched;
+  final int nextPage;
+  final bool lastPageFull;
+  final bool configured;
+  final Object? error;
+
+  const PagedCursor({
+    required this.fetched,
+    required this.nextPage,
+    required this.lastPageFull,
+    required this.configured,
+    this.error,
+  });
+
+  /// Whether another page might exist.
+  ///
+  /// The \*arr page endpoints do not hand their total count to callers of this
+  /// shape, so "full last page" is the proxy: a page that came back with fewer
+  /// records than requested was the last one. The only cost of the heuristic is
+  /// one extra empty page when a list ends exactly on a page boundary.
+  bool get hasMore => lastPageFull;
+
+  bool get failed => error != null;
+}
+
+/// The window a paged bucket currently shows.
+///
+/// [feed] deliberately keeps the same shape the one-shot buckets produce — the
+/// screen's four branches (loading, nothing configured, all failed, data) only
+/// need a feed and a retry callback, and they get exactly those.
+class PagedArrFeedState {
+  final ActivityFeed? feed;
+  final bool refreshing;
+  final bool loadingMore;
+  final bool loadMoreFailed;
+  final Map<(GlobalActivityKind, ServiceType), PagedCursor> cursors;
+
+  const PagedArrFeedState({
+    this.feed,
+    this.refreshing = false,
+    this.loadingMore = false,
+    this.loadMoreFailed = false,
+    this.cursors = const {},
+  });
+
+  PagedArrFeedState copyWith({
+    ActivityFeed? feed,
+    bool? refreshing,
+    bool? loadingMore,
+    bool? loadMoreFailed,
+    Map<(GlobalActivityKind, ServiceType), PagedCursor>? cursors,
+  }) {
+    return PagedArrFeedState(
+      feed: feed ?? this.feed,
+      refreshing: refreshing ?? this.refreshing,
+      loadingMore: loadingMore ?? this.loadingMore,
+      loadMoreFailed: loadMoreFailed ?? this.loadMoreFailed,
+      cursors: cursors ?? this.cursors,
+    );
+  }
+
+  bool get hasMore => cursors.values.any((c) => c.hasMore);
+}
+
+/// Loads a bucket's records a window at a time, the way the official web UI
+/// pages its History, Wanted and Blocklist tables.
+///
+/// `build` watches [activityRefreshVersionProvider] so the one pull-to-refresh
+/// mechanism reloads every bucket that is alive, paged or not; the previous
+/// feed stays on screen (with the hairline "refreshing" bar) until the first
+/// pages come back. [loadMore] then fetches the next page of every pair that
+/// has one, in parallel, and re-merges — the merged feed is re-sorted whole, so
+/// the severity-first order stays an order, not a per-page concatenation.
+class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
+  PagedArrFeedNotifier({required this.kinds});
+
+  /// The record kinds this bucket pages over, in display order.
+  final List<GlobalActivityKind> kinds;
+
+  /// Accumulated items per (kind, service type) pair.
+  final Map<(GlobalActivityKind, ServiceType), List<GlobalActivityItem>>
+  _items = {};
+
+  /// The most recent first-page load, so tests can await it.
+  Future<void> _loading = Future.value();
+
+  /// Guards the first-page loads against each other and against [loadMore]:
+  /// whoever bumps the generation last owns `_items` and `state`.
+  int _generation = 0;
+
+  /// The first-page load, awaitable for tests.
+  Future<void> get loading => _loading;
+
+  @override
+  PagedArrFeedState build() {
+    ref.watch(activityRefreshVersionProvider);
+    final previous = stateOrNull;
+    _loading = _reload();
+    return previous?.copyWith(refreshing: true) ?? const PagedArrFeedState();
+  }
+
+  /// Fetches the next page of every pair that still has one, in parallel, and
+  /// merges the result into the window.
+  Future<void> loadMore() async {
+    final current = state;
+    if (current.feed == null || current.loadingMore || !current.hasMore) return;
+
+    final generation = _generation;
+    state = current.copyWith(loadingMore: true, loadMoreFailed: false);
+
+    final pairs = [
+      for (final entry in current.cursors.entries)
+        if (entry.value.hasMore) entry.key,
+    ];
+    final fetched =
+        <(GlobalActivityKind, ServiceType), List<GlobalActivityItem>>{};
+    await Future.wait([for (final pair in pairs) _loadNextPage(pair, fetched)]);
+
+    if (generation != _generation) return;
+
+    for (final entry in fetched.entries) {
+      _items.putIfAbsent(entry.key, () => []).addAll(entry.value);
+    }
+
+    final cursors = <(GlobalActivityKind, ServiceType), PagedCursor>{};
+    for (final entry in current.cursors.entries) {
+      final pair = entry.key;
+      final cursor = entry.value;
+      final extra = fetched[pair];
+      cursors[pair] = PagedCursor(
+        fetched: cursor.fetched + (extra?.length ?? 0),
+        nextPage: cursor.nextPage + (extra == null ? 0 : 1),
+        lastPageFull: (extra?.length ?? 0) == _pagedMorePageSize,
+        configured: cursor.configured,
+        error: cursor.error,
+      );
+    }
+
+    state = PagedArrFeedState(feed: _buildFeed(cursors), cursors: cursors);
+  }
+
+  Future<void> _reload() async {
+    final generation = ++_generation;
+    _items.clear();
+
+    final cursors = <(GlobalActivityKind, ServiceType), PagedCursor>{};
+    final loaded =
+        <(GlobalActivityKind, ServiceType), List<GlobalActivityItem>>{};
+    final settings = ref.read(settingsProvider);
+
+    await Future.wait([
+      for (final kind in kinds)
+        for (final serviceType in _arrActivityServiceTypes)
+          _loadFirstPage(kind, serviceType, settings, cursors, loaded),
+    ]);
+
+    if (generation != _generation) return;
+
+    for (final entry in loaded.entries) {
+      // Growable copy: `loadMore` appends to these lists.
+      _items[entry.key] = [...entry.value];
+    }
+
+    state = PagedArrFeedState(feed: _buildFeed(cursors), cursors: cursors);
+  }
+
+  Future<void> _loadFirstPage(
+    GlobalActivityKind kind,
+    ServiceType serviceType,
+    SettingsModel settings,
+    Map<(GlobalActivityKind, ServiceType), PagedCursor> cursors,
+    Map<(GlobalActivityKind, ServiceType), List<GlobalActivityItem>> loaded,
+  ) async {
+    final service = _serviceKeyFor(serviceType);
+    final pair = (kind, serviceType);
+    if (!settings.isServiceConfigured(service)) {
+      cursors[pair] = PagedCursor(
+        fetched: 0,
+        nextPage: 1,
+        lastPageFull: false,
+        configured: false,
+      );
+      return;
+    }
+
+    try {
+      final arrService = ref.read(resolvedArrServiceProvider(serviceType));
+      final raw = await _loadRawItems(
+        arrService,
+        kind,
+        page: 1,
+        pageSize: _pagedInitialPageSize,
+      );
+      final mapped = raw
+          .whereType<Map>()
+          .map((item) => _arrItem(kind, serviceType, stringKeyMap(item)))
+          .toList(growable: false);
+      loaded[pair] = mapped;
+      cursors[pair] = PagedCursor(
+        fetched: mapped.length,
+        nextPage: 2,
+        lastPageFull: mapped.length == _pagedInitialPageSize,
+        configured: true,
+      );
+    } catch (error) {
+      cursors[pair] = PagedCursor(
+        fetched: 0,
+        nextPage: 1,
+        lastPageFull: false,
+        configured: true,
+        error: error,
+      );
+    }
+  }
+
+  Future<void> _loadNextPage(
+    (GlobalActivityKind, ServiceType) pair,
+    Map<(GlobalActivityKind, ServiceType), List<GlobalActivityItem>> fetched,
+  ) async {
+    final (kind, serviceType) = pair;
+    final cursor = state.cursors[pair];
+    if (cursor == null || !cursor.hasMore) return;
+
+    try {
+      final arrService = ref.read(resolvedArrServiceProvider(serviceType));
+      final raw = await _loadRawItems(
+        arrService,
+        kind,
+        page: cursor.nextPage,
+        pageSize: _pagedMorePageSize,
+      );
+      fetched[pair] = raw
+          .whereType<Map>()
+          .map((item) => _arrItem(kind, serviceType, stringKeyMap(item)))
+          .toList(growable: false);
+    } catch (_) {
+      // The pair keeps its cursor, so the footer can offer a retry.
+    }
+  }
+
+  ActivityFeed _buildFeed(
+    Map<(GlobalActivityKind, ServiceType), PagedCursor> cursors,
+  ) {
+    final results = <ActivityServiceResult>[];
+    for (final kind in kinds) {
+      for (final serviceType in _arrActivityServiceTypes) {
+        final pair = (kind, serviceType);
+        final cursor = cursors[pair];
+        if (cursor == null) continue;
+        results.add(
+          ActivityServiceResult(
+            service: _serviceKeyFor(serviceType),
+            items: _items[pair] ?? const [],
+            configured: cursor.configured,
+            error: cursor.error,
+          ),
+        );
+      }
+    }
+    return _merge(results);
+  }
+}
 
 /// Resolves a [ServiceType] to the corresponding *arr service.
 ///
@@ -344,17 +642,18 @@ Future<ActivityServiceResult> _loadRequestResult(Ref ref) async {
   }
 }
 
+/// The three \*arr services that appear in the global feed, as service types.
+const _arrActivityServiceTypes = [
+  ServiceType.movies,
+  ServiceType.series,
+  ServiceType.music,
+];
+
 List<Future<ActivityServiceResult>> _loadArrResults(
   Ref ref,
   GlobalActivityKind kind,
 ) {
-  const serviceTypes = [
-    ServiceType.movies,
-    ServiceType.series,
-    ServiceType.music,
-  ];
-
-  return serviceTypes
+  return _arrActivityServiceTypes
       .map((serviceType) async {
         final service = _serviceKeyFor(serviceType);
         final settings = ref.read(settingsProvider);
@@ -387,17 +686,24 @@ List<Future<ActivityServiceResult>> _loadArrResults(
 
 Future<List<dynamic>> _loadRawItems(
   ArrActivityMixin service,
-  GlobalActivityKind kind,
-) {
+  GlobalActivityKind kind, {
+  int page = 1,
+  int pageSize = _globalActivityPageSize,
+}) {
   return switch (kind) {
     GlobalActivityKind.queue => service.getQueue(),
-    GlobalActivityKind.history => service.getHistory(pageSize: 25),
+    GlobalActivityKind.history => service.getHistory(
+      page: page,
+      pageSize: pageSize,
+    ),
     GlobalActivityKind.blocklist => service.getBlocklist(),
     GlobalActivityKind.missing => service.getMissing(
-      pageSize: _globalActivityPageSize,
+      page: page,
+      pageSize: pageSize,
     ),
     GlobalActivityKind.cutoff => service.getCutoff(
-      pageSize: _globalActivityPageSize,
+      page: page,
+      pageSize: pageSize,
     ),
     GlobalActivityKind.request => Future.value(const <dynamic>[]),
   };

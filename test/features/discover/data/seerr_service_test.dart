@@ -174,11 +174,158 @@ void main() {
       expect(requests.single.id, 7);
       expect(client.lastGetPath, '/api/v1/request');
       expect(client.lastGetQueryParameters, {
-        'take': 20,
+        'take': 50,
         'skip': 0,
         'sort': 'added',
         'filter': 'all',
       });
+    });
+
+    test('pages through every request page in parallel', () async {
+      client.getResponseQueue.addAll([
+        {
+          'pageInfo': {'results': 60},
+          'results': [
+            for (var id = 1; id <= 50; id++)
+              {
+                'id': id,
+                'status': 2,
+                'createdAt': '2024-01-01T00:00:00.000Z',
+                'type': 'movie',
+                'is4k': false,
+                'media': {
+                  'id': id,
+                  'tmdbId': id,
+                  'status': 5,
+                  'mediaType': 'movie',
+                  'title': 'Title $id',
+                  'posterPath': '/p$id.jpg',
+                },
+              },
+          ],
+        },
+        {
+          'pageInfo': {'results': 60},
+          'results': [
+            for (var id = 51; id <= 60; id++)
+              {
+                'id': id,
+                'status': 2,
+                'createdAt': '2024-01-01T00:00:00.000Z',
+                'type': 'movie',
+                'is4k': false,
+                'media': {
+                  'id': id,
+                  'tmdbId': id,
+                  'status': 5,
+                  'mediaType': 'movie',
+                  'title': 'Title $id',
+                  'posterPath': '/p$id.jpg',
+                },
+              },
+          ],
+        },
+      ]);
+
+      final requests = await service.getRequests();
+
+      expect(requests, hasLength(60));
+      expect(requests.first.id, 1);
+      expect(requests.last.id, 60);
+    });
+
+    test('a failing later page keeps the pages that did arrive', () async {
+      client.getResponseQueue.addAll([
+        {
+          'pageInfo': {'results': 60},
+          'results': [
+            for (var id = 1; id <= 50; id++)
+              {
+                'id': id,
+                'status': 2,
+                'createdAt': '2024-01-01T00:00:00.000Z',
+                'type': 'movie',
+                'is4k': false,
+                'media': {
+                  'id': id,
+                  'tmdbId': id,
+                  'status': 5,
+                  'mediaType': 'movie',
+                  'title': 'Title $id',
+                  'posterPath': '/p$id.jpg',
+                },
+              },
+          ],
+        },
+      ]);
+      // The queue holds one response; the second page falls back to
+      // getResponseData, which is null and cannot be parsed as a page.
+
+      final requests = await service.getRequests();
+
+      // The second page answered nothing, but the first page's requests are
+      // still reported — truncation beats blanking the whole list.
+      expect(requests, hasLength(50));
+    });
+
+    test('hydration results are cached across refreshes', () async {
+      client.getResponseQueue.addAll([
+        {
+          'results': [
+            {
+              'id': 7,
+              'status': 2,
+              'createdAt': '2024-01-02T00:00:00.000Z',
+              'type': 'movie',
+              'is4k': false,
+              'media': {
+                'id': 101,
+                'tmdbId': 111,
+                'status': 5,
+                'mediaType': 'movie',
+                'title': 'Unknown Media',
+              },
+            },
+          ],
+        },
+        {
+          'title': 'Hydrated Movie',
+          'releaseDate': '2022-05-01',
+          'posterPath': '/hydrated.jpg',
+        },
+        // Second refresh: same request page again, but the details call below
+        // is never made — the response queue would run dry and the fake would
+        // fall back to getResponseData, which is null.
+        {
+          'results': [
+            {
+              'id': 7,
+              'status': 2,
+              'createdAt': '2024-01-02T00:00:00.000Z',
+              'type': 'movie',
+              'is4k': false,
+              'media': {
+                'id': 101,
+                'tmdbId': 111,
+                'status': 5,
+                'mediaType': 'movie',
+                'title': 'Unknown Media',
+              },
+            },
+          ],
+        },
+      ]);
+
+      final first = await service.getRequests();
+      expect(first.single.media?.title, 'Hydrated Movie');
+      expect(first.single.media?.year, '2022');
+      expect(first.single.media?.posterPath, '/hydrated.jpg');
+
+      final second = await service.getRequests();
+      expect(second.single.media?.title, 'Hydrated Movie');
+      // The queue held exactly three responses: two request pages and one
+      // details call. A second hydration would have consumed a fourth.
+      expect(client.getCallCount, 3);
     });
 
     test('hydrates media when title is Unknown via movie detail', () async {

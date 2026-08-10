@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Cupola
+Exec=cupola
+Icon=cupola
+Type=Application
+Terminal=false
+Categories=AudioVideo;Network;

@@ -118,9 +118,16 @@ enum _ActivitySection {
 class _ActivitySub {
   final String label;
 
-  /// Null on a [_ActivitySub.custom] sub, whose records are not
-  /// [GlobalActivityItem]s at all.
+  /// Null on a paged or custom sub.
   final FutureProvider<ActivityFeed>? provider;
+
+  /// The incremental provider behind a paged sub (History, Wanted).
+  ///
+  /// Null on one-shot and custom subs. A paged sub loads a window and then
+  /// "load more"s, so its screen state carries cursors and flags the one-shot
+  /// [FutureProvider] never needs.
+  final NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>?
+  pagedProvider;
   final String emptyMessage;
 
   /// A body that replaces the whole feed path, filter strip included.
@@ -137,10 +144,16 @@ class _ActivitySub {
   final Widget Function(double bottomPadding)? body;
 
   const _ActivitySub(this.label, this.provider, this.emptyMessage)
-    : body = null;
+    : pagedProvider = null,
+      body = null;
+
+  const _ActivitySub.paged(this.label, this.pagedProvider, this.emptyMessage)
+    : provider = null,
+      body = null;
 
   const _ActivitySub.custom({required this.label, required this.body})
     : provider = null,
+      pagedProvider = null,
       emptyMessage = '';
 }
 
@@ -173,7 +186,13 @@ final Map<_ActivitySection, List<_ActivitySub>> _activitySubs = {
     _ActivitySub.custom(label: 'Searching', body: _releaseSearchesBody),
   ],
   _ActivitySection.history: [
-    _ActivitySub('History', globalHistoryItemsProvider, 'No recent history'),
+    // Paged: History can be thousands of rows, so it loads a window and
+    // "load more"s like the web UI's history table.
+    _ActivitySub.paged(
+      'History',
+      globalHistoryFeedProvider,
+      'No recent history',
+    ),
     _ActivitySub(
       'Blocklist',
       globalBlocklistItemsProvider,
@@ -181,11 +200,11 @@ final Map<_ActivitySection, List<_ActivitySub>> _activitySubs = {
     ),
   ],
   _ActivitySection.wanted: [
-    _ActivitySub('All', globalWantedItemsProvider, 'Nothing wanted'),
-    _ActivitySub('Missing', globalMissingItemsProvider, 'Nothing missing'),
-    _ActivitySub(
+    _ActivitySub.paged('All', globalWantedFeedProvider, 'Nothing wanted'),
+    _ActivitySub.paged('Missing', globalMissingFeedProvider, 'Nothing missing'),
+    _ActivitySub.paged(
       'Cutoff Unmet',
-      globalCutoffItemsProvider,
+      globalCutoffFeedProvider,
       'Cutoff met for everything',
     ),
   ],
@@ -348,7 +367,9 @@ class _BucketBody extends ConsumerWidget {
       );
     }
 
-    final feedAsync = ref.watch(sub.provider!);
+    final pagedProvider = sub.pagedProvider;
+    final pagedState = pagedProvider == null ? null : ref.watch(pagedProvider);
+    final feedAsync = pagedProvider == null ? ref.watch(sub.provider!) : null;
     final filter = ref.watch(_activityServiceFilterProvider);
     final configuredServices = ref.watch(configuredActivityServicesProvider);
 
@@ -371,8 +392,13 @@ class _BucketBody extends ConsumerWidget {
     // dash, and `isRefreshing` could never be true, which left `_RefreshingBar`
     // dead code. `.value` carries the previous data through a reload, which is
     // what the paragraph above always claimed to do.
-    final feed = feedAsync.value;
-    final isRefreshing = feedAsync.isLoading && feed != null;
+    //
+    // The paged subs keep the same contract through their own state: the
+    // notifier's build re-runs on the refresh bump, returns the previous feed
+    // with `refreshing` set, and swaps in the new first pages when they land.
+    final feed = pagedState?.feed ?? feedAsync?.value;
+    final isRefreshing =
+        pagedState?.refreshing ?? (feedAsync!.isLoading && feed != null);
 
     return Column(
       children: [
@@ -406,13 +432,19 @@ class _BucketBody extends ConsumerWidget {
             onRefresh: () async => refresh(),
             child: _FeedBody(
               feed: feed,
-              hasError: feedAsync.hasError,
-              error: feedAsync.error,
+              hasError: pagedProvider == null ? feedAsync!.hasError : false,
+              error: pagedProvider == null ? feedAsync!.error : null,
               section: section,
               emptyMessage: sub.emptyMessage,
               filter: filter,
               bottomPadding: bottomPadding,
               onRetry: refresh,
+              hasMore: pagedState?.hasMore ?? false,
+              loadingMore: pagedState?.loadingMore ?? false,
+              loadMoreFailed: pagedState?.loadMoreFailed ?? false,
+              onLoadMore: pagedProvider == null
+                  ? () {}
+                  : () => ref.read(pagedProvider.notifier).loadMore(),
             ),
           ),
         ),
@@ -497,6 +529,19 @@ class _FeedBody extends StatelessWidget {
   final double bottomPadding;
   final VoidCallback onRetry;
 
+  /// Whether another page of this bucket is available to load.
+  ///
+  /// False for the one-shot buckets (Now, Blocklist), which load everything at
+  /// once; true for the paged ones while any pair has a full last page.
+  final bool hasMore;
+
+  /// A "load more" is in flight.
+  final bool loadingMore;
+
+  /// The last "load more" failed and the footer offers a retry.
+  final bool loadMoreFailed;
+  final VoidCallback onLoadMore;
+
   const _FeedBody({
     required this.feed,
     required this.hasError,
@@ -506,6 +551,10 @@ class _FeedBody extends StatelessWidget {
     required this.filter,
     required this.bottomPadding,
     required this.onRetry,
+    required this.hasMore,
+    required this.loadingMore,
+    required this.loadMoreFailed,
+    required this.onLoadMore,
   });
 
   @override
@@ -572,6 +621,10 @@ class _FeedBody extends StatelessWidget {
       filter: filter,
       bottomPadding: bottomPadding,
       onRetry: onRetry,
+      hasMore: hasMore,
+      loadingMore: loadingMore,
+      loadMoreFailed: loadMoreFailed,
+      onLoadMore: onLoadMore,
     );
   }
 }
@@ -583,6 +636,10 @@ class _ActivityData extends ConsumerWidget {
   final ServiceKey? filter;
   final double bottomPadding;
   final VoidCallback onRetry;
+  final bool hasMore;
+  final bool loadingMore;
+  final bool loadMoreFailed;
+  final VoidCallback onLoadMore;
 
   const _ActivityData({
     required this.feed,
@@ -591,6 +648,10 @@ class _ActivityData extends ConsumerWidget {
     required this.filter,
     required this.bottomPadding,
     required this.onRetry,
+    required this.hasMore,
+    required this.loadingMore,
+    required this.loadMoreFailed,
+    required this.onLoadMore,
   });
 
   @override
@@ -627,16 +688,23 @@ class _ActivityData extends ConsumerWidget {
 
     // Flat list when a single service is selected.
     if (filter != null) {
+      final footerVisible = hasMore || loadingMore || loadMoreFailed;
+      final headerCount = health == null ? 0 : 1;
       return ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(top: AppSpacing.md, bottom: bottomPadding),
-        itemCount: visible.length + (health == null ? 0 : 1),
+        itemCount: visible.length + headerCount + (footerVisible ? 1 : 0),
         itemBuilder: (context, index) {
-          if (health != null) {
-            if (index == 0) return health;
-            return GlobalActivityItemTile(item: visible[index - 1]);
+          if (health != null && index == 0) return health;
+          final itemIndex = index - headerCount;
+          if (itemIndex >= visible.length) {
+            return _FeedFooter(
+              loadingMore: loadingMore,
+              loadMoreFailed: loadMoreFailed,
+              onLoadMore: onLoadMore,
+            );
           }
-          return GlobalActivityItemTile(item: visible[index]);
+          return GlobalActivityItemTile(item: visible[itemIndex]);
         },
       );
     }
@@ -675,10 +743,81 @@ class _ActivityData extends ConsumerWidget {
       }
     }
 
+    if (hasMore || loadingMore || loadMoreFailed) {
+      children.add(
+        _FeedFooter(
+          loadingMore: loadingMore,
+          loadMoreFailed: loadMoreFailed,
+          onLoadMore: onLoadMore,
+        ),
+      );
+    }
+
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.only(bottom: bottomPadding),
       children: children,
+    );
+  }
+}
+
+/// The row a paged bucket puts under its last record.
+///
+/// Three faces for the same slot: an idle "show more" button, a spinner while
+/// the next pages are in flight, and a retry when that fetch failed — a failed
+/// load more must not look like "everything is loaded".
+class _FeedFooter extends StatelessWidget {
+  final bool loadingMore;
+  final bool loadMoreFailed;
+  final VoidCallback onLoadMore;
+
+  const _FeedFooter({
+    required this.loadingMore,
+    required this.loadMoreFailed,
+    required this.onLoadMore,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (loadingMore) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.4,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (loadMoreFailed) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            "Couldn't load more.",
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          TextButton(onPressed: onLoadMore, child: const Text('Retry')),
+        ],
+      );
+    }
+
+    return Center(
+      child: TextButton.icon(
+        onPressed: onLoadMore,
+        icon: const Icon(Icons.expand_more_rounded, size: 18),
+        label: const Text('Show more'),
+      ),
     );
   }
 }

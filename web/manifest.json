@@ -1,23 +1,27 @@
 {
     "name": "Cupola",
     "short_name": "Cupola",
+    "id": ".",
     "start_url": ".",
+    "scope": ".",
     "display": "standalone",
-    "background_color": "#4548AF",
-    "theme_color": "#4548AF",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#0A0B11",
+    "theme_color": "#6366F1",
+    "description": "Manage your self-hosted media stack and infrastructure services from one trusted Cupola client.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
             "src": "icons/Icon-192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "icons/Icon-512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "icons/Icon-maskable-192.png",

@@ -285,7 +285,7 @@ void main() {
         ),
       );
 
-      final feed = await container.read(globalHistoryItemsProvider.future);
+      final feed = await _loadPagedFeed(container, globalHistoryFeedProvider);
       final items = feed.items;
 
       expect(items, hasLength(1));
@@ -305,7 +305,7 @@ void main() {
         ),
       );
 
-      final feed = await container.read(globalWantedItemsProvider.future);
+      final feed = await _loadPagedFeed(container, globalWantedFeedProvider);
       final items = feed.items;
 
       expect(items.map((item) => item.kind), [
@@ -317,7 +317,80 @@ void main() {
         'Inception',
       ]);
     });
+
+    test('history loads a window and reports hasMore on a full page', () async {
+      final container = createContainer(
+        radarrService: _PagedHistoryRadarrService(
+          records: [
+            for (var i = 0; i < 50; i++)
+              {
+                'sourceTitle': 'Release $i',
+                'eventType': 'grabbed',
+                'date': '2026-04-02T11:18:00Z',
+              },
+          ],
+        ),
+      );
+
+      final notifier = container.read(globalHistoryFeedProvider.notifier);
+      await notifier.loading;
+
+      final state = container.read(globalHistoryFeedProvider);
+      expect(state.feed!.items, hasLength(50));
+      expect(state.hasMore, isTrue);
+    });
+
+    test('history load more appends the next page and finishes', () async {
+      final radarr = _PagedHistoryRadarrService(
+        records: [
+          for (var i = 0; i < 60; i++)
+            {
+              'sourceTitle': 'Release $i',
+              'eventType': 'grabbed',
+              'date': '2026-04-02T11:18:00Z',
+            },
+        ],
+      );
+      final container = createContainer(radarrService: radarr);
+
+      final notifier = container.read(globalHistoryFeedProvider.notifier);
+      await notifier.loading;
+      expect(container.read(globalHistoryFeedProvider).hasMore, isTrue);
+
+      await notifier.loadMore();
+
+      final state = container.read(globalHistoryFeedProvider);
+      expect(state.feed!.items, hasLength(60));
+      expect(state.hasMore, isFalse);
+      // The first page asked for the initial window; the load-more page asks
+      // for the big page size.
+      expect(radarr.historyCalls, 2);
+      expect(radarr.lastPage, 2);
+      expect(radarr.lastPageSize, 200);
+    });
+
+    test('a failed first page is reported, not swallowed', () async {
+      final container = createContainer(
+        radarrService: _ThrowingHistoryRadarrService(),
+      );
+
+      final notifier = container.read(globalHistoryFeedProvider.notifier);
+      await notifier.loading;
+
+      final feed = container.read(globalHistoryFeedProvider).feed!;
+      expect(feed.allConfiguredFailed, isTrue);
+      expect(feed.firstError, isNotNull);
+    });
   });
+}
+
+Future<ActivityFeed> _loadPagedFeed(
+  ProviderContainer container,
+  NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState> provider,
+) async {
+  final notifier = container.read(provider.notifier);
+  await notifier.loading;
+  return container.read(provider).feed!;
 }
 
 class _ActivityRadarrService extends FakeRadarrService {
@@ -404,4 +477,46 @@ class _ThrowingQueueLidarrService extends FakeLidarrService {
   Future<List<dynamic>> getQueue({
     Map<String, dynamic>? queryParameters,
   }) async => throw Exception('Lidarr down');
+}
+
+/// History that pages for real, so the paged-bucket tests can prove the window
+/// mechanics rather than the fake's willingness to answer everything at once.
+///
+/// Page sizes vary between the first page (50) and load-more pages (200), so
+/// the slice boundary is tracked as a running cursor — like a real server,
+/// which pages from its own position rather than deriving it from a page
+/// number times a page size.
+class _PagedHistoryRadarrService extends FakeRadarrService {
+  _PagedHistoryRadarrService({required this.records});
+
+  final List<dynamic> records;
+  int historyCalls = 0;
+  int? lastPage;
+  int? lastPageSize;
+  int _served = 0;
+
+  @override
+  Future<List<dynamic>> getHistory({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    historyCalls++;
+    lastPage = page;
+    lastPageSize = pageSize;
+    if (_served >= records.length) return const [];
+    final end = (_served + pageSize).clamp(0, records.length);
+    final slice = records.sublist(_served, end);
+    _served = end;
+    return slice;
+  }
+}
+
+class _ThrowingHistoryRadarrService extends FakeRadarrService {
+  @override
+  Future<List<dynamic>> getHistory({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => throw Exception('Radarr history down');
 }

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Adaptive-icon background for Android dark mode. -->
+<!--
+  Adaptive-icon background for Android dark mode. Keep this palette identical
+  to drawable/cupola_icon_bg_gradient.xml so icon output is deterministic.
+-->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <gradient

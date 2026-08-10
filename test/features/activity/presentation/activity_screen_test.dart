@@ -317,6 +317,51 @@ void main() {
     );
   });
 
+  testWidgets('paged history shows a show-more footer and loads the next '
+      'page on tap', (tester) async {
+    final scope = await settingsScope(configured: activityServiceKeys);
+    final radarr = _PagedScreenHistoryRadarrService(total: 60);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWith((ref) => scope.prefs),
+          secureSettingsStoreProvider.overrideWith((ref) => scope.secureStore),
+          initialSettingsProvider.overrideWith((ref) => scope.settings),
+          initialOnboardingCompletedProvider.overrideWith((ref) => true),
+          requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
+          seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
+          radarrServiceProvider.overrideWith((ref) => radarr),
+          sonarrServiceProvider.overrideWith((ref) => FakeSonarrService()),
+          lidarrServiceProvider.overrideWith((ref) => FakeLidarrService()),
+        ],
+        child: const MaterialApp(home: GlobalActivityScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('History'));
+    await tester.pumpAndSettle();
+
+    // First page (50) came back full, so the window offers more. The footer
+    // sits under 50 rows, so scroll it into view first.
+    expect(radarr.historyCalls, 1);
+    await tester.dragUntilVisible(
+      find.text('Show more'),
+      find.byType(ListView).last,
+      const Offset(0, -400),
+    );
+    expect(find.text('Show more'), findsOneWidget);
+
+    await tester.tap(find.text('Show more'));
+    await tester.pumpAndSettle();
+
+    // The second page (10 records) finished the list; the footer is gone
+    // because there is nothing left to show.
+    expect(radarr.historyCalls, 2);
+    expect(find.text('Show more'), findsNothing);
+  });
+
   testWidgets('tapping a request pushes the requests screen with a way back', (
     tester,
   ) async {
@@ -413,6 +458,37 @@ class _GatedRadarrService extends FakeRadarrService {
   Future<List<dynamic>> getQueue({Map<String, dynamic>? queryParameters}) {
     queueCalls++;
     return queueCalls == 1 ? Future.value(queue) : _gate.future;
+  }
+}
+
+/// History that pages from a running cursor (first page 50, load-more pages
+/// 200), so the show-more footer can be exercised end to end.
+class _PagedScreenHistoryRadarrService extends FakeRadarrService {
+  _PagedScreenHistoryRadarrService({required this.total});
+
+  final int total;
+  int historyCalls = 0;
+  int _served = 0;
+
+  @override
+  Future<List<dynamic>> getHistory({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    historyCalls++;
+    if (_served >= total) return const [];
+    final end = (_served + pageSize).clamp(0, total);
+    final slice = [
+      for (var i = _served; i < end; i++)
+        {
+          'sourceTitle': 'Release $i',
+          'eventType': 'grabbed',
+          'date': '2026-04-02T11:18:00Z',
+        },
+    ];
+    _served = end;
+    return slice;
   }
 }
 

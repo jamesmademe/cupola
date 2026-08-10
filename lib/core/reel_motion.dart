@@ -3,7 +3,7 @@ import 'package:reel_text/reel_text.dart';
 
 import 'package:cupola/core/app_animation.dart';
 
-/// The app's roll vocabulary: five presets, and no call site may hand-write a
+/// The app's roll vocabulary: four presets, and no call site may hand-write a
 /// `ReelTextOptions`.
 ///
 /// `reel_text` ships its own defaults — a 300ms roll on `Cubic(0.34, 1.56, 0.64,
@@ -14,10 +14,11 @@ import 'package:cupola/core/app_animation.dart';
 ///
 /// **Stagger has no [AppAnimation] equivalent**, because nothing else in the app
 /// staggers *within* a single string — [StaggeredEntrance] staggers between
-/// siblings at 45ms and that is a different axis. The four values below are
+/// siblings at 45ms and that is a different axis. The values below are
 /// authored, and each one is a ratio of the roll it belongs to rather than a
 /// number picked by eye: a figure's glyphs travel almost together (the value is
-/// one unit), a headline's sweep left to right (the line is being assembled).
+/// one unit), a state word's a little wider (a word is read as a word), a
+/// command's tight under the thumb.
 ///
 /// See also the Reduce Motion note on [waiting] — the one preset that is not
 /// self-suppressing.
@@ -85,48 +86,6 @@ abstract final class ReelMotion {
     bounce: 0.15,
     interrupt: false,
   );
-
-  /// The onboarding door's claim assembling itself on first frame.
-  ///
-  /// The only decorative roll in the app, and the only one on a *static* string.
-  /// It is allowed exactly one surface: the door is the single Persuade moment
-  /// in an Operate product, it plays once per install, and it is choreographed
-  /// against the service ring's entrance rather than competing with it — see
-  /// [OnePunchline.assembling].
-  ///
-  /// Split-flap timing: the app's standard-transition travel per glyph, a
-  /// stagger wide enough that the line resolves left to right at a readable
-  /// pace rather than all at once, and real bounce because a flap board
-  /// *settles*. `down` is the direction a flap actually falls.
-  ///
-  /// The stagger is load-bearing beyond its own line, because a multi-line claim
-  /// has to land on **one** beat: a short second line started at the same moment
-  /// as a long first line settles early, and a bottom line that finishes before
-  /// the top one reads as two animations rather than one board. Callers stagger
-  /// their lines' *start* by `(longestLineGraphemes - thisLineGraphemes) *`
-  /// [headlineStagger] so every line finishes together. See
-  /// [OnePunchline.assembling].
-  static const headline = ReelTextOptions(
-    direction: ReelTextDirection.down,
-    duration: AppAnimation.durationMd,
-    stagger: headlineStagger,
-    exitOffset: Duration(milliseconds: 60),
-    curve: AppAnimation.emphasizedCurve,
-    bounce: 0.45,
-  );
-
-  /// [headline]'s per-glyph offset, exposed so a caller can align two lines onto
-  /// one landing beat without restating the number.
-  static const headlineStagger = Duration(milliseconds: 34);
-
-  /// How long after mount the claim starts assembling.
-  ///
-  /// Non-zero so the first painted frame is the settled composition rather than
-  /// a board mid-flip, and small enough that the assemble overlaps the service
-  /// ring's own `durationXl` entrance instead of queueing behind it — the ring
-  /// seats, the last flaps land just after, and the door reads as one movement
-  /// with a tail rather than as two things stopping at once.
-  static const headlineLeadIn = Duration(milliseconds: 80);
 
   /// The busy loop under [ReelTextController.runWhile].
   ///

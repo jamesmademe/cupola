@@ -27,6 +27,8 @@ void main() {
         '/api/${ArrServiceConfig.sonarr.apiVersion}/queue',
       );
       expect(client.lastGetQueryParameters, const {
+        'page': 1,
+        'pageSize': 200,
         'includeSeries': true,
         'includeEpisode': true,
         'includeUnknownSeriesItems': true,

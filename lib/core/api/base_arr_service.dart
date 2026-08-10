@@ -49,15 +49,22 @@ mixin ArrActivityMixin {
   /// The service configuration (API version, sort key).
   ArrServiceConfig get config;
 
-  /// Fetches the download queue.
+  /// Fetches the download queue, page by page.
+  ///
+  /// The queue endpoint is paginated and defaults to a page size of 10, so a
+  /// bare `/queue` call silently returns the first ten records — which is what
+  /// made Activity's "Now" bucket show ten Sonarr rows however full the real
+  /// queue was. Pages of 200 (the server-side cap) keep this to a single
+  /// request in the common case, and only page on when a queue is genuinely
+  /// enormous.
   Future<List<dynamic>> getQueue({
     Map<String, dynamic>? queryParameters,
   }) async {
-    final response = await client.get(
-      '/api/${config.apiVersion}/queue',
-      queryParameters: queryParameters,
+    return _fetchAllPages(
+      'queue',
+      extraParams: queryParameters ?? const {},
+      pageSize: 200,
     );
-    return response.data['records'] as List<dynamic>;
   }
 
   /// Fetches recent history.
@@ -126,10 +133,12 @@ mixin ArrActivityMixin {
     };
   }
 
-  /// Fetches the blocklist.
+  /// Fetches the whole blocklist.
+  ///
+  /// Same pagination trap as the queue: no page size means the server answers
+  /// with ten records and the rest of the blocklist never reaches the screen.
   Future<List<dynamic>> getBlocklist() async {
-    final response = await client.get('/api/${config.apiVersion}/blocklist');
-    return response.data['records'] as List<dynamic>;
+    return _fetchAllPages('blocklist', pageSize: 200);
   }
 
   /// Fetches missing items (wanted).

@@ -33,3 +33,9 @@ jobs:
 
       - name: Run tests
         run: flutter test
+
+      - name: Verify platform icons
+        run: bash scripts/verify_icons.sh
+
+      - name: Build web
+        run: flutter build web --release

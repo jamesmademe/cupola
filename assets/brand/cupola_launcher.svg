@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Launcher variant: a deliberately simplified Cupola silhouette for small app-icon sizes. -->
+  <defs>
+    <radialGradient id="ground" cx="50%" cy="42%" r="78%">
+      <stop offset="0" stop-color="#171D31"/>
+      <stop offset="100%" stop-color="#07080E"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#35415D"/>
+      <stop offset="1" stop-color="#151B2B"/>
+    </linearGradient>
+    <linearGradient id="pane" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D7DAFF"/>
+      <stop offset="0.48" stop-color="#818CF8"/>
+      <stop offset="1" stop-color="#4F46D8"/>
+    </linearGradient>
+    <radialGradient id="oculus" cx="38%" cy="30%" r="78%">
+      <stop offset="0" stop-color="#C2C7FF"/>
+      <stop offset="0.55" stop-color="#6366F1"/>
+      <stop offset="1" stop-color="#4338B8"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#ground)"/>
+
+  <!-- Six broad windows preserve the source mark's silhouette while keeping ribs legible at 16px. -->
+  <path d="M458 90Q512 58 566 90L866 263Q898 281 866 300L765 358Q742 371 719 358L548 259Q525 246 523 220L520 119Q519 96 542 108L512 90L482 108Q505 96 504 119L501 220Q499 246 476 259L305 358Q282 371 259 358L158 300Q126 281 158 263Z" fill="url(#body)"/>
+  <path d="M542 126L833 294L748 342L579 244Q553 229 550 198Z" fill="url(#pane)"/>
+  <path d="M876 350V674L789 624V400Z" fill="url(#pane)"/>
+  <path d="M833 730L542 898L550 826L719 728Q744 713 768 727Z" fill="url(#pane)"/>
+  <path d="M191 730L482 898L474 826L305 728Q280 713 256 727Z" fill="url(#pane)"/>
+  <path d="M148 674V350L235 400V624Z" fill="url(#pane)"/>
+  <path d="M191 294L482 126L474 198L305 296Q280 311 256 297Z" fill="url(#pane)"/>
+
+  <!-- A high-contrast, generously sized oculus is the recognition anchor. -->
+  <circle cx="512" cy="512" r="232" fill="#0B0E18"/>
+  <circle cx="512" cy="512" r="204" fill="url(#oculus)"/>
+  <circle cx="512" cy="512" r="204" fill="none" stroke="#A5B4FC" stroke-width="8" stroke-opacity="0.8"/>
+</svg>

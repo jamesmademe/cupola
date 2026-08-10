@@ -141,7 +141,7 @@ class OnboardingDoor extends StatelessWidget {
     return OnboardingBeat(
       alignment: MainAxisAlignment.end,
       children: [
-        const OnePunchline.assembling(),
+        const OnePunchline(),
         const SizedBox(height: AppSpacing.lg),
         Text(
           '${ServiceKey.values.length} self-hosted services — media, '

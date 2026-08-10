@@ -5,26 +5,31 @@ set -euo pipefail
 TARGET="${1:-all}"
 APP_NAME="Cupola"
 APP_SLUG="cupola"
+ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 
 case "$TARGET" in
-  android|ios|macos|all)
+  android|ios|macos|web|windows|linux|all)
     ;;
   *)
-    printf 'Usage: scripts/release.sh [android|ios|macos|all]\n' >&2
+    printf 'Usage: scripts/release.sh [android|ios|macos|web|windows|linux|all]\n' >&2
     exit 1
     ;;
 esac
 
-VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: *//;s/+.*//')
+VERSION=$(grep '^version:' "$ROOT_DIR/pubspec.yaml" | sed 's/version: *//;s/+.*//')
 
 if [[ -z "$VERSION" ]]; then
   printf 'Failed to read version from pubspec.yaml\n' >&2
   exit 1
 fi
 
+cd "$ROOT_DIR"
 DIST_DIR="dist/${VERSION}"
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
+
+printf '==> Getting Flutter packages...\n'
+flutter pub get
 
 printf '==> Running flutter analyze...\n'
 flutter analyze --fatal-infos
@@ -35,88 +40,134 @@ dart format --output=none --set-exit-if-changed .
 printf '==> Running flutter test...\n'
 flutter test
 
+printf '==> Verifying platform icons...\n'
+bash "$ROOT_DIR/scripts/verify_icons.sh"
+
 if [[ "$TARGET" == "android" || "$TARGET" == "all" ]]; then
   printf '==> Building Android APK...\n'
   flutter build apk --release
   cp build/app/outputs/flutter-apk/app-release.apk "$DIST_DIR/${APP_SLUG}-${VERSION}.apk"
 fi
 
+if [[ "$TARGET" == "web" || "$TARGET" == "all" ]]; then
+  printf '==> Building web release...\n'
+  flutter build web --release
+  cp -R build/web "$DIST_DIR/web"
+fi
+
+if [[ "$TARGET" == "windows" || "$TARGET" == "all" ]]; then
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) windows_host=true ;;
+    *) windows_host=false ;;
+  esac
+  if [[ "$windows_host" != true ]]; then
+    if [[ "$TARGET" == "windows" ]]; then
+      printf 'Windows releases can only be built on a Windows host\n' >&2
+      exit 1
+    fi
+    printf 'SKIP: Windows release requires a Windows host\n'
+  else
+    printf '==> Building Windows release...\n'
+    flutter build windows --release
+    cp -R build/windows/x64/runner/Release "$DIST_DIR/windows"
+  fi
+fi
+
+if [[ "$TARGET" == "linux" || "$TARGET" == "all" ]]; then
+  if [[ "$(uname -s)" != "Linux" ]]; then
+    if [[ "$TARGET" == "linux" ]]; then
+      printf 'Linux releases can only be built on a Linux host\n' >&2
+      exit 1
+    fi
+    printf 'SKIP: Linux release requires a Linux host\n'
+  else
+    printf '==> Building Linux release...\n'
+    flutter build linux --release
+    cp -R build/linux/x64/release/bundle "$DIST_DIR/linux"
+  fi
+fi
+
 if [[ "$TARGET" == "ios" || "$TARGET" == "all" ]]; then
   if [[ "$(uname -s)" != "Darwin" ]]; then
-    printf 'iOS releases can only be built on macOS\n' >&2
-    exit 1
+    if [[ "$TARGET" == "ios" ]]; then
+      printf 'iOS releases can only be built on macOS\n' >&2
+      exit 1
+    fi
+    printf 'SKIP: iOS release requires a macOS host\n'
+  else
+    printf '==> Building iOS IPA (unsigned, for sideloading)...\n'
+    flutter build ios --release --no-codesign
+
+    APP_PATH="build/ios/iphoneos/Runner.app"
+    IPA_PATH="$DIST_DIR/${APP_SLUG}-${VERSION}.ipa"
+
+    if [[ ! -d "$APP_PATH" ]]; then
+      printf 'Missing iOS app bundle at %s\n' "$APP_PATH" >&2
+      exit 1
+    fi
+
+    IPA_WORK_DIR=$(mktemp -d)
+    mkdir -p "$IPA_WORK_DIR/Payload"
+    cp -r "$APP_PATH" "$IPA_WORK_DIR/Payload/"
+    (cd "$IPA_WORK_DIR" && zip -qr - Payload/) > "$IPA_PATH"
+    rm -rf "$IPA_WORK_DIR"
+
+    printf '==> IPA pronto per il sideload: %s\n' "$IPA_PATH"
   fi
-
-  printf '==> Building iOS IPA (unsigned, for sideloading)...\n'
-  flutter build ios --release --no-codesign
-
-  APP_PATH="build/ios/iphoneos/Runner.app"
-  IPA_PATH="$DIST_DIR/${APP_SLUG}-${VERSION}.ipa"
-
-  if [[ ! -d "$APP_PATH" ]]; then
-    printf 'Missing iOS app bundle at %s\n' "$APP_PATH" >&2
-    exit 1
-  fi
-
-  IPA_WORK_DIR=$(mktemp -d)
-  mkdir -p "$IPA_WORK_DIR/Payload"
-  cp -r "$APP_PATH" "$IPA_WORK_DIR/Payload/"
-  (cd "$IPA_WORK_DIR" && zip -qr - Payload/) > "$IPA_PATH"
-  rm -rf "$IPA_WORK_DIR"
-
-  printf '==> IPA pronto per il sideload: %s\n' "$IPA_PATH"
 fi
 
 if [[ "$TARGET" == "macos" || "$TARGET" == "all" ]]; then
   if [[ "$(uname -s)" != "Darwin" ]]; then
-    printf 'macOS releases can only be built on macOS\n' >&2
-    exit 1
-  fi
+    if [[ "$TARGET" == "macos" ]]; then
+      printf 'macOS releases can only be built on macOS\n' >&2
+      exit 1
+    fi
+    printf 'SKIP: macOS release requires a macOS host\n'
+  else
+    printf '==> Building macOS release...\n'
+    flutter build macos --release
 
-  printf '==> Building macOS release...\n'
-  flutter build macos --release
+    APP_PATH="build/macos/Build/Products/Release/${APP_NAME}.app"
+    DMG_STEM="$DIST_DIR/${APP_SLUG}-${VERSION}"
+    DMG_PATH="${DMG_STEM}.dmg"
+    DMG_WORK_DIR=$(mktemp -d)
+    DMG_STAGING_DIR="$DMG_WORK_DIR/staging"
+    DMG_RW_PATH="$DMG_WORK_DIR/${APP_SLUG}-${VERSION}-rw.dmg"
+    DMG_DEVICE=""
+    DMG_MOUNT_DIR=""
+    DMG_VOLUME_NAME=""
+    VOLUME_NAME="${APP_NAME} ${VERSION}"
 
-  APP_PATH="build/macos/Build/Products/Release/${APP_NAME}.app"
-  DMG_STEM="$DIST_DIR/${APP_SLUG}-${VERSION}"
-  DMG_PATH="${DMG_STEM}.dmg"
-  DMG_WORK_DIR=$(mktemp -d)
-  DMG_STAGING_DIR="$DMG_WORK_DIR/staging"
-  DMG_RW_PATH="$DMG_WORK_DIR/${APP_SLUG}-${VERSION}-rw.dmg"
-  DMG_DEVICE=""
-  DMG_MOUNT_DIR=""
-  DMG_VOLUME_NAME=""
-  VOLUME_NAME="${APP_NAME} ${VERSION}"
+    cleanup() {
+      if [[ -n "$DMG_DEVICE" ]]; then
+        hdiutil detach "$DMG_DEVICE" -quiet || true
+      fi
 
-  cleanup() {
-    if [[ -n "$DMG_DEVICE" ]]; then
-      hdiutil detach "$DMG_DEVICE" -quiet || true
+      rm -rf "$DMG_WORK_DIR"
+    }
+
+    trap cleanup EXIT
+
+    if [[ ! -d "$APP_PATH" ]]; then
+      printf 'Missing macOS app bundle at %s\n' "$APP_PATH" >&2
+      exit 1
     fi
 
-    rm -rf "$DMG_WORK_DIR"
-  }
+    mkdir -p "$DMG_STAGING_DIR"
+    ditto "$APP_PATH" "$DMG_STAGING_DIR/${APP_NAME}.app"
+    ln -s /Applications "$DMG_STAGING_DIR/Applications"
 
-  trap cleanup EXIT
+    printf '==> Creating writable DMG...\n'
+    hdiutil create -quiet -fs HFS+ -volname "$VOLUME_NAME" -srcfolder "$DMG_STAGING_DIR" -ov -format UDRW "$DMG_RW_PATH"
 
-  if [[ ! -d "$APP_PATH" ]]; then
-    printf 'Missing macOS app bundle at %s\n' "$APP_PATH" >&2
-    exit 1
-  fi
+    printf '==> Customizing DMG window...\n'
+    ATTACH_OUTPUT=$(hdiutil attach -readwrite -noverify -noautoopen "$DMG_RW_PATH")
+    DMG_DEVICE=$(printf '%s\n' "$ATTACH_OUTPUT" | awk '/Apple_HFS/ { print $1; exit }')
+    DMG_MOUNT_DIR=$(printf '%s\n' "$ATTACH_OUTPUT" | awk '/Apple_HFS/ { sub(/^.*Apple_HFS[[:space:]]*/, ""); print; exit }')
+    DMG_VOLUME_NAME=$(basename "$DMG_MOUNT_DIR")
+    sleep 1
 
-  mkdir -p "$DMG_STAGING_DIR"
-  ditto "$APP_PATH" "$DMG_STAGING_DIR/${APP_NAME}.app"
-  ln -s /Applications "$DMG_STAGING_DIR/Applications"
-
-  printf '==> Creating writable DMG...\n'
-  hdiutil create -quiet -fs HFS+ -volname "$VOLUME_NAME" -srcfolder "$DMG_STAGING_DIR" -ov -format UDRW "$DMG_RW_PATH"
-
-  printf '==> Customizing DMG window...\n'
-  ATTACH_OUTPUT=$(hdiutil attach -readwrite -noverify -noautoopen "$DMG_RW_PATH")
-  DMG_DEVICE=$(printf '%s\n' "$ATTACH_OUTPUT" | awk '/Apple_HFS/ { print $1; exit }')
-  DMG_MOUNT_DIR=$(printf '%s\n' "$ATTACH_OUTPUT" | awk '/Apple_HFS/ { sub(/^.*Apple_HFS[[:space:]]*/, ""); print; exit }')
-  DMG_VOLUME_NAME=$(basename "$DMG_MOUNT_DIR")
-  sleep 1
-
-  if ! osascript <<EOF
+    if ! osascript <<EOF
 tell application "Finder"
   tell disk "${DMG_VOLUME_NAME}"
     open
@@ -138,17 +189,18 @@ tell application "Finder"
   end tell
 end tell
 EOF
-  then
-    printf 'Warning: Finder customization failed, continuing with default DMG layout\n' >&2
+    then
+      printf 'Warning: Finder customization failed, continuing with default DMG layout\n' >&2
+    fi
+
+    bless --folder "$DMG_MOUNT_DIR" --openfolder "$DMG_MOUNT_DIR" >/dev/null 2>&1 || true
+    sync
+    hdiutil detach "$DMG_DEVICE" -quiet
+    DMG_DEVICE=""
+
+    printf '==> Compressing DMG...\n'
+    hdiutil convert "$DMG_RW_PATH" -quiet -format UDZO -o "$DMG_STEM"
   fi
-
-  bless --folder "$DMG_MOUNT_DIR" --openfolder "$DMG_MOUNT_DIR" >/dev/null 2>&1 || true
-  sync
-  hdiutil detach "$DMG_DEVICE" -quiet
-  DMG_DEVICE=""
-
-  printf '==> Compressing DMG...\n'
-  hdiutil convert "$DMG_RW_PATH" -quiet -format UDZO -o "$DMG_STEM"
 fi
 
 printf '\n==> Release artifacts for v%s:\n' "$VERSION"

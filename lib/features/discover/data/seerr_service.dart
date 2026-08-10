@@ -44,76 +44,184 @@ final seerrServiceProvider = Provider<SeerrService>((ref) {
 class SeerrService {
   final ApiClient _client;
 
+  /// Page size for the request list.
+  ///
+  /// Seerr puts no cap on `take` and answers with `pageInfo.results`, so pages
+  /// of 50 keep fetching every request to one round-trip until a request
+  /// history genuinely outgrows it.
+  static const int _requestPageSize = 50;
+
+  /// How many title hydrations may run at once.
+  ///
+  /// Each one is a TMDB call proxied by Seerr, and a request list full of
+  /// "Unknown Media" rows used to fire one for every row simultaneously. Eight
+  /// at a time keeps a burst of refreshes polite to the server without making
+  /// the first paint wait for a serial walk.
+  static const int _hydrationConcurrency = 8;
+
+  /// tmdbId → hydrated title metadata.
+  ///
+  /// Without this every refresh re-fetched the details of the same unknown
+  /// titles from Seerr's TMDB passthrough — the list only grows, so a refresh
+  /// that ran N calls ran N calls every time.
+  final Map<int, ({String? title, String? year, String? posterPath})>
+  _mediaCache = {};
+
   SeerrService(this._client);
 
   Future<List<SeerrRequest>> getRequests() async {
     try {
-      final response = await _client.get(
-        '/api/v1/request',
-        queryParameters: {
-          'take': 20,
-          'skip': 0,
-          'sort': 'added',
-          'filter': 'all',
-        },
-      );
-      final results = response.data['results'] as List<dynamic>;
-      final requests = results
-          .map((e) {
-            try {
-              return SeerrRequest.fromJson(e);
-            } catch (e) {
-              return null;
-            }
-          })
-          .whereType<SeerrRequest>()
-          .toList();
+      final first = await _requestPage(0);
+      final all = <SeerrRequest>[...first.items];
 
-      // Hydrate missing titles
-      return await Future.wait(
-        requests.map((request) async {
-          if (request.media?.title != null &&
-              request.media?.posterPath != null &&
-              request.media!.title != 'Unknown Media' &&
-              !request.media!.title!.startsWith('Unknown Media (')) {
-            return request;
-          }
+      // The server reports the true count on the first page, so the remaining
+      // pages can all be asked for in parallel.
+      if (all.length < first.total) {
+        final pages = await Future.wait([
+          for (
+            var skip = _requestPageSize;
+            skip < first.total;
+            skip += _requestPageSize
+          )
+            _requestPageSafely(skip),
+        ]);
+        for (final page in pages) {
+          all.addAll(page.items);
+        }
+      }
 
-          try {
-            if (request.media?.mediaType == 'movie' &&
-                request.media?.tmdbId != null) {
-              final details = await getMovie(request.media!.tmdbId!);
-              return request.copyWith(
-                media: request.media?.copyWith(
-                  title: details['title'],
-                  year: details['releaseDate']?.toString().substring(0, 4),
-                  posterPath:
-                      details['posterPath']?.toString() ??
-                      details['poster_path']?.toString(),
-                ),
-              );
-            } else if (request.media?.mediaType == 'tv' &&
-                request.media?.tmdbId != null) {
-              final details = await getTv(request.media!.tmdbId!);
-              return request.copyWith(
-                media: request.media?.copyWith(
-                  title: details['name'],
-                  year: details['firstAirDate']?.toString().substring(0, 4),
-                  posterPath:
-                      details['posterPath']?.toString() ??
-                      details['poster_path']?.toString(),
-                ),
-              );
-            }
-          } catch (e) {
-            // Ignore hydration errors
-          }
-          return request;
-        }),
-      );
+      return await _hydrateRequests(all);
     } catch (e) {
       return [];
     }
+  }
+
+  Future<({List<SeerrRequest> items, int total})> _requestPage(int skip) async {
+    final response = await _client.get(
+      '/api/v1/request',
+      queryParameters: {
+        'take': _requestPageSize,
+        'skip': skip,
+        'sort': 'added',
+        'filter': 'all',
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    final results = data['results'] as List<dynamic>? ?? const [];
+    final pageInfo = data['pageInfo'];
+    final total = pageInfo is Map<String, dynamic>
+        ? (pageInfo['results'] as num?)?.toInt() ?? 0
+        : 0;
+    final items = results
+        .map((e) {
+          try {
+            return SeerrRequest.fromJson(e);
+          } catch (e) {
+            return null;
+          }
+        })
+        .whereType<SeerrRequest>()
+        .toList(growable: false);
+    return (items: items, total: total);
+  }
+
+  /// A later page failing must not blank the requests that did arrive — the
+  /// caller gets the pages that answered and moves on.
+  Future<({List<SeerrRequest> items, int total})> _requestPageSafely(
+    int skip,
+  ) async {
+    try {
+      return await _requestPage(skip);
+    } catch (_) {
+      return (items: const <SeerrRequest>[], total: 0);
+    }
+  }
+
+  Future<List<SeerrRequest>> _hydrateRequests(
+    List<SeerrRequest> requests,
+  ) async {
+    if (requests.isEmpty) return requests;
+
+    final hydrated = List<SeerrRequest?>.filled(requests.length, null);
+    var next = 0;
+
+    Future<void> worker() async {
+      while (true) {
+        final index = next++;
+        if (index >= requests.length) return;
+        hydrated[index] = await _hydrateRequest(requests[index]);
+      }
+    }
+
+    final workers = _hydrationConcurrency < requests.length
+        ? _hydrationConcurrency
+        : requests.length;
+    await Future.wait(List.generate(workers, (_) => worker()));
+
+    return hydrated.whereType<SeerrRequest>().toList(growable: false);
+  }
+
+  Future<SeerrRequest> _hydrateRequest(SeerrRequest request) async {
+    final media = request.media;
+    if (media == null) return request;
+
+    final title = media.title;
+    final needsTitle =
+        title == null ||
+        title == 'Unknown Media' ||
+        title.startsWith('Unknown Media (');
+    if (!needsTitle && media.posterPath != null) return request;
+
+    final tmdbId = media.tmdbId;
+    if (tmdbId == null) return request;
+
+    final cached = _mediaCache[tmdbId];
+    if (cached != null) {
+      return _applyHydration(request, cached);
+    }
+
+    try {
+      if (media.mediaType == 'movie') {
+        final details = await getMovie(tmdbId);
+        _mediaCache[tmdbId] = (
+          title: details['title']?.toString(),
+          year: details['releaseDate']?.toString().substring(0, 4),
+          posterPath:
+              details['posterPath']?.toString() ??
+              details['poster_path']?.toString(),
+        );
+      } else if (media.mediaType == 'tv') {
+        final details = await getTv(tmdbId);
+        _mediaCache[tmdbId] = (
+          title: details['name']?.toString(),
+          year: details['firstAirDate']?.toString().substring(0, 4),
+          posterPath:
+              details['posterPath']?.toString() ??
+              details['poster_path']?.toString(),
+        );
+      } else {
+        return request;
+      }
+      return _applyHydration(request, _mediaCache[tmdbId]!);
+    } catch (e) {
+      // Ignore hydration errors
+      return request;
+    }
+  }
+
+  SeerrRequest _applyHydration(
+    SeerrRequest request,
+    ({String? title, String? year, String? posterPath}) entry,
+  ) {
+    final media = request.media;
+    if (media == null) return request;
+    return request.copyWith(
+      media: media.copyWith(
+        title: entry.title ?? media.title,
+        year: entry.year ?? media.year,
+        posterPath: entry.posterPath ?? media.posterPath,
+      ),
+    );
   }
 
   Future<void> deleteRequest(int requestId) async {

@@ -26,7 +26,11 @@ void main() {
         client.lastGetPath,
         '/api/${ArrServiceConfig.radarr.apiVersion}/queue',
       );
-      expect(client.lastGetQueryParameters, const {'includeMovie': true});
+      expect(client.lastGetQueryParameters, const {
+        'page': 1,
+        'pageSize': 200,
+        'includeMovie': true,
+      });
     });
 
     test('getHistory requests embedded movie data', () async {
