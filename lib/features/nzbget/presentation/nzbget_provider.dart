@@ -10,15 +10,27 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Throws if NZBGet is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.nzbget)` before reading.
 final nzbgetClientProvider = Provider<NzbgetClient>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  if (!settings.isServiceConfigured(ServiceKey.nzbget)) {
+  // Selected rather than watching the whole model: this provider closes a live
+  // Dio on dispose, so an unrelated settings write must not rebuild it.
+  final transport = ref.watch(
+    currentSettingsProvider.select(
+      (s) => (
+        configured: s.isServiceConfigured(ServiceKey.nzbget),
+        url: s.nzbgetUrl,
+        username: s.nzbgetUsername,
+        password: s.nzbgetPassword,
+        pin: s.pinForUrl(s.nzbgetUrl),
+      ),
+    ),
+  );
+  if (!transport.configured) {
     throw Exception('NZBGet not configured');
   }
   final client = NzbgetClient(
-    url: settings.nzbgetUrl,
-    username: settings.nzbgetUsername.isEmpty ? null : settings.nzbgetUsername,
-    password: settings.nzbgetPassword.isEmpty ? null : settings.nzbgetPassword,
-    certFingerprint: settings.pinForUrl(settings.nzbgetUrl),
+    url: transport.url,
+    username: transport.username.isEmpty ? null : transport.username,
+    password: transport.password.isEmpty ? null : transport.password,
+    certFingerprint: transport.pin,
   );
   ref.onDispose(() => client.close());
   return client;

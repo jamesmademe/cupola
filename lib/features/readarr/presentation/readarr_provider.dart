@@ -10,12 +10,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Throws if Readarr is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.readarr)` before reading.
 final readarrServiceProvider = Provider<ReadarrService>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  final service = ReadarrService(apiClientFor(settings, ServiceKey.readarr));
-  // The provider is rebuilt whenever the config changes; close the previous
-  // Dio instance so its connections are not leaked.
-  ref.onDispose(() => service.client.close());
-  return service;
+  return ReadarrService(watchApiClient(ref, ServiceKey.readarr));
 });
 
 /// All authors in the library.

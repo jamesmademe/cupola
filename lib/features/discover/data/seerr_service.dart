@@ -60,8 +60,7 @@ Future<List<MediaPreview>> _mapPreviews(
 }
 
 final seerrServiceProvider = Provider<SeerrService>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  return SeerrService(apiClientFor(settings, ServiceKey.seerr));
+  return SeerrService(watchApiClient(ref, ServiceKey.seerr));
 });
 
 class SeerrService {

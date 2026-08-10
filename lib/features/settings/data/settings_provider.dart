@@ -40,13 +40,32 @@ final themeModeProvider = Provider<ThemeMode>((ref) {
   return ref.watch(currentSettingsProvider).resolvedThemeMode;
 });
 
-/// The [ApiClient] for [service], built from [settings].
+/// The three settings fields that decide which server an [ApiClient] talks to
+/// and how it authenticates. A record so it compares structurally, which is
+/// what makes it usable as a `select` key.
+typedef ServiceTransport = ({
+  bool configured,
+  String url,
+  String apiKey,
+  String? pin,
+});
+
+/// Watches only [service]'s transport identity and returns an [ApiClient] bound
+/// to it, closed when the provider is disposed.
 ///
-/// The one place the seven `X-Api-Key` services turn a [SettingsModel] into a
-/// client. Each of them used to spell out the same twelve lines with its own
-/// field names substituted, which is three chances per service to disagree with
-/// the registry: whether "configured" means url-and-key, which URL the
-/// certificate pin is looked up against, and what the thrown message says.
+/// The one place the seven `X-Api-Key` services turn settings into a client.
+/// Each of them used to spell out the same twelve lines with its own field
+/// names substituted, which is three chances per service to disagree with the
+/// registry: whether "configured" means url-and-key, which URL the certificate
+/// pin is looked up against, and what the thrown message says.
+///
+/// **Watches a `select` rather than the whole [SettingsModel] on purpose.** An
+/// `ApiClient` owns a `Dio`, and this function registers `onDispose(close)`, so
+/// a rebuild is not free — it tears down live connections. Watching the whole
+/// model meant *any* settings write rebuilt every service client: switching the
+/// theme, editing a different service's URL, completing onboarding. Selecting
+/// the record means the client survives everything except a change to its own
+/// URL, its own key, or the certificate pinned for its own origin.
 ///
 /// Throws `Exception('<Service> not configured')` when [service] is not
 /// configured. The exact `'not configured'` wording is load-bearing —
@@ -54,19 +73,32 @@ final themeModeProvider = Provider<ThemeMode>((ref) {
 /// rather than an error — and the service name comes from
 /// [ServiceKeyExtension.title] so it stays the name the rest of the app uses.
 ///
-/// A plain function rather than a provider: the callers are already inside a
-/// `Provider` body watching [currentSettingsProvider], and a second provider
-/// layer would add a rebuild edge without adding an answer.
-ApiClient apiClientFor(SettingsModel settings, ServiceKey service) {
-  if (!settings.isServiceConfigured(service)) {
+/// A plain function taking [ref] rather than a provider: the callers already
+/// are providers, and a second provider layer would add a rebuild edge without
+/// adding an answer.
+ApiClient watchApiClient(Ref ref, ServiceKey service) {
+  final transport = ref.watch(
+    currentSettingsProvider.select(
+      (s) => (
+        configured: s.isServiceConfigured(service),
+        url: s.urlFor(service),
+        apiKey: s.apiKeyFor(service),
+        pin: s.pinForUrl(s.urlFor(service)),
+      ),
+    ),
+  );
+  if (!transport.configured) {
     throw Exception('${service.title} not configured');
   }
-  final url = settings.urlFor(service);
-  return ApiClient(
-    baseUrl: url,
-    apiKey: settings.apiKeyFor(service),
-    pinnedCertFingerprint: settings.pinForUrl(url),
+  final client = ApiClient(
+    baseUrl: transport.url,
+    apiKey: transport.apiKey,
+    pinnedCertFingerprint: transport.pin,
   );
+  // Rebuilt whenever the transport identity changes; close the outgoing Dio so
+  // its connections are not leaked.
+  ref.onDispose(client.close);
+  return client;
 }
 
 class SettingsNotifier extends Notifier<SettingsModel> {

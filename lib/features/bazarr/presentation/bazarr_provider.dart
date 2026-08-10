@@ -14,8 +14,7 @@ const int _defaultDashboardPageSize = 20;
 /// Throws if Bazarr is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.bazarr)` before reading.
 final bazarrServiceProvider = Provider<BazarrService>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  return BazarrService(apiClientFor(settings, ServiceKey.bazarr));
+  return BazarrService(watchApiClient(ref, ServiceKey.bazarr));
 });
 
 /// Aggregated counts for the Bazarr dashboard stat row.

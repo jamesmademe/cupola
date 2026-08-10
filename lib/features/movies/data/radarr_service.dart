@@ -8,8 +8,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 final radarrServiceProvider = Provider<RadarrService>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  return RadarrService(apiClientFor(settings, ServiceKey.radarr));
+  return RadarrService(watchApiClient(ref, ServiceKey.radarr));
 });
 
 /// Service for interacting with Radarr API.

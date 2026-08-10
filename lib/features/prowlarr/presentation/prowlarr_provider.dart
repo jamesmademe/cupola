@@ -12,12 +12,7 @@ const int _defaultHistoryPageSize = 20;
 /// Throws if Prowlarr is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.prowlarr)` before reading.
 final prowlarrServiceProvider = Provider<ProwlarrService>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  final service = ProwlarrService(apiClientFor(settings, ServiceKey.prowlarr));
-  // The provider is rebuilt whenever the config changes; close the previous
-  // Dio instance so its connections are not leaked.
-  ref.onDispose(() => service.client.close());
-  return service;
+  return ProwlarrService(watchApiClient(ref, ServiceKey.prowlarr));
 });
 
 /// Configured indexers.

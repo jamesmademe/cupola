@@ -46,10 +46,18 @@ class ServiceTheme {
   /// accent (Radarr's 0.44 amber, the 0.41 success green) passes any intuitive
   /// cutoff while white on it still fails — which is exactly how a 0.45
   /// threshold shipped white-on-amber buttons at 2.15:1.
+  ///
+  /// Both candidates go through the same symmetric WCAG ratio. The dark-ink arm
+  /// used to hard-code the background as the lighter of the pair, which is a
+  /// value the caller can falsify: on a background darker than [_darkInk]
+  /// (relative luminance under ~0.013) it yielded a number below 1 rather than
+  /// the real ratio. It never picked the wrong ink — white clears ~17:1 down
+  /// there and wins either way — but a contrast function that can report a
+  /// ratio below 1 is one someone will later read as a measurement.
   static Color foregroundOn(Color background) {
     final luminance = background.computeLuminance();
-    final whiteContrast = 1.05 / (luminance + 0.05);
-    final darkContrast = (luminance + 0.05) / (_darkInkLuminance + 0.05);
+    final whiteContrast = _contrastBetween(_whiteLuminance, luminance);
+    final darkContrast = _contrastBetween(_darkInkLuminance, luminance);
     return darkContrast >= whiteContrast ? _darkInk : Colors.white;
   }
 
@@ -59,6 +67,10 @@ class ServiceTheme {
   /// [_darkInk] never changes, so its luminance is resolved once instead of on
   /// every [foregroundOn] call — each `computeLuminance` is three `pow`s.
   static final double _darkInkLuminance = _darkInk.computeLuminance();
+
+  /// White's relative luminance is 1.0 by definition; named so [foregroundOn]
+  /// reads as one comparison between two measured inks.
+  static const double _whiteLuminance = 1.0;
 
   /// A legible label colour for text drawn **on a low-alpha tint of its own
   /// accent** — a selected nav pill, an accent chip, a segment pill.
@@ -139,9 +151,16 @@ class ServiceTheme {
   /// WCAG contrast of [foreground] against an already-measured background
   /// luminance. Taking the luminance rather than the `Color` lets callers that
   /// compare many foregrounds to one background pay for it once.
-  static double _contrastAgainst(Color foreground, double backgroundLuminance) {
-    final a = foreground.computeLuminance();
-    final b = backgroundLuminance;
+  static double _contrastAgainst(
+    Color foreground,
+    double backgroundLuminance,
+  ) => _contrastBetween(foreground.computeLuminance(), backgroundLuminance);
+
+  /// The WCAG ratio itself, over two luminances that are already measured.
+  ///
+  /// Split out so [foregroundOn] can compare two *constant* inks without paying
+  /// `computeLuminance` — three `pow`s each — on every call.
+  static double _contrastBetween(double a, double b) {
     final lighter = a > b ? a : b;
     final darker = a > b ? b : a;
     return (lighter + 0.05) / (darker + 0.05);

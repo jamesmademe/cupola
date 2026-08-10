@@ -156,16 +156,13 @@ Future<String?> _loadVersion(
           : null,
       certFingerprint: settings.pinForUrl(settings.qbittorrentUrl),
     );
-    try {
-      final version = await client.getVersion().timeout(
-        const Duration(seconds: 5),
-      );
-      return version.isNotEmpty ? version : null;
-    } catch (_) {
-      return null;
-    } finally {
-      client.close();
-    }
+    // Login-then-version is two hops on a cold client, so this gets the same
+    // headroom as Transmission's 409 handshake pair.
+    return _versionOrNull(
+      client.getVersion,
+      timeout: const Duration(seconds: 8),
+      close: client.close,
+    );
   }
 
   if (service == ServiceKey.truenas) {
@@ -296,9 +293,10 @@ Future<String?> _loadVersion(
 ///
 /// Nothing is caught here, on purpose. A throw is what tells
 /// [_loadServiceSummary] the service is offline, so swallowing it would report
-/// an unreachable box as online with a blank version — which is exactly what
-/// the qBittorrent branch above does deliberately, and why that branch is not
-/// folded into this helper.
+/// an unreachable box as online with a blank version. The qBittorrent branch
+/// used to do exactly that — it caught everything and returned null, so a
+/// refusing or unreachable qBittorrent still showed ONLINE while the other five
+/// clients reported offline. All six now share this envelope.
 ///
 /// [close] is a `FutureOr` so a client with an asynchronous shutdown could share
 /// this path without the synchronous Dio ones changing shape.

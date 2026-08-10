@@ -15,20 +15,32 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  if (!settings.isServiceConfigured(ServiceKey.qbittorrent)) {
+  // Selected rather than watching the whole model, and here that matters twice
+  // over: the client holds the WebUI SID cookie, so rebuilding it throws away
+  // an authenticated session. Only this service's own address and credentials
+  // should do that.
+  final transport = ref.watch(
+    currentSettingsProvider.select(
+      (s) => (
+        configured: s.isServiceConfigured(ServiceKey.qbittorrent),
+        url: s.qbittorrentUrl,
+        username: s.qbittorrentUsername,
+        password: s.qbittorrentPassword,
+        pin: s.pinForUrl(s.qbittorrentUrl),
+      ),
+    ),
+  );
+  if (!transport.configured) {
     throw Exception('qBittorrent not configured');
   }
   final client = QbittorrentClient(
-    url: settings.qbittorrentUrl,
-    username: settings.qbittorrentUsername.isNotEmpty
-        ? settings.qbittorrentUsername
-        : null,
-    password: settings.qbittorrentPassword.isNotEmpty
-        ? settings.qbittorrentPassword
-        : null,
-    certFingerprint: settings.pinForUrl(settings.qbittorrentUrl),
+    url: transport.url,
+    username: transport.username.isNotEmpty ? transport.username : null,
+    password: transport.password.isNotEmpty ? transport.password : null,
+    certFingerprint: transport.pin,
   );
+  // The outgoing client owns a Dio and a cookie jar; close it so neither leaks.
+  ref.onDispose(() => client.close());
   return QbittorrentService(client);
 });
 

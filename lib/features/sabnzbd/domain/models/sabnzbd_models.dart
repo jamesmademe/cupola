@@ -104,33 +104,21 @@ class SabnzbdQueueSlot {
 
 /// Aggregate transfer statistics (`mode=server_stats`).
 ///
-/// SABnzbd reports totals in bytes. Only the roll-ups are kept; the per-server
-/// breakdown is ignored for the dashboard.
+/// SABnzbd reports totals in bytes, and the response also carries `month`,
+/// `week` and `day` roll-ups plus a per-server breakdown. None of them are
+/// modelled: the dashboard shows the all-time total and nothing else, and a
+/// field that is parsed but never read is one more thing to keep in step with
+/// the API for no one's benefit.
 class SabnzbdServerStats {
-  const SabnzbdServerStats({
-    required this.total,
-    required this.month,
-    required this.week,
-    required this.day,
-  });
+  const SabnzbdServerStats({required this.total});
 
   /// Total bytes downloaded over all time.
   final int total;
 
-  /// Bytes downloaded this month / week / today.
-  final int month;
-  final int week;
-  final int day;
-
   String get totalLabel => formatBytes(total);
 
   factory SabnzbdServerStats.fromJson(Map<String, dynamic> json) {
-    return SabnzbdServerStats(
-      total: _asDouble(json['total']).round(),
-      month: _asDouble(json['month']).round(),
-      week: _asDouble(json['week']).round(),
-      day: _asDouble(json['day']).round(),
-    );
+    return SabnzbdServerStats(total: _asDouble(json['total']).round());
   }
 }
 

@@ -10,14 +10,25 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Throws if SABnzbd is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.sabnzbd)` before reading.
 final sabnzbdClientProvider = Provider<SabnzbdClient>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  if (!settings.isServiceConfigured(ServiceKey.sabnzbd)) {
+  // Selected rather than watching the whole model: this provider closes a live
+  // Dio on dispose, so an unrelated settings write must not rebuild it.
+  final transport = ref.watch(
+    currentSettingsProvider.select(
+      (s) => (
+        configured: s.isServiceConfigured(ServiceKey.sabnzbd),
+        url: s.sabnzbdUrl,
+        apiKey: s.sabnzbdApiKey,
+        pin: s.pinForUrl(s.sabnzbdUrl),
+      ),
+    ),
+  );
+  if (!transport.configured) {
     throw Exception('SABnzbd not configured');
   }
   final client = SabnzbdClient(
-    url: settings.sabnzbdUrl,
-    apiKey: settings.sabnzbdApiKey,
-    certFingerprint: settings.pinForUrl(settings.sabnzbdUrl),
+    url: transport.url,
+    apiKey: transport.apiKey,
+    certFingerprint: transport.pin,
   );
   ref.onDispose(() => client.close());
   return client;

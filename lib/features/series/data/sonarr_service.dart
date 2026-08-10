@@ -9,8 +9,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 final sonarrServiceProvider = Provider<SonarrService>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  return SonarrService(apiClientFor(settings, ServiceKey.sonarr));
+  return SonarrService(watchApiClient(ref, ServiceKey.sonarr));
 });
 
 /// Service for interacting with Sonarr API.

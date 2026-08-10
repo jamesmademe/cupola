@@ -10,8 +10,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 final lidarrServiceProvider = Provider<LidarrService>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  return LidarrService(apiClientFor(settings, ServiceKey.lidarr));
+  return LidarrService(watchApiClient(ref, ServiceKey.lidarr));
 });
 
 /// Service for interacting with Lidarr API.
