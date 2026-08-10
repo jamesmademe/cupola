@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -68,7 +69,7 @@ class _ReadarrDashboard extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async {
         _invalidateAll(ref);
-        await Future<void>.delayed(const Duration(milliseconds: 300));
+        await Future<void>.delayed(AppAnimation.durationMd);
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -81,7 +82,7 @@ class _ReadarrDashboard extends ConsumerWidget {
             kpis: ref.watch(serviceKpiProvider(ServiceKey.readarr)),
             accent: AppColors.readarr,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           SectionHeader(
             title: 'Authors',
             showChevron: true,
@@ -89,7 +90,7 @@ class _ReadarrDashboard extends ConsumerWidget {
           ),
           const SizedBox(height: 2),
           _AuthorPreview(authorsAsync: authorsAsync),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           const SectionHeader(title: 'Recent Activity', showChevron: false),
           const SizedBox(height: 2),
           _HistoryList(historyAsync: historyAsync),
@@ -118,7 +119,10 @@ class _AuthorPreview extends ConsumerWidget {
       data: (authors) {
         if (authors.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('No authors in the library yet.'),
           );
         }
@@ -135,8 +139,8 @@ class _AuthorPreview extends ConsumerWidget {
               .toList(),
         );
       },
-      loading: () => const ReadarrListShimmer(),
-      error: (error, _) => ReadarrErrorRetry(
+      loading: () => const ListRowsShimmer(),
+      error: (error, _) => InlineErrorRetry(
         message: 'Failed to load authors',
         onRetry: () => ref.invalidate(readarrAuthorsProvider),
       ),
@@ -155,7 +159,10 @@ class _HistoryList extends ConsumerWidget {
       data: (items) {
         if (items.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('No recent activity yet.'),
           );
         }
@@ -166,80 +173,10 @@ class _HistoryList extends ConsumerWidget {
               .toList(),
         );
       },
-      loading: () => const ReadarrListShimmer(),
-      error: (error, _) => ReadarrErrorRetry(
+      loading: () => const ListRowsShimmer(),
+      error: (error, _) => InlineErrorRetry(
         message: 'Failed to load recent activity',
         onRetry: () => ref.invalidate(readarrRecentHistoryProvider),
-      ),
-    );
-  }
-}
-
-/// Lightweight skeleton rows shown while a Readarr list loads.
-class ReadarrListShimmer extends StatelessWidget {
-  const ReadarrListShimmer({super.key, this.rows = 4});
-
-  final int rows;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      children: List.generate(
-        rows,
-        (_) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Container(
-            height: 56,
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-              borderRadius: AppRadius.borderRadiusMd,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Inline error placeholder with retry, distinct from the loading shimmer.
-class ReadarrErrorRetry extends StatelessWidget {
-  const ReadarrErrorRetry({
-    super.key,
-    required this.message,
-    required this.onRetry,
-  });
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer.withValues(alpha: 0.4),
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(color: colorScheme.error.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline_rounded, color: colorScheme.error),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onErrorContainer,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
-        ],
       ),
     );
   }

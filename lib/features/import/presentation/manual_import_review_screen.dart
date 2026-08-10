@@ -10,6 +10,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/import/domain/manual_import_display.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
 import 'package:cupola/features/import/domain/manual_import_status.dart';
+import 'package:cupola/features/import/presentation/manual_import_adjust_sheet.dart';
 import 'package:cupola/features/import/presentation/manual_import_fix_sheet.dart';
 import 'package:cupola/features/import/presentation/manual_import_provider.dart';
 import 'package:cupola/features/import/presentation/manual_import_review_facets.dart';
@@ -183,7 +184,7 @@ class _ManualImportReviewScreenState
                     .loadSelectedFolderItems(),
         ),
       ],
-      bottomBar: _ReviewFooter(
+      bottomBar: ManualImportReviewFooter(
         service: widget.service,
         targetId: widget.targetId,
       ),
@@ -237,13 +238,13 @@ class _ManualImportReviewScreenState
       // row up front is what made this list feel heavy to scroll.
       padding: const EdgeInsets.only(bottom: AppSpacing.xl),
       itemCount: rows.length,
-      itemBuilder: (context, index) => rows[index].build(context),
+      itemBuilder: (context, index) => rows[index],
     );
   }
 
-  /// Flattens the whole screen into row descriptors so the list can stay lazy
+  /// Flattens the whole screen into a single row list so the list can stay lazy
   /// while still carrying headers, group headers and per-file rows.
-  List<_ReviewRow> _buildRows(ManualImportFlowState state) {
+  List<Widget> _buildRows(ManualImportFlowState state) {
     final service = widget.service;
     final query = _query;
 
@@ -268,47 +269,33 @@ class _ManualImportReviewScreenState
     final other = visible(state.otherItems, ManualImportFacet.other);
     final imported = visible(state.importedItems, ManualImportFacet.imported);
 
-    final rows = <_ReviewRow>[
-      _WidgetRow(
-        key: 'station',
-        child: ImportStationBar(service: service, activeIndex: 1),
-      ),
-      _WidgetRow(
-        key: 'facets',
-        child: ManualImportFacetBar(
-          counts: {
-            ManualImportFacet.ready: state.readyItems.length,
-            ManualImportFacet.attention: state.attentionItems.length,
-            ManualImportFacet.imported: state.importedItems.length,
-            ManualImportFacet.other: state.otherItems.length,
-          },
-          hidden: _hidden,
-          onToggle: _toggleFacet,
-        ),
+    final rows = <Widget>[
+      ImportStationBar(service: service, activeIndex: 1),
+      ManualImportFacetBar(
+        counts: {
+          ManualImportFacet.ready: state.readyItems.length,
+          ManualImportFacet.attention: state.attentionItems.length,
+          ManualImportFacet.imported: state.importedItems.length,
+          ManualImportFacet.other: state.otherItems.length,
+        },
+        hidden: _hidden,
+        onToggle: _toggleFacet,
       ),
     ];
 
     if (state.items.length > _filterThreshold) {
       rows.add(
-        _WidgetRow(
-          key: 'filter',
-          child: _FilterField(
-            controller: _filterController,
-            service: service,
-            total: state.items.length,
-            onChanged: (value) => setState(() => _query = value),
-          ),
+        _FilterField(
+          controller: _filterController,
+          service: service,
+          total: state.items.length,
+          onChanged: (value) => setState(() => _query = value),
         ),
       );
     }
 
     if (state.error != null) {
-      rows.add(
-        _WidgetRow(
-          key: 'error',
-          child: _InlineError(error: state.error!),
-        ),
-      );
+      rows.add(_InlineError(error: state.error!));
     }
 
     final visibleCount =
@@ -324,25 +311,22 @@ class _ManualImportReviewScreenState
 
     if (visibleCount > 0 && visibleCount < totalCount) {
       rows.add(
-        _WidgetRow(
-          key: 'filter-status',
-          child: _FilterStatus(
-            visibleCount: visibleCount,
-            totalCount: totalCount,
-            // Offered only when it would actually change the selection, so it
-            // never reads as a no-op button.
-            onSelectOnly:
-                ready.isEmpty ||
-                    (state.selectedPaths.length == ready.length &&
-                        ready.every(
-                          (item) => state.selectedPaths.contains(item.path),
-                        ))
-                ? null
-                : () => ref
-                      .read(manualImportFlowProvider.notifier)
-                      .selectOnly(ready),
-            readyCount: ready.length,
-          ),
+        _FilterStatus(
+          visibleCount: visibleCount,
+          totalCount: totalCount,
+          // Offered only when it would actually change the selection, so it
+          // never reads as a no-op button.
+          onSelectOnly:
+              ready.isEmpty ||
+                  (state.selectedPaths.length == ready.length &&
+                      ready.every(
+                        (item) => state.selectedPaths.contains(item.path),
+                      ))
+              ? null
+              : () => ref
+                    .read(manualImportFlowProvider.notifier)
+                    .selectOnly(ready),
+          readyCount: ready.length,
         ),
       );
     }
@@ -360,14 +344,11 @@ class _ManualImportReviewScreenState
       // no rows left to show — but the batch still happened, and the only way
       // back to its result would otherwise be gone with them.
       rows.add(
-        _WidgetRow(
-          key: 'last-import',
-          child: _LastImportBanner(
-            service: service,
-            command: command,
-            fileCount: state.submittedItems.length,
-            onView: () => _openTrack(),
-          ),
+        _LastImportBanner(
+          service: service,
+          command: command,
+          fileCount: state.submittedItems.length,
+          onView: () => _openTrack(),
         ),
       );
     }
@@ -377,28 +358,25 @@ class _ManualImportReviewScreenState
     if (visibleCount == 0 && totalCount > 0) {
       final searching = query.trim().isNotEmpty;
       rows.add(
-        _WidgetRow(
-          key: 'no-results',
-          child: AppEmptyState.compact(
-            icon: searching
-                ? Icons.search_off_rounded
-                : Icons.filter_alt_off_rounded,
-            title: searching
-                ? 'No files match "${query.trim()}"'
-                : 'Every file is filtered out',
-            message: searching
-                ? 'Clear the filter to see all $totalCount files.'
-                : 'The counts above are switched off. Tap one to bring those '
-                      'files back.',
-            accentColor: service.accent,
-            action: searching
-                ? null
-                : FilledButton.tonalIcon(
-                    onPressed: () => setState(_hidden.clear),
-                    icon: const Icon(Icons.visibility_rounded, size: 18),
-                    label: Text('Show all $totalCount files'),
-                  ),
-          ),
+        AppEmptyState.compact(
+          icon: searching
+              ? Icons.search_off_rounded
+              : Icons.filter_alt_off_rounded,
+          title: searching
+              ? 'No files match "${query.trim()}"'
+              : 'Every file is filtered out',
+          message: searching
+              ? 'Clear the filter to see all $totalCount files.'
+              : 'The counts above are switched off. Tap one to bring those '
+                    'files back.',
+          accentColor: service.accent,
+          action: searching
+              ? null
+              : FilledButton.tonalIcon(
+                  onPressed: () => setState(_hidden.clear),
+                  icon: const Icon(Icons.visibility_rounded, size: 18),
+                  label: Text('Show all $totalCount files'),
+                ),
         ),
       );
       return rows;
@@ -412,33 +390,25 @@ class _ManualImportReviewScreenState
     }
     if (other.isNotEmpty) {
       rows.add(
-        _WidgetRow(
-          key: 'other-header',
-          child: SectionHeader(
-            title: 'Other files',
-            subtitle: _fileCount(
-              other.length,
-              'is not a kind ${service.title} imports',
-              'are not a kind ${service.title} imports',
-            ),
-            showChevron: false,
+        SectionHeader(
+          title: 'Other files',
+          subtitle: _fileCount(
+            other.length,
+            'is not a kind ${service.title} imports',
+            'are not a kind ${service.title} imports',
           ),
+          showChevron: false,
         ),
       );
       for (final item in other) {
-        rows.add(
-          _WidgetRow(
-            key: 'other-${item.path}',
-            child: OtherFileRow(service: service, item: item),
-          ),
-        );
+        rows.add(OtherFileRow(service: service, item: item));
       }
     }
 
     return rows;
   }
 
-  List<_ReviewRow> _attentionRows(
+  List<Widget> _attentionRows(
     ManualImportFlowState state,
     List<ManualImportItem> attention,
   ) {
@@ -458,51 +428,38 @@ class _ManualImportReviewScreenState
     // Two controls for one job is how a section came to be hideable in a place
     // that never said what it was hiding.
     return [
-      _WidgetRow(
-        key: 'attention-header',
-        child: SectionHeader.action(
-          title: 'Needs attention',
-          subtitle: _fileCount(
-            attention.length,
-            'needs a match',
-            'need a match',
-          ),
-          trailing: canAssignTogether
-              ? TextButton.icon(
-                  onPressed: () => showManualImportBulkFixSheet(
-                    context: context,
-                    service: service,
-                    items: picked,
-                  ),
-                  icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
-                  label: Text('Assign ${picked.length}'),
-                )
-              : const SizedBox.shrink(),
-        ),
+      SectionHeader.action(
+        title: 'Needs attention',
+        subtitle: _fileCount(attention.length, 'needs a match', 'need a match'),
+        trailing: canAssignTogether
+            ? TextButton.icon(
+                onPressed: () => showManualImportBulkFixSheet(
+                  context: context,
+                  service: service,
+                  items: picked,
+                ),
+                icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
+                label: Text('Assign ${picked.length}'),
+              )
+            : const SizedBox.shrink(),
       ),
       if (picked.length == 1)
-        _WidgetRow(
-          key: 'attention-hint',
-          child: _AssignHint(
-            onClear: () =>
-                ref.read(manualImportFlowProvider.notifier).clearFixSelection(),
-          ),
+        _AssignHint(
+          onClear: () =>
+              ref.read(manualImportFlowProvider.notifier).clearFixSelection(),
         ),
       for (final item in attention)
-        _WidgetRow(
-          key: 'attention-${item.path}',
-          child: AttentionFileRow(
+        AttentionFileRow(
+          service: service,
+          item: item,
+          picked: state.fixSelectionPaths.contains(item.path),
+          onPickedChanged: (value) => ref
+              .read(manualImportFlowProvider.notifier)
+              .toggleFixSelection(item, value),
+          onFix: () => showManualImportFixSheet(
+            context: context,
             service: service,
             item: item,
-            picked: state.fixSelectionPaths.contains(item.path),
-            onPickedChanged: (value) => ref
-                .read(manualImportFlowProvider.notifier)
-                .toggleFixSelection(item, value),
-            onFix: () => showManualImportFixSheet(
-              context: context,
-              service: service,
-              item: item,
-            ),
           ),
         ),
     ];
@@ -522,42 +479,32 @@ class _ManualImportReviewScreenState
   }
 
   /// The batch already handed to the service, and where to watch it.
-  List<_ReviewRow> _inFlightRows(
+  List<Widget> _inFlightRows(
     ManualImportCommandStatus command,
     List<ManualImportItem> inFlight,
   ) {
     final running = command.isActive;
     return [
-      _WidgetRow(
-        key: 'inflight-header',
-        child: SectionHeader.action(
-          title: running ? 'Importing now' : 'Sent to import',
-          subtitle: _fileCount(
-            inFlight.length,
-            running
-                ? 'is with ${widget.service.title}'
-                : 'was sent to ${widget.service.title}',
-            running
-                ? 'are with ${widget.service.title}'
-                : 'were sent to ${widget.service.title}',
-          ),
-          trailing: TextButton(
-            // Same contract as the import button: coming back re-reads the
-            // folder, so what the service did lands in the list.
-            onPressed: _openTrack,
-            child: const Text('View progress'),
-          ),
+      SectionHeader.action(
+        title: running ? 'Importing now' : 'Sent to import',
+        subtitle: _fileCount(
+          inFlight.length,
+          running
+              ? 'is with ${widget.service.title}'
+              : 'was sent to ${widget.service.title}',
+          running
+              ? 'are with ${widget.service.title}'
+              : 'were sent to ${widget.service.title}',
+        ),
+        trailing: TextButton(
+          // Same contract as the import button: coming back re-reads the
+          // folder, so what the service did lands in the list.
+          onPressed: _openTrack,
+          child: const Text('View progress'),
         ),
       ),
       for (final item in inFlight)
-        _WidgetRow(
-          key: 'inflight-${item.path}',
-          child: InFlightFileRow(
-            service: widget.service,
-            item: item,
-            command: command,
-          ),
-        ),
+        InFlightFileRow(service: widget.service, item: item, command: command),
     ];
   }
 
@@ -569,7 +516,7 @@ class _ManualImportReviewScreenState
   /// suspected it was: the useful place for "S01E05 is already imported" is
   /// between S01E04 and S01E06, in the same group, in broadcast order — where
   /// the gap it explains actually is.
-  List<_ReviewRow> _matchedRows(
+  List<Widget> _matchedRows(
     ManualImportFlowState state, {
     required List<ManualImportItem> ready,
     required List<ManualImportItem> imported,
@@ -606,26 +553,22 @@ class _ManualImportReviewScreenState
     final reimportCount = state.selectedReimportItems.length;
     final selectedReady = state.selectedItems.length - reimportCount;
 
-    final rows = <_ReviewRow>[
-      _WidgetRow(
-        key: 'matched-header',
-        child: SectionHeader.action(
-          title: 'Matched files',
-          subtitle: [
-            if (readyTotal > 0) '$selectedReady of $readyTotal selected',
-            if (importedTotal > 0)
-              reimportCount == 0
-                  ? '$importedTotal already in the library'
-                  : '$reimportCount of $importedTotal being re-imported',
-          ].join(' · '),
-          trailing: titles.length > 1
-              ? TextButton(
-                  onPressed: () =>
-                      _setAllGroups(titles, expanded: anyCollapsed),
-                  child: Text(anyCollapsed ? 'Expand all' : 'Collapse all'),
-                )
-              : const SizedBox.shrink(),
-        ),
+    final rows = <Widget>[
+      SectionHeader.action(
+        title: 'Matched files',
+        subtitle: [
+          if (readyTotal > 0) '$selectedReady of $readyTotal selected',
+          if (importedTotal > 0)
+            reimportCount == 0
+                ? '$importedTotal already in the library'
+                : '$reimportCount of $importedTotal being re-imported',
+        ].join(' · '),
+        trailing: titles.length > 1
+            ? TextButton(
+                onPressed: () => _setAllGroups(titles, expanded: anyCollapsed),
+                child: Text(anyCollapsed ? 'Expand all' : 'Collapse all'),
+              )
+            : const SizedBox.shrink(),
       ),
     ];
 
@@ -649,21 +592,17 @@ class _ManualImportReviewScreenState
 
       if (hasHeader) {
         rows.add(
-          _WidgetRow(
-            key: 'group-$title',
-            child: ReadyGroupHeader(
-              service: service,
-              title: title,
-              total: groupReady.length,
-              importedCount: group.length - groupReady.length,
-              selectedCount: selectedCount,
-              expanded: expanded,
-              onToggleExpanded: () =>
-                  _toggleGroup(title, nowExpanded: !expanded),
-              onSelectionChanged: (selected) => ref
-                  .read(manualImportFlowProvider.notifier)
-                  .setGroupSelected(groupReady, selected),
-            ),
+          ReadyGroupHeader(
+            service: service,
+            title: title,
+            total: groupReady.length,
+            importedCount: group.length - groupReady.length,
+            selectedCount: selectedCount,
+            expanded: expanded,
+            onToggleExpanded: () => _toggleGroup(title, nowExpanded: !expanded),
+            onSelectionChanged: (selected) => ref
+                .read(manualImportFlowProvider.notifier)
+                .setGroupSelected(groupReady, selected),
           ),
         );
       }
@@ -674,38 +613,35 @@ class _ManualImportReviewScreenState
         final selected = state.selectedPaths.contains(item.path);
         void toggle(bool value) =>
             ref.read(manualImportFlowProvider.notifier).toggleItem(item, value);
-        void openOptions() => _showAdjustSheet(context, ref, service, item);
+        void openOptions() =>
+            showManualImportAdjustSheet(context, ref, service, item);
 
         rows.add(
-          _WidgetRow(
-            key:
-                '${item.isAlreadyImported ? 'imported' : 'ready'}-${item.path}',
-            child: item.isAlreadyImported
-                ? MatchedFileRow.imported(
-                    service: service,
-                    item: item,
-                    groupTitle: title,
-                    underGroupHeader: hasHeader,
-                    selected: selected,
-                    // An imported file whose payload no longer carries a usable
-                    // identity cannot be sent anywhere, so it keeps the row and
-                    // loses the tick rather than offering an import that would
-                    // fail at the service.
-                    onSelectedChanged: item.isReimportableFor(service)
-                        ? toggle
-                        : null,
-                    onOpenOptions: openOptions,
-                  )
-                : MatchedFileRow.ready(
-                    service: service,
-                    item: item,
-                    groupTitle: title,
-                    underGroupHeader: hasHeader,
-                    selected: selected,
-                    onSelectedChanged: toggle,
-                    onOpenOptions: openOptions,
-                  ),
-          ),
+          item.isAlreadyImported
+              ? MatchedFileRow.imported(
+                  service: service,
+                  item: item,
+                  groupTitle: title,
+                  underGroupHeader: hasHeader,
+                  selected: selected,
+                  // An imported file whose payload no longer carries a usable
+                  // identity cannot be sent anywhere, so it keeps the row and
+                  // loses the tick rather than offering an import that would
+                  // fail at the service.
+                  onSelectedChanged: item.isReimportableFor(service)
+                      ? toggle
+                      : null,
+                  onOpenOptions: openOptions,
+                )
+              : MatchedFileRow.ready(
+                  service: service,
+                  item: item,
+                  groupTitle: title,
+                  underGroupHeader: hasHeader,
+                  selected: selected,
+                  onSelectedChanged: toggle,
+                  onOpenOptions: openOptions,
+                ),
         );
       }
     }
@@ -715,23 +651,6 @@ class _ManualImportReviewScreenState
 
   String _fileCount(int count, String singular, String plural) =>
       count == 1 ? '$count file $singular' : '$count files $plural';
-}
-
-/// One built row in the flattened list.
-abstract class _ReviewRow {
-  String get key;
-  Widget build(BuildContext context);
-}
-
-class _WidgetRow implements _ReviewRow {
-  @override
-  final String key;
-  final Widget child;
-
-  const _WidgetRow({required this.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) => child;
 }
 
 /// Narrows a large scan to the files the user came for.
@@ -1086,306 +1005,4 @@ class _InlineError extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ReviewFooter extends ConsumerWidget {
-  final ServiceKey service;
-  final int? targetId;
-
-  const _ReviewFooter({required this.service, this.targetId});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(manualImportFlowProvider);
-    final count = state.selectedItems.length;
-    final label = count == 0
-        ? 'Nothing selected to import'
-        : count == 1
-        ? 'Import 1 file'
-        : 'Import $count files';
-
-    return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.lg),
-      child: Row(
-        children: [
-          _ImportModeMenu(service: service),
-          Expanded(
-            child: ImportPrimaryButton(
-              service: service,
-              icon: Icons.check_circle_outline_rounded,
-              label: label,
-              loading: state.isSubmitting,
-              onPressed: !state.canImportSelected
-                  ? null
-                  : () async {
-                      final notifier = ref.read(
-                        manualImportFlowProvider.notifier,
-                      );
-                      final command = await notifier.confirmImport();
-                      if (command == null || !context.mounted) return;
-                      // Await the pop: coming back from Track re-reads the
-                      // folder, so the list reflects what the service actually
-                      // did with the files instead of the state we left behind.
-                      await context.push(
-                        manualImportLocation(
-                          manualImportProgressPath,
-                          service,
-                          targetId: targetId,
-                        ),
-                      );
-                      if (!context.mounted) return;
-                      await notifier.refreshAfterImport();
-                    },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Auto / Move / Copy — how the service should take the files.
-class _ImportModeMenu extends ConsumerWidget {
-  final ServiceKey service;
-
-  const _ImportModeMenu({required this.service});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(manualImportFlowProvider);
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return MenuAnchor(
-      builder: (context, controller, _) {
-        return Semantics(
-          button: true,
-          label: 'Import mode',
-          value: state.importMode.label,
-          child: OutlinedButton.icon(
-            onPressed: controller.isOpen ? controller.close : controller.open,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: colorScheme.onSurface,
-              side: BorderSide(color: colorScheme.outlineVariant),
-              minimumSize: const Size(0, 48),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            ),
-            icon: Icon(
-              Icons.expand_more_rounded,
-              size: 16,
-              color: colorScheme.onSurfaceVariant,
-            ),
-            iconAlignment: IconAlignment.end,
-            label: Text(state.importMode.label),
-          ),
-        );
-      },
-      menuChildren: [
-        for (final mode in ManualImportMode.values)
-          MenuItemButton(
-            onPressed: () =>
-                ref.read(manualImportFlowProvider.notifier).setImportMode(mode),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(mode.label, style: theme.textTheme.labelLarge),
-                Text(
-                  mode.subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// Per-file options for a matched file: quality, languages, or a new match.
-Future<void> _showAdjustSheet(
-  BuildContext context,
-  WidgetRef ref,
-  ServiceKey service,
-  ManualImportItem item,
-) {
-  final identity = manualImportIdentityFor(service, item);
-  return AppBottomSheet.show<void>(
-    context: context,
-    // Title is the matched identity — the series (or movie, or artist) plus the
-    // positional code. Subtitle is the raw file, nothing else. Folding the
-    // episode name and the filename into one subtitle line made the sheet's two
-    // jobs — "what did this match" and "which file is this" — indistinguishable.
-    title: [
-      manualImportGroupTitle(service, item),
-      if (identity.code != null) identity.code!,
-    ].join(' · '),
-    subtitle: item.fileName,
-    icon: service.icon,
-    accent: service.accent,
-    bodyPadding: const EdgeInsets.fromLTRB(
-      AppSpacing.lg,
-      0,
-      AppSpacing.lg,
-      AppSpacing.lg,
-    ),
-    builder: (sheetContext) => SettingsGroupCard(
-      children: [
-        SettingsCard.grouped(
-          leading: const Icon(Icons.high_quality_rounded),
-          title: 'Quality',
-          subtitle: item.qualityLabel,
-          accentColor: service.accent,
-          semanticHint: 'opens the quality picker',
-          onTap: () {
-            Navigator.of(sheetContext).pop();
-            _showQualityPicker(context, ref, service, item);
-          },
-        ),
-        SettingsCard.grouped(
-          leading: const Icon(Icons.translate_rounded),
-          title: 'Languages',
-          subtitle: item.languageLabel,
-          accentColor: service.accent,
-          semanticHint: 'opens the language picker',
-          onTap: () {
-            Navigator.of(sheetContext).pop();
-            _showLanguagePicker(context, ref, service, item);
-          },
-        ),
-        SettingsCard.grouped(
-          leading: const Icon(Icons.swap_horiz_rounded),
-          title: 'Change match',
-          subtitle:
-              'Assign a different '
-              '${service.manualImportSubLabel.toLowerCase()} identity',
-          accentColor: service.accent,
-          semanticHint: 'opens match assignment',
-          onTap: () {
-            Navigator.of(sheetContext).pop();
-            showManualImportFixSheet(
-              context: context,
-              service: service,
-              item: item,
-            );
-          },
-        ),
-      ],
-    ),
-  );
-}
-
-Future<void> _showQualityPicker(
-  BuildContext context,
-  WidgetRef ref,
-  ServiceKey service,
-  ManualImportItem item,
-) async {
-  final options = await ref
-      .read(manualImportFlowProvider.notifier)
-      .getQualityOptions();
-  if (!context.mounted) return;
-
-  await AppBottomSheet.show<void>(
-    context: context,
-    title: 'Select quality',
-    icon: Icons.high_quality_rounded,
-    accent: service.accent,
-    builder: (sheetContext) {
-      if (options.isEmpty) {
-        return const AppEmptyState.compact(
-          icon: Icons.high_quality_rounded,
-          title: 'No quality options available',
-        );
-      }
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final option in options)
-            ImportChoiceRow(
-              label: option.name,
-              selected: option.id == item.qualityId,
-              accent: service.accent,
-              onSelected: () async {
-                Navigator.of(sheetContext).pop();
-                await ref
-                    .read(manualImportFlowProvider.notifier)
-                    .updateItemMetadata(item, quality: option);
-              },
-            ),
-        ],
-      );
-    },
-  );
-}
-
-Future<void> _showLanguagePicker(
-  BuildContext context,
-  WidgetRef ref,
-  ServiceKey service,
-  ManualImportItem item,
-) async {
-  final options = await ref
-      .read(manualImportFlowProvider.notifier)
-      .getLanguageOptions();
-  if (!context.mounted) return;
-
-  final selectedIds = item.languageIds.toSet();
-
-  await AppBottomSheet.show<void>(
-    context: context,
-    title: 'Select languages',
-    icon: Icons.translate_rounded,
-    accent: service.accent,
-    builder: (sheetContext) {
-      if (options.isEmpty) {
-        return const AppEmptyState.compact(
-          icon: Icons.translate_rounded,
-          title: 'No language options available',
-        );
-      }
-      return StatefulBuilder(
-        builder: (context, setState) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final option in options)
-              CheckboxListTile(
-                value: selectedIds.contains(option.id),
-                activeColor: service.accent,
-                checkColor: ServiceTheme.foregroundOn(service.accent),
-                title: Text(option.name),
-                onChanged: (selected) {
-                  setState(() {
-                    if (selected == true) {
-                      selectedIds.add(option.id);
-                    } else {
-                      selectedIds.remove(option.id);
-                    }
-                  });
-                },
-              ),
-            const SizedBox(height: AppSpacing.md),
-            FilledButton(
-              onPressed: () async {
-                final selected = options
-                    .where((option) => selectedIds.contains(option.id))
-                    .toList(growable: false);
-                Navigator.of(sheetContext).pop();
-                await ref
-                    .read(manualImportFlowProvider.notifier)
-                    .updateItemMetadata(item, languages: selected);
-              },
-              style: FilledButton.styleFrom(
-                backgroundColor: service.accent,
-                foregroundColor: ServiceTheme.foregroundOn(service.accent),
-                minimumSize: const Size.fromHeight(48),
-              ),
-              child: const Text('Apply languages'),
-            ),
-          ],
-        ),
-      );
-    },
-  );
 }

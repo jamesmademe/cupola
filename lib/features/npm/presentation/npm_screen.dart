@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
@@ -57,7 +59,7 @@ class _NpmNotConfigured extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -66,12 +68,12 @@ class _NpmNotConfigured extends StatelessWidget {
               size: 48,
               color: AppColors.nginxProxyManager,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             const Text(
               'Nginx Proxy Manager is not configured yet.',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             FilledButton(
               onPressed: onOpenSettings,
               child: const Text('Open settings'),
@@ -126,7 +128,7 @@ class _NpmDashboard extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async {
         _invalidateAll(ref);
-        await Future<void>.delayed(const Duration(milliseconds: 300));
+        await Future<void>.delayed(AppAnimation.durationMd);
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -140,15 +142,15 @@ class _NpmDashboard extends ConsumerWidget {
             accent: AppColors.nginxProxyManager,
           ),
           const _DefaultAdminWarning(),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           const SectionHeader(title: 'Proxy hosts', showChevron: false),
           const SizedBox(height: 2),
           _ProxyHostList(hostsAsync: hostsAsync),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           const SectionHeader(title: 'Certificates', showChevron: false),
           const SizedBox(height: 2),
           _CertificateList(certsAsync: certsAsync),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           const SectionHeader(
             title: 'Redirections, 404s and streams',
             showChevron: false,
@@ -179,9 +181,14 @@ class _DefaultAdminWarning extends ConsumerWidget {
     }
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        0,
+      ),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color: AppColors.warning.withValues(alpha: 0.12),
           borderRadius: AppRadius.borderRadiusMd,
@@ -224,7 +231,10 @@ class _ProxyHostList extends ConsumerWidget {
       data: (hosts) {
         if (hosts.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('No proxy hosts configured.'),
           );
         }
@@ -245,8 +255,8 @@ class _ProxyHostList extends ConsumerWidget {
               .toList(growable: false),
         );
       },
-      loading: () => const _NpmShimmer(),
-      error: (error, _) => _ErrorRetry(
+      loading: () => const ListRowsShimmer(count: 3),
+      error: (error, _) => InlineErrorRetry(
         message: 'Failed to load proxy hosts',
         onRetry: () => ref.invalidate(npmProxyHostsProvider),
       ),
@@ -280,7 +290,10 @@ class _ProxyHostTile extends ConsumerWidget {
     ].join(' · ');
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Material(
         color: colorScheme.surface,
         borderRadius: AppRadius.borderRadiusMd,
@@ -413,7 +426,10 @@ class _CertificateList extends ConsumerWidget {
       data: (certs) {
         if (certs.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('No certificates.'),
           );
         }
@@ -431,8 +447,8 @@ class _CertificateList extends ConsumerWidget {
               .toList(growable: false),
         );
       },
-      loading: () => const _NpmShimmer(),
-      error: (error, _) => _ErrorRetry(
+      loading: () => const ListRowsShimmer(count: 3),
+      error: (error, _) => InlineErrorRetry(
         message: 'Failed to load certificates',
         onRetry: () => ref.invalidate(npmCertificatesProvider),
       ),
@@ -464,7 +480,10 @@ class _CertificateTile extends ConsumerWidget {
         : 'Expires in $days days';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Material(
         color: colorScheme.surface,
         borderRadius: AppRadius.borderRadiusMd,
@@ -537,7 +556,10 @@ class _SimpleHostList extends ConsumerWidget {
       data: (hosts) {
         if (hosts.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('Nothing else configured.'),
           );
         }
@@ -548,8 +570,8 @@ class _SimpleHostList extends ConsumerWidget {
               .toList(growable: false),
         );
       },
-      loading: () => const _NpmShimmer(),
-      error: (error, _) => _ErrorRetry(
+      loading: () => const ListRowsShimmer(count: 3),
+      error: (error, _) => InlineErrorRetry(
         message: 'Failed to load the other hosts',
         onRetry: () => ref.invalidate(npmOtherHostsProvider),
       ),
@@ -566,7 +588,10 @@ class _SimpleHostTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Material(
         color: colorScheme.surface,
         borderRadius: AppRadius.borderRadiusMd,
@@ -598,7 +623,7 @@ class _SimpleHostTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Flexible(
                 child: Text(
                   host.detail,
@@ -613,68 +638,6 @@ class _SimpleHostTile extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _NpmShimmer extends StatelessWidget {
-  const _NpmShimmer();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      children: List.generate(
-        3,
-        (_) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Container(
-            height: 56,
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-              borderRadius: AppRadius.borderRadiusMd,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer.withValues(alpha: 0.4),
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(color: colorScheme.error.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline_rounded, color: colorScheme.error),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onErrorContainer,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
-        ],
       ),
     );
   }

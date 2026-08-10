@@ -6,6 +6,7 @@ library;
 // Animation
 export 'shimmer_placeholder.dart';
 export 'app_skeleton.dart';
+export 'list_rows_shimmer.dart';
 export 'staggered_entrance.dart';
 export 'pressable_scale.dart';
 export 'reel_line.dart';
@@ -20,12 +21,14 @@ export 'service_ring.dart';
 // States
 export 'app_empty_state.dart';
 export 'app_error_state.dart';
+export 'inline_error_retry.dart';
 export 'service_offline_state.dart';
 
 // Layout
 export 'ambient_background.dart';
 export 'ambient_scaffold.dart';
 export 'glass_app_bar.dart';
+export 'domain_section.dart';
 export 'section_header.dart';
 export 'media_grid.dart';
 export 'media_browse_scaffold.dart';
@@ -58,6 +61,7 @@ export 'status_badge.dart';
 export 'tag_chip.dart';
 export 'rating_chip.dart';
 export 'rating_chips_row.dart';
+export 'release_list_widgets.dart';
 export 'file_info_section.dart';
 
 // Async handling

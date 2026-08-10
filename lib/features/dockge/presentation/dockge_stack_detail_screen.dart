@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -66,14 +68,19 @@ class _DetailBody extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async {
         onRefresh(ref);
-        await Future<void>.delayed(const Duration(milliseconds: 300));
+        await Future<void>.delayed(AppAnimation.durationMd);
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          AppSpacing.xxl,
+        ),
         children: [
           _StatusHeader(status: detail.status),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           _ActionBar(name: detail.name, onRefresh: onRefresh),
           const SizedBox(height: 20),
           Text(
@@ -82,7 +89,7 @@ class _DetailBody extends ConsumerWidget {
               context,
             ).textTheme.titleSmall!.weight(FontWeight.w700),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           servicesAsync.when(
             data: (services) => _ServiceStatusList(services: services),
             loading: () => const ShimmerPlaceholder(height: 120),
@@ -269,7 +276,10 @@ class _ActionChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: AppRadius.borderRadiusSm,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           decoration: BoxDecoration(
             border: Border.all(color: color.withValues(alpha: 0.4)),
             borderRadius: AppRadius.borderRadiusSm,
@@ -313,7 +323,7 @@ class _ServiceStatusList extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.only(bottom: 6),
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               color: colorScheme.surface,
               border: Border.all(color: colorScheme.outlineVariant),
@@ -333,7 +343,7 @@ class _ServiceStatusList extends StatelessWidget {
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
+                    horizontal: AppSpacing.sm,
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
@@ -468,11 +478,11 @@ class _TerminalLogState extends ConsumerState<_TerminalLog> {
             context,
           ).textTheme.titleSmall!.weight(FontWeight.w700),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Container(
           height: 220,
           width: double.infinity,
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             color: const Color(0xFF0A0B11),
             borderRadius: AppRadius.borderRadiusMd,

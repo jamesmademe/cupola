@@ -38,11 +38,10 @@ class PersonDetailScreen extends ConsumerWidget {
         accent: ServiceKey.seerr.accent,
         heroFallbackIcon: Icons.person_rounded,
         posterCard: hasInitial
-            ? MediaPosterCard(
+            ? MediaPosterCard.circular(
                 heroTag: tag,
                 imageUrl: initialProfileUrl,
                 fallbackIcon: Icons.person_rounded,
-                circular: true,
               )
             : null,
       ),
@@ -104,8 +103,7 @@ class PersonDetailScreen extends ConsumerWidget {
           posterUrl: effectivePoster,
           title: person.name,
           heroFallbackIcon: Icons.person_rounded,
-          posterRow: MediaDetailPosterRow(
-            circularPoster: true,
+          posterRow: MediaDetailPosterRow.circular(
             title: person.name,
             metadataItems: [
               if ((person.knownForDepartment ?? '').isNotEmpty)
@@ -123,11 +121,10 @@ class PersonDetailScreen extends ConsumerWidget {
                   color: ServiceKey.seerr.accent,
                 ),
             ],
-            posterCard: MediaPosterCard(
+            posterCard: MediaPosterCard.circular(
               heroTag: tag,
               imageUrl: effectivePoster,
               fallbackIcon: Icons.person_rounded,
-              circular: true,
             ),
           ),
           onRefresh: () async {

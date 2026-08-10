@@ -16,16 +16,9 @@ import 'package:cupola/features/qbittorrent/presentation/widgets/torrent_tile.da
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class QbittorrentScreen extends ConsumerStatefulWidget {
-  final bool showAppBar;
   final double topPadding;
-  final VoidCallback? onAddTorrent;
 
-  const QbittorrentScreen({
-    super.key,
-    this.showAppBar = true,
-    this.topPadding = 0,
-    this.onAddTorrent,
-  });
+  const QbittorrentScreen({super.key, this.topPadding = 0});
 
   @override
   ConsumerState<QbittorrentScreen> createState() => _QbittorrentScreenState();

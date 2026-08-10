@@ -302,20 +302,6 @@ class NpmSimpleHost {
       configLoaded: _configLoaded(json),
     );
   }
-
-  /// An access list, named only. **Never fetched with `?expand=items`**: that
-  /// returns the stored basic-auth usernames and passwords for the sites it
-  /// protects, which this app has no reason to hold.
-  factory NpmSimpleHost.accessList(Map<String, dynamic> json) {
-    final satisfyAny = parseBool(json['satisfy_any']);
-    return NpmSimpleHost(
-      id: parseInt(json['id']),
-      label: json['name']?.toString() ?? 'Access list',
-      detail: satisfyAny ? 'Satisfy any' : 'Satisfy all',
-      enabled: true,
-      configLoaded: true,
-    );
-  }
 }
 
 extension _FirstOrNull<T> on List<T> {

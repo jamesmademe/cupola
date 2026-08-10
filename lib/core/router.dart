@@ -9,7 +9,9 @@ import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_screen.dart';
+import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/activity/presentation/global_activity_screen.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
 import 'package:cupola/features/series/presentation/series_screen.dart';
@@ -91,6 +93,29 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
 
 const double _serviceDashboardTopPadding = kToolbarHeight;
 
+/// A route whose page is a plain [RouteUtils.cupertinoPage] around [child].
+///
+/// Collapses the `pageBuilder: (context, state) => RouteUtils.cupertinoPage(
+/// key: state.pageKey, child: ...)` shape that every non-redirecting page
+/// route repeats. `state.pageKey` stays the page key, so go_router's page
+/// identity is unchanged.
+///
+/// Routes whose page is *not* plain — the ones that return a redirect page for
+/// bad params ([_discoverDetailPage], [_libraryDetailPage], [_manualImportPage])
+/// or that swap between `builder` and `pageBuilder` — keep their long form.
+GoRoute _page(
+  String path,
+  Widget Function(GoRouterState state) child, {
+  GoRouterRedirect? redirect,
+  List<RouteBase> routes = const [],
+}) => GoRoute(
+  path: path,
+  redirect: redirect,
+  routes: routes,
+  pageBuilder: (context, state) =>
+      RouteUtils.cupertinoPage(key: state.pageKey, child: child(state)),
+);
+
 Page<void> _discoverDetailPage(
   GoRouterState state, {
   required String mediaType,
@@ -130,10 +155,6 @@ Page<void> _libraryDetailPage<T>(
     key: state.pageKey,
     child: buildChild(id, heroTag, item),
   );
-}
-
-Page<void> _settingsSubpage(GoRouterState state, Widget child) {
-  return RouteUtils.cupertinoPage(key: state.pageKey, child: child);
 }
 
 String _redirectLegacyManualImport(GoRouterState state) {
@@ -237,30 +258,24 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
         pageBuilder: (context, state) =>
             _discoverDetailPage(state, mediaType: 'tv'),
       ),
-      GoRoute(
-        path: 'person/:id',
+      _page(
+        'person/:id',
+        (state) => PersonDetailScreen(
+          personId: RouteUtils.safeIntParam(state, 'id')!,
+          heroTag: state.uri.queryParameters['heroTag'],
+          initialProfileUrl: state.uri.queryParameters['posterUrl'],
+        ),
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
-        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-          key: state.pageKey,
-          child: PersonDetailScreen(
-            personId: RouteUtils.safeIntParam(state, 'id')!,
-            heroTag: state.uri.queryParameters['heroTag'],
-            initialProfileUrl: state.uri.queryParameters['posterUrl'],
-          ),
-        ),
       ),
-      GoRoute(
-        path: 'collection/:id',
+      _page(
+        'collection/:id',
+        (state) => CollectionDetailScreen(
+          collectionId: RouteUtils.safeIntParam(state, 'id')!,
+          heroTag: state.uri.queryParameters['heroTag'],
+        ),
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
-        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-          key: state.pageKey,
-          child: CollectionDetailScreen(
-            collectionId: RouteUtils.safeIntParam(state, 'id')!,
-            heroTag: state.uri.queryParameters['heroTag'],
-          ),
-        ),
       ),
     ],
   );
@@ -414,141 +429,85 @@ GoRoute _musicRoutes({required String path, String? redirectLocation}) {
 }
 
 GoRoute _qbittorrentRoutes({required String path}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-      key: state.pageKey,
-      child: ServiceDashboardScreen(
-        service: ServiceKey.qbittorrent,
-        trailingAction: const QbittorrentActionsBar(),
-        child: const QbittorrentScreen(
-          showAppBar: false,
-          topPadding: _serviceDashboardTopPadding,
-        ),
-      ),
+  return _page(
+    path,
+    (state) => ServiceDashboardScreen(
+      service: ServiceKey.qbittorrent,
+      trailingAction: const QbittorrentActionsBar(),
+      child: const QbittorrentScreen(topPadding: _serviceDashboardTopPadding),
     ),
     routes: [
-      GoRoute(
-        path: 'torrent/:hash',
-        pageBuilder: (context, state) {
-          final hash = state.pathParameters['hash'] ?? '';
-          return RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            child: TorrentDetailScreen(hash: hash),
-          );
-        },
+      _page(
+        'torrent/:hash',
+        (state) =>
+            TorrentDetailScreen(hash: state.pathParameters['hash'] ?? ''),
       ),
     ],
   );
 }
 
 GoRoute _bazarrRoutes({required String path}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-      key: state.pageKey,
-      child: ServiceDashboardScreen(
-        service: ServiceKey.bazarr,
-        child: const BazarrScreen(
-          showAppBar: false,
-          topPadding: _serviceDashboardTopPadding,
-        ),
+  return _page(
+    path,
+    (state) => ServiceDashboardScreen(
+      service: ServiceKey.bazarr,
+      child: const BazarrScreen(
+        showAppBar: false,
+        topPadding: _serviceDashboardTopPadding,
       ),
     ),
     routes: [
-      GoRoute(
-        path: 'wanted',
-        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-          key: state.pageKey,
-          child: const BazarrWantedScreen(),
+      _page('wanted', (state) => const BazarrWantedScreen()),
+      _page('library', (state) => const BazarrLibraryScreen()),
+      // No `heroTag`: the Bazarr lead is a figure plate, not a poster, so
+      // there is no source counterpart on a Bazarr row to fly from and an
+      // orphan flight would fade in from nothing. The route still accepts the
+      // query param (global search builds one for every service uniformly);
+      // nothing reads it.
+      _page(
+        'series/:id',
+        (state) => BazarrSeriesDetailScreen(
+          sonarrSeriesId: RouteUtils.safeIntParam(state, 'id')!,
+          initialWanted: RouteUtils.safeExtra<BazarrWantedItem>(state),
         ),
-      ),
-      GoRoute(
-        path: 'library',
-        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-          key: state.pageKey,
-          child: const BazarrLibraryScreen(),
-        ),
-      ),
-      GoRoute(
-        path: 'series/:id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
-        pageBuilder: (context, state) {
-          final id = RouteUtils.safeIntParam(state, 'id')!;
-          final wanted = RouteUtils.safeExtra<BazarrWantedItem>(state);
-          return RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            // No `heroTag`: the Bazarr lead is a figure plate, not a poster,
-            // so there is no source counterpart on a Bazarr row to fly from and
-            // an orphan flight would fade in from nothing. The route still
-            // accepts the query param (global search builds one for every
-            // service uniformly); nothing reads it.
-            child: BazarrSeriesDetailScreen(
-              sonarrSeriesId: id,
-              initialWanted: wanted,
-            ),
-          );
-        },
       ),
-      GoRoute(
-        path: 'movie/:id',
+      // See the series route above: no Hero source, so no `heroTag`.
+      _page(
+        'movie/:id',
+        (state) => BazarrMovieDetailScreen(
+          radarrId: RouteUtils.safeIntParam(state, 'id')!,
+          initialWanted: RouteUtils.safeExtra<BazarrWantedItem>(state),
+        ),
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
-        pageBuilder: (context, state) {
-          final id = RouteUtils.safeIntParam(state, 'id')!;
-          final wanted = RouteUtils.safeExtra<BazarrWantedItem>(state);
-          return RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            // See the series route above: no Hero source, so no `heroTag`.
-            child: BazarrMovieDetailScreen(radarrId: id, initialWanted: wanted),
-          );
-        },
       ),
     ],
   );
 }
 
 GoRoute _dockgeRoutes({required String path}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-      key: state.pageKey,
-      child: ServiceDashboardScreen(
-        service: ServiceKey.dockge,
-        child: const DockgeScreen(
-          showAppBar: false,
-          topPadding: _serviceDashboardTopPadding,
-        ),
+  return _page(
+    path,
+    (state) => ServiceDashboardScreen(
+      service: ServiceKey.dockge,
+      child: const DockgeScreen(
+        showAppBar: false,
+        topPadding: _serviceDashboardTopPadding,
       ),
     ),
     routes: [
-      GoRoute(
-        path: 'new',
-        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-          key: state.pageKey,
-          child: const DockgeStackEditScreen(),
-        ),
-      ),
-      GoRoute(
-        path: 'stack/:name',
-        pageBuilder: (context, state) {
-          final name = state.pathParameters['name'] ?? '';
-          return RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            child: DockgeStackDetailScreen(name: name),
-          );
-        },
+      _page('new', (state) => const DockgeStackEditScreen()),
+      _page(
+        'stack/:name',
+        (state) =>
+            DockgeStackDetailScreen(name: state.pathParameters['name'] ?? ''),
         routes: [
-          GoRoute(
-            path: 'edit',
-            pageBuilder: (context, state) {
-              final name = state.pathParameters['name'] ?? '';
-              return RouteUtils.cupertinoPage(
-                key: state.pageKey,
-                child: DockgeStackEditScreen(name: name),
-              );
-            },
+          _page(
+            'edit',
+            (state) =>
+                DockgeStackEditScreen(name: state.pathParameters['name'] ?? ''),
           ),
         ],
       ),
@@ -557,63 +516,40 @@ GoRoute _dockgeRoutes({required String path}) {
 }
 
 GoRoute _prowlarrRoutes({required String path}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-      key: state.pageKey,
-      child: ServiceDashboardScreen(
-        service: ServiceKey.prowlarr,
-        child: const ProwlarrScreen(
-          showAppBar: false,
-          topPadding: _serviceDashboardTopPadding,
-        ),
+  return _page(
+    path,
+    (state) => ServiceDashboardScreen(
+      service: ServiceKey.prowlarr,
+      child: const ProwlarrScreen(
+        showAppBar: false,
+        topPadding: _serviceDashboardTopPadding,
       ),
     ),
     routes: [
-      GoRoute(
-        path: 'library',
-        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-          key: state.pageKey,
-          child: const ProwlarrLibraryScreen(),
+      _page('library', (state) => const ProwlarrLibraryScreen()),
+      _page(
+        'indexer/:id',
+        (state) => ProwlarrIndexerDetailScreen(
+          indexerId: RouteUtils.safeIntParam(state, 'id')!,
         ),
-      ),
-      GoRoute(
-        path: 'indexer/:id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
-        pageBuilder: (context, state) {
-          final id = RouteUtils.safeIntParam(state, 'id')!;
-          return RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            child: ProwlarrIndexerDetailScreen(indexerId: id),
-          );
-        },
       ),
-      GoRoute(
-        path: 'settings',
-        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-          key: state.pageKey,
-          child: const ProwlarrSettingsScreen(),
-        ),
+      _page(
+        'settings',
+        (state) => const ProwlarrSettingsScreen(),
         routes: [
-          GoRoute(
-            path: 'sync-profiles',
-            pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-              key: state.pageKey,
-              child: const ProwlarrAppProfilesScreen(),
-            ),
-          ),
-          GoRoute(
-            path: 'tags',
-            pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-              key: state.pageKey,
-              child: const ProwlarrTagsScreen(),
-            ),
-          ),
+          _page('sync-profiles', (state) => const ProwlarrAppProfilesScreen()),
+          _page('tags', (state) => const ProwlarrTagsScreen()),
           // One route for the four field-driven sections; an unknown segment
           // falls back to the hub rather than a blank screen.
-          GoRoute(
-            path: ':section',
+          _page(
+            ':section',
+            (state) => ProwlarrProviderListScreen(
+              kind: ProwlarrProviderKind.fromRouteSegment(
+                state.pathParameters['section']!,
+              )!,
+            ),
             redirect: (context, state) =>
                 ProwlarrProviderKind.fromRouteSegment(
                       state.pathParameters['section'] ?? '',
@@ -621,14 +557,6 @@ GoRoute _prowlarrRoutes({required String path}) {
                     null
                 ? ServiceRoutes.prowlarrSettings
                 : null,
-            pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-              key: state.pageKey,
-              child: ProwlarrProviderListScreen(
-                kind: ProwlarrProviderKind.fromRouteSegment(
-                  state.pathParameters['section']!,
-                )!,
-              ),
-            ),
           ),
         ],
       ),
@@ -637,105 +565,79 @@ GoRoute _prowlarrRoutes({required String path}) {
 }
 
 GoRoute _readarrRoutes({required String path}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-      key: state.pageKey,
-      child: ServiceDashboardScreen(
-        service: ServiceKey.readarr,
-        child: const ReadarrScreen(
-          showAppBar: false,
-          topPadding: _serviceDashboardTopPadding,
-        ),
+  return _page(
+    path,
+    (state) => ServiceDashboardScreen(
+      service: ServiceKey.readarr,
+      child: const ReadarrScreen(
+        showAppBar: false,
+        topPadding: _serviceDashboardTopPadding,
       ),
     ),
-    routes: [
-      GoRoute(
-        path: 'library',
-        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-          key: state.pageKey,
-          child: const ReadarrLibraryScreen(),
-        ),
-      ),
-    ],
+    routes: [_page('library', (state) => const ReadarrLibraryScreen())],
   );
 }
 
 GoRoute _sabnzbdRoutes({required String path}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-      key: state.pageKey,
-      child: ServiceDashboardScreen(
-        service: ServiceKey.sabnzbd,
-        child: const SabnzbdScreen(
-          showAppBar: false,
-          topPadding: _serviceDashboardTopPadding,
-        ),
+  return _page(
+    path,
+    (state) => ServiceDashboardScreen(
+      service: ServiceKey.sabnzbd,
+      child: const SabnzbdScreen(
+        showAppBar: false,
+        topPadding: _serviceDashboardTopPadding,
       ),
     ),
   );
 }
 
 GoRoute _nzbgetRoutes({required String path}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-      key: state.pageKey,
-      child: ServiceDashboardScreen(
-        service: ServiceKey.nzbget,
-        child: const NzbgetScreen(
-          showAppBar: false,
-          topPadding: _serviceDashboardTopPadding,
-        ),
+  return _page(
+    path,
+    (state) => ServiceDashboardScreen(
+      service: ServiceKey.nzbget,
+      child: const NzbgetScreen(
+        showAppBar: false,
+        topPadding: _serviceDashboardTopPadding,
       ),
     ),
   );
 }
 
 GoRoute _unraidRoutes({required String path}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-      key: state.pageKey,
-      child: ServiceDashboardScreen(
-        service: ServiceKey.unraid,
-        child: const UnraidScreen(
-          showAppBar: false,
-          topPadding: _serviceDashboardTopPadding,
-        ),
+  return _page(
+    path,
+    (state) => ServiceDashboardScreen(
+      service: ServiceKey.unraid,
+      child: const UnraidScreen(
+        showAppBar: false,
+        topPadding: _serviceDashboardTopPadding,
       ),
     ),
   );
 }
 
 GoRoute _transmissionRoutes({required String path}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-      key: state.pageKey,
-      child: ServiceDashboardScreen(
-        service: ServiceKey.transmission,
-        child: const TransmissionScreen(
-          showAppBar: false,
-          topPadding: _serviceDashboardTopPadding,
-        ),
+  return _page(
+    path,
+    (state) => ServiceDashboardScreen(
+      service: ServiceKey.transmission,
+      child: const TransmissionScreen(
+        showAppBar: false,
+        topPadding: _serviceDashboardTopPadding,
       ),
     ),
   );
 }
 
 GoRoute _npmRoutes({required String path}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-      key: state.pageKey,
-      child: ServiceDashboardScreen(
-        service: ServiceKey.nginxProxyManager,
-        child: const NpmScreen(
-          showAppBar: false,
-          topPadding: _serviceDashboardTopPadding,
-        ),
+  return _page(
+    path,
+    (state) => ServiceDashboardScreen(
+      service: ServiceKey.nginxProxyManager,
+      child: const NpmScreen(
+        showAppBar: false,
+        topPadding: _serviceDashboardTopPadding,
       ),
     ),
   );
@@ -760,61 +662,49 @@ GoRoute _npmRoutes({required String path}) {
 /// `!` or defaulted to `''`, which is the pattern the older string-id routes
 /// (`torrent/:hash`, `stack/:name`) left unguarded.
 GoRoute _streamRoutes({required ServiceKey service, required String path}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-      key: state.pageKey,
-      child: StreamDashboardScreen(
-        service: service,
-        showAppBar: false,
-        topPadding: _serviceDashboardTopPadding,
-      ),
+  return _page(
+    path,
+    (state) => StreamDashboardScreen(
+      service: service,
+      showAppBar: false,
+      topPadding: _serviceDashboardTopPadding,
     ),
     routes: [
-      GoRoute(
-        path: 'library/:id',
+      _page(
+        'library/:id',
+        (state) => StreamLibraryScreen(
+          service: service,
+          libraryId: state.pathParameters['id']!,
+          libraryTitle: state.uri.queryParameters['title'],
+        ),
         redirect: (context, state) =>
             (state.pathParameters['id']?.trim().isEmpty ?? true)
             ? '/services/${service.routeParam}'
             : null,
-        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-          key: state.pageKey,
-          child: StreamLibraryScreen(
-            service: service,
-            libraryId: state.pathParameters['id']!,
-            libraryTitle: state.uri.queryParameters['title'],
-          ),
-        ),
       ),
-      GoRoute(
-        path: 'item/:id',
+      _page(
+        'item/:id',
+        (state) => StreamItemScreen(
+          service: service,
+          itemId: state.pathParameters['id']!,
+        ),
         redirect: (context, state) =>
             (state.pathParameters['id']?.trim().isEmpty ?? true)
             ? '/services/${service.routeParam}'
             : null,
-        pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-          key: state.pageKey,
-          child: StreamItemScreen(
-            service: service,
-            itemId: state.pathParameters['id']!,
-          ),
-        ),
       ),
     ],
   );
 }
 
 GoRoute _truenasRoutes({required String path}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-      key: state.pageKey,
-      child: ServiceDashboardScreen(
-        service: ServiceKey.truenas,
-        child: const TrueNasHubScreen(
-          showAppBar: false,
-          topPadding: _serviceDashboardTopPadding,
-        ),
+  return _page(
+    path,
+    (state) => ServiceDashboardScreen(
+      service: ServiceKey.truenas,
+      child: const TrueNasHubScreen(
+        showAppBar: false,
+        topPadding: _serviceDashboardTopPadding,
       ),
     ),
     routes: _truenasSectionRoutes(),
@@ -822,137 +712,95 @@ GoRoute _truenasRoutes({required String path}) {
 }
 
 /// Child routes for each TrueNAS management section.
-List<GoRoute> _truenasSectionRoutes() {
-  GoRoute page(String path, Widget child) => GoRoute(
-    path: path,
-    pageBuilder: (context, state) =>
-        RouteUtils.cupertinoPage(key: state.pageKey, child: child),
-  );
-
-  return <GoRoute>[
-    page('dashboard', const TrueNasDashboardScreen()),
-    GoRoute(
-      path: 'storage',
-      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-        key: state.pageKey,
-        child: const TrueNasStorageScreen(),
+List<GoRoute> _truenasSectionRoutes() => <GoRoute>[
+  _page('dashboard', (state) => const TrueNasDashboardScreen()),
+  _page(
+    'storage',
+    (state) => const TrueNasStorageScreen(),
+    routes: [
+      _page(
+        'pool/:name',
+        (state) =>
+            TrueNasPoolDetailScreen(poolName: state.pathParameters['name']!),
       ),
-      routes: [
-        GoRoute(
-          path: 'pool/:name',
-          pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            child: TrueNasPoolDetailScreen(
-              poolName: state.pathParameters['name']!,
-            ),
-          ),
+    ],
+  ),
+  _page(
+    'datasets',
+    (state) => const TrueNasDatasetsScreen(),
+    routes: [
+      _page(
+        'detail',
+        (state) => TrueNasDatasetDetailScreen(
+          datasetId: state.uri.queryParameters['id']!,
         ),
-      ],
-    ),
-    GoRoute(
-      path: 'datasets',
-      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-        key: state.pageKey,
-        child: const TrueNasDatasetsScreen(),
+        redirect: (context, state) =>
+            (state.uri.queryParameters['id'] ?? '').isEmpty
+            ? '/services/truenas/datasets'
+            : null,
       ),
-      routes: [
-        GoRoute(
-          path: 'detail',
-          redirect: (context, state) =>
-              (state.uri.queryParameters['id'] ?? '').isEmpty
-              ? '/services/truenas/datasets'
-              : null,
-          pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            child: TrueNasDatasetDetailScreen(
-              datasetId: state.uri.queryParameters['id']!,
-            ),
-          ),
-        ),
-      ],
+    ],
+  ),
+  _page('shares', (state) => const TrueNasSharesScreen()),
+  _page('data-protection', (state) => const TrueNasDataProtectionScreen()),
+  _page(
+    'containers',
+    (state) => const TrueNasVirtScreen(
+      type: 'CONTAINER',
+      title: 'Containers',
+      experimental: true,
     ),
-    page('shares', const TrueNasSharesScreen()),
-    page('data-protection', const TrueNasDataProtectionScreen()),
-    GoRoute(
-      path: 'containers',
-      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-        key: state.pageKey,
-        child: const TrueNasVirtScreen(
+    routes: [
+      _page(
+        'instance/:id',
+        (state) => TrueNasVirtDetailScreen(
+          id: state.pathParameters['id']!,
           type: 'CONTAINER',
-          title: 'Containers',
-          experimental: true,
         ),
       ),
-      routes: [
-        GoRoute(
-          path: 'instance/:id',
-          pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            child: TrueNasVirtDetailScreen(
-              id: state.pathParameters['id']!,
-              type: 'CONTAINER',
-            ),
-          ),
+    ],
+  ),
+  _page(
+    'vms',
+    (state) => const TrueNasVirtScreen(type: 'VM', title: 'Virtual Machines'),
+    routes: [
+      _page(
+        'instance/:id',
+        (state) => TrueNasVirtDetailScreen(
+          id: state.pathParameters['id']!,
+          type: 'VM',
         ),
-      ],
-    ),
-    GoRoute(
-      path: 'vms',
-      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-        key: state.pageKey,
-        child: const TrueNasVirtScreen(type: 'VM', title: 'Virtual Machines'),
       ),
-      routes: [
-        GoRoute(
-          path: 'instance/:id',
-          pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            child: TrueNasVirtDetailScreen(
-              id: state.pathParameters['id']!,
-              type: 'VM',
-            ),
-          ),
-        ),
-      ],
-    ),
-    GoRoute(
-      path: 'apps',
-      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-        key: state.pageKey,
-        child: const TrueNasAppsScreen(),
+    ],
+  ),
+  _page(
+    'apps',
+    (state) => const TrueNasAppsScreen(),
+    routes: [
+      _page(
+        'app/:name',
+        (state) => TrueNasAppDetailScreen(name: state.pathParameters['name']!),
       ),
-      routes: [
-        GoRoute(
-          path: 'app/:name',
-          pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            child: TrueNasAppDetailScreen(name: state.pathParameters['name']!),
-          ),
-        ),
-      ],
-    ),
-    page('reporting', const TrueNasReportingScreen()),
-    GoRoute(
-      path: 'system',
-      pageBuilder: (context, state) => RouteUtils.cupertinoPage(
-        key: state.pageKey,
-        child: const TrueNasSystemHubScreen(),
-      ),
-      routes: [
-        page('general', const TrueNasGeneralScreen()),
-        page('advanced', const TrueNasAdvancedScreen()),
-        page('services', const TrueNasServicesScreen()),
-        page('network', const TrueNasNetworkScreen()),
-        page('credentials', const TrueNasCredentialsScreen()),
-        page('certificates', const TrueNasCertificatesScreen()),
-        page('email', const TrueNasEmailScreen()),
-        page('update', const TrueNasUpdateScreen()),
-        page('ntp', const TrueNasNtpScreen()),
-        page('alert-settings', const TrueNasAlertSettingsScreen()),
-      ],
-    ),
-  ];
-}
+    ],
+  ),
+  _page('reporting', (state) => const TrueNasReportingScreen()),
+  _page(
+    'system',
+    (state) => const TrueNasSystemHubScreen(),
+    routes: [
+      _page('general', (state) => const TrueNasGeneralScreen()),
+      _page('advanced', (state) => const TrueNasAdvancedScreen()),
+      _page('services', (state) => const TrueNasServicesScreen()),
+      _page('network', (state) => const TrueNasNetworkScreen()),
+      _page('credentials', (state) => const TrueNasCredentialsScreen()),
+      _page('certificates', (state) => const TrueNasCertificatesScreen()),
+      _page('email', (state) => const TrueNasEmailScreen()),
+      _page('update', (state) => const TrueNasUpdateScreen()),
+      _page('ntp', (state) => const TrueNasNtpScreen()),
+      _page('alert-settings', (state) => const TrueNasAlertSettingsScreen()),
+    ],
+  ),
+];
 
 String? _redirectLegacyDiscover(GoRouterState state) {
   final path = state.uri.path;
@@ -1104,15 +952,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) =>
                     const ReleaseSearchSettingsScreen(),
               ),
-              GoRoute(
-                path: 'appearance',
-                pageBuilder: (context, state) =>
-                    _settingsSubpage(state, const SettingsAppearanceScreen()),
-              ),
-              GoRoute(
-                path: 'connections',
-                pageBuilder: (context, state) =>
-                    _settingsSubpage(state, const SettingsConnectionsScreen()),
+              _page('appearance', (state) => const SettingsAppearanceScreen()),
+              _page(
+                'connections',
+                (state) => const SettingsConnectionsScreen(),
               ),
               // Former name of the connections screen, kept so an existing
               // deep link or a shortcut does not dead-end.
@@ -1120,34 +963,23 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'services',
                 redirect: (context, state) => '/settings/connections',
               ),
-              GoRoute(
-                path: 'region',
-                pageBuilder: (context, state) =>
-                    _settingsSubpage(state, const SettingsRegionScreen()),
+              _page('region', (state) => const SettingsRegionScreen()),
+              _page(
+                'certificates',
+                (state) => const TrustedCertificatesScreen(),
               ),
-              GoRoute(
-                path: 'certificates',
-                pageBuilder: (context, state) =>
-                    _settingsSubpage(state, const TrustedCertificatesScreen()),
-              ),
-              GoRoute(
-                path: 'service/:service',
-                pageBuilder: (context, state) {
-                  final serviceParam = state.pathParameters['service'];
-                  // Accept 'jellyseerr' as a legacy alias for 'seerr'.
-                  final normalizedParam = serviceParam == 'jellyseerr'
-                      ? 'seerr'
-                      : serviceParam;
-                  final service = ServiceKey.values.firstWhere(
-                    (s) => s.routeParam == normalizedParam,
-                    orElse: () => ServiceKey.seerr,
-                  );
-                  return _settingsSubpage(
-                    state,
-                    ServiceSettingsScreen(service: service),
-                  );
-                },
-              ),
+              _page('service/:service', (state) {
+                final serviceParam = state.pathParameters['service'];
+                // Accept 'jellyseerr' as a legacy alias for 'seerr'.
+                final normalizedParam = serviceParam == 'jellyseerr'
+                    ? 'seerr'
+                    : serviceParam;
+                final service = ServiceKey.values.firstWhere(
+                  (s) => s.routeParam == normalizedParam,
+                  orElse: () => ServiceKey.seerr,
+                );
+                return ServiceSettingsScreen(service: service);
+              }),
             ],
           ),
         ],

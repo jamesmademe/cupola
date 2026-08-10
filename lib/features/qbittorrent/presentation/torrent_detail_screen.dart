@@ -325,7 +325,7 @@ class _InfoRow extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -369,7 +369,10 @@ class _EditableInfoRow extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.xs,
+          horizontal: AppSpacing.xs,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -438,7 +441,7 @@ class _FilesTab extends ConsumerWidget {
           return const Center(child: Text('No files'));
         }
         return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           itemCount: files.length,
           itemBuilder: (context, index) =>
               _FileRow(file: files[index], index: index, hash: hash),
@@ -473,6 +476,8 @@ class _FileRow extends ConsumerWidget {
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(2),
         child: SizedBox(
+          // The progress bar's own geometry, not a layout gap: these stay
+          // literals rather than borrowing the AppSpacing vocabulary.
           width: 4,
           height: 32,
           child: LinearProgressIndicator(
@@ -561,7 +566,7 @@ class _TrackersTab extends ConsumerWidget {
           return const Center(child: Text('No trackers'));
         }
         return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           itemCount: trackers.length,
           itemBuilder: (context, index) =>
               _TrackerRow(tracker: trackers[index]),
@@ -671,7 +676,7 @@ class _ActionsTab extends ConsumerWidget {
           icon: const Icon(Icons.play_arrow_rounded, size: 18),
           label: const Text('Resume'),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         FilledButton.icon(
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.qbittorrent,
@@ -688,7 +693,7 @@ class _ActionsTab extends ConsumerWidget {
           icon: const Icon(Icons.flash_on_rounded, size: 18),
           label: const Text('Force Resume'),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         FilledButton.icon(
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.warning,
@@ -705,7 +710,7 @@ class _ActionsTab extends ConsumerWidget {
           icon: const Icon(Icons.pause_rounded, size: 18),
           label: const Text('Pause'),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         FilledButton.icon(
           style: FilledButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.error,
@@ -714,7 +719,7 @@ class _ActionsTab extends ConsumerWidget {
           icon: const Icon(Icons.delete_outline_rounded, size: 18),
           label: const Text('Delete'),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
         OutlinedButton.icon(
           onPressed: () {
             Clipboard.setData(ClipboardData(text: torrent.hash));
@@ -723,7 +728,7 @@ class _ActionsTab extends ConsumerWidget {
           icon: const Icon(Icons.copy_rounded, size: 16),
           label: const Text('Copy hash'),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         OutlinedButton.icon(
           onPressed: () {
             Clipboard.setData(ClipboardData(text: torrent.name));
@@ -732,39 +737,39 @@ class _ActionsTab extends ConsumerWidget {
           icon: const Icon(Icons.copy_rounded, size: 16),
           label: const Text('Copy name'),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.xl),
         const Divider(),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         _SectionLabel('Speed limits (this torrent)'),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         OutlinedButton.icon(
           onPressed: () => _setLimit(context, ref, torrent, isDownload: true),
           icon: const Icon(Icons.south_rounded, size: 16),
           label: const Text('Download limit'),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         OutlinedButton.icon(
           onPressed: () => _setLimit(context, ref, torrent, isDownload: false),
           icon: const Icon(Icons.north_rounded, size: 16),
           label: const Text('Upload limit'),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.xl),
         _SectionLabel('Global'),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         OutlinedButton.icon(
           onPressed: () => _toggleAltSpeed(context, ref),
           icon: const Icon(Icons.shield_moon_outlined, size: 16),
           label: const Text('Toggle alternative speed limits'),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.xl),
         _SectionLabel('Maintenance'),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         OutlinedButton.icon(
           onPressed: () => _recheck(context, ref, torrent),
           icon: const Icon(Icons.refresh_rounded, size: 16),
           label: const Text('Force recheck'),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         OutlinedButton.icon(
           onPressed: () => _reannounce(context, ref, torrent),
           icon: const Icon(Icons.campaign_rounded, size: 16),

@@ -73,11 +73,11 @@ class ManualImportFileSystemResult {
   factory ManualImportFileSystemResult.fromJson(Map<String, dynamic> json) {
     return ManualImportFileSystemResult(
       parent: stringOrNull(json['parent']),
-      directories: _mapList(
+      directories: jsonObjects(
         json['directories'],
         ManualImportFileSystemEntry.fromJson,
       ),
-      files: _mapList(json['files'], ManualImportFileSystemEntry.fromJson),
+      files: jsonObjects(json['files'], ManualImportFileSystemEntry.fromJson),
     );
   }
 }
@@ -179,12 +179,12 @@ class ManualImportItem {
       movieFileId: intOrNull(json['movieFileId']),
       series: mapOrNull(json['series']),
       seasonNumber: intOrNull(json['seasonNumber']),
-      episodes: _mapList(json['episodes'], (item) => item),
+      episodes: jsonObjects(json['episodes'], (item) => item),
       episodeFileId: intOrNull(json['episodeFileId']),
       artist: mapOrNull(json['artist']),
       album: mapOrNull(json['album']),
       albumReleaseId: intOrNull(json['albumReleaseId']),
-      tracks: _mapList(json['tracks'], (item) => item),
+      tracks: jsonObjects(json['tracks'], (item) => item),
       quality: mapOrNull(json['quality']),
       languages: _dynamicList(json['languages']),
       qualityWeight: intOrNull(json['qualityWeight']) ?? 0,
@@ -198,7 +198,10 @@ class ManualImportItem {
       additionalFile: json['additionalFile'] == true,
       replaceExistingFiles: json['replaceExistingFiles'] == true,
       disableReleaseSwitching: json['disableReleaseSwitching'] == true,
-      rejections: _mapList(json['rejections'], ManualImportRejection.fromJson),
+      rejections: jsonObjects(
+        json['rejections'],
+        ManualImportRejection.fromJson,
+      ),
     );
   }
 
@@ -222,8 +225,6 @@ class ManualImportItem {
     return (movieFileId ?? 0) > 0 || (episodeFileId ?? 0) > 0;
   }
 
-  bool get hasPermanentRejection => rejections.any((item) => item.isPermanent);
-
   bool get hasBlockingIdentityRejection =>
       rejections.any((item) => item.isPermanent && _isIdentityRejection(item));
 
@@ -242,9 +243,6 @@ class ManualImportItem {
   }
 
   bool get isSelectable => !isAlreadyImported;
-
-  bool get isReadyForImport =>
-      isSelectable && hasBlockingRequirementsFor(ServiceKey.radarr) == false;
 
   bool isReadyForImportFor(ServiceKey service) {
     return isSelectable && !hasBlockingRequirementsFor(service);
@@ -271,10 +269,6 @@ class ManualImportItem {
 
   bool isMatchedFor(ServiceKey service) {
     return hasMatchFor(service) && !hasBlockingIdentityRejection;
-  }
-
-  bool hasWarningFor(ServiceKey service) {
-    return !isMatchedFor(service) || hasBlockingMetadataRejection;
   }
 
   bool hasBlockingRequirementsFor(ServiceKey service) {
@@ -836,15 +830,6 @@ String manualImportPathName(String path) {
   final parts = normalized.split('/').where((part) => part.isNotEmpty).toList();
   if (parts.isEmpty) return normalized.isEmpty ? 'Root' : normalized;
   return parts.last;
-}
-
-List<T> _mapList<T>(dynamic value, T Function(Map<String, dynamic>) fromJson) {
-  final list = value is List ? value : const [];
-  return list
-      .map(mapOrNull)
-      .whereType<Map<String, dynamic>>()
-      .map(fromJson)
-      .toList(growable: false);
 }
 
 List<dynamic> _dynamicList(dynamic value) {

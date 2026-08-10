@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
@@ -66,7 +67,7 @@ class _ProwlarrNotConfigured extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -75,12 +76,12 @@ class _ProwlarrNotConfigured extends StatelessWidget {
               size: 48,
               color: AppColors.prowlarr,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             const Text(
               'Prowlarr is not configured yet.',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             FilledButton(
               onPressed: onOpenSettings,
               child: const Text('Open settings'),
@@ -117,7 +118,7 @@ class _ProwlarrDashboard extends ConsumerWidget {
         ref.invalidate(prowlarrHealthProvider);
         ref.invalidate(serviceKpiProvider(ServiceKey.prowlarr));
         ref.invalidate(serviceSummaryProvider(ServiceKey.prowlarr));
-        await Future<void>.delayed(const Duration(milliseconds: 300));
+        await Future<void>.delayed(AppAnimation.durationMd);
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -130,7 +131,7 @@ class _ProwlarrDashboard extends ConsumerWidget {
             kpis: ref.watch(serviceKpiProvider(ServiceKey.prowlarr)),
             accent: AppColors.prowlarr,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           _HealthBanner(healthAsync: healthAsync),
           const _QuickActions(),
           SectionHeader(
@@ -140,7 +141,7 @@ class _ProwlarrDashboard extends ConsumerWidget {
           ),
           const SizedBox(height: 2),
           _IndexerList(indexersAsync: indexersAsync, disabledIds: disabledIds),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           SectionHeader(
             title: 'Apps',
             showChevron: true,
@@ -152,7 +153,7 @@ class _ProwlarrDashboard extends ConsumerWidget {
           ),
           const SizedBox(height: 2),
           const _AppsList(),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           const SectionHeader(title: 'Recent Activity', showChevron: false),
           const SizedBox(height: 2),
           _HistoryList(historyAsync: historyAsync),
@@ -180,9 +181,14 @@ class _HealthBanner extends StatelessWidget {
             ? '$errors error${errors == 1 ? '' : 's'}, ${issues.length} issue${issues.length == 1 ? '' : 's'}'
             : '${issues.length} warning${issues.length == 1 ? '' : 's'}';
         return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.sm,
+          ),
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               color: accent.withValues(alpha: 0.1),
               borderRadius: AppRadius.borderRadiusMd,
@@ -202,10 +208,10 @@ class _HealthBanner extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
+                    horizontal: AppSpacing.sm,
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
@@ -289,7 +295,10 @@ class _AppsList extends ConsumerWidget {
           data: (apps) {
             if (apps.isEmpty) {
               return const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
                 child: Text('No applications connected to Prowlarr.'),
               );
             }
@@ -349,7 +358,7 @@ class _AppsList extends ConsumerWidget {
             );
           },
           loading: () => const ProwlarrListShimmer(count: 2),
-          error: (error, _) => _ErrorRetry(
+          error: (error, _) => InlineErrorRetry.fixedHeight(
             message: 'Failed to load applications',
             onRetry: () => ref.invalidate(prowlarrApplicationsProvider),
           ),
@@ -369,7 +378,10 @@ class _IndexerList extends ConsumerWidget {
       data: (indexers) {
         if (indexers.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('No indexers configured.'),
           );
         }
@@ -393,7 +405,7 @@ class _IndexerList extends ConsumerWidget {
         );
       },
       loading: () => const ProwlarrListShimmer(),
-      error: (error, _) => _ErrorRetry(
+      error: (error, _) => InlineErrorRetry.fixedHeight(
         message: 'Failed to load indexers',
         onRetry: () => ref.invalidate(prowlarrIndexersProvider),
       ),
@@ -412,7 +424,10 @@ class _HistoryList extends ConsumerWidget {
       data: (page) {
         if (page.records.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('No recent activity yet.'),
           );
         }
@@ -424,7 +439,7 @@ class _HistoryList extends ConsumerWidget {
         );
       },
       loading: () => const ProwlarrListShimmer(),
-      error: (error, _) => _ErrorRetry(
+      error: (error, _) => InlineErrorRetry.fixedHeight(
         message: 'Failed to load recent activity',
         onRetry: () => ref.invalidate(prowlarrRecentHistoryProvider),
       ),
@@ -449,7 +464,10 @@ class _HistoryTile extends StatelessWidget {
     ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Material(
         color: colorScheme.surface,
         borderRadius: AppRadius.borderRadiusMd,
@@ -496,7 +514,7 @@ class _HistoryTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
@@ -513,47 +531,6 @@ class _HistoryTile extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Inline error placeholder with a retry action so failures are
-/// distinguishable from the loading shimmer state.
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      height: 120,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer.withValues(alpha: 0.4),
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(color: colorScheme.error.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline_rounded, color: colorScheme.error),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onErrorContainer,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
-        ],
       ),
     );
   }
