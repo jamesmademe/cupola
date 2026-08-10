@@ -1,39 +1,35 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Cupola icon source policy
-# -------------------------
-# - assets/brand/cupola_mark.svg is the ONLY geometry source of record. Do not
-#   add geometry to this script or derive geometry from a raster export.
-# - assets/brand/cupola_icon.svg is the active full-ground/preview composition:
-#   it intentionally owns its opaque ground and halo for previews and store art.
-# - assets/brand/cupola_launcher.svg is the active simplified launcher variant;
-#   its heavier ribs and oculus are intentional small-size geometry.
-# - The Apple Icon Composer bundles are active Apple inputs, selected by both
-#   Xcode projects: ios/Runner/cupola_icon.icon/ and
-#   macos/Runner/cupola_icon.icon/. Each bundle's icon.json and layer PNGs are
-#   intentional build inputs, not orphaned source families.
-# - The traditional Apple catalogs are synchronized compatibility/fallback
-#   outputs: ios/Runner/Assets.xcassets/AppIcon.appiconset/ and
-#   macos/Runner/Assets.xcassets/AppIcon.appiconset/. Keep them aligned with
-#   the active Icon Composer bundles for tooling and older build paths.
-# - Active output families are android/app/src/main/res/ (Android), the Apple
-#   Icon Composer bundles above, the Apple fallback catalogs above, web/ (web),
-#   windows/ (Windows), and linux/ (Linux). These are consumers or synchronized
-#   outputs, not additional geometry sources of truth.
-# - Intentionally retained scratch/orphan paths are assets/brand/cupola_mark.png,
-#   assets/icon/, and android/app/src/main/cupola_icon-playstore.png. The
-#   .ai/generated-icons/ directory is also disposable script output; none of
-#   these paths should be treated as active generation inputs.
+# Cupola icon pipeline
+# ---------------------
+# Everything the app ships as an icon descends from scripts/icons/masters.py,
+# where the geometry lives as constants. Nothing downstream carries geometry, so
+# changing the mark means editing that one file and running --write.
 #
-# Default mode is check-only and never writes. Generation is explicit:
-#   scripts/generate_icons.sh --generate [output-directory]
-# Generation copies the three canonical SVG compositions and, when a supported
-# host rasterizer is available, emits 1024px PNG previews. This is deterministic
-# staging/preview output only; it never overwrites an existing file. The checked-
-# in scripts/icon_outputs.json is the integrity contract for curated/native
-# outputs. Refresh it explicitly after reviewing output changes:
-#   scripts/generate_icons.sh --refresh-manifest
+#   scripts/generate_icons.sh --write             regenerate every target in place
+#   scripts/generate_icons.sh --check             (default) validate sources + manifest
+#   scripts/generate_icons.sh --refresh-manifest  re-record output hashes
+#
+# --write needs python3 with Pillow, plus node/npx for the SVG rasteriser. It is
+# a developer-machine operation: CI only ever runs --check, which needs neither.
+#
+# What --write produces:
+#   assets/brand/*.svg      the three canonical compositions (mark, full ground,
+#                           simplified small-size variant)
+#   assets/brand/cupola_mark.png  the in-app mark drawn by ServiceRing — a real
+#                           app asset declared in pubspec.yaml, not scratch
+#   ios|macos .icon/Assets  Icon Composer layers, light and dark groups
+#   ios|macos .appiconset   fallback catalogues (dark appearance; those slots
+#                           have no appearance channel)
+#   android res/mipmap-*    light appearance, plus mipmap-night-* for dark and
+#                           an adaptive foreground for each
+#   android res/drawable*   the adaptive backgrounds, one per appearance
+#   web, windows, linux     favicons, maskable icons, .ico, hicolor set
+#
+# The manifest refresh stays deliberate: --write never touches
+# scripts/icon_outputs.json, so output changes get reviewed before being
+# re-recorded. scripts/verify_icons.sh is the gate.
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 BRAND_DIR="$ROOT_DIR/assets/brand"
@@ -42,7 +38,7 @@ OUTPUT_DIR="$ROOT_DIR/.ai/generated-icons"
 MANIFEST="$ROOT_DIR/scripts/icon_outputs.json"
 
 usage() {
-  printf 'Usage: %s [--check] | [--generate [OUTPUT_DIR]] | [--refresh-manifest]\n' "${0##*/}"
+  printf 'Usage: %s [--check] | [--write] | [--refresh-manifest]\n' "${0##*/}"
 }
 
 if [[ ${1:-} == "--help" || ${1:-} == "-h" ]]; then
@@ -50,18 +46,31 @@ if [[ ${1:-} == "--help" || ${1:-} == "-h" ]]; then
   exit 0
 elif [[ ${1:-} == "--check" || -z ${1:-} ]]; then
   MODE=check
-elif [[ ${1:-} == "--generate" ]]; then
-  MODE=generate
-  if [[ -n ${2:-} ]]; then
-    OUTPUT_DIR=$2
-  fi
-  [[ -z ${3:-} ]] || { usage >&2; exit 2; }
+elif [[ ${1:-} == "--write" ]]; then
+  MODE=write
+  [[ -z ${2:-} ]] || { usage >&2; exit 2; }
 elif [[ ${1:-} == "--refresh-manifest" ]]; then
   MODE=refresh_manifest
   [[ -z ${2:-} ]] || { usage >&2; exit 2; }
 else
   usage >&2
   exit 2
+fi
+
+if [[ $MODE == write ]]; then
+  command -v python3 >/dev/null 2>&1 || {
+    printf 'error: --write requires python3\n' >&2; exit 1; }
+  python3 -c 'import PIL' >/dev/null 2>&1 || {
+    printf 'error: --write requires Pillow (pip install Pillow)\n' >&2; exit 1; }
+  command -v npx >/dev/null 2>&1 || {
+    printf 'error: --write requires node/npx for the SVG rasteriser\n' >&2; exit 1; }
+
+  BUILD_DIR="$ROOT_DIR/scripts/icons/.build"
+  rm -rf "$BUILD_DIR"
+  python3 "$ROOT_DIR/scripts/icons/masters.py" --out "$BUILD_DIR" --brand "$BRAND_DIR"
+  python3 "$ROOT_DIR/scripts/icons/export.py" --repo "$ROOT_DIR" --masters "$BUILD_DIR"
+  printf '\nReview the diff, then record it:\n  scripts/generate_icons.sh --refresh-manifest\n  scripts/verify_icons.sh\n'
+  exit 0
 fi
 
 for required in cupola_mark.svg cupola_icon.svg cupola_launcher.svg; do
@@ -228,45 +237,5 @@ PY
 
 if [[ $MODE == check ]]; then
   printf 'Check-only mode: no files written.\n'
-  exit 0
 fi
-
-if [[ $MODE == refresh_manifest ]]; then
-  exit 0
-fi
-
-mkdir -p "$OUTPUT_DIR"
-for source in cupola_mark.svg cupola_icon.svg cupola_launcher.svg; do
-  target="$OUTPUT_DIR/$source"
-  [[ ! -e "$target" ]] || {
-    printf 'error: refusing to overwrite %s\n' "$target" >&2
-    exit 1
-  }
-  cp "$BRAND_DIR/$source" "$target"
-done
-
-rasterizer=""
-if command -v sips >/dev/null 2>&1; then
-  rasterizer=sips
-elif command -v ffmpeg >/dev/null 2>&1; then
-  rasterizer=ffmpeg
-fi
-
-if [[ -z $rasterizer ]]; then
-  printf 'SVG generation complete; PNG previews skipped (sips/ffmpeg unavailable).\n'
-  exit 0
-fi
-
-for source in cupola_icon.svg cupola_launcher.svg; do
-  target="$OUTPUT_DIR/${source%.svg}.png"
-  [[ ! -e "$target" ]] || {
-    printf 'error: refusing to overwrite %s\n' "$target" >&2
-    exit 1
-  }
-  if [[ $rasterizer == sips ]]; then
-    sips -s format png "$OUTPUT_DIR/$source" --out "$target" >/dev/null
-  else
-    ffmpeg -loglevel error -y -i "$OUTPUT_DIR/$source" -frames:v 1 -vf scale=1024:1024 "$target"
-  fi
-done
-printf 'Generated canonical SVGs and PNG previews with %s in %s.\n' "$rasterizer" "$OUTPUT_DIR"
+exit 0

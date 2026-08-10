@@ -177,7 +177,9 @@ for name in ("cupola_mark.svg", "cupola_icon.svg", "cupola_launcher.svg"):
         except (OSError, ET.ParseError) as exc:
             fail(f"{path.relative_to(root)}: invalid SVG ({exc})")
 for path in root.glob("**/*.svg"):
-    if ".git" not in path.parts and ".ai" not in path.parts and path.parent != brand:
+    if any(part.startswith(".") for part in path.parts):
+        continue  # dot-directories are untracked build output
+    if path.parent != brand:
         fail(f"unexpected SVG geometry source: {path.relative_to(root)}")
 ok("canonical SVG source policy")
 
@@ -203,8 +205,10 @@ light = require("android/app/src/main/res/drawable/cupola_icon_bg_gradient.xml")
 night = require("android/app/src/main/res/drawable-night/cupola_icon_bg_gradient.xml")
 if light and night:
     colors = lambda p: re.findall(r'android:(?:startColor|centerColor|endColor)="([#A-Fa-f0-9]+)"', p.read_text())
-    if colors(light) != colors(night):
-        fail("Android light/night icon palettes differ")
+    if not colors(light) or not colors(night):
+        fail("Android icon background gradients are missing colour stops")
+    elif colors(light) == colors(night):
+        fail("Android light/night icon backgrounds are identical; the theme split regressed")
 for density in ("mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"):
     directory = root / "android/app/src/main/res" / f"mipmap-{density}"
     for suffix in ("", "_round", "_foreground", "_monochrome"):
@@ -215,7 +219,7 @@ for density in ("mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"):
             if path.suffix.lower() == ".png":
                 check_png(path)
 for density in ("mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"):
-    for suffix in ("", "_round"):
+    for suffix in ("", "_round", "_foreground"):
         directory = root / "android/app/src/main/res" / f"mipmap-night-{density}"
         if not list(directory.glob(f"cupola_icon{suffix}.*")):
             fail(f"Android missing night-{density} cupola_icon{suffix} output")
@@ -326,13 +330,16 @@ for size in (16, 32, 48, 64, 128, 256):
     check_png(require(f"linux/runner/icons/hicolor/{size}x{size}/apps/cupola.png"), (size, size))
 ok("Linux desktop metadata, CMake wiring, and hicolor outputs")
 
-# The generator is intentionally check-only by default and must remain present.
+# The generator is check-only by default; --write is the explicit regeneration
+# path and scripts/icons/ holds the geometry every output descends from.
 generator = require("scripts/generate_icons.sh")
 if generator:
     text = generator.read_text()
-    if "MODE=check" not in text or "--check" not in text or "--generate" not in text:
-        fail("icon generator lacks explicit check/generate modes")
-ok("icon generator presence and check mode")
+    if "MODE=check" not in text or "--check" not in text or "--write" not in text:
+        fail("icon generator lacks explicit check/write modes")
+for name in ("scripts/icons/masters.py", "scripts/icons/export.py"):
+    require(name)
+ok("icon generator presence, check mode, and geometry source")
 
 if failures:
     print(f"Icon verification failed: {len(failures)} issue(s).", file=sys.stderr)

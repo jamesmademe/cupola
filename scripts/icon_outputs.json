@@ -28,13 +28,13 @@
       "path": "android/app/src/main/res/drawable-night/cupola_icon_bg_gradient.xml",
       "role": "Android icon resource/config",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "3a9073566f1fe935ad5f0e9f2a4e15f6c3328b2aeb4115a0105dc9e4d1f607b7"
+      "sha256": "30a614f424268b70c949b4b01a34689d45dd43f5cd82f21df01a78dcd8da11c3"
     },
     {
       "path": "android/app/src/main/res/drawable/cupola_icon_bg_gradient.xml",
       "role": "Android icon resource/config",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "76e5aa1eed27685642d60f4ee3ac27435cf29d2ebe79e4b5066a9bf41beb095c"
+      "sha256": "fd97d22f9b67f7cbb6049a985e44e7d9ecce79dd1b35db39d44b021b74d4d234"
     },
     {
       "path": "android/app/src/main/res/mipmap-anydpi-v26/cupola_icon.xml",
@@ -52,181 +52,211 @@
       "path": "android/app/src/main/res/mipmap-hdpi/cupola_icon.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "89effba955be0082c5e94f68f5dd82b48f2600671e10ebdd98045696a18a1ff1"
+      "sha256": "5ca877e933abc00bb4c42592ba6346f61d0996b690c9b4881ff3951ff5986d9b"
     },
     {
       "path": "android/app/src/main/res/mipmap-hdpi/cupola_icon_foreground.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "b48f897d78b7f40a3e6cc22a7f75bc5c647fdbd75a1210dde8085854e67a03c3"
+      "sha256": "224ca28f90f7d78224edf6ae76585e1369bdd0a18b372090a644795ff51b8793"
     },
     {
       "path": "android/app/src/main/res/mipmap-hdpi/cupola_icon_monochrome.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "401c20ea4c0d9003ea90b61508e44d5682ec7691323acd2d53d23a445640db9d"
+      "sha256": "298d950b5ddd2e5598084861ce18e5ed81dc902a547ebfe8c1d172b6b22ffffd"
     },
     {
       "path": "android/app/src/main/res/mipmap-hdpi/cupola_icon_round.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "89effba955be0082c5e94f68f5dd82b48f2600671e10ebdd98045696a18a1ff1"
+      "sha256": "5ca877e933abc00bb4c42592ba6346f61d0996b690c9b4881ff3951ff5986d9b"
     },
     {
       "path": "android/app/src/main/res/mipmap-mdpi/cupola_icon.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "8d6cc4691ca79641a0b43e732983db721cdc354eeedefb85589259bcb4859733"
+      "sha256": "c1492a0c4762e3af0425eb6a330ff00daf7f4bba04d2c339c99e021720c17e4f"
     },
     {
       "path": "android/app/src/main/res/mipmap-mdpi/cupola_icon_foreground.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "54960d64b27ea2fc7140a75b29853c8f778ef32c55ff7fd859c60e1193277a20"
+      "sha256": "c9dae13eb677d98cccf2f876cd01918436c23d3a0cd0f52cc203022734989788"
     },
     {
       "path": "android/app/src/main/res/mipmap-mdpi/cupola_icon_monochrome.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "053d90d65cd9e265b9f8377e252b3cf8e93031765ea39587e1a7fe806b3e9424"
+      "sha256": "267f46d14861fc1544c41a508c66a995a9b0ff8fdee8cc0c1c4ef62ee78f57a2"
     },
     {
       "path": "android/app/src/main/res/mipmap-mdpi/cupola_icon_round.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "8d6cc4691ca79641a0b43e732983db721cdc354eeedefb85589259bcb4859733"
+      "sha256": "c1492a0c4762e3af0425eb6a330ff00daf7f4bba04d2c339c99e021720c17e4f"
     },
     {
       "path": "android/app/src/main/res/mipmap-night-hdpi/cupola_icon.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "89effba955be0082c5e94f68f5dd82b48f2600671e10ebdd98045696a18a1ff1"
+      "sha256": "89824730aa5fc8495c3b2f78d78e9c1f5b3c45d9c214a9d08a6a6e926926d283"
+    },
+    {
+      "path": "android/app/src/main/res/mipmap-night-hdpi/cupola_icon_foreground.webp",
+      "role": "Android launcher output",
+      "source_family": "cupola_mark.svg + cupola_launcher.svg",
+      "sha256": "172a61432b9513b640ed8a82f45ddd116f41f9e3c95282a437d91d5c5003ab0c"
     },
     {
       "path": "android/app/src/main/res/mipmap-night-hdpi/cupola_icon_round.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "89effba955be0082c5e94f68f5dd82b48f2600671e10ebdd98045696a18a1ff1"
+      "sha256": "89824730aa5fc8495c3b2f78d78e9c1f5b3c45d9c214a9d08a6a6e926926d283"
     },
     {
       "path": "android/app/src/main/res/mipmap-night-mdpi/cupola_icon.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "8d6cc4691ca79641a0b43e732983db721cdc354eeedefb85589259bcb4859733"
+      "sha256": "1aafd6392d1a73b663a6d22c8237b0753e2f3fbd861df95b032279e84812c288"
+    },
+    {
+      "path": "android/app/src/main/res/mipmap-night-mdpi/cupola_icon_foreground.webp",
+      "role": "Android launcher output",
+      "source_family": "cupola_mark.svg + cupola_launcher.svg",
+      "sha256": "84b610fbb8906e7f3c8ef7e9af3cb68dada00b20e51ca7a8f53e52d52a27d160"
     },
     {
       "path": "android/app/src/main/res/mipmap-night-mdpi/cupola_icon_round.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "8d6cc4691ca79641a0b43e732983db721cdc354eeedefb85589259bcb4859733"
+      "sha256": "1aafd6392d1a73b663a6d22c8237b0753e2f3fbd861df95b032279e84812c288"
     },
     {
       "path": "android/app/src/main/res/mipmap-night-xhdpi/cupola_icon.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "f70fb4627924edbe6243a93157fab6169f4a84e6407f6928b2f10919159b7c37"
+      "sha256": "b781c4e52c6d768bb00d7b42630a462224797550e572ad57b9c6d3f7650c186f"
+    },
+    {
+      "path": "android/app/src/main/res/mipmap-night-xhdpi/cupola_icon_foreground.webp",
+      "role": "Android launcher output",
+      "source_family": "cupola_mark.svg + cupola_launcher.svg",
+      "sha256": "43e103a02e2ab4e78d9b6b717377faa4bbf435d1e15e5cd5de90ff284666efda"
     },
     {
       "path": "android/app/src/main/res/mipmap-night-xhdpi/cupola_icon_round.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "f70fb4627924edbe6243a93157fab6169f4a84e6407f6928b2f10919159b7c37"
+      "sha256": "b781c4e52c6d768bb00d7b42630a462224797550e572ad57b9c6d3f7650c186f"
     },
     {
       "path": "android/app/src/main/res/mipmap-night-xxhdpi/cupola_icon.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "157c05e5a529cdc77d4a9274a5d58352eb3adea962103258cd0b3dafa573b4cc"
+      "sha256": "9393bf9a141bc63c0be9b9f910b6f293143d5ead410562424b1246c342ae0698"
+    },
+    {
+      "path": "android/app/src/main/res/mipmap-night-xxhdpi/cupola_icon_foreground.webp",
+      "role": "Android launcher output",
+      "source_family": "cupola_mark.svg + cupola_launcher.svg",
+      "sha256": "ede5006b307c75c18f9db93e4f4bf0d0480d7299e630c34e3078b285ee16ee86"
     },
     {
       "path": "android/app/src/main/res/mipmap-night-xxhdpi/cupola_icon_round.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "157c05e5a529cdc77d4a9274a5d58352eb3adea962103258cd0b3dafa573b4cc"
+      "sha256": "9393bf9a141bc63c0be9b9f910b6f293143d5ead410562424b1246c342ae0698"
     },
     {
       "path": "android/app/src/main/res/mipmap-night-xxxhdpi/cupola_icon.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "5c430ead8e1383ac40de50e91d00bcc557983048c2b50959b03a0de1bd3bbc10"
+      "sha256": "87350fe391544d639723c2ceb57cb2fea2200a03c9af7e3f3263556c93cc5d42"
+    },
+    {
+      "path": "android/app/src/main/res/mipmap-night-xxxhdpi/cupola_icon_foreground.webp",
+      "role": "Android launcher output",
+      "source_family": "cupola_mark.svg + cupola_launcher.svg",
+      "sha256": "3b70d016905db3afad4fa71ef9a26f237ec3102bdf69998427772c436bf26085"
     },
     {
       "path": "android/app/src/main/res/mipmap-night-xxxhdpi/cupola_icon_round.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "5c430ead8e1383ac40de50e91d00bcc557983048c2b50959b03a0de1bd3bbc10"
+      "sha256": "87350fe391544d639723c2ceb57cb2fea2200a03c9af7e3f3263556c93cc5d42"
     },
     {
       "path": "android/app/src/main/res/mipmap-xhdpi/cupola_icon.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "f70fb4627924edbe6243a93157fab6169f4a84e6407f6928b2f10919159b7c37"
+      "sha256": "6aceaef55f85610134b35aac9b6f176a23e5ca1f786c4156ac11c8397347b84a"
     },
     {
       "path": "android/app/src/main/res/mipmap-xhdpi/cupola_icon_foreground.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "e0ac4581bfac7d3604a230dbf797cd0f6a0c66779e200cc11e40c9bdf06fa720"
+      "sha256": "b86cf90d4d0e6cafabafd77b56cc1ecb2ad5ee98a6778b5df644d29dc0712984"
     },
     {
       "path": "android/app/src/main/res/mipmap-xhdpi/cupola_icon_monochrome.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "c90defc63cf13a67466e08a4469377d4745e9e55b9a4d3c4658f03a107fd2151"
+      "sha256": "3b35c661143139fbf53468bbf938fb018bc2cb34e5683bb6888e7806ec7a1447"
     },
     {
       "path": "android/app/src/main/res/mipmap-xhdpi/cupola_icon_round.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "f70fb4627924edbe6243a93157fab6169f4a84e6407f6928b2f10919159b7c37"
+      "sha256": "6aceaef55f85610134b35aac9b6f176a23e5ca1f786c4156ac11c8397347b84a"
     },
     {
       "path": "android/app/src/main/res/mipmap-xxhdpi/cupola_icon.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "157c05e5a529cdc77d4a9274a5d58352eb3adea962103258cd0b3dafa573b4cc"
+      "sha256": "d8bbf08d00f1be77266e476ee98c88f0d91b59ca1f3c1b9dd9f47debb96e2650"
     },
     {
       "path": "android/app/src/main/res/mipmap-xxhdpi/cupola_icon_foreground.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "8da14737e96e55d81be769a076d7f71df60a4ee51232b62f305a672d96cf497c"
+      "sha256": "05e973e6d81d3e261d8ae0cf3c94352a2e93e686b6c73b94c8db3132efc39c27"
     },
     {
       "path": "android/app/src/main/res/mipmap-xxhdpi/cupola_icon_monochrome.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "01c34f562e187d2321a36986ed054873bdf291f8feed497b86f4db5d183cbf80"
+      "sha256": "551ccb69b8cc370f4d5bf5e6e4f0dac187b4ebcee51561ea753d30dbb41cd256"
     },
     {
       "path": "android/app/src/main/res/mipmap-xxhdpi/cupola_icon_round.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "157c05e5a529cdc77d4a9274a5d58352eb3adea962103258cd0b3dafa573b4cc"
+      "sha256": "d8bbf08d00f1be77266e476ee98c88f0d91b59ca1f3c1b9dd9f47debb96e2650"
     },
     {
       "path": "android/app/src/main/res/mipmap-xxxhdpi/cupola_icon.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "5c430ead8e1383ac40de50e91d00bcc557983048c2b50959b03a0de1bd3bbc10"
+      "sha256": "55aaffe5c3e82a593584f29cc43fcd0fc6c536422e296f3746f8523cf3aa8239"
     },
     {
       "path": "android/app/src/main/res/mipmap-xxxhdpi/cupola_icon_foreground.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "bf9804f7de0fb0ab4ea7ee8cc541c58b0f6cc6a970e2736d33c75e2df386d0b8"
+      "sha256": "9399f064aff442a11f0981aaae53d9e899b1984da4fb83d42bc7e858bb7617aa"
     },
     {
       "path": "android/app/src/main/res/mipmap-xxxhdpi/cupola_icon_monochrome.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "e7c527ee99a74cfcd5df0177f55445a258e256ea86bfaa4d74e26fc4db125a0c"
+      "sha256": "5386a4f97514f47ddbebbaa1a6b5b22c9b96421e8401903f9fe6a46d6fd03d48"
     },
     {
       "path": "android/app/src/main/res/mipmap-xxxhdpi/cupola_icon_round.webp",
       "role": "Android launcher output",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "5c430ead8e1383ac40de50e91d00bcc557983048c2b50959b03a0de1bd3bbc10"
+      "sha256": "55aaffe5c3e82a593584f29cc43fcd0fc6c536422e296f3746f8523cf3aa8239"
     },
     {
       "path": "ios/Runner.xcodeproj/project.pbxproj",
@@ -244,145 +274,145 @@
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "ed2427fcbdee28739d526577f1724f86b3014bb7dcf7f1f4e34b9d045160fb4c"
+      "sha256": "ada1415db5d4ac3f1b3155dc65ae245e073dcfdcaa472145e87606ff3c663e47"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "475f78b57ea25465e66c070043cac73c2c0b2eabf31d7f598170464f18de6f02"
+      "sha256": "a2aa0363310cf8328047d34157394da7d1d4ae29fd807306510dcca47d09d165"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "7e986a03ead2f0d8769c8f624ede73336d76771af7ab7d8b42dbf2e29fe5892f"
+      "sha256": "018c14244db5b80dad85ae334780c225b8e6bafd46f5ee70c51eb70123f0c913"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "f98c8f97846ab2c2ddb042a7f63a56976c6c782f6073cd9bdd08284dba7ff5e2"
+      "sha256": "d02787053ee6208e8ab6356e0c745e501a3deef637feca84229238499c2827c0"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "958889be6a0ca92745fec736ad598ff76b92ced7b00767796441f6f8ec57cbc8"
+      "sha256": "63918ef200b4102a095e0087cdc424715e3c293ff2f04e796a03c044044627da"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "ada9fd6aaea96e1517caf003e46595b53c3a9602f75ae5b90bb8dfd7208ad3ec"
+      "sha256": "054e8823812f4461db9c5d91e0fee1aae2979347310ea6781b43a0fae3abc95d"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "274ca7bb7b66154e9f4baa39ea8370547e8c33fae4dbde2336873ebcc7ec8f5a"
+      "sha256": "9e09bb7a1c96e92384ae3dec16998f1d37b44c7228f6d8a9cf2e556b19a6e2ad"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "7e986a03ead2f0d8769c8f624ede73336d76771af7ab7d8b42dbf2e29fe5892f"
+      "sha256": "018c14244db5b80dad85ae334780c225b8e6bafd46f5ee70c51eb70123f0c913"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "66beb41b6c7d738f69c8956f64113af33d5bfb133a7883ec6308a819f37ebb59"
+      "sha256": "d0bc735f8921de5c809ef2f293623b91260248612604748daa987db3bda51600"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "2cc50e6ba35768a2f554dd169bcc58ea9cdd43d86dd8f79b97bedf4477332daf"
+      "sha256": "07ba686d61f6b0c876f27899c415b5d931dfcde759c1a9ff582f2ff34b59174f"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "2cc50e6ba35768a2f554dd169bcc58ea9cdd43d86dd8f79b97bedf4477332daf"
+      "sha256": "07ba686d61f6b0c876f27899c415b5d931dfcde759c1a9ff582f2ff34b59174f"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "a8dd2ff8f9eb51fb556d130ec1496a9867a0b2d74832f05a4726c6c6cb8f3f17"
+      "sha256": "fab3a4da998e63709ad71c6d125ba93a0396ccc0c7972900be3fbd7c9262f28c"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "0718a5913d541edd5f5520af4d20d439e0a39363235ca15439e0010beadfff24"
+      "sha256": "c0e3c62585adf958dc1bf27e3d9b6e184894e26d889c80a19f8db7184a4ed79f"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "261cfb82c43fde9d79c796f1583af9b22d2fb13258c7cded79122ff739112f00"
+      "sha256": "0d0db7191d4d16726a2fc0899d9fc376bc1acdb56421e61aa9ff991d7608fa26"
     },
     {
       "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "f4d10d8f5a16105b5bf0c050c1065b3f5d7ea2c1595143ebf4707980d3ae827e"
+      "sha256": "47f94681161ab770e93b92c2d168f92a5ef1b539f63d9b702a970c91f6c4658d"
     },
     {
       "path": "ios/Runner/cupola_icon.icon/Assets/cupola-core-dark.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "2b1ea10cd163e022311c26f498d34b0d2b56f35b23b8247609c63dd08f637881"
+      "sha256": "8139e6587d7d6a3fd1c86eb64718c2a8b7c761510b7c9115fe9e853c29f1924f"
     },
     {
       "path": "ios/Runner/cupola_icon.icon/Assets/cupola-core-light.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "2b1ea10cd163e022311c26f498d34b0d2b56f35b23b8247609c63dd08f637881"
+      "sha256": "a8a0286c60be25917a6c47654ede8a416353148f73a2c5fbe12c7c37a10cfe27"
     },
     {
       "path": "ios/Runner/cupola_icon.icon/Assets/cupola-frame-dark.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "639c16b42ff2af28f5305e5dec9d5de49a2139cae72928afc6a456bcdb9ccbbf"
+      "sha256": "409c3ead07760090ed420a16a45d46f4aec9085a5579d13e10804dadb83c0d45"
     },
     {
       "path": "ios/Runner/cupola_icon.icon/Assets/cupola-frame-light.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "639c16b42ff2af28f5305e5dec9d5de49a2139cae72928afc6a456bcdb9ccbbf"
+      "sha256": "86a004bd264873d808d81724b3c9b5b94fa6d229aae60c9c521c30bff8b6cdf4"
     },
     {
       "path": "ios/Runner/cupola_icon.icon/Assets/cupola-panes-dark.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "8b4952f267533ed73ea3a59b709ea95517c5d63d10019e29f217d336941db721"
+      "sha256": "7e17f6fe0ce94c66491536d2e6491d684b46cc9bb837334a156dcdc3dec1ada0"
     },
     {
       "path": "ios/Runner/cupola_icon.icon/Assets/cupola-panes-light.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "8b4952f267533ed73ea3a59b709ea95517c5d63d10019e29f217d336941db721"
+      "sha256": "19b89425b2215fa9059f8c7198998e116a418af4738448e486b8a6205e02c564"
     },
     {
       "path": "ios/Runner/cupola_icon.icon/Assets/cupola_fg.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "f4e362a316a7b36e9b1fe53b1f41f08638daa14710f32a55147fc9793d585686"
+      "sha256": "9360ba479e125af122d1eba6ac64ae08bb99a4150ab58396fea50c1a2c7fc80c"
     },
     {
       "path": "ios/Runner/cupola_icon.icon/Assets/preview-light-ground.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "4eb9b2246542694cd76f1e08ed7a10a625dd2d337e36374730bb0cb1252a696a"
+      "sha256": "6596ebd7b4db9c28938013ea7ec4912100fc4d4663678c4c7f10a2a39eafd3da"
     },
     {
       "path": "ios/Runner/cupola_icon.icon/icon.json",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "6563d3fdc822e82b71f5ab36d6588490ef2d256402bb2cae5f48c3166d35be1e"
+      "sha256": "98861fc1bfac70ec6e5cf76a431da3a4d0a99121d738b3b79fe4347b35d752ce"
     },
     {
       "path": "linux/CMakeLists.txt",
@@ -400,37 +430,37 @@
       "path": "linux/runner/icons/hicolor/128x128/apps/cupola.png",
       "role": "Linux hicolor launcher output/install config",
       "source_family": "cupola_icon.svg",
-      "sha256": "d99e4fbff75304e9b14b3aacbc38484ef691823e380f4f4ffa69799ad1570ec0"
+      "sha256": "f7d7741054ac4195f3f609b25f4e7297b47b9c4d9ca57ea2be1a716b08a0dea0"
     },
     {
       "path": "linux/runner/icons/hicolor/16x16/apps/cupola.png",
       "role": "Linux hicolor launcher output/install config",
       "source_family": "cupola_icon.svg",
-      "sha256": "a1a92dc80ead1e0a292dc39d1bd353fd13874c6859d639e05a87e2ed8805598f"
+      "sha256": "9fd9cb3b825f156d51d50879fae1c0c9d61170b1f10e22e17cafd29c908b80c8"
     },
     {
       "path": "linux/runner/icons/hicolor/256x256/apps/cupola.png",
       "role": "Linux hicolor launcher output/install config",
       "source_family": "cupola_icon.svg",
-      "sha256": "43b0df2b763fcfb6681c87ee438a8950cffbc4d573abe1533fc1386689f6ed5b"
+      "sha256": "648c71dae0c632d7d4a6652b5533512b37a4b2bd4590bbb6b887bcd6808679f6"
     },
     {
       "path": "linux/runner/icons/hicolor/32x32/apps/cupola.png",
       "role": "Linux hicolor launcher output/install config",
       "source_family": "cupola_icon.svg",
-      "sha256": "bbcdc03b9ce3387b87d1e118c89e126a28bb703998dcb8be4df7f4f43d3d0653"
+      "sha256": "e7434eff7eb0eec491ff310bf9444d3ff46817d4b7143f6c4147ec6d98637450"
     },
     {
       "path": "linux/runner/icons/hicolor/48x48/apps/cupola.png",
       "role": "Linux hicolor launcher output/install config",
       "source_family": "cupola_icon.svg",
-      "sha256": "a9efc82880f92019d4c00aa4643a88f8c8b643ab59f8e7c4130a7e3d27ec5f7f"
+      "sha256": "9e5744a9ce5367121fb6ccacd9f677b659af1854bc135c0c1cd6731124f7dc09"
     },
     {
       "path": "linux/runner/icons/hicolor/64x64/apps/cupola.png",
       "role": "Linux hicolor launcher output/install config",
       "source_family": "cupola_icon.svg",
-      "sha256": "68180ee005c7943f4c2024c6d3c30774ee82c4e9410c946d6f5d4e3a104ac14f"
+      "sha256": "ece55086cd846a9a56c5e56ea578813cb2d2a1b08a36f1aecdd31c07b18a0eb9"
     },
     {
       "path": "macos/Runner.xcodeproj/project.pbxproj",
@@ -448,133 +478,133 @@
       "path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_1024.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "ed2427fcbdee28739d526577f1724f86b3014bb7dcf7f1f4e34b9d045160fb4c"
+      "sha256": "ada1415db5d4ac3f1b3155dc65ae245e073dcfdcaa472145e87606ff3c663e47"
     },
     {
       "path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_128.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "0aca36ce6703621dc1d13654336844c06768f33a836aadca3a3e13d5f249668f"
+      "sha256": "f7d7741054ac4195f3f609b25f4e7297b47b9c4d9ca57ea2be1a716b08a0dea0"
     },
     {
       "path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_16.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "086b5cce271238bd646cb0c3ab5cfb515b0ca4269b9a87c1fb4171c8fccd50ed"
+      "sha256": "9fd9cb3b825f156d51d50879fae1c0c9d61170b1f10e22e17cafd29c908b80c8"
     },
     {
       "path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "22fc9fe4e232b7c583f3716f86722d50d8303c310fa62b3326e9da38e09e601f"
+      "sha256": "648c71dae0c632d7d4a6652b5533512b37a4b2bd4590bbb6b887bcd6808679f6"
     },
     {
       "path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "91b56d27cf9e6707c98aedaef4897e391c5cf69b4597b97085078ee6b849624d"
+      "sha256": "e7434eff7eb0eec491ff310bf9444d3ff46817d4b7143f6c4147ec6d98637450"
     },
     {
       "path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "b9d24148aa7f96d175dfc89146a5f8aabf94b0d9c1ea98b2e9636b2a8c26b6d5"
+      "sha256": "064a8539fb1ab45317479b3a058ae780ebe04b5da7599197263c50c807b110d4"
     },
     {
       "path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_64.png",
       "role": "Apple fallback catalog output/config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "55a914ba093705858bb624972d94a454c2348f89f2c6cc94ea9e6a3853066fd6"
+      "sha256": "ece55086cd846a9a56c5e56ea578813cb2d2a1b08a36f1aecdd31c07b18a0eb9"
     },
     {
       "path": "macos/Runner/cupola_icon.icon/Assets/cupola-core-dark.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "2b1ea10cd163e022311c26f498d34b0d2b56f35b23b8247609c63dd08f637881"
+      "sha256": "8139e6587d7d6a3fd1c86eb64718c2a8b7c761510b7c9115fe9e853c29f1924f"
     },
     {
       "path": "macos/Runner/cupola_icon.icon/Assets/cupola-core-light.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "2b1ea10cd163e022311c26f498d34b0d2b56f35b23b8247609c63dd08f637881"
+      "sha256": "a8a0286c60be25917a6c47654ede8a416353148f73a2c5fbe12c7c37a10cfe27"
     },
     {
       "path": "macos/Runner/cupola_icon.icon/Assets/cupola-frame-dark.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "639c16b42ff2af28f5305e5dec9d5de49a2139cae72928afc6a456bcdb9ccbbf"
+      "sha256": "409c3ead07760090ed420a16a45d46f4aec9085a5579d13e10804dadb83c0d45"
     },
     {
       "path": "macos/Runner/cupola_icon.icon/Assets/cupola-frame-light.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "639c16b42ff2af28f5305e5dec9d5de49a2139cae72928afc6a456bcdb9ccbbf"
+      "sha256": "86a004bd264873d808d81724b3c9b5b94fa6d229aae60c9c521c30bff8b6cdf4"
     },
     {
       "path": "macos/Runner/cupola_icon.icon/Assets/cupola-panes-dark.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "8b4952f267533ed73ea3a59b709ea95517c5d63d10019e29f217d336941db721"
+      "sha256": "7e17f6fe0ce94c66491536d2e6491d684b46cc9bb837334a156dcdc3dec1ada0"
     },
     {
       "path": "macos/Runner/cupola_icon.icon/Assets/cupola-panes-light.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "8b4952f267533ed73ea3a59b709ea95517c5d63d10019e29f217d336941db721"
+      "sha256": "19b89425b2215fa9059f8c7198998e116a418af4738448e486b8a6205e02c564"
     },
     {
       "path": "macos/Runner/cupola_icon.icon/Assets/cupola_fg.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "f4e362a316a7b36e9b1fe53b1f41f08638daa14710f32a55147fc9793d585686"
+      "sha256": "9360ba479e125af122d1eba6ac64ae08bb99a4150ab58396fea50c1a2c7fc80c"
     },
     {
       "path": "macos/Runner/cupola_icon.icon/Assets/preview-light-ground.png",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "4eb9b2246542694cd76f1e08ed7a10a625dd2d337e36374730bb0cb1252a696a"
+      "sha256": "6596ebd7b4db9c28938013ea7ec4912100fc4d4663678c4c7f10a2a39eafd3da"
     },
     {
       "path": "macos/Runner/cupola_icon.icon/icon.json",
       "role": "Apple Icon Composer active input",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "6563d3fdc822e82b71f5ab36d6588490ef2d256402bb2cae5f48c3166d35be1e"
+      "sha256": "98861fc1bfac70ec6e5cf76a431da3a4d0a99121d738b3b79fe4347b35d752ce"
     },
     {
       "path": "web/favicon-light.png",
       "role": "web icon output/config",
       "source_family": "cupola_icon.svg",
-      "sha256": "91b56d27cf9e6707c98aedaef4897e391c5cf69b4597b97085078ee6b849624d"
+      "sha256": "3208070fa412dfc8d55174c0eb80e27a8ccfa41ab4ace437091e20996678a1ef"
     },
     {
       "path": "web/favicon.png",
       "role": "web icon output/config",
       "source_family": "cupola_icon.svg",
-      "sha256": "fcd83610718c017142a0a87a7e3fcec79431ee101dd3193bc2acbd4142eca0e5"
+      "sha256": "e7434eff7eb0eec491ff310bf9444d3ff46817d4b7143f6c4147ec6d98637450"
     },
     {
       "path": "web/icons/Icon-192.png",
       "role": "web icon output/config",
       "source_family": "cupola_icon.svg",
-      "sha256": "df45835a06377d2fed1941c5a97e101fed63d79d55d260261fd1226656993234"
+      "sha256": "44ef4cf2e7129714cde04c879b70e3a0fe2d810f9150de98105d51ffe1342f2f"
     },
     {
       "path": "web/icons/Icon-512.png",
       "role": "web icon output/config",
       "source_family": "cupola_icon.svg",
-      "sha256": "b9d24148aa7f96d175dfc89146a5f8aabf94b0d9c1ea98b2e9636b2a8c26b6d5"
+      "sha256": "064a8539fb1ab45317479b3a058ae780ebe04b5da7599197263c50c807b110d4"
     },
     {
       "path": "web/icons/Icon-maskable-192.png",
       "role": "web icon output/config",
       "source_family": "cupola_icon.svg",
-      "sha256": "eaf3185e935e4c3390513ca31922c205c8a0b9d16b97f2bd79b559657acbcd42"
+      "sha256": "c8d467dc101cfe72bce8770f277993e6f8f14d0ee94a298228373f7bc3a8c7d7"
     },
     {
       "path": "web/icons/Icon-maskable-512.png",
       "role": "web icon output/config",
       "source_family": "cupola_icon.svg",
-      "sha256": "e075022f88e7401db91a0a6ef4f058ae9f76ba3a8e790ed236b1f7e73a58d2ef"
+      "sha256": "22f680218ca01af8c2819da6ccfb858a55e3dcfc984cdbe15db303c841cb4cff"
     },
     {
       "path": "web/index.html",
@@ -598,7 +628,7 @@
       "path": "windows/runner/resources/app_icon.ico",
       "role": "Windows launcher output",
       "source_family": "cupola_icon.svg",
-      "sha256": "ddc8650e4003eb1389af25819b64d72e8ba3a162952b4da9583bde5e6e7d290c"
+      "sha256": "6f1686d30eab424e080ed7654b1575bb5ef89b9505af350c403f99d694187e5b"
     }
   ]
 }

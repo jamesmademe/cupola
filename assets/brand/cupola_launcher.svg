@@ -1,39 +1,140 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Launcher variant: a deliberately simplified Cupola silhouette for small app-icon sizes. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Cupola icon, simplified for small sizes">
   <defs>
-    <radialGradient id="ground" cx="50%" cy="42%" r="78%">
-      <stop offset="0" stop-color="#171D31"/>
-      <stop offset="100%" stop-color="#07080E"/>
+
+    <radialGradient id="is-body" cx="42%" cy="30%" r="92%">
+      <stop offset="0" stop-color="#2A344E"/>
+      <stop offset="0.46" stop-color="#141A29"/>
+      <stop offset="1" stop-color="#05060B"/>
     </radialGradient>
-    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#35415D"/>
-      <stop offset="1" stop-color="#151B2B"/>
-    </linearGradient>
-    <linearGradient id="pane" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#D7DAFF"/>
-      <stop offset="0.48" stop-color="#818CF8"/>
-      <stop offset="1" stop-color="#4F46D8"/>
-    </linearGradient>
-    <radialGradient id="oculus" cx="38%" cy="30%" r="78%">
-      <stop offset="0" stop-color="#C2C7FF"/>
-      <stop offset="0.55" stop-color="#6366F1"/>
-      <stop offset="1" stop-color="#4338B8"/>
+    <radialGradient id="is-vignette" cx="48%" cy="42%" r="76%">
+      <stop offset="0.58" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.58"/>
     </radialGradient>
+
+    <linearGradient id="is-space" x1="0.82" y1="0" x2="0.2" y2="0.55">
+      <stop offset="0" stop-color="#050A1E"/>
+      <stop offset="1" stop-color="#0D1636"/>
+    </linearGradient>
+    <radialGradient id="is-earth" gradientUnits="userSpaceOnUse" cx="430" cy="1030" r="820">
+      <stop offset="0.08" stop-color="#1B34A6"/>
+      <stop offset="0.7" stop-color="#3C7BEC"/>
+      <stop offset="0.93" stop-color="#8FC3FA"/>
+      <stop offset="0.988" stop-color="#E2F0FF"/>
+      <stop offset="1" stop-color="#F2F7FF"/>
+    </radialGradient>
+    <radialGradient id="is-halo" gradientUnits="userSpaceOnUse" cx="430" cy="1030" r="884">
+      <stop offset="0.94" stop-color="#A9CCFF" stop-opacity="0"/>
+      <stop offset="0.965" stop-color="#A9CCFF" stop-opacity="0.5"/>
+      <stop offset="0.988" stop-color="#A9CCFF" stop-opacity="0.72"/>
+      <stop offset="1" stop-color="#A9CCFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="is-airglow" gradientUnits="userSpaceOnUse" cx="430" cy="1030" r="916">
+      <stop offset="0.955" stop-color="#A9CCFF" stop-opacity="0"/>
+      <stop offset="0.985" stop-color="#A9CCFF" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#A9CCFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="is-terminator" x1="0.06" y1="1" x2="0.94" y2="0.06">
+      <stop offset="0" stop-color="#03050F" stop-opacity="0"/>
+      <stop offset="0.55" stop-color="#03050F" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#03050F" stop-opacity="0.34"/>
+    </linearGradient>
+    <filter id="is-soft" x="-45%" y="-45%" width="190%" height="190%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="11"/></filter>
+    <filter id="is-tight" x="-45%" y="-45%" width="190%" height="190%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="7"/></filter>
+    <filter id="is-glow" x="-45%" y="-45%" width="190%" height="190%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="34"/></filter>
+    
+    <filter id="is-cloud" x="-45%" y="-45%" width="190%" height="190%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="30"/></filter>
+    <filter id="is-wisp" x="-45%" y="-45%" width="190%" height="190%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="12"/></filter>
+    <clipPath id="is-all">
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(30 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(90 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(150 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(210 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(270 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(330 512 512)"/>
+      <circle cx="512" cy="512" r="152"/>
+    </clipPath>
+    
   </defs>
 
-  <rect width="1024" height="1024" fill="url(#ground)"/>
+  <rect width="1024" height="1024" fill="url(#is-body)"/>
 
-  <!-- Six broad windows preserve the source mark's silhouette while keeping ribs legible at 16px. -->
-  <path d="M458 90Q512 58 566 90L866 263Q898 281 866 300L765 358Q742 371 719 358L548 259Q525 246 523 220L520 119Q519 96 542 108L512 90L482 108Q505 96 504 119L501 220Q499 246 476 259L305 358Q282 371 259 358L158 300Q126 281 158 263Z" fill="url(#body)"/>
-  <path d="M542 126L833 294L748 342L579 244Q553 229 550 198Z" fill="url(#pane)"/>
-  <path d="M876 350V674L789 624V400Z" fill="url(#pane)"/>
-  <path d="M833 730L542 898L550 826L719 728Q744 713 768 727Z" fill="url(#pane)"/>
-  <path d="M191 730L482 898L474 826L305 728Q280 713 256 727Z" fill="url(#pane)"/>
-  <path d="M148 674V350L235 400V624Z" fill="url(#pane)"/>
-  <path d="M191 294L482 126L474 198L305 296Q280 311 256 297Z" fill="url(#pane)"/>
 
-  <!-- A high-contrast, generously sized oculus is the recognition anchor. -->
-  <circle cx="512" cy="512" r="232" fill="#0B0E18"/>
-  <circle cx="512" cy="512" r="204" fill="url(#oculus)"/>
-  <circle cx="512" cy="512" r="204" fill="none" stroke="#A5B4FC" stroke-width="8" stroke-opacity="0.8"/>
+
+
+  <g fill="none" stroke="#AEB8DA" stroke-width="6" stroke-opacity="0.34" transform="translate(-5 -6)">
+    <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(30 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(90 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(150 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(210 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(270 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(330 512 512)"/>
+      <circle cx="512" cy="512" r="152"/>
+  </g>
+  <g fill="none" stroke="#02030A" stroke-width="7" stroke-opacity="0.6" transform="translate(5 6)">
+    <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(30 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(90 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(150 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(210 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(270 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(330 512 512)"/>
+      <circle cx="512" cy="512" r="152"/>
+  </g>
+
+  <g clip-path="url(#is-all)">
+      
+      <rect width="1024" height="1024" fill="url(#is-space)"/>
+      <circle cx="430" cy="1030" r="916" fill="url(#is-airglow)"/>
+      <circle cx="430" cy="1030" r="884" fill="url(#is-halo)"/>
+      <circle cx="430" cy="1030" r="820" fill="url(#is-earth)"/>
+      
+      <rect width="1024" height="1024" fill="url(#is-terminator)"/>
+
+    <g filter="url(#is-soft)" opacity="0.62">
+      <g fill="none" stroke="#04050A" stroke-width="34" transform="translate(-9 -12)">
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(30 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(90 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(150 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(210 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(270 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(330 512 512)"/>
+      </g>
+    </g>
+    <g filter="url(#is-tight)" opacity="0.13">
+      <g fill="none" stroke="#F2F4FF" stroke-width="12" transform="translate(9 12)">
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(30 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(90 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(150 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(210 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(270 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(330 512 512)"/>
+      </g>
+    </g>
+
+    <g filter="url(#is-soft)" opacity="0.42">
+      <g fill="none" stroke="#04050A" stroke-width="16" transform="translate(-5 -7)">
+      <circle cx="512" cy="512" r="152"/>
+      </g>
+    </g>
+    <g filter="url(#is-tight)" opacity="0.08">
+      <g fill="none" stroke="#F2F4FF" stroke-width="9" transform="translate(5 7)">
+      <circle cx="512" cy="512" r="152"/>
+      </g>
+    </g>
+  </g>
+
+  <g fill="none" stroke="#7E8AB4" stroke-width="4" stroke-opacity="0.48">
+    <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(30 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(90 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(150 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(210 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(270 512 512)"/>
+      <path d="M 432 264 L 592 264 Q 624 264 636.57 234.57 L 693.43 101.43 Q 706 72 674 72 L 350 72 Q 318 72 330.57 101.43 L 387.43 234.57 Q 400 264 432 264 Z" transform="rotate(330 512 512)"/>
+  </g>
+
+  <g>
+    <circle cx="512" cy="512" r="174" fill="none" stroke="#0A0D18" stroke-width="44"/>
+    <circle cx="512" cy="512" r="193" fill="none" stroke="#4C5878" stroke-width="5" stroke-opacity="0.75"/>
+    <circle cx="512" cy="512" r="155" fill="none" stroke="#CBD2FF" stroke-width="5" stroke-opacity="0.7"/>
+  </g>
+  <rect width="1024" height="1024" fill="url(#is-vignette)"/>
 </svg>
