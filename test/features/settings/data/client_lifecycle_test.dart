@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -185,9 +187,16 @@ void main() {
   });
 
   group('the outgoing client is closed', () {
-    test('an ApiClient service closes its Dio when the URL moves', () async {
+    // Asserted by swapping in an adapter that records its own close(), NOT by
+    // watching a request fail: a request to an unreachable host throws
+    // DioException whether or not anything was ever closed, so that assertion
+    // passes on the very leak it is meant to catch — and it would put a real
+    // socket in an offline test suite.
+    test('a rebuild closes the Dio it replaces', () async {
       final container = await containerWith([ServiceKey.radarr]);
-      final before = container.read(radarrServiceProvider);
+      final adapter = _RecordingAdapter();
+      container.read(radarrServiceProvider).client.dio.httpClientAdapter =
+          adapter;
 
       final settings = container.read(currentSettingsProvider);
       await container
@@ -201,11 +210,12 @@ void main() {
       // Force the rebuild, which is what disposes the previous one.
       container.read(radarrServiceProvider);
 
-      // A closed Dio refuses locally — this never reaches the network, which is
-      // what keeps the test offline.
-      await expectLater(
-        before.client.dio.get<dynamic>('/api/v3/system/status'),
-        throwsA(isA<DioException>()),
+      expect(
+        adapter.closed,
+        isTrue,
+        reason:
+            'the replaced ApiClient kept its Dio open — every settings change '
+            'would leak one.',
       );
     });
 
@@ -215,13 +225,29 @@ void main() {
           configured: const [ServiceKey.radarr],
         ),
       );
-      final service = container.read(radarrServiceProvider);
+      final adapter = _RecordingAdapter();
+      container.read(radarrServiceProvider).client.dio.httpClientAdapter =
+          adapter;
+
       container.dispose();
 
-      await expectLater(
-        service.client.dio.get<dynamic>('/api/v3/system/status'),
-        throwsA(isA<DioException>()),
-      );
+      expect(adapter.closed, isTrue);
     });
   });
+}
+
+/// Records `close()` instead of performing any I/O, so the assertion is about
+/// lifecycle and the test stays offline.
+class _RecordingAdapter implements HttpClientAdapter {
+  bool closed = false;
+
+  @override
+  void close({bool force = false}) => closed = true;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async => throw UnsupportedError('offline test: no request should be made');
 }
