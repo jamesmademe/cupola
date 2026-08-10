@@ -25,9 +25,6 @@ class PressableScale extends StatefulWidget {
   /// Whether to fire [HapticFeedback.lightImpact] on tap.
   final bool haptic;
 
-  /// Border radius used to clip the ripple/hit area, when relevant.
-  final BorderRadius? borderRadius;
-
   /// Accessible name announced for this control.
   ///
   /// Supply it whenever the child is visual-only (a poster, an artwork tile);
@@ -54,7 +51,6 @@ class PressableScale extends StatefulWidget {
     this.onLongPress,
     this.pressedScale = 0.97,
     this.haptic = true,
-    this.borderRadius,
     this.semanticLabel,
     this.semanticValue,
     this.semanticHint,

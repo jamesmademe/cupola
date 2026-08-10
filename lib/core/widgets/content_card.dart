@@ -6,6 +6,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 
 /// A card widget for displaying media content with cached images.
 ///
@@ -21,9 +22,6 @@ class ContentCard extends StatelessWidget {
   /// Optional badge widget to display in the corner (e.g., status badge).
   final Widget? badge;
 
-  /// Whether to show a shimmer loading effect instead of spinner
-  final bool useShimmer;
-
   /// Optional callback for tap gesture
   final VoidCallback? onTap;
 
@@ -32,7 +30,6 @@ class ContentCard extends StatelessWidget {
     required this.imageUrl,
     this.httpHeaders,
     this.badge,
-    this.useShimmer = true,
     this.onTap,
   });
 
@@ -74,11 +71,7 @@ class ContentCard extends StatelessWidget {
 
     if (onTap == null) return card;
 
-    return PressableScale(
-      onTap: onTap,
-      borderRadius: AppRadius.borderRadiusMd,
-      child: card,
-    );
+    return PressableScale(onTap: onTap, child: card);
   }
 
   Widget _buildImage(BuildContext context, ColorScheme colorScheme) {
@@ -91,9 +84,11 @@ class ContentCard extends StatelessWidget {
       httpHeaders: httpHeaders,
       cacheManager: pinnedImageCacheFor(imageUrl),
       fit: BoxFit.cover,
-      placeholder: (context, url) => useShimmer
-          ? _ShimmerPlaceholder(color: colorScheme.surfaceContainerHigh)
-          : _buildLoadingPlaceholder(colorScheme),
+      // The shared shimmer, not a local clone: it is the one that honours
+      // Reduce Motion, and a poster grid is where an unstoppable sweep is
+      // most visible.
+      placeholder: (context, url) =>
+          const ShimmerPlaceholder(height: double.infinity),
       errorWidget: (context, url, error) => _buildErrorPlaceholder(colorScheme),
     );
   }
@@ -109,22 +104,6 @@ class ContentCard extends StatelessWidget {
     );
   }
 
-  Widget _buildLoadingPlaceholder(ColorScheme colorScheme) {
-    return Container(
-      color: colorScheme.surfaceContainer,
-      child: Center(
-        child: SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: colorScheme.primary,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildErrorPlaceholder(ColorScheme colorScheme) {
     return Container(
       color: colorScheme.surfaceContainerHighest,
@@ -133,63 +112,6 @@ class ContentCard extends StatelessWidget {
         color: colorScheme.onSurfaceVariant,
         size: 32,
       ),
-    );
-  }
-}
-
-/// Simple shimmer effect for loading placeholders
-class _ShimmerPlaceholder extends StatefulWidget {
-  final Color color;
-
-  const _ShimmerPlaceholder({required this.color});
-
-  @override
-  State<_ShimmerPlaceholder> createState() => _ShimmerPlaceholderState();
-}
-
-class _ShimmerPlaceholderState extends State<_ShimmerPlaceholder>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
-
-    _animation = Tween<double>(begin: -1.0, end: 2.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment(_animation.value - 1, 0),
-              end: Alignment(_animation.value, 0),
-              colors: [
-                widget.color,
-                widget.color.withValues(alpha: 0.5),
-                widget.color,
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

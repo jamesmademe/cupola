@@ -1,0 +1,575 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/reel_motion.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/core/widgets/reel_command_button.dart';
+import 'package:cupola/core/widgets/reel_line.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/data/service_verification.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
+
+// ── Beat 3: the walk ────────────────────────────────────────────────────────
+
+/// Which service this step is about, and how far in — hoisted out of the pager
+/// so it can *roll* from one service to the next.
+///
+/// It sits beside the ring for the same reason the ring sits outside the
+/// `PageView`: a `PageView` builds one child per page, so the walk's nine steps
+/// are nine separate elements and nothing in one can animate into its
+/// counterpart in the next. Held here it is a single widget across the whole
+/// walk, and advancing rolls `Where does Radarr live?` into `Where does Sonarr
+/// live?` — one word moving inside a sentence that holds still, on the same beat
+/// as the ring rotating that service to noon. Two instruments, one clock,
+/// answering the same question.
+///
+/// The service's accent travels with it: the eyebrow's ink is resolved per
+/// service through `onTint`, so the line changes colour as it changes subject and
+/// the room's own accent is what the change hands off to.
+class OnboardingWalkSubject extends StatelessWidget {
+  const OnboardingWalkSubject({
+    super.key,
+    required this.service,
+    required this.position,
+    required this.total,
+  });
+
+  final ServiceKey service;
+
+  /// 1-based position in the walk, and how many services are in it.
+  final int position;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // The flow's spoken landmark: which service, and how far in.
+          ReelLine(
+            '${service.title} · $position of $total'.toUpperCase(),
+            style: AppTheme.eyebrow(
+              ServiceTheme.onTint(
+                service.accent,
+                surface: scheme.surface,
+                tintAlpha: 0,
+              ),
+            ),
+            options: ReelMotion.word,
+            // Uppercase belongs in the eye, not the ear — and the spoken form
+            // also spells out the separator the eye reads as a dot.
+            semanticsLabel: '${service.title}, step $position of $total',
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ReelLine(
+            'Where does ${service.title} live?',
+            style: theme.textTheme.headlineSmall!
+                .weight(FontWeight.w700)
+                .copyWith(color: scheme.onSurface),
+            options: ReelMotion.word,
+            // Wraps rather than rolls once the sentence stops fitting one line,
+            // which for the longest service name happens well inside the
+            // reading sizes this app supports.
+            fallbackMaxLines: null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One service, one screen: where it lives, how to authenticate, and whether it
+/// answered.
+///
+/// The step's subject line lives in [OnboardingWalkSubject], above the pager.
+class OnboardingWalk extends StatelessWidget {
+  const OnboardingWalk({
+    super.key,
+    required this.service,
+    required this.urlController,
+    required this.apiKeyController,
+    required this.usernameController,
+    required this.passwordController,
+    required this.status,
+    required this.reason,
+    required this.failureDetail,
+    required this.verifying,
+    required this.certificateProbe,
+    required this.trustedFingerprint,
+    this.affectedServices = const [],
+    required this.next,
+    required this.onTest,
+    required this.onTrustCertificate,
+    required this.onSuggestPort,
+    required this.onSkip,
+    required this.onAdvance,
+    required this.onBack,
+  });
+
+  final ServiceKey service;
+
+  final TextEditingController urlController;
+  final TextEditingController apiKeyController;
+  final TextEditingController usernameController;
+  final TextEditingController passwordController;
+  final ServiceConnectionStatus? status;
+  final ServiceFailureReason? reason;
+
+  /// The verbatim sentence the failure carried, when it carried one — see
+  /// `ServiceDiagnosis.detail`. Null for almost every failure, where the
+  /// reason-derived message is the better one.
+  final String? failureDetail;
+  final bool verifying;
+
+  /// A certificate probe the last test ran into, waiting to be trusted.
+  final UntrustedCertificateProbe? certificateProbe;
+  final String? trustedFingerprint;
+
+  /// Other services in this walk whose typed address shares this one's TLS
+  /// origin — trusting or forgetting the certificate here covers them too.
+  final List<ServiceKey> affectedServices;
+
+  /// The next service in the walk, so the step can say how far there is to go.
+  final ServiceKey? next;
+
+  final Future<void> Function() onTest;
+  final VoidCallback onTrustCertificate;
+  final VoidCallback onSuggestPort;
+  final VoidCallback onSkip;
+  final VoidCallback onAdvance;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return OnboardingBeat(
+      children: _form(context),
+      actions: Column(
+        children: [
+          OnboardingFooter(
+            secondary: OutlinedButton(
+              onPressed: onSkip,
+              child: Text('Skip ${service.title}'),
+            ),
+            primary: _TestOrAdvance(
+              status: status,
+              verifying: verifying,
+              isLast: next == null,
+              onTest: onTest,
+              onAdvance: onAdvance,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextButton(onPressed: onBack, child: const Text('Back')),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _form(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return [
+      OnboardingField(
+        label: 'Address',
+        controller: urlController,
+        isUrl: true,
+        help:
+            "${service.title}'s default port is ${service.defaultPort}. "
+            'Behind a reverse proxy, use the address you reach it on.',
+        trailing: _PortChip(port: service.defaultPort, onTap: onSuggestPort),
+      ),
+      if (service.usesApiKey) ...[
+        const SizedBox(height: AppSpacing.lg),
+        OnboardingField(
+          label: service.credentialLabel,
+          controller: apiKeyController,
+          isSecret: true,
+          hint: 'Paste the ${service.credentialLabel.toLowerCase()}',
+          help: service.credentialPath == null
+              ? null
+              : '${service.title} → ${service.credentialPath}',
+          warningFor: service == ServiceKey.plex ? _plexTokenWarning : null,
+        ),
+      ] else ...[
+        const SizedBox(height: AppSpacing.lg),
+        OnboardingField(
+          label: service.usernameLabel,
+          controller: usernameController,
+          hint: service == ServiceKey.nginxProxyManager
+              ? 'The email you sign in with'
+              : 'Optional',
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        OnboardingField(
+          label: 'Password',
+          controller: passwordController,
+          isSecret: true,
+          hint: 'Optional',
+          help:
+              'Leave both empty if your ${service.title} instance does not '
+              'require a login.',
+        ),
+      ],
+      if (_serviceNote(service) case final note?) ...[
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          note,
+          style: theme.textTheme.bodySmall!.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+      if (certificateProbe != null) ...[
+        const SizedBox(height: AppSpacing.xl),
+        _CertificateCard(
+          service: service,
+          origin:
+              UrlUtils.certOrigin(urlController.text) ??
+              urlController.text.trim(),
+          probe: certificateProbe!,
+          previousFingerprint: trustedFingerprint,
+          sharedWith: affectedServices.where((s) => s != service).toList(),
+          onTrust: onTrustCertificate,
+        ),
+      ],
+      if (status != null && !verifying) ...[
+        const SizedBox(height: AppSpacing.xl),
+        _Outcome(
+          service: service,
+          status: status!,
+          reason: reason,
+          failureDetail: failureDetail,
+        ),
+      ],
+      if (trustedFingerprint != null && certificateProbe == null) ...[
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          affectedServices.length > 1
+              ? "You trusted this server's own certificate — it also covers "
+                    '${affectedServices.where((s) => s != service).map((s) => s.title).join(', ')}.'
+              : "You trusted this server's own certificate.",
+          style: theme.textTheme.bodySmall!.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+      if (next case final upcoming?) ...[
+        const SizedBox(height: AppSpacing.xl),
+        Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: upcoming.accent,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              'Next: ${upcoming.title}',
+              style: theme.textTheme.bodySmall!.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ],
+    ];
+  }
+}
+
+/// One button that changes its job once the service has answered: there is no
+/// reason to make someone press Test and then press Next.
+///
+/// It is a **single** [ReelCommandButton] across that change rather than two
+/// widgets swapped by a conditional, and that is the whole point: the same
+/// control rolls `Test connection` → `Testing…` → `Next service`, so the reward
+/// for a service answering is the button itself turning into the way forward.
+/// Swapping widgets would reset the label controller and replace the text
+/// instead of rolling it.
+///
+/// The spinner this replaced is not missed. A test behind a reverse proxy can
+/// take fifteen seconds, and for all fifteen the old button said nothing at all
+/// — the label had been swapped out for an 18pt ring. Here the label stays and
+/// being in motion is what says busy.
+class _TestOrAdvance extends StatelessWidget {
+  const _TestOrAdvance({
+    required this.status,
+    required this.verifying,
+    required this.isLast,
+    required this.onTest,
+    required this.onAdvance,
+  });
+
+  final ServiceConnectionStatus? status;
+  final bool verifying;
+  final bool isLast;
+  final Future<void> Function() onTest;
+  final VoidCallback onAdvance;
+
+  @override
+  Widget build(BuildContext context) {
+    final connected = status == ServiceConnectionStatus.connected;
+    final advanceLabel = isLast ? 'Finish' : 'Next service';
+
+    return ReelCommandButton(
+      label: connected ? advanceLabel : 'Test connection',
+      // Absent on the advance arm: that press navigates, it does not wait, and a
+      // waiting label would flash for one frame on the way out.
+      busyLabel: connected ? null : 'Testing',
+      // Not "Failed". The outcome card below already names the cause in a
+      // sentence the user can act on; the button's job is to say what pressing
+      // it again will do.
+      failureLabel: connected ? null : 'Test again',
+      // Both arms measured now, so the one transition this reservation exists
+      // for — answered — moves a word and not the button's width.
+      slotLabels: ['Test connection', 'Test again', advanceLabel],
+      onPressed: verifying
+          ? null
+          : connected
+          ? () async => onAdvance()
+          : onTest,
+    );
+  }
+}
+
+/// The result of a test as a sentence. A badge saying UNREACHABLE names nothing
+/// the user can act on; the resolved failure message names the cause.
+class _Outcome extends StatelessWidget {
+  const _Outcome({
+    required this.service,
+    required this.status,
+    required this.reason,
+    required this.failureDetail,
+  });
+
+  final ServiceKey service;
+  final ServiceConnectionStatus status;
+  final ServiceFailureReason? reason;
+  final String? failureDetail;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final presentation = describeConnection(
+      service,
+      status: status,
+      reason: reason,
+    );
+    final tone = statusToneColor(scheme, presentation.tone);
+    final sentence = switch (status) {
+      ServiceConnectionStatus.connected => '${service.title} answered.',
+      ServiceConnectionStatus.notConfigured =>
+        service.usesApiKey
+            ? 'Enter the address and the ${service.credentialLabel.toLowerCase()}, then test.'
+            : 'Enter the address, then test.',
+      // The detail when the failure carried one, the reason-derived sentence
+      // otherwise — the same rule `ServiceDiagnosis.messageFor` applies on the
+      // settings screen, so the two surfaces cannot describe one test
+      // differently.
+      _ => failureDetail ?? connectionFailureMessage(service, reason),
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: AppRadius.borderRadiusMd,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 5),
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: tone),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              sentence,
+              style: theme.textTheme.bodyMedium!.copyWith(
+                color: scheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The self-signed certificate moment, resolved inside the step.
+///
+/// A modal appearing on top of a failure the user has not read yet is an
+/// ambush; on a home lab a server presenting its own certificate is normal,
+/// so it gets a state rather than an interruption. [CertTrustContent] is the
+/// same content [showCertTrustDialog] wraps in a modal for settings — the
+/// evidence and words match wherever the user meets a certificate; only the
+/// chrome around it (a card here, a dialog there) differs.
+class _CertificateCard extends StatelessWidget {
+  const _CertificateCard({
+    required this.service,
+    required this.origin,
+    required this.probe,
+    required this.onTrust,
+    this.previousFingerprint,
+    this.sharedWith = const [],
+  });
+
+  final ServiceKey service;
+
+  /// The address this certificate was presented for, already resolved to
+  /// [UrlUtils.certOrigin]'s canonical `https://host:port` form by the
+  /// caller — the same string [SettingsModel.trustedCertificates] keys on.
+  final String origin;
+  final UntrustedCertificateProbe probe;
+  final VoidCallback onTrust;
+  final String? previousFingerprint;
+  final List<ServiceKey> sharedWith;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final rotated = probe.rotated;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: rotated
+            ? scheme.errorContainer.withValues(alpha: 0.35)
+            : scheme.surfaceContainer,
+        borderRadius: AppRadius.borderRadiusMd,
+        border: Border.all(
+          color: rotated ? scheme.error : scheme.outlineVariant,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CertTrustContent(
+            origin: origin,
+            probe: probe,
+            previousFingerprint: previousFingerprint,
+            sharedWith: sharedWith,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Rotated gets no visually-affirmative default: an outlined button
+          // is what the first-trust case already used, so the escalation is
+          // carried by the card's own tint and border above, not by demoting
+          // this control further.
+          OutlinedButton(
+            onPressed: onTrust,
+            style: rotated
+                ? OutlinedButton.styleFrom(foregroundColor: scheme.error)
+                : null,
+            child: Text(
+              rotated
+                  ? 'Trust this certificate anyway'
+                  : 'Trust and test again',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PortChip extends StatelessWidget {
+  const _PortChip({required this.port, required this.onTap});
+
+  final int port;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Semantics(
+      button: true,
+      label: 'Use port $port',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        borderRadius: AppRadius.borderRadiusSm,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 32),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: scheme.primary.withValues(alpha: 0.14),
+            borderRadius: AppRadius.borderRadiusSm,
+          ),
+          child: Text(
+            ':$port',
+            style: theme.textTheme.labelSmall!
+                .weight(FontWeight.w600)
+                .tabular
+                .copyWith(
+                  color: ServiceTheme.onTint(
+                    scheme.primary,
+                    surface: scheme.surface,
+                    tintAlpha: 0.14,
+                  ),
+                ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Flags a pasted Plex JSON Web Token while it is still being typed.
+///
+/// A warning rather than an error: the token is well-formed and will work — for
+/// seven days. After that it can only be renewed through plex.tv, which Cupola
+/// never calls, so the user would be left with a 401 and no way to read it.
+String? _plexTokenWarning(String value) => value.trim().startsWith('eyJ')
+    ? 'That token expires in 7 days and cannot be renewed here. Paste a '
+          'long-lived device token instead.'
+    : null;
+
+/// Per-service facts worth saying at the moment they matter, rather than in a
+/// help page nobody opens.
+String? _serviceNote(ServiceKey service) {
+  switch (service) {
+    case ServiceKey.readarr:
+      return 'Readarr development has stopped upstream. Existing instances keep '
+          'working against its last released API, but expect no new '
+          'server-side fixes.';
+    case ServiceKey.unraid:
+      return 'Enable the Unraid API first, under Settings → Management Access → '
+          'Developer Options. The endpoint stays silent until it is on.';
+    case ServiceKey.jellyfin:
+      return 'The key signs in as an administrator but carries no user of its '
+          'own, so pick whose watch state to read in Settings afterwards.';
+    case ServiceKey.plex:
+      return 'It must be a long-lived device token: one beginning "eyJ" expires '
+          'in 7 days and Cupola cannot renew it without contacting plex.tv.';
+    default:
+      return null;
+  }
+}

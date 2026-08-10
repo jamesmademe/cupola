@@ -123,6 +123,17 @@ class InteractiveSearchSheet extends StatefulWidget {
   State<InteractiveSearchSheet> createState() => _InteractiveSearchSheetState();
 }
 
+/// Everything [filterAndSortReleases] reads besides the release list itself,
+/// used to decide whether a rebuild can reuse the previous result.
+typedef _ReleaseFilterKey = ({
+  ReleaseSortType sortType,
+  bool sortAscending,
+  bool approvedOnly,
+  String? indexer,
+  ReleaseProtocol? protocol,
+  String query,
+});
+
 class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
   final TextEditingController _searchController = TextEditingController();
 
@@ -136,10 +147,48 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
   /// GUID of the release currently being grabbed, if any.
   String? _grabbingGuid;
 
+  /// Facets that depend on [InteractiveSearchSheet.releases] alone.
+  ///
+  /// The filter field is undebounced, so every keystroke rebuilds this sheet —
+  /// and a Prowlarr fan-out routinely returns a couple of thousand releases.
+  /// None of these three can change while the list does not, so they are
+  /// derived once per list rather than three more O(n) passes per character.
+  late List<ReleaseProtocol> _protocols;
+  late Set<String> _indexers;
+  late int _approvedCount;
+
+  /// Memoised [filterAndSortReleases] result and the inputs it was computed
+  /// from. A rebuild that changed none of them — a grab starting or finishing —
+  /// reuses it instead of re-filtering and re-sorting the whole list.
+  _ReleaseFilterKey? _filterKey;
+  List<dynamic>? _filtered;
+
+  @override
+  void initState() {
+    super.initState();
+    _deriveReleaseFacets();
+  }
+
+  @override
+  void didUpdateWidget(InteractiveSearchSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.releases, widget.releases)) {
+      _deriveReleaseFacets();
+      _filtered = null;
+      _filterKey = null;
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _deriveReleaseFacets() {
+    _protocols = extractAvailableProtocols(widget.releases);
+    _indexers = extractAvailableIndexers(widget.releases);
+    _approvedCount = countApprovedReleases(widget.releases);
   }
 
   bool get _hasActiveFilters =>
@@ -150,7 +199,18 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
 
   /// Returns filtered and sorted releases using the pure function.
   List<dynamic> get _filteredAndSortedReleases {
-    return filterAndSortReleases(
+    final key = (
+      sortType: _sortType,
+      sortAscending: _sortAscending,
+      approvedOnly: _approvedOnly,
+      indexer: _selectedIndexer,
+      protocol: _selectedProtocol,
+      query: _query,
+    );
+    final cached = _filtered;
+    if (cached != null && key == _filterKey) return cached;
+
+    final result = filterAndSortReleases(
       widget.releases,
       sortType: _sortType,
       sortAscending: _sortAscending,
@@ -159,11 +219,10 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
       selectedProtocol: _selectedProtocol,
       query: _query,
     );
+    _filterKey = key;
+    _filtered = result;
+    return result;
   }
-
-  /// Returns unique indexer names from all releases.
-  Set<String> get _availableIndexers =>
-      extractAvailableIndexers(widget.releases);
 
   void _clearFilters() {
     HapticFeedback.selectionClick();
@@ -179,7 +238,6 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredAndSortedReleases;
-    final protocols = extractAvailableProtocols(widget.releases);
 
     return Column(
       children: [
@@ -203,17 +261,17 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
           approvedOnly: _approvedOnly,
           onApprovedOnlyChanged: (value) =>
               setState(() => _approvedOnly = value),
-          protocols: protocols,
+          protocols: _protocols,
           selectedProtocol: _selectedProtocol,
           onProtocolChanged: (protocol) =>
               setState(() => _selectedProtocol = protocol),
-          indexers: _availableIndexers,
+          indexers: _indexers,
           selectedIndexer: _selectedIndexer,
           onIndexerChanged: (indexer) =>
               setState(() => _selectedIndexer = indexer),
           shownCount: filtered.length,
           totalCount: widget.releases.length,
-          approvedCount: countApprovedReleases(widget.releases),
+          approvedCount: _approvedCount,
           hasActiveFilters: _hasActiveFilters,
           onClearFilters: _clearFilters,
         ),

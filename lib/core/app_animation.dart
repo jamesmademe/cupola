@@ -34,25 +34,7 @@ class AppAnimation {
   /// Use for elements appearing on screen
   static const Curve emphasizedCurve = Curves.easeOutCubic;
 
-  /// Emphasized decelerate for elements coming to rest
-  static const Curve decelerateCurve = Curves.easeOutQuart;
-
-  /// Emphasized accelerate for elements leaving screen
-  static const Curve accelerateCurve = Curves.easeInQuart;
-
-  /// Linear for continuous animations (progress, loading)
-  static const Curve linearCurve = Curves.linear;
-
   // === COMMON ANIMATION CONFIGS ===
-
-  /// Quick fade in/out
-  static const Duration fadeDuration = durationSm;
-
-  /// Page transition duration
-  static const Duration pageTransitionDuration = durationMd;
-
-  /// Bottom sheet animation
-  static const Duration sheetDuration = durationMd;
 
   /// Shimmer animation cycle
   static const Duration shimmerDuration = Duration(milliseconds: 1500);
@@ -62,25 +44,4 @@ class AppAnimation {
   /// Long enough to be seen after the eye returns from the snackbar, short
   /// enough that the control is back to normal by the next glance.
   static const Duration confirmationHold = Duration(milliseconds: 1600);
-
-  // === HELPER METHODS ===
-
-  /// Create a standard curved animation
-  static Animation<double> createStandardAnimation(
-    AnimationController controller,
-  ) {
-    return CurvedAnimation(parent: controller, curve: standardCurve);
-  }
-
-  /// Create an emphasized animation for entering elements
-  static Animation<double> createEnterAnimation(
-    AnimationController controller,
-  ) {
-    return CurvedAnimation(parent: controller, curve: emphasizedCurve);
-  }
-
-  /// Create an animation for exiting elements
-  static Animation<double> createExitAnimation(AnimationController controller) {
-    return CurvedAnimation(parent: controller, curve: accelerateCurve);
-  }
 }

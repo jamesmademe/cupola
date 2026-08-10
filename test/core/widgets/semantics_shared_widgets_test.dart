@@ -352,46 +352,6 @@ void main() {
     });
   });
 
-  group('CollapsibleDomainSection', () {
-    testWidgets('exposes expanded state and the un-uppercased label', (
-      tester,
-    ) async {
-      await _pump(
-        tester,
-        const CollapsibleDomainSection(
-          label: 'Media',
-          trailing: Text('3/4'),
-          child: Text('Body'),
-        ),
-      );
-
-      // The chevron rotation is the visual cue; without `expanded:` there is no
-      // way to tell whether a tap will open or close the group.
-      expect(
-        find.semantics.byLabel('Media'),
-        containsSemantics(
-          isHeader: true,
-          isButton: true,
-          hasExpandedState: true,
-          isExpanded: false,
-          hasTapAction: true,
-        ),
-      );
-      // '.toUpperCase()' is typography and must not reach the label.
-      expect(find.semantics.byLabel('MEDIA'), findsNothing);
-      // The trailing count keeps a node of its own.
-      expect(find.semantics.byLabel('3/4'), findsOneWidget);
-
-      await tester.tap(find.byType(InkWell));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.semantics.byLabel('Media'),
-        containsSemantics(hasExpandedState: true, isExpanded: true),
-      );
-    });
-  });
-
   group('DomainSectionHeader', () {
     testWidgets('is marked as a heading with the spoken label', (tester) async {
       await _pump(tester, const DomainSectionHeader(label: 'Downloads'));

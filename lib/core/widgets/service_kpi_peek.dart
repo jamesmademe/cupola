@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_elevation.dart';
@@ -166,19 +165,7 @@ class _KpiCard extends StatelessWidget {
       ),
     );
 
-    if (kpi.onTap == null) return card;
-    return Material(
-      color: Colors.transparent,
-      borderRadius: AppRadius.borderRadiusMd,
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          kpi.onTap!();
-        },
-        borderRadius: AppRadius.borderRadiusMd,
-        child: card,
-      ),
-    );
+    return card;
   }
 }
 

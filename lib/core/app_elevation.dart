@@ -94,17 +94,4 @@ class AppElevation {
       ),
     ];
   }
-
-  /// Accent-tinted glow, used to make signature cards feel lit from within by
-  /// their service colour. Layer *under* a card's own neutral elevation.
-  static List<BoxShadow> accentGlow(Color accent, {double alpha = 0.28}) {
-    return [
-      BoxShadow(
-        color: accent.withValues(alpha: alpha),
-        blurRadius: 24,
-        spreadRadius: -6,
-        offset: const Offset(0, 8),
-      ),
-    ];
-  }
 }

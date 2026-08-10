@@ -123,7 +123,6 @@ class _FacetChip extends StatelessWidget {
       child: ExcludeSemantics(
         child: PressableScale(
           onTap: onTap,
-          borderRadius: AppRadius.borderRadiusPill,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: _minTouchTarget),
             // `widthFactor: 1` is load-bearing, not a tweak: an `Align` (or a

@@ -11,6 +11,7 @@ import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
+import 'package:cupola/features/onboarding/presentation/widgets/onboarding_walk.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';

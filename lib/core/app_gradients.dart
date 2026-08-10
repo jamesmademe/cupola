@@ -2,8 +2,6 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 
-import 'package:cupola/core/theme.dart';
-
 /// Centralised gradient tokens for Cupola.
 ///
 /// Gradients were previously hand-rolled inline across onboarding, media detail
@@ -11,20 +9,6 @@ import 'package:cupola/core/theme.dart';
 /// premium look consistent and makes the brand language editable in one place.
 class AppGradients {
   AppGradients._();
-
-  /// Indigo → violet brand mark (logo tiles, primary accents).
-  static const LinearGradient brandMark = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [AppColors.seerr, AppColors.sonarr],
-  );
-
-  /// Active progress / selection fill (indigo → light indigo).
-  static const LinearGradient progressActive = LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [AppColors.primary, AppColors.primaryLight],
-  );
 
   /// Bottom-up scrim laid over a poster/backdrop so foreground text and badges
   /// stay legible. Fades from the given [surface] colour to transparent.
@@ -46,16 +30,6 @@ class AppGradients {
         surface.withValues(alpha: lerpDouble(0.0, 0.35, depth)!),
       ],
       stops: const [0.0, 0.35, 1.0],
-    );
-  }
-
-  /// Lighter top-down scrim for badges pinned to the top corner of a poster.
-  static LinearGradient posterScrim(Color shadow) {
-    return LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [shadow.withValues(alpha: 0.45), shadow.withValues(alpha: 0.0)],
-      stops: const [0.0, 0.6],
     );
   }
 

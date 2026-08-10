@@ -825,7 +825,7 @@ class _FeedFooter extends StatelessWidget {
 /// A service group header you can fold away.
 ///
 /// The aggregate view is only useful if you can get *past* the service you are
-/// not looking at. Follows the same contract as `CollapsibleDomainSection`:
+/// not looking at. The fold contract is
 /// `expanded:` on the semantics node rather than an announcement, so the state is
 /// discoverable on re-focus and works on TalkBack, and the chevron rotation is
 /// the visual half only.

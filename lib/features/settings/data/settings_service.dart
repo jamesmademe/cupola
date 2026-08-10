@@ -294,52 +294,33 @@ class SettingsService {
     final jellyfinUserId = _prefs.getString(jellyfinKeys.userId!) ?? '';
     final plexClientId = await _loadOrCreatePlexClientId();
 
-    return SettingsModel(
-      seerrUrl: serviceSettings[ServiceKey.seerr]!.$1,
-      seerrApiKey: serviceSettings[ServiceKey.seerr]!.$2,
-      radarrUrl: serviceSettings[ServiceKey.radarr]!.$1,
-      radarrApiKey: serviceSettings[ServiceKey.radarr]!.$2,
-      sonarrUrl: serviceSettings[ServiceKey.sonarr]!.$1,
-      sonarrApiKey: serviceSettings[ServiceKey.sonarr]!.$2,
-      lidarrUrl: serviceSettings[ServiceKey.lidarr]!.$1,
-      lidarrApiKey: serviceSettings[ServiceKey.lidarr]!.$2,
-      qbittorrentUrl: serviceSettings[ServiceKey.qbittorrent]!.$1,
-      qbittorrentUsername: usernames[ServiceKey.qbittorrent]!,
-      qbittorrentPassword: serviceSettings[ServiceKey.qbittorrent]!.$2,
-      transmissionUrl: serviceSettings[ServiceKey.transmission]!.$1,
-      transmissionUsername: usernames[ServiceKey.transmission]!,
-      transmissionPassword: serviceSettings[ServiceKey.transmission]!.$2,
-      npmUrl: serviceSettings[ServiceKey.nginxProxyManager]!.$1,
-      npmUsername: usernames[ServiceKey.nginxProxyManager]!,
-      npmPassword: serviceSettings[ServiceKey.nginxProxyManager]!.$2,
-      bazarrUrl: serviceSettings[ServiceKey.bazarr]!.$1,
-      bazarrApiKey: serviceSettings[ServiceKey.bazarr]!.$2,
-      truenasUrl: serviceSettings[ServiceKey.truenas]!.$1,
-      truenasApiKey: serviceSettings[ServiceKey.truenas]!.$2,
-      dockgeUrl: serviceSettings[ServiceKey.dockge]!.$1,
-      dockgeUsername: usernames[ServiceKey.dockge]!,
-      dockgePassword: serviceSettings[ServiceKey.dockge]!.$2,
-      prowlarrUrl: serviceSettings[ServiceKey.prowlarr]!.$1,
-      prowlarrApiKey: serviceSettings[ServiceKey.prowlarr]!.$2,
-      readarrUrl: serviceSettings[ServiceKey.readarr]!.$1,
-      readarrApiKey: serviceSettings[ServiceKey.readarr]!.$2,
-      sabnzbdUrl: serviceSettings[ServiceKey.sabnzbd]!.$1,
-      sabnzbdApiKey: serviceSettings[ServiceKey.sabnzbd]!.$2,
-      nzbgetUrl: serviceSettings[ServiceKey.nzbget]!.$1,
-      nzbgetUsername: usernames[ServiceKey.nzbget]!,
-      nzbgetPassword: serviceSettings[ServiceKey.nzbget]!.$2,
-      unraidUrl: serviceSettings[ServiceKey.unraid]!.$1,
-      unraidApiKey: serviceSettings[ServiceKey.unraid]!.$2,
-      jellyfinUrl: serviceSettings[ServiceKey.jellyfin]!.$1,
-      jellyfinApiKey: serviceSettings[ServiceKey.jellyfin]!.$2,
+    // Only the values with no `ServiceKey` to hang them on are named here;
+    // everything per-service is folded in below, through the same registry that
+    // produced it. Naming all 17 services a third time in a constructor literal
+    // is the hazard `copyWithCredentials` was written to kill — see its doc.
+    var model = SettingsModel(
       jellyfinUserId: jellyfinUserId,
-      plexUrl: serviceSettings[ServiceKey.plex]!.$1,
-      plexToken: serviceSettings[ServiceKey.plex]!.$2,
       plexClientId: plexClientId,
       trustedCertificates: trustedCertificates,
       region: _loadRegion(),
       themeMode: AppThemeMode.fromName(_prefs.getString(_kThemeMode)),
     );
+    for (final service in ServiceKey.values) {
+      final (url, credential) = serviceSettings[service]!;
+      model = model.copyWithService(service, url: url, apiKey: credential);
+
+      // The guard is load-bearing, not cosmetic: `copyWithCredentials` asserts
+      // the service has a username half, and `_loadUsernames` returns `''` for
+      // exactly the services that do not — the ones whose `_ServiceStorageKeys`
+      // entry has no `username`, i.e. the API-key services. Skipping the empty
+      // case is what keeps that assert satisfied, and it drops nothing: `''` is
+      // already the field's default.
+      final username = usernames[service]!;
+      if (username.isNotEmpty) {
+        model = model.copyWithCredentials(service, username: username);
+      }
+    }
+    return model;
   }
 
   Future<void> saveSettings(SettingsModel settings) async {

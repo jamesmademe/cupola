@@ -696,8 +696,7 @@ class _DomainBandState extends ConsumerState<_DomainBand>
         // `expanded:` rather than an announcement on toggle: the platform speaks
         // the change off the node update, it works on TalkBack where
         // announcements are dropped, and the state stays discoverable on
-        // re-focus instead of only at the moment of the tap. Same contract as
-        // `CollapsibleDomainSection`.
+        // re-focus instead of only at the moment of the tap.
         Semantics(
           container: true,
           explicitChildNodes: true,

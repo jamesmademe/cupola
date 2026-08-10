@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/utils/byte_format.dart';
 
+/// Term separator for the title query. Hoisted out of [filterAndSortReleases]
+/// because that function runs on every keystroke of the interactive-search
+/// filter field, and a literal there recompiles the pattern each time.
+final _whitespace = RegExp(r'\s+');
+
 /// Sort options for releases in Interactive Search.
 enum ReleaseSortType {
   score('CF Score', Icons.star_rounded),
@@ -132,7 +137,7 @@ List<dynamic> filterAndSortReleases(
   if (trimmedQuery.isNotEmpty) {
     // Every whitespace-separated term must appear, so "1080 remux" narrows
     // the list the way users expect from a scene-name search.
-    final terms = trimmedQuery.split(RegExp(r'\s+'));
+    final terms = trimmedQuery.split(_whitespace);
     result = result.where((r) {
       final title = (r['title'] as String? ?? '').toLowerCase();
       return terms.every(title.contains);
