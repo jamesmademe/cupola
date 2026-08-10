@@ -80,7 +80,7 @@ class _DockgeDashboard extends ConsumerWidget {
           const SizedBox(height: 2),
           stacksAsync.when(
             data: (stacks) => _StackList(stacks: stacks),
-            loading: () => const ListRowsShimmer.pulsing(),
+            loading: () => const ListRowsShimmer(),
             error: (error, _) => AppErrorState(
               error: error,
               onRetry: () => ref.invalidate(dockgeStackListProvider),

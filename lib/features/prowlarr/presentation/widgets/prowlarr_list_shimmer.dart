@@ -26,7 +26,7 @@ class ProwlarrListShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: verticalPadding),
-      child: ListRowsShimmer.pulsing(count: count, rowHeight: _rowHeight),
+      child: ListRowsShimmer(count: count, rowHeight: _rowHeight),
     );
   }
 }

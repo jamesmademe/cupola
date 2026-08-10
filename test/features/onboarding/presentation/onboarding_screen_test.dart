@@ -531,6 +531,101 @@ void main() {
       );
     });
   });
+
+  /// A 6.1" phone with the keyboard up, which is the real posture for the only
+  /// beat that asks the user to type.
+  ///
+  /// The ring, the subject line and the pinned footer all have fixed heights
+  /// and sat above an `Expanded`, so the form absorbed the entire shortfall:
+  /// on this viewport it was left roughly 60pt, which clipped the address field
+  /// mid-glyph and hid the validation line that explains why the step will not
+  /// advance. The ring now gives its slot back instead.
+  group('with the keyboard up', () {
+    const phone = Size(393, 852);
+    const keyboard = 336.0;
+
+    Future<void> reachTheForm(WidgetTester tester) async {
+      await _tap(tester, 'Set up my stack');
+      await _pick(tester, 'Sonarr');
+      await _tap(tester, 'Continue with 1');
+    }
+
+    /// Raises the keyboard the way the platform does — after the field has
+    /// focus, by shrinking the view — rather than pumping a screen that was
+    /// already short. Pumping it up front would test a state the user never
+    /// reaches, since the beats before the walk have nothing to type into.
+    Future<void> raiseKeyboard(WidgetTester tester) async {
+      tester.view.viewInsets = const FakeViewPadding(bottom: keyboard);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the ring holds its place while the keyboard is down', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await reachTheForm(tester);
+
+      expect(find.byType(ServiceRing), findsOneWidget);
+    });
+
+    testWidgets('the ring gives up its slot to the keyboard', (tester) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await reachTheForm(tester);
+      await raiseKeyboard(tester);
+
+      // Not merely smaller: at its 96pt floor it would still cost more than the
+      // form has to spare, so the slot has to collapse to nothing.
+      expect(find.byType(ServiceRing), findsNothing);
+    });
+
+    testWidgets('the address field stays clear of the keyboard', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await reachTheForm(tester);
+      await raiseKeyboard(tester);
+
+      final field = find.byType(TextField).first;
+      final rect = tester.getRect(field);
+
+      expect(rect.height, greaterThan(0));
+      // The whole control, not just its top edge — a field cut off at the
+      // baseline is what the screenshots showed.
+      expect(
+        rect.bottom,
+        lessThanOrEqualTo(phone.height - keyboard),
+        reason:
+            'the address field runs under the keyboard: bottom ${rect.bottom} '
+            'against a ${phone.height - keyboard} fold',
+      );
+      expect(rect.top, greaterThanOrEqualTo(0));
+    });
+
+    testWidgets('the primary action stays reachable', (tester) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await reachTheForm(tester);
+      await raiseKeyboard(tester);
+
+      final button = tester.getRect(_button('Test connection').first);
+      expect(button.bottom, lessThanOrEqualTo(phone.height - keyboard));
+    });
+
+    testWidgets('a way to put the keyboard away appears with it', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await reachTheForm(tester);
+      expect(find.text('Hide keyboard'), findsNothing);
+
+      await raiseKeyboard(tester);
+
+      // iOS gives the URL keyboard no dismissing return key, so without this
+      // there is no key to press on the one beat that asks the user to type.
+      expect(find.text('Hide keyboard'), findsOneWidget);
+      final bar = tester.getRect(find.text('Hide keyboard'));
+      expect(bar.bottom, lessThanOrEqualTo(phone.height - keyboard));
+    });
+  });
 }
 
 Finder _button(String label) => find.widgetWithText(FilledButton, label);

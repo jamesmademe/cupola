@@ -54,7 +54,7 @@ Future<bool> runTransmissionAction(
       ref.invalidate(provider);
     }
     if (context.mounted) {
-      SnackBarHelper.error(context, '$failureMessage: $e');
+      SnackBarHelper.error(context, failureMessage, detail: e);
     }
     return false;
   }

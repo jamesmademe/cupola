@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/presentation/discover_navigation_utils.dart';
 import 'package:cupola/features/discover/presentation/manage_media_provider.dart';
@@ -107,19 +108,13 @@ class ManageMediaSheet extends ConsumerWidget {
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
     if (error == null) {
-      messenger.showSnackBar(const SnackBar(content: Text('Request deleted')));
+      SnackBarHelper.success(context, 'Request deleted');
       onDataChanged();
       return;
     }
 
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(error),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
+    SnackBarHelper.error(context, error);
   }
 
   Future<void> _removeFromService(
@@ -151,26 +146,17 @@ class ManageMediaSheet extends ConsumerWidget {
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
     if (error == null) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            '${mediaType == 'movie' ? 'Movie' : 'Series'} removed from service',
-          ),
-        ),
+      SnackBarHelper.success(
+        context,
+        '${mediaType == 'movie' ? 'Movie' : 'Series'} removed from service',
       );
       Navigator.pop(context);
       onDataChanged();
       return;
     }
 
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(error),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
+    SnackBarHelper.error(context, error);
   }
 
   Future<void> _clearAllData(
@@ -203,20 +189,14 @@ class ManageMediaSheet extends ConsumerWidget {
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
     if (error == null) {
-      messenger.showSnackBar(const SnackBar(content: Text('Data cleared')));
+      SnackBarHelper.success(context, 'Data cleared');
       Navigator.pop(context);
       onDataChanged();
       return;
     }
 
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(error),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
+    SnackBarHelper.error(context, error);
   }
 
   Future<void> _openInService(BuildContext context, WidgetRef ref) async {

@@ -226,7 +226,11 @@ class AddTorrentButton extends ConsumerWidget {
                         );
                       }
                     } catch (e) {
-                      SnackBarHelper.error(ctx2, 'Failed to add torrent: $e');
+                      SnackBarHelper.error(
+                        ctx2,
+                        "Couldn't add the torrent.",
+                        detail: e,
+                      );
                     }
                   },
                   child: Row(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
-import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
@@ -39,47 +38,7 @@ class NpmScreen extends ConsumerWidget {
       body: SafeArea(
         child: isConfigured
             ? _NpmDashboard(topPadding: topPadding)
-            : _NpmNotConfigured(
-                onOpenSettings: () => context.go(
-                  '/settings/service/'
-                  '${ServiceKey.nginxProxyManager.routeParam}',
-                ),
-              ),
-      ),
-    );
-  }
-}
-
-class _NpmNotConfigured extends StatelessWidget {
-  const _NpmNotConfigured({required this.onOpenSettings});
-
-  final VoidCallback onOpenSettings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.alt_route_rounded,
-              size: 48,
-              color: AppColors.nginxProxyManager,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const Text(
-              'Nginx Proxy Manager is not configured yet.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            FilledButton(
-              onPressed: onOpenSettings,
-              child: const Text('Open settings'),
-            ),
-          ],
-        ),
+            : NotConfiguredPlaceholder.forService(ServiceKey.nginxProxyManager),
       ),
     );
   }

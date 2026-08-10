@@ -46,48 +46,7 @@ class ProwlarrScreen extends ConsumerWidget {
       body: SafeArea(
         child: isConfigured
             ? _ProwlarrDashboard(topPadding: topPadding)
-            : _ProwlarrNotConfigured(
-                onOpenSettings: () => _openSettings(context),
-              ),
-      ),
-    );
-  }
-
-  void _openSettings(BuildContext context) {
-    context.go('/settings/service/${ServiceKey.prowlarr.routeParam}');
-  }
-}
-
-class _ProwlarrNotConfigured extends StatelessWidget {
-  const _ProwlarrNotConfigured({required this.onOpenSettings});
-
-  final VoidCallback onOpenSettings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.travel_explore_rounded,
-              size: 48,
-              color: AppColors.prowlarr,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const Text(
-              'Prowlarr is not configured yet.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            FilledButton(
-              onPressed: onOpenSettings,
-              child: const Text('Open settings'),
-            ),
-          ],
-        ),
+            : NotConfiguredPlaceholder.forService(ServiceKey.prowlarr),
       ),
     );
   }

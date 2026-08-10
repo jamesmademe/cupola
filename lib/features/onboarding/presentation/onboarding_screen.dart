@@ -564,125 +564,137 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         ? walk[_page - _firstWalkPage]
         : null;
 
+    // Resolved here, outside the `Scaffold`: a Scaffold that resizes for the
+    // keyboard removes the bottom inset from the MediaQuery it hands its body,
+    // so anything below this point is told the keyboard is down while it is up.
+    final keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
+
     return AmbientBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: onboardingMaxWidth),
-              child: Column(
-                children: [
-                  // The instrument, outside the pager on purpose. One ring for
-                  // the whole flow: it holds its place while the forms page
-                  // behind it, rotates the active service to noon, and grows a
-                  // spoke the moment one answers. Hoisting it out is what stops
-                  // the ring and the shell arriving from two different places on
-                  // every step.
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      top: AppSpacing.lg,
-                      bottom: AppSpacing.md,
-                    ),
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(end: _ringDiameter(context)),
-                      // The page slide's own timing, so the resize and the
-                      // shell's travel read as one movement.
-                      duration: AppAnimation.durationMd,
-                      curve: AppAnimation.standardCurve,
-                      builder: (context, diameter, _) => AnimatedBuilder(
-                        animation: _entrance,
-                        builder: (context, _) => ServiceRing(
-                          states: ringStates,
-                          diameter: diameter,
-                          entrance: AppAnimation.emphasizedCurve.transform(
-                            _entrance.value,
+      child: OnboardingKeyboardScope(
+        up: keyboardUp,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: onboardingMaxWidth),
+                child: Column(
+                  children: [
+                    // The instrument, outside the pager on purpose. One ring for
+                    // the whole flow: it holds its place while the forms page
+                    // behind it, rotates the active service to noon, and grows a
+                    // spoke the moment one answers. Hoisting it out is what stops
+                    // the ring and the shell arriving from two different places on
+                    // every step.
+                    OnboardingInstrument(
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          top: AppSpacing.lg,
+                          bottom: AppSpacing.md,
+                        ),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(end: _ringDiameter(context)),
+                          // The page slide's own timing, so the resize and the
+                          // shell's travel read as one movement.
+                          duration: AppAnimation.durationMd,
+                          curve: AppAnimation.standardCurve,
+                          builder: (context, diameter, _) => AnimatedBuilder(
+                            animation: _entrance,
+                            builder: (context, _) => ServiceRing(
+                              states: ringStates,
+                              diameter: diameter,
+                              entrance: AppAnimation.emphasizedCurve.transform(
+                                _entrance.value,
+                              ),
+                              activeService: activeWalk,
+                              progress: activeWalk == null
+                                  ? (_page >= _closePage &&
+                                            _silent.isEmpty &&
+                                            _answering.isNotEmpty
+                                        ? 1
+                                        : 0)
+                                  : (_page - _firstWalkPage) / walk.length,
+                              spin: true,
+                            ),
                           ),
-                          activeService: activeWalk,
-                          progress: activeWalk == null
-                              ? (_page >= _closePage &&
-                                        _silent.isEmpty &&
-                                        _answering.isNotEmpty
-                                    ? 1
-                                    : 0)
-                              : (_page - _firstWalkPage) / walk.length,
-                          spin: true,
                         ),
                       ),
                     ),
-                  ),
-                  // The step's subject, hoisted for the same reason the ring is:
-                  // a `PageView` builds one element per page, so a headline held
-                  // inside the pager can only ever be replaced, never rolled.
-                  // Held here it is one widget across the whole walk and the
-                  // service name rolls inside a sentence that stays put.
-                  if (activeWalk case final service?)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: OnboardingWalkSubject(
-                        service: service,
-                        position: _page - _firstWalkPage + 1,
-                        total: walk.length,
+                    // The step's subject, hoisted for the same reason the ring is:
+                    // a `PageView` builds one element per page, so a headline held
+                    // inside the pager can only ever be replaced, never rolled.
+                    // Held here it is one widget across the whole walk and the
+                    // service name rolls inside a sentence that stays put.
+                    if (activeWalk case final service?)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                        child: OnboardingWalkSubject(
+                          service: service,
+                          position: _page - _firstWalkPage + 1,
+                          total: walk.length,
+                        ),
+                      ),
+                    Expanded(
+                      child: PageView(
+                        controller: _pageController,
+                        physics: const NeverScrollableScrollPhysics(),
+                        children: [
+                          OnboardingDoor(
+                            onStart: () => _goTo(_pickPage),
+                            onSkip: _skipEverything,
+                          ),
+                          OnboardingPick(
+                            picked: _picked,
+                            onToggle: (service) => setState(() {
+                              if (_picked.remove(service)) {
+                                _status.remove(service);
+                                _reason.remove(service);
+                                _pendingCert.remove(service);
+                              } else {
+                                _picked.add(service);
+                                _skipped.remove(service);
+                              }
+                            }),
+                            onContinue: _enterWalk,
+                            onBack: () => _goTo(_doorPage),
+                          ),
+                          for (var i = 0; i < walk.length; i++)
+                            OnboardingWalk(
+                              service: walk[i],
+                              urlController: _urlCtrl[walk[i]]!,
+                              apiKeyController: _apiKeyCtrl[walk[i]]!,
+                              usernameController: _usernameCtrl[walk[i]]!,
+                              passwordController: _passwordCtrl[walk[i]]!,
+                              status: _status[walk[i]],
+                              reason: _reason[walk[i]],
+                              failureDetail: _failureDetail[walk[i]],
+                              verifying: _verifying[walk[i]] ?? false,
+                              certificateProbe: _pendingCert[walk[i]],
+                              trustedFingerprint: _pinFor(walk[i]),
+                              affectedServices: _servicesSharingOrigin(walk[i]),
+                              next: i + 1 < walk.length ? walk[i + 1] : null,
+                              onTest: () => _test(walk[i]),
+                              onTrustCertificate: () =>
+                                  _trustCertificate(walk[i]),
+                              onSuggestPort: () => _suggestPort(walk[i]),
+                              onSkip: () => _skip(walk[i]),
+                              onAdvance: () => _advanceFrom(walk[i]),
+                              onBack: () => _backFrom(walk[i]),
+                            ),
+                          OnboardingClose(
+                            connected: _answering,
+                            silent: _silent,
+                            onFix: _fix,
+                            onFinish: _finish,
+                            onReview: () => _goTo(_pickPage),
+                          ),
+                        ],
                       ),
                     ),
-                  Expanded(
-                    child: PageView(
-                      controller: _pageController,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        OnboardingDoor(
-                          onStart: () => _goTo(_pickPage),
-                          onSkip: _skipEverything,
-                        ),
-                        OnboardingPick(
-                          picked: _picked,
-                          onToggle: (service) => setState(() {
-                            if (_picked.remove(service)) {
-                              _status.remove(service);
-                              _reason.remove(service);
-                              _pendingCert.remove(service);
-                            } else {
-                              _picked.add(service);
-                              _skipped.remove(service);
-                            }
-                          }),
-                          onContinue: _enterWalk,
-                          onBack: () => _goTo(_doorPage),
-                        ),
-                        for (var i = 0; i < walk.length; i++)
-                          OnboardingWalk(
-                            service: walk[i],
-                            urlController: _urlCtrl[walk[i]]!,
-                            apiKeyController: _apiKeyCtrl[walk[i]]!,
-                            usernameController: _usernameCtrl[walk[i]]!,
-                            passwordController: _passwordCtrl[walk[i]]!,
-                            status: _status[walk[i]],
-                            reason: _reason[walk[i]],
-                            failureDetail: _failureDetail[walk[i]],
-                            verifying: _verifying[walk[i]] ?? false,
-                            certificateProbe: _pendingCert[walk[i]],
-                            trustedFingerprint: _pinFor(walk[i]),
-                            affectedServices: _servicesSharingOrigin(walk[i]),
-                            next: i + 1 < walk.length ? walk[i + 1] : null,
-                            onTest: () => _test(walk[i]),
-                            onTrustCertificate: () =>
-                                _trustCertificate(walk[i]),
-                            onSuggestPort: () => _suggestPort(walk[i]),
-                            onSkip: () => _skip(walk[i]),
-                            onAdvance: () => _advanceFrom(walk[i]),
-                            onBack: () => _backFrom(walk[i]),
-                          ),
-                        OnboardingClose(
-                          connected: _answering,
-                          silent: _silent,
-                          onFix: _fix,
-                          onFinish: _finish,
-                          onReview: () => _goTo(_pickPage),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                    // Below the beat's own actions, directly above the keyboard.
+                    if (keyboardUp) const OnboardingKeyboardBar(),
+                  ],
+                ),
               ),
             ),
           ),

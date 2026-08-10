@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
-import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
@@ -43,56 +42,12 @@ class TransmissionScreen extends ConsumerWidget {
       body: SafeArea(
         child: isConfigured
             ? _TransmissionDashboard(topPadding: topPadding)
-            : _TransmissionNotConfigured(
-                onOpenSettings: () => context.go(
-                  '/settings/service/${ServiceKey.transmission.routeParam}',
-                ),
-              ),
+            : NotConfiguredPlaceholder.forService(ServiceKey.transmission),
       ),
     );
   }
 }
 
-class _TransmissionNotConfigured extends StatelessWidget {
-  const _TransmissionNotConfigured({required this.onOpenSettings});
-
-  final VoidCallback onOpenSettings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.swap_vert_rounded,
-              size: 48,
-              color: AppColors.transmission,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const Text(
-              'Transmission is not configured yet.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            FilledButton(
-              onPressed: onOpenSettings,
-              child: const Text('Open settings'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Providers refreshed after any mutation.
-///
-/// All three, always. Transmission's write methods return an empty `arguments`
-/// with no per-id outcome, so re-reading is the only way to learn what actually
-/// happened — see [runTransmissionAction].
 final _invalidateAfterAction = <ProviderOrFamily>[
   transmissionTorrentsProvider,
   transmissionStatsProvider,

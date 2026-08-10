@@ -132,10 +132,14 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
       await _settle(tester);
 
+      // Both registers, in one node: the sentence the user acts on, and the
+      // diagnostic the server actually sent, demoted to its own line by
+      // `SnackBarHelper`'s `detail:` contract rather than interpolated into it.
       expect(
-        find.textContaining('Could not delete the request'),
+        find.textContaining("Couldn't delete the request."),
         findsOneWidget,
       );
+      expect(find.textContaining('HTTP 403'), findsOneWidget);
     });
   });
 

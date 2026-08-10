@@ -10,6 +10,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/grab_error_utils.dart';
 import 'package:cupola/core/utils/release_utils.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
@@ -338,9 +339,7 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
 
     if (guid == null || indexerId == null) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Invalid release data')));
+        SnackBarHelper.error(context, 'Invalid release data');
       }
       return;
     }
@@ -366,7 +365,13 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
     try {
       await widget.onGrabRelease(guid, indexerId);
       if (!mounted) return;
-      // Both resolved before the pop, which takes this element out of the tree.
+      // The one snackbar in the app that stays on `ScaffoldMessenger` rather
+      // than going through `SnackBarHelper`, for two reasons that both have to
+      // hold: it is painted in the primary accent — a grab starting is neither
+      // the neutral default nor an error — and it is shown *after* the pop that
+      // takes this element out of the tree, so the messenger and the colour are
+      // resolved while `context` is still valid and the helper's own
+      // `Theme.of(context)` would not be.
       final messenger = ScaffoldMessenger.of(context);
       final accent = Theme.of(context).colorScheme.primary;
       Navigator.pop(context);
@@ -385,12 +390,10 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
       // the failure has to be reported even when the row it started from is
       // gone — the busy state is the State's, not the row's.
       setState(() => _grabbingGuid = null);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(translateGrabError(e)),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          duration: const Duration(seconds: 5),
-        ),
+      SnackBarHelper.error(
+        context,
+        translateGrabError(e),
+        duration: const Duration(seconds: 5),
       );
     }
   }

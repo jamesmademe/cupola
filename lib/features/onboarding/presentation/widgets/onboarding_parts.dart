@@ -26,6 +26,127 @@ const onboardingPadding = EdgeInsets.fromLTRB(
 /// control drift too far apart to read as a pair.
 const onboardingMaxWidth = 560.0;
 
+/// Whether the keyboard is currently taking screen height, published for the
+/// whole flow.
+///
+/// It has to be *published* rather than read where it is needed. A `Scaffold`
+/// with `resizeToAvoidBottomInset` — the default — hands its body a
+/// `MediaQuery` with the bottom inset already removed (`scaffold.dart`:
+/// `removeViewInsets`), reasoning that it has consumed the keyboard by
+/// shrinking the body. So every widget inside the body is told the keyboard is
+/// down while it is up. The screen reads the inset outside the `Scaffold` and
+/// puts the answer here, where the ring and the beats can both depend on it.
+class OnboardingKeyboardScope extends InheritedWidget {
+  const OnboardingKeyboardScope({
+    super.key,
+    required this.up,
+    required super.child,
+  });
+
+  final bool up;
+
+  static bool of(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<OnboardingKeyboardScope>()
+          ?.up ??
+      false;
+
+  @override
+  bool updateShouldNotify(OnboardingKeyboardScope oldWidget) =>
+      oldWidget.up != up;
+}
+
+/// The instrument's slot, which gives its whole height back when the keyboard
+/// takes the screen.
+///
+/// The ring is the flow's landmark and it earns its size — but only while there
+/// is a screen to put it on. On a 6.1" phone the keyboard leaves about 457pt
+/// between the status bar and the key rows; the subject line, the two actions
+/// and a two-field form already want ~380 of it. A 190pt ring plus its gutters
+/// does not fit in what is left, and because it sat above an `Expanded` it did
+/// not shrink to make room — it squeezed the form into a ~60pt slot, clipping
+/// the address field mid-glyph and hiding the validation message that explains
+/// why the step will not advance. So the ring yields entirely rather than
+/// shrinking: at 96pt (its floor) it would still cost more than the form has to
+/// spare, and a ring you cannot read is not worth the field you cannot see.
+///
+/// Nothing is lost by its leaving. [OnboardingWalkSubject] still names the
+/// service and the step, which is the orientation the ring was carrying.
+///
+/// Reads [OnboardingKeyboardScope], which is why that scope exists — see its
+/// doc for why the inset cannot be read from inside the `Scaffold`.
+class OnboardingInstrument extends StatelessWidget {
+  const OnboardingInstrument({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: OnboardingKeyboardScope.of(context) ? 0 : 1),
+      duration: AppAnimation.durationMd,
+      curve: AppAnimation.standardCurve,
+      // Gone means gone: at zero the slot contributes no height, no semantics
+      // and no paint, so the form's Expanded gets the full remainder.
+      builder: (context, t, ring) => t == 0
+          ? const SizedBox.shrink()
+          : ClipRect(
+              child: Align(
+                alignment: Alignment.topCenter,
+                heightFactor: t,
+                child: Opacity(
+                  // Fades out ahead of the collapse so the ring reads as
+                  // withdrawing rather than as being cropped by the fold.
+                  opacity: Curves.easeOut.transform(t),
+                  child: Transform.scale(
+                    // Contracts toward its own centre while the slot closes;
+                    // scale alone would leave the gap behind, heightFactor alone
+                    // would guillotine it.
+                    scale: 0.72 + 0.28 * t,
+                    child: ring,
+                  ),
+                ),
+              ),
+            ),
+      child: child,
+    );
+  }
+}
+
+/// The bar that sits between the beat's actions and the keyboard, carrying the
+/// one control the keyboard itself does not offer here: a way to put it away.
+///
+/// iOS gives a URL keyboard no return key that dismisses — the address field
+/// asks for `next` because there is a credential field after it, and `done`
+/// only appears on the last field of the form. So on the step where the user is
+/// most likely to want the screen back, there was no key to press. This is that
+/// key, in the platform's own place for one.
+///
+/// Only mounted while the keyboard is up, so it costs nothing the rest of the
+/// time — which matters, because the height it takes is height the form was
+/// short of to begin with.
+class OnboardingKeyboardBar extends StatelessWidget {
+  const OnboardingKeyboardBar({super.key});
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.centerRight,
+    child: Padding(
+      padding: const EdgeInsets.only(
+        right: AppSpacing.xl,
+        bottom: AppSpacing.xs,
+      ),
+      child: TextButton.icon(
+        // Names the action rather than saying "Done", which on a form step
+        // reads as finishing the step rather than closing the keyboard.
+        onPressed: () => FocusScope.of(context).unfocus(),
+        icon: const Icon(Icons.keyboard_hide_rounded, size: 18),
+        label: const Text('Hide keyboard'),
+      ),
+    ),
+  );
+}
+
 /// A beat whose content is centred while it fits and scrolls once it does not.
 ///
 /// The page owns the viewport, not the content. A ring, a display headline, a
@@ -56,13 +177,22 @@ class OnboardingBeat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: onboardingPadding,
+    // The generous top and bottom gutters are for a beat sitting against the
+    // screen edge. With the keyboard up there is no edge below — the key rows
+    // are the edge — and that spare 44pt is exactly what the pinned actions
+    // need in order not to overflow once the dismiss bar takes its place.
+    padding: OnboardingKeyboardScope.of(context)
+        ? onboardingPadding.copyWith(top: AppSpacing.md, bottom: AppSpacing.sm)
+        : onboardingPadding,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) => SingleChildScrollView(
+              // Dragging the form puts the keyboard away, the platform gesture
+              // for exactly that.
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Column(

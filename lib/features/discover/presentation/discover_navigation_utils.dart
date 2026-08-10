@@ -82,7 +82,11 @@ Future<bool> _openMovieInService({
       return false;
     }
 
-    SnackBarHelper.error(context, 'Error: $error');
+    SnackBarHelper.error(
+      context,
+      "Couldn't open this in Radarr.",
+      detail: error,
+    );
     return false;
   }
 }
@@ -132,7 +136,11 @@ Future<bool> _openSeriesInService({
       return false;
     }
 
-    SnackBarHelper.error(context, 'Error: $error');
+    SnackBarHelper.error(
+      context,
+      "Couldn't open this in Sonarr.",
+      detail: error,
+    );
     return false;
   }
 }

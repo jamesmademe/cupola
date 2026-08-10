@@ -155,7 +155,7 @@ class _WantedList extends ConsumerWidget {
           children: items.map((item) => _WantedTile(item: item)).toList(),
         );
       },
-      loading: () => const ListRowsShimmer.pulsing(count: 3),
+      loading: () => const ListRowsShimmer(count: 3),
       error: (error, _) => InlineErrorRetry.fixedHeight(
         message: 'Failed to load wanted subtitles',
         onRetry: () => ref.invalidate(bazarrDashboardWantedProvider),
@@ -394,7 +394,7 @@ class _HistoryList extends ConsumerWidget {
           children: items.map((item) => _HistoryTile(item: item)).toList(),
         );
       },
-      loading: () => const ListRowsShimmer.pulsing(count: 3),
+      loading: () => const ListRowsShimmer(count: 3),
       error: (error, _) => InlineErrorRetry.fixedHeight(
         message: 'Failed to load recent activity',
         onRetry: () => ref.invalidate(bazarrDashboardHistoryProvider),
