@@ -172,7 +172,19 @@ class OnboardingWalk extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          TextButton(onPressed: onBack, child: const Text('Back')),
+          // Back keeps the row to itself until the keyboard is up, at which
+          // point the dismiss control joins it rather than taking a third row —
+          // that row cost more height than the ring it was competing with.
+          if (OnboardingKeyboardScope.of(context))
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(onPressed: onBack, child: const Text('Back')),
+                const OnboardingKeyboardDismiss(),
+              ],
+            )
+          else
+            TextButton(onPressed: onBack, child: const Text('Back')),
         ],
       ),
     );

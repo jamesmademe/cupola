@@ -60,30 +60,38 @@ class OnboardingKeyboardScope extends InheritedWidget {
 /// takes the screen.
 ///
 /// The ring is the flow's landmark and it earns its size — but only while there
-/// is a screen to put it on. On a 6.1" phone the keyboard leaves about 457pt
-/// between the status bar and the key rows; the subject line, the two actions
-/// and a two-field form already want ~380 of it. A 190pt ring plus its gutters
-/// does not fit in what is left, and because it sat above an `Expanded` it did
-/// not shrink to make room — it squeezed the form into a ~60pt slot, clipping
-/// the address field mid-glyph and hiding the validation message that explains
-/// why the step will not advance. So the ring yields entirely rather than
-/// shrinking: at 96pt (its floor) it would still cost more than the form has to
-/// spare, and a ring you cannot read is not worth the field you cannot see.
+/// is a screen to put it on. It sat above an `Expanded`, so it did not shrink to
+/// make room: with the keyboard up it squeezed the form into a ~60pt slot,
+/// clipping the address field mid-glyph and hiding the validation message that
+/// explains why the step will not advance.
 ///
-/// Nothing is lost by its leaving. [OnboardingWalkSubject] still names the
+/// The screen now sizes it from the height actually left over, so it shrinks
+/// with the space instead of vanishing at the first sign of a keyboard, and only
+/// collapses when what remains is under `serviceRingDiameter`'s own 96pt floor —
+/// where a ring is a smudge rather than an instrument.
+///
+/// Nothing is lost when it does go. [OnboardingWalkSubject] still names the
 /// service and the step, which is the orientation the ring was carrying.
 ///
-/// Reads [OnboardingKeyboardScope], which is why that scope exists — see its
-/// doc for why the inset cannot be read from inside the `Scaffold`.
+/// [collapsed] is decided by the screen, which is the only place that knows both
+/// the height available and what the beat below needs — see
+/// `_OnboardingScreenState._ringDiameter`.
 class OnboardingInstrument extends StatelessWidget {
-  const OnboardingInstrument({super.key, required this.child});
+  const OnboardingInstrument({
+    super.key,
+    required this.collapsed,
+    required this.child,
+  });
+
+  /// Whether there is no longer enough height to show a legible ring.
+  final bool collapsed;
 
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
-      tween: Tween<double>(end: OnboardingKeyboardScope.of(context) ? 0 : 1),
+      tween: Tween<double>(end: collapsed ? 0 : 1),
       duration: AppAnimation.durationMd,
       curve: AppAnimation.standardCurve,
       // Gone means gone: at zero the slot contributes no height, no semantics
@@ -113,37 +121,26 @@ class OnboardingInstrument extends StatelessWidget {
   }
 }
 
-/// The bar that sits between the beat's actions and the keyboard, carrying the
-/// one control the keyboard itself does not offer here: a way to put it away.
+/// The control the keyboard itself does not offer here: a way to put it away.
 ///
 /// iOS gives a URL keyboard no return key that dismisses — the address field
 /// asks for `next` because there is a credential field after it, and `done`
 /// only appears on the last field of the form. So on the step where the user is
-/// most likely to want the screen back, there was no key to press. This is that
-/// key, in the platform's own place for one.
+/// most likely to want the screen back, there was no key to press.
 ///
-/// Only mounted while the keyboard is up, so it costs nothing the rest of the
-/// time — which matters, because the height it takes is height the form was
-/// short of to begin with.
-class OnboardingKeyboardBar extends StatelessWidget {
-  const OnboardingKeyboardBar({super.key});
+/// It shares the back row rather than taking a row of its own: a third stacked
+/// action cost ~50pt of the height the form was already short of, and the two
+/// belong together anyway — both are ways out of the field you are in.
+class OnboardingKeyboardDismiss extends StatelessWidget {
+  const OnboardingKeyboardDismiss({super.key});
 
   @override
-  Widget build(BuildContext context) => Align(
-    alignment: Alignment.centerRight,
-    child: Padding(
-      padding: const EdgeInsets.only(
-        right: AppSpacing.xl,
-        bottom: AppSpacing.xs,
-      ),
-      child: TextButton.icon(
-        // Names the action rather than saying "Done", which on a form step
-        // reads as finishing the step rather than closing the keyboard.
-        onPressed: () => FocusScope.of(context).unfocus(),
-        icon: const Icon(Icons.keyboard_hide_rounded, size: 18),
-        label: const Text('Hide keyboard'),
-      ),
-    ),
+  Widget build(BuildContext context) => TextButton.icon(
+    // Names the action rather than saying "Done", which on a form step reads as
+    // finishing the step rather than closing the keyboard.
+    onPressed: () => FocusScope.of(context).unfocus(),
+    icon: const Icon(Icons.keyboard_hide_rounded, size: 18),
+    label: const Text('Hide keyboard'),
   );
 }
 

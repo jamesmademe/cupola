@@ -610,6 +610,23 @@ void main() {
       expect(button.bottom, lessThanOrEqualTo(phone.height - keyboard));
     });
 
+    testWidgets('a shallow inset keeps the ring rather than dumping it', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await reachTheForm(tester);
+
+      // A hardware or floating keyboard reports only its accessory strip. The
+      // first version of this hid the ring on `viewInsets > 0` alone, which
+      // emptied half the screen for nothing.
+      tester.view.viewInsets = const FakeViewPadding(bottom: 90);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ServiceRing), findsOneWidget);
+      final field = tester.getRect(find.byType(TextField).first);
+      expect(field.bottom, lessThanOrEqualTo(phone.height - 90));
+    });
+
     testWidgets('a way to put the keyboard away appears with it', (
       tester,
     ) async {
