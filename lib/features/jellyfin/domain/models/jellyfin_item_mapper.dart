@@ -9,6 +9,7 @@
 /// difference from the arr side that `StreamItem` was designed around.
 library;
 
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_transcode_reason.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_units.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -213,16 +214,8 @@ StreamItem jellyfinStreamItemFromJson(Map<String, dynamic> item) {
 }
 
 /// A whole page of items. The `Isolate.run` entry point, hence top-level.
-List<StreamItem> jellyfinStreamItemsFromJson(Object? raw) {
-  if (raw is! List) return const [];
-  final items = <StreamItem>[];
-  for (final element in raw) {
-    if (element is Map) {
-      items.add(jellyfinStreamItemFromJson(element.cast<String, dynamic>()));
-    }
-  }
-  return items;
-}
+List<StreamItem> jellyfinStreamItemsFromJson(Object? raw) =>
+    jsonObjects(raw, jellyfinStreamItemFromJson);
 
 /// Jellyfin's `PlayMethod` → the shared decision enum.
 ///

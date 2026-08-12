@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/core/widgets/header_action_row.dart';
 import 'package:cupola/core/widgets/media_profile_selector.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -12,78 +11,6 @@ const _profiles = <Map<String, dynamic>>[
 ];
 
 void main() {
-  group('MediaProfileSelector', () {
-    testWidgets('the default variant does not hand-roll its own gesture', (
-      tester,
-    ) async {
-      await _pump(
-        tester,
-        MediaProfileSelector(
-          currentProfileName: 'HD-1080p',
-          currentProfileId: 1,
-          qualityProfiles: _profiles,
-          onProfileSelected: (_) async {},
-          accent: ServiceKey.sonarr.accent,
-        ),
-      );
-
-      // PressableScale is the sole home of the press-scale, the haptic, the
-      // Reduce Motion check and the button role; a raw InkWell drops all four.
-      // (The two button variants reach ink through Material's own buttons, which
-      // is the sanctioned route.)
-      expect(find.byType(InkWell), findsNothing);
-      expect(find.byType(PressableScale), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('the default variant is a named button target', (tester) async {
-      final handle = tester.ensureSemantics();
-      await _pump(
-        tester,
-        MediaProfileSelector(
-          currentProfileName: 'HD-1080p',
-          currentProfileId: 1,
-          qualityProfiles: _profiles,
-          onProfileSelected: (_) async {},
-          accent: ServiceKey.sonarr.accent,
-        ),
-      );
-
-      expect(find.byType(PressableScale), findsOneWidget);
-      expect(find.semantics.byLabel('Quality profile: HD-1080p'), findsOne);
-      expect(
-        tester.getSize(find.byType(PressableScale)).height,
-        greaterThanOrEqualTo(44),
-      );
-      handle.dispose();
-    });
-
-    // `.iconOnly` and `.split` are gone — both had zero call sites in `lib/`
-    // once the overflow sheet's "Quality profile: <name>" row replaced the
-    // icon-only button and `MediaManagementRow` was deleted. The assertion they
-    // carried — that the control is sized off the ONE shared floor rather than a
-    // local number — moves onto the surviving variant.
-    testWidgets('the only variant is sized off the shared action floor', (
-      tester,
-    ) async {
-      await _pump(
-        tester,
-        MediaProfileSelector(
-          currentProfileName: 'HD-1080p',
-          currentProfileId: 1,
-          qualityProfiles: _profiles,
-          onProfileSelected: (_) async {},
-          accent: ServiceKey.sonarr.accent,
-        ),
-      );
-
-      expect(
-        tester.getSize(find.byType(PressableScale)).height,
-        greaterThanOrEqualTo(HeaderActionRow.buttonHeight),
-      );
-    });
-  });
-
   group('showMediaProfileSelector', () {
     testWidgets('every row is a PressableScale target of at least 44pt', (
       tester,
@@ -152,15 +79,6 @@ void main() {
       expect(written, [2]);
     });
   });
-}
-
-Future<void> _pump(WidgetTester tester, Widget child) async {
-  await tester.pumpWidget(
-    MaterialApp(
-      home: Scaffold(body: Center(child: child)),
-    ),
-  );
-  await tester.pump();
 }
 
 Future<void> _pumpPicker(

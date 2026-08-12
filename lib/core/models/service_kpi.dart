@@ -19,14 +19,10 @@ class ServiceKpi {
   /// Optional accent override; defaults to the service accent at render time.
   final Color? accent;
 
-  /// Optional tap handler (e.g. jump to a filtered view).
-  final VoidCallback? onTap;
-
   const ServiceKpi({
     required this.label,
     required this.value,
     required this.icon,
     this.accent,
-    this.onTap,
   });
 }

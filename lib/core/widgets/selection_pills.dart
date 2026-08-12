@@ -138,7 +138,6 @@ class _Pill extends StatelessWidget {
       child: ExcludeSemantics(
         child: PressableScale(
           onTap: onTap,
-          borderRadius: AppRadius.borderRadiusPill,
           child: Container(
             constraints: const BoxConstraints(minHeight: _minTouchTarget),
             alignment: Alignment.center,

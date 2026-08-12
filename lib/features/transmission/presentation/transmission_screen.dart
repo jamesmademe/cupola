@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
-import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -41,56 +42,12 @@ class TransmissionScreen extends ConsumerWidget {
       body: SafeArea(
         child: isConfigured
             ? _TransmissionDashboard(topPadding: topPadding)
-            : _TransmissionNotConfigured(
-                onOpenSettings: () => context.go(
-                  '/settings/service/${ServiceKey.transmission.routeParam}',
-                ),
-              ),
+            : NotConfiguredPlaceholder.forService(ServiceKey.transmission),
       ),
     );
   }
 }
 
-class _TransmissionNotConfigured extends StatelessWidget {
-  const _TransmissionNotConfigured({required this.onOpenSettings});
-
-  final VoidCallback onOpenSettings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.swap_vert_rounded,
-              size: 48,
-              color: AppColors.transmission,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Transmission is not configured yet.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onOpenSettings,
-              child: const Text('Open settings'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Providers refreshed after any mutation.
-///
-/// All three, always. Transmission's write methods return an empty `arguments`
-/// with no per-id outcome, so re-reading is the only way to learn what actually
-/// happened — see [runTransmissionAction].
 final _invalidateAfterAction = <ProviderOrFamily>[
   transmissionTorrentsProvider,
   transmissionStatsProvider,
@@ -132,7 +89,7 @@ class _TransmissionDashboard extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async {
         _invalidateAll(ref);
-        await Future<void>.delayed(const Duration(milliseconds: 300));
+        await Future<void>.delayed(AppAnimation.durationMd);
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -145,9 +102,9 @@ class _TransmissionDashboard extends ConsumerWidget {
             kpis: ref.watch(serviceKpiProvider(ServiceKey.transmission)),
             accent: AppColors.transmission,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           const _TransmissionActionsBar(),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           const SectionHeader(title: 'Transferring', showChevron: false),
           const SizedBox(height: 2),
           _TorrentList(
@@ -155,7 +112,7 @@ class _TransmissionDashboard extends ConsumerWidget {
             filter: (t) => t.status.isIncoming,
             emptyLabel: 'Nothing is downloading.',
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           const SectionHeader(title: 'Seeding and idle', showChevron: false),
           const SizedBox(height: 2),
           _TorrentList(
@@ -186,7 +143,7 @@ class _TransmissionActionsBar extends ConsumerWidget {
         ref.watch(transmissionSessionProvider).asData?.value.altSpeedEnabled ??
         false;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Row(
         children: [
           Expanded(
@@ -196,7 +153,7 @@ class _TransmissionActionsBar extends ConsumerWidget {
               label: const Text('Add torrent'),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: FilledButton.tonalIcon(
               onPressed: () {
@@ -437,7 +394,10 @@ class _TorrentList extends ConsumerWidget {
         final matching = torrents.where(filter).toList(growable: false);
         if (matching.isEmpty) {
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text(emptyLabel),
           );
         }
@@ -448,8 +408,8 @@ class _TorrentList extends ConsumerWidget {
               .toList(),
         );
       },
-      loading: () => const _TransmissionShimmer(),
-      error: (error, _) => _ErrorRetry(
+      loading: () => const ListRowsShimmer(),
+      error: (error, _) => InlineErrorRetry(
         message: 'Failed to load torrents',
         onRetry: () => ref.invalidate(transmissionTorrentsProvider),
       ),
@@ -475,7 +435,10 @@ class _TorrentTile extends ConsumerWidget {
     ].join(' · ');
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Material(
         color: colorScheme.surface,
         borderRadius: AppRadius.borderRadiusMd,
@@ -500,7 +463,7 @@ class _TorrentTile extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Text(
                     '${(torrent.progress * 100).round()}%',
                     style: Theme.of(context).textTheme.labelMedium!
@@ -513,7 +476,7 @@ class _TorrentTile extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
               ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: AppRadius.borderRadiusXs,
                 child: LinearProgressIndicator(
                   value: torrent.progress,
                   minHeight: 4,
@@ -539,68 +502,6 @@ class _TorrentTile extends ConsumerWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _TransmissionShimmer extends StatelessWidget {
-  const _TransmissionShimmer();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      children: List.generate(
-        4,
-        (_) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Container(
-            height: 56,
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-              borderRadius: AppRadius.borderRadiusMd,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer.withValues(alpha: 0.4),
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(color: colorScheme.error.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline_rounded, color: colorScheme.error),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onErrorContainer,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
-        ],
       ),
     );
   }

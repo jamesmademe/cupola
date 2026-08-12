@@ -2,7 +2,6 @@ import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 
-import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
@@ -48,33 +47,20 @@ class QbittorrentClient {
     String? certFingerprint,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        _cookieJar = cookieJar ?? CookieJar() {
-    _dio =
-        dio ??
-        Dio(
-          BaseOptions(
-            baseUrl: baseUrl,
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 15),
-            sendTimeout: const Duration(seconds: 10),
-            // Follow redirects by hand so the SID cookie — which is full
-            // account access to the torrent client — is never replayed to a
-            // host the user did not configure. `dart:io` exempts a redirect to
-            // a *parent* domain from its own cookie stripping, so
-            // `qbit.homelab.net` → `homelab.net` hands the session over.
-            followRedirects: false,
-            validateStatus: allowRedirectStatus,
-          ),
-        );
+    // Redirects are followed by hand so the SID cookie — which is full account
+    // access to the torrent client — is never replayed to a host the user did
+    // not configure. `dart:io` exempts a redirect to a *parent* domain from its
+    // own cookie stripping, so `qbit.homelab.net` → `homelab.net` hands the
+    // session over.
+    _dio = guardedDio(
+      baseUrl: baseUrl,
+      injected: dio,
+      certFingerprint: certFingerprint,
+      sendTimeout: const Duration(seconds: 10),
+    );
 
-    if (dio == null) {
-      _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
-      final adapter = pinnedHttpClientAdapterFor(
-        baseUrl,
-        pinnedFingerprint: certFingerprint,
-      );
-      if (adapter != null) _dio.httpClientAdapter = adapter;
-    }
-
+    // Added after the redirect guard, and unconditionally: the guard has to see
+    // a 3xx first, and these two apply to an injected transport as well.
     _dio.interceptors.add(CookieManager(_cookieJar));
     _dio.interceptors.add(
       InterceptorsWrapper(

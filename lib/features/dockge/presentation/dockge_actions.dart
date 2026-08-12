@@ -32,7 +32,7 @@ Future<bool> runDockgeAction(
     return true;
   } catch (e) {
     if (context.mounted) {
-      SnackBarHelper.error(context, '$failureMessage: $e');
+      SnackBarHelper.error(context, failureMessage, detail: e);
     }
     return false;
   }

@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 
-import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
@@ -86,36 +85,22 @@ class NpmClient {
     Dio? dio,
     String? certFingerprint,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url) {
-    _dio =
-        dio ??
-        Dio(
-          BaseOptions(
-            baseUrl: baseUrl,
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 15),
-            // Follow redirects by hand so the bearer token — which *is* the
-            // account, with no scoping and no revocation — is never replayed to
-            // a host the user did not configure. Required for a second reason
-            // too: `GET /api` without the trailing slash is a 302 to `/api/`,
-            // and that redirect has to reach the interceptor rather than be
-            // rejected as a bad response.
-            followRedirects: false,
-            validateStatus: allowRedirectStatus,
-          ),
-        );
-    if (dio == null) {
-      // One Dio for login *and* data, deliberately. A second transport minted
-      // just for the token exchange is the natural shape and the wrong one: it
-      // would skip the pinned adapter, so against a self-signed NPM the login
-      // would fail as "unreachable" while every data call would have worked,
-      // and the user would never be offered the certificate prompt.
-      _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
-      final adapter = pinnedHttpClientAdapterFor(
-        baseUrl,
-        pinnedFingerprint: certFingerprint,
-      );
-      if (adapter != null) _dio.httpClientAdapter = adapter;
-    }
+    // Redirects are followed by hand so the bearer token — which *is* the
+    // account, with no scoping and no revocation — is never replayed to a host
+    // the user did not configure. Required for a second reason too: `GET /api`
+    // without the trailing slash is a 302 to `/api/`, and that redirect has to
+    // reach the interceptor rather than be rejected as a bad response.
+    //
+    // One Dio for login *and* data, deliberately. A second transport minted
+    // just for the token exchange is the natural shape and the wrong one: it
+    // would skip the pinned adapter, so against a self-signed NPM the login
+    // would fail as "unreachable" while every data call would have worked, and
+    // the user would never be offered the certificate prompt.
+    _dio = guardedDio(
+      baseUrl: baseUrl,
+      injected: dio,
+      certFingerprint: certFingerprint,
+    );
   }
 
   final String baseUrl;
@@ -241,10 +226,6 @@ class NpmClient {
 
   Future<List<NpmSimpleHost>> streams() async {
     return _simpleHosts('/api/nginx/streams', NpmSimpleHost.stream);
-  }
-
-  Future<List<NpmSimpleHost>> accessLists() async {
-    return _simpleHosts('/api/nginx/access-lists', NpmSimpleHost.accessList);
   }
 
   Future<List<NpmSimpleHost>> _simpleHosts(

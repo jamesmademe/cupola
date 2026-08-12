@@ -4,6 +4,7 @@ import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Cast + collection for an *arr library item, sourced from TMDB via Seerr.
 typedef ArrMediaExtras = ({
@@ -20,7 +21,7 @@ typedef ArrMediaExtrasKey = ({int tmdbId, String mediaType});
 final arrMediaExtrasProvider = FutureProvider.autoDispose
     .family<ArrMediaExtras?, ArrMediaExtrasKey>((ref, key) async {
       final settings = ref.watch(currentSettingsProvider);
-      if (settings.seerrUrl.isEmpty || settings.seerrApiKey.isEmpty) {
+      if (!settings.isServiceConfigured(ServiceKey.seerr)) {
         return null;
       }
       if (key.tmdbId <= 0) {

@@ -100,6 +100,13 @@ bool mediaBrowseFilterMatches(
   };
 }
 
+/// A sort key whose first character is a Latin letter, and therefore gets its
+/// own section heading rather than landing under `#`.
+///
+/// Top level because the section pass runs it once per library item: built
+/// inline, the pattern was recompiled for every row on every rebuild.
+final RegExp _sectionLetter = RegExp(r'^[A-Z]$');
+
 /// Shared scaffold for media library browse screens.
 ///
 /// Provides the shared AppBar, search bar, navigation refresh listener,
@@ -170,6 +177,28 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
 class _MediaBrowseScaffoldState<T>
     extends ConsumerState<MediaBrowseScaffold<T>> {
   MediaBrowseFilter _selectedFilter = MediaBrowseFilter.all;
+
+  /// The library list the cached order was computed from, and that order.
+  ///
+  /// The comparator does not read [_selectedFilter], so the sort is invariant
+  /// across a chip tap and across every other rebuild of this element — of
+  /// which the soft keyboard alone produces one per frame. [FutureProvider]
+  /// hands back the same `List` instance until it is invalidated, so identity
+  /// is a sound key; the filter itself still runs on every build.
+  List<T>? _sortedSource;
+  List<T>? _sorted;
+
+  @override
+  void didUpdateWidget(MediaBrowseScaffold<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The comparator reads both extractors, so a rebuild that re-closes over
+    // new ones has to re-sort even when the list itself is unchanged.
+    if (!identical(widget.titleExtractor, oldWidget.titleExtractor) ||
+        !identical(widget.sortTitleExtractor, oldWidget.sortTitleExtractor)) {
+      _sortedSource = null;
+      _sorted = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -447,6 +476,24 @@ class _MediaBrowseScaffoldState<T>
   }
 
   List<T> _filteredItems(List<T> items) {
+    return _sortedItems(items)
+        .where(
+          (item) => mediaBrowseFilterMatches(
+            _selectedFilter,
+            widget.statusExtractor?.call(item),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  /// [items] in display order, computed once per library list — see
+  /// [_sortedSource]. The result is never mutated afterwards.
+  List<T> _sortedItems(List<T> items) {
+    final cached = _sorted;
+    if (cached != null && identical(items, _sortedSource)) {
+      return cached;
+    }
+
     final sortedItems = [...items]
       ..sort((left, right) {
         final bySortTitle = _sortKeyFor(left).compareTo(_sortKeyFor(right));
@@ -459,14 +506,9 @@ class _MediaBrowseScaffoldState<T>
             .compareTo(widget.titleExtractor(right).toLowerCase());
       });
 
-    return sortedItems
-        .where(
-          (item) => mediaBrowseFilterMatches(
-            _selectedFilter,
-            widget.statusExtractor?.call(item),
-          ),
-        )
-        .toList(growable: false);
+    _sortedSource = items;
+    _sorted = sortedItems;
+    return sortedItems;
   }
 
   List<_MediaBrowseSection<T>> _buildSections(List<T> items) {
@@ -496,7 +538,7 @@ class _MediaBrowseScaffoldState<T>
       return '#';
     }
     final firstCharacter = sortKey.characters.first.toUpperCase();
-    return RegExp(r'^[A-Z]$').hasMatch(firstCharacter) ? firstCharacter : '#';
+    return _sectionLetter.hasMatch(firstCharacter) ? firstCharacter : '#';
   }
 }
 

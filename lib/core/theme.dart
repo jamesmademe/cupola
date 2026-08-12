@@ -237,11 +237,9 @@ class AppColors {
   static const Color success = Color(0xFF22C55E); // green-500
   static const Color successContainer = Color(0xFF166534); // green-800
   static const Color warning = Color(0xFFF59E0B); // amber-500
-  static const Color warningContainer = Color(0xFF92400E); // amber-800
   static const Color error = Color(0xFFEF4444); // red-500
   static const Color errorContainer = Color(0xFF991B1B); // red-800
   static const Color info = Color(0xFF3B82F6); // blue-500
-  static const Color infoContainer = Color(0xFF1E40AF); // blue-800
 }
 
 @immutable

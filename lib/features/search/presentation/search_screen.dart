@@ -230,19 +230,85 @@ class _SearchResultsList extends StatelessWidget {
       return const _NoResultsState();
     }
 
-    return ListView(
+    // Sections and their rows share one flat index so the sliver can build
+    // lazily. Nesting a section's cards in a single `Column` made the whole
+    // section one list child: a service answering with 50 results laid out and
+    // painted 50 cards — and fired 50 poster requests, each with its own
+    // repeating shimmer ticker — the moment any part of that section touched
+    // the cache extent.
+    final rows = <Object>[];
+    for (final group in visibleGroups) {
+      rows.add(group);
+      if (group.hasError) {
+        rows.add(_SectionOffline(group.service));
+      } else if (group.results.isEmpty) {
+        rows.add(_SectionNoResults(group.service));
+      } else {
+        rows.addAll(group.results);
+      }
+    }
+
+    return ListView.builder(
       padding: EdgeInsets.only(top: AppSpacing.sm, bottom: bottomPadding),
-      children: [
-        for (final group in visibleGroups) _SearchSection(group: group),
-      ],
+      itemCount: rows.length,
+      itemBuilder: (context, index) => switch (rows[index]) {
+        final GlobalSearchServiceResults group => _SearchSectionHeader(
+          group: group,
+        ),
+        _SectionOffline(:final service) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: _SearchSectionMessage(
+            icon: Icons.cloud_off_rounded,
+            text: '${service.title} is offline',
+            color: Theme.of(context).colorScheme.error,
+          ),
+        ),
+        _SectionNoResults(:final service) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: _SearchSectionMessage(
+            icon: Icons.search_off_rounded,
+            text: 'No ${service.title} results',
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        // The section's horizontal inset used to live on the wrapper around the
+        // cards' `Column`; folded together with the per-card bottom gap it is
+        // the same box.
+        final GlobalSearchResult result => Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.sm,
+          ),
+          child: _SearchResultCard(result: result),
+        ),
+        _ => const SizedBox.shrink(),
+      },
     );
   }
 }
 
-class _SearchSection extends StatelessWidget {
+/// A section body that is a message rather than a list of cards: the service
+/// did not answer.
+class _SectionOffline {
+  final ServiceKey service;
+
+  const _SectionOffline(this.service);
+}
+
+/// A section body that is a message rather than a list of cards: the service
+/// answered with nothing.
+class _SectionNoResults {
+  final ServiceKey service;
+
+  const _SectionNoResults(this.service);
+}
+
+class _SearchSectionHeader extends StatelessWidget {
   final GlobalSearchServiceResults group;
 
-  const _SearchSection({required this.group});
+  const _SearchSectionHeader({required this.group});
 
   @override
   Widget build(BuildContext context) {
@@ -250,78 +316,49 @@ class _SearchSection extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final count = group.results.length;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.md,
-            AppSpacing.lg,
-            AppSpacing.sm,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: service.accent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(service.icon, size: 14, color: service.accent),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: service.accent.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(service.icon, size: 14, color: service.accent),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                service.title,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.weight(FontWeight.w700),
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              // A global search fans out to every configured service and they
-              // answer at their own pace, so this count genuinely arrives — it
-              // is not a number that was always there. Rolling it is the section
-              // reporting in. `.tabular` still does the anti-jitter work; the
-              // roll is what marks the arrival.
-              ReelLine(
-                group.hasError
-                    ? 'offline'
-                    : '$count result${count == 1 ? '' : 's'}',
-                options: ReelMotion.figure,
-                style: Theme.of(context).textTheme.labelSmall?.tabular.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                fallbackMaxLines: 1,
-              ),
-            ],
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            service.title,
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.weight(FontWeight.w700),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: group.hasError
-              ? _SearchSectionMessage(
-                  icon: Icons.cloud_off_rounded,
-                  text: '${service.title} is offline',
-                  color: colorScheme.error,
-                )
-              : count == 0
-              ? _SearchSectionMessage(
-                  icon: Icons.search_off_rounded,
-                  text: 'No ${service.title} results',
-                  color: colorScheme.onSurfaceVariant,
-                )
-              : Column(
-                  children: [
-                    for (final result in group.results)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: _SearchResultCard(result: result),
-                      ),
-                  ],
-                ),
-        ),
-      ],
+          const SizedBox(width: AppSpacing.xs),
+          // A global search fans out to every configured service and they
+          // answer at their own pace, so this count genuinely arrives — it
+          // is not a number that was always there. Rolling it is the section
+          // reporting in. `.tabular` still does the anti-jitter work; the
+          // roll is what marks the arrival.
+          ReelLine(
+            group.hasError
+                ? 'offline'
+                : '$count result${count == 1 ? '' : 's'}',
+            options: ReelMotion.figure,
+            style: Theme.of(context).textTheme.labelSmall?.tabular.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+            fallbackMaxLines: 1,
+          ),
+        ],
+      ),
     );
   }
 }

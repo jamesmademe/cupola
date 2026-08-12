@@ -217,6 +217,7 @@ class AddTorrentButton extends ConsumerWidget {
                         );
                       }
                       ref.invalidate(torrentsProvider);
+                      ref.invalidate(allTorrentsProvider);
                       Navigator.of(ctx2).pop();
                       if (context.mounted) {
                         SnackBarHelper.success(
@@ -225,7 +226,11 @@ class AddTorrentButton extends ConsumerWidget {
                         );
                       }
                     } catch (e) {
-                      SnackBarHelper.error(ctx2, 'Failed to add torrent: $e');
+                      SnackBarHelper.error(
+                        ctx2,
+                        "Couldn't add the torrent.",
+                        detail: e,
+                      );
                     }
                   },
                   child: Row(

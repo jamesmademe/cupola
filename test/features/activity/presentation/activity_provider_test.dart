@@ -1,15 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
-import 'package:cupola/features/activity/presentation/activity_screen.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_tab.dart';
 import 'package:cupola/features/activity/presentation/widgets/wanted_tab.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
-import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
@@ -19,12 +18,14 @@ import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 void main() {
-  late SettingsScope scope;
+  late List<Override> settingsOverrides;
 
   setUp(() async {
     // The feed distinguishes "not configured" from "did not answer", so it reads
     // settings — which throw unless overridden.
-    scope = await settingsScope(configured: activityServiceKeys);
+    settingsOverrides = await settingsScopeOverrides(
+      configured: activityServiceKeys,
+    );
   });
 
   ProviderContainer createContainer({
@@ -36,10 +37,7 @@ void main() {
   }) {
     final container = ProviderContainer(
       overrides: [
-        sharedPreferencesProvider.overrideWith((ref) => scope.prefs),
-        secureSettingsStoreProvider.overrideWith((ref) => scope.secureStore),
-        initialSettingsProvider.overrideWith((ref) => scope.settings),
-        initialOnboardingCompletedProvider.overrideWith((ref) => true),
+        ...settingsOverrides,
         if (seerrService != null)
           seerrServiceProvider.overrideWith((ref) => seerrService),
         if (requests != null)
@@ -248,7 +246,9 @@ void main() {
     );
 
     test('an unconfigured service is not reported as a failure', () async {
-      scope = await settingsScope(configured: const [ServiceKey.sonarr]);
+      settingsOverrides = await settingsScopeOverrides(
+        configured: const [ServiceKey.sonarr],
+      );
       final container = createContainer(
         sonarrService: _ActivitySonarrService(
           queue: const [

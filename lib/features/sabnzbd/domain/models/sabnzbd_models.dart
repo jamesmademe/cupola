@@ -9,16 +9,13 @@
 library;
 
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
+/// SABnzbd reports decimals with the server's locale separator, so a comma has
+/// to become a dot before parsing — which is why this is not `doubleOrNull`.
 double _asDouble(dynamic value) {
   if (value is num) return value.toDouble();
   return double.tryParse('$value'.replaceAll(',', '.')) ?? 0;
-}
-
-bool _asBool(dynamic value) {
-  if (value is bool) return value;
-  final s = '$value'.toLowerCase();
-  return s == 'true' || s == '1';
 }
 
 /// The download queue (`mode=queue`).
@@ -55,7 +52,7 @@ class SabnzbdQueue {
   factory SabnzbdQueue.fromJson(Map<String, dynamic> json) {
     final slots = (json['slots'] as List?) ?? const [];
     return SabnzbdQueue(
-      paused: _asBool(json['paused']),
+      paused: boolOrFalse(json['paused']),
       status: (json['status'] ?? '').toString(),
       kbPerSec: _asDouble(json['kbpersec']),
       mbLeft: _asDouble(json['mbleft']),
@@ -107,34 +104,21 @@ class SabnzbdQueueSlot {
 
 /// Aggregate transfer statistics (`mode=server_stats`).
 ///
-/// SABnzbd reports totals in bytes. Only the roll-ups are kept; the per-server
-/// breakdown is ignored for the dashboard.
+/// SABnzbd reports totals in bytes, and the response also carries `month`,
+/// `week` and `day` roll-ups plus a per-server breakdown. None of them are
+/// modelled: the dashboard shows the all-time total and nothing else, and a
+/// field that is parsed but never read is one more thing to keep in step with
+/// the API for no one's benefit.
 class SabnzbdServerStats {
-  const SabnzbdServerStats({
-    required this.total,
-    required this.month,
-    required this.week,
-    required this.day,
-  });
+  const SabnzbdServerStats({required this.total});
 
   /// Total bytes downloaded over all time.
   final int total;
 
-  /// Bytes downloaded this month / week / today.
-  final int month;
-  final int week;
-  final int day;
-
   String get totalLabel => formatBytes(total);
-  String get monthLabel => formatBytes(month);
 
   factory SabnzbdServerStats.fromJson(Map<String, dynamic> json) {
-    return SabnzbdServerStats(
-      total: _asDouble(json['total']).round(),
-      month: _asDouble(json['month']).round(),
-      week: _asDouble(json['week']).round(),
-      day: _asDouble(json['day']).round(),
-    );
+    return SabnzbdServerStats(total: _asDouble(json['total']).round());
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/status/media_action.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/widgets/header_action_row.dart';
 import 'package:cupola/core/widgets/library_detail_actions.dart';
@@ -17,7 +18,6 @@ void main() {
       canOpenQueue: true,
       canRequest: true,
       canAdd: true,
-      canRefresh: true,
     );
     const none = MediaActionCapabilities();
 

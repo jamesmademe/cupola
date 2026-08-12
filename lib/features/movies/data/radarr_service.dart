@@ -5,19 +5,10 @@ import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 final radarrServiceProvider = Provider<RadarrService>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  if (settings.radarrUrl.isEmpty || settings.radarrApiKey.isEmpty) {
-    throw Exception('Radarr not configured');
-  }
-  return RadarrService(
-    ApiClient(
-      baseUrl: settings.radarrUrl,
-      apiKey: settings.radarrApiKey,
-      pinnedCertFingerprint: settings.pinForUrl(settings.radarrUrl),
-    ),
-  );
+  return RadarrService(watchApiClient(ref, ServiceKey.radarr));
 });
 
 /// Service for interacting with Radarr API.
@@ -47,12 +38,7 @@ class RadarrService with ArrActivityMixin {
 
   /// Fetches a single movie by its Radarr ID.
   Future<RadarrMovie?> getMovie(int movieId) async {
-    try {
-      final response = await client.get('/api/v3/movie/$movieId');
-      return RadarrMovie.fromJson(response.data as Map<String, dynamic>);
-    } catch (_) {
-      return null;
-    }
+    return fetchItem('movie', movieId, RadarrMovie.fromJson);
   }
 
   @override

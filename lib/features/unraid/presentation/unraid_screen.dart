@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
@@ -65,7 +67,7 @@ class _UnraidDashboard extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async {
         _invalidateAll(ref);
-        await Future<void>.delayed(const Duration(milliseconds: 300));
+        await Future<void>.delayed(AppAnimation.durationMd);
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -78,11 +80,11 @@ class _UnraidDashboard extends ConsumerWidget {
             kpis: ref.watch(serviceKpiProvider(ServiceKey.unraid)),
             accent: AppColors.unraid,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           const SectionHeader(title: 'Array disks', showChevron: false),
           const SizedBox(height: 2),
           _DiskList(arrayAsync: arrayAsync),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           const SectionHeader(title: 'Docker', showChevron: false),
           const SizedBox(height: 2),
           _DockerList(dockerAsync: dockerAsync),
@@ -110,7 +112,10 @@ class _DiskList extends ConsumerWidget {
       data: (array) {
         if (array.disks.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('No array disks reported.'),
           );
         }
@@ -118,8 +123,8 @@ class _DiskList extends ConsumerWidget {
           children: array.disks.map((disk) => _DiskTile(disk: disk)).toList(),
         );
       },
-      loading: () => const _UnraidShimmer(),
-      error: (error, _) => _ErrorRetry(
+      loading: () => const ListRowsShimmer(),
+      error: (error, _) => InlineErrorRetry(
         message: 'Failed to load the array',
         onRetry: () => ref.invalidate(unraidArrayProvider),
       ),
@@ -139,7 +144,10 @@ class _DiskTile extends StatelessWidget {
     final hot = (disk.temp ?? 0) >= 45;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Material(
         color: colorScheme.surface,
         borderRadius: AppRadius.borderRadiusMd,
@@ -191,7 +199,7 @@ class _DiskTile extends StatelessWidget {
                 ),
               ),
               if (tempLabel != null) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 Text(
                   tempLabel,
                   style: Theme.of(context).textTheme.labelMedium!
@@ -223,7 +231,10 @@ class _DockerList extends ConsumerWidget {
       data: (containers) {
         if (containers.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Text('No containers reported.'),
           );
         }
@@ -236,8 +247,8 @@ class _DockerList extends ConsumerWidget {
               .toList(),
         );
       },
-      loading: () => const _UnraidShimmer(),
-      error: (error, _) => _ErrorRetry(
+      loading: () => const ListRowsShimmer(),
+      error: (error, _) => InlineErrorRetry(
         message: 'Failed to load containers',
         onRetry: () => ref.invalidate(unraidDockerProvider),
       ),
@@ -258,7 +269,10 @@ class _ContainerTile extends StatelessWidget {
         : colorScheme.onSurfaceVariant;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Material(
         color: colorScheme.surface,
         borderRadius: AppRadius.borderRadiusMd,
@@ -314,68 +328,6 @@ class _ContainerTile extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _UnraidShimmer extends StatelessWidget {
-  const _UnraidShimmer();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      children: List.generate(
-        4,
-        (_) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Container(
-            height: 56,
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-              borderRadius: AppRadius.borderRadiusMd,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer.withValues(alpha: 0.4),
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(color: colorScheme.error.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline_rounded, color: colorScheme.error),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onErrorContainer,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
-        ],
       ),
     );
   }

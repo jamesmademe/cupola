@@ -6,16 +6,7 @@
 /// schema (SDL / Apollo sandbox) before relying on any one of them.
 library;
 
-int? _asIntOrNull(dynamic value) {
-  if (value == null) return null;
-  if (value is num) return value.toInt();
-  return int.tryParse('$value');
-}
-
-double _asDouble(dynamic value) {
-  if (value is num) return value.toDouble();
-  return double.tryParse('$value') ?? 0;
-}
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// System information (`info`).
 class UnraidInfo {
@@ -62,8 +53,8 @@ class UnraidArray {
         (capacity?['kilobytes'] as Map?)?.cast<String, dynamic>() ??
         (capacity?['bytes'] as Map?)?.cast<String, dynamic>();
     if (bucket != null) {
-      final total = _asDouble(bucket['total']);
-      final used = _asDouble(bucket['used']);
+      final total = doubleOrNull(bucket['total']) ?? 0.0;
+      final used = doubleOrNull(bucket['used']) ?? 0.0;
       if (total > 0) usedFraction = (used / total).clamp(0, 1).toDouble();
     }
     final disks = (json['disks'] as List?) ?? const [];
@@ -94,7 +85,7 @@ class UnraidDisk {
     return UnraidDisk(
       name: (json['name'] ?? 'disk').toString(),
       status: (json['status'] ?? '').toString(),
-      temp: _asIntOrNull(json['temp']),
+      temp: intOrNull(json['temp']),
     );
   }
 }

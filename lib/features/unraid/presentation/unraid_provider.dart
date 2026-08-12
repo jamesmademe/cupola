@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/unraid/data/unraid_client.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 
@@ -9,14 +10,25 @@ import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 /// Throws if Unraid is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.unraid)` before reading.
 final unraidClientProvider = Provider<UnraidClient>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  if (settings.unraidUrl.isEmpty || settings.unraidApiKey.isEmpty) {
+  // Selected rather than watching the whole model: this provider closes a live
+  // Dio on dispose, so an unrelated settings write must not rebuild it.
+  final transport = ref.watch(
+    currentSettingsProvider.select(
+      (s) => (
+        configured: s.isServiceConfigured(ServiceKey.unraid),
+        url: s.unraidUrl,
+        apiKey: s.unraidApiKey,
+        pin: s.pinForUrl(s.unraidUrl),
+      ),
+    ),
+  );
+  if (!transport.configured) {
     throw Exception('Unraid not configured');
   }
   final client = UnraidClient(
-    url: settings.unraidUrl,
-    apiKey: settings.unraidApiKey,
-    certFingerprint: settings.pinForUrl(settings.unraidUrl),
+    url: transport.url,
+    apiKey: transport.apiKey,
+    certFingerprint: transport.pin,
   );
   ref.onDispose(() => client.close());
   return client;

@@ -1,13 +1,11 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/api/arr_detail_actions_mixin.dart';
 import 'package:cupola/core/api/quality_profile_mixin.dart';
-import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/utils/rating_display.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/string_utils.dart';
@@ -48,19 +46,9 @@ class SeriesDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
-    with QualityProfileMixin<SeriesDetailScreen> {
-  bool _isAutoSearching = false;
-  bool _isAutoSearchConfirmed = false;
-  Timer? _searchConfirmTimer;
-
-  @override
-  void dispose() {
-    _searchConfirmTimer?.cancel();
-    super.dispose();
-  }
-
-  bool _isDeleting = false;
-  bool _isUpdatingMonitoredState = false;
+    with
+        QualityProfileMixin<SeriesDetailScreen>,
+        ArrDetailActionsMixin<SeriesDetailScreen> {
   final Set<int> _searchingSeasons = {};
   final Set<int> _searchingEpisodes = {};
 
@@ -231,9 +219,8 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
               partialSummary: total > 0
                   ? '$onDisk of $total episodes on disk.'
                   : null,
-              isBusy:
-                  _isAutoSearching || _isUpdatingMonitoredState || _isDeleting,
-              isConfirmed: _isAutoSearchConfirmed,
+              isBusy: isAutoSearching || isUpdatingMonitoredState || isDeleting,
+              isConfirmed: isAutoSearchConfirmed,
               currentProfileName: currentProfileName,
               currentProfileId: currentProfileId,
               qualityProfiles: qualityProfiles,
@@ -399,68 +386,30 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     BuildContext context, {
     required int seriesId,
     required bool monitored,
-  }) async {
-    setState(() => _isUpdatingMonitoredState = true);
-    try {
-      final sonarrService = ref.read(sonarrServiceProvider);
-      await sonarrService.updateSeriesMonitored(seriesId, monitored);
-      if (!mounted) return;
-      ref.invalidate(seriesDetailProvider(seriesId));
-      ref.invalidate(seriesProvider);
-      // The consequence, not the flag — the same sentence shape Radarr and
-      // Lidarr use for the same action.
-      SnackBarHelper.success(
-        context,
-        monitored
-            ? 'Sonarr is monitoring this series'
-            : 'Sonarr has stopped monitoring this series',
-      );
-    } catch (e) {
-      if (!mounted) return;
-      SnackBarHelper.error(
-        context,
-        "Couldn't change monitoring in Sonarr.",
-        detail: e,
-      );
-    } finally {
-      if (mounted) setState(() => _isUpdatingMonitoredState = false);
-    }
+  }) {
+    return setMonitored(
+      context: context,
+      serviceName: 'Sonarr',
+      subject: 'series',
+      monitored: monitored,
+      write: () => ref
+          .read(sonarrServiceProvider)
+          .updateSeriesMonitored(seriesId, monitored),
+      invalidate: [seriesDetailProvider(seriesId), seriesProvider],
+    );
   }
 
-  Future<void> _triggerSearch(BuildContext context) async {
-    HapticFeedback.selectionClick();
-    setState(() => _isAutoSearching = true);
-    try {
-      final sonarrService = ref.read(sonarrServiceProvider);
-      await sonarrService.searchSeries(widget.seriesId);
-      if (!context.mounted) return;
+  Future<void> _triggerSearch(BuildContext context) {
+    return triggerSearch(
+      context: context,
+      serviceName: 'Sonarr',
       // "<Service> is searching <what>", the shape every library page uses. The
       // scope matters here more than anywhere: this one search covers every
       // monitored episode of the show.
-      SnackBarHelper.success(
-        context,
-        'Sonarr is searching for every monitored episode',
-      );
-      _showSearchConfirmation();
-    } catch (e) {
-      if (!context.mounted) return;
-      SnackBarHelper.error(
-        context,
-        "Couldn't start a search in Sonarr.",
-        detail: e,
-      );
-    } finally {
-      if (mounted) setState(() => _isAutoSearching = false);
-    }
-  }
-
-  void _showSearchConfirmation() {
-    if (!mounted) return;
-    setState(() => _isAutoSearchConfirmed = true);
-    _searchConfirmTimer?.cancel();
-    _searchConfirmTimer = Timer(AppAnimation.confirmationHold, () {
-      if (mounted) setState(() => _isAutoSearchConfirmed = false);
-    });
+      successMessage: 'Sonarr is searching for every monitored episode',
+      search: () =>
+          ref.read(sonarrServiceProvider).searchSeries(widget.seriesId),
+    );
   }
 
   Future<void> _showInteractiveSearch(
@@ -569,96 +518,33 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     );
   }
 
-  /// Changes the quality profile behind a confirmation that names the
-  /// transition and its consequence — see the note on Radarr's equivalent for
-  /// why this is a confirm and not an Undo: putting the old profile back does
-  /// not recall searches Sonarr has already queued.
-  Future<void> _updateProfile(
-    int profileId, {
-    required String mediaTitle,
-  }) async {
-    if (profileId == currentProfileId) return;
-
-    final from = currentProfileName ?? 'its current profile';
-    final to = getProfileName(profileId) ?? 'the selected profile';
-
-    final result = await showAppConfirmDialog(
-      context: context,
-      title: 'Change quality profile?',
-      icon: Icons.high_quality_rounded,
-      message:
-          '${truncateTitle(mediaTitle)} moves from $from to $to. Sonarr may '
-          'start searching for upgrades across every monitored episode as soon '
-          'as this lands, and a search cannot be called back from here.',
-      confirmLabel: 'Change profile',
+  Future<void> _updateProfile(int profileId, {required String mediaTitle}) {
+    return changeProfile(
+      profileId: profileId,
+      mediaTitle: mediaTitle,
+      serviceName: 'Sonarr',
+      consequence: 'upgrades across every monitored episode',
+      write: () => ref
+          .read(sonarrServiceProvider)
+          .updateSeriesProfile(widget.seriesId, profileId),
+      invalidate: [seriesProvider],
     );
-
-    if (!result.confirmed || !mounted) return;
-
-    try {
-      final sonarrService = ref.read(sonarrServiceProvider);
-      await sonarrService.updateSeriesProfile(widget.seriesId, profileId);
-      if (mounted) {
-        updateProfileState(profileId);
-        ref.invalidate(seriesProvider);
-        SnackBarHelper.success(context, 'Quality profile changed to $to');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      SnackBarHelper.error(
-        context,
-        "Couldn't change the quality profile in Sonarr.",
-        detail: e,
-      );
-    }
   }
 
-  Future<void> _confirmDelete(
-    BuildContext context, {
-    required String title,
-  }) async {
-    // Same tactile weight Radarr gives the same action: the destructive button
-    // announces itself in the hand before the dialog arrives. Tactility is a
-    // property of the action, not of which service happens to own the screen.
-    HapticFeedback.mediumImpact();
-
-    final result = await showDeleteMediaDialog(
+  Future<void> _confirmDelete(BuildContext context, {required String title}) {
+    return confirmDelete(
       context: context,
-      // Capped where the untrusted string enters: the dialog's "Delete <title>?"
-      // heading sits above the scrollable content, so a long name pushes the
-      // checkboxes and the buttons off the screen.
-      title: truncateTitle(title),
+      serviceName: 'Sonarr',
+      subject: 'series',
+      title: title,
       mediaType: DeleteMediaType.series,
+      write: (deleteFiles, addExclusion) => ref
+          .read(sonarrServiceProvider)
+          .deleteSeries(
+            widget.seriesId,
+            deleteFiles: deleteFiles,
+            addImportListExclusion: addExclusion,
+          ),
     );
-
-    if (!result.confirmed || !context.mounted) return;
-
-    setState(() => _isDeleting = true);
-    try {
-      final sonarrService = ref.read(sonarrServiceProvider);
-      await sonarrService.deleteSeries(
-        widget.seriesId,
-        deleteFiles: result.deleteFiles,
-        addImportListExclusion: result.addExclusion,
-      );
-      if (!context.mounted) return;
-      // Which destruction happened, since the dialog offered two.
-      SnackBarHelper.success(
-        context,
-        result.deleteFiles
-            ? 'Removed from Sonarr and deleted from disk'
-            : 'Removed from Sonarr',
-      );
-      context.pop();
-    } catch (e) {
-      if (!context.mounted) return;
-      SnackBarHelper.error(
-        context,
-        "Couldn't delete this series from Sonarr.",
-        detail: e,
-      );
-    } finally {
-      if (mounted) setState(() => _isDeleting = false);
-    }
   }
 }

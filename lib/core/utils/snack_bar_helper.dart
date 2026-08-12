@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/service_theme.dart';
+
 /// Convenience helpers for showing semantically typed snackbars.
 ///
 /// The app theme already configures shared snackbar styling in `core/theme.dart`.
@@ -63,12 +65,33 @@ class SnackBarHelper {
   /// Radarr.", detail: e)` leads with what the user needs and demotes the
   /// diagnostic to its own line — the same two-register shape `AppErrorState`
   /// uses.
-  static void error(BuildContext context, String message, {Object? detail}) {
-    final colorScheme = Theme.of(context).colorScheme;
+  /// [duration] is for the rare failure that needs longer than the default four
+  /// seconds — a grab that failed after the sheet moved on, say, where the user
+  /// has to read a sentence they did not expect. Everything else takes the
+  /// default; a snackbar that lingers is one the user has to dismiss.
+  static void error(
+    BuildContext context,
+    String message, {
+    Object? detail,
+    Duration? duration,
+  }) {
+    final background = Theme.of(context).colorScheme.error;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_compose(message, detail)),
-        backgroundColor: colorScheme.error,
+        duration: duration ?? const Duration(seconds: 4),
+        // The theme's snackbar ink is chosen for `inverseSurface`, and this is
+        // the one snackbar that repaints its own background — so it has to pick
+        // its own foreground too. DESIGN.md's Luminance Rule: an opaque accent
+        // resolves its ink through `foregroundOn`, never by assuming white.
+        // Assuming it here measured 3.5:1 on the light theme's error red,
+        // against a 4.5:1 floor; resolved, it lands on the dark ink at 5.2:1.
+        // Set on the `Text` because `SnackBar` takes its content style from the
+        // theme; a `Text` style merges over that and changes only the colour.
+        content: Text(
+          _compose(message, detail),
+          style: TextStyle(color: ServiceTheme.foregroundOn(background)),
+        ),
+        backgroundColor: background,
       ),
     );
   }

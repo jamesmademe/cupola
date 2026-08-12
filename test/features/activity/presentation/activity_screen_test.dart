@@ -7,13 +7,13 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/widgets/selection_pills.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/activity/presentation/global_activity_screen.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_tab.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_list.dart';
 import 'package:cupola/features/activity/presentation/widgets/wanted_tab.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
-import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
@@ -74,15 +74,10 @@ void main() {
   testWidgets('renders global activity with sections, grouping and filter', (
     tester,
   ) async {
-    final scope = await settingsScope(configured: activityServiceKeys);
-
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          sharedPreferencesProvider.overrideWith((ref) => scope.prefs),
-          secureSettingsStoreProvider.overrideWith((ref) => scope.secureStore),
-          initialSettingsProvider.overrideWith((ref) => scope.settings),
-          initialOnboardingCompletedProvider.overrideWith((ref) => true),
+          ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith(
             (ref) async => const [
               SeerrRequest(
@@ -154,15 +149,10 @@ void main() {
 
   testWidgets('the Now bucket pills the two directions of traffic, not the '
       'service axis', (tester) async {
-    final scope = await settingsScope(configured: activityServiceKeys);
-
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          sharedPreferencesProvider.overrideWith((ref) => scope.prefs),
-          secureSettingsStoreProvider.overrideWith((ref) => scope.secureStore),
-          initialSettingsProvider.overrideWith((ref) => scope.settings),
-          initialOnboardingCompletedProvider.overrideWith((ref) => true),
+          ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
           seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
           radarrServiceProvider.overrideWith((ref) => FakeRadarrService()),
@@ -205,15 +195,10 @@ void main() {
   });
 
   testWidgets('buckets are swipeable, not just tappable', (tester) async {
-    final scope = await settingsScope(configured: activityServiceKeys);
-
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          sharedPreferencesProvider.overrideWith((ref) => scope.prefs),
-          secureSettingsStoreProvider.overrideWith((ref) => scope.secureStore),
-          initialSettingsProvider.overrideWith((ref) => scope.settings),
-          initialOnboardingCompletedProvider.overrideWith((ref) => true),
+          ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
           seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
           radarrServiceProvider.overrideWith((ref) => FakeRadarrService()),
@@ -245,7 +230,7 @@ void main() {
     // provider watches. So on every tick the whole list was replaced by
     // shimmer, the service strip's counts fell back to a dash, and the
     // hairline "refreshing" bar the screen carries could never appear.
-    final scope = await settingsScope(configured: activityServiceKeys);
+
     // The second fetch is held open on purpose: an in-flight reload is the
     // whole state under test, and a fake that answers instantly never renders
     // one.
@@ -264,10 +249,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          sharedPreferencesProvider.overrideWith((ref) => scope.prefs),
-          secureSettingsStoreProvider.overrideWith((ref) => scope.secureStore),
-          initialSettingsProvider.overrideWith((ref) => scope.settings),
-          initialOnboardingCompletedProvider.overrideWith((ref) => true),
+          ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
           seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
           radarrServiceProvider.overrideWith((ref) => radarr),
@@ -319,16 +301,12 @@ void main() {
 
   testWidgets('paged history shows a show-more footer and loads the next '
       'page on tap', (tester) async {
-    final scope = await settingsScope(configured: activityServiceKeys);
     final radarr = _PagedScreenHistoryRadarrService(total: 60);
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          sharedPreferencesProvider.overrideWith((ref) => scope.prefs),
-          secureSettingsStoreProvider.overrideWith((ref) => scope.secureStore),
-          initialSettingsProvider.overrideWith((ref) => scope.settings),
-          initialOnboardingCompletedProvider.overrideWith((ref) => true),
+          ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
           seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
           radarrServiceProvider.overrideWith((ref) => radarr),
@@ -371,7 +349,6 @@ void main() {
     // left `Navigator.canPop()` false and the app bar with no back entry to imply
     // a leading button from. Tapping a request stranded the user on the requests
     // list with no nav bar and no back: a dead end.
-    final scope = await settingsScope(configured: activityServiceKeys);
 
     final router = GoRouter(
       initialLocation: '/activity',
@@ -396,10 +373,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          sharedPreferencesProvider.overrideWith((ref) => scope.prefs),
-          secureSettingsStoreProvider.overrideWith((ref) => scope.secureStore),
-          initialSettingsProvider.overrideWith((ref) => scope.settings),
-          initialOnboardingCompletedProvider.overrideWith((ref) => true),
+          ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith(
             (ref) async => const [
               SeerrRequest(

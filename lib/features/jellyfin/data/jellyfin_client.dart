@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_item_mapper.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
@@ -633,14 +634,8 @@ class JellyfinClient implements StreamServerClient {
       // Absent on the unwrapped shape and on some builds of `/Shows/NextUp`,
       // which is why it is nullable rather than defaulted — see
       // [_JellyfinItemsPage.toLibraryPage].
-      total: data is Map ? _asInt(data['TotalRecordCount']) : null,
+      total: data is Map ? intOrNull(data['TotalRecordCount']) : null,
     );
-  }
-
-  static int? _asInt(Object? value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return int.tryParse(value?.toString() ?? '');
   }
 
   Future<Map<String, dynamic>?> _fetchRawItem(

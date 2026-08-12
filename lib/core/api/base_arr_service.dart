@@ -40,6 +40,33 @@ class ArrServiceConfig {
   );
 }
 
+/// Row count above which list mapping moves off the main isolate.
+///
+/// Same number and the same reasoning as the qBittorrent torrent parse and the
+/// Jellyfin item mapper: below it the isolate spawn costs more than the mapping
+/// does. It matters most on `lookupItems`, which runs on the debounced global
+/// search path and typically answers with under twenty rows.
+const int _arrIsolateMapThreshold = 200;
+
+/// Maps a decoded list, moving to an isolate once the page is big enough to be
+/// worth the port.
+///
+/// Top-level rather than a mixin method on purpose: the closure handed to
+/// `Isolate.run` must capture only sendable values, and one written inside an
+/// instance method can drag `this` — which holds an [ApiClient] — across the
+/// boundary.
+Future<List<T>> _mapArrItems<T>(
+  List<dynamic> data,
+  T Function(Map<String, dynamic>) fromJson,
+) async {
+  if (data.length <= _arrIsolateMapThreshold) {
+    return data.map((item) => fromJson(item as Map<String, dynamic>)).toList();
+  }
+  return Isolate.run(
+    () => data.map((item) => fromJson(item as Map<String, dynamic>)).toList(),
+  );
+}
+
 /// Mixin providing shared activity endpoints and common service helpers for
 /// *arr services (Radarr, Sonarr, Lidarr).
 mixin ArrActivityMixin {
@@ -185,7 +212,8 @@ mixin ArrActivityMixin {
     }
   }
 
-  /// Fetches all items from a list endpoint and maps them in an isolate.
+  /// Fetches all items from a list endpoint and maps them, in an isolate once
+  /// the response is large enough to be worth one.
   Future<List<T>> fetchAllItems<T>(
     String endpoint,
     T Function(Map<String, dynamic>) fromJson,
@@ -193,16 +221,52 @@ mixin ArrActivityMixin {
     try {
       final response = await client.get('/api/${config.apiVersion}/$endpoint');
       final data = response.data as List<dynamic>;
-      return await Isolate.run(
-        () =>
-            data.map((item) => fromJson(item as Map<String, dynamic>)).toList(),
-      );
+      return await _mapArrItems(data, fromJson);
     } catch (_) {
       return [];
     }
   }
 
-  /// Searches by term using a lookup endpoint and maps results in an isolate.
+  /// Fetches a single item by id, or null if it cannot be read.
+  ///
+  /// Deliberately not routed through `Isolate.run`: one object costs less to
+  /// map here than to ship across a port.
+  Future<T?> fetchItem<T>(
+    String endpoint,
+    int id,
+    T Function(Map<String, dynamic>) fromJson,
+  ) async {
+    try {
+      final response = await client.get(
+        '/api/${config.apiVersion}/$endpoint/$id',
+      );
+      return fromJson(response.data as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Fetches a filtered list endpoint and maps it, letting failures propagate.
+  ///
+  /// Unlike [fetchAllItems] this does **not** degrade to `[]`: the episode,
+  /// album and track lists behind it belong to detail screens that show the
+  /// failure rather than an empty section.
+  Future<List<T>> fetchListItems<T>(
+    String endpoint,
+    Map<String, dynamic> queryParameters,
+    T Function(Map<String, dynamic>) fromJson,
+  ) async {
+    final response = await client.get(
+      '/api/${config.apiVersion}/$endpoint',
+      queryParameters: queryParameters,
+    );
+    final data = response.data as List<dynamic>;
+    return data
+        .map((item) => fromJson(item as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  /// Searches by term using a lookup endpoint and maps the results.
   ///
   /// [cancelToken] aborts the request once the search that asked for it has
   /// been superseded: global search re-runs every service leg on each debounced
@@ -227,10 +291,7 @@ mixin ArrActivityMixin {
         cancelToken: cancelToken,
       );
       final data = response.data as List<dynamic>;
-      return await Isolate.run(
-        () =>
-            data.map((item) => fromJson(item as Map<String, dynamic>)).toList(),
-      );
+      return await _mapArrItems(data, fromJson);
     } catch (_) {
       return [];
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
@@ -53,7 +54,7 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
           if (indexer == null) {
             return const Center(
               child: Padding(
-                padding: EdgeInsets.all(24),
+                padding: EdgeInsets.all(AppSpacing.xl),
                 child: Text('Indexer not found.'),
               ),
             );
@@ -64,21 +65,21 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
               ref.invalidate(prowlarrIndexerStatsProvider);
               ref.invalidate(prowlarrIndexerStatusProvider);
               ref.invalidate(prowlarrIndexerHistoryProvider(indexerId));
-              await Future<void>.delayed(const Duration(milliseconds: 300));
+              await Future<void>.delayed(AppAnimation.durationMd);
             },
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               children: [
                 _StatusBanner(indexerId: indexerId),
                 _ActionRow(indexer: indexer),
                 _InfoCard(indexer: indexer),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 _StatsSection(indexerId: indexerId),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 _SectionLabel(text: 'Recent Activity'),
                 _IndexerHistory(indexerId: indexerId),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
               ],
             ),
           );
@@ -86,12 +87,12 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(AppSpacing.xl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text('Failed to load indexer'),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 FilledButton(
                   onPressed: () =>
                       ref.invalidate(prowlarrIndexerByIdProvider(indexerId)),
@@ -190,9 +191,14 @@ class _StatusBanner extends ConsumerWidget {
         if (status == null) return const SizedBox.shrink();
         final until = status.disabledTill;
         return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.sm,
+          ),
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               color: AppColors.error.withValues(alpha: 0.1),
               borderRadius: AppRadius.borderRadiusMd,
@@ -260,7 +266,7 @@ class _InfoCard extends ConsumerWidget {
     ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -282,7 +288,7 @@ class _InfoCard extends ConsumerWidget {
             ],
             for (final row in rows)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -320,12 +326,15 @@ class _StatsSection extends ConsumerWidget {
       data: (stat) {
         if (stat == null) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.xs,
+            ),
             child: Text('No usage statistics yet.'),
           );
         }
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Row(
             children: [
               _StatTile(
@@ -333,20 +342,20 @@ class _StatsSection extends ConsumerWidget {
                 value: '${stat.numberOfQueries}',
                 icon: Icons.search_rounded,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               _StatTile(
                 label: 'Grabs',
                 value: '${stat.numberOfGrabs}',
                 icon: Icons.download_rounded,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               _StatTile(
                 label: 'Fails',
                 value: '${stat.numberOfFailures}',
                 icon: Icons.error_outline_rounded,
                 accent: stat.numberOfFailures > 0 ? AppColors.warning : null,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               _StatTile(
                 label: 'Resp',
                 value: '${stat.averageResponseTime}ms',
@@ -380,7 +389,10 @@ class _StatTile extends StatelessWidget {
     final color = accent ?? AppColors.prowlarr;
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.md,
+          horizontal: AppSpacing.sm,
+        ),
         decoration: BoxDecoration(
           color: colorScheme.surface,
           borderRadius: AppRadius.borderRadiusMd,
@@ -422,7 +434,12 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.xs,
+      ),
       child: Text(
         text,
         style: Theme.of(context).textTheme.titleSmall!.weight(FontWeight.w800),
@@ -443,7 +460,10 @@ class _IndexerHistory extends ConsumerWidget {
       data: (items) {
         if (items.isEmpty) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
             child: Text('No recent activity for this indexer.'),
           );
         }
@@ -455,11 +475,14 @@ class _IndexerHistory extends ConsumerWidget {
         );
       },
       loading: () => const Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(AppSpacing.lg),
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.sm,
+        ),
         child: Row(
           children: [
             const Expanded(child: Text('Failed to load activity')),
@@ -487,7 +510,10 @@ class _HistoryRow extends StatelessWidget {
     final title = prowlarrHistoryTitle(item);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Container(
         padding: const EdgeInsets.all(11),
         decoration: BoxDecoration(
@@ -521,7 +547,7 @@ class _HistoryRow extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(

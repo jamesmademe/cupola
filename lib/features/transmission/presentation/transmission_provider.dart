@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 
@@ -16,19 +17,27 @@ import 'package:cupola/features/transmission/domain/models/transmission_models.d
 /// hundred allowed login failures and locking the user out until they restart
 /// it. A fresh client per request would throw both away every tick.
 final transmissionClientProvider = Provider<TransmissionClient>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  if (settings.transmissionUrl.isEmpty) {
+  // Selected rather than watching the whole model: this provider closes a live
+  // Dio on dispose, so an unrelated settings write must not rebuild it.
+  final transport = ref.watch(
+    currentSettingsProvider.select(
+      (s) => (
+        configured: s.isServiceConfigured(ServiceKey.transmission),
+        url: s.transmissionUrl,
+        username: s.transmissionUsername,
+        password: s.transmissionPassword,
+        pin: s.pinForUrl(s.transmissionUrl),
+      ),
+    ),
+  );
+  if (!transport.configured) {
     throw Exception('Transmission not configured');
   }
   final client = TransmissionClient(
-    url: settings.transmissionUrl,
-    username: settings.transmissionUsername.isEmpty
-        ? null
-        : settings.transmissionUsername,
-    password: settings.transmissionPassword.isEmpty
-        ? null
-        : settings.transmissionPassword,
-    certFingerprint: settings.pinForUrl(settings.transmissionUrl),
+    url: transport.url,
+    username: transport.username.isEmpty ? null : transport.username,
+    password: transport.password.isEmpty ? null : transport.password,
+    certFingerprint: transport.pin,
   );
   ref.onDispose(() => client.close());
   return client;

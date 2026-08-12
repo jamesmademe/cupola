@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/reel_motion.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
@@ -12,12 +11,7 @@ import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/reel_command_button.dart';
 import 'package:cupola/core/widgets/reel_line.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
-import 'package:cupola/core/widgets/status_badge.dart';
-import 'package:cupola/features/settings/data/service_connection_provider.dart';
-import 'package:cupola/features/settings/data/service_verification.dart';
-import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
 
 /// Screen padding for every beat. Wider than the app's 16dp because a beat is a
 /// single centred column with nothing beside it.
@@ -31,6 +25,124 @@ const onboardingPadding = EdgeInsets.fromLTRB(
 /// Widest the column is allowed to get. Past this a field's label and its
 /// control drift too far apart to read as a pair.
 const onboardingMaxWidth = 560.0;
+
+/// Whether the keyboard is currently taking screen height, published for the
+/// whole flow.
+///
+/// It has to be *published* rather than read where it is needed. A `Scaffold`
+/// with `resizeToAvoidBottomInset` — the default — hands its body a
+/// `MediaQuery` with the bottom inset already removed (`scaffold.dart`:
+/// `removeViewInsets`), reasoning that it has consumed the keyboard by
+/// shrinking the body. So every widget inside the body is told the keyboard is
+/// down while it is up. The screen reads the inset outside the `Scaffold` and
+/// puts the answer here, where the ring and the beats can both depend on it.
+class OnboardingKeyboardScope extends InheritedWidget {
+  const OnboardingKeyboardScope({
+    super.key,
+    required this.up,
+    required super.child,
+  });
+
+  final bool up;
+
+  static bool of(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<OnboardingKeyboardScope>()
+          ?.up ??
+      false;
+
+  @override
+  bool updateShouldNotify(OnboardingKeyboardScope oldWidget) =>
+      oldWidget.up != up;
+}
+
+/// The instrument's slot, which gives its whole height back when the keyboard
+/// takes the screen.
+///
+/// The ring is the flow's landmark and it earns its size — but only while there
+/// is a screen to put it on. It sat above an `Expanded`, so it did not shrink to
+/// make room: with the keyboard up it squeezed the form into a ~60pt slot,
+/// clipping the address field mid-glyph and hiding the validation message that
+/// explains why the step will not advance.
+///
+/// The screen now sizes it from the height actually left over, so it shrinks
+/// with the space instead of vanishing at the first sign of a keyboard, and only
+/// collapses when what remains is under `serviceRingDiameter`'s own 96pt floor —
+/// where a ring is a smudge rather than an instrument.
+///
+/// Nothing is lost when it does go. [OnboardingWalkSubject] still names the
+/// service and the step, which is the orientation the ring was carrying.
+///
+/// [collapsed] is decided by the screen, which is the only place that knows both
+/// the height available and what the beat below needs — see
+/// `_OnboardingScreenState._ringDiameter`.
+class OnboardingInstrument extends StatelessWidget {
+  const OnboardingInstrument({
+    super.key,
+    required this.collapsed,
+    required this.child,
+  });
+
+  /// Whether there is no longer enough height to show a legible ring.
+  final bool collapsed;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: collapsed ? 0 : 1),
+      duration: AppAnimation.durationMd,
+      curve: AppAnimation.standardCurve,
+      // Gone means gone: at zero the slot contributes no height, no semantics
+      // and no paint, so the form's Expanded gets the full remainder.
+      builder: (context, t, ring) => t == 0
+          ? const SizedBox.shrink()
+          : ClipRect(
+              child: Align(
+                alignment: Alignment.topCenter,
+                heightFactor: t,
+                child: Opacity(
+                  // Fades out ahead of the collapse so the ring reads as
+                  // withdrawing rather than as being cropped by the fold.
+                  opacity: Curves.easeOut.transform(t),
+                  child: Transform.scale(
+                    // Contracts toward its own centre while the slot closes;
+                    // scale alone would leave the gap behind, heightFactor alone
+                    // would guillotine it.
+                    scale: 0.72 + 0.28 * t,
+                    child: ring,
+                  ),
+                ),
+              ),
+            ),
+      child: child,
+    );
+  }
+}
+
+/// The control the keyboard itself does not offer here: a way to put it away.
+///
+/// iOS gives a URL keyboard no return key that dismisses — the address field
+/// asks for `next` because there is a credential field after it, and `done`
+/// only appears on the last field of the form. So on the step where the user is
+/// most likely to want the screen back, there was no key to press.
+///
+/// It shares the back row rather than taking a row of its own: a third stacked
+/// action cost ~50pt of the height the form was already short of, and the two
+/// belong together anyway — both are ways out of the field you are in.
+class OnboardingKeyboardDismiss extends StatelessWidget {
+  const OnboardingKeyboardDismiss({super.key});
+
+  @override
+  Widget build(BuildContext context) => TextButton.icon(
+    // Names the action rather than saying "Done", which on a form step reads as
+    // finishing the step rather than closing the keyboard.
+    onPressed: () => FocusScope.of(context).unfocus(),
+    icon: const Icon(Icons.keyboard_hide_rounded, size: 18),
+    label: const Text('Hide keyboard'),
+  );
+}
 
 /// A beat whose content is centred while it fits and scrolls once it does not.
 ///
@@ -62,13 +174,22 @@ class OnboardingBeat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: onboardingPadding,
+    // The generous top and bottom gutters are for a beat sitting against the
+    // screen edge. With the keyboard up there is no edge below — the key rows
+    // are the edge — and that spare 44pt is exactly what the pinned actions
+    // need in order not to overflow once the dismiss bar takes its place.
+    padding: OnboardingKeyboardScope.of(context)
+        ? onboardingPadding.copyWith(top: AppSpacing.md, bottom: AppSpacing.sm)
+        : onboardingPadding,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) => SingleChildScrollView(
+              // Dragging the form puts the keyboard away, the platform gesture
+              // for exactly that.
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Column(
@@ -377,530 +498,6 @@ class _PickChip extends StatelessWidget {
   }
 }
 
-// ── Beat 3: the walk ────────────────────────────────────────────────────────
-
-/// Which service this step is about, and how far in — hoisted out of the pager
-/// so it can *roll* from one service to the next.
-///
-/// It sits beside the ring for the same reason the ring sits outside the
-/// `PageView`: a `PageView` builds one child per page, so the walk's nine steps
-/// are nine separate elements and nothing in one can animate into its
-/// counterpart in the next. Held here it is a single widget across the whole
-/// walk, and advancing rolls `Where does Radarr live?` into `Where does Sonarr
-/// live?` — one word moving inside a sentence that holds still, on the same beat
-/// as the ring rotating that service to noon. Two instruments, one clock,
-/// answering the same question.
-///
-/// The service's accent travels with it: the eyebrow's ink is resolved per
-/// service through `onTint`, so the line changes colour as it changes subject and
-/// the room's own accent is what the change hands off to.
-class OnboardingWalkSubject extends StatelessWidget {
-  const OnboardingWalkSubject({
-    super.key,
-    required this.service,
-    required this.position,
-    required this.total,
-  });
-
-  final ServiceKey service;
-
-  /// 1-based position in the walk, and how many services are in it.
-  final int position;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // The flow's spoken landmark: which service, and how far in.
-          ReelLine(
-            '${service.title} · $position of $total'.toUpperCase(),
-            style: AppTheme.eyebrow(
-              ServiceTheme.onTint(
-                service.accent,
-                surface: scheme.surface,
-                tintAlpha: 0,
-              ),
-            ),
-            options: ReelMotion.word,
-            // Uppercase belongs in the eye, not the ear — and the spoken form
-            // also spells out the separator the eye reads as a dot.
-            semanticsLabel: '${service.title}, step $position of $total',
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          ReelLine(
-            'Where does ${service.title} live?',
-            style: theme.textTheme.headlineSmall!
-                .weight(FontWeight.w700)
-                .copyWith(color: scheme.onSurface),
-            options: ReelMotion.word,
-            // Wraps rather than rolls once the sentence stops fitting one line,
-            // which for the longest service name happens well inside the
-            // reading sizes this app supports.
-            fallbackMaxLines: null,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// One service, one screen: where it lives, how to authenticate, and whether it
-/// answered.
-///
-/// The step's subject line lives in [OnboardingWalkSubject], above the pager.
-class OnboardingWalk extends StatelessWidget {
-  const OnboardingWalk({
-    super.key,
-    required this.service,
-    required this.urlController,
-    required this.apiKeyController,
-    required this.usernameController,
-    required this.passwordController,
-    required this.status,
-    required this.reason,
-    required this.failureDetail,
-    required this.verifying,
-    required this.certificateProbe,
-    required this.trustedFingerprint,
-    this.affectedServices = const [],
-    required this.next,
-    required this.onTest,
-    required this.onTrustCertificate,
-    required this.onSuggestPort,
-    required this.onSkip,
-    required this.onAdvance,
-    required this.onBack,
-  });
-
-  final ServiceKey service;
-
-  final TextEditingController urlController;
-  final TextEditingController apiKeyController;
-  final TextEditingController usernameController;
-  final TextEditingController passwordController;
-  final ServiceConnectionStatus? status;
-  final ServiceFailureReason? reason;
-
-  /// The verbatim sentence the failure carried, when it carried one — see
-  /// `ServiceDiagnosis.detail`. Null for almost every failure, where the
-  /// reason-derived message is the better one.
-  final String? failureDetail;
-  final bool verifying;
-
-  /// A certificate probe the last test ran into, waiting to be trusted.
-  final UntrustedCertificateProbe? certificateProbe;
-  final String? trustedFingerprint;
-
-  /// Other services in this walk whose typed address shares this one's TLS
-  /// origin — trusting or forgetting the certificate here covers them too.
-  final List<ServiceKey> affectedServices;
-
-  /// The next service in the walk, so the step can say how far there is to go.
-  final ServiceKey? next;
-
-  final Future<void> Function() onTest;
-  final VoidCallback onTrustCertificate;
-  final VoidCallback onSuggestPort;
-  final VoidCallback onSkip;
-  final VoidCallback onAdvance;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return OnboardingBeat(
-      children: _form(context),
-      actions: Column(
-        children: [
-          OnboardingFooter(
-            secondary: OutlinedButton(
-              onPressed: onSkip,
-              child: Text('Skip ${service.title}'),
-            ),
-            primary: _TestOrAdvance(
-              status: status,
-              verifying: verifying,
-              isLast: next == null,
-              onTest: onTest,
-              onAdvance: onAdvance,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextButton(onPressed: onBack, child: const Text('Back')),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _form(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return [
-      OnboardingField(
-        label: 'Address',
-        controller: urlController,
-        isUrl: true,
-        help:
-            "${service.title}'s default port is ${service.defaultPort}. "
-            'Behind a reverse proxy, use the address you reach it on.',
-        trailing: _PortChip(port: service.defaultPort, onTap: onSuggestPort),
-      ),
-      if (service.usesApiKey) ...[
-        const SizedBox(height: AppSpacing.lg),
-        OnboardingField(
-          label: service.credentialLabel,
-          controller: apiKeyController,
-          isSecret: true,
-          hint: 'Paste the ${service.credentialLabel.toLowerCase()}',
-          help: service.credentialPath == null
-              ? null
-              : '${service.title} → ${service.credentialPath}',
-          warningFor: service == ServiceKey.plex ? _plexTokenWarning : null,
-        ),
-      ] else ...[
-        const SizedBox(height: AppSpacing.lg),
-        OnboardingField(
-          label: service.usernameLabel,
-          controller: usernameController,
-          hint: service == ServiceKey.nginxProxyManager
-              ? 'The email you sign in with'
-              : 'Optional',
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        OnboardingField(
-          label: 'Password',
-          controller: passwordController,
-          isSecret: true,
-          hint: 'Optional',
-          help:
-              'Leave both empty if your ${service.title} instance does not '
-              'require a login.',
-        ),
-      ],
-      if (_serviceNote(service) case final note?) ...[
-        const SizedBox(height: AppSpacing.lg),
-        Text(
-          note,
-          style: theme.textTheme.bodySmall!.copyWith(
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-      if (certificateProbe != null) ...[
-        const SizedBox(height: AppSpacing.xl),
-        _CertificateCard(
-          service: service,
-          origin:
-              UrlUtils.certOrigin(urlController.text) ??
-              urlController.text.trim(),
-          probe: certificateProbe!,
-          previousFingerprint: trustedFingerprint,
-          sharedWith: affectedServices.where((s) => s != service).toList(),
-          onTrust: onTrustCertificate,
-        ),
-      ],
-      if (status != null && !verifying) ...[
-        const SizedBox(height: AppSpacing.xl),
-        _Outcome(
-          service: service,
-          status: status!,
-          reason: reason,
-          failureDetail: failureDetail,
-        ),
-      ],
-      if (trustedFingerprint != null && certificateProbe == null) ...[
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          affectedServices.length > 1
-              ? "You trusted this server's own certificate — it also covers "
-                    '${affectedServices.where((s) => s != service).map((s) => s.title).join(', ')}.'
-              : "You trusted this server's own certificate.",
-          style: theme.textTheme.bodySmall!.copyWith(
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-      if (next case final upcoming?) ...[
-        const SizedBox(height: AppSpacing.xl),
-        Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: upcoming.accent,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              'Next: ${upcoming.title}',
-              style: theme.textTheme.bodySmall!.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ],
-    ];
-  }
-}
-
-/// One button that changes its job once the service has answered: there is no
-/// reason to make someone press Test and then press Next.
-///
-/// It is a **single** [ReelCommandButton] across that change rather than two
-/// widgets swapped by a conditional, and that is the whole point: the same
-/// control rolls `Test connection` → `Testing…` → `Next service`, so the reward
-/// for a service answering is the button itself turning into the way forward.
-/// Swapping widgets would reset the label controller and replace the text
-/// instead of rolling it.
-///
-/// The spinner this replaced is not missed. A test behind a reverse proxy can
-/// take fifteen seconds, and for all fifteen the old button said nothing at all
-/// — the label had been swapped out for an 18pt ring. Here the label stays and
-/// being in motion is what says busy.
-class _TestOrAdvance extends StatelessWidget {
-  const _TestOrAdvance({
-    required this.status,
-    required this.verifying,
-    required this.isLast,
-    required this.onTest,
-    required this.onAdvance,
-  });
-
-  final ServiceConnectionStatus? status;
-  final bool verifying;
-  final bool isLast;
-  final Future<void> Function() onTest;
-  final VoidCallback onAdvance;
-
-  @override
-  Widget build(BuildContext context) {
-    final connected = status == ServiceConnectionStatus.connected;
-    final advanceLabel = isLast ? 'Finish' : 'Next service';
-
-    return ReelCommandButton(
-      label: connected ? advanceLabel : 'Test connection',
-      // Absent on the advance arm: that press navigates, it does not wait, and a
-      // waiting label would flash for one frame on the way out.
-      busyLabel: connected ? null : 'Testing',
-      // Not "Failed". The outcome card below already names the cause in a
-      // sentence the user can act on; the button's job is to say what pressing
-      // it again will do.
-      failureLabel: connected ? null : 'Test again',
-      // Both arms measured now, so the one transition this reservation exists
-      // for — answered — moves a word and not the button's width.
-      slotLabels: ['Test connection', 'Test again', advanceLabel],
-      onPressed: verifying
-          ? null
-          : connected
-          ? () async => onAdvance()
-          : onTest,
-    );
-  }
-}
-
-/// The result of a test as a sentence. A badge saying UNREACHABLE names nothing
-/// the user can act on; the resolved failure message names the cause.
-class _Outcome extends StatelessWidget {
-  const _Outcome({
-    required this.service,
-    required this.status,
-    required this.reason,
-    required this.failureDetail,
-  });
-
-  final ServiceKey service;
-  final ServiceConnectionStatus status;
-  final ServiceFailureReason? reason;
-  final String? failureDetail;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final presentation = describeConnection(
-      service,
-      status: status,
-      reason: reason,
-    );
-    final tone = statusToneColor(scheme, presentation.tone);
-    final sentence = switch (status) {
-      ServiceConnectionStatus.connected => '${service.title} answered.',
-      ServiceConnectionStatus.notConfigured =>
-        service.usesApiKey
-            ? 'Enter the address and the ${service.credentialLabel.toLowerCase()}, then test.'
-            : 'Enter the address, then test.',
-      // The detail when the failure carried one, the reason-derived sentence
-      // otherwise — the same rule `ServiceDiagnosis.messageFor` applies on the
-      // settings screen, so the two surfaces cannot describe one test
-      // differently.
-      _ => failureDetail ?? connectionFailureMessage(service, reason),
-    };
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: AppRadius.borderRadiusMd,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 5),
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: tone),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(
-              sentence,
-              style: theme.textTheme.bodyMedium!.copyWith(
-                color: scheme.onSurface,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The self-signed certificate moment, resolved inside the step.
-///
-/// A modal appearing on top of a failure the user has not read yet is an
-/// ambush; on a home lab a server presenting its own certificate is normal,
-/// so it gets a state rather than an interruption. [CertTrustContent] is the
-/// same content [showCertTrustDialog] wraps in a modal for settings — the
-/// evidence and words match wherever the user meets a certificate; only the
-/// chrome around it (a card here, a dialog there) differs.
-class _CertificateCard extends StatelessWidget {
-  const _CertificateCard({
-    required this.service,
-    required this.origin,
-    required this.probe,
-    required this.onTrust,
-    this.previousFingerprint,
-    this.sharedWith = const [],
-  });
-
-  final ServiceKey service;
-
-  /// The address this certificate was presented for, already resolved to
-  /// [UrlUtils.certOrigin]'s canonical `https://host:port` form by the
-  /// caller — the same string [SettingsModel.trustedCertificates] keys on.
-  final String origin;
-  final UntrustedCertificateProbe probe;
-  final VoidCallback onTrust;
-  final String? previousFingerprint;
-  final List<ServiceKey> sharedWith;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final rotated = probe.rotated;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: rotated
-            ? scheme.errorContainer.withValues(alpha: 0.35)
-            : scheme.surfaceContainer,
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(
-          color: rotated ? scheme.error : scheme.outlineVariant,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CertTrustContent(
-            origin: origin,
-            probe: probe,
-            previousFingerprint: previousFingerprint,
-            sharedWith: sharedWith,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          // Rotated gets no visually-affirmative default: an outlined button
-          // is what the first-trust case already used, so the escalation is
-          // carried by the card's own tint and border above, not by demoting
-          // this control further.
-          OutlinedButton(
-            onPressed: onTrust,
-            style: rotated
-                ? OutlinedButton.styleFrom(foregroundColor: scheme.error)
-                : null,
-            child: Text(
-              rotated
-                  ? 'Trust this certificate anyway'
-                  : 'Trust and test again',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PortChip extends StatelessWidget {
-  const _PortChip({required this.port, required this.onTap});
-
-  final int port;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return Semantics(
-      button: true,
-      label: 'Use port $port',
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        borderRadius: AppRadius.borderRadiusSm,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 32),
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: scheme.primary.withValues(alpha: 0.14),
-            borderRadius: AppRadius.borderRadiusSm,
-          ),
-          child: Text(
-            ':$port',
-            style: theme.textTheme.labelSmall!
-                .weight(FontWeight.w600)
-                .tabular
-                .copyWith(
-                  color: ServiceTheme.onTint(
-                    scheme.primary,
-                    surface: scheme.surface,
-                    tintAlpha: 0.14,
-                  ),
-                ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ── Beat 4: the close ───────────────────────────────────────────────────────
 
 /// What the walk actually achieved, in words, plus a way to fix the one thing
@@ -1020,38 +617,6 @@ class _FinishButton extends StatelessWidget {
 }
 
 // ── Fields ──────────────────────────────────────────────────────────────────
-
-/// Flags a pasted Plex JSON Web Token while it is still being typed.
-///
-/// A warning rather than an error: the token is well-formed and will work — for
-/// seven days. After that it can only be renewed through plex.tv, which Cupola
-/// never calls, so the user would be left with a 401 and no way to read it.
-String? _plexTokenWarning(String value) => value.trim().startsWith('eyJ')
-    ? 'That token expires in 7 days and cannot be renewed here. Paste a '
-          'long-lived device token instead.'
-    : null;
-
-/// Per-service facts worth saying at the moment they matter, rather than in a
-/// help page nobody opens.
-String? _serviceNote(ServiceKey service) {
-  switch (service) {
-    case ServiceKey.readarr:
-      return 'Readarr development has stopped upstream. Existing instances keep '
-          'working against its last released API, but expect no new '
-          'server-side fixes.';
-    case ServiceKey.unraid:
-      return 'Enable the Unraid API first, under Settings → Management Access → '
-          'Developer Options. The endpoint stays silent until it is on.';
-    case ServiceKey.jellyfin:
-      return 'The key signs in as an administrator but carries no user of its '
-          'own, so pick whose watch state to read in Settings afterwards.';
-    case ServiceKey.plex:
-      return 'It must be a long-lived device token: one beginning "eyJ" expires '
-          'in 7 days and Cupola cannot renew it without contacting plex.tv.';
-    default:
-      return null;
-  }
-}
 
 /// One labelled field, with the live checks that keep a typo from being reported
 /// as a network fault.

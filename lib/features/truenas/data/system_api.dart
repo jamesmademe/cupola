@@ -37,9 +37,6 @@ class TrueNasSystemApi extends TrueNasApiBase {
   Future<void> dismissAlert(String uuid) =>
       client.call('alert.dismiss', [uuid]);
 
-  Future<void> restoreAlert(String uuid) =>
-      client.call('alert.restore', [uuid]);
-
   // ── System configuration ────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getGeneralConfig() async =>
@@ -54,11 +51,8 @@ class TrueNasSystemApi extends TrueNasApiBase {
   Future<void> updateAdvancedConfig(Map<String, dynamic> patch) =>
       client.call('system.advanced.update', [patch]);
 
-  Future<List<Map<String, dynamic>>> getNtpServers() async {
-    final result = await client.call('system.ntpserver.query');
-    if (result is! List) return const [];
-    return result.map(mapOrNull).whereType<Map<String, dynamic>>().toList();
-  }
+  Future<List<Map<String, dynamic>>> getNtpServers() =>
+      queryRawList('system.ntpserver.query');
 
   Future<Map<String, dynamic>> getMailConfig() async =>
       mapOrNull(await client.call('mail.config')) ?? const {};
@@ -76,23 +70,14 @@ class TrueNasSystemApi extends TrueNasApiBase {
         if (config != null) config,
       ]);
 
-  Future<List<Map<String, dynamic>>> getCertificates() async {
-    final result = await client.call('certificate.query');
-    if (result is! List) return const [];
-    return result.map(mapOrNull).whereType<Map<String, dynamic>>().toList();
-  }
-
-  Future<dynamic> deleteCertificate(int id) =>
-      client.callJob('certificate.delete', [id]);
+  Future<List<Map<String, dynamic>>> getCertificates() =>
+      queryRawList('certificate.query');
 
   // ── Updates ──────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> checkUpdateAvailable() async =>
       mapOrNull(await client.call('update.check_available')) ?? const {};
 
-  Future<List<Map<String, dynamic>>> getAlertServices() async {
-    final result = await client.call('alertservice.query');
-    if (result is! List) return const [];
-    return result.map(mapOrNull).whereType<Map<String, dynamic>>().toList();
-  }
+  Future<List<Map<String, dynamic>>> getAlertServices() =>
+      queryRawList('alertservice.query');
 }

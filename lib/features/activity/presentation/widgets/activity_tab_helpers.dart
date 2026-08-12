@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,7 +7,7 @@ import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
-import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/activity/presentation/widgets/segment_selector.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
@@ -17,8 +16,6 @@ import 'package:cupola/features/release_search/domain/release_search_target.dart
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-
-typedef ReleaseFetcher = Future<List<dynamic>> Function(CancelToken token);
 
 int? extractWantedItemId(ServiceType serviceType, Map<String, dynamic> item) {
   switch (serviceType) {

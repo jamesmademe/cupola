@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -52,7 +54,7 @@ class _DockgeDashboard extends ConsumerWidget {
         ref.invalidate(dockgeStackListProvider);
         ref.invalidate(serviceKpiProvider(ServiceKey.dockge));
         ref.invalidate(serviceSummaryProvider(ServiceKey.dockge));
-        await Future<void>.delayed(const Duration(milliseconds: 300));
+        await Future<void>.delayed(AppAnimation.durationMd);
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -65,7 +67,7 @@ class _DockgeDashboard extends ConsumerWidget {
             kpis: ref.watch(serviceKpiProvider(ServiceKey.dockge)),
             accent: AppColors.dockge,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           SectionHeader.action(
             title: 'Stacks',
             trailing: TextButton.icon(
@@ -78,7 +80,7 @@ class _DockgeDashboard extends ConsumerWidget {
           const SizedBox(height: 2),
           stacksAsync.when(
             data: (stacks) => _StackList(stacks: stacks),
-            loading: () => const _ListShimmer(),
+            loading: () => const ListRowsShimmer(),
             error: (error, _) => AppErrorState(
               error: error,
               onRetry: () => ref.invalidate(dockgeStackListProvider),
@@ -99,7 +101,10 @@ class _StackList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (stacks.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.xl,
+        ),
         child: AppEmptyState(
           icon: Icons.layers_clear_rounded,
           title: 'No stacks yet',
@@ -122,7 +127,10 @@ class _StackTile extends ConsumerWidget {
     final statusColor = stack.status.color;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Material(
         color: colorScheme.surface,
         borderRadius: AppRadius.borderRadiusMd,
@@ -130,7 +138,7 @@ class _StackTile extends ConsumerWidget {
           borderRadius: AppRadius.borderRadiusMd,
           onTap: () => context.push(ServiceRoutes.dockgeStack(stack.name)),
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               border: Border.all(color: colorScheme.outlineVariant),
               borderRadius: AppRadius.borderRadiusMd,
@@ -145,7 +153,7 @@ class _StackTile extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,26 +284,6 @@ class _StackQuickActions extends ConsumerWidget {
       success,
       failure,
       invalidate: [dockgeStackListProvider],
-    );
-  }
-}
-
-class _ListShimmer extends StatelessWidget {
-  const _ListShimmer();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: List.generate(
-          4,
-          (_) => const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: ShimmerPlaceholder(height: 60),
-          ),
-        ),
-      ),
     );
   }
 }

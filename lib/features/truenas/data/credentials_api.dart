@@ -11,9 +11,6 @@ class TrueNasCredentialsApi extends TrueNasApiBase {
   Future<void> createUser(Map<String, dynamic> payload) =>
       client.call('user.create', [payload]);
 
-  Future<void> updateUser(int id, Map<String, dynamic> patch) =>
-      client.call('user.update', [id, patch]);
-
   Future<void> deleteUser(int id, {bool deletePrimaryGroup = false}) =>
       client.call('user.delete', [
         id,
@@ -25,9 +22,6 @@ class TrueNasCredentialsApi extends TrueNasApiBase {
 
   Future<void> createGroup(Map<String, dynamic> payload) =>
       client.call('group.create', [payload]);
-
-  Future<void> updateGroup(int id, Map<String, dynamic> patch) =>
-      client.call('group.update', [id, patch]);
 
   Future<void> deleteGroup(int id) => client.call('group.delete', [id]);
 }

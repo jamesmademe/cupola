@@ -18,18 +18,34 @@ class MediaPosterCard extends StatelessWidget {
   final String? imageUrl;
   final Map<String, String>? imageHeaders;
   final IconData fallbackIcon;
-  final bool circular;
   final BorderRadius? borderRadius;
 
+  /// Private because the public name is taken by the [MediaPosterCard.circular]
+  /// constructor — the same shape `MediaChildTile._stacked` uses.
+  final bool _circular;
+
+  /// The rectangular poster: rounded corners on [borderRadius].
   const MediaPosterCard({
     super.key,
     required this.heroTag,
     this.imageUrl,
     this.imageHeaders,
     this.fallbackIcon = Icons.movie_outlined,
-    this.circular = false,
     this.borderRadius,
-  });
+  }) : _circular = false;
+
+  /// The circular artist/person treatment.
+  ///
+  /// Takes no [borderRadius]: a [ClipOval] has no corners to round, so the
+  /// rectangular constructor's parameter would be silently discarded here.
+  const MediaPosterCard.circular({
+    super.key,
+    required this.heroTag,
+    this.imageUrl,
+    this.imageHeaders,
+    this.fallbackIcon = Icons.movie_outlined,
+  }) : borderRadius = null,
+       _circular = true;
 
   /// Whether poster Heroes also fly during the interactive swipe-back
   /// gesture (iOS Photos behaviour). Shared by every Hero source that flies
@@ -69,15 +85,15 @@ class MediaPosterCard extends StatelessWidget {
             errorWidget: (context, url, error) => fallback(),
           )
         : fallback();
-    final clippedImage = circular
+    final clippedImage = _circular
         ? ClipOval(child: image)
         : ClipRRect(borderRadius: effectiveBorderRadius, child: image);
 
     Widget content(List<BoxShadow> shadow) {
       Widget child = DecoratedBox(
         decoration: BoxDecoration(
-          shape: circular ? BoxShape.circle : BoxShape.rectangle,
-          borderRadius: circular ? null : effectiveBorderRadius,
+          shape: _circular ? BoxShape.circle : BoxShape.rectangle,
+          borderRadius: _circular ? null : effectiveBorderRadius,
           boxShadow: shadow,
         ),
         child: clippedImage,

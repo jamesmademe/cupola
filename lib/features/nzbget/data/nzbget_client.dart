@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
-import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
@@ -41,32 +40,17 @@ class NzbgetClient {
     Dio? dio,
     String? certFingerprint,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url) {
-    _dio =
-        dio ??
-        Dio(
-          BaseOptions(
-            baseUrl: baseUrl,
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 15),
-            // Follow redirects by hand so the Basic credential is never
-            // replayed to a host the user did not configure. `dart:io` is not
-            // enough on its own: it copies `Authorization` when the redirect
-            // target is a *parent* of the original host, so
-            // `nzbget.homelab.net` → `homelab.net` hands the password over —
-            // and on a home network that apex is usually a shared reverse proxy
-            // or a wildcard catch-all.
-            followRedirects: false,
-            validateStatus: allowRedirectStatus,
-          ),
-        );
-    if (dio == null) {
-      _dio.interceptors.add(SameOriginRedirectInterceptor(_dio));
-      final adapter = pinnedHttpClientAdapterFor(
-        baseUrl,
-        pinnedFingerprint: certFingerprint,
-      );
-      if (adapter != null) _dio.httpClientAdapter = adapter;
-    }
+    // Redirects are followed by hand so the Basic credential is never replayed
+    // to a host the user did not configure. `dart:io` is not enough on its own:
+    // it copies `Authorization` when the redirect target is a *parent* of the
+    // original host, so `nzbget.homelab.net` → `homelab.net` hands the password
+    // over — and on a home network that apex is usually a shared reverse proxy
+    // or a wildcard catch-all.
+    _dio = guardedDio(
+      baseUrl: baseUrl,
+      injected: dio,
+      certFingerprint: certFingerprint,
+    );
   }
 
   final String baseUrl;

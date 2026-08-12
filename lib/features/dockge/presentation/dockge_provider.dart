@@ -63,15 +63,3 @@ final dockgeServiceStatusProvider = FutureProvider.autoDispose
     .family<List<DockgeServiceStatus>, String>((ref, name) async {
       return ref.watch(dockgeServiceProvider).getServiceStatusList(name);
     });
-
-/// Available Docker networks (used by the compose editor).
-final dockgeNetworkListProvider = FutureProvider.autoDispose<List<String>>((
-  ref,
-) async {
-  return ref.watch(dockgeClientProvider).getDockerNetworkList();
-});
-
-/// Connected server version, or null if unavailable.
-final dockgeVersionProvider = FutureProvider.autoDispose<String?>((ref) async {
-  return ref.watch(dockgeServiceProvider).fetchVersion();
-});

@@ -342,7 +342,11 @@ class _RequestListRow extends ConsumerWidget {
       SnackBarHelper.success(context, 'Deleted the request for $title');
     } catch (error) {
       if (!context.mounted) return;
-      SnackBarHelper.error(context, 'Could not delete the request: $error');
+      SnackBarHelper.error(
+        context,
+        "Couldn't delete the request.",
+        detail: error,
+      );
     }
   }
 

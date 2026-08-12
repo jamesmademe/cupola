@@ -12,22 +12,35 @@ import 'package:cupola/features/qbittorrent/domain/models/torrent_properties.dar
 import 'package:cupola/features/qbittorrent/domain/models/torrent_tracker.dart';
 import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  if (settings.qbittorrentUrl.isEmpty) {
+  // Selected rather than watching the whole model, and here that matters twice
+  // over: the client holds the WebUI SID cookie, so rebuilding it throws away
+  // an authenticated session. Only this service's own address and credentials
+  // should do that.
+  final transport = ref.watch(
+    currentSettingsProvider.select(
+      (s) => (
+        configured: s.isServiceConfigured(ServiceKey.qbittorrent),
+        url: s.qbittorrentUrl,
+        username: s.qbittorrentUsername,
+        password: s.qbittorrentPassword,
+        pin: s.pinForUrl(s.qbittorrentUrl),
+      ),
+    ),
+  );
+  if (!transport.configured) {
     throw Exception('qBittorrent not configured');
   }
   final client = QbittorrentClient(
-    url: settings.qbittorrentUrl,
-    username: settings.qbittorrentUsername.isNotEmpty
-        ? settings.qbittorrentUsername
-        : null,
-    password: settings.qbittorrentPassword.isNotEmpty
-        ? settings.qbittorrentPassword
-        : null,
-    certFingerprint: settings.pinForUrl(settings.qbittorrentUrl),
+    url: transport.url,
+    username: transport.username.isNotEmpty ? transport.username : null,
+    password: transport.password.isNotEmpty ? transport.password : null,
+    certFingerprint: transport.pin,
   );
+  // The outgoing client owns a Dio and a cookie jar; close it so neither leaks.
+  ref.onDispose(() => client.close());
   return QbittorrentService(client);
 });
 
@@ -155,18 +168,6 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
       .trim()
       .toLowerCase();
 
-  final hasSubFilters =
-      (categoryFilter != null && categoryFilter.isNotEmpty) ||
-      (tagFilter != null && tagFilter.isNotEmpty) ||
-      trackerFilter != null;
-
-  // Fast path: when status filter is "All" and no sub-filters or search
-  // query are active, reuse allTorrentsProvider so we don't double-fetch
-  // /torrents/info.
-  if (filter == TorrentFilter.all && !hasSubFilters && searchQuery.isEmpty) {
-    return await ref.watch(allTorrentsProvider.future);
-  }
-
   final apiFilter = switch (filter) {
     TorrentFilter.downloading => 'downloading',
     TorrentFilter.seeding => 'seeding',
@@ -175,11 +176,20 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
     _ => 'all',
   };
 
-  var torrents = await service.getTorrents(
-    filter: apiFilter,
-    sort: sort.apiValue,
-    reverse: reverse,
-  );
+  // Whenever the server-side filter resolves to "all", reuse
+  // allTorrentsProvider — it requests the very same /torrents/info payload
+  // (no `filter` param, which qB's WebUI v2 defaults to `all`) with the same
+  // sort and direction, and it is already alive on this screen. Fetching
+  // separately here would download and parse the identical body twice on
+  // every 3s poll tick. Sub-filters and the search query are applied
+  // client-side below, so they do not need their own request.
+  var torrents = apiFilter == 'all'
+      ? await ref.watch(allTorrentsProvider.future)
+      : await service.getTorrents(
+          filter: apiFilter,
+          sort: sort.apiValue,
+          reverse: reverse,
+        );
 
   if (filter == TorrentFilter.queued) {
     torrents = torrents.where((t) => t.parsedState.isQueued).toList();

@@ -92,17 +92,6 @@ class DiscoverDetailViewModel {
   String get metadataLine =>
       [genres, networks].where((value) => value.isNotEmpty).join(' • ');
 
-  String detailMetadataLine({required bool isMovie}) {
-    return [
-      year,
-      isMovie ? runtimeStr : episodeSummary ?? runtimeStr,
-      genres,
-      if (!isMovie && networks.isNotEmpty) networks,
-    ].whereType<String>().where((value) => value.isNotEmpty).join(' • ');
-  }
-
-  bool get hasCrew => directors.isNotEmpty || writers.isNotEmpty;
-
   bool get hasManageableMedia => mediaInfo?['id'] != null;
 
   String? get servicePath => mediaInfo?['path']?.toString();

@@ -4,6 +4,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/presentation/discover_search_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/presentation/movies_search_provider.dart';
@@ -16,11 +19,16 @@ import 'package:cupola/features/series/presentation/series_search_provider.dart'
 
 import '../../../test_helpers/fake_services.dart';
 
-/// The per-section search surfaces (`/movies`, `/series`, `/music`) each mint
-/// their own [CancelToken], the same way the global fan-out does. Every one of
-/// them re-runs on each keystroke against services that can take seconds to
-/// answer, so the round a keystroke supersedes has to stop rather than run to
-/// completion.
+/// The per-section search surfaces (`/movies`, `/series`, `/music`,
+/// `/discover`) each mint their own [CancelToken], the same way the global
+/// fan-out does. Every one of them re-runs on each keystroke against services
+/// that can take seconds to answer, so the round a keystroke supersedes has to
+/// stop rather than run to completion.
+///
+/// Discover is covered here because it was the one that did not: it hand-rolled
+/// the query/try/catch shape instead of going through
+/// `loadNullableSearchResults`, and passed no token at all, in breach of
+/// CONTEXT.md rule 8.
 void main() {
   group('movies', () {
     test('hands the lookup a cancel token', () async {
@@ -138,6 +146,77 @@ void main() {
       expect(lidarr.tokens.last!.isCancelled, isFalse);
     });
   });
+
+  group('discover', () {
+    test('hands the lookup a cancel token', () async {
+      final seerr = _GateSeerrService();
+      final container = ProviderContainer(
+        overrides: [seerrServiceProvider.overrideWithValue(seerr)],
+      );
+      addTearDown(container.dispose);
+
+      container.read(discoverSearchQueryProvider.notifier).state = 'arrival';
+      await container.read(discoverSearchResultsProvider.future);
+
+      expect(seerr.tokens.single, isNotNull);
+    });
+
+    test('cancels the superseded round when the query moves on', () async {
+      final gate = Completer<void>();
+      addTearDown(() {
+        if (!gate.isCompleted) gate.complete();
+      });
+      final seerr = _GateSeerrService(gate: gate);
+      final container = ProviderContainer(
+        overrides: [seerrServiceProvider.overrideWithValue(seerr)],
+      );
+      addTearDown(container.dispose);
+
+      final sub = container.listen(discoverSearchResultsProvider, (_, _) {});
+      addTearDown(sub.close);
+
+      container.read(discoverSearchQueryProvider.notifier).state = 'arr';
+      await Future<void>.delayed(Duration.zero);
+      container.read(discoverSearchQueryProvider.notifier).state = 'arrival';
+      await Future<void>.delayed(Duration.zero);
+
+      expect(seerr.tokens, hasLength(2));
+      expect(seerr.tokens.first!.isCancelled, isTrue);
+      expect(seerr.tokens.last!.isCancelled, isFalse);
+    });
+
+    test(
+      'an empty query resolves to null without reaching the service',
+      () async {
+        final seerr = _GateSeerrService();
+        final container = ProviderContainer(
+          overrides: [seerrServiceProvider.overrideWithValue(seerr)],
+        );
+        addTearDown(container.dispose);
+
+        expect(
+          await container.read(discoverSearchResultsProvider.future),
+          isNull,
+        );
+        expect(seerr.tokens, isEmpty);
+      },
+    );
+
+    test('a failing lookup degrades to an empty list, not an error', () async {
+      final seerr = _GateSeerrService(fails: true);
+      final container = ProviderContainer(
+        overrides: [seerrServiceProvider.overrideWithValue(seerr)],
+      );
+      addTearDown(container.dispose);
+
+      container.read(discoverSearchQueryProvider.notifier).state = 'arrival';
+
+      expect(
+        await container.read(discoverSearchResultsProvider.future),
+        isEmpty,
+      );
+    });
+  });
 }
 
 /// Records the token of every lookup and, with a [gate], parks the request so
@@ -190,6 +269,26 @@ class _GateLidarrService extends FakeLidarrService {
   }) async {
     tokens.add(cancelToken);
     await gate?.future;
+    return const [];
+  }
+}
+
+class _GateSeerrService extends FakeSeerrService {
+  _GateSeerrService({this.gate, this.fails = false});
+
+  final Completer<void>? gate;
+  final bool fails;
+  final List<CancelToken?> tokens = [];
+
+  @override
+  Future<List<MediaPreview>> search(
+    String query, {
+    int page = 1,
+    CancelToken? cancelToken,
+  }) async {
+    tokens.add(cancelToken);
+    await gate?.future;
+    if (fails) throw Exception('Seerr unreachable');
     return const [];
   }
 }

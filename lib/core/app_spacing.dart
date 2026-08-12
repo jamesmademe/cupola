@@ -26,14 +26,6 @@ class AppSpacing {
   /// 48dp - Maximum spacing for major sections
   static const double xxxl = 48;
 
-  // --- Content Padding ---
-
-  /// Horizontal padding for screen content
-  static const double screenPaddingHorizontal = 16;
-
-  /// Vertical padding for screen content
-  static const double screenPaddingVertical = 16;
-
   // --- Grid Spacing ---
 
   /// Gap between grid items
@@ -41,12 +33,4 @@ class AppSpacing {
 
   /// Gap between carousel items
   static const double carouselGap = 12;
-
-  // --- Card Spacing ---
-
-  /// Internal padding for cards
-  static const double cardPadding = 16;
-
-  /// Gap between card elements
-  static const double cardContentGap = 8;
 }

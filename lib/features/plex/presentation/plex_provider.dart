@@ -79,58 +79,6 @@ final plexLibrariesProvider = FutureProvider<List<StreamLibrary>>((ref) async {
   return ref.watch(plexClientProvider).getLibraries();
 });
 
-/// Identifies one page of one library under one lens.
-///
-/// A record rather than a hand-written key class: records have structural
-/// equality, which is what a `family` needs to reuse a cached page instead of
-/// refetching it, and this is the same shape `discoverByGenrePageProvider`
-/// already uses.
-typedef PlexLibraryPageKey = ({
-  String libraryId,
-  StreamLibraryLens lens,
-  int page,
-});
-
-/// One zero-indexed page of a library.
-///
-/// Returns the whole [PlexPage] rather than a bare list because Plex requires
-/// the caller to read `MediaContainer.offset`/`size`/`totalSize` back — a pager
-/// that counted the rows it received would either stop early on a page the
-/// server trimmed or never stop at all.
-///
-/// No viewer is passed. On Plex the token *is* the user: `/library/*` takes no
-/// impersonation parameter, so every lens answers for the token's owner and a
-/// viewer key would be a parameter with no effect. See `PlexClient.getViewers`.
-///
-/// Null when the request failed, which an empty page is not: see
-/// `StreamLibraryPage`. A caller that only wants rows should say
-/// `?.items ?? const []` and be explicit about flattening the two.
-///
-/// `autoDispose`, like every per-page and per-item family here: a browse the
-/// user has left holds fifty `StreamItem`s per page, and a family entry that is
-/// never disposed keeps every one of them for the life of the app.
-final plexLibraryItemsProvider = FutureProvider.autoDispose
-    .family<PlexPage<StreamItem>?, PlexLibraryPageKey>((ref, key) async {
-      return ref
-          .watch(plexClientProvider)
-          .getLibraryItemsPage(
-            libraryId: key.libraryId,
-            lens: key.lens,
-            startIndex: key.page * kPlexLibraryPageSize,
-            limit: kPlexLibraryPageSize,
-          );
-    });
-
-/// How many items a library holds.
-///
-/// Separate from [plexLibrariesProvider] because Plex puts no count on a
-/// section: the number costs one extra request per library, so it is fetched
-/// where it is shown rather than N times on every dashboard load.
-final plexLibraryItemCountProvider = FutureProvider.autoDispose
-    .family<int?, String>((ref, libraryId) async {
-      return ref.watch(plexClientProvider).getLibraryItemCount(libraryId);
-    });
-
 /// One item at any depth — film, show, season, episode, album or track.
 final plexItemProvider = FutureProvider.autoDispose.family<StreamItem?, String>(
   (ref, ratingKey) async {
@@ -143,16 +91,3 @@ final plexChildrenProvider = FutureProvider.autoDispose
     .family<List<StreamItem>, String>((ref, ratingKey) async {
       return ref.watch(plexClientProvider).getChildren(ratingKey);
     });
-
-/// In-progress playback across every library.
-final plexContinueWatchingProvider = FutureProvider<List<StreamItem>>((
-  ref,
-) async {
-  return ref.watch(plexClientProvider).getContinueWatching();
-});
-
-/// The household members whose watch state can be read — always exactly one on
-/// Plex. See `PlexClient.getViewers` for why that is structural.
-final plexViewersProvider = FutureProvider<List<StreamViewer>>((ref) async {
-  return ref.watch(plexClientProvider).getViewers();
-});

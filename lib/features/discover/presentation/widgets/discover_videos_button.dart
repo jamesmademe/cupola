@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/header_action_row.dart';
@@ -95,16 +96,13 @@ Future<void> _openVideo({
   required BuildContext sheetContext,
   required RelatedVideo video,
 }) async {
-  final messenger = ScaffoldMessenger.of(pageContext);
   // `Uri.tryParse` alone is a syntax check: it accepts `javascript:`, `data:`,
   // `intent:` and `file:` just as readily as https, and this URL comes verbatim
   // from the remote Seerr instance. The model already refuses a non-web `url`,
   // and this is the second gate on the one call that leaves the app.
   final uri = Uri.tryParse(video.url);
   if (uri == null || !UrlUtils.isLaunchableWebUri(uri)) {
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Unable to open this video.')),
-    );
+    SnackBarHelper.error(pageContext, 'Unable to open this video.');
     return;
   }
 
@@ -118,9 +116,7 @@ Future<void> _openVideo({
     launched = false;
   }
   if (!launched && pageContext.mounted) {
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Unable to open this video.')),
-    );
+    SnackBarHelper.error(pageContext, 'Unable to open this video.');
   }
 }
 

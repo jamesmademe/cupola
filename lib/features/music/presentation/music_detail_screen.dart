@@ -1,13 +1,11 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/api/arr_detail_actions_mixin.dart';
 import 'package:cupola/core/api/quality_profile_mixin.dart';
-import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/utils/rating_display.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
@@ -47,19 +45,9 @@ class MusicDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
-    with QualityProfileMixin<MusicDetailScreen> {
-  bool _isAutoSearching = false;
-  bool _isAutoSearchConfirmed = false;
-  Timer? _searchConfirmTimer;
-
-  @override
-  void dispose() {
-    _searchConfirmTimer?.cancel();
-    super.dispose();
-  }
-
-  bool _isDeleting = false;
-  bool _isUpdatingMonitoredState = false;
+    with
+        QualityProfileMixin<MusicDetailScreen>,
+        ArrDetailActionsMixin<MusicDetailScreen> {
   final Set<int> _searchingAlbums = {};
 
   @override
@@ -176,20 +164,18 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     MusicDetailViewModel viewModel,
     MediaStatusInfo status,
   ) {
-    return MediaDetailPosterRow(
+    return MediaDetailPosterRow.circular(
       statusBadge: StatusBadge.animated(info: status),
       title: viewModel.title,
       // The counts are the chip slot's one meaning, so they are stated there and
       // not also in the metadata line, which used to carry the identical pair.
       metadataItems: const [],
       tags: _buildTags(viewModel),
-      circularPoster: true,
-      posterCard: MediaPosterCard(
+      posterCard: MediaPosterCard.circular(
         heroTag: widget.heroTag,
         imageUrl: viewModel.posterUrl,
         imageHeaders: viewModel.posterHeaders,
         fallbackIcon: Icons.album_outlined,
-        circular: true,
       ),
     );
   }
@@ -217,9 +203,8 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
               partialSummary: tracks > 0
                   ? '${viewModel.trackFileCount} of $tracks tracks on disk.'
                   : null,
-              isBusy:
-                  _isAutoSearching || _isUpdatingMonitoredState || _isDeleting,
-              isConfirmed: _isAutoSearchConfirmed,
+              isBusy: isAutoSearching || isUpdatingMonitoredState || isDeleting,
+              isConfirmed: isAutoSearchConfirmed,
               currentProfileName: currentProfileName,
               currentProfileId: currentProfileId,
               qualityProfiles: qualityProfiles,
@@ -366,111 +351,42 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     BuildContext context, {
     required int artistId,
     required bool monitored,
-  }) async {
-    setState(() => _isUpdatingMonitoredState = true);
-    try {
-      final lidarrService = ref.read(lidarrServiceProvider);
-      await lidarrService.updateArtistMonitored(artistId, monitored);
-      if (!mounted) return;
-      ref.invalidate(musicDetailProvider(artistId));
-      ref.invalidate(musicProvider);
-      // The consequence, not the flag — the same sentence shape Radarr and
-      // Sonarr use for the same action.
-      SnackBarHelper.success(
-        context,
-        monitored
-            ? 'Lidarr is monitoring this artist'
-            : 'Lidarr has stopped monitoring this artist',
-      );
-    } catch (e) {
-      if (!mounted) return;
-      SnackBarHelper.error(
-        context,
-        "Couldn't change monitoring in Lidarr.",
-        detail: e,
-      );
-    } finally {
-      if (mounted) setState(() => _isUpdatingMonitoredState = false);
-    }
-  }
-
-  /// Changes the quality profile behind a confirmation that names the
-  /// transition and its consequence — see the note on Radarr's equivalent for
-  /// why this is a confirm and not an Undo: putting the old profile back does
-  /// not recall searches Lidarr has already queued.
-  Future<void> _updateProfile(
-    int profileId, {
-    required String mediaTitle,
-  }) async {
-    if (profileId == currentProfileId) return;
-
-    final from = currentProfileName ?? 'its current profile';
-    final to = getProfileName(profileId) ?? 'the selected profile';
-
-    final result = await showAppConfirmDialog(
+  }) {
+    return setMonitored(
       context: context,
-      title: 'Change quality profile?',
-      icon: Icons.high_quality_rounded,
-      message:
-          '${truncateTitle(mediaTitle)} moves from $from to $to. Lidarr may '
-          'start searching for upgrades across every monitored album as soon '
-          'as this lands, and a search cannot be called back from here.',
-      confirmLabel: 'Change profile',
+      serviceName: 'Lidarr',
+      subject: 'artist',
+      monitored: monitored,
+      write: () => ref
+          .read(lidarrServiceProvider)
+          .updateArtistMonitored(artistId, monitored),
+      invalidate: [musicDetailProvider(artistId), musicProvider],
     );
-
-    if (!result.confirmed || !mounted) return;
-
-    try {
-      final lidarrService = ref.read(lidarrServiceProvider);
-      await lidarrService.updateArtistProfile(widget.artistId, profileId);
-      if (mounted) {
-        updateProfileState(profileId);
-        ref.invalidate(musicProvider);
-        SnackBarHelper.success(context, 'Quality profile changed to $to');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      SnackBarHelper.error(
-        context,
-        "Couldn't change the quality profile in Lidarr.",
-        detail: e,
-      );
-    }
   }
 
-  Future<void> _triggerSearch(BuildContext context) async {
-    HapticFeedback.selectionClick();
-    setState(() => _isAutoSearching = true);
-    try {
-      final lidarrService = ref.read(lidarrServiceProvider);
-      await lidarrService.searchArtist(widget.artistId);
-      if (!context.mounted) return;
+  Future<void> _updateProfile(int profileId, {required String mediaTitle}) {
+    return changeProfile(
+      profileId: profileId,
+      mediaTitle: mediaTitle,
+      serviceName: 'Lidarr',
+      consequence: 'upgrades across every monitored album',
+      write: () => ref
+          .read(lidarrServiceProvider)
+          .updateArtistProfile(widget.artistId, profileId),
+      invalidate: [musicProvider],
+    );
+  }
+
+  Future<void> _triggerSearch(BuildContext context) {
+    return triggerSearch(
+      context: context,
+      serviceName: 'Lidarr',
       // "<Service> is searching <what>", naming the scope: this covers every
       // monitored album, not just the one the user was looking at.
-      SnackBarHelper.success(
-        context,
-        'Lidarr is searching for every monitored album',
-      );
-      _showSearchConfirmation();
-    } catch (e) {
-      if (!context.mounted) return;
-      SnackBarHelper.error(
-        context,
-        "Couldn't start a search in Lidarr.",
-        detail: e,
-      );
-    } finally {
-      if (mounted) setState(() => _isAutoSearching = false);
-    }
-  }
-
-  void _showSearchConfirmation() {
-    if (!mounted) return;
-    setState(() => _isAutoSearchConfirmed = true);
-    _searchConfirmTimer?.cancel();
-    _searchConfirmTimer = Timer(AppAnimation.confirmationHold, () {
-      if (mounted) setState(() => _isAutoSearchConfirmed = false);
-    });
+      successMessage: 'Lidarr is searching for every monitored album',
+      search: () =>
+          ref.read(lidarrServiceProvider).searchArtist(widget.artistId),
+    );
   }
 
   Future<void> _showInteractiveSearch(
@@ -530,51 +446,20 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     );
   }
 
-  Future<void> _confirmDelete(
-    BuildContext context, {
-    required String title,
-  }) async {
-    // Same tactile weight Radarr gives the same action: the destructive button
-    // announces itself in the hand before the dialog arrives. Tactility is a
-    // property of the action, not of which service happens to own the screen.
-    HapticFeedback.mediumImpact();
-
-    final result = await showDeleteMediaDialog(
+  Future<void> _confirmDelete(BuildContext context, {required String title}) {
+    return confirmDelete(
       context: context,
-      // Capped where the untrusted string enters: the dialog's "Delete <title>?"
-      // heading is not scrollable, so a long name pushes its own buttons away.
-      title: truncateTitle(title),
+      serviceName: 'Lidarr',
+      subject: 'artist',
+      title: title,
       mediaType: DeleteMediaType.artist,
+      write: (deleteFiles, addExclusion) => ref
+          .read(lidarrServiceProvider)
+          .deleteArtist(
+            widget.artistId,
+            deleteFiles: deleteFiles,
+            addImportListExclusion: addExclusion,
+          ),
     );
-
-    if (!result.confirmed || !context.mounted) return;
-
-    setState(() => _isDeleting = true);
-    try {
-      final lidarrService = ref.read(lidarrServiceProvider);
-      await lidarrService.deleteArtist(
-        widget.artistId,
-        deleteFiles: result.deleteFiles,
-        addImportListExclusion: result.addExclusion,
-      );
-      if (!context.mounted) return;
-      // Which destruction happened, since the dialog offered two.
-      SnackBarHelper.success(
-        context,
-        result.deleteFiles
-            ? 'Removed from Lidarr and deleted from disk'
-            : 'Removed from Lidarr',
-      );
-      context.pop();
-    } catch (e) {
-      if (!context.mounted) return;
-      SnackBarHelper.error(
-        context,
-        "Couldn't delete this artist from Lidarr.",
-        detail: e,
-      );
-    } finally {
-      if (mounted) setState(() => _isDeleting = false);
-    }
   }
 }

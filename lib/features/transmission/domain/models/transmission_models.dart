@@ -187,8 +187,6 @@ class TransmissionTorrent {
 
   double get progress => percentDone.clamp(0, 1).toDouble();
 
-  String get sizeLabel => formatSize(totalSize);
-
   String get remainingLabel => formatSize(leftUntilDone);
 
   String get downloadSpeedLabel => formatSpeed(rateDownload);
@@ -286,10 +284,6 @@ class TransmissionSession {
   final int speedLimitUpKbPerSec;
   final bool speedLimitUpEnabled;
 
-  /// Whether this daemon reports per-torrent `labels` (RPC 16 / Transmission
-  /// 3.00 and newer).
-  bool get supportsLabels => rpcVersion >= 16;
-
   factory TransmissionSession.fromJson(Map<String, dynamic> json) {
     return TransmissionSession(
       version: json['version']?.toString() ?? '',
@@ -331,8 +325,6 @@ class TransmissionStats {
   String get downloadSpeedLabel => formatSpeed(downloadSpeed);
 
   String get uploadSpeedLabel => formatSpeed(uploadSpeed);
-
-  String get uploadedLabel => formatSize(uploadedBytes);
 
   factory TransmissionStats.fromJson(Map<String, dynamic> json) {
     final current = json['current-stats'];

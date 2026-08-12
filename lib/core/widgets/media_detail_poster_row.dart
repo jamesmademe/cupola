@@ -30,9 +30,14 @@ class MediaDetailPosterRow extends StatelessWidget {
   /// Inline genre/status chips shown below metadata.
   final List<Widget> tags;
 
-  /// Whether the poster should use the circular artist treatment.
-  final bool circularPoster;
+  /// Whether the poster slot is sized for the circular artist treatment.
+  ///
+  /// Private because the public name is taken by the
+  /// [MediaDetailPosterRow.circular] constructor — the same shape
+  /// `MediaChildTile._stacked` uses.
+  final bool _circularPoster;
 
+  /// The rectangular 82x123 poster lead.
   const MediaDetailPosterRow({
     super.key,
     required this.posterCard,
@@ -40,8 +45,20 @@ class MediaDetailPosterRow extends StatelessWidget {
     this.title,
     this.metadataItems = const [],
     this.tags = const [],
-    this.circularPoster = false,
-  });
+  }) : _circularPoster = false;
+
+  /// The 92x92 circular lead, for an artist or a person.
+  ///
+  /// Pass a [MediaPosterCard.circular] as [posterCard]: this constructor sizes
+  /// the slot, the card decides what is clipped inside it.
+  const MediaDetailPosterRow.circular({
+    super.key,
+    required this.posterCard,
+    this.statusBadge,
+    this.title,
+    this.metadataItems = const [],
+    this.tags = const [],
+  }) : _circularPoster = true;
 
   // Poster dimensions at expanded state.
   static const expandedWidth = 82.0;
@@ -51,8 +68,8 @@ class MediaDetailPosterRow extends StatelessWidget {
   Widget build(BuildContext context) {
     const posterWidth = expandedWidth;
     const posterHeight = expandedHeight;
-    final effectivePosterWidth = circularPoster ? 92.0 : posterWidth;
-    final effectivePosterHeight = circularPoster ? 92.0 : posterHeight;
+    final effectivePosterWidth = _circularPoster ? 92.0 : posterWidth;
+    final effectivePosterHeight = _circularPoster ? 92.0 : posterHeight;
     final showTextContent =
         title != null ||
         statusBadge != null ||

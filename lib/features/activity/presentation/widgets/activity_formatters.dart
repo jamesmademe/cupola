@@ -5,7 +5,7 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart'
 import 'package:cupola/core/utils/release_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
-import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/activity/domain/service_type.dart';
 
 export 'package:cupola/core/utils/dynamic_map_utils.dart'
     show intOrNull, stringOrNull;
@@ -257,4 +257,156 @@ String? extractQualityName(Map<String, dynamic> item, {String? fileKey}) {
 
 String? formatEpisodeCode(int? seasonNumber, int? episodeNumber) {
   return formatArrEpisodeCode(seasonNumber, episodeNumber);
+}
+
+String historyTitle(Map<String, dynamic> item, ServiceType serviceType) {
+  return arrPrimaryMediaTitle(item, includeMovieYear: true) ??
+      stringOrNull(item['sourceTitle']) ??
+      'Unknown release';
+}
+
+String? historyEpisodeCode(Map<String, dynamic> item) {
+  final episode = asActivityMap(item['episode']);
+  return formatEpisodeCode(
+    intOrNull(episode?['seasonNumber'] ?? item['seasonNumber']),
+    intOrNull(episode?['episodeNumber'] ?? item['episodeNumber']),
+  );
+}
+
+String? historySizeLabel(Map<String, dynamic> item) {
+  final size = formatActivitySize(
+    asActivityMap(item['data'])?['size'] ?? item['size'],
+  );
+  return size == '—' ? null : size;
+}
+
+String queueTitle(Map<String, dynamic> item, ServiceType serviceType) {
+  return switch (serviceType) {
+    ServiceType.movies =>
+      arrPrimaryMediaTitle(item, includeMovieYear: true) ??
+          arrReleaseTitle(item) ??
+          'Unknown release',
+    ServiceType.series || ServiceType.music =>
+      arrPrimaryMediaTitle(item) ?? arrReleaseTitle(item) ?? 'Unknown release',
+    ServiceType.discover => arrReleaseTitle(item) ?? 'Unknown release',
+  };
+}
+
+String? queueSubtitle(Map<String, dynamic> item, ServiceType serviceType) {
+  return activitySecondaryLine(
+    serviceType,
+    item,
+    title: queueTitle(item, serviceType),
+    release: arrReleaseTitle(item),
+  );
+}
+
+String? historySubtitle(Map<String, dynamic> item, ServiceType serviceType) {
+  return activitySecondaryLine(
+    serviceType,
+    item,
+    title: historyTitle(item, serviceType),
+    release: stringOrNull(item['sourceTitle']),
+  );
+}
+
+String blocklistTitle(Map<String, dynamic> item, ServiceType serviceType) {
+  return switch (serviceType) {
+    ServiceType.movies =>
+      arrPrimaryMediaTitle(item, includeMovieYear: true) ??
+          stringOrNull(item['sourceTitle']) ??
+          'Unknown release',
+    ServiceType.series || ServiceType.music =>
+      arrPrimaryMediaTitle(item) ??
+          stringOrNull(item['sourceTitle']) ??
+          'Unknown release',
+    ServiceType.discover =>
+      stringOrNull(item['sourceTitle']) ?? 'Unknown release',
+  };
+}
+
+String? blocklistSubtitle(Map<String, dynamic> item, ServiceType serviceType) {
+  return activitySecondaryLine(
+    serviceType,
+    item,
+    title: blocklistTitle(item, serviceType),
+    release: stringOrNull(item['sourceTitle']),
+  );
+}
+
+/// The one secondary line every \*arr activity row prints under its title.
+///
+/// Queue, history and blocklist rows all describe the same thing — "which
+/// episode/artist, and which release" — and used to carry a byte-identical copy
+/// of this switch each, with a fourth in `activity_provider.dart`.
+///
+/// [release] is the release string itself, deliberately not the key it lives
+/// under: the queue derives it from [arrReleaseTitle], which falls back from
+/// `title` to `sourceTitle`, while the other callers read one key. Passing a key
+/// name here would silently change queue rows that only carry `sourceTitle`.
+///
+/// Returns null when the line would be empty, so callers can skip the widget;
+/// the provider, whose subtitle is non-nullable, maps that to `''`.
+String? activitySecondaryLine(
+  ServiceType serviceType,
+  Map<String, dynamic> item, {
+  required String title,
+  required String? release,
+}) {
+  final uniqueRelease = release == title ? null : release;
+
+  final parts = switch (serviceType) {
+    ServiceType.series => [
+      arrEpisodeCode(item),
+      arrEpisodeTitle(item),
+      uniqueRelease,
+    ],
+    ServiceType.movies => [uniqueRelease],
+    ServiceType.music => [arrArtistName(item), uniqueRelease],
+    ServiceType.discover => null,
+  };
+  if (parts == null) return null;
+
+  final line = joinDisplayParts(parts);
+  return line.isEmpty ? null : line;
+}
+
+String wantedTitle(Map<String, dynamic> item, ServiceType serviceType) {
+  switch (serviceType) {
+    case ServiceType.movies:
+      final title = stringOrNull(item['title']) ?? 'Unknown movie';
+      final year = intOrNull(item['year']);
+      return year == null ? title : '$title ($year)';
+    case ServiceType.music:
+      return stringOrNull(item['title']) ?? 'Unknown release';
+    case ServiceType.series:
+      final episodeCode = formatEpisodeCode(
+        intOrNull(item['seasonNumber']),
+        intOrNull(item['episodeNumber']),
+      );
+      final title = joinActivityParts([
+        episodeCode,
+        stringOrNull(item['title']),
+      ]);
+      return title.isEmpty ? 'Unknown Episode' : title;
+    case ServiceType.discover:
+      return stringOrNull(item['title']) ?? 'Unknown';
+  }
+}
+
+String? wantedSubtitle(Map<String, dynamic> item, ServiceType serviceType) {
+  switch (serviceType) {
+    case ServiceType.movies:
+      final date = stringOrNull(
+        item['airDateUtc'] ?? item['digitalRelease'] ?? item['inCinemas'],
+      );
+      return date == null ? null : 'Release ${formatIsoDate(date)}';
+    case ServiceType.music:
+      return stringOrNull(asActivityMap(item['artist'])?['artistName']);
+    case ServiceType.series:
+      return stringOrNull(asActivityMap(item['series'])?['title']) ??
+          'Unknown Series';
+    case ServiceType.discover:
+      return null;
+  }
 }

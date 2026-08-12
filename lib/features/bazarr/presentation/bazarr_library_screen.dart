@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
@@ -78,18 +79,7 @@ class _BazarrLibraryScreenState extends ConsumerState<BazarrLibraryScreen>
                 _BazarrLibraryTab(kind: _BazarrLibraryTabKind.movies),
               ],
             )
-          : Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Text(
-                  'Bazarr is not configured yet.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
+          : NotConfiguredPlaceholder.forService(ServiceKey.bazarr),
     );
   }
 }

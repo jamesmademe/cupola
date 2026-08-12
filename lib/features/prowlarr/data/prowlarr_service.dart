@@ -36,13 +36,13 @@ class ProwlarrService {
   /// Current health issues (missing definitions, failing indexers, updates...).
   Future<List<ProwlarrHealthIssue>> getHealth() async {
     final response = await client.get('/api/v1/health');
-    return _mapList(response.data, ProwlarrHealthIssue.fromJson);
+    return jsonObjects(response.data, ProwlarrHealthIssue.fromJson);
   }
 
   /// All configured indexers.
   Future<List<ProwlarrIndexer>> getIndexers() async {
     final response = await client.get('/api/v1/indexer');
-    return _mapList(response.data, ProwlarrIndexer.fromJson);
+    return jsonObjects(response.data, ProwlarrIndexer.fromJson);
   }
 
   /// Aggregated per-indexer usage statistics (queries/grabs/failures).
@@ -63,7 +63,7 @@ class ProwlarrService {
   /// Failure state for indexers currently disabled due to errors.
   Future<List<ProwlarrIndexerStatus>> getIndexerStatus() async {
     final response = await client.get('/api/v1/indexerstatus');
-    return _mapList(response.data, ProwlarrIndexerStatus.fromJson);
+    return jsonObjects(response.data, ProwlarrIndexerStatus.fromJson);
   }
 
   /// Paged history of indexer activity (queries, grabs, RSS, auth).
@@ -110,13 +110,13 @@ class ProwlarrService {
         if (eventType != null) 'eventType': eventType,
       },
     );
-    return _mapList(response.data, ProwlarrHistoryItem.fromJson);
+    return jsonObjects(response.data, ProwlarrHistoryItem.fromJson);
   }
 
   /// Newznab categories, used as an indexer filter.
   Future<List<ProwlarrCategory>> getIndexerCategories() async {
     final response = await client.get('/api/v1/indexer/categories');
-    return _mapList(response.data, ProwlarrCategory.fromJson);
+    return jsonObjects(response.data, ProwlarrCategory.fromJson);
   }
 
   /// Configured providers of one [kind] (apps, download clients,
@@ -125,7 +125,7 @@ class ProwlarrService {
     ProwlarrProviderKind kind,
   ) async {
     final response = await client.get('/api/v1/${kind.path}');
-    return _mapList(response.data, ProwlarrProviderResource.fromJson);
+    return jsonObjects(response.data, ProwlarrProviderResource.fromJson);
   }
 
   /// Implementations of [kind] that can be added, from `<kind>/schema`.
@@ -136,7 +136,7 @@ class ProwlarrService {
     ProwlarrProviderKind kind,
   ) async {
     final response = await client.get('/api/v1/${kind.path}/schema');
-    return _mapList(response.data, ProwlarrProviderResource.fromJson);
+    return jsonObjects(response.data, ProwlarrProviderResource.fromJson);
   }
 
   /// Adds (no `id`) or updates (`id` present) one provider.
@@ -213,7 +213,7 @@ class ProwlarrService {
   /// Tags with what currently references them, for the tag manager.
   Future<List<ProwlarrTagDetail>> getTagDetails() async {
     final response = await client.get('/api/v1/tag/detail');
-    return _mapList(response.data, ProwlarrTagDetail.fromJson);
+    return jsonObjects(response.data, ProwlarrTagDetail.fromJson);
   }
 
   Future<void> deleteTag(int id) async {
@@ -236,7 +236,7 @@ class ProwlarrService {
   /// Tags, used both as an indexer filter and in the edit form.
   Future<List<ProwlarrTag>> getTags() async {
     final response = await client.get('/api/v1/tag');
-    return _mapList(response.data, ProwlarrTag.fromJson);
+    return jsonObjects(response.data, ProwlarrTag.fromJson);
   }
 
   /// Creates a tag and returns it with its server-assigned id.
@@ -251,14 +251,7 @@ class ProwlarrService {
   /// Sync profiles offered by the indexer edit form (`appProfileId`).
   Future<List<ProwlarrAppProfile>> getAppProfiles() async {
     final response = await client.get('/api/v1/appprofile');
-    return _mapList(response.data, ProwlarrAppProfile.fromJson);
-  }
-
-  /// A single indexer, including its `fields`.
-  Future<ProwlarrIndexer?> getIndexer(int id) async {
-    final response = await client.get('/api/v1/indexer/$id');
-    final json = mapOrNull(response.data);
-    return json == null ? null : ProwlarrIndexer.fromJson(json);
+    return jsonObjects(response.data, ProwlarrAppProfile.fromJson);
   }
 
   /// Every indexer definition Prowlarr can add, from `indexer/schema`.
@@ -432,11 +425,11 @@ class ProwlarrService {
         path,
         receiveTimeout: _testReceiveTimeout,
       );
-      return _mapList(response.data, ProwlarrTestResult.fromJson);
+      return jsonObjects(response.data, ProwlarrTestResult.fromJson);
     } on DioException catch (error) {
       final data = error.response?.data;
       if (_isTestReport(data)) {
-        return _mapList(data, ProwlarrTestResult.fromJson);
+        return jsonObjects(data, ProwlarrTestResult.fromJson);
       }
       final detail = _validationDetail(data);
       throw Exception(detail ?? '$fallback (${_statusLabel(error)})');
@@ -491,18 +484,4 @@ class ProwlarrService {
 
   static bool _isHeavySchemaKey(String key, dynamic _) =>
       key == 'capabilities' || key == 'presets';
-
-  static List<T> _mapList<T>(
-    dynamic raw,
-    T Function(Map<String, dynamic>) builder,
-  ) {
-    if (raw is List) {
-      return raw
-          .whereType<Map>()
-          .map(stringKeyMap)
-          .map(builder)
-          .toList(growable: false);
-    }
-    return const [];
-  }
 }

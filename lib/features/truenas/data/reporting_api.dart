@@ -106,16 +106,10 @@ class TrueNasReportingApi extends TrueNasApiBase {
     // sending 0 (the previous behaviour) fails validation with "Invalid
     // params". The previously-used `reporting.netdata_graph` is the *singular*
     // variant that expects a single name string, not a list.
-    final result = await client.call('reporting.get_data', [graphs, query]);
-    if (result is! List) return const [];
-    return result
-        .whereType<Map>()
-        .map(
-          (m) => TrueNasReportingGraph.fromJson(
-            Map<String, dynamic>.from(m),
-            maxPoints: maxPoints,
-          ),
-        )
-        .toList(growable: false);
+    return queryList(
+      'reporting.get_data',
+      (json) => TrueNasReportingGraph.fromJson(json, maxPoints: maxPoints),
+      [graphs, query],
+    );
   }
 }

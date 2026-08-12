@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
-import 'package:cupola/features/readarr/presentation/readarr_screen.dart';
 import 'package:cupola/features/readarr/presentation/widgets/readarr_tiles.dart';
 
 /// Full author list for Readarr, reached from the dashboard "Authors" section.
@@ -22,7 +23,7 @@ class ReadarrLibraryScreen extends ConsumerWidget {
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(readarrAuthorsProvider);
-            await Future<void>.delayed(const Duration(milliseconds: 300));
+            await Future<void>.delayed(AppAnimation.durationMd);
           },
           child: authorsAsync.when(
             data: (authors) {
@@ -38,7 +39,7 @@ class ReadarrLibraryScreen extends ConsumerWidget {
               return ListView.builder(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.only(
-                  top: 8,
+                  top: AppSpacing.sm,
                   bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(
                     context,
                   ),
@@ -48,8 +49,8 @@ class ReadarrLibraryScreen extends ConsumerWidget {
                     ReadarrAuthorTile(author: sorted[index]),
               );
             },
-            loading: () => const ReadarrListShimmer(rows: 8),
-            error: (error, _) => ReadarrErrorRetry(
+            loading: () => const ListRowsShimmer(count: 8),
+            error: (error, _) => InlineErrorRetry(
               message: 'Failed to load authors',
               onRetry: () => ref.invalidate(readarrAuthorsProvider),
             ),

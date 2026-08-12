@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
@@ -57,7 +58,7 @@ class _BazarrDashboard extends ConsumerWidget {
         ref.invalidate(bazarrDashboardWantedProvider);
         ref.invalidate(bazarrDashboardHistoryProvider);
         ref.invalidate(serviceSummaryProvider(ServiceKey.bazarr));
-        await Future<void>.delayed(const Duration(milliseconds: 300));
+        await Future<void>.delayed(AppAnimation.durationMd);
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -71,13 +72,13 @@ class _BazarrDashboard extends ConsumerWidget {
             kpis: ref.watch(serviceKpiProvider(ServiceKey.bazarr)),
             accent: AppColors.bazarr,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           // Search bar — decorative, non-functional for Fase 3
           _SearchBar(accent: AppColors.bazarr),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           // Quick action: open wanted/library lists
           _BazarrQuickActions(accent: AppColors.bazarr),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           // Wanted Subtitles
           SectionHeader(
             title: 'Wanted Subtitles',
@@ -86,12 +87,12 @@ class _BazarrDashboard extends ConsumerWidget {
           ),
           const SizedBox(height: 2),
           _WantedList(wantedAsync: wantedAsync),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           // Recent Activity
           const SectionHeader(title: 'Recent Activity', showChevron: false),
           const SizedBox(height: 2),
           _HistoryList(historyAsync: historyAsync),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           // CTA
           _BazarrCta(accent: AppColors.bazarr),
         ],
@@ -109,7 +110,7 @@ class _SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: TextField(
         enabled: false,
         decoration: InputDecoration(
@@ -120,7 +121,7 @@ class _SearchBar extends StatelessWidget {
           prefixIcon: Icon(Icons.search_rounded, color: accent),
           filled: true,
           fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           border: OutlineInputBorder(
             borderRadius: AppRadius.borderRadiusMd,
             borderSide: BorderSide.none,
@@ -154,8 +155,8 @@ class _WantedList extends ConsumerWidget {
           children: items.map((item) => _WantedTile(item: item)).toList(),
         );
       },
-      loading: () => const _ListShimmer(),
-      error: (error, _) => _ErrorRetry(
+      loading: () => const ListRowsShimmer(count: 3),
+      error: (error, _) => InlineErrorRetry.fixedHeight(
         message: 'Failed to load wanted subtitles',
         onRetry: () => ref.invalidate(bazarrDashboardWantedProvider),
       ),
@@ -180,7 +181,10 @@ class _WantedTile extends ConsumerWidget {
         .join(', ');
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Material(
         color: colorScheme.surface,
         borderRadius: AppRadius.borderRadiusMd,
@@ -188,7 +192,7 @@ class _WantedTile extends ConsumerWidget {
           borderRadius: AppRadius.borderRadiusMd,
           onTap: () => _openWanted(context, item),
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               border: Border.all(color: colorScheme.outlineVariant),
               borderRadius: AppRadius.borderRadiusMd,
@@ -232,10 +236,10 @@ class _WantedTile extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.md),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
+                    horizontal: AppSpacing.sm,
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
@@ -292,7 +296,7 @@ class _BazarrQuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Row(
         children: [
           Expanded(
@@ -303,7 +307,7 @@ class _BazarrQuickActions extends StatelessWidget {
               onTap: () => context.push(ServiceRoutes.bazarrWanted),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: _QuickActionButton(
               icon: Icons.library_books_rounded,
@@ -340,7 +344,10 @@ class _QuickActionButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: AppRadius.borderRadiusSm,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 10,
+          ),
           decoration: BoxDecoration(
             border: Border.all(color: accent.withValues(alpha: 0.4)),
             borderRadius: AppRadius.borderRadiusSm,
@@ -387,8 +394,8 @@ class _HistoryList extends ConsumerWidget {
           children: items.map((item) => _HistoryTile(item: item)).toList(),
         );
       },
-      loading: () => const _ListShimmer(),
-      error: (error, _) => _ErrorRetry(
+      loading: () => const ListRowsShimmer(count: 3),
+      error: (error, _) => InlineErrorRetry.fixedHeight(
         message: 'Failed to load recent activity',
         onRetry: () => ref.invalidate(bazarrDashboardHistoryProvider),
       ),
@@ -426,7 +433,10 @@ class _HistoryTile extends StatelessWidget {
         : item.subtitle;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Material(
         color: colorScheme.surface,
         borderRadius: AppRadius.borderRadiusMd,
@@ -476,7 +486,7 @@ class _HistoryTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
@@ -507,7 +517,7 @@ class _BazarrCta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: SizedBox(
         width: double.infinity,
         height: 46,
@@ -527,67 +537,6 @@ class _BazarrCta extends StatelessWidget {
             ).textTheme.labelLarge!.weight(FontWeight.w800),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ListShimmer extends StatelessWidget {
-  const _ListShimmer();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: List.generate(
-          3,
-          (_) => const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: ShimmerPlaceholder(height: 60),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Inline error placeholder with a retry action so failures are
-/// distinguishable from the loading shimmer state.
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      height: 120,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer.withValues(alpha: 0.4),
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(color: colorScheme.error.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline_rounded, color: colorScheme.error),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onErrorContainer,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
-        ],
       ),
     );
   }

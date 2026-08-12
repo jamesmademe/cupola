@@ -350,7 +350,6 @@ class AppCard extends StatelessWidget {
         semanticValue: semanticValue,
         semanticHint: semanticHint,
         excludeChildSemantics: excludeChildSemantics,
-        borderRadius: effectiveBorderRadius,
         child: body,
       );
     }

@@ -1,14 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/api/arr_detail_actions_mixin.dart';
 import 'package:cupola/core/api/quality_profile_mixin.dart';
-import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/utils/rating_display.dart';
-import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/presentation/widgets/arr_media_extras_section.dart';
@@ -45,19 +41,9 @@ class MovieDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
-    with QualityProfileMixin<MovieDetailScreen> {
-  bool _isAutoSearching = false;
-  bool _isAutoSearchConfirmed = false;
-  Timer? _searchConfirmTimer;
-  bool _isDeleting = false;
-  bool _isUpdatingMonitoredState = false;
-
-  @override
-  void dispose() {
-    _searchConfirmTimer?.cancel();
-    super.dispose();
-  }
-
+    with
+        QualityProfileMixin<MovieDetailScreen>,
+        ArrDetailActionsMixin<MovieDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(currentSettingsProvider);
@@ -185,9 +171,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
               isMonitored: viewModel.isMonitored,
               // One flag, mapped from whichever per-action flag can be in flight
               // on this page: only one action is ever promoted.
-              isBusy:
-                  _isAutoSearching || _isUpdatingMonitoredState || _isDeleting,
-              isConfirmed: _isAutoSearchConfirmed,
+              isBusy: isAutoSearching || isUpdatingMonitoredState || isDeleting,
+              isConfirmed: isAutoSearchConfirmed,
               currentProfileName: currentProfileName,
               currentProfileId: currentProfileId,
               qualityProfiles: qualityProfiles,
@@ -313,165 +298,60 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     BuildContext context, {
     required int movieId,
     required bool monitored,
-  }) async {
-    setState(() => _isUpdatingMonitoredState = true);
-    try {
-      final radarrService = ref.read(radarrServiceProvider);
-      await radarrService.updateMovieMonitored(movieId, monitored);
-      if (!mounted) return;
-      ref.invalidate(movieDetailProvider(movieId));
-      ref.invalidate(moviesProvider);
-      // What changed, in the words of the thing that will act on it. "Movie
-      // unmonitored" states a flag; "Radarr has stopped monitoring" states the
-      // consequence, and Monitored is a term a self-hoster genuinely needs.
-      SnackBarHelper.success(
-        context,
-        monitored
-            ? 'Radarr is monitoring this movie'
-            : 'Radarr has stopped monitoring this movie',
-      );
-    } catch (e) {
-      if (!mounted) return;
-      SnackBarHelper.error(
-        context,
-        "Couldn't change monitoring in Radarr.",
-        detail: e,
-      );
-    } finally {
-      if (mounted) setState(() => _isUpdatingMonitoredState = false);
-    }
-  }
-
-  /// Changes the quality profile behind a confirmation that names the
-  /// transition and its consequence.
-  ///
-  /// This used to fire straight off a tap in the icon row, which made a
-  /// server-side write with real cost — Radarr can start hunting upgrades for
-  /// the whole title the moment the profile lands — the one action on the page
-  /// with no confirmation and no way back. An Undo would be a lie here: putting
-  /// the old profile back does not recall searches that are already queued on
-  /// the user's connection, so the recoverable moment is *before* the write.
-  Future<void> _updateProfile(
-    int profileId, {
-    required String mediaTitle,
-  }) async {
-    if (profileId == currentProfileId) return;
-
-    final from = currentProfileName ?? 'its current profile';
-    final to = getProfileName(profileId) ?? 'the selected profile';
-
-    final result = await showAppConfirmDialog(
+  }) {
+    return setMonitored(
       context: context,
-      title: 'Change quality profile?',
-      icon: Icons.high_quality_rounded,
-      message:
-          '${truncateTitle(mediaTitle)} moves from $from to $to. Radarr may '
-          'start searching for an upgrade as soon as this lands, and a search '
-          'cannot be called back from here.',
-      confirmLabel: 'Change profile',
+      serviceName: 'Radarr',
+      subject: 'movie',
+      monitored: monitored,
+      write: () => ref
+          .read(radarrServiceProvider)
+          .updateMovieMonitored(movieId, monitored),
+      invalidate: [movieDetailProvider(movieId), moviesProvider],
     );
-
-    if (!result.confirmed || !mounted) return;
-
-    try {
-      final radarrService = ref.read(radarrServiceProvider);
-      await radarrService.updateMovieProfile(widget.movieId, profileId);
-      if (mounted) {
-        updateProfileState(profileId);
-        ref.invalidate(moviesProvider);
-        SnackBarHelper.success(context, 'Quality profile changed to $to');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      SnackBarHelper.error(
-        context,
-        "Couldn't change the quality profile in Radarr.",
-        detail: e,
-      );
-    }
   }
 
-  Future<void> _confirmDelete(
-    BuildContext context, {
-    required String title,
-  }) async {
-    HapticFeedback.mediumImpact();
+  Future<void> _updateProfile(int profileId, {required String mediaTitle}) {
+    return changeProfile(
+      profileId: profileId,
+      mediaTitle: mediaTitle,
+      serviceName: 'Radarr',
+      consequence: 'an upgrade',
+      write: () => ref
+          .read(radarrServiceProvider)
+          .updateMovieProfile(widget.movieId, profileId),
+      invalidate: [moviesProvider],
+    );
+  }
 
-    final result = await showDeleteMediaDialog(
+  Future<void> _confirmDelete(BuildContext context, {required String title}) {
+    return confirmDelete(
       context: context,
-      // The dialog builds "Delete <title>?" as its heading, which sits above the
-      // scrollable content in an AlertDialog — so a 200-character release name
-      // pushes the two checkboxes and both buttons off the screen. Capped here,
-      // where the untrusted string enters.
-      title: truncateTitle(title),
+      serviceName: 'Radarr',
+      subject: 'movie',
+      title: title,
       mediaType: DeleteMediaType.movie,
+      write: (deleteFiles, addExclusion) => ref
+          .read(radarrServiceProvider)
+          .deleteMovie(
+            widget.movieId,
+            deleteFiles: deleteFiles,
+            addImportExclusion: addExclusion,
+          ),
     );
-
-    if (!result.confirmed || !context.mounted) return;
-
-    setState(() => _isDeleting = true);
-    try {
-      final radarrService = ref.read(radarrServiceProvider);
-      await radarrService.deleteMovie(
-        widget.movieId,
-        deleteFiles: result.deleteFiles,
-        addImportExclusion: result.addExclusion,
-      );
-      if (!context.mounted) return;
-      // "Movie deleted" left the one thing the user just decided unstated. The
-      // dialog offered two different destructions; the confirmation says which
-      // one happened.
-      SnackBarHelper.success(
-        context,
-        result.deleteFiles
-            ? 'Removed from Radarr and deleted from disk'
-            : 'Removed from Radarr',
-      );
-      context.pop();
-    } catch (e) {
-      if (!context.mounted) return;
-      SnackBarHelper.error(
-        context,
-        "Couldn't delete this movie from Radarr.",
-        detail: e,
-      );
-    } finally {
-      if (mounted) setState(() => _isDeleting = false);
-    }
   }
 
-  Future<void> _triggerSearch(BuildContext context) async {
-    HapticFeedback.selectionClick();
-    setState(() => _isAutoSearching = true);
-    try {
-      final radarrService = ref.read(radarrServiceProvider);
-      await radarrService.searchMovie(widget.movieId);
-      if (!context.mounted) return;
+  Future<void> _triggerSearch(BuildContext context) {
+    return triggerSearch(
+      context: context,
+      serviceName: 'Radarr',
       // One shape for every search confirmation on every library page:
       // "<Service> is searching <what>". The old set drifted between "Search
       // started", "Search started for entire series" and "Album search
       // started", which read as three different features.
-      SnackBarHelper.success(context, 'Radarr is searching for this movie');
-      _showSearchConfirmation();
-    } catch (e) {
-      if (!context.mounted) return;
-      SnackBarHelper.error(
-        context,
-        "Couldn't start a search in Radarr.",
-        detail: e,
-      );
-    } finally {
-      if (mounted) setState(() => _isAutoSearching = false);
-    }
-  }
-
-  void _showSearchConfirmation() {
-    if (!mounted) return;
-    setState(() => _isAutoSearchConfirmed = true);
-    _searchConfirmTimer?.cancel();
-    _searchConfirmTimer = Timer(AppAnimation.confirmationHold, () {
-      if (mounted) setState(() => _isAutoSearchConfirmed = false);
-    });
+      successMessage: 'Radarr is searching for this movie',
+      search: () => ref.read(radarrServiceProvider).searchMovie(widget.movieId),
+    );
   }
 
   Future<void> _showInteractiveSearch(

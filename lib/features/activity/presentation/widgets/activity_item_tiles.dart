@@ -12,8 +12,8 @@ import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/media_search_popup_menu.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/tag_chip.dart';
+import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
-import 'package:cupola/features/activity/presentation/activity_screen.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_tab_helpers.dart';
@@ -37,8 +37,8 @@ class QueueItemTile extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final resolvedStatus = resolveQueueDisplayStatus(item);
-    final title = _queueTitle(item, serviceType);
-    final subtitle = _queueSubtitle(item, serviceType);
+    final title = queueTitle(item, serviceType);
+    final subtitle = queueSubtitle(item, serviceType);
     final progress = dynamic_utils.queueProgress(
       item,
       parseStrings: false,
@@ -127,14 +127,14 @@ class HistoryItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final title = _historyTitle(item, serviceType);
-    final subtitle = _historySubtitle(item, serviceType);
+    final title = historyTitle(item, serviceType);
+    final subtitle = historySubtitle(item, serviceType);
     final metadata = joinActivityParts([
       formatDateOnly(stringOrNull(item['date'])),
-      _historySizeLabel(item),
+      historySizeLabel(item),
     ]);
     final episodeCode = serviceType == ServiceType.series
-        ? _historyEpisodeCode(item)
+        ? historyEpisodeCode(item)
         : null;
     final chips = _buildHistoryChips(item, colorScheme);
 
@@ -197,7 +197,7 @@ class BlocklistItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final subtitle = _blocklistSubtitle(item, serviceType);
+    final subtitle = blocklistSubtitle(item, serviceType);
     final chips = _buildBlocklistChips(item, colorScheme);
     final status = resolveBlocklistStatus(item);
     final reason = status.detail;
@@ -208,7 +208,7 @@ class BlocklistItemTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _TitleRow(
-            title: _blocklistTitle(item, serviceType),
+            title: blocklistTitle(item, serviceType),
             titleStyle: theme.textTheme.titleSmall?.weight(FontWeight.w700),
             trailing: StatusBadge(info: status),
           ),
@@ -258,10 +258,10 @@ class WantedItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final title = _wantedTitle(item, serviceType);
+    final title = wantedTitle(item, serviceType);
     final subtitle = isCutoff && serviceType == ServiceType.movies
         ? null
-        : _wantedSubtitle(item, serviceType);
+        : wantedSubtitle(item, serviceType);
     final statusText = isCutoff
         ? formatCutoffSize(item, serviceType)
         : wantedStatusText(item, serviceType);
@@ -1019,157 +1019,4 @@ List<Widget> _buildWantedChips(
     if (showDateChip && date != null)
       TagChip(text: formatIsoDate(date), color: AppColors.info),
   ];
-}
-
-String _historyTitle(Map<String, dynamic> item, ServiceType serviceType) {
-  return arrPrimaryMediaTitle(item, includeMovieYear: true) ??
-      stringOrNull(item['sourceTitle']) ??
-      'Unknown release';
-}
-
-String? _historyEpisodeCode(Map<String, dynamic> item) {
-  final episode = asActivityMap(item['episode']);
-  return formatEpisodeCode(
-    intOrNull(episode?['seasonNumber'] ?? item['seasonNumber']),
-    intOrNull(episode?['episodeNumber'] ?? item['episodeNumber']),
-  );
-}
-
-String? _historySizeLabel(Map<String, dynamic> item) {
-  final size = formatActivitySize(
-    asActivityMap(item['data'])?['size'] ?? item['size'],
-  );
-  return size == '—' ? null : size;
-}
-
-String _queueTitle(Map<String, dynamic> item, ServiceType serviceType) {
-  return switch (serviceType) {
-    ServiceType.movies =>
-      arrPrimaryMediaTitle(item, includeMovieYear: true) ??
-          arrReleaseTitle(item) ??
-          'Unknown release',
-    ServiceType.series || ServiceType.music =>
-      arrPrimaryMediaTitle(item) ?? arrReleaseTitle(item) ?? 'Unknown release',
-    ServiceType.discover => arrReleaseTitle(item) ?? 'Unknown release',
-  };
-}
-
-String? _queueSubtitle(Map<String, dynamic> item, ServiceType serviceType) {
-  final release = arrReleaseTitle(item);
-  final title = _queueTitle(item, serviceType);
-  final uniqueRelease = release == title ? null : release;
-
-  return switch (serviceType) {
-    ServiceType.series => _joinSecondaryParts([
-      arrEpisodeCode(item),
-      arrEpisodeTitle(item),
-      uniqueRelease,
-    ]),
-    ServiceType.movies => _joinSecondaryParts([uniqueRelease]),
-    ServiceType.music => _joinSecondaryParts([
-      arrArtistName(item),
-      uniqueRelease,
-    ]),
-    ServiceType.discover => null,
-  };
-}
-
-String? _historySubtitle(Map<String, dynamic> item, ServiceType serviceType) {
-  final release = stringOrNull(item['sourceTitle']);
-  final title = _historyTitle(item, serviceType);
-  final uniqueRelease = release == title ? null : release;
-
-  return switch (serviceType) {
-    ServiceType.series => _joinSecondaryParts([
-      arrEpisodeCode(item),
-      arrEpisodeTitle(item),
-      uniqueRelease,
-    ]),
-    ServiceType.movies => _joinSecondaryParts([uniqueRelease]),
-    ServiceType.music => _joinSecondaryParts([
-      arrArtistName(item),
-      uniqueRelease,
-    ]),
-    ServiceType.discover => null,
-  };
-}
-
-String _blocklistTitle(Map<String, dynamic> item, ServiceType serviceType) {
-  return switch (serviceType) {
-    ServiceType.movies =>
-      arrPrimaryMediaTitle(item, includeMovieYear: true) ??
-          stringOrNull(item['sourceTitle']) ??
-          'Unknown release',
-    ServiceType.series || ServiceType.music =>
-      arrPrimaryMediaTitle(item) ??
-          stringOrNull(item['sourceTitle']) ??
-          'Unknown release',
-    ServiceType.discover =>
-      stringOrNull(item['sourceTitle']) ?? 'Unknown release',
-  };
-}
-
-String? _blocklistSubtitle(Map<String, dynamic> item, ServiceType serviceType) {
-  final release = stringOrNull(item['sourceTitle']);
-  final title = _blocklistTitle(item, serviceType);
-  final uniqueRelease = release == title ? null : release;
-
-  return switch (serviceType) {
-    ServiceType.series => _joinSecondaryParts([
-      arrEpisodeCode(item),
-      arrEpisodeTitle(item),
-      uniqueRelease,
-    ]),
-    ServiceType.movies => _joinSecondaryParts([uniqueRelease]),
-    ServiceType.music => _joinSecondaryParts([
-      arrArtistName(item),
-      uniqueRelease,
-    ]),
-    ServiceType.discover => null,
-  };
-}
-
-String? _joinSecondaryParts(List<String?> parts) {
-  final line = joinDisplayParts(parts);
-  return line.isEmpty ? null : line;
-}
-
-String _wantedTitle(Map<String, dynamic> item, ServiceType serviceType) {
-  switch (serviceType) {
-    case ServiceType.movies:
-      final title = stringOrNull(item['title']) ?? 'Unknown movie';
-      final year = intOrNull(item['year']);
-      return year == null ? title : '$title ($year)';
-    case ServiceType.music:
-      return stringOrNull(item['title']) ?? 'Unknown release';
-    case ServiceType.series:
-      final episodeCode = formatEpisodeCode(
-        intOrNull(item['seasonNumber']),
-        intOrNull(item['episodeNumber']),
-      );
-      final title = joinActivityParts([
-        episodeCode,
-        stringOrNull(item['title']),
-      ]);
-      return title.isEmpty ? 'Unknown Episode' : title;
-    case ServiceType.discover:
-      return stringOrNull(item['title']) ?? 'Unknown';
-  }
-}
-
-String? _wantedSubtitle(Map<String, dynamic> item, ServiceType serviceType) {
-  switch (serviceType) {
-    case ServiceType.movies:
-      final date = stringOrNull(
-        item['airDateUtc'] ?? item['digitalRelease'] ?? item['inCinemas'],
-      );
-      return date == null ? null : 'Release ${formatIsoDate(date)}';
-    case ServiceType.music:
-      return stringOrNull(asActivityMap(item['artist'])?['artistName']);
-    case ServiceType.series:
-      return stringOrNull(asActivityMap(item['series'])?['title']) ??
-          'Unknown Series';
-    case ServiceType.discover:
-      return null;
-  }
 }

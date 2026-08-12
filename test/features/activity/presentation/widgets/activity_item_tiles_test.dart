@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/media_search_popup_menu.dart';
+import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
-import 'package:cupola/features/activity/presentation/activity_screen.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/core/status/media_status.dart';

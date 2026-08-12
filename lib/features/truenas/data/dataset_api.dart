@@ -6,27 +6,20 @@ class TrueNasDatasetApi extends TrueNasApiBase {
   const TrueNasDatasetApi(super.client);
 
   /// Top-level datasets with nested `children` (a tree per pool).
-  Future<List<TrueNasDataset>> getDatasetTree() async {
-    final result = await client.call('pool.dataset.query', [
-      const <dynamic>[],
-      {
-        'extra': {'flat': false},
-      },
-    ]);
-    return TrueNasDatasetApiParser.parse(result);
-  }
+  Future<List<TrueNasDataset>> getDatasetTree() =>
+      queryList('pool.dataset.query', TrueNasDataset.fromJson, [
+        const <dynamic>[],
+        {
+          'extra': {'flat': false},
+        },
+      ]);
 
-  Future<TrueNasDataset?> getDataset(String id) async {
-    final result = await client.call('pool.dataset.query', [
-      [
-        ['id', '=', id],
-      ],
-    ]);
-    if (result is! List || result.isEmpty) return null;
-    final map = result.first;
-    if (map is! Map) return null;
-    return TrueNasDataset.fromJson(Map<String, dynamic>.from(map));
-  }
+  Future<TrueNasDataset?> getDataset(String id) =>
+      queryFirst('pool.dataset.query', TrueNasDataset.fromJson, [
+        [
+          ['id', '=', id],
+        ],
+      ]);
 
   Future<void> createDataset(Map<String, dynamic> payload) =>
       client.call('pool.dataset.create', [payload]);
@@ -58,15 +51,4 @@ class TrueNasDatasetApi extends TrueNasApiBase {
 
   Future<void> deleteSnapshot(String id) =>
       client.call('zfs.snapshot.delete', [id]);
-}
-
-/// Parses a `pool.dataset.query` result into a list of trees.
-class TrueNasDatasetApiParser {
-  static List<TrueNasDataset> parse(dynamic result) {
-    if (result is! List) return const [];
-    return result
-        .whereType<Map>()
-        .map((m) => TrueNasDataset.fromJson(Map<String, dynamic>.from(m)))
-        .toList(growable: false);
-  }
 }

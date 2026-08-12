@@ -7,19 +7,10 @@ import 'package:cupola/features/music/domain/models/lidarr_album.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/music/domain/models/lidarr_track.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 final lidarrServiceProvider = Provider<LidarrService>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  if (settings.lidarrUrl.isEmpty || settings.lidarrApiKey.isEmpty) {
-    throw Exception('Lidarr not configured');
-  }
-  return LidarrService(
-    ApiClient(
-      baseUrl: settings.lidarrUrl,
-      apiKey: settings.lidarrApiKey,
-      pinnedCertFingerprint: settings.pinForUrl(settings.lidarrUrl),
-    ),
-  );
+  return LidarrService(watchApiClient(ref, ServiceKey.lidarr));
 });
 
 /// Service for interacting with Lidarr API.
@@ -42,36 +33,19 @@ class LidarrService with ArrActivityMixin {
 
   /// Fetches a single artist by ID, returning a typed model.
   Future<LidarrArtist?> getArtistById(int artistId) async {
-    try {
-      final response = await client.get('/api/v1/artist/$artistId');
-      return LidarrArtist.fromJson(response.data as Map<String, dynamic>);
-    } catch (_) {
-      return null;
-    }
+    return fetchItem('artist', artistId, LidarrArtist.fromJson);
   }
 
   /// Fetches all albums for an artist.
   Future<List<LidarrAlbum>> getAlbums(int artistId) async {
-    final response = await client.get(
-      '/api/v1/album',
-      queryParameters: {'artistId': artistId},
-    );
-    final data = response.data as List<dynamic>;
-    return data
-        .map((album) => LidarrAlbum.fromJson(album as Map<String, dynamic>))
-        .toList(growable: false);
+    return fetchListItems('album', {
+      'artistId': artistId,
+    }, LidarrAlbum.fromJson);
   }
 
   /// Fetches all tracks for an album.
   Future<List<LidarrTrack>> getTracks(int albumId) async {
-    final response = await client.get(
-      '/api/v1/track',
-      queryParameters: {'albumId': albumId},
-    );
-    final data = response.data as List<dynamic>;
-    return data
-        .map((track) => LidarrTrack.fromJson(track as Map<String, dynamic>))
-        .toList(growable: false);
+    return fetchListItems('track', {'albumId': albumId}, LidarrTrack.fromJson);
   }
 
   /// Triggers an automatic search for an artist.

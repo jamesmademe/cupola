@@ -108,7 +108,12 @@ class FloatingNavBarMetrics {
   ///
   /// Includes the nav bar height, margins, and device safe area.
   static double getScrollViewBottomPadding(BuildContext context) {
-    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
+    // `paddingOf`, not `of`: this helper is called from ~50 `build` methods, and
+    // an unscoped `MediaQuery.of` subscribes every one of them to *any*
+    // MediaQueryData change — including `viewInsets`, which animates every frame
+    // the soft keyboard opens or closes. The padding aspect changes only on a
+    // real safe-area change (rotation, notch).
+    final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
     return totalHeightFor(context) + bottomSafeArea;
   }
 }
@@ -265,7 +270,11 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    // Aspect-scoped for the same reason as
+    // [FloatingNavBarMetrics.getScrollViewBottomPadding]: the bar is on screen
+    // on every tab, so an unscoped subscription rebuilds it on every keyboard
+    // frame.
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
     // Clamped so the bar follows the user's reading size without letting an
     // accessibility scale turn it into a full-height panel.
     final textScaler = FloatingNavBarMetrics.effectiveTextScaler(context);

@@ -2,6 +2,7 @@ import 'dart:isolate';
 import 'package:dio/dio.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/core/models/media_preview.dart';
@@ -27,18 +28,39 @@ class SeerrRequestConflict implements Exception {
   String toString() => message;
 }
 
-final seerrServiceProvider = Provider<SeerrService>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  if (settings.seerrUrl.isEmpty || settings.seerrApiKey.isEmpty) {
-    throw Exception('Seerr not configured');
+/// Row count above which a discover page is mapped off the main isolate.
+///
+/// Same number and the same reasoning as the qBittorrent torrent parse and the
+/// Jellyfin item mapper: below it the isolate spawn costs more than the mapping
+/// does. Discover pages are TMDB-shaped and hold twenty rows, so in practice
+/// they map here — the gate exists for a server that answers with more.
+const int _seerrIsolateMapThreshold = 200;
+
+/// Maps a decoded discover page, moving to an isolate once it is big enough to
+/// be worth the port.
+///
+/// Top-level rather than a method on purpose: the closure handed to
+/// `Isolate.run` must capture only sendable values (here a decoded list and a
+/// `String?`), and one written inside an instance method can drag `this` —
+/// which holds an [ApiClient] — across the boundary.
+Future<List<MediaPreview>> _mapPreviews(
+  List<dynamic> results,
+  String? forcedMediaType,
+) async {
+  if (results.length <= _seerrIsolateMapThreshold) {
+    return results
+        .map((e) => MediaPreview.fromJson(e, forcedMediaType: forcedMediaType))
+        .toList();
   }
-  return SeerrService(
-    ApiClient(
-      baseUrl: settings.seerrUrl,
-      apiKey: settings.seerrApiKey,
-      pinnedCertFingerprint: settings.pinForUrl(settings.seerrUrl),
-    ),
+  return Isolate.run(
+    () => results
+        .map((e) => MediaPreview.fromJson(e, forcedMediaType: forcedMediaType))
+        .toList(),
   );
+}
+
+final seerrServiceProvider = Provider<SeerrService>((ref) {
+  return SeerrService(watchApiClient(ref, ServiceKey.seerr));
 });
 
 class SeerrService {
@@ -263,14 +285,23 @@ class SeerrService {
     }
   }
 
-  Future<List<MediaPreview>> getDiscoverMovies({
-    int page = 1,
+  /// The one discover body: every `/discover/*` row differs only in path, in
+  /// the media type it forces onto rows that do not carry one, and in whether
+  /// the caller filters or sorts.
+  ///
+  /// The conditional spreads are what keep the query maps identical to the
+  /// per-row methods they replaced — the upcoming and trending rows take no
+  /// genre or sort, so they still send `page` alone.
+  Future<List<MediaPreview>> _discover(
+    String path, {
+    required int page,
     int? genre,
     String? sortBy,
+    String? forcedMediaType,
   }) async {
     try {
       final response = await _client.get(
-        '/api/v1/discover/movies',
+        path,
         queryParameters: {
           'page': page,
           if (genre != null) 'genre': genre,
@@ -278,75 +309,56 @@ class SeerrService {
         },
       );
       final results = response.data['results'] as List<dynamic>;
-      return await Isolate.run(
-        () => results
-            .map((e) => MediaPreview.fromJson(e, forcedMediaType: 'movie'))
-            .toList(),
-      );
+      return await _mapPreviews(results, forcedMediaType);
     } catch (e) {
       return [];
     }
+  }
+
+  Future<List<MediaPreview>> getDiscoverMovies({
+    int page = 1,
+    int? genre,
+    String? sortBy,
+  }) {
+    return _discover(
+      '/api/v1/discover/movies',
+      page: page,
+      genre: genre,
+      sortBy: sortBy,
+      forcedMediaType: 'movie',
+    );
   }
 
   Future<List<MediaPreview>> getDiscoverTV({
     int page = 1,
     int? genre,
     String? sortBy,
-  }) async {
-    try {
-      final response = await _client.get(
-        '/api/v1/discover/tv',
-        queryParameters: {
-          'page': page,
-          if (genre != null) 'genre': genre,
-          if (sortBy != null) 'sortBy': sortBy,
-        },
-      );
-      final results = response.data['results'] as List<dynamic>;
-      return await Isolate.run(
-        () => results
-            .map((e) => MediaPreview.fromJson(e, forcedMediaType: 'tv'))
-            .toList(),
-      );
-    } catch (e) {
-      return [];
-    }
+  }) {
+    return _discover(
+      '/api/v1/discover/tv',
+      page: page,
+      genre: genre,
+      sortBy: sortBy,
+      forcedMediaType: 'tv',
+    );
   }
 
   /// Upcoming movies (Overseerr/Jellyseerr `/discover/movies/upcoming`).
-  Future<List<MediaPreview>> getDiscoverUpcomingMovies({int page = 1}) async {
-    try {
-      final response = await _client.get(
-        '/api/v1/discover/movies/upcoming',
-        queryParameters: {'page': page},
-      );
-      final results = response.data['results'] as List<dynamic>;
-      return await Isolate.run(
-        () => results
-            .map((e) => MediaPreview.fromJson(e, forcedMediaType: 'movie'))
-            .toList(),
-      );
-    } catch (e) {
-      return [];
-    }
+  Future<List<MediaPreview>> getDiscoverUpcomingMovies({int page = 1}) {
+    return _discover(
+      '/api/v1/discover/movies/upcoming',
+      page: page,
+      forcedMediaType: 'movie',
+    );
   }
 
   /// Upcoming TV (Overseerr/Jellyseerr `/discover/tv/upcoming`).
-  Future<List<MediaPreview>> getDiscoverUpcomingTv({int page = 1}) async {
-    try {
-      final response = await _client.get(
-        '/api/v1/discover/tv/upcoming',
-        queryParameters: {'page': page},
-      );
-      final results = response.data['results'] as List<dynamic>;
-      return await Isolate.run(
-        () => results
-            .map((e) => MediaPreview.fromJson(e, forcedMediaType: 'tv'))
-            .toList(),
-      );
-    } catch (e) {
-      return [];
-    }
+  Future<List<MediaPreview>> getDiscoverUpcomingTv({int page = 1}) {
+    return _discover(
+      '/api/v1/discover/tv/upcoming',
+      page: page,
+      forcedMediaType: 'tv',
+    );
   }
 
   /// Available movie genres (used to build per-genre discover rows).
@@ -371,19 +383,10 @@ class SeerrService {
     }
   }
 
-  Future<List<MediaPreview>> getDiscoverTrending({int page = 1}) async {
-    try {
-      final response = await _client.get(
-        '/api/v1/discover/trending',
-        queryParameters: {'page': page},
-      );
-      final results = response.data['results'] as List<dynamic>;
-      return await Isolate.run(
-        () => results.map((e) => MediaPreview.fromJson(e)).toList(),
-      );
-    } catch (e) {
-      return [];
-    }
+  /// Trending rows mix movies and TV, so the media type stays whatever each row
+  /// declares.
+  Future<List<MediaPreview>> getDiscoverTrending({int page = 1}) {
+    return _discover('/api/v1/discover/trending', page: page);
   }
 
   Future<Map<String, dynamic>> getMovie(int movieId) async {

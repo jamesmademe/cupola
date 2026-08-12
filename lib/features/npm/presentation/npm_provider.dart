@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Nginx Proxy Manager client bound to the current settings.
 ///
@@ -15,15 +16,28 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 /// with no rate limiting, on an account whose password is the key to every
 /// route on the box.
 final npmClientProvider = Provider<NpmClient>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  if (settings.npmUrl.isEmpty) {
+  // Selected rather than watching the whole model, and here that matters twice
+  // over: a rebuild closes the live Dio AND throws away the bearer token, so
+  // watching every field meant a theme change forced a fresh login.
+  final transport = ref.watch(
+    currentSettingsProvider.select(
+      (s) => (
+        configured: s.isServiceConfigured(ServiceKey.nginxProxyManager),
+        url: s.npmUrl,
+        username: s.npmUsername,
+        password: s.npmPassword,
+        pin: s.pinForUrl(s.npmUrl),
+      ),
+    ),
+  );
+  if (!transport.configured) {
     throw Exception('Nginx Proxy Manager not configured');
   }
   final client = NpmClient(
-    url: settings.npmUrl,
-    identity: settings.npmUsername.isEmpty ? null : settings.npmUsername,
-    secret: settings.npmPassword.isEmpty ? null : settings.npmPassword,
-    certFingerprint: settings.pinForUrl(settings.npmUrl),
+    url: transport.url,
+    identity: transport.username.isEmpty ? null : transport.username,
+    secret: transport.password.isEmpty ? null : transport.password,
+    certFingerprint: transport.pin,
   );
   ref.onDispose(() => client.close());
   return client;
@@ -52,12 +66,6 @@ final npmOtherHostsProvider = FutureProvider<List<NpmSimpleHost>>((ref) async {
     client.streams(),
   ]);
   return results.expand((hosts) => hosts).toList(growable: false);
-});
-
-/// Access lists, by name only — never with `?expand=items`, which would return
-/// the basic-auth credentials of the sites they protect.
-final npmAccessListsProvider = FutureProvider<List<NpmSimpleHost>>((ref) async {
-  return ref.watch(npmClientProvider).accessLists();
 });
 
 /// The unauthenticated health document — version, and whether this install is

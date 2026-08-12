@@ -15,7 +15,6 @@ import 'package:cupola/features/release_search/domain/release_search_target.dart
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../test_helpers/fake_services.dart';
@@ -490,13 +489,10 @@ void main() {
       String sonarrUrl, {
       TargetPlatform platform = TargetPlatform.android,
     }) async {
-      final scope = await settingsScope();
       final container = ProviderContainer(
         overrides: [
-          sharedPreferencesProvider.overrideWith((ref) => scope.prefs),
-          secureSettingsStoreProvider.overrideWith((ref) => scope.secureStore),
-          initialSettingsProvider.overrideWith(
-            (ref) => scope.settings.copyWithService(
+          ...await settingsScopeOverrides(
+            customize: (settings) => settings.copyWithService(
               ServiceKey.sonarr,
               url: sonarrUrl,
               apiKey: 'the-arr-admin-key',

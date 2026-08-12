@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/features/prowlarr/data/prowlarr_service.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 const int _defaultHistoryPageSize = 20;
 
@@ -12,21 +12,7 @@ const int _defaultHistoryPageSize = 20;
 /// Throws if Prowlarr is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.prowlarr)` before reading.
 final prowlarrServiceProvider = Provider<ProwlarrService>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  if (settings.prowlarrUrl.isEmpty || settings.prowlarrApiKey.isEmpty) {
-    throw Exception('Prowlarr not configured');
-  }
-  final service = ProwlarrService(
-    ApiClient(
-      baseUrl: settings.prowlarrUrl,
-      apiKey: settings.prowlarrApiKey,
-      pinnedCertFingerprint: settings.pinForUrl(settings.prowlarrUrl),
-    ),
-  );
-  // The provider is rebuilt whenever the config changes; close the previous
-  // Dio instance so its connections are not leaked.
-  ref.onDispose(() => service.client.close());
-  return service;
+  return ProwlarrService(watchApiClient(ref, ServiceKey.prowlarr));
 });
 
 /// Configured indexers.

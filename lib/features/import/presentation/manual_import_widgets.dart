@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
@@ -10,6 +11,9 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/features/import/domain/manual_import_models.dart';
+import 'package:cupola/features/import/presentation/manual_import_provider.dart';
+import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 extension ManualImportServiceCopy on ServiceKey {
@@ -361,6 +365,126 @@ class ImportPrimaryButton extends StatelessWidget {
           minimumSize: const Size.fromHeight(48),
         ),
       ),
+    );
+  }
+}
+
+/// Review's pinned bottom bar: the import-mode menu plus the primary action.
+class ManualImportReviewFooter extends ConsumerWidget {
+  final ServiceKey service;
+  final int? targetId;
+
+  const ManualImportReviewFooter({
+    super.key,
+    required this.service,
+    this.targetId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(manualImportFlowProvider);
+    final count = state.selectedItems.length;
+    final label = count == 0
+        ? 'Nothing selected to import'
+        : count == 1
+        ? 'Import 1 file'
+        : 'Import $count files';
+
+    return Padding(
+      padding: const EdgeInsets.only(left: AppSpacing.lg),
+      child: Row(
+        children: [
+          _ImportModeMenu(service: service),
+          Expanded(
+            child: ImportPrimaryButton(
+              service: service,
+              icon: Icons.check_circle_outline_rounded,
+              label: label,
+              loading: state.isSubmitting,
+              onPressed: !state.canImportSelected
+                  ? null
+                  : () async {
+                      final notifier = ref.read(
+                        manualImportFlowProvider.notifier,
+                      );
+                      final command = await notifier.confirmImport();
+                      if (command == null || !context.mounted) return;
+                      // Await the pop: coming back from Track re-reads the
+                      // folder, so the list reflects what the service actually
+                      // did with the files instead of the state we left behind.
+                      await context.push(
+                        manualImportLocation(
+                          manualImportProgressPath,
+                          service,
+                          targetId: targetId,
+                        ),
+                      );
+                      if (!context.mounted) return;
+                      await notifier.refreshAfterImport();
+                    },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Auto / Move / Copy — how the service should take the files.
+class _ImportModeMenu extends ConsumerWidget {
+  final ServiceKey service;
+
+  const _ImportModeMenu({required this.service});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(manualImportFlowProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return MenuAnchor(
+      builder: (context, controller, _) {
+        return Semantics(
+          button: true,
+          label: 'Import mode',
+          value: state.importMode.label,
+          child: OutlinedButton.icon(
+            onPressed: controller.isOpen ? controller.close : controller.open,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: colorScheme.onSurface,
+              side: BorderSide(color: colorScheme.outlineVariant),
+              minimumSize: const Size(0, 48),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            ),
+            icon: Icon(
+              Icons.expand_more_rounded,
+              size: 16,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            iconAlignment: IconAlignment.end,
+            label: Text(state.importMode.label),
+          ),
+        );
+      },
+      menuChildren: [
+        for (final mode in ManualImportMode.values)
+          MenuItemButton(
+            onPressed: () =>
+                ref.read(manualImportFlowProvider.notifier).setImportMode(mode),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(mode.label, style: theme.textTheme.labelLarge),
+                Text(
+                  mode.subtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

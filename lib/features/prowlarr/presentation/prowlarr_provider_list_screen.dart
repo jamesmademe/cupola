@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
@@ -79,7 +80,7 @@ class ProwlarrProviderListScreen extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(prowlarrProvidersProvider(kind));
-              await Future<void>.delayed(const Duration(milliseconds: 300));
+              await Future<void>.delayed(AppAnimation.durationMd);
             },
             child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),

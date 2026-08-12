@@ -73,14 +73,6 @@ final truenasCredentialsApiProvider = Provider<TrueNasCredentialsApi>(
   (ref) => TrueNasCredentialsApi(ref.watch(truenasClientProvider)),
 );
 
-/// The set of RPC methods the server exposes (capability discovery). Empty on
-/// failure — treat unknown as "assume available".
-final truenasCapabilitiesProvider = FutureProvider.autoDispose<Set<String>>((
-  ref,
-) async {
-  return ref.watch(truenasClientProvider).getMethods();
-});
-
 /// The connected server's parsed version, or null if unavailable/unparseable.
 final truenasVersionProvider = FutureProvider.autoDispose<TrueNasVersion?>((
   ref,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
@@ -47,7 +48,7 @@ class ProwlarrAppProfilesScreen extends ConsumerWidget {
         data: (profiles) => RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(prowlarrAppProfilesProvider);
-            await Future<void>.delayed(const Duration(milliseconds: 300));
+            await Future<void>.delayed(AppAnimation.durationMd);
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),

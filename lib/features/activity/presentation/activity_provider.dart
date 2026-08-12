@@ -9,7 +9,9 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
-import 'package:cupola/features/activity/presentation/activity_screen.dart';
+import 'package:cupola/features/activity/domain/service_type.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
+    show activitySecondaryLine;
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
@@ -230,12 +232,6 @@ final globalNowItemsProvider = FutureProvider<ActivityFeed>((ref) async {
       ..._loadArrResults(ref, GlobalActivityKind.queue),
     ]),
   );
-});
-
-/// Seerr requests only — the "Requests" sub-segment of the global "Now" bucket.
-final globalRequestItemsProvider = FutureProvider<ActivityFeed>((ref) async {
-  ref.watch(activityRefreshVersionProvider);
-  return _merge([await _loadRequestResult(ref)]);
 });
 
 /// Blocklist, complete: `getBlocklist` now pages every record, so a one-shot
@@ -823,23 +819,30 @@ String _subtitleFor(
   final title = _titleFor(kind, serviceType, item);
 
   return switch (kind) {
-    GlobalActivityKind.queue => _activitySecondaryLine(
-      serviceType,
-      item,
-      title: title,
-    ),
-    GlobalActivityKind.history => _activitySecondaryLine(
-      serviceType,
-      item,
-      title: title,
-      releaseKey: 'sourceTitle',
-    ),
-    GlobalActivityKind.blocklist => _activitySecondaryLine(
-      serviceType,
-      item,
-      title: title,
-      releaseKey: 'sourceTitle',
-    ),
+    GlobalActivityKind.queue =>
+      activitySecondaryLine(
+            serviceType,
+            item,
+            title: title,
+            release: stringOrNull(item['title']),
+          ) ??
+          '',
+    GlobalActivityKind.history =>
+      activitySecondaryLine(
+            serviceType,
+            item,
+            title: title,
+            release: stringOrNull(item['sourceTitle']),
+          ) ??
+          '',
+    GlobalActivityKind.blocklist =>
+      activitySecondaryLine(
+            serviceType,
+            item,
+            title: title,
+            release: stringOrNull(item['sourceTitle']),
+          ) ??
+          '',
     GlobalActivityKind.missing || GlobalActivityKind.cutoff => [
       _serviceKeyFor(serviceType).title,
       _wantedContext(serviceType, item),
@@ -887,27 +890,6 @@ String? _wantedContext(ServiceType serviceType, Map<String, dynamic> item) {
     ServiceType.series => _episodeLabel(item),
     ServiceType.music => stringOrNull(mapOrNull(item['artist'])?['artistName']),
     ServiceType.discover => null,
-  };
-}
-
-String _activitySecondaryLine(
-  ServiceType serviceType,
-  Map<String, dynamic> item, {
-  required String title,
-  String releaseKey = 'title',
-}) {
-  final release = stringOrNull(item[releaseKey]);
-  final uniqueRelease = release == title ? null : release;
-
-  return switch (serviceType) {
-    ServiceType.series => joinDisplayParts([
-      arrEpisodeCode(item),
-      arrEpisodeTitle(item),
-      uniqueRelease,
-    ]),
-    ServiceType.movies => joinDisplayParts([uniqueRelease]),
-    ServiceType.music => joinDisplayParts([arrArtistName(item), uniqueRelease]),
-    ServiceType.discover => '',
   };
 }
 
