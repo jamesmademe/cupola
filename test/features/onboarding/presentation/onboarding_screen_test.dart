@@ -568,14 +568,99 @@ void main() {
       expect(find.byType(ServiceRing), findsOneWidget);
     });
 
-    testWidgets('the ring gives up its slot to the keyboard', (tester) async {
+    testWidgets('the ring changes register rather than leaving', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await reachTheForm(tester);
+      final before = tester.widget<ServiceRing>(find.byType(ServiceRing));
+      final full = before.diameter;
+      expect(before.markFraction, ServiceRing.defaultMarkFraction);
+
+      await raiseKeyboard(tester);
+
+      // The defect this replaces: the full register asks for whatever the beat
+      // leaves over, and with a software keyboard up that is nothing on every
+      // phone — so the instrument was not merely smaller, it was gone for the
+      // whole time the user was typing.
+      expect(find.byType(ServiceRing), findsOneWidget);
+      final after = tester.widget<ServiceRing>(find.byType(ServiceRing));
+      expect(after.diameter, lessThan(full));
+      expect(
+        after.diameter,
+        greaterThanOrEqualTo(96),
+        reason: 'under its own floor the ring is a smudge, not an instrument',
+      );
+      // The mark gives up proportionally more than the ring does, because the
+      // nodes keep an absolute radius and would otherwise crowd it.
+      expect(after.markFraction, lessThan(ServiceRing.defaultMarkFraction));
+    });
+
+    testWidgets('the compact register keeps the ring inside the screen', (
+      tester,
+    ) async {
       await _pumpOnboarding(tester, viewport: phone);
       await reachTheForm(tester);
       await raiseKeyboard(tester);
 
-      // Not merely smaller: at its 96pt floor it would still cost more than the
-      // form has to spare, so the slot has to collapse to nothing.
-      expect(find.byType(ServiceRing), findsNothing);
+      final ring = tester.getRect(find.byType(ServiceRing));
+      expect(ring.top, greaterThanOrEqualTo(0));
+      expect(
+        ring.bottom,
+        lessThanOrEqualTo(phone.height - keyboard),
+        reason: 'a ring drawn under the keyboard is no better than no ring',
+      );
+    });
+
+    testWidgets('the eyebrow moves beside the ring and the question goes', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await reachTheForm(tester);
+      expect(findLine('Where does Sonarr live?'), findsOneWidget);
+
+      await raiseKeyboard(tester);
+
+      // The orientation survives the register change — which service, how far in
+      // — and says it exactly once, because a duplicated eyebrow is two steps to
+      // a screen reader.
+      expect(findLine('SONARR · 1 OF 1'), findsOneWidget);
+      final label = tester.getRect(findLine('SONARR · 1 OF 1'));
+      final ring = tester.getRect(find.byType(ServiceRing));
+      expect(
+        label.left,
+        greaterThanOrEqualTo(ring.right),
+        reason:
+            'the compact register puts the label beside the ring, not under',
+      );
+      // The question is what pays for the row: while the keyboard is up the user
+      // is already answering it, into a field labelled Address.
+      expect(findLine('Where does Sonarr live?'), findsNothing);
+    });
+
+    testWidgets('the return key walks down the form', (tester) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await reachTheForm(tester);
+
+      final address = find.byType(TextField).first;
+      final apiKey = find.byType(TextField).last;
+      await tester.tap(address);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(address).focusNode?.hasFocus, isTrue);
+
+      await tester.testTextInput.receiveAction(TextInputAction.next);
+      await tester.pumpAndSettle();
+
+      // Not the framework's own handling of `next`, which would hand focus to
+      // the port chip sitting inside the address field.
+      expect(tester.widget<TextField>(apiKey).focusNode?.hasFocus, isTrue);
+
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+
+      // The last field ends the form: the keyboard goes and the pinned actions
+      // are under the thumb. It does not fire the test itself.
+      expect(tester.widget<TextField>(apiKey).focusNode?.hasFocus, isFalse);
     });
 
     testWidgets('the address field stays clear of the keyboard', (
@@ -625,6 +710,50 @@ void main() {
       expect(find.byType(ServiceRing), findsOneWidget);
       final field = tester.getRect(find.byType(TextField).first);
       expect(field.bottom, lessThanOrEqualTo(phone.height - 90));
+    });
+
+    testWidgets('leaving the walk takes the keyboard with it', (tester) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await reachTheForm(tester);
+      await tester.tap(find.byType(TextField).first);
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isTrue);
+
+      await _tap(tester, 'Skip Sonarr');
+
+      // A focused `EditableText` registers a keep-alive, so the step the user
+      // left stayed mounted and focused: the close arrived with the keyboard
+      // still covering half of it, and keystrokes went into a field that was no
+      // longer on screen.
+      expect(find.text('Nothing connected yet.'), findsOneWidget);
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(
+        find
+            .byType(TextField)
+            .evaluate()
+            .where((e) => (e.widget as TextField).focusNode?.hasFocus ?? false),
+        isEmpty,
+      );
+    });
+
+    testWidgets('paging to the next service takes the keyboard with it', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester, viewport: phone);
+      await _tap(tester, 'Set up my stack');
+      await _pick(tester, 'Sonarr');
+      await _pick(tester, 'Radarr');
+      await _tap(tester, 'Continue with 2');
+
+      await tester.tap(find.byType(TextField).first);
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isTrue);
+
+      // Radarr comes first in ring order.
+      await _tap(tester, 'Skip Radarr');
+
+      expect(findLine('SONARR · 2 OF 2'), findsOneWidget);
+      expect(tester.testTextInput.isVisible, isFalse);
     });
 
     testWidgets('a way to put the keyboard away appears with it', (

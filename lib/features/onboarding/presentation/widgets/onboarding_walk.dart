@@ -41,7 +41,22 @@ class OnboardingWalkSubject extends StatelessWidget {
     required this.service,
     required this.position,
     required this.total,
-  });
+  }) : _eyebrowOnly = false;
+
+  /// The eyebrow on its own, for the ring's compact register — see
+  /// [OnboardingInstrument].
+  ///
+  /// The question goes, and only the question. While the keyboard is up the user
+  /// is already answering it, with a field labelled `Address` under the cursor;
+  /// what they still need is which service they are answering *for* and how much
+  /// is left, which is exactly what the eyebrow says. Dropping the headline is
+  /// also what makes the header row cost the height of the medallion and no more.
+  const OnboardingWalkSubject.eyebrow({
+    super.key,
+    required this.service,
+    required this.position,
+    required this.total,
+  }) : _eyebrowOnly = true;
 
   final ServiceKey service;
 
@@ -49,30 +64,36 @@ class OnboardingWalkSubject extends StatelessWidget {
   final int position;
   final int total;
 
+  final bool _eyebrowOnly;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    // The flow's spoken landmark: which service, and how far in.
+    final eyebrow = ReelLine(
+      '${service.title} · $position of $total'.toUpperCase(),
+      style: AppTheme.eyebrow(
+        ServiceTheme.onTint(
+          service.accent,
+          surface: scheme.surface,
+          tintAlpha: 0,
+        ),
+      ),
+      options: ReelMotion.word,
+      // Uppercase belongs in the eye, not the ear — and the spoken form
+      // also spells out the separator the eye reads as a dot.
+      semanticsLabel: '${service.title}, step $position of $total',
+    );
+    // Beside the ring the row supplies the gutters, and there is no second line
+    // to align to.
+    if (_eyebrowOnly) return eyebrow;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // The flow's spoken landmark: which service, and how far in.
-          ReelLine(
-            '${service.title} · $position of $total'.toUpperCase(),
-            style: AppTheme.eyebrow(
-              ServiceTheme.onTint(
-                service.accent,
-                surface: scheme.surface,
-                tintAlpha: 0,
-              ),
-            ),
-            options: ReelMotion.word,
-            // Uppercase belongs in the eye, not the ear — and the spoken form
-            // also spells out the separator the eye reads as a dot.
-            semanticsLabel: '${service.title}, step $position of $total',
-          ),
+          eyebrow,
           const SizedBox(height: AppSpacing.sm),
           ReelLine(
             'Where does ${service.title} live?',
@@ -95,7 +116,15 @@ class OnboardingWalkSubject extends StatelessWidget {
 /// answered.
 ///
 /// The step's subject line lives in [OnboardingWalkSubject], above the pager.
-class OnboardingWalk extends StatelessWidget {
+///
+/// The step owns its fields' [FocusNode]s so the return key can walk down the
+/// form: address → credential → done, one field under the cursor at a time. The
+/// framework's own handling of [TextInputAction.next] cannot do this, because it
+/// moves focus to the next *traversable* widget and the address field has two of
+/// its own — the port chip and, on a secret, the reveal toggle. Both stay in the
+/// traversal order for keyboard and screen-reader users; they are simply not
+/// where the return key goes.
+class OnboardingWalk extends StatefulWidget {
   const OnboardingWalk({
     super.key,
     required this.service,
@@ -153,6 +182,37 @@ class OnboardingWalk extends StatelessWidget {
   final VoidCallback onBack;
 
   @override
+  State<OnboardingWalk> createState() => _OnboardingWalkState();
+}
+
+class _OnboardingWalkState extends State<OnboardingWalk> {
+  /// One node per field the step can show. Three rather than two because a
+  /// credential-authenticated service has a username *and* a password, and the
+  /// address node is shared by both shapes.
+  final _address = FocusNode(debugLabel: 'onboarding address');
+  final _credential = FocusNode(debugLabel: 'onboarding credential');
+  final _password = FocusNode(debugLabel: 'onboarding password');
+
+  @override
+  void dispose() {
+    _address.dispose();
+    _credential.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  /// Hands the keyboard to [next], keeping it up. Requesting focus rather than
+  /// unfocusing first is what stops the keyboard closing and reopening between
+  /// two fields, which on iOS costs two animations and a relayout of the beat.
+  void _pass(FocusNode next) => next.requestFocus();
+
+  /// The end of the form: the keyboard goes away and the screen comes back, with
+  /// the pinned actions — Test, Skip, Back — already under the thumb. It does not
+  /// run the test itself: a network probe is a labelled button's job, not a
+  /// return key's.
+  void _close() => FocusManager.instance.primaryFocus?.unfocus();
+
+  @override
   Widget build(BuildContext context) {
     return OnboardingBeat(
       children: _form(context),
@@ -160,15 +220,15 @@ class OnboardingWalk extends StatelessWidget {
         children: [
           OnboardingFooter(
             secondary: OutlinedButton(
-              onPressed: onSkip,
-              child: Text('Skip ${service.title}'),
+              onPressed: widget.onSkip,
+              child: Text('Skip ${widget.service.title}'),
             ),
             primary: _TestOrAdvance(
-              status: status,
-              verifying: verifying,
-              isLast: next == null,
-              onTest: onTest,
-              onAdvance: onAdvance,
+              status: widget.status,
+              verifying: widget.verifying,
+              isLast: widget.next == null,
+              onTest: widget.onTest,
+              onAdvance: widget.onAdvance,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -179,12 +239,12 @@ class OnboardingWalk extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                TextButton(onPressed: onBack, child: const Text('Back')),
+                TextButton(onPressed: widget.onBack, child: const Text('Back')),
                 const OnboardingKeyboardDismiss(),
               ],
             )
           else
-            TextButton(onPressed: onBack, child: const Text('Back')),
+            TextButton(onPressed: widget.onBack, child: const Text('Back')),
         ],
       ),
     );
@@ -193,22 +253,32 @@ class OnboardingWalk extends StatelessWidget {
   List<Widget> _form(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final service = widget.service;
     return [
       OnboardingField(
         label: 'Address',
-        controller: urlController,
+        controller: widget.urlController,
         isUrl: true,
+        focusNode: _address,
+        action: TextInputAction.next,
+        onSubmitted: (_) => _pass(_credential),
         help:
             "${service.title}'s default port is ${service.defaultPort}. "
             'Behind a reverse proxy, use the address you reach it on.',
-        trailing: _PortChip(port: service.defaultPort, onTap: onSuggestPort),
+        trailing: _PortChip(
+          port: service.defaultPort,
+          onTap: widget.onSuggestPort,
+        ),
       ),
       if (service.usesApiKey) ...[
         const SizedBox(height: AppSpacing.lg),
         OnboardingField(
           label: service.credentialLabel,
-          controller: apiKeyController,
+          controller: widget.apiKeyController,
           isSecret: true,
+          focusNode: _credential,
+          action: TextInputAction.done,
+          onSubmitted: (_) => _close(),
           hint: 'Paste the ${service.credentialLabel.toLowerCase()}',
           help: service.credentialPath == null
               ? null
@@ -219,7 +289,10 @@ class OnboardingWalk extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         OnboardingField(
           label: service.usernameLabel,
-          controller: usernameController,
+          controller: widget.usernameController,
+          focusNode: _credential,
+          action: TextInputAction.next,
+          onSubmitted: (_) => _pass(_password),
           hint: service == ServiceKey.nginxProxyManager
               ? 'The email you sign in with'
               : 'Optional',
@@ -227,8 +300,11 @@ class OnboardingWalk extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         OnboardingField(
           label: 'Password',
-          controller: passwordController,
+          controller: widget.passwordController,
           isSecret: true,
+          focusNode: _password,
+          action: TextInputAction.done,
+          onSubmitted: (_) => _close(),
           hint: 'Optional',
           help:
               'Leave both empty if your ${service.title} instance does not '
@@ -244,41 +320,44 @@ class OnboardingWalk extends StatelessWidget {
           ),
         ),
       ],
-      if (certificateProbe != null) ...[
+      if (widget.certificateProbe case final probe?) ...[
         const SizedBox(height: AppSpacing.xl),
         _CertificateCard(
           service: service,
           origin:
-              UrlUtils.certOrigin(urlController.text) ??
-              urlController.text.trim(),
-          probe: certificateProbe!,
-          previousFingerprint: trustedFingerprint,
-          sharedWith: affectedServices.where((s) => s != service).toList(),
-          onTrust: onTrustCertificate,
+              UrlUtils.certOrigin(widget.urlController.text) ??
+              widget.urlController.text.trim(),
+          probe: probe,
+          previousFingerprint: widget.trustedFingerprint,
+          sharedWith: widget.affectedServices
+              .where((s) => s != service)
+              .toList(),
+          onTrust: widget.onTrustCertificate,
         ),
       ],
-      if (status != null && !verifying) ...[
+      if (widget.status case final status? when !widget.verifying) ...[
         const SizedBox(height: AppSpacing.xl),
         _Outcome(
           service: service,
-          status: status!,
-          reason: reason,
-          failureDetail: failureDetail,
+          status: status,
+          reason: widget.reason,
+          failureDetail: widget.failureDetail,
         ),
       ],
-      if (trustedFingerprint != null && certificateProbe == null) ...[
+      if (widget.trustedFingerprint != null &&
+          widget.certificateProbe == null) ...[
         const SizedBox(height: AppSpacing.md),
         Text(
-          affectedServices.length > 1
+          widget.affectedServices.length > 1
               ? "You trusted this server's own certificate — it also covers "
-                    '${affectedServices.where((s) => s != service).map((s) => s.title).join(', ')}.'
+                    '${widget.affectedServices.where((s) => s != service).map((s) => s.title).join(', ')}.'
               : "You trusted this server's own certificate.",
           style: theme.textTheme.bodySmall!.copyWith(
             color: scheme.onSurfaceVariant,
           ),
         ),
       ],
-      if (next case final upcoming?) ...[
+      if (widget.next case final upcoming?) ...[
         const SizedBox(height: AppSpacing.xl),
         Row(
           children: [

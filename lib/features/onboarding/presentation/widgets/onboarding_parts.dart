@@ -56,35 +56,58 @@ class OnboardingKeyboardScope extends InheritedWidget {
       oldWidget.up != up;
 }
 
-/// The instrument's slot, which gives its whole height back when the keyboard
-/// takes the screen.
+/// The instrument's slot, in either of the two registers the flow gives it.
 ///
 /// The ring is the flow's landmark and it earns its size — but only while there
 /// is a screen to put it on. It sat above an `Expanded`, so it did not shrink to
 /// make room: with the keyboard up it squeezed the form into a ~60pt slot,
 /// clipping the address field mid-glyph and hiding the validation message that
-/// explains why the step will not advance.
+/// explains why the step will not advance. Sizing it from the height actually
+/// left over fixed the clipping — and on every phone traded it for a ring that
+/// was simply gone, because a software keyboard leaves roughly 420pt of column
+/// and the beat's own content wants more than that on its own.
 ///
-/// The screen now sizes it from the height actually left over, so it shrinks
-/// with the space instead of vanishing at the first sign of a keyboard, and only
-/// collapses when what remains is under `serviceRingDiameter`'s own 96pt floor —
-/// where a ring is a smudge rather than an instrument.
+/// So scarcity changes the instrument's *register* rather than removing it. The
+/// full register is the hero above the beat. The compact one moves it beside
+/// [label] — the step's eyebrow, which is the orientation the full subject line
+/// was carrying — into a single header row that costs about what the subject
+/// line alone used to. That is where the ~100pt the form needs comes from, and
+/// the ring stays on screen while the user types.
 ///
-/// Nothing is lost when it does go. [OnboardingWalkSubject] still names the
-/// service and the step, which is the orientation the ring was carrying.
+/// It is the *same* ring in both: the row is the same shape at either end of the
+/// animation, so the element — and with it every transition the ring is holding
+/// mid-flight — survives the change. Only its size, the label's width and the
+/// gutters interpolate. The node radii do not: they are absolute (4–6pt), which
+/// is why a 96pt ring still reads as fifteen distinct services rather than as a
+/// smudge.
 ///
-/// [collapsed] is decided by the screen, which is the only place that knows both
-/// the height available and what the beat below needs — see
-/// `_OnboardingScreenState._ringDiameter`.
+/// [collapsed] is the last resort, for a screen so short that even the compact
+/// register would eat the form's floor. Nothing is lost when it fires:
+/// [OnboardingWalkSubject] is back at full height by then and still names the
+/// service and the step.
+///
+/// Both are decided by the screen, the only place that knows the height
+/// available and what the beat below needs — see
+/// `_OnboardingScreenState._fullRingDiameter` and its compact counterpart.
 class OnboardingInstrument extends StatelessWidget {
   const OnboardingInstrument({
     super.key,
     required this.collapsed,
+    required this.compact,
+    this.label,
     required this.child,
   });
 
-  /// Whether there is no longer enough height to show a legible ring.
+  /// Whether there is no longer enough height to show a legible ring at all.
   final bool collapsed;
+
+  /// Whether the instrument is in its compact register, beside [label] rather
+  /// than above the whole beat.
+  final bool compact;
+
+  /// The step's eyebrow, shown only in the compact register. Null on the beats
+  /// that have no subject of their own — the door, the choice and the close.
+  final Widget? label;
 
   final Widget child;
 
@@ -96,7 +119,7 @@ class OnboardingInstrument extends StatelessWidget {
       curve: AppAnimation.standardCurve,
       // Gone means gone: at zero the slot contributes no height, no semantics
       // and no paint, so the form's Expanded gets the full remainder.
-      builder: (context, t, ring) => t == 0
+      builder: (context, t, _) => t == 0
           ? const SizedBox.shrink()
           : ClipRect(
               child: Align(
@@ -111,14 +134,116 @@ class OnboardingInstrument extends StatelessWidget {
                     // scale alone would leave the gap behind, heightFactor alone
                     // would guillotine it.
                     scale: 0.72 + 0.28 * t,
-                    child: ring,
+                    child: _register(context),
                   ),
                 ),
               ),
             ),
-      child: child,
     );
   }
+
+  Widget _register(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween<double>(end: compact ? 1 : 0),
+    duration: AppAnimation.durationMd,
+    curve: AppAnimation.standardCurve,
+    builder: (context, c, _) => Padding(
+      // The full register's gutters are for a hero with a beat under it. The
+      // compact one is a header strip, and every point it keeps is a point the
+      // focused field does not get.
+      padding: EdgeInsets.only(
+        top: _lerp(AppSpacing.lg, AppSpacing.sm, c),
+        bottom: _lerp(AppSpacing.md, AppSpacing.sm, c),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          child,
+          // Built only while it contributes something. A zero-width, fully
+          // transparent slot still occupies the tree, and this label is the same
+          // sentence [OnboardingWalkSubject] is showing in the full register —
+          // so leaving it mounted put the step's eyebrow in the semantics tree
+          // twice, which a screen reader reads out as two steps.
+          if (label case final label? when c > 0)
+            // Loose by default, so the moment it goes the ring is centred by the
+            // row exactly as it was before the label existed.
+            Flexible(
+              child: ClipRect(
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  // Widens out from behind the ring rather than fading in
+                  // place — the label is arriving from where it used to be.
+                  widthFactor: c,
+                  child: Opacity(
+                    // Trails the width so the two eyebrows — this one and the
+                    // subject line's, which is collapsing on the same clock —
+                    // are never both legible at once.
+                    opacity: Curves.easeIn.transform(
+                      ((c - 0.4) / 0.6).clamp(0.0, 1.0),
+                    ),
+                    child: ExcludeSemantics(
+                      // Mid-flight the subject line is still on its way out, so
+                      // for those few frames neither speaks. One of the two is
+                      // always the settled answer.
+                      excluding: c < 1,
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          start: AppSpacing.lg,
+                          end: AppSpacing.md,
+                        ),
+                        child: label,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+
+  static double _lerp(double a, double b, double t) => a + (b - a) * t;
+}
+
+/// A slot that gives its height back when the beat stops needing what is in it.
+///
+/// The counterpart to [OnboardingInstrument]'s compact register: the step's full
+/// subject line folds away exactly as the instrument takes its eyebrow over, so
+/// the two read as one label moving rather than as two labels, one of which
+/// disappeared.
+class OnboardingCollapsible extends StatelessWidget {
+  const OnboardingCollapsible({
+    super.key,
+    required this.collapsed,
+    required this.child,
+  });
+
+  final bool collapsed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween<double>(end: collapsed ? 0 : 1),
+    duration: AppAnimation.durationMd,
+    curve: AppAnimation.standardCurve,
+    builder: (context, t, content) => t == 0
+        ? const SizedBox.shrink()
+        : ClipRect(
+            child: Align(
+              alignment: Alignment.topCenter,
+              heightFactor: t,
+              // Leaves ahead of the fold, for the same reason the ring does.
+              child: Opacity(
+                opacity: Curves.easeOut.transform(t),
+                // Hands the spoken label over cleanly: on its way out this is no
+                // longer the step's voice, and the instrument's own label has not
+                // finished arriving. See [OnboardingInstrument].
+                child: ExcludeSemantics(excluding: t < 1, child: content),
+              ),
+            ),
+          ),
+    child: child,
+  );
 }
 
 /// The control the keyboard itself does not offer here: a way to put it away.
@@ -631,6 +756,9 @@ class OnboardingField extends StatefulWidget {
     this.help,
     this.trailing,
     this.warningFor,
+    this.focusNode,
+    this.action,
+    this.onSubmitted,
   });
 
   final String label;
@@ -638,6 +766,21 @@ class OnboardingField extends StatefulWidget {
   final bool isUrl;
   final bool isSecret;
   final String? hint;
+
+  /// Owned by the step, not by the field, because the return key's job is to
+  /// hand focus to the *next* field and only the step knows what that is.
+  final FocusNode? focusNode;
+
+  /// What the return key says. Defaults to the shape of a lone field — `next`
+  /// for an address, `done` otherwise — which is only right when nothing wires
+  /// [onSubmitted].
+  final TextInputAction? action;
+
+  /// Runs on the return key. Wired explicitly rather than left to the
+  /// framework's default for [TextInputAction.next], which moves focus to the
+  /// next *traversable* widget — here the reveal toggle or the port chip sitting
+  /// inside the same field, not the field below it.
+  final ValueChanged<String>? onSubmitted;
 
   /// A steady line under the field — where the credential lives, what the
   /// default port is. Not a validation result.
@@ -741,13 +884,17 @@ class _OnboardingFieldState extends State<OnboardingField> {
               Expanded(
                 child: TextField(
                   controller: widget.controller,
+                  focusNode: widget.focusNode,
+                  onSubmitted: widget.onSubmitted,
                   obscureText: widget.isSecret && !_revealed,
                   keyboardType: widget.isUrl
                       ? TextInputType.url
                       : TextInputType.text,
-                  textInputAction: widget.isUrl
-                      ? TextInputAction.next
-                      : TextInputAction.done,
+                  textInputAction:
+                      widget.action ??
+                      (widget.isUrl
+                          ? TextInputAction.next
+                          : TextInputAction.done),
                   autocorrect: false,
                   enableSuggestions: false,
                   // Smart substitutions off as well as autocorrect: iOS

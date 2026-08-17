@@ -63,8 +63,14 @@ class ServiceRing extends StatefulWidget {
     this.progress = 0,
     this.activeService,
     this.spin = false,
-    this.markFraction = 0.42,
+    this.markFraction = defaultMarkFraction,
   });
+
+  /// The mark's share of the ring when the ring is the subject of the screen.
+  ///
+  /// Named so a caller that wants a different proportion can say what it is
+  /// departing *from* — see [markFraction].
+  static const double defaultMarkFraction = 0.42;
 
   /// Per-service node state. A service absent from the map is
   /// [ServiceRingState.unlit].

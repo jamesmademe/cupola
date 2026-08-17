@@ -470,6 +470,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   void _goTo(int page) {
     if (!_pageController.hasClients) return;
+    // Leaving a beat means leaving the field you were in.
+    //
+    // A focused `EditableText` registers a keep-alive with the pager, so the step
+    // the user walked away from stayed mounted *and* focused. The keyboard
+    // therefore rode along: the close arrived with half of it covered by keys
+    // belonging to a form that was no longer on screen, and anything typed went
+    // into that invisible field. Unfocusing here rather than in each caller is
+    // the point — every way out of a step, forward, back, skip or fix, comes
+    // through this method.
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _page = page);
     _pageController.animateToPage(
       page,
@@ -545,22 +555,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
-  /// The ring's size for the beat currently on screen, given the height the
-  /// column actually has.
+  /// The ring's size in its **full** register, given the height the column
+  /// actually has — or zero, which is the signal to try the compact one.
   ///
   /// Two preferred sizes, not four: the door and the close are about the whole
   /// stack, so the instrument is the subject there; picking and configuring are
   /// about one service at a time, so it steps down to leave the form room — but
   /// it is the *same* ring resizing, never a second one.
   ///
-  /// [available] is what makes it survive the keyboard. The ring takes what is
-  /// left after the beat's own content is served, so it shrinks smoothly on a
-  /// short screen and only disappears when there is genuinely nothing to give
-  /// it. An earlier version hid it on `viewInsets > 0` alone, which was wrong
-  /// twice over: a hardware or floating keyboard reports a small inset and left
-  /// half the screen empty with no ring in it, and a tall phone with the
-  /// software keyboard up has room for a reduced one.
-  double _ringDiameter(BuildContext context, double available) {
+  /// [available] is what keeps it honest. The ring takes what is left after the
+  /// beat's own content is served, so it shrinks smoothly on a short screen. An
+  /// earlier version hid it on `viewInsets > 0` alone, which was wrong twice
+  /// over: a hardware or floating keyboard reports a small inset and left half
+  /// the screen empty with no ring in it, and a tall phone with the software
+  /// keyboard up has room for a reduced one.
+  double _fullRingDiameter(BuildContext context, double available) {
     final preferred = _page == _doorPage || _page >= _closePage ? 300.0 : 190.0;
     final wanted = serviceRingDiameter(context, preferred: preferred);
     if (!available.isFinite) return wanted;
@@ -572,10 +581,46 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     final reserved = _contentFloor * scale.clamp(1.0, 2.0);
     final spare = available - reserved;
 
-    // Below its own floor a ring is a smudge rather than an instrument, and the
-    // form needs the height more than the composition does.
+    // Below its own floor a ring is a smudge rather than an instrument. This is
+    // not the ring leaving, though — it is the point where the compact register
+    // takes over.
     if (spare < _ringFloor) return 0;
     return spare < wanted ? spare : wanted;
+  }
+
+  /// The ring's size in its **compact** register: a medallion in the header row,
+  /// beside the step's eyebrow.
+  ///
+  /// The full register asks for whatever the beat leaves over, and with a
+  /// software keyboard up that is nothing — a 6.1" phone keeps about 420pt of
+  /// column and the beat's own content wants more than that on its own, so the
+  /// ring came out at zero on every phone rather than merely smaller. The
+  /// compact register does not compete: it *replaces* the subject line's row
+  /// instead of sitting above it, so it is sized from a share of the short
+  /// screen rather than from its leftovers, and the form still ends up with
+  /// roughly 100pt more than it had.
+  ///
+  /// Returns zero only in the genuine squeeze — an accessibility reading size on
+  /// a small phone — where even a medallion would eat the one field the user is
+  /// typing into. The caller falls back to the full register's answer there,
+  /// which is the ring standing down and the subject line staying whole.
+  double _compactRingDiameter(BuildContext context, double available) {
+    if (!available.isFinite) {
+      return serviceRingDiameter(context, preferred: _compactCeiling);
+    }
+    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    // One labelled field with its help line, the pinned actions, and the beat's
+    // own gutters. Far less than [_contentFloor] because the fields below the
+    // focused one are allowed to be scrolled to — the return key walks the form
+    // one field at a time, so the header only has to leave room for the field
+    // under the cursor.
+    final room = available - _compactContentFloor * scale.clamp(1.0, 2.0);
+    if (room < _ringFloor) return 0;
+    final wanted = serviceRingDiameter(
+      context,
+      preferred: (available * _compactShare).clamp(_ringFloor, _compactCeiling),
+    );
+    return wanted > room ? room : wanted;
   }
 
   /// Height the beat's own content wants before the ring is served: subject
@@ -583,6 +628,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// — erring here costs a smaller ring, while erring the other way costs a
   /// clipped field, which is the defect this whole arrangement exists to fix.
   static const double _contentFloor = 450;
+
+  /// The same figure for the compact register, where only the focused field has
+  /// to be on screen.
+  static const double _compactContentFloor = 260;
+
+  /// Share of a short screen the medallion may take. Tuned so a 6.1" phone with
+  /// the keyboard up lands near [_compactCeiling] and a 4.7" one near the floor.
+  static const double _compactShare = 0.28;
+
+  /// Past this a medallion stops reading as a medallion and starts competing
+  /// with the form again.
+  static const double _compactCeiling = 132;
+
+  /// The mark's share of the medallion, a little under
+  /// [ServiceRing.defaultMarkFraction].
+  ///
+  /// The ring's nodes keep an absolute radius while the mark scales with the
+  /// diameter, so shrinking the ring closes the gap between the two: 49pt of air
+  /// at 190, 32pt at 132, 24pt at the floor. Giving the mark proportionally less
+  /// buys that air back — at 132 the gap returns to ~38pt — and the nodes stay
+  /// the thing the eye reads first, which is the whole point of a dial.
+  static const double _compactMarkFraction = 0.34;
 
   /// [serviceRingDiameter]'s own clamp floor. Under this the ring stops being
   /// legible, so it leaves instead.
@@ -612,10 +679,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                 constraints: const BoxConstraints(maxWidth: onboardingMaxWidth),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final diameter = _ringDiameter(
+                    // The register follows the space, not the keyboard. Where the
+                    // full one still fits, nothing changes; where it used to
+                    // collapse to nothing, the medallion takes over instead.
+                    var diameter = _fullRingDiameter(
                       context,
                       constraints.maxHeight,
                     );
+                    var compact = false;
+                    if (diameter == 0) {
+                      diameter = _compactRingDiameter(
+                        context,
+                        constraints.maxHeight,
+                      );
+                      compact = diameter > 0;
+                    }
                     return Column(
                       children: [
                         // The instrument, outside the pager on purpose. One ring for
@@ -626,38 +704,54 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                         // every step.
                         OnboardingInstrument(
                           collapsed: diameter == 0,
-                          child: Padding(
-                            padding: const EdgeInsets.only(
-                              top: AppSpacing.lg,
-                              bottom: AppSpacing.md,
-                            ),
-                            child: TweenAnimationBuilder<double>(
-                              tween: Tween(end: diameter),
-                              // The page slide's own timing, so the resize and the
-                              // shell's travel read as one movement.
-                              duration: AppAnimation.durationMd,
-                              curve: AppAnimation.standardCurve,
-                              builder: (context, animated, _) =>
-                                  AnimatedBuilder(
-                                    animation: _entrance,
-                                    builder: (context, _) => ServiceRing(
-                                      states: ringStates,
-                                      diameter: animated,
-                                      entrance: AppAnimation.emphasizedCurve
-                                          .transform(_entrance.value),
-                                      activeService: activeWalk,
-                                      progress: activeWalk == null
-                                          ? (_page >= _closePage &&
-                                                    _silent.isEmpty &&
-                                                    _answering.isNotEmpty
-                                                ? 1
-                                                : 0)
-                                          : (_page - _firstWalkPage) /
-                                                walk.length,
-                                      spin: true,
-                                    ),
+                          compact: compact,
+                          label: activeWalk == null
+                              ? null
+                              : OnboardingWalkSubject.eyebrow(
+                                  service: activeWalk,
+                                  position: _page - _firstWalkPage + 1,
+                                  total: walk.length,
+                                ),
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween(end: diameter),
+                            // The page slide's own timing, so the resize and the
+                            // shell's travel read as one movement.
+                            duration: AppAnimation.durationMd,
+                            curve: AppAnimation.standardCurve,
+                            builder: (context, animated, _) =>
+                                TweenAnimationBuilder<double>(
+                                  // On the same clock as the diameter, so the
+                                  // medallion contracts as one object rather than
+                                  // as a mark that catches up with its ring.
+                                  tween: Tween(
+                                    end: compact
+                                        ? _compactMarkFraction
+                                        : ServiceRing.defaultMarkFraction,
                                   ),
-                            ),
+                                  duration: AppAnimation.durationMd,
+                                  curve: AppAnimation.standardCurve,
+                                  builder: (context, mark, _) =>
+                                      AnimatedBuilder(
+                                        animation: _entrance,
+                                        builder: (context, _) => ServiceRing(
+                                          states: ringStates,
+                                          diameter: animated,
+                                          markFraction: mark,
+                                          entrance: AppAnimation.emphasizedCurve
+                                              .transform(_entrance.value),
+                                          activeService: activeWalk,
+                                          progress: activeWalk == null
+                                              ? (_page >= _closePage &&
+                                                        _silent.isEmpty &&
+                                                        _answering.isNotEmpty
+                                                    ? 1
+                                                    : 0)
+                                              : (_page - _firstWalkPage) /
+                                                    walk.length,
+                                          spin: true,
+                                        ),
+                                      ),
+                                ),
                           ),
                         ),
                         // The step's subject, hoisted for the same reason the ring is:
@@ -666,14 +760,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                         // Held here it is one widget across the whole walk and the
                         // service name rolls inside a sentence that stays put.
                         if (activeWalk case final service?)
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              bottom: AppSpacing.md,
-                            ),
-                            child: OnboardingWalkSubject(
-                              service: service,
-                              position: _page - _firstWalkPage + 1,
-                              total: walk.length,
+                          // Folds away as the instrument takes its eyebrow over,
+                          // on the same clock, so the label reads as moving into
+                          // the medallion's row rather than as two labels.
+                          OnboardingCollapsible(
+                            collapsed: compact,
+                            child: Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: AppSpacing.md,
+                              ),
+                              child: OnboardingWalkSubject(
+                                service: service,
+                                position: _page - _firstWalkPage + 1,
+                                total: walk.length,
+                              ),
                             ),
                           ),
                         Expanded(
