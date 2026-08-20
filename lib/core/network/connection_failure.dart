@@ -40,6 +40,17 @@ enum ServiceFailureReason {
   /// The service answered with a 5xx.
   serverError,
 
+  /// The host OS refused to let Cupola onto the local network at all, so the
+  /// request never left the device.
+  ///
+  /// Unreachable in every way that matters at the socket — iOS answers "no route
+  /// to host", Android times out — which is why this is the one reason
+  /// [classifyConnectionFailure] can never produce: no exception carries it.
+  /// It is attributed afterwards, by asking the OS
+  /// (`probeLocalNetworkAccess`), and it *supersedes* the socket's verdict
+  /// because the address the user is being told to check was never dialled.
+  localNetworkBlocked,
+
   /// Reached, failed, and the cause cannot be attributed.
   unknown,
 }

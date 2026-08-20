@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/features/dockge/data/dockge_client.dart';
 import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
@@ -52,6 +53,15 @@ class ServiceDiagnosis {
     : this(
         ServiceConnectionStatus.disconnected,
         ServiceFailureReason.unreachable,
+      );
+
+  /// The OS refused to let Cupola onto the local network, so the request never
+  /// left the device. Not derived from an error — see
+  /// [ServiceFailureReason.localNetworkBlocked].
+  const ServiceDiagnosis.localNetworkBlocked()
+    : this(
+        ServiceConnectionStatus.disconnected,
+        ServiceFailureReason.localNetworkBlocked,
       );
 
   ServiceDiagnosis.failed(
@@ -459,6 +469,65 @@ Future<ServiceDiagnosis> diagnoseService(
   );
 }
 
+/// Whether a blocked local network could still explain this failure.
+///
+/// The mirror of [certProbeWorthwhile], and it rules out one more: a TLS failure
+/// proves the packets reached a server, so the OS was never in the way. What is
+/// left — nothing answered, nothing answered in time, or nothing attributable —
+/// is exactly how a permission the user has not granted looks from the socket.
+bool localNetworkCouldExplain(ServiceFailureReason? reason) => switch (reason) {
+  ServiceFailureReason.unauthorized ||
+  ServiceFailureReason.notFound ||
+  ServiceFailureReason.redirected ||
+  ServiceFailureReason.serverError ||
+  ServiceFailureReason.tls ||
+  // Already attributed; asking again would only re-confirm it.
+  ServiceFailureReason.localNetworkBlocked => false,
+  _ => true,
+};
+
+/// Runs [diagnose] and, when it fails the way a blocked local network fails,
+/// asks the OS whether that is what happened.
+///
+/// The order is the whole design. Cupola never asks first: on iOS the *failing
+/// connection is what raises the system alert*, so by the time this asks, the
+/// alert the user must answer is already on screen — and asking only after a
+/// failure means a public server timing out can never raise a Local Network
+/// prompt out of nowhere. Three outcomes, three different truths:
+///
+/// * `justGranted` — the user allowed it while we were asking. The failed
+///   connection was dialled through a closed gate, so its verdict is void and
+///   the test is simply run again. This is the retest the user used to have to
+///   work out for themselves.
+/// * `denied` — report the permission, not the address. The old copy sent people
+///   to re-check a hostname and port that were right all along.
+/// * anything else — keep the original failure untouched. Claiming a permission
+///   problem on a hunch would be the same bug in the other direction.
+///
+/// [timeout] is how long the OS gets to answer. Pass something generous where a
+/// human is watching (they are reading an alert), and something short on a
+/// background refresh, where the only answer worth having is one the OS already
+/// holds.
+Future<ServiceDiagnosis> diagnoseThroughLocalNetworkGate(
+  Future<ServiceDiagnosis> Function() diagnose, {
+  required String url,
+  Duration timeout = const Duration(seconds: 20),
+  LocalNetworkProbe probe = probeLocalNetworkAccess,
+}) async {
+  final first = await diagnose();
+  if (!first.isDisconnected || !localNetworkCouldExplain(first.reason)) {
+    return first;
+  }
+  final access = await probe(url, timeout: timeout);
+  return switch (access) {
+    LocalNetworkAccess.justGranted => await diagnose(),
+    LocalNetworkAccess.denied => const ServiceDiagnosis.localNetworkBlocked(),
+    LocalNetworkAccess.granted ||
+    LocalNetworkAccess.unrestricted ||
+    LocalNetworkAccess.unknown => first,
+  };
+}
+
 /// Whether a certificate probe could still explain this failure.
 ///
 /// An untrusted certificate surfaces as `tls`, and as `unreachable`/`unknown`
@@ -471,7 +540,10 @@ bool certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
   ServiceFailureReason.notFound ||
   ServiceFailureReason.redirected ||
-  ServiceFailureReason.serverError => false,
+  ServiceFailureReason.serverError ||
+  // Nothing left the device, so there is no handshake to inspect: the probe
+  // opens its own socket to the same blocked address and can only time out.
+  ServiceFailureReason.localNetworkBlocked => false,
   _ => true,
 };
 
@@ -538,6 +610,14 @@ String connectionFailureMessage(
     case ServiceFailureReason.serverError:
       return '${service.title} answered with a server error. Check the '
           'instance and its logs.';
+    case ServiceFailureReason.localNetworkBlocked:
+      // Names the device, not the server, and never mentions the address: the
+      // request never left this phone, so everything in the form is still
+      // unproven rather than wrong. `remedy` spells out the route in the words
+      // the running OS uses for it.
+      return 'This device is blocking Cupola from reaching your local '
+          'network, so ${service.title} was never dialled. '
+          '${LocalNetworkPermission.remedy}';
     case ServiceFailureReason.unknown:
     case null:
       return 'Could not verify the instance. Double-check the address and '
@@ -550,5 +630,15 @@ String connectionFailureMessage(
 final serviceDiagnosisProvider =
     FutureProvider.family<ServiceDiagnosis, ServiceKey>((ref, service) async {
       final settings = ref.watch(currentSettingsProvider);
+      // Deliberately *not* through `diagnoseThroughLocalNetworkGate`. This runs
+      // unattended — on launch, and for every configured service at once — and
+      // resolving the permission is not a passive question: on iOS it can put an
+      // alert on screen, and it costs a Bonjour round trip per service. Neither
+      // belongs in a background refresh nobody asked for.
+      //
+      // The cost is that a service blocked by the permission reads `Unreachable`
+      // in the list rather than naming the permission. It is named the moment the
+      // user does the obvious thing — open the service and test it — which is
+      // where the fix lives anyway.
       return diagnoseService(service, settings);
     });

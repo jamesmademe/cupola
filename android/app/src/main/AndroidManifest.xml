@@ -5,6 +5,14 @@
          never called — which is what keeps this clear of the Play-restricted
          exact-alarm permissions and their declaration form. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Every service Cupola manages lives on the user's own network. Android's
+         Local Network Protections gate that traffic behind this runtime
+         permission: opt-in on Android 16, mandatory from Android 17 for apps
+         that target it. Declared now so the day `targetSdk` reaches 37 the
+         connection tests ask for it instead of silently timing out — the gate in
+         `MainActivity.localNetworkIsGated` keeps it inert until then, and on
+         every older release the name is simply ignored. -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK"/>
     <application
         android:label="Cupola"
         android:name="${applicationName}"

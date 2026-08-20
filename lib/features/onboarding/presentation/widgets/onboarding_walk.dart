@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/core/reel_motion.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/reel_command_button.dart';
 import 'package:cupola/core/widgets/reel_line.dart';
@@ -495,11 +497,41 @@ class _Outcome extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
-            child: Text(
-              sentence,
-              style: theme.textTheme.bodyMedium!.copyWith(
-                color: scheme.onSurface,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  sentence,
+                  style: theme.textTheme.bodyMedium!.copyWith(
+                    color: scheme.onSurface,
+                  ),
+                ),
+                // The permission is the only failure in the vocabulary whose fix
+                // is not in this form, so it is the only one that earns a button:
+                // everything else is an address or a credential the user is
+                // already looking at.
+                if (reason == ServiceFailureReason.localNetworkBlocked) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: TextButton.icon(
+                      onPressed: () async {
+                        final opened =
+                            await LocalNetworkPermission.openSettings();
+                        if (!opened && context.mounted) {
+                          SnackBarHelper.info(
+                            context,
+                            LocalNetworkPermission.remedy,
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.settings_rounded, size: 18),
+                      label: const Text('Open Settings'),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

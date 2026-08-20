@@ -40,6 +40,27 @@ void main() {
       expect(redirected.icon, isNot(notFound.icon));
     });
 
+    test('a blocked local network is not drawn as an unreachable server', () {
+      final blocked = describeConnection(
+        ServiceKey.radarr,
+        status: ServiceConnectionStatus.disconnected,
+        reason: ServiceFailureReason.localNetworkBlocked,
+      );
+      final unreachable = describeConnection(
+        ServiceKey.radarr,
+        status: ServiceConnectionStatus.disconnected,
+        reason: ServiceFailureReason.unreachable,
+      );
+
+      // Red says "nothing answered", which sends the user auditing an address
+      // and a port that are both fine — the request never left the device. Amber
+      // says "there is one thing to change", and there is exactly one.
+      expect(blocked.tone, StatusTone.warning);
+      expect(unreachable.tone, StatusTone.error);
+      expect(blocked.label, isNot(unreachable.label));
+      expect(blocked.icon, isNot(unreachable.icon));
+    });
+
     // The switch over `reason` is exhaustive, so this is a guard against a new
     // reason being added and quietly landing on the "Unreachable" fallback
     // rather than being given words of its own.

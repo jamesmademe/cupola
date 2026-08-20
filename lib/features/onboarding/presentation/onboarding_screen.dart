@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
@@ -27,11 +28,16 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({
     super.key,
     this.certificateProber = probeUntrustedCertificate,
+    this.localNetworkProbe = probeLocalNetworkAccess,
   });
 
   /// Injectable so a widget test can stay off a real socket — see
   /// [CertificateProber].
   final CertificateProber certificateProber;
+
+  /// Injectable for the same reason as [certificateProber]: the real one reaches
+  /// the host OS and, on iOS, can put a permission alert on screen.
+  final LocalNetworkProbe localNetworkProbe;
 
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -299,17 +305,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   }
 
   Future<void> _runTest(ServiceKey service) async {
-    final result = await diagnoseCredentials(
-      service,
+    // The first connection this app ever opens usually happens right here, which
+    // is what makes the local-network gate an onboarding problem before it is a
+    // settings one: on iOS the very act of dialling a LAN address raises the
+    // permission alert, and the connection racing it fails. Going through the
+    // gate means the alert is *waited on* rather than raced — allow it and the
+    // test simply runs again, deny it and the step says so instead of blaming
+    // the address the user just typed.
+    final result = await diagnoseThroughLocalNetworkGate(
+      () => diagnoseCredentials(
+        service,
+        url: _urlCtrl[service]!.text,
+        apiKey: _apiKeyCtrl[service]!.text,
+        username: _usernameCtrl[service]!.text,
+        password: _passwordCtrl[service]!.text,
+        certFingerprint: _pinFor(service) ?? '',
+        // Plex's persisted per-install identity. Minted once by
+        // `SettingsService` and read rather than generated here, because a fresh
+        // value registers another "device" row on the user's server.
+        clientIdentifier: ref.read(currentSettingsProvider).plexClientId,
+      ),
       url: _urlCtrl[service]!.text,
-      apiKey: _apiKeyCtrl[service]!.text,
-      username: _usernameCtrl[service]!.text,
-      password: _passwordCtrl[service]!.text,
-      certFingerprint: _pinFor(service) ?? '',
-      // Plex's persisted per-install identity. Minted once by `SettingsService`
-      // and read rather than generated here, because a fresh value registers
-      // another "device" row on the user's server.
-      clientIdentifier: ref.read(currentSettingsProvider).plexClientId,
+      probe: widget.localNetworkProbe,
     );
 
     // A TLS failure resolves *in the step*: probe for the certificate and let

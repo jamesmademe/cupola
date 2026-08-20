@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/core/platform/secure_clipboard.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -396,6 +397,59 @@ void main() {
         containsSemantics(isLiveRegion: true),
       );
     });
+
+    testWidgets('a blocked local network names the permission and offers the '
+        'one control that fixes it', (tester) async {
+      // The reported bug, from the other side: the address and the key are both
+      // right, and iOS is simply refusing to let the request out. Saying
+      // "could not reach the server" here sends the user to audit a form that
+      // has nothing wrong with it.
+      final asked = <MethodCall>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(LocalNetworkPermission.channel, (
+        call,
+      ) async {
+        asked.add(call);
+        return true;
+      });
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(
+          LocalNetworkPermission.channel,
+          null,
+        ),
+      );
+
+      await _pumpServiceSettings(
+        tester,
+        service: ServiceKey.radarr,
+        settings: const SettingsModel(
+          radarrUrl: 'https://radarr.local:7878',
+          radarrApiKey: 'key',
+        ),
+        localNetworkProbe: _theOsIsBlockingUs,
+      );
+
+      await tester.tap(find.text('Test connection'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Local network blocked'), findsOneWidget);
+      expect(find.textContaining('This device is blocking Cupola'), findsOne);
+      expect(find.textContaining('Check the address'), findsNothing);
+      // The verdict stays a single live region, so the control that fixes it has
+      // to sit *outside* that subtree to be reachable at all — see
+      // `_buildTestResult`.
+      expect(
+        find.semantics.byLabel(RegExp(r'^Connection test failed\. ')),
+        containsSemantics(isLiveRegion: true),
+      );
+
+      // The fix is not in this form, so this is the one failure that earns a
+      // button — and the button has to reach the host, not just look like it.
+      await tester.tap(find.text('Open Settings'));
+      await tester.pumpAndSettle();
+      expect(asked.map((call) => call.method), contains('openSettings'));
+    });
   });
 }
 
@@ -415,6 +469,21 @@ Finder _fieldByLabel(String labelText) {
 /// intercept the way it does an `HttpClient`, so a save that fails in a
 /// probe-worthy way would otherwise reach a real socket and hang the test on a
 /// pending timer. None of these cases exercise the trust prompt itself.
+/// Stands in for the host OS. A widget test must not depend on whether the
+/// machine running it gates the local network, and the real probe would spend a
+/// whole deadline of simulated time waiting on a channel with nothing listening.
+Future<LocalNetworkAccess> _nothingGatesTheNetwork(
+  String rawUrl, {
+  Duration timeout = Duration.zero,
+}) async => LocalNetworkAccess.unrestricted;
+
+/// The OS is refusing, which is what a user who tapped Deny — or never saw the
+/// alert — is living with.
+Future<LocalNetworkAccess> _theOsIsBlockingUs(
+  String rawUrl, {
+  Duration timeout = Duration.zero,
+}) async => LocalNetworkAccess.denied;
+
 Future<UntrustedCertificateProbe?> _neverFindsACertificate(
   String rawUrl, {
   String pinnedFingerprint = '',
@@ -425,6 +494,7 @@ Future<_SettingsHarness> _pumpServiceSettings(
   required ServiceKey service,
   SettingsModel settings = const SettingsModel(),
   Size? viewport,
+  LocalNetworkProbe localNetworkProbe = _nothingGatesTheNetwork,
 }) async {
   if (viewport != null) {
     tester.view.devicePixelRatio = 1;
@@ -445,7 +515,12 @@ Future<_SettingsHarness> _pumpServiceSettings(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp(home: _ServiceSettingsLauncher(service: service)),
+      child: MaterialApp(
+        home: _ServiceSettingsLauncher(
+          service: service,
+          localNetworkProbe: localNetworkProbe,
+        ),
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -454,9 +529,14 @@ Future<_SettingsHarness> _pumpServiceSettings(
 }
 
 class _ServiceSettingsLauncher extends StatefulWidget {
-  const _ServiceSettingsLauncher({required this.service});
+  const _ServiceSettingsLauncher({
+    required this.service,
+    required this.localNetworkProbe,
+  });
 
   final ServiceKey service;
+
+  final LocalNetworkProbe localNetworkProbe;
 
   @override
   State<_ServiceSettingsLauncher> createState() =>
@@ -485,6 +565,7 @@ class _ServiceSettingsLauncherState extends State<_ServiceSettingsLauncher> {
           builder: (_) => ServiceSettingsScreen(
             service: widget.service,
             certificateProber: _neverFindsACertificate,
+            localNetworkProbe: widget.localNetworkProbe,
           ),
         ),
       );

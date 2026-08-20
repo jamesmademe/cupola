@@ -89,6 +89,18 @@ ConnectionPresentation describeConnection(
           label: 'Redirected elsewhere',
           needsAttention: true,
         ),
+        // Amber, and never red: nothing is wrong with the address, the server
+        // or the credentials — the OS simply has not been told Cupola may talk
+        // to this network. Red here would send the user auditing settings that
+        // are already correct, which is the exact failure this state exists to
+        // stop.
+        ServiceFailureReason.localNetworkBlocked =>
+          const ConnectionPresentation(
+            tone: StatusTone.warning,
+            icon: Icons.wifi_lock_rounded,
+            label: 'Local network blocked',
+            needsAttention: true,
+          ),
         ServiceFailureReason.tls => const ConnectionPresentation(
           tone: StatusTone.warning,
           icon: Icons.gpp_bad_rounded,

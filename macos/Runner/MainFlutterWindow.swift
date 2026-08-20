@@ -1,5 +1,6 @@
 import Cocoa
 import FlutterMacOS
+import Network
 
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
@@ -32,6 +33,10 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     SecureClipboardChannel.register(with: flutterViewController.engine.binaryMessenger)
+
+    LocalNetworkAccessChannel.register(
+      with: flutterViewController.engine.binaryMessenger
+    )
 
     super.awakeFromNib()
   }
@@ -82,5 +87,200 @@ enum SecureClipboardChannel {
     // clear stays the mitigation for how long the key lingers.
     pasteboard.prepareForNewContents(with: .currentHostOnly)
     return pasteboard.setString(secret, forType: .string)
+  }
+}
+
+/// Answers whether macOS is letting Cupola onto the local network.
+///
+/// The same permission iOS 14 introduced arrived on the Mac with macOS 15, and it
+/// fails the same silent way: a service on the LAN simply stops answering, so a
+/// connection test blames the address. Dart calls `resolve` only after such a
+/// failure — see the iOS twin of this channel in `ios/Runner/AppDelegate.swift`,
+/// which carries the full reasoning.
+///
+/// One deliberate difference from iOS: the sandbox lets a release build browse
+/// for Bonjour services (`network.client`) but not advertise one
+/// (`network.server`, which only the debug profile grants). So the listener half
+/// of the probe is expected to fail in a release build, and the probe is built to
+/// survive that: a refusal is still detected — the *browser* is what reports it —
+/// while a grant comes back as `unknown`, which claims nothing and leaves the
+/// original connection failure exactly as it was. Granting the entitlement in
+/// `Release.entitlements` would buy the positive answer, at the cost of shipping
+/// a listening socket in a client app.
+enum LocalNetworkAccessChannel {
+  static func register(with messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(
+      name: "com.matthwlabs.cupola/local_network",
+      binaryMessenger: messenger
+    )
+
+    channel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "resolve":
+        let arguments = call.arguments as? [String: Any]
+        let milliseconds = arguments?["timeoutMs"] as? Int ?? 20000
+        resolve(timeout: TimeInterval(milliseconds) / 1000, result: result)
+      case "openSettings":
+        result(openPrivacySettings())
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  /// The probe in flight, and everyone waiting on it.
+  ///
+  /// One probe answers every waiter — see the iOS twin for why this lives here
+  /// rather than in Dart.
+  ///
+  /// `AnyObject` so this property does not inherit the probe's own availability.
+  private static var live: AnyObject?
+  private static var waiting: [FlutterResult] = []
+
+  private static func resolve(timeout: TimeInterval, result: @escaping FlutterResult) {
+    // Before Sequoia the Mac never gated the local network.
+    guard #available(macOS 15.0, *) else {
+      result("unrestricted")
+      return
+    }
+
+    waiting.append(result)
+    // Already asking. The running probe answers this caller too.
+    if live != nil { return }
+
+    let probe = LocalNetworkProbe()
+    live = probe
+    probe.run(timeout: timeout) { verdict in
+      // Back on the platform thread, both because `FlutterResult` expects it and
+      // because `live` and `waiting` are only ever touched there.
+      DispatchQueue.main.async {
+        live = nil
+        let pending = waiting
+        waiting = []
+        for answer in pending { answer(verdict) }
+      }
+    }
+  }
+
+  /// Opens the Local Network list in System Settings, falling back to the pane
+  /// that contains it when the anchor is not honoured — the anchor names are
+  /// Apple's, undocumented, and have been renamed between releases before.
+  private static func openPrivacySettings() -> Bool {
+    let anchored = URL(
+      string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork"
+    )
+    if let anchored, NSWorkspace.shared.open(anchored) { return true }
+    guard
+      let pane = URL(string: "x-apple.systempreferences:com.apple.preference.security")
+    else { return false }
+    return NSWorkspace.shared.open(pane)
+  }
+}
+
+/// One local-network verdict, from a Bonjour service that exists for no other
+/// purpose. Mirrors `LocalNetworkProbe` in `ios/Runner/AppDelegate.swift`.
+@available(macOS 15.0, *)
+private final class LocalNetworkProbe {
+  /// Matches `NSBonjourServices` in Info.plist; Bonjour caps the name at 15
+  /// characters.
+  private static let serviceType = "_cupola-check._tcp"
+
+  /// `kDNSServiceErr_PolicyDenied`, spelled out rather than imported from
+  /// `dnssd`.
+  private static let policyDenied: Int32 = -65570
+
+  /// A grant that lands later than this was answered by a person, so the
+  /// connection that failed a moment ago was dialled through a gate that has
+  /// since opened and deserves a retry.
+  ///
+  /// See the iOS twin: measured rather than guessed: a cold Bonjour registration and discovery on an
+  /// already-granted machine took 0.97s, so the obvious ~1s threshold sits right
+  /// on top of it. The asymmetry decides the rest — reading a fast human as
+  /// `granted` costs them one tap on Test, while reading a slow round trip as
+  /// `just_granted` re-runs a doomed connection in full.
+  private static let humanDelay: TimeInterval = 2.5
+
+  private let queue = DispatchQueue(label: "com.matthwlabs.cupola.local-network")
+  private let name = UUID().uuidString
+  private var listener: NWListener?
+  private var browser: NWBrowser?
+  private var settled = false
+  private var startedAt = Date()
+  private var completion: ((String) -> Void)?
+
+  func run(timeout: TimeInterval, completion: @escaping (String) -> Void) {
+    queue.async { self.start(timeout: timeout, completion: completion) }
+  }
+
+  private func start(timeout: TimeInterval, completion: @escaping (String) -> Void) {
+    self.completion = completion
+    startedAt = Date()
+
+    // Expected to fail in a sandboxed release build, and deliberately not fatal:
+    // the browser alone still reports a refusal.
+    do {
+      let listener = try NWListener(using: .tcp)
+      listener.service = NWListener.Service(name: name, type: Self.serviceType)
+      listener.newConnectionHandler = { $0.cancel() }
+      listener.start(queue: queue)
+      self.listener = listener
+    } catch {
+      self.listener = nil
+    }
+
+    let parameters = NWParameters()
+    parameters.includePeerToPeer = true
+    let browser = NWBrowser(
+      for: .bonjour(type: Self.serviceType, domain: nil),
+      using: parameters
+    )
+    browser.stateUpdateHandler = { [weak self] state in
+      switch state {
+      case .waiting(let error), .failed(let error):
+        if Self.isPolicyDenied(error) { self?.settle("denied") }
+      default:
+        break
+      }
+    }
+    browser.browseResultsChangedHandler = { [weak self] results, _ in
+      guard let self else { return }
+      let found = results.contains { candidate in
+        if case let .service(name, _, _, _) = candidate.endpoint {
+          return name == self.name
+        }
+        return false
+      }
+      guard found else { return }
+      let waited = Date().timeIntervalSince(self.startedAt)
+      self.settle(waited > Self.humanDelay ? "just_granted" : "granted")
+    }
+    browser.start(queue: queue)
+    self.browser = browser
+
+    queue.asyncAfter(deadline: .now() + timeout) { [weak self] in
+      self?.settle("unknown")
+    }
+  }
+
+  /// Always on `queue`, which is what makes the once-only guard sound.
+  private func settle(_ verdict: String) {
+    guard !settled else { return }
+    settled = true
+    listener?.cancel()
+    listener = nil
+    browser?.cancel()
+    browser = nil
+    let finish = completion
+    completion = nil
+    finish?(verdict)
+  }
+
+  /// Only the mDNS refusal counts — see the iOS twin. It matters more here: this
+  /// sandbox may browse but not advertise in a release build, and a POSIX error
+  /// read as a refusal would tell a Mac user whose permission is switched on to go
+  /// and switch it on.
+  private static func isPolicyDenied(_ error: NWError) -> Bool {
+    if case .dns(let code) = error { return code == policyDenied }
+    return false
   }
 }

@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/core/platform/secure_clipboard.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
@@ -42,10 +44,15 @@ class ServiceSettingsScreen extends ConsumerStatefulWidget {
   /// [CertificateProber].
   final CertificateProber certificateProber;
 
+  /// Injectable for the same reason: the real one reaches the host OS and, on
+  /// iOS, can put a permission alert on screen.
+  final LocalNetworkProbe localNetworkProbe;
+
   const ServiceSettingsScreen({
     super.key,
     required this.service,
     this.certificateProber = probeUntrustedCertificate,
+    this.localNetworkProbe = probeLocalNetworkAccess,
   });
 
   @override
@@ -156,7 +163,15 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       final candidate = _updateServiceSettings(
         ref.read(currentSettingsProvider),
       );
-      var result = await diagnoseService(service, candidate);
+      // Through the local-network gate: a LAN address that fails because the OS
+      // has not been allowed onto the network reports the permission, and one
+      // the user allows while the alert is up is simply tested again — the
+      // retest that used to be theirs to work out.
+      var result = await diagnoseThroughLocalNetworkGate(
+        () => diagnoseService(service, candidate),
+        url: candidate.urlFor(service),
+        probe: widget.localNetworkProbe,
+      );
 
       // TLS exception flow: when the failure could be explained by a
       // certificate, offer to trust it and test again. Every service can
@@ -593,7 +608,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // Android. The outcome is spelled out because the glyph and the tint are the
     // only things carrying it (the "Fill in the address" message, for one, never
     // says it failed).
-    return Semantics(
+    final banner = Semantics(
       container: true,
       liveRegion: true,
       excludeSemantics: true,
@@ -639,6 +654,39 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         ),
       ),
     );
+
+    if (result.reason != ServiceFailureReason.localNetworkBlocked) {
+      return banner;
+    }
+    // The one control that fixes this sits *outside* the banner, because the
+    // banner excludes its own subtree from the semantics tree to read as a
+    // single live region — a button in there would be unreachable to a screen
+    // reader, which is precisely the user least able to go hunting through the
+    // OS settings for a toggle nobody named.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        banner,
+        const SizedBox(height: AppSpacing.xs),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton.icon(
+            onPressed: _openLocalNetworkSettings,
+            icon: const Icon(Icons.settings_rounded, size: 18),
+            label: const Text('Open Settings'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Takes the user to the toggle. When the host cannot get there, the route is
+  /// spelled out instead of failing silently.
+  Future<void> _openLocalNetworkSettings() async {
+    final opened = await LocalNetworkPermission.openSettings();
+    if (!opened && mounted) {
+      SnackBarHelper.info(context, LocalNetworkPermission.remedy);
+    }
   }
 
   Widget _buildRemoveRow(BuildContext context) {

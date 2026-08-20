@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
@@ -908,6 +909,7 @@ Future<ProviderContainer> _pumpOnboarding(
       child: MaterialApp(
         home: const OnboardingScreen(
           certificateProber: _neverFindsACertificate,
+          localNetworkProbe: _nothingGatesTheNetwork,
         ),
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(
@@ -938,6 +940,14 @@ Future<ProviderContainer> _pumpOnboarding(
 /// socket `flutter_test` cannot intercept or fake, hanging the test on a
 /// pending timer. None of these tests exercise the trust flow itself, so
 /// "no certificate found" is the correct fake, not just a convenient one.
+/// Stands in for the host OS. A widget test must not depend on whether the
+/// machine running it gates the local network, and the real probe would spend a
+/// whole deadline of simulated time waiting on a channel with nothing listening.
+Future<LocalNetworkAccess> _nothingGatesTheNetwork(
+  String rawUrl, {
+  Duration timeout = Duration.zero,
+}) async => LocalNetworkAccess.unrestricted;
+
 Future<UntrustedCertificateProbe?> _neverFindsACertificate(
   String rawUrl, {
   String pinnedFingerprint = '',

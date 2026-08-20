@@ -26,6 +26,16 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSBonjourServices</key>
+	<array>
+		<!-- Advertised and browsed for by nothing but the local-network
+		     permission probe in AppDelegate. A dedicated type on purpose: it can
+		     never collide with a service the user actually runs, so a probe can
+		     only ever discover itself. -->
+		<string>_cupola-check._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Cupola talks to the services running on your own network — Radarr, Sonarr, Plex, your NAS. Without this, none of them can be reached, and nothing Cupola does leaves your network.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
