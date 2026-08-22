@@ -24,71 +24,15 @@ void main() {
     );
     expect(find.text('Radarr body'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('service-dashboard-switcher')));
-    await tester.pump();
-
-    expect(
-      find.byKey(const ValueKey('service-dashboard-picker')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('service-dashboard-selected-radarr')),
-      findsOneWidget,
-    );
-
-    await tester.tap(
-      find.byKey(const ValueKey('service-dashboard-option-sonarr')),
-    );
-    await tester.pumpAndSettle();
-
-    expect(router.state.uri.toString(), '/services/sonarr');
-    expect(
-      find.byKey(const ValueKey('service-dashboard-title-sonarr')),
-      findsOneWidget,
-    );
-    expect(find.text('Sonarr body'), findsOneWidget);
+    // The title is the room's name, not a control: the dropdown picker it
+    // used to open was retired when the Portal became the one switcher.
+    expect(find.byKey(const ValueKey('service-dashboard-switcher')), findsNothing);
 
     await tester.tap(find.byTooltip('Back to Services'));
     await tester.pumpAndSettle();
 
     expect(router.state.uri.toString(), '/services');
     expect(find.text('Services home'), findsOneWidget);
-  });
-
-  testWidgets('the picker announces which service is selected', (tester) async {
-    // The only indication of the current service is a bare check glyph, so
-    // without `selected:` a screen-reader user cannot tell which row is active.
-    final router = _buildRouter('/services/radarr');
-    addTearDown(router.dispose);
-
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const ValueKey('service-dashboard-switcher')));
-    await tester.pumpAndSettle();
-
-    expect(
-      tester.getSemantics(
-        find.byKey(const ValueKey('service-dashboard-option-radarr')),
-      ),
-      containsSemantics(
-        label: 'Radarr',
-        isButton: true,
-        hasSelectedState: true,
-        isSelected: true,
-      ),
-    );
-    expect(
-      tester.getSemantics(
-        find.byKey(const ValueKey('service-dashboard-option-sonarr')),
-      ),
-      containsSemantics(
-        label: 'Sonarr',
-        isButton: true,
-        hasSelectedState: true,
-        isSelected: false,
-      ),
-    );
   });
 
   testWidgets('back and activity actions navigate to parent routes', (

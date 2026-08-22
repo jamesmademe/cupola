@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-class ServiceDashboardScreen extends StatefulWidget {
+/// The band every service screen lives under: back chevron, the service's
+/// identity (accent dot + name), and one trailing action.
+///
+/// The dot + title used to be a button opening a dropdown picker of all
+/// seventeen services — the dashboard's own switcher. The Portal made it a
+/// second, worse copy of the same instrument (drag the nav bar up from
+/// anywhere, land on the real matrix), so the picker is gone and the title
+/// went back to being what it looks like: the name of the room you are in.
+/// Screen-reader users switch through the accessible path that always
+/// existed — Services tab → matrix — since the Portal's drag is gesture-only.
+class ServiceDashboardScreen extends StatelessWidget {
   final ServiceKey service;
   final Widget child;
   final Widget? trailingAction;
@@ -21,25 +29,10 @@ class ServiceDashboardScreen extends StatefulWidget {
   });
 
   @override
-  State<ServiceDashboardScreen> createState() => _ServiceDashboardScreenState();
-}
-
-class _ServiceDashboardScreenState extends State<ServiceDashboardScreen> {
-  bool _isPickerOpen = false;
-
-  @override
-  void didUpdateWidget(covariant ServiceDashboardScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.service != widget.service) {
-      _isPickerOpen = false;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        widget.child,
+        child,
         Positioned(
           top: 0,
           left: 0,
@@ -51,32 +44,12 @@ class _ServiceDashboardScreenState extends State<ServiceDashboardScreen> {
             child: SafeArea(
               bottom: false,
               child: _ServiceDashboardAppBar(
-                service: widget.service,
-                isPickerOpen: _isPickerOpen,
-                trailingAction: widget.trailingAction,
-                onTogglePicker: () {
-                  setState(() => _isPickerOpen = !_isPickerOpen);
-                },
+                service: service,
+                trailingAction: trailingAction,
               ),
             ),
           ),
         ),
-        if (_isPickerOpen)
-          Positioned(
-            top: MediaQuery.paddingOf(context).top + kToolbarHeight,
-            left: AppSpacing.lg,
-            right: AppSpacing.lg,
-            child: _ServicePicker(
-              selectedService: widget.service,
-              onSelected: (service) {
-                setState(() => _isPickerOpen = false);
-                if (service == widget.service) {
-                  return;
-                }
-                context.pushReplacement('/services/${service.routeParam}');
-              },
-            ),
-          ),
       ],
     );
   }
@@ -84,16 +57,9 @@ class _ServiceDashboardScreenState extends State<ServiceDashboardScreen> {
 
 class _ServiceDashboardAppBar extends StatelessWidget {
   final ServiceKey service;
-  final bool isPickerOpen;
   final Widget? trailingAction;
-  final VoidCallback onTogglePicker;
 
-  const _ServiceDashboardAppBar({
-    required this.service,
-    required this.isPickerOpen,
-    this.trailingAction,
-    required this.onTogglePicker,
-  });
+  const _ServiceDashboardAppBar({required this.service, this.trailingAction});
 
   @override
   Widget build(BuildContext context) {
@@ -116,46 +82,19 @@ class _ServiceDashboardAppBar extends StatelessWidget {
               padding: const EdgeInsets.only(right: AppSpacing.xs),
               constraints: const BoxConstraints(minWidth: 36, minHeight: 40),
             ),
-            TextButton(
-              key: const ValueKey('service-dashboard-switcher'),
-              onPressed: onTogglePicker,
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.onSurface,
-                padding: EdgeInsets.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: service.accent,
+                shape: BoxShape.circle,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: service.accent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    service.title,
-                    key: ValueKey(
-                      'service-dashboard-title-${service.routeParam}',
-                    ),
-                    style: titleStyle,
-                  ),
-                  const SizedBox(width: 4),
-                  AnimatedRotation(
-                    turns: isPickerOpen ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 160),
-                    curve: Curves.easeOutCubic,
-                    child: Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: 18,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              service.title,
+              key: ValueKey('service-dashboard-title-${service.routeParam}'),
+              style: titleStyle,
             ),
             const Spacer(),
             if (trailingAction != null)
@@ -167,126 +106,6 @@ class _ServiceDashboardAppBar extends StatelessWidget {
                 tooltip: 'Activity',
               ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ServicePicker extends StatelessWidget {
-  final ServiceKey selectedService;
-  final ValueChanged<ServiceKey> onSelected;
-
-  const _ServicePicker({
-    required this.selectedService,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Material(
-      key: const ValueKey('service-dashboard-picker'),
-      color: colorScheme.surfaceContainer,
-      borderRadius: AppRadius.borderRadiusLg,
-      elevation: 14,
-      shadowColor: Colors.black.withValues(alpha: 0.45),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.all(color: colorScheme.outlineVariant),
-          borderRadius: AppRadius.borderRadiusLg,
-        ),
-        child: ClipRRect(
-          borderRadius: AppRadius.borderRadiusLg,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final service in ServiceKey.values)
-                _ServicePickerOption(
-                  service: service,
-                  selected: service == selectedService,
-                  onTap: () => onSelected(service),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ServicePickerOption extends StatelessWidget {
-  final ServiceKey service;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ServicePickerOption({
-    required this.service,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Material(
-      color: selected ? colorScheme.surfaceContainerHigh : Colors.transparent,
-      // The only indication of the current service is a bare check glyph, so
-      // without `selected:` a screen-reader user cannot tell which row is
-      // active. The key lives on the Semantics rather than the InkWell so
-      // `tester.getSemantics` resolves this annotation instead of walking up to
-      // an ancestor; the render object covers the same rect, so taps are
-      // unaffected.
-      child: Semantics(
-        key: ValueKey('service-dashboard-option-${service.routeParam}'),
-        container: true,
-        button: true,
-        selected: selected,
-        excludeSemantics: true,
-        label: service.title,
-        onTap: onTap,
-        child: InkWell(
-          onTap: onTap,
-          excludeFromSemantics: true,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: 13,
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: service.accent.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(service.icon, size: 16, color: service.accent),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(
-                    service.title,
-                    style: Theme.of(context).textTheme.bodyMedium
-                        ?.weight(FontWeight.w700)
-                        .copyWith(color: colorScheme.onSurface),
-                  ),
-                ),
-                if (selected)
-                  Icon(
-                    Icons.check_rounded,
-                    key: ValueKey(
-                      'service-dashboard-selected-${service.routeParam}',
-                    ),
-                    size: 18,
-                    color: service.accent,
-                  ),
-              ],
-            ),
-          ),
         ),
       ),
     );

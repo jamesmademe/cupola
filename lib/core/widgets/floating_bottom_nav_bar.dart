@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_animation.dart';
@@ -142,6 +143,20 @@ class FloatingNavBarMetrics {
 ///   ],
 /// )
 /// ```
+/// Contract through which the shell takes over the bar's VERTICAL drag (the
+/// Portal trigger) while the bar keeps its horizontal rubber band to itself.
+///
+/// Lives here rather than in the shell feature so `core/widgets` never depends
+/// on a feature: the bar knows this contract, never the Portal.
+abstract class FloatingNavBarVerticalDragDelegate {
+  /// Current lift to apply to the bar (pt, positive = raised).
+  ValueListenable<double> get verticalLift;
+
+  void onBarDragStart(double globalY);
+  void onBarDragDelta(double dy);
+  void onBarDragEnd(double velocityY);
+}
+
 class FloatingBottomNavBar extends StatefulWidget {
   /// The index of the currently selected destination.
   final int selectedIndex;
@@ -152,11 +167,17 @@ class FloatingBottomNavBar extends StatefulWidget {
   /// The list of destinations to display.
   final List<FloatingNavDestination> destinations;
 
+  /// When set, the vertical axis of the pan belongs to the delegate (the
+  /// Portal) and the bar's own elastic runs horizontally only. With `null`
+  /// the bar behaves exactly as it always has.
+  final FloatingNavBarVerticalDragDelegate? verticalDragDelegate;
+
   const FloatingBottomNavBar({
     super.key,
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.destinations,
+    this.verticalDragDelegate,
   });
 
   @override
@@ -217,16 +238,24 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
     return delta * resistance;
   }
 
+  void _onPanStart(DragStartDetails details) {
+    widget.verticalDragDelegate?.onBarDragStart(details.globalPosition.dy);
+  }
+
   void _onPanUpdate(DragUpdateDetails details) {
     // Stop any running spring animation
     if (_springController.isAnimating) {
       _springController.stop();
     }
 
+    final delegate = widget.verticalDragDelegate;
     setState(() {
-      // Apply elastic resistance to both axes
+      // Apply elastic resistance; the vertical axis is the delegate's when one
+      // is attached (the Portal's prelude replaces the aesthetic dy elastic).
       final dx = _applyElasticResistance(details.delta.dx, _dragOffset.dx);
-      final dy = _applyElasticResistance(details.delta.dy, _dragOffset.dy);
+      final dy = delegate == null
+          ? _applyElasticResistance(details.delta.dy, _dragOffset.dy)
+          : 0.0;
 
       _dragOffset += Offset(dx, dy);
 
@@ -236,6 +265,7 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
         _dragOffset.dy.clamp(-_maxDragDistance, _maxDragDistance),
       );
     });
+    delegate?.onBarDragDelta(details.delta.dy);
   }
 
   void _onPanEnd(DragEndDetails details) {
@@ -249,6 +279,8 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
     _springController.forward(from: 0).whenComplete(() {
       _springAnimation?.removeListener(_onSpringAnimation);
     });
+    widget.verticalDragDelegate
+        ?.onBarDragEnd(details.velocity.pixelsPerSecond.dy);
   }
 
   void _handleDestinationTap(int index) {
@@ -264,6 +296,29 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
         _dragOffset = _springAnimation!.value;
       });
     }
+  }
+
+  /// The drag translate. With a vertical delegate attached the lift comes from
+  /// it (a [ValueListenable], so only this transform rebuilds per frame);
+  /// without one this is the original two-axis elastic offset.
+  Widget _dragTransform({required Widget child}) {
+    final delegate = widget.verticalDragDelegate;
+    if (delegate == null) {
+      return Transform.translate(
+        key: const ValueKey('floating-nav-drag-transform'),
+        offset: _dragOffset,
+        child: child,
+      );
+    }
+    return ValueListenableBuilder<double>(
+      valueListenable: delegate.verticalLift,
+      child: child,
+      builder: (context, lift, inner) => Transform.translate(
+        key: const ValueKey('floating-nav-drag-transform'),
+        offset: Offset(_dragOffset.dx, _dragOffset.dy - lift),
+        child: inner!,
+      ),
+    );
   }
 
   @override
@@ -296,6 +351,7 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
         : null;
 
     return GestureDetector(
+      onPanStart: _onPanStart,
       onPanUpdate: _onPanUpdate,
       onPanEnd: _onPanEnd,
       behavior: HitTestBehavior.opaque,
@@ -322,9 +378,7 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
             return Align(
               alignment: Alignment.center,
               heightFactor: 1,
-              child: Transform.translate(
-                key: const ValueKey('floating-nav-drag-transform'),
-                offset: _dragOffset,
+              child: _dragTransform(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: AppRadius.borderRadiusXl,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,12 +13,15 @@ import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
+import 'package:cupola/features/shell/domain/portal_hints.dart';
+import 'package:cupola/features/shell/presentation/portal_coach_mark.dart';
+import 'package:cupola/features/shell/presentation/service_portal.dart';
 
 /// Main shell screen with floating bottom navigation.
 ///
 /// Uses a custom [FloatingBottomNavBar] with rounded corners and floating design.
 /// Outlined icons for unselected state and filled icons for selected state.
-class ShellScreen extends ConsumerWidget {
+class ShellScreen extends ConsumerStatefulWidget {
   final Widget child;
 
   const ShellScreen({super.key, required this.child});
@@ -31,10 +36,93 @@ class ShellScreen extends ConsumerWidget {
   static const double _railBreakpoint = 840;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ShellScreen> createState() => _ShellScreenState();
+}
+
+class _ShellScreenState extends ConsumerState<ShellScreen>
+    with TickerProviderStateMixin {
+  /// One Portal per shell: the machine behind the bar's upward drag.
+  ///
+  /// Created eagerly in [initState]: as a `late final` initializer its first
+  /// access could be [dispose] (rail layout never touches it in build), and
+  /// creating a ticker during unmount trips the deactivated-ancestor assert.
+  late final ServicePortalController _portal;
+
+  String? _lastLocation;
+  Timer? _demoTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _portal = ServicePortalController(vsync: this);
+    // Using the Portal is the proof the coach mark is no longer needed.
+    _portal.onOpened = () =>
+        ref.read(portalHintsProvider.notifier).notePortalUsed();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _armDemoBounce());
+  }
+
+  /// The one-shot demo bounce (Settings → Hints re-arms it): only on the phone
+  /// layout, never under a screen reader, and only while the Portal is idle.
+  /// A cancellable timer, not a bare delay: the shell may be torn down first.
+  void _armDemoBounce() {
+    if (!mounted) return;
+    if (_isImportRoute(context)) return;
+    if (MediaQuery.sizeOf(context).width >= ShellScreen._railBreakpoint) return;
+    if (MediaQuery.accessibleNavigationOf(context)) return;
+    if (!ref.read(portalHintsProvider).demoBouncePending) return;
+    // Un respiro dopo il primo frame: il bounce deve leggersi come un gesto
+    // della barra, non come un glitch di avvio.
+    _demoTimer = Timer(const Duration(milliseconds: 700), () {
+      if (!mounted || !ref.read(portalHintsProvider).demoBouncePending) return;
+      ref.read(portalHintsProvider.notifier).markDemoShown();
+      _portal.playDemoBounce();
+    });
+  }
+
+  @override
+  void dispose() {
+    _demoTimer?.cancel();
+    _portal.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final hideNav = _isImportRoute(context);
     final selectedIndex = hideNav ? -1 : _calculateSelectedIndex(context);
-    final useRail = MediaQuery.sizeOf(context).width >= _railBreakpoint;
+    final useRail =
+        MediaQuery.sizeOf(context).width >= ShellScreen._railBreakpoint;
+    // The Portal's drag is unusable under a screen reader; there the bar keeps
+    // its pure elastic and switching stays on the accessible paths.
+    final accessibleNav = MediaQuery.accessibleNavigationOf(context);
+
+    // Any route change under an open Portal (a matrix cell navigating, a deep
+    // link) closes it and drops the stale snapshot. Post-frame: starting
+    // animations inside build is not allowed.
+    //
+    // The comparison is on the FULL path on purpose — never weaken it to the
+    // service's routeParam. With multi-instance, `/services/radarr/4K` →
+    // `/services/radarr/HD` is a content change under the same ServiceKey,
+    // and a param-keyed hook would reopen the Portal onto a frozen snapshot
+    // of the previous instance's library.
+    final location = GoRouterState.of(context).uri.path;
+    if (_lastLocation != null && _lastLocation != location) {
+      if (_portal.isOpenOrEngaged) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _portal.handleRouteChanged();
+        });
+      } else if (_lastLocation == NavTab.services.routePath &&
+          location.startsWith('${NavTab.services.routePath}/')) {
+        // Dashboard → servizio senza passare dal Portale: esattamente il
+        // tragitto che il Portale sostituisce. Il coach mark conta questi.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ref.read(portalHintsProvider.notifier).noteManualJourney();
+          }
+        });
+      }
+    }
+    _lastLocation = location;
 
     // Built once, above the layout branch, and handed to whichever navigation
     // this window is wide enough for. The rail used to build its own bare
@@ -69,23 +157,33 @@ class ShellScreen extends ConsumerWidget {
                         selectedIndex: selectedIndex,
                         destinations: destinations,
                         onDestinationSelected: (int idx) =>
-                            _onItemTapped(idx, context, ref, selectedIndex),
+                            _onItemTapped(idx, context, selectedIndex),
                       ),
                     ),
-                  Expanded(child: child),
+                  Expanded(child: widget.child),
                 ],
               ),
             )
           : Scaffold(
               extendBody: !hideNav,
-              body: child,
+              body: hideNav
+                  ? widget.child
+                  : Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        PortalStage(controller: _portal, child: widget.child),
+                        if (!accessibleNav)
+                          PortalCoachMark(controller: _portal),
+                      ],
+                    ),
               bottomNavigationBar: hideNav
                   ? null
                   : FloatingBottomNavBar(
                       selectedIndex: selectedIndex,
                       onDestinationSelected: (int idx) =>
-                          _onItemTapped(idx, context, ref, selectedIndex),
+                          _onItemTapped(idx, context, selectedIndex),
                       destinations: destinations,
+                      verticalDragDelegate: accessibleNav ? null : _portal,
                     ),
             ),
     );
@@ -109,18 +207,20 @@ class ShellScreen extends ConsumerWidget {
     return -1;
   }
 
-  void _onItemTapped(
-    int index,
-    BuildContext context,
-    WidgetRef ref,
-    int currentIndex,
-  ) {
+  void _onItemTapped(int index, BuildContext context, int currentIndex) {
     HapticFeedback.selectionClick();
+
+    // A tab tap with the Portal open always closes it; landing on the tab is
+    // the rest of the answer. A re-tap on the current tab then stops there —
+    // "take me back where I was" must not also fire a refresh.
+    final portalWasOpen = _portal.isOpenOrEngaged;
+    if (portalWasOpen) _portal.closeFromUi();
 
     final tab = NavTab.values[index];
     final currentPath = GoRouterState.of(context).uri.path;
 
     if (index == currentIndex && currentPath == tab.routePath) {
+      if (portalWasOpen) return;
       final section = _refreshSectionFor(tab);
       if (section != null) {
         ref.triggerNavigationRefresh(section);

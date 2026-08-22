@@ -106,6 +106,13 @@ class SettingsHomeScreen extends ConsumerWidget {
             onTap: () => context.push('/settings/background-search'),
           ),
           SettingsCard.grouped(
+            leading: const Icon(Icons.tips_and_updates_outlined),
+            title: 'Hints',
+            subtitle: 'Nudges that introduce a gesture',
+            semanticHint: 'opens the gesture hint switches',
+            onTap: () => context.push('/settings/hints'),
+          ),
+          SettingsCard.grouped(
             leading: const Icon(Icons.replay_rounded),
             title: 'Revisit onboarding',
             subtitle: 'Walk through the intro screens again',

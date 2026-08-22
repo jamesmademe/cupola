@@ -27,6 +27,7 @@ import 'package:cupola/features/discover/presentation/discover_detail_screen.dar
 import 'package:cupola/features/discover/presentation/discover_see_all_screen.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_appearance_screen.dart';
+import 'package:cupola/features/settings/presentation/settings_hints_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_home_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_region_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_connections_screen.dart';
@@ -953,6 +954,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                     const ReleaseSearchSettingsScreen(),
               ),
               _page('appearance', (state) => const SettingsAppearanceScreen()),
+              _page('hints', (state) => const SettingsHintsScreen()),
               _page(
                 'connections',
                 (state) => const SettingsConnectionsScreen(),
