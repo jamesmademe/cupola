@@ -9,15 +9,19 @@ import 'package:cupola/core/theme.dart';
 /// screen, not-configured placeholder) with one consistent visual language:
 /// an icon in a soft circle, a title, an optional body and an optional action.
 ///
-/// Two modes:
+/// Three densities:
 /// - [AppEmptyState] (full): screen-centred, larger, for whole pages.
-/// - [AppEmptyState.compact]: inline, smaller, for carousels/sections.
+/// - [AppEmptyState.compact]: centred but smaller, for carousels/sections.
+/// - [AppEmptyState.inline]: one left-aligned line beside a small glyph, for
+///   the *expected* absence — a panel whose source simply does not model this
+///   data. A ceremonial icon well and a centred headline read as a failure;
+///   when nothing went wrong, the note should cost a row, not a screenful.
 class AppEmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? message;
   final Widget? action;
-  final bool compact;
+  final AppEmptyStateDensity density;
 
   /// Optional accent for the icon (defaults to a neutral variant tone).
   final Color? accentColor;
@@ -29,7 +33,7 @@ class AppEmptyState extends StatelessWidget {
     this.message,
     this.action,
     this.accentColor,
-  }) : compact = false;
+  }) : density = AppEmptyStateDensity.full;
 
   const AppEmptyState.compact({
     super.key,
@@ -38,13 +42,35 @@ class AppEmptyState extends StatelessWidget {
     this.message,
     this.action,
     this.accentColor,
-  }) : compact = true;
+  }) : density = AppEmptyStateDensity.compact;
+
+  /// One line beside a glyph. Takes no [action]: an absence nobody can act on
+  /// is the only kind that belongs on a single row.
+  const AppEmptyState.inline({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.message,
+    this.accentColor,
+  }) : action = null,
+       density = AppEmptyStateDensity.inline;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final accent = accentColor ?? colorScheme.onSurfaceVariant;
+
+    if (density == AppEmptyStateDensity.inline) {
+      return _InlineNote(
+        icon: icon,
+        title: title,
+        message: message,
+        accent: accent,
+      );
+    }
+
+    final compact = density == AppEmptyStateDensity.compact;
     final circleSize = compact ? 52.0 : 72.0;
     final iconSize = compact ? 26.0 : 34.0;
 
@@ -107,6 +133,70 @@ class AppEmptyState extends StatelessWidget {
           vertical: compact ? AppSpacing.xl : AppSpacing.xxl,
         ),
         child: column,
+      ),
+    );
+  }
+}
+
+/// How much room an [AppEmptyState] is allowed to take.
+enum AppEmptyStateDensity { full, compact, inline }
+
+/// The [AppEmptyState.inline] body: a glyph and the words, left-aligned so the
+/// note sits on the same edge as the rows it stands in for.
+class _InlineNote extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? message;
+  final Color accent;
+
+  const _InlineNote({
+    required this.icon,
+    required this.title,
+    this.message,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Optically aligned to the first line of text rather than to the
+          // block, so a note that wraps to two lines keeps its glyph on the
+          // sentence and not floating in the middle of the paragraph.
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(icon, size: 16, color: accent),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.bodySmall
+                      ?.weight(FontWeight.w600)
+                      .copyWith(color: colorScheme.onSurfaceVariant),
+                ),
+                if (message != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    message!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

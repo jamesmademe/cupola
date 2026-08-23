@@ -137,10 +137,7 @@ void main() {
       await tester.pumpWidget(
         host(
           textScale: scale,
-          child: const DiscoverWatchProviders(
-            providers: providers,
-            region: 'US',
-          ),
+          child: const DiscoverWatchProviders(providers: providers),
         ),
       );
       expect(tester.takeException(), isNull);

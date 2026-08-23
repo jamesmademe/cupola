@@ -216,6 +216,19 @@ class DiscoverDetailScreen extends ConsumerWidget {
                         networks: viewModel.networks,
                       ),
               ),
+              // Region 5 and not region 6: where a title streams is a fact
+              // about *this* title, and one that can settle the request outright
+              // — "I already pay for that" is an answer, not an afterthought.
+              // Sitting last under Cast and Collection put it among the other
+              // titles, three screens below the button it should have informed.
+              // No slot at all when the region has nothing: a heading over "not
+              // available in your region" is a section that reports its own
+              // absence.
+              if (watchProviders != null && watchProviders.hasAny)
+                MediaDetailSlot.box(
+                  label: 'Where to watch',
+                  child: DiscoverWatchProviders(providers: watchProviders),
+                ),
               if (ratingWidgets.isNotEmpty)
                 MediaDetailSlot.box(
                   label: 'Scores',
@@ -256,13 +269,6 @@ class DiscoverDetailScreen extends ConsumerWidget {
                     collection: viewModel.collection!,
                   ),
                 ),
-              MediaDetailSlot.box(
-                label: 'Where to watch',
-                child: DiscoverWatchProviders(
-                  providers: watchProviders,
-                  region: region,
-                ),
-              ),
             ],
           ),
         );

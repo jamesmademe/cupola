@@ -48,6 +48,11 @@ class WatchProviderRegion {
       ).map(WatchProviderEntry.fromJson).toList(growable: false),
     );
   }
+
+  /// Whether this region names anywhere at all to watch the title. TMDB
+  /// answers for a region even when every list under it is empty, so the
+  /// region existing is not the same as it being worth a section.
+  bool get hasAny => flatrate.isNotEmpty || buy.isNotEmpty;
 }
 
 class RelatedVideo {

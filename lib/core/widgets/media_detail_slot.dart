@@ -153,12 +153,16 @@ class MediaDetailBody {
   final List<MediaDetailSlot> synopsis;
 
   /// Region 5 — the encyclopaedic block, in this internal order: the `DETAILS`
-  /// fact grid, then `SCORES`, then the catalogue (`GENRES` / `KEYWORDS` /
-  /// `TAGS`).
+  /// fact grid, then `WHERE TO WATCH`, then `SCORES`, then the catalogue
+  /// (`GENRES` / `KEYWORDS` / `TAGS`).
   final List<MediaDetailSlot> reference;
 
-  /// Region 6 — everything that is about other titles: the `CAST` rail, then
-  /// `COLLECTION`, then `WATCH PROVIDERS` / `FILMOGRAPHY`.
+  /// Region 6 — everything that is about **other** titles: the `CAST` rail,
+  /// then `COLLECTION`, then `FILMOGRAPHY`.
+  ///
+  /// `WHERE TO WATCH` used to end this list and does not belong here: where a
+  /// title streams is a fact about that title, and one that can settle the
+  /// request outright, so it reads as reference and sits under `DETAILS`.
   final List<MediaDetailSlot> related;
 
   const MediaDetailBody({

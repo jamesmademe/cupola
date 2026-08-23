@@ -156,7 +156,7 @@ void main() {
       );
     });
 
-    testWidgets('a season with no episode details gets an empty state', (
+    testWidgets('a season with no episode details gets a one-line note', (
       tester,
     ) async {
       await _pump(
@@ -166,8 +166,16 @@ void main() {
         ],
       );
 
-      expect(find.text('8 episodes listed'), findsOneWidget);
-      expect(find.byType(AppEmptyState), findsOneWidget);
+      expect(
+        find.text('Seerr lists no individual episodes for Season 1.'),
+        findsOneWidget,
+      );
+
+      // The ordinary case must stay a note. A full empty state is over 150pt
+      // tall here, which is what this height ceiling exists to catch.
+      final note = tester.widget<AppEmptyState>(find.byType(AppEmptyState));
+      expect(note.density, AppEmptyStateDensity.inline);
+      expect(tester.getSize(find.byType(AppEmptyState)).height, lessThan(60));
     });
 
     testWidgets('builds only a bounded number of rows for a long season', (

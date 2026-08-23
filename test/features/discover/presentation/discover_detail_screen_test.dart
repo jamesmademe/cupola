@@ -47,7 +47,10 @@ Map<String, dynamic> _movie({
   },
 };
 
-Map<String, dynamic> _tv({int seasonCount = 3}) => <String, dynamic>{
+Map<String, dynamic> _tv({
+  int seasonCount = 3,
+  bool withWatchProviders = false,
+}) => <String, dynamic>{
   'name': 'Breaking Bad',
   'overview': 'A teacher turns to crime.',
   'firstAirDate': '2008-01-20',
@@ -73,6 +76,15 @@ Map<String, dynamic> _tv({int seasonCount = 3}) => <String, dynamic>{
         ],
       },
   ],
+  if (withWatchProviders)
+    'watchProviders': [
+      {
+        'iso_3166_1': 'US',
+        'flatrate': [
+          {'id': 8, 'name': 'Netflix', 'logoPath': '/netflix.jpg'},
+        ],
+      },
+    ],
 };
 
 Future<int> _pump(
@@ -220,8 +232,56 @@ void main() {
         'Details',
         'Genres',
         'Keywords',
-        'Where to watch',
       ]);
+    });
+
+    testWidgets('where to watch sits in the reference block, under Details', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        details: () => _tv(withWatchProviders: true),
+        mediaType: 'tv',
+        mediaId: _tvId,
+      );
+
+      final body = tester
+          .widget<MediaDetailView>(find.byType(MediaDetailView))
+          .body;
+
+      // Where a title streams is a fact about this title, so it belongs to the
+      // reference block and not among the cast and the collection — it used to
+      // be the last slot on the page, below everything about *other* titles.
+      expect(body.slots.map((slot) => slot.label).toList(), [
+        'Seasons',
+        'Overview',
+        'Details',
+        'Where to watch',
+        'Genres',
+        'Keywords',
+      ]);
+    });
+
+    testWidgets('a region with nowhere to watch spends no slot', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        details: () => _tv(),
+        mediaType: 'tv',
+        mediaId: _tvId,
+      );
+
+      final body = tester
+          .widget<MediaDetailView>(find.byType(MediaDetailView))
+          .body;
+
+      // A `WHERE TO WATCH` heading over the sentence "not available in your
+      // region" is a section reporting its own absence.
+      expect(
+        body.slots.map((slot) => slot.label),
+        isNot(contains('Where to watch')),
+      );
     });
 
     testWidgets('pull-to-refresh re-runs the detail load exactly once', (

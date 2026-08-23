@@ -13,53 +13,19 @@ import 'package:cupola/features/discover/domain/models/discover_detail_model.dar
 /// Headless: the heading comes from the `MediaDetailSlot` that hosts it, so the
 /// same list can never reach two differently-titled sections and the heading
 /// cannot lose its accent or its `Semantics(header: true)`.
+///
+/// It takes a region that actually names somewhere to watch — the caller mounts
+/// the slot only when [WatchProviderRegion.hasAny] holds. This used to answer
+/// its own empty cases in prose, which meant a `WHERE TO WATCH` heading could
+/// stand over the sentence "not available in your region": a section whose
+/// entire content was the news that it had none.
 class DiscoverWatchProviders extends StatelessWidget {
-  final WatchProviderRegion? providers;
-  final String region;
-
-  const DiscoverWatchProviders({
-    super.key,
-    required this.providers,
-    required this.region,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    if (providers == null) {
-      return Text(
-        'Watch provider info is not available in your region ($region).',
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: colorScheme.onSurfaceVariant,
-        ),
-      );
-    }
-
-    return _ProvidersContent(providers: providers!);
-  }
-}
-
-class _ProvidersContent extends StatelessWidget {
   final WatchProviderRegion providers;
 
-  const _ProvidersContent({required this.providers});
+  const DiscoverWatchProviders({super.key, required this.providers});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final mutedTextStyle = theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
-
-    if (providers.flatrate.isEmpty && providers.buy.isEmpty) {
-      return Text(
-        'No streaming or purchase options available.',
-        style: mutedTextStyle,
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

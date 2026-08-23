@@ -83,11 +83,18 @@ class DiscoverSeasonsList extends StatelessWidget {
       childOverride: (context, group) {
         if ((episodesBySeason[group.id] ?? const []).isNotEmpty) return null;
 
+        // Seerr almost never returns an episode list, so this is the ordinary
+        // case rather than a fault — a full empty state gave a routine "nothing
+        // here" the same 160pt of ceremony a broken season would get, three
+        // times taller than the row it stands in for. The count is already on
+        // the season's summary line above, so the note only has to say why the
+        // list is missing.
         final listed = countsBySeason[group.id] ?? 0;
-        return AppEmptyState.compact(
+        return AppEmptyState.inline(
           icon: Icons.event_note_outlined,
-          title: listed > 0 ? '$listed episodes listed' : 'No episodes listed',
-          message: 'Seerr has no per-episode details for ${group.label}.',
+          title: listed > 0
+              ? 'Seerr lists no individual episodes for ${group.label}.'
+              : 'Seerr lists no episodes for ${group.label}.',
           accentColor: accent,
         );
       },
