@@ -255,6 +255,52 @@ extension ServiceKeyExtension on ServiceKey {
   String get credentialLabel =>
       this == ServiceKey.plex ? 'Plex token' : 'API Key';
 
+  /// The word this service's secret is filed under in secure storage.
+  ///
+  /// The tail of `ServiceInstance.credentialStorageKey`, and the reason that
+  /// key comes out byte-identical to the one an existing install already wrote:
+  /// the suffix was never uniform. Three services' worth of vocabulary is
+  /// already on disk — an arr files an `api_key`, qBittorrent a `password`,
+  /// Plex a `token` — so this states it rather than flattening it and orphaning
+  /// every stored secret.
+  ///
+  /// Not [credentialLabel] lowercased: that string is UI copy and may be
+  /// reworded, while this one names bytes on disk and may not. They are allowed
+  /// to drift, and keeping them apart is what makes that safe.
+  ///
+  /// Exhaustive on purpose, for the same reason [usesApiKey] is: a `!=` chain
+  /// would silently file a newly added service under `api_key` and lose its
+  /// secret the first time someone noticed.
+  String get credentialStorageSuffix => switch (this) {
+    ServiceKey.qbittorrent ||
+    ServiceKey.transmission ||
+    ServiceKey.nginxProxyManager ||
+    ServiceKey.dockge ||
+    ServiceKey.nzbget => 'password',
+    ServiceKey.plex => 'token',
+    ServiceKey.seerr ||
+    ServiceKey.radarr ||
+    ServiceKey.sonarr ||
+    ServiceKey.lidarr ||
+    ServiceKey.bazarr ||
+    ServiceKey.truenas ||
+    ServiceKey.prowlarr ||
+    ServiceKey.readarr ||
+    ServiceKey.sabnzbd ||
+    ServiceKey.unraid ||
+    ServiceKey.jellyfin => 'api_key',
+  };
+
+  /// Whether this service may hold more than one instance.
+  ///
+  /// True for every service, and stated as a named capability rather than left
+  /// implicit because the question gets asked at a dozen call sites and the
+  /// answer deserves one home. Two NAS in two houses, two Jellyfin for two
+  /// households, a seedbox qBittorrent beside the one at home: none of these
+  /// are stranger than 4K-and-1080p Radarr, and carving out a "singleton"
+  /// class would mean defending an arbitrary line at every one of them.
+  bool get supportsMultipleInstances => true;
+
   /// What the *non-secret* half of a credential pair is called.
   ///
   /// The sibling of [credentialLabel], and it exists for one service: Nginx
