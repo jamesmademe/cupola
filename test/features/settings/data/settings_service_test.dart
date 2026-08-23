@@ -132,7 +132,7 @@ void main() {
       expect(loaded.lidarrApiKey, isEmpty);
       expect(loaded.bazarrUrl, isEmpty);
       expect(loaded.bazarrApiKey, isEmpty);
-      expect(loaded.themeMode, AppThemeMode.system);
+      expect(loaded.themeMode, AppThemeMode.dark);
     });
 
     test('loadSettings reads Bazarr API key from secure storage', () async {
@@ -202,7 +202,7 @@ void main() {
       expect(loaded.radarrApiKey, isEmpty);
       expect(loaded.qbittorrentUsername, isEmpty);
       expect(loaded.qbittorrentPassword, isEmpty);
-      expect(loaded.themeMode, AppThemeMode.system);
+      expect(loaded.themeMode, AppThemeMode.dark);
 
       expect(await secureStore.read(key: 'secure_seerr_api_key'), isNull);
       expect(await secureStore.read(key: 'secure_radarr_api_key'), isNull);

@@ -252,11 +252,11 @@ void main() {
   });
 
   group('SettingsModel.themeMode', () {
-    test('defaults to system appearance and resolves to ThemeMode.system', () {
+    test('defaults to dark appearance and resolves to ThemeMode.dark', () {
       const settings = SettingsModel();
 
-      expect(settings.themeMode, AppThemeMode.system);
-      expect(settings.resolvedThemeMode, ThemeMode.system);
+      expect(settings.themeMode, AppThemeMode.dark);
+      expect(settings.resolvedThemeMode, ThemeMode.dark);
     });
 
     test('resolves light and dark appearance modes', () {

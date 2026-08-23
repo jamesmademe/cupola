@@ -269,7 +269,7 @@ void main() {
 
       expect(container.read(settingsProvider).radarrUrl, isEmpty);
       expect(container.read(settingsProvider).radarrApiKey, isEmpty);
-      expect(container.read(settingsProvider).themeMode, AppThemeMode.system);
+      expect(container.read(settingsProvider).themeMode, AppThemeMode.dark);
       expect(container.read(onboardingCompletedProvider), isFalse);
       expect(await secureStore.read(key: 'secure_radarr_api_key'), isNull);
     });

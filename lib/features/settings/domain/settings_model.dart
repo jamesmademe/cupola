@@ -25,7 +25,7 @@ enum AppThemeMode {
   }
 
   static AppThemeMode fromName(String? value) =>
-      _modesByName[value] ?? AppThemeMode.system;
+      _modesByName[value] ?? AppThemeMode.dark;
 }
 
 class SettingsModel {
@@ -297,7 +297,7 @@ class SettingsModel {
     this.plexClientId = '',
     this.trustedCertificates = const {},
     this.region = 'US',
-    this.themeMode = AppThemeMode.system,
+    this.themeMode = AppThemeMode.dark,
   });
 
   SettingsModel copyWith({
