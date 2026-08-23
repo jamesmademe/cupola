@@ -9,6 +9,7 @@ import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/release_search/data/release_search_bootstrap.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 void main() async {
@@ -32,6 +33,7 @@ void main() async {
         prefs: prefs,
         secureSettingsStore: secureSettingsStore,
         initialSettings: initialSettings,
+        activeInstances: settingsService.loadActiveInstances(),
         onboardingCompleted: onboardingCompleted,
       ),
       child: const CupolaApp(),
@@ -47,12 +49,14 @@ _buildProviderOverrides({
   required SharedPreferences prefs,
   required SecureSettingsStore secureSettingsStore,
   required SettingsModel initialSettings,
+  required Map<ServiceKey, String> activeInstances,
   required bool onboardingCompleted,
 }) {
   return [
     sharedPreferencesProvider.overrideWithValue(prefs),
     secureSettingsStoreProvider.overrideWithValue(secureSettingsStore),
     initialSettingsProvider.overrideWithValue(initialSettings),
+    initialActiveInstancesProvider.overrideWithValue(activeInstances),
     initialOnboardingCompletedProvider.overrideWithValue(onboardingCompleted),
   ];
 }

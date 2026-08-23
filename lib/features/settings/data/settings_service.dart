@@ -88,6 +88,16 @@ class SettingsService {
   /// the same list it always did. The roster appears on the next save.
   static const _kInstanceRoster = 'service_instances';
 
+  /// Which instance of each service the UI is currently looking through:
+  /// `{serviceName: instanceId}`.
+  ///
+  /// Kept apart from the roster, and apart from [SettingsModel], because it is
+  /// a *view* rather than configuration. Folding it into the settings blob
+  /// would make changing lens look like a settings write — and a settings write
+  /// re-probes every service, which is a connection storm for what is really a
+  /// tab change.
+  static const _kActiveInstances = 'active_instances';
+
   /// Where TrueNAS's and Dockge's fingerprints lived under ADR-5, kept only
   /// so [_loadTrustedCertificates] can migrate an existing install once.
   static const _legacyTrueNasCertFingerprint = 'truenas_cert_fingerprint';
@@ -245,6 +255,52 @@ class SettingsService {
     }
   }
 
+  /// The lens the user last used for each service.
+  ///
+  /// Synchronous: `SharedPreferences` is already in memory by the time anything
+  /// asks, and making this a `Future` would put an async gap in front of the
+  /// first frame of every service screen.
+  ///
+  /// Entries naming a service this build does not have are dropped. An entry
+  /// naming an instance that no longer exists is *kept* here and resolved away
+  /// at read time — this class does not know what exists, and silently editing
+  /// the user's last choice on load would lose it the moment a settings file
+  /// was read before the instance list was.
+  Map<ServiceKey, String> loadActiveInstances() {
+    final raw = _prefs.getString(_kActiveInstances);
+    if (raw == null || raw.isEmpty) return const {};
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return const {};
+
+      final lenses = <ServiceKey, String>{};
+      decoded.forEach((name, id) {
+        if (name is! String || id is! String || id.isEmpty) return;
+        final service = ServiceKey.values
+            .where((candidate) => candidate.name == name)
+            .firstOrNull;
+        if (service != null) lenses[service] = id;
+      });
+      return lenses;
+    } on FormatException {
+      return const {};
+    }
+  }
+
+  Future<void> saveActiveInstances(Map<ServiceKey, String> lenses) async {
+    if (lenses.isEmpty) {
+      await _prefs.remove(_kActiveInstances);
+      return;
+    }
+    await _prefs.setString(
+      _kActiveInstances,
+      jsonEncode({
+        for (final entry in lenses.entries) entry.key.name: entry.value,
+      }),
+    );
+  }
+
   Future<bool> loadOnboardingComplete() async {
     return _prefs.getBool(_kOnboardingComplete) ?? false;
   }
@@ -270,6 +326,7 @@ class SettingsService {
       );
     }
     await _prefs.remove(_kInstanceRoster);
+    await _prefs.remove(_kActiveInstances);
 
     for (final storageKeys in _serviceStorageKeys.values) {
       await _prefs.remove(storageKeys.url);
