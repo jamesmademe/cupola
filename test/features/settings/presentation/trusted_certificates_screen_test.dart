@@ -10,6 +10,8 @@ import 'package:cupola/features/settings/presentation/trusted_certificates_scree
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 const _fingerprint =
     'ab12cd34ef56ab12cd34ef56ab12cd34ef56ab12cd34ef56ab12cd34ef56ab1';
 
@@ -27,7 +29,7 @@ void main() {
     ) async {
       await _pumpScreen(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://nas.local:8443',
           radarrApiKey: 'radarr-key',
           sonarrUrl: 'https://nas.local:8443',
@@ -49,7 +51,7 @@ void main() {
         // an origin must not make the pin unreachable.
         await _pumpScreen(
           tester,
-          settings: const SettingsModel(
+          settings: settingsWith(
             trustedCertificates: {'https://nas.local:8443': _fingerprint},
           ),
         );
@@ -67,7 +69,7 @@ void main() {
     ) async {
       final container = await _pumpScreen(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           trustedCertificates: {'https://nas.local:8443': _fingerprint},
         ),
       );
@@ -92,7 +94,7 @@ void main() {
     ) async {
       final container = await _pumpScreen(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           trustedCertificates: {'https://nas.local:8443': _fingerprint},
         ),
       );

@@ -16,6 +16,8 @@ import 'package:cupola/features/settings/presentation/settings_home_screen.dart'
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 void main() {
   group('SettingsHomeScreen', () {
     testWidgets('renders the main settings sections', (tester) async {
@@ -41,7 +43,7 @@ void main() {
     ) async {
       await _pumpSettingsHome(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'radarr-key',
         ),
@@ -56,7 +58,7 @@ void main() {
       // nobody reads. Only trouble earns a row here.
       await _pumpSettingsHome(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'radarr-key',
           sonarrUrl: 'https://sonarr.local:8989',
@@ -73,7 +75,7 @@ void main() {
     testWidgets('a failing service is promoted with its cause', (tester) async {
       await _pumpSettingsHome(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'radarr-key',
         ),
@@ -89,7 +91,7 @@ void main() {
     ) async {
       await _pumpSettingsHome(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'radarr-key',
         ),
@@ -103,10 +105,7 @@ void main() {
     });
 
     testWidgets('formats the selected region label', (tester) async {
-      await _pumpSettingsHome(
-        tester,
-        settings: const SettingsModel(region: 'gb'),
-      );
+      await _pumpSettingsHome(tester, settings: settingsWith(region: 'gb'));
 
       expect(find.text('United Kingdom (GB)'), findsOneWidget);
     });
@@ -129,7 +128,7 @@ void main() {
         // the subtitle beside it is only the host.
         await _pumpSettingsHome(
           tester,
-          settings: const SettingsModel(
+          settings: settingsWith(
             radarrUrl: 'https://radarr.local:7878',
             radarrApiKey: 'radarr-key',
           ),
@@ -213,7 +212,7 @@ void main() {
       final secureStore = FakeSecureSettingsStore();
       final service = SettingsService(prefs, secureStore);
       await service.saveSettings(
-        const SettingsModel(
+        settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'radarr-key',
           region: 'IT',
@@ -280,7 +279,7 @@ void main() {
       final secureStore = FakeSecureSettingsStore();
       final service = SettingsService(prefs, secureStore);
       await service.saveSettings(
-        const SettingsModel(radarrUrl: 'https://radarr.local:7878'),
+        settingsWith(radarrUrl: 'https://radarr.local:7878'),
       );
       await service.saveOnboardingComplete();
       final initialSettings = await service.loadSettings();

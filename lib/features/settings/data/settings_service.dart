@@ -299,7 +299,6 @@ class SettingsService {
     // produced it. Naming all 17 services a third time in a constructor literal
     // is the hazard `copyWithCredentials` was written to kill — see its doc.
     var model = SettingsModel(
-      jellyfinUserId: jellyfinUserId,
       plexClientId: plexClientId,
       trustedCertificates: trustedCertificates,
       region: _loadRegion(),
@@ -319,6 +318,16 @@ class SettingsService {
       if (username.isNotEmpty) {
         model = model.copyWithCredentials(service, username: username);
       }
+    }
+
+    // Applied after the loop rather than in the constructor, because the viewer
+    // now belongs to a Jellyfin *instance* and the loop above is what creates
+    // one. Setting it first would have nowhere to land — and doing it here
+    // cannot conjure an instance out of nothing either: an unconfigured
+    // Jellyfin has no address, so `_upsertPrimary` declines to mint one and the
+    // orphaned id is dropped rather than resurrected.
+    if (jellyfinUserId.isNotEmpty) {
+      model = model.copyWithViewer(ServiceKey.jellyfin, jellyfinUserId);
     }
     return model;
   }

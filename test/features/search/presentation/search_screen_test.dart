@@ -12,11 +12,12 @@ import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
 import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/model_builders.dart';
 import '../../../test_helpers/reel_finders.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 void main() {
   testWidgets('renders grouped global search result cards', (tester) async {
@@ -214,7 +215,7 @@ Future<void> _pumpFrames(WidgetTester tester) async {
 _overrides({bool withPoster = false}) {
   return [
     currentSettingsProvider.overrideWith(
-      (ref) => const SettingsModel(
+      (ref) => settingsWith(
         radarrUrl: 'http://radarr.local:7878',
         radarrApiKey: 'key',
       ),

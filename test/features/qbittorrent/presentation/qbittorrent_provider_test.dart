@@ -12,6 +12,8 @@ import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.da
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 class _StubAdapter implements HttpClientAdapter {
   // Holds JSON responses keyed by request path. The values can be either
   // a `Map<String, dynamic>` (for object-shaped payloads like /properties)
@@ -112,7 +114,7 @@ void main() {
 
     test('creates service when URL configured', () {
       final container = _container(
-        settings: const SettingsModel(qbittorrentUrl: 'http://localhost:8080'),
+        settings: settingsWith(qbittorrentUrl: 'http://localhost:8080'),
       );
       final service = container.read(qbittorrentServiceProvider);
       expect(service, isA<QbittorrentService>());
@@ -122,7 +124,7 @@ void main() {
   group('available* providers', () {
     test('availableCategories derives from allTorrentsProvider', () async {
       final container = _container(
-        settings: const SettingsModel(qbittorrentUrl: 'http://localhost'),
+        settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
           '/api/v2/torrents/info': [
             _torrentJson(category: 'linux'),
@@ -142,7 +144,7 @@ void main() {
 
     test('availableTags aggregates all torrent tags', () async {
       final container = _container(
-        settings: const SettingsModel(qbittorrentUrl: 'http://localhost'),
+        settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
           '/api/v2/torrents/info': [
             _torrentJson(tags: ['a', 'b']),
@@ -159,7 +161,7 @@ void main() {
 
     test('availableTrackers extracts domains', () async {
       final container = _container(
-        settings: const SettingsModel(qbittorrentUrl: 'http://localhost'),
+        settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
           '/api/v2/torrents/info': [
             _torrentJson(tracker: 'https://tracker.example/announce'),
@@ -178,7 +180,7 @@ void main() {
 
     test('available* return empty when allTorrentsProvider has no data', () {
       final container = _container(
-        settings: const SettingsModel(qbittorrentUrl: 'http://localhost'),
+        settings: settingsWith(qbittorrentUrl: 'http://localhost'),
       );
       expect(container.read(availableCategoriesProvider), isEmpty);
       expect(container.read(availableTagsProvider), isEmpty);
@@ -191,7 +193,7 @@ void main() {
       'queued filter applies client-side even though api filter is all',
       () async {
         final container = _container(
-          settings: const SettingsModel(qbittorrentUrl: 'http://localhost'),
+          settings: settingsWith(qbittorrentUrl: 'http://localhost'),
           responses: {
             '/api/v2/torrents/info': [
               _torrentJson(hash: 'a', state: 'downloading'),
@@ -212,7 +214,7 @@ void main() {
 
     test('category filter is applied on top of API filter', () async {
       final container = _container(
-        settings: const SettingsModel(qbittorrentUrl: 'http://localhost'),
+        settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
           '/api/v2/torrents/info': [
             _torrentJson(hash: 'a', category: 'linux'),
@@ -231,7 +233,7 @@ void main() {
 
     test('tag filter narrows by tag membership', () async {
       final container = _container(
-        settings: const SettingsModel(qbittorrentUrl: 'http://localhost'),
+        settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
           '/api/v2/torrents/info': [
             _torrentJson(hash: 'a', tags: ['4k', 'remux']),
@@ -250,7 +252,7 @@ void main() {
 
     test('tracker filter narrows by domain', () async {
       final container = _container(
-        settings: const SettingsModel(qbittorrentUrl: 'http://localhost'),
+        settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
           '/api/v2/torrents/info': [
             _torrentJson(hash: 'a', tracker: 'https://alpha.example/announce'),
@@ -271,7 +273,7 @@ void main() {
   group('qbittorrentTorrentsProvider', () {
     test('forwards hashes query to service', () async {
       final container = _container(
-        settings: const SettingsModel(qbittorrentUrl: 'http://localhost'),
+        settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
           '/api/v2/torrents/info': [_torrentJson(hash: 'a')],
         },
@@ -288,7 +290,7 @@ void main() {
   group('torrentPropertiesProvider', () {
     test('forwards hash and parses the /properties response', () async {
       final container = _container(
-        settings: const SettingsModel(qbittorrentUrl: 'http://localhost'),
+        settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
           '/api/v2/torrents/properties': {
             'save_path': '/downloads/Ubuntu',
@@ -353,7 +355,7 @@ void main() {
       final container2 = ProviderContainer(
         overrides: [
           currentSettingsProvider.overrideWith(
-            (ref) => const SettingsModel(qbittorrentUrl: 'http://localhost'),
+            (ref) => settingsWith(qbittorrentUrl: 'http://localhost'),
           ),
           qbittorrentServiceProvider.overrideWith((ref) {
             final s = ref.watch(currentSettingsProvider);

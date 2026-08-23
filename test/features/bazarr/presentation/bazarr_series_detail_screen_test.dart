@@ -13,7 +13,9 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_bazarr_service.dart';
 
-const _settings = SettingsModel(
+import '../../../test_helpers/settings_scope.dart';
+
+final _settings = settingsWith(
   bazarrUrl: 'http://bazarr.local',
   bazarrApiKey: 'key',
 );
@@ -21,7 +23,7 @@ const _settings = SettingsModel(
 Future<void> _pumpScreen(
   WidgetTester tester, {
   required FakeBazarrService fake,
-  SettingsModel settings = _settings,
+  SettingsModel? settings,
   int sonarrSeriesId = 7,
   BazarrWantedItem? initialWanted,
 }) async {
@@ -31,7 +33,7 @@ Future<void> _pumpScreen(
       // AsyncError instead of looping through retry-loading in the test.
       retry: (retryCount, error) => null,
       overrides: [
-        currentSettingsProvider.overrideWith((ref) => settings),
+        currentSettingsProvider.overrideWith((ref) => (settings ?? _settings)),
         bazarrServiceProvider.overrideWith((ref) => fake),
       ],
       child: MaterialApp(

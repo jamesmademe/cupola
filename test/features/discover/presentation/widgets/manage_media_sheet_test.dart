@@ -7,6 +7,8 @@ import 'package:cupola/features/discover/presentation/widgets/manage_media_sheet
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
+import '../../../../test_helpers/settings_scope.dart';
+
 void main() {
   group('ManageMediaSheet', () {
     testWidgets('remove action is a silent no-op when seerr id is missing', (
@@ -17,7 +19,7 @@ void main() {
       await _pumpSheet(
         tester,
         onDataChanged: () => onDataChangedCount += 1,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.example.com',
           radarrApiKey: 'key',
         ),
@@ -39,7 +41,7 @@ void main() {
       await _pumpSheet(
         tester,
         onDataChanged: () => onDataChangedCount += 1,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.example.com',
           radarrApiKey: 'key',
         ),
@@ -89,7 +91,7 @@ void main() {
       (tester) async {
         await _pumpSheet(
           tester,
-          settings: const SettingsModel(
+          settings: settingsWith(
             radarrUrl: 'https://radarr.example.com',
             radarrApiKey: 'key',
           ),
@@ -106,7 +108,7 @@ void main() {
         await _pumpSheet(
           tester,
           mediaInfo: {'requests': const []},
-          settings: const SettingsModel(
+          settings: settingsWith(
             radarrUrl: 'https://radarr.example.com',
             radarrApiKey: 'key',
           ),

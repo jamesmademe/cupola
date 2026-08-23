@@ -14,7 +14,9 @@ import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/presentation/stream_dashboard_screen.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_session_card.dart';
 
-const _configured = SettingsModel(
+import '../../test_helpers/settings_scope.dart';
+
+final _configured = settingsWith(
   jellyfinUrl: 'http://jelly.local:8096',
   jellyfinApiKey: 'key',
   jellyfinUserId: 'viewer-1',
@@ -58,12 +60,14 @@ Future<void> _pumpBoard(
   WidgetTester tester, {
   List<StreamSession> sessions = const [],
   List<StreamLibrary> libraries = const [_library],
-  SettingsModel settings = _configured,
+  SettingsModel? settings,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        currentSettingsProvider.overrideWith((ref) => settings),
+        currentSettingsProvider.overrideWith(
+          (ref) => (settings ?? _configured),
+        ),
         jellyfinSessionsProvider.overrideWith((ref) async => sessions),
         jellyfinLibrariesProvider.overrideWith((ref) async => libraries),
         serviceKpiProvider.overrideWith((ref, service) async => const []),

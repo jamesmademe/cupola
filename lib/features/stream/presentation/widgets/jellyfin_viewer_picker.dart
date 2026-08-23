@@ -6,6 +6,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
 /// Picks whose watch state the Jellyfin library is read through.
@@ -82,7 +83,9 @@ class JellyfinViewerPicker extends ConsumerWidget {
     final settings = ref.read(currentSettingsProvider);
     await ref
         .read(settingsProvider.notifier)
-        .updateSettings(settings.copyWith(jellyfinUserId: viewer.id));
+        .updateSettings(
+          settings.copyWithViewer(ServiceKey.jellyfin, viewer.id),
+        );
     // The client is rebuilt from the new id, which invalidates every per-viewer
     // lens with it — see `jellyfinClientProvider`, where the viewer is part of
     // *which client you are talking to* rather than part of a page's identity.

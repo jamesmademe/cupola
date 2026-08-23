@@ -8,6 +8,8 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 void main() {
   group('lidarrServiceProvider', () {
     test('throws when Lidarr is not configured', () {
@@ -25,7 +27,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           currentSettingsProvider.overrideWith(
-            (ref) => const SettingsModel(
+            (ref) => settingsWith(
               lidarrUrl: 'https://lidarr.example.com',
               lidarrApiKey: 'key',
             ),

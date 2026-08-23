@@ -24,6 +24,8 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/model_builders.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 void main() {
   test('returns no grouped results for an empty query', () async {
     final container = _container();
@@ -231,7 +233,7 @@ void main() {
       // A connection it *does* depend on still re-runs it.
       container.read(_testSettings.notifier).state = container
           .read(_testSettings)
-          .copyWith(radarrApiKey: 'rotated');
+          .copyWithService(ServiceKey.radarr, apiKey: 'rotated');
       await container.read(globalSearchResultsProvider.future);
 
       expect(radarr.leg.tokens, hasLength(2));
@@ -242,7 +244,7 @@ void main() {
 /// The settings the fan-out reads, mutable so a test can write to a field the
 /// search does not depend on.
 final _testSettings = StateProvider<SettingsModel>(
-  (ref) => const SettingsModel(
+  (ref) => settingsWith(
     seerrUrl: 'http://seerr.local:5055',
     seerrApiKey: 'key',
     radarrUrl: 'http://radarr.local:7878',

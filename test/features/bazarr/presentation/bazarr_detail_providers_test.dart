@@ -5,11 +5,12 @@ import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_bazarr_service.dart';
 
-const _settings = SettingsModel(
+import '../../../test_helpers/settings_scope.dart';
+
+final _settings = settingsWith(
   bazarrUrl: 'http://bazarr.local',
   bazarrApiKey: 'key',
 );

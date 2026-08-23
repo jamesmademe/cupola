@@ -11,6 +11,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/settings_connections_screen.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 void main() {
   group('SettingsConnectionsScreen', () {
     testWidgets('splits configured services from the ones still to add', (
@@ -18,7 +20,7 @@ void main() {
     ) async {
       await _pumpConnectionsScreen(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           seerrUrl: 'https://seerr.local',
           seerrApiKey: 'key',
           radarrUrl: 'https://radarr.local:7878',
@@ -45,7 +47,7 @@ void main() {
     testWidgets('groups connected services by domain', (tester) async {
       await _pumpConnectionsScreen(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'key',
           qbittorrentUrl: 'https://qb.local',
@@ -104,7 +106,7 @@ void main() {
     testWidgets('a configured row speaks its connection state', (tester) async {
       await _pumpConnectionsScreen(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'key',
         ),
@@ -129,7 +131,7 @@ void main() {
       // key; this is that verdict reaching the list.
       await _pumpConnectionsScreen(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'key',
         ),

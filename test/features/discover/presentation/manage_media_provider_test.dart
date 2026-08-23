@@ -8,6 +8,8 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_services.dart' as shared;
 
+import '../../../test_helpers/settings_scope.dart';
+
 void main() {
   group('ManageMediaState', () {
     test('default state has correct defaults', () {
@@ -132,11 +134,11 @@ void main() {
       expect(notifier.hasExternalService, isFalse);
     });
 
-    const radarrConfigured = SettingsModel(
+    final radarrConfigured = settingsWith(
       radarrUrl: 'https://radarr.example.com',
       radarrApiKey: 'key',
     );
-    const sonarrConfigured = SettingsModel(
+    final sonarrConfigured = settingsWith(
       sonarrUrl: 'https://sonarr.example.com',
       sonarrApiKey: 'key',
     );

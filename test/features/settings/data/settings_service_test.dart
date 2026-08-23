@@ -6,6 +6,8 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 void main() {
   group('SettingsService', () {
     late SharedPreferences prefs;
@@ -86,7 +88,7 @@ void main() {
     });
 
     test('saveSettings and loadSettings round-trip', () async {
-      const settings = SettingsModel(
+      final settings = settingsWith(
         seerrUrl: 'https://jelly.example.com',
         seerrApiKey: 'jelly-key',
         radarrUrl: 'https://radarr.example.com',
@@ -162,7 +164,7 @@ void main() {
     });
 
     test('saveSettings removes secure keys when values are empty', () async {
-      const populatedSettings = SettingsModel(radarrApiKey: 'radarr-key');
+      final populatedSettings = settingsWith(radarrApiKey: 'radarr-key');
       const clearedSettings = SettingsModel();
 
       await service.saveSettings(populatedSettings);
@@ -180,7 +182,7 @@ void main() {
     });
 
     test('clearAll wipes settings, credentials, and onboarding flag', () async {
-      const settings = SettingsModel(
+      final settings = settingsWith(
         seerrUrl: 'https://jelly.example.com',
         seerrApiKey: 'jelly-key',
         radarrUrl: 'https://radarr.example.com',
@@ -241,7 +243,7 @@ void main() {
           'ab12cd34ef56ab12cd34ef56ab12cd34ef56ab12cd34ef56ab12cd34ef56ab1';
 
       test('saveSettings and loadSettings round-trip the trust map', () async {
-        const settings = SettingsModel(
+        final settings = settingsWith(
           radarrUrl: 'https://nas.local:8443',
           radarrApiKey: 'radarr-key',
           trustedCertificates: {'https://nas.local:8443': fingerprint},
@@ -348,7 +350,7 @@ void main() {
         );
         await service.loadSettings(); // triggers the one-time migration
         await service.saveSettings(
-          const SettingsModel(
+          settingsWith(
             trustedCertificates: {'https://nas.local:8443': fingerprint},
           ),
         );

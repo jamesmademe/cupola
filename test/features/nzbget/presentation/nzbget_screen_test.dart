@@ -16,7 +16,9 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
-const _configured = SettingsModel(nzbgetUrl: 'http://nzbget.local:6789');
+import '../../../test_helpers/settings_scope.dart';
+
+final _configured = settingsWith(nzbgetUrl: 'http://nzbget.local:6789');
 
 /// See the SABnzbd screen test: `FilledButton.tonalIcon` builds a private
 /// subclass, which `find.byType` cannot see.
