@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/platform/local_network_access.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/dockge/data/dockge_client.dart';
 import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
@@ -39,9 +40,32 @@ class ServiceDiagnosis {
     this.reason,
     this.certificateProbe,
     this.detail,
-  ]);
+  ]) : serverVersion = null;
+
+  /// The full form, for the places that set a field the positional list cannot
+  /// reach — Dart allows optional positionals or optional named, not both, and
+  /// the positional shape above is what every call site already uses.
+  const ServiceDiagnosis._all({
+    required this.status,
+    this.reason,
+    this.certificateProbe,
+    this.detail,
+    this.serverVersion,
+  });
 
   const ServiceDiagnosis.connected() : this(ServiceConnectionStatus.connected);
+
+  /// The service answered, and named its own version on the way.
+  ///
+  /// Worth carrying because a green tick can still be the wrong answer: a
+  /// TrueNAS older than the minimum authenticates, replies, and then leaves
+  /// half the console empty. The version is what lets the test say so at the
+  /// moment it is read, rather than leaving the user to find out inside the hub.
+  const ServiceDiagnosis.connectedAs(String version)
+    : this._all(
+        status: ServiceConnectionStatus.connected,
+        serverVersion: version,
+      );
 
   const ServiceDiagnosis.notConfigured()
     : this(ServiceConnectionStatus.notConfigured);
@@ -96,6 +120,12 @@ class ServiceDiagnosis {
   /// [connectionFailureMessage] when present, never alongside it.
   final String? detail;
 
+  /// The version string the server reported during the test, for the services
+  /// that say — null everywhere else. Raw and unparsed: turning it into words,
+  /// and into a caveat where the version matters, is `describeServerVersion`'s
+  /// job, so both surfaces that report a test say the same thing about it.
+  final String? serverVersion;
+
   /// What the UI should actually say about this outcome.
   ///
   /// One accessor rather than `detail ?? connectionFailureMessage(...)` repeated
@@ -112,7 +142,13 @@ class ServiceDiagnosis {
   bool get isConfigured => status != ServiceConnectionStatus.notConfigured;
 
   ServiceDiagnosis withCertificateProbe(UntrustedCertificateProbe? probe) =>
-      ServiceDiagnosis(status, reason, probe, detail);
+      ServiceDiagnosis._all(
+        status: status,
+        reason: reason,
+        certificateProbe: probe,
+        detail: detail,
+        serverVersion: serverVersion,
+      );
 }
 
 /// Verifies [service] against the credentials passed in, rather than the saved
@@ -272,11 +308,33 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       apiKey: apiKey.trim(),
       certFingerprint: pin,
     );
-    return _probe(
-      () => client.call('core.ping'),
-      timeout: const Duration(seconds: 6),
-      close: client.close,
-    );
+    try {
+      // `core.ping` stays the verdict: it is the cheapest call that proves the
+      // socket, the login and the API key all at once.
+      await client.call('core.ping').timeout(const Duration(seconds: 6));
+      // The version is a second hop on the socket that is already open and
+      // authenticated, and it is deliberately *not* allowed to change the
+      // verdict — a server that pings is connected whether or not it will name
+      // itself. Hence the swallowed failure: the outcome loses one line, not
+      // its green tick.
+      String? version;
+      try {
+        version = stringOrNull(
+          await client
+              .call('system.version')
+              .timeout(const Duration(seconds: 4)),
+        );
+      } catch (_) {
+        version = null;
+      }
+      return version == null || version.trim().isEmpty
+          ? const ServiceDiagnosis.connected()
+          : ServiceDiagnosis.connectedAs(version.trim());
+    } catch (e) {
+      return ServiceDiagnosis.failed(e);
+    } finally {
+      await client.close();
+    }
   }
 
   // The two media servers authenticate with a header the shared `ApiClient`

@@ -5,8 +5,48 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/truenas/domain/truenas_version.dart';
 
 void main() {
+  group('describeServerVersion', () {
+    test('says nothing when the server named nothing', () {
+      expect(describeServerVersion(ServiceKey.truenas, null), isNull);
+      expect(describeServerVersion(ServiceKey.truenas, '   '), isNull);
+    });
+
+    test('a supported TrueNAS is reported without a caveat', () {
+      final note = describeServerVersion(
+        ServiceKey.truenas,
+        'TrueNAS-SCALE-25.04.2',
+      );
+
+      expect(note, isNotNull);
+      expect(note!.message, contains('25.04.2'));
+      expect(note.isWarning, isFalse);
+    });
+
+    test('a TrueNAS below the floor is a qualified pass, not a plain one', () {
+      final note = describeServerVersion(
+        ServiceKey.truenas,
+        'TrueNAS-SCALE-24.10.1',
+      );
+
+      // The whole point of reading the version during the test: this server
+      // answers, so nothing else in the outcome can say the console is about to
+      // come up half empty.
+      expect(note!.isWarning, isTrue);
+      expect(note.message, contains('24.10.1'));
+      expect(note.message, contains(kTrueNasMinVersion));
+    });
+
+    test('an unreadable version fails open', () {
+      final note = describeServerVersion(ServiceKey.truenas, 'TrueNAS-nightly');
+
+      expect(note!.message, contains('TrueNAS-nightly'));
+      expect(note.isWarning, isFalse);
+    });
+  });
+
   group('describeConnection', () {
     test('a refused redirect is not drawn as unreachable', () {
       final presentation = describeConnection(

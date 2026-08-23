@@ -79,6 +79,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   /// `ServiceDiagnosis.detail`. Kept beside [_reason] rather than folded into it
   /// so the walk renders the same words the settings screen does.
   final Map<ServiceKey, String?> _failureDetail = {};
+
+  /// The version each service named while its test ran — see
+  /// `ServiceDiagnosis.serverVersion`. Beside [_failureDetail] for the same
+  /// reason: the walk prints what the settings screen prints.
+  final Map<ServiceKey, String?> _serverVersion = {};
   final Map<ServiceKey, bool> _verifying = {};
 
   /// Self-signed fingerprints the user chose to trust, persisted on save
@@ -357,6 +362,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     });
   }
 
+      _serverVersion[service] = result.serverVersion;
   Future<void> _trustCertificate(ServiceKey service) async {
     final probe = _pendingCert[service];
     if (probe == null) return;
@@ -548,6 +554,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     _advanceFrom(service);
   }
 
+      _serverVersion.remove(service);
   void _backFrom(ServiceKey service) {
     final index = _walk.indexOf(service);
     _goTo(index <= 0 ? _pickPage : _firstWalkPage + index - 1);
@@ -813,6 +820,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                     _picked.add(service);
                                     _skipped.remove(service);
                                   }
+                                    _serverVersion.remove(service);
                                 }),
                                 onContinue: _enterWalk,
                                 onBack: () => _goTo(_doorPage),
@@ -832,6 +840,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                   trustedFingerprint: _pinFor(walk[i]),
                                   affectedServices: _servicesSharingOrigin(
                                     walk[i],
+                                  serverVersion: _serverVersion[walk[i]],
                                   ),
                                   next: i + 1 < walk.length
                                       ? walk[i + 1]

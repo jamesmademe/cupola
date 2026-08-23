@@ -366,6 +366,62 @@ extension ServiceKeyExtension on ServiceKey {
     ServiceKey.nzbget => null,
   };
 
+  /// The same caveats as [setupNote], said in the onboarding walk's voice: a
+  /// sentence or two under the fields, for the services where something has to
+  /// be true before the connection is worth testing.
+  ///
+  /// A second getter rather than a reuse of [setupNote] because the walk says
+  /// less on purpose — its address field already prints the default port and
+  /// its credential field the breadcrumb, so what is left to say is the caveat
+  /// itself. It lives here for the reason [setupNote] does: what a service says
+  /// about itself belongs beside the rest of its description, so a new service
+  /// is one entry in this file rather than a hunt through the screens that
+  /// render it. The walk used to carry its own copy of this list, and TrueNAS
+  /// was missing from it — the version requirement was stated in Settings and
+  /// nowhere in the flow that actually asks for the address.
+  String? get walkNote => switch (this) {
+    // Said before the test, not after: an older TrueNAS can connect and then
+    // leave whole sections empty, which reads as a broken app rather than an
+    // unsupported server.
+    ServiceKey.truenas =>
+      'Cupola supports TrueNAS SCALE $kTrueNasMinVersion or newer. An older '
+          'release may connect and still leave whole sections empty.',
+    ServiceKey.readarr =>
+      'Readarr development has stopped upstream. Existing instances keep '
+          'working against its last released API, but expect no new '
+          'server-side fixes.',
+    ServiceKey.unraid =>
+      'Enable the Unraid API first, under Settings → Management Access → '
+          'Developer Options. The endpoint stays silent until it is on.',
+    ServiceKey.jellyfin =>
+      'The key signs in as an administrator but carries no user of its '
+          'own, so pick whose watch state to read in Settings afterwards.',
+    ServiceKey.plex =>
+      'It must be a long-lived device token: one beginning "eyJ" expires '
+          'in 7 days and Cupola cannot renew it without contacting plex.tv.',
+    // Transmission's one all-or-nothing credential and its `rpc-whitelist`
+    // default are both reasons a daemon that works in a browser refuses a
+    // phone, so they are worth a line here too.
+    ServiceKey.transmission =>
+      'Use the same login the Transmission web interface asks for, and widen '
+          '`rpc-whitelist` — it defaults to 127.0.0.1, so this device is '
+          'refused until it is listed.',
+    ServiceKey.nginxProxyManager =>
+      'Point this at the admin interface (port 81 by default), not at a '
+          'hostname the proxy serves, and use a dedicated account rather than '
+          'your admin one.',
+    ServiceKey.seerr ||
+    ServiceKey.radarr ||
+    ServiceKey.sonarr ||
+    ServiceKey.lidarr ||
+    ServiceKey.qbittorrent ||
+    ServiceKey.bazarr ||
+    ServiceKey.dockge ||
+    ServiceKey.prowlarr ||
+    ServiceKey.sabnzbd ||
+    ServiceKey.nzbget => null,
+  };
+
   /// Whether the global search tab fans out to this service.
   ///
   /// **Jellyfin and Plex are deliberately excluded, and this is a design

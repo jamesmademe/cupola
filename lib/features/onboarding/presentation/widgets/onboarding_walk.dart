@@ -137,6 +137,7 @@ class OnboardingWalk extends StatefulWidget {
     required this.status,
     required this.reason,
     required this.failureDetail,
+    required this.serverVersion,
     required this.verifying,
     required this.certificateProbe,
     required this.trustedFingerprint,
@@ -163,6 +164,12 @@ class OnboardingWalk extends StatefulWidget {
   /// `ServiceDiagnosis.detail`. Null for almost every failure, where the
   /// reason-derived message is the better one.
   final String? failureDetail;
+
+  /// The version the server named while the test ran, for the services that say
+  /// — see `ServiceDiagnosis.serverVersion`. Printed in the outcome, because a
+  /// TrueNAS below the supported floor answers this test and then leaves whole
+  /// sections of its console empty.
+  final String? serverVersion;
   final bool verifying;
 
   /// A certificate probe the last test ran into, waiting to be trusted.
@@ -313,7 +320,10 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
               'require a login.',
         ),
       ],
-      if (_serviceNote(service) case final note?) ...[
+      // Per-service facts worth saying at the moment they matter — registry
+      // data, so Settings and the walk cannot drift apart on which services
+      // have something to say.
+      if (service.walkNote case final note?) ...[
         const SizedBox(height: AppSpacing.lg),
         Text(
           note,
@@ -353,6 +363,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           widget.affectedServices.length > 1
               ? "You trusted this server's own certificate — it also covers "
                     '${widget.affectedServices.where((s) => s != service).map((s) => s.title).join(', ')}.'
+          serverVersion: widget.serverVersion,
               : "You trusted this server's own certificate.",
           style: theme.textTheme.bodySmall!.copyWith(
             color: scheme.onSurfaceVariant,
@@ -457,12 +468,14 @@ class _Outcome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    required this.serverVersion,
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final presentation = describeConnection(
       service,
       status: status,
       reason: reason,
+  final String? serverVersion;
     );
     final tone = statusToneColor(scheme, presentation.tone);
     final sentence = switch (status) {
@@ -516,6 +529,21 @@ class _Outcome extends StatelessWidget {
                   Align(
                     alignment: AlignmentDirectional.centerStart,
                     child: TextButton.icon(
+                // What the server said it is running. Amber when the version
+                // itself is the problem: "answered" is true and still not the
+                // whole answer on a release Cupola cannot drive.
+                if (describeServerVersion(service, serverVersion)
+                    case final note?) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    note.message,
+                    style: theme.textTheme.bodySmall!.copyWith(
+                      color: note.isWarning
+                          ? AppColors.warning
+                          : scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
                       onPressed: () async {
                         final opened =
                             await LocalNetworkPermission.openSettings();
@@ -674,25 +702,3 @@ String? _plexTokenWarning(String value) => value.trim().startsWith('eyJ')
     ? 'That token expires in 7 days and cannot be renewed here. Paste a '
           'long-lived device token instead.'
     : null;
-
-/// Per-service facts worth saying at the moment they matter, rather than in a
-/// help page nobody opens.
-String? _serviceNote(ServiceKey service) {
-  switch (service) {
-    case ServiceKey.readarr:
-      return 'Readarr development has stopped upstream. Existing instances keep '
-          'working against its last released API, but expect no new '
-          'server-side fixes.';
-    case ServiceKey.unraid:
-      return 'Enable the Unraid API first, under Settings → Management Access → '
-          'Developer Options. The endpoint stays silent until it is on.';
-    case ServiceKey.jellyfin:
-      return 'The key signs in as an administrator but carries no user of its '
-          'own, so pick whose watch state to read in Settings afterwards.';
-    case ServiceKey.plex:
-      return 'It must be a long-lived device token: one beginning "eyJ" expires '
-          'in 7 days and Cupola cannot renew it without contacting plex.tv.';
-    default:
-      return null;
-  }
-}

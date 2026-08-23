@@ -4,6 +4,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/truenas/domain/truenas_version.dart';
 
 /// A connection state resolved into everything the UI needs to render it: a
 /// tone from the closed vocabulary, a glyph, and words.
@@ -129,4 +130,46 @@ ConnectionPresentation describeConnection(
         ),
       };
   }
+}
+
+/// The version a service reported during a connection test, resolved into a
+/// line to print under the outcome.
+///
+/// [isWarning] is the whole reason this is a type rather than a string: a
+/// version can turn a passing test into a qualified one, and a caveat rendered
+/// in the same quiet grey as everything else is a caveat nobody reads.
+class ServerVersionNote {
+  const ServerVersionNote(this.message, {this.isWarning = false});
+
+  final String message;
+  final bool isWarning;
+}
+
+/// What the outcome of a test should say about the version the server named,
+/// or null when it named nothing.
+///
+/// Resolved here, beside [describeConnection], for the reason that function
+/// exists: the walk and the service form report the same test, and the version
+/// is exactly the kind of detail one of them would otherwise learn to phrase
+/// differently.
+ServerVersionNote? describeServerVersion(ServiceKey service, String? version) {
+  final reported = version?.trim();
+  if (reported == null || reported.isEmpty) return null;
+
+  if (service == ServiceKey.truenas) {
+    final parsed = TrueNasVersion.parse(reported);
+    // Only a version that parses *and* falls short earns the warning. An
+    // unparseable string fails open, the same way `TrueNasVersion.parse` does
+    // everywhere else — guessing "unsupported" from a string we cannot read
+    // would put a caveat on a working server.
+    if (parsed != null && !parsed.isSupported) {
+      return ServerVersionNote(
+        'Running $reported. Cupola supports SCALE $kTrueNasMinVersion or '
+        'newer — some sections will be unavailable.',
+        isWarning: true,
+      );
+    }
+  }
+
+  return ServerVersionNote('Running $reported.');
 }
