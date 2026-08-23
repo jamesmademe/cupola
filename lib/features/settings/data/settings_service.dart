@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -72,6 +73,20 @@ class SettingsService {
   /// keyed by TLS origin, not by `ServiceKey`, so there is no per-service key
   /// to hang it on.
   static const _kTrustedCertificates = 'secure_trusted_certificates';
+
+  /// The ordered list of configured connections: `[{id, service, label}, ...]`.
+  ///
+  /// Every value a connection holds already lives under keys derived from its
+  /// id, so this carries no addresses and no secrets — only which ids exist,
+  /// what kind of server each is, and in what order the user put them. That is
+  /// the part nothing else on disk can tell you: a primary is discoverable by
+  /// walking the enum, but nothing announces that `radarr-a1b2c3d` is out
+  /// there waiting to be read.
+  ///
+  /// Absent on an install that predates multi-instance, which is exactly the
+  /// migration: [loadSettings] falls back to walking the enum and produces
+  /// the same list it always did. The roster appears on the next save.
+  static const _kInstanceRoster = 'service_instances';
 
   /// Where TrueNAS's and Dockge's fingerprints lived under ADR-5, kept only
   /// so [_loadTrustedCertificates] can migrate an existing install once.
@@ -243,7 +258,18 @@ class SettingsService {
   /// secure-storage entry. Clears secure storage first so a Keychain failure
   /// leaves prefs intact and the caller can surface an error.
   Future<void> clearAll() async {
+    // Read before the wipe: the roster is the only thing that knows an extra
+    // instance's id, and once it is gone its keys are unreachable by name.
+    final roster = _readRoster();
+
     await _secureStore.deleteAll();
+
+    for (final entry in roster) {
+      await _forgetInstance(
+        ServiceInstance(id: entry.id, service: entry.service),
+      );
+    }
+    await _prefs.remove(_kInstanceRoster);
 
     for (final storageKeys in _serviceStorageKeys.values) {
       await _prefs.remove(storageKeys.url);
@@ -329,29 +355,122 @@ class SettingsService {
     if (jellyfinUserId.isNotEmpty) {
       model = model.copyWithViewer(ServiceKey.jellyfin, jellyfinUserId);
     }
-    return model;
+
+    final roster = _readRoster();
+    final extras = await _loadExtraInstances(roster);
+    return model.copyWith(
+      instances: _ordered([...model.instances, ...extras], roster),
+    );
+  }
+
+  /// The roster as stored, or empty when there is none to read.
+  ///
+  /// Tolerant on purpose. A roster that will not parse, or that names a service
+  /// this build does not have, must not take the user's whole configuration
+  /// down with it: every value is still reachable through the keys derived from
+  /// its id, and the enum walk in [loadSettings] finds the primaries regardless.
+  /// A bad roster costs the *order* and any extra instances, and is repaired by
+  /// the next save.
+  List<({String id, ServiceKey service, String label})> _readRoster() {
+    final raw = _prefs.getString(_kInstanceRoster);
+    if (raw == null || raw.isEmpty) return const [];
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+
+      final entries = <({String id, ServiceKey service, String label})>[];
+      for (final row in decoded) {
+        if (row is! Map) continue;
+        final id = row['id'];
+        final serviceName = row['service'];
+        if (id is! String || id.isEmpty || serviceName is! String) continue;
+
+        final service = ServiceKey.values
+            .where((candidate) => candidate.name == serviceName)
+            .firstOrNull;
+        if (service == null) continue;
+
+        final label = row['label'];
+        entries.add((
+          id: id,
+          service: service,
+          label: label is String ? label : '',
+        ));
+      }
+      return entries;
+    } on FormatException {
+      return const [];
+    }
+  }
+
+  /// The instances the enum walk cannot find: everything whose id is not the
+  /// primary slot of its service.
+  Future<List<ServiceInstance>> _loadExtraInstances(
+    List<({String id, ServiceKey service, String label})> roster,
+  ) async {
+    final extras = <ServiceInstance>[];
+
+    for (final entry in roster) {
+      if (entry.id == ServiceInstance.primaryIdFor(entry.service)) continue;
+
+      final skeleton = ServiceInstance(id: entry.id, service: entry.service);
+      var url = _loadString(skeleton.urlStorageKey);
+      final schemed = _schemeQualified(entry.service, url);
+      if (schemed != null) {
+        url = schemed;
+        await _prefs.setString(skeleton.urlStorageKey, url);
+      }
+
+      extras.add(
+        skeleton.copyWith(
+          label: entry.label,
+          url: url,
+          credential: await _loadApiKey(skeleton.credentialStorageKey),
+          username: _loadString(skeleton.usernameStorageKey),
+          viewerId: _loadString(skeleton.viewerIdStorageKey),
+        ),
+      );
+    }
+    return extras;
+  }
+
+  /// [loaded] in the user's saved order, with anything the roster does not
+  /// mention kept rather than dropped.
+  ///
+  /// Order is meaning here — the first instance of a service is the one a bare
+  /// route resolves to — so it is restored from the roster rather than left to
+  /// enum declaration order. The tail is the safety net: an instance present on
+  /// disk but missing from the roster is a roster that lost a write, and the
+  /// answer to that is to show the connection, not to hide it.
+  List<ServiceInstance> _ordered(
+    List<ServiceInstance> loaded,
+    List<({String id, ServiceKey service, String label})> roster,
+  ) {
+    if (roster.isEmpty) return List.unmodifiable(loaded);
+
+    final byId = {for (final instance in loaded) instance.id: instance};
+    final ordered = <ServiceInstance>[];
+
+    for (final entry in roster) {
+      final instance = byId.remove(entry.id);
+      if (instance == null) continue;
+      // The label lives only in the roster; the value keys carry the rest.
+      ordered.add(instance.copyWith(label: entry.label));
+    }
+    ordered.addAll(byId.values);
+    return List.unmodifiable(ordered);
   }
 
   Future<void> saveSettings(SettingsModel settings) async {
     final normalizedRegion = SettingsModel.normalizeRegion(settings.region);
 
-    await _saveServiceUrls(settings);
+    await _saveInstances(settings);
     await _prefs.setString(_kRegion, normalizedRegion);
     await _prefs.setString(_kThemeMode, settings.themeMode.name);
     await _prefs.remove('hidden_tabs');
 
-    await _saveServiceApiKeys(settings);
-
-    await _saveUsernames(settings);
-
     await _saveTrustedCertificates(settings.trustedCertificates);
-
-    final jellyfinKeys = _serviceStorageKeys[ServiceKey.jellyfin]!;
-    if (settings.jellyfinUserId.isNotEmpty) {
-      await _prefs.setString(jellyfinKeys.userId!, settings.jellyfinUserId);
-    } else {
-      await _prefs.remove(jellyfinKeys.userId!);
-    }
 
     // Deliberately *not* written from `settings`. The client id is owned by
     // `_loadOrCreatePlexClientId`, which mints it once; honouring an incoming
@@ -384,18 +503,6 @@ class SettingsService {
   ///
   /// A username is not a secret and stays in [SharedPreferences] beside the
   /// URL; only the password half goes to the Keychain, via [_saveServiceApiKeys].
-  Future<void> _saveUsernames(SettingsModel settings) async {
-    for (final entry in _serviceStorageKeys.entries) {
-      final key = entry.value.username;
-      if (key == null) continue;
-      final value = settings.usernameFor(entry.key);
-      if (value.isEmpty) {
-        await _prefs.remove(key);
-      } else {
-        await _prefs.setString(key, value);
-      }
-    }
-  }
 
   /// Reads the persisted `X-Plex-Client-Identifier`, minting one on first use.
   ///
@@ -627,33 +734,6 @@ class SettingsService {
     return settingsByService;
   }
 
-  Future<void> _saveServiceUrls(SettingsModel settings) async {
-    for (final service in ServiceKey.values) {
-      final storageKeys = _serviceStorageKeys[service]!;
-      await _prefs.setString(storageKeys.url, settings.urlFor(service));
-
-      // Remove legacy URL key after writing to the new key.
-      if (storageKeys.legacyUrl != null) {
-        await _prefs.remove(storageKeys.legacyUrl!);
-      }
-    }
-  }
-
-  Future<void> _saveServiceApiKeys(SettingsModel settings) async {
-    for (final service in ServiceKey.values) {
-      final storageKeys = _serviceStorageKeys[service]!;
-      // `apiKeyFor` already resolves to the password for a credential-
-      // authenticated service (that is what the generic credential slot is
-      // for), so there is one branch here rather than one per such service.
-      await _saveApiKey(storageKeys.secureApiKey, settings.apiKeyFor(service));
-
-      // Remove legacy secure API key after writing to the new key.
-      if (storageKeys.legacySecureApiKey != null) {
-        await _secureStore.delete(key: storageKeys.legacySecureApiKey!);
-      }
-    }
-  }
-
   String _loadString(String key) {
     return _prefs.getString(key) ?? '';
   }
@@ -663,6 +743,98 @@ class SettingsService {
       _prefs.getString(_kRegion) ??
           PlatformDispatcher.instance.locale.countryCode,
     );
+  }
+
+  /// Writes every connection to the keys derived from its id, forgets the ones
+  /// that are gone, and records the roster.
+  ///
+  /// Replaces three per-service passes that each walked the enum. They could
+  /// only ever see one connection per service, which is the limitation this
+  /// whole change exists to remove.
+  Future<void> _saveInstances(SettingsModel settings) async {
+    for (final instance in settings.instances) {
+      await _prefs.setString(instance.urlStorageKey, instance.url);
+      await _saveApiKey(instance.credentialStorageKey, instance.credential);
+      await _writeOrRemove(instance.usernameStorageKey, instance.username);
+      await _writeOrRemove(instance.viewerIdStorageKey, instance.viewerId);
+    }
+
+    final live = {for (final instance in settings.instances) instance.id};
+
+    // Everything the previous roster knew about and this one does not. Without
+    // this pass a removed connection's API key stays in the keychain for the
+    // life of the install — invisible, unreachable, and still a secret.
+    for (final entry in _readRoster()) {
+      if (live.contains(entry.id)) continue;
+      await _forgetInstance(
+        ServiceInstance(id: entry.id, service: entry.service),
+      );
+    }
+
+    // Primary slots with nothing in them. They predate the roster, so no
+    // roster entry proves they were ever written — the enum is their only
+    // record, and leaving a stale address here would have the legacy walk in
+    // [loadSettings] resurrect a connection the user removed.
+    for (final service in ServiceKey.values) {
+      final primaryId = ServiceInstance.primaryIdFor(service);
+      if (live.contains(primaryId)) continue;
+      await _forgetInstance(ServiceInstance(id: primaryId, service: service));
+
+      final storageKeys = _serviceStorageKeys[service]!;
+      if (storageKeys.legacyApiKey.isNotEmpty) {
+        await _prefs.remove(storageKeys.legacyApiKey);
+      }
+    }
+
+    // Renamed-service leftovers, cleared once the new keys carry the value.
+    for (final storageKeys in _serviceStorageKeys.values) {
+      if (storageKeys.legacyUrl != null) {
+        await _prefs.remove(storageKeys.legacyUrl!);
+      }
+      if (storageKeys.legacySecureApiKey != null) {
+        await _secureStore.delete(key: storageKeys.legacySecureApiKey!);
+      }
+    }
+
+    await _writeRoster(settings.instances);
+  }
+
+  /// Removes every value belonging to [instance].
+  ///
+  /// Deliberately does not touch `plex_client_id`: that key is not derived from
+  /// an instance and does not belong to one — it identifies the install, and
+  /// clearing it would hand the user's Plex server a new device row.
+  Future<void> _forgetInstance(ServiceInstance instance) async {
+    await _prefs.remove(instance.urlStorageKey);
+    await _prefs.remove(instance.usernameStorageKey);
+    await _prefs.remove(instance.viewerIdStorageKey);
+    await _secureStore.delete(key: instance.credentialStorageKey);
+  }
+
+  Future<void> _writeRoster(List<ServiceInstance> instances) async {
+    if (instances.isEmpty) {
+      await _prefs.remove(_kInstanceRoster);
+      return;
+    }
+    await _prefs.setString(
+      _kInstanceRoster,
+      jsonEncode([
+        for (final instance in instances)
+          {
+            'id': instance.id,
+            'service': instance.service.name,
+            'label': instance.label,
+          },
+      ]),
+    );
+  }
+
+  Future<void> _writeOrRemove(String key, String value) async {
+    if (value.isEmpty) {
+      await _prefs.remove(key);
+      return;
+    }
+    await _prefs.setString(key, value);
   }
 
   Future<String> _loadApiKey(String key) async {
