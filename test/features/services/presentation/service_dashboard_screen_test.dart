@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/features/services/presentation/service_dashboard_screen.dart';
@@ -12,7 +15,16 @@ void main() {
     final router = _buildRouter('/services');
     addTearDown(router.dispose);
 
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpWidget(
+      ProviderScope(
+        // The app bar reads settings now: it has to know whether this service
+        // has a second connection before it decides to show a lens badge.
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('open-service-radarr')));
@@ -44,7 +56,16 @@ void main() {
     final router = _buildRouter('/services');
     addTearDown(router.dispose);
 
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpWidget(
+      ProviderScope(
+        // The app bar reads settings now: it has to know whether this service
+        // has a second connection before it decides to show a lens badge.
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('open-service-lidarr')));

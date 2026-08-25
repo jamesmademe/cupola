@@ -158,16 +158,40 @@ ServiceTransport watchTransport(Ref ref, ServiceKey service) {
 ///
 /// The naming counterpart of [watchTransport], for the surfaces that show a
 /// label rather than open a socket.
-ServiceInstance? watchActiveInstance(Ref ref, ServiceKey service) {
+///
+/// Selects the resolved instance rather than the list it came out of.
+/// `instancesOf` builds a fresh `List` on every call and lists compare by
+/// identity, so selecting one would never match its previous value and every
+/// consumer would rebuild on every unrelated settings write. [ServiceInstance]
+/// compares structurally, so this settles.
+final activeInstanceProvider = Provider.family<ServiceInstance?, ServiceKey>((
+  ref,
+  service,
+) {
   final lensId = ref.watch(
     activeInstancesProvider.select((lenses) => lenses[service]),
   );
-  final instances = ref.watch(
-    currentSettingsProvider.select((s) => s.instancesOf(service)),
+  return ref.watch(
+    currentSettingsProvider.select((s) {
+      final instances = s.instancesOf(service);
+      return instances
+              .where((candidate) => candidate.id == lensId)
+              .firstOrNull ??
+          (instances.isEmpty ? null : instances.first);
+    }),
   );
-  return instances.where((candidate) => candidate.id == lensId).firstOrNull ??
-      (instances.isEmpty ? null : instances.first);
-}
+});
+
+/// Whether [service] has more than one connection — the question every surface
+/// asks before it decides to show a label at all.
+final hasMultipleInstancesProvider = Provider.family<bool, ServiceKey>((
+  ref,
+  service,
+) {
+  return ref.watch(
+    currentSettingsProvider.select((s) => s.hasMultipleInstances(service)),
+  );
+});
 
 /// Watches only [service]'s transport identity and returns an [ApiClient] bound
 /// to it, closed when the provider is disposed.
