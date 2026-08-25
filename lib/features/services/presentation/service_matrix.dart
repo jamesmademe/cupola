@@ -1248,7 +1248,15 @@ class _ServiceMatrixCellBody extends StatelessWidget {
 
     return AppCard.surfaceOutlined(
       key: ValueKey('service-matrix-cell-${service.routeParam}'),
-      onTap: () => context.push('/services/${service.routeParam}'),
+      // `go`, not `push`, because this same cell is rendered in two places: on
+      // the Services dashboard, and on the Portal's floor — which lives ABOVE
+      // the branch navigators and can be opened from any tab. A push keeps the
+      // origin branch, so travelling to Radarr from Activity would have stacked
+      // a service page on the Activity tab with the bar still lit on Activity.
+      // `go` lands on the Services branch, which is what travelling means here;
+      // the route is nested under `/services`, so back still returns to the
+      // dashboard.
+      onTap: () => context.go('/services/${service.routeParam}'),
       // The card dips under the thumb instead of rippling. A ripple flooding a
       // 32pt box is how a chip signals selection, not how a surface signals a
       // touch — the same judgment as the radius above, and the reason
