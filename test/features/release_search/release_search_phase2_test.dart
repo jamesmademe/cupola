@@ -104,6 +104,7 @@ void main() {
           ServiceKey.sonarr,
           baseUrl: _httpsBase,
           certTrustedInApp: false,
+          backgroundEnabled: true,
           platform: TargetPlatform.android,
         ),
         ReleaseSearchReach.beyondTheApp,
@@ -115,6 +116,7 @@ void main() {
           ServiceKey.sonarr,
           baseUrl: _httpsBase,
           certTrustedInApp: true,
+          backgroundEnabled: true,
           platform: TargetPlatform.android,
         ),
         ReleaseSearchReach.whileOpenTrustedCert,
@@ -124,6 +126,7 @@ void main() {
           ServiceKey.sonarr,
           baseUrl: _httpsBase,
           certTrustedInApp: true,
+          backgroundEnabled: true,
           platform: TargetPlatform.iOS,
         ),
         ReleaseSearchReach.whileOpenTrustedCert,
@@ -135,6 +138,7 @@ void main() {
           ServiceKey.sonarr,
           baseUrl: _httpsBase,
           certTrustedInApp: false,
+          backgroundEnabled: true,
           platform: TargetPlatform.macOS,
         ),
         ReleaseSearchReach.whileOpen,
@@ -144,10 +148,59 @@ void main() {
           ServiceKey.sonarr,
           baseUrl: _httpsBase,
           certTrustedInApp: true,
+          backgroundEnabled: true,
           platform: TargetPlatform.macOS,
         ),
         ReleaseSearchReach.whileOpen,
       );
+    });
+
+    test('switching background search off outranks every per-instance reason',
+        () {
+      // The order in `reachFor` is the design: when the user has switched the
+      // capability off, that is both the true cause and the only one they can
+      // lift in a tap. A pinned certificate or a cleartext origin only starts
+      // mattering once the capability is wanted — reporting those first would
+      // send someone to fix an instance over a switch they turned off
+      // themselves.
+      for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+        for (final certTrusted in [true, false]) {
+          for (final base in [_httpsBase, _httpBase]) {
+            expect(
+              reachFor(
+                ServiceKey.sonarr,
+                baseUrl: base,
+                certTrustedInApp: certTrusted,
+                backgroundEnabled: false,
+                platform: platform,
+              ),
+              ReleaseSearchReach.whileOpenSwitchedOff,
+              reason:
+                  '$platform / cert=$certTrusted / $base: off is off, and it '
+                  'is the reason that gets named',
+            );
+          }
+        }
+      }
+    });
+
+    test('on desktop the platform still answers, switch or no switch', () {
+      // The one reason that outranks the switch. Desktop has no background path
+      // to turn on, so naming the setting there would invent a missing
+      // capability — and attach a warning to a risk that does not exist.
+      for (final enabled in [true, false]) {
+        expect(
+          reachFor(
+            ServiceKey.sonarr,
+            baseUrl: _httpsBase,
+            certTrustedInApp: false,
+            backgroundEnabled: enabled,
+            platform: TargetPlatform.macOS,
+          ),
+          ReleaseSearchReach.whileOpen,
+          reason: 'enabled=$enabled must not change a platform fact',
+        );
+      }
     });
 
     test('a cleartext instance never gets the background transport', () {
@@ -164,6 +217,7 @@ void main() {
             ServiceKey.sonarr,
             baseUrl: _httpBase,
             certTrustedInApp: false,
+            backgroundEnabled: true,
             platform: platform,
           ),
           ReleaseSearchReach.whileOpenCleartext,
@@ -183,6 +237,7 @@ void main() {
           ServiceKey.sonarr,
           baseUrl: 'sonarr.example.com:8989',
           certTrustedInApp: false,
+          backgroundEnabled: true,
           platform: TargetPlatform.android,
         ),
         ReleaseSearchReach.beyondTheApp,
@@ -192,6 +247,7 @@ void main() {
           ServiceKey.sonarr,
           baseUrl: 'https://192.168.1.10:8989',
           certTrustedInApp: false,
+          backgroundEnabled: true,
           platform: TargetPlatform.android,
         ),
         ReleaseSearchReach.beyondTheApp,
@@ -203,6 +259,7 @@ void main() {
           ServiceKey.sonarr,
           baseUrl: 'http://192.168.1.10:8989',
           certTrustedInApp: false,
+          backgroundEnabled: true,
           platform: TargetPlatform.android,
         ),
         ReleaseSearchReach.whileOpenCleartext,
@@ -220,6 +277,7 @@ void main() {
             service,
             baseUrl: _httpBase,
             certTrustedInApp: false,
+            backgroundEnabled: true,
             platform: TargetPlatform.iOS,
           ),
           ReleaseSearchReach.whileOpenCleartext,
@@ -489,6 +547,10 @@ void main() {
     Future<ProviderContainer> containerFor(
       String sonarrUrl, {
       TargetPlatform platform = TargetPlatform.android,
+      // Defaults to on because these tests are about the *other* axes — the
+      // scheme, the pin, the platform. The switch has its own tests below, and
+      // the shipped default is off.
+      bool backgroundEnabled = true,
     }) async {
       final container = ProviderContainer(
         overrides: [
@@ -503,6 +565,9 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
+      container
+          .read(releaseSearchSettingsProvider.notifier)
+          .setBackgroundEnabled(backgroundEnabled);
       return container;
     }
 
@@ -554,6 +619,83 @@ void main() {
 
       expect(runner(_target, CancelToken()), completion(isEmpty));
       expect(service.releaseCalls, 1);
+    });
+
+    test('the switch, off, keeps an https instance out of native code entirely',
+        () async {
+      // The claim the opt-in rests on: with the feature off, nothing is handed
+      // to the OS *at all* — not "handed and cancelled quickly", not "handed
+      // without notification". This asserts it at the only place that could
+      // enqueue, and then again one layer up at the runner.
+      final container = await containerFor(
+        _httpsBase,
+        backgroundEnabled: false,
+      );
+      expect(
+        container.read(releaseSearchReachProvider(ServiceKey.sonarr)),
+        ReleaseSearchReach.whileOpenSwitchedOff,
+      );
+      expect(
+        container.read(releaseSearchTransportProvider(ServiceKey.sonarr)),
+        isNot(isA<BackgroundReleaseSearchTransport>()),
+        reason: 'the transport is the gate; nothing else builds a DataTask',
+      );
+    });
+
+    test('the switch, off, routes the search through the arr service', () async {
+      // And the foreground route is a real one rather than a dead end: the
+      // service answers, which is what keeps `ApiClient`'s redirect guard and
+      // the pinned adapter in the path.
+      final service = _RecordingSonarrService();
+      final container = ProviderContainer(
+        overrides: [
+          ...await settingsScopeOverrides(
+            customize: (settings) => settings.copyWithService(
+              ServiceKey.sonarr,
+              url: _httpsBase,
+              apiKey: 'the-arr-admin-key',
+            ),
+          ),
+          releaseSearchPlatformProvider.overrideWith(
+            (ref) => TargetPlatform.android,
+          ),
+          sonarrServiceProvider.overrideWithValue(service),
+        ],
+      );
+      addTearDown(container.dispose);
+      container
+          .read(releaseSearchSettingsProvider.notifier)
+          .setBackgroundEnabled(false);
+
+      await container.read(releaseSearchRunnerProvider)(_target, CancelToken());
+
+      expect(service.releaseCalls, 1);
+    });
+
+    test('turning the switch on restores the background transport', () async {
+      // The other direction, because a gate that cannot be opened is not a
+      // setting. Same container, same instance — only the flag moves.
+      final container = await containerFor(
+        _httpsBase,
+        backgroundEnabled: false,
+      );
+      expect(
+        container.read(releaseSearchTransportProvider(ServiceKey.sonarr)),
+        isNot(isA<BackgroundReleaseSearchTransport>()),
+      );
+
+      container
+          .read(releaseSearchSettingsProvider.notifier)
+          .setBackgroundEnabled(true);
+
+      expect(
+        container.read(releaseSearchReachProvider(ServiceKey.sonarr)),
+        ReleaseSearchReach.beyondTheApp,
+      );
+      expect(
+        container.read(releaseSearchTransportProvider(ServiceKey.sonarr)),
+        isA<BackgroundReleaseSearchTransport>(),
+      );
     });
 
     test('macOS is unaffected by the scheme', () async {

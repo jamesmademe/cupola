@@ -370,6 +370,13 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
           'The search cannot continue while the app is in the background on '
               'this platform. Searching again asks your indexers a second '
               'time.',
+        // Names the setting, because this is the one reach the user can lift
+        // from here — and a failure is when they most want to know how.
+        ReleaseSearchReach.whileOpenSwitchedOff =>
+          'Background search is switched off, so a search ends when you leave '
+              'Cupola. Turning it on in Settings › Background search lets the '
+              'next one finish on its own. Searching again asks your indexers '
+              'a second time.',
       },
       detail: error.type.name,
     );

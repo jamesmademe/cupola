@@ -248,6 +248,36 @@ class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
     _pump();
   }
 
+  /// Cancels every search in flight, with one stated reason.
+  ///
+  /// Cancelling is the *cleanup* here, not a courtesy: on the native transport
+  /// a cancelled task reaches a **final** state, which is the condition under
+  /// which the plugin deletes its own record of the task — headers, and so the
+  /// API key, included. That is why switching background search off cancels
+  /// rather than letting the last searches drain: draining would leave exactly
+  /// the record the user just asked not to have.
+  ///
+  /// Deliberately every active job, not only the ones on the native transport.
+  /// The manager does not track a transport per job, and buying that
+  /// bookkeeping to spare a foreground search would trade a clear promise for a
+  /// subtle one — so the promise is the blunt one, and the copy says it.
+  void cancelAll({required String headline, required String diagnosis}) {
+    for (final job in state.where((j) => j.isActive).toList()) {
+      _tokens.remove(job.id)?.cancel();
+      _replace(
+        job.copyWith(
+          status: ReleaseSearchJobStatus.failed,
+          finishedAt: _now(),
+          failure: ReleaseSearchFailure(
+            kind: ReleaseSearchFailureKind.cancelled,
+            headline: headline,
+            diagnosis: diagnosis,
+          ),
+        ),
+      );
+    }
+  }
+
   /// Records that the app went to the background, so a request that does not
   /// survive it can be blamed on the OS rather than on the user's network.
   void noteBackgrounded() {

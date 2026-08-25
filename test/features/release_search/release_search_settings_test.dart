@@ -104,4 +104,73 @@ void main() {
       kDefaultSearchConcurrency,
     );
   });
+
+  group('the background search switch', () {
+    test('ships off, on every path that can produce a value', () async {
+      // Not a preference with a convenient default: on means the OS gets the
+      // request, API key and all, in writing. So every route to a value — fresh
+      // prefs, absent prefs — has to answer off, including the fallback that
+      // exists for widget tests.
+      final c = await container();
+      expect(c.read(releaseSearchSettingsProvider).backgroundEnabled, isFalse);
+
+      final bare = ProviderContainer();
+      addTearDown(bare.dispose);
+      expect(
+        bare.read(releaseSearchSettingsProvider).backgroundEnabled,
+        isFalse,
+      );
+    });
+
+    test('survives a restart once turned on', () async {
+      final first = await container();
+      first
+          .read(releaseSearchSettingsProvider.notifier)
+          .setBackgroundEnabled(true);
+
+      final prefs = await SharedPreferences.getInstance();
+      final second = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(second.dispose);
+
+      expect(
+        second.read(releaseSearchSettingsProvider).backgroundEnabled,
+        isTrue,
+      );
+    });
+
+    test('reads a stored opt-in from a previous launch', () async {
+      SharedPreferences.setMockInitialValues({
+        'release_search_background_enabled': true,
+      });
+      final c = await container();
+      expect(c.read(releaseSearchSettingsProvider).backgroundEnabled, isTrue);
+    });
+
+    test('turning it off does not disturb the other settings', () async {
+      // The flip goes through copyWith rather than rebuilding the record field
+      // by field, which is what used to make every new setting a chance to
+      // silently reset an old one.
+      final c = await container();
+      final notifier = c.read(releaseSearchSettingsProvider.notifier);
+      notifier.setConcurrency(4);
+      notifier.setTimeoutMinutes(7);
+      notifier.setNotifyOnFinish(true);
+
+      notifier.setBackgroundEnabled(true);
+      notifier.setBackgroundEnabled(false);
+
+      final settings = c.read(releaseSearchSettingsProvider);
+      expect(settings.concurrency, 4);
+      expect(settings.timeout, const Duration(minutes: 7));
+      expect(
+        settings.notifyOnFinish,
+        isTrue,
+        reason:
+            'the notification preference is disabled by the master, not reset '
+            'by it — it has to come back when the master does',
+      );
+    });
+  });
 }

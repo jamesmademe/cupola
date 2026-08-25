@@ -166,7 +166,15 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
         : '';
 
     return switch (reach) {
-      ReleaseSearchReach.beyondTheApp || ReleaseSearchReach.whileOpen => null,
+      // `whileOpenSwitchedOff` joins these two rather than getting its own
+      // sentence: this card explains what *this instance's path* imposes, and
+      // background search being off is neither about this instance nor about
+      // its path. Saying it here would repeat one global fact on three service
+      // screens, and the global screen is where the switch and its explanation
+      // already live.
+      ReleaseSearchReach.beyondTheApp ||
+      ReleaseSearchReach.whileOpen ||
+      ReleaseSearchReach.whileOpenSwitchedOff => null,
       ReleaseSearchReach.whileOpenTrustedCert =>
         '$title uses a certificate trusted only inside Cupola, so this '
             'search runs while Cupola stays open instead of in the '

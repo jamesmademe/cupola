@@ -503,13 +503,30 @@ void main() {
                 '$reach: explainerBody claims "while Cupola is open" iff the '
                 'search does NOT survive leaving the app.',
           );
+          // Asserted on the *claim* rather than on the word "background",
+          // which the opt-in made ambiguous: `whileOpenSwitchedOff` names the
+          // setting ("Background search is off") in the same breath as it says
+          // the search will not survive, so a bare keyword check read that as a
+          // promise. What must never drift is the promise itself — "running in
+          // the background" against "keep Cupola open" — so that is what is
+          // checked, in both directions. Do not weaken this to a one-way test:
+          // the original defect was a confirmation that claimed the background
+          // on a build that did not have it.
           expect(
-            confirmation.toLowerCase().contains('background'),
+            confirmation.toLowerCase().contains('running in the background'),
             survivesLeavingTheApp,
             reason:
-                '$reach: confirmation claims the background iff the search '
-                'actually survives leaving the app — the exact pairing whose '
-                'absence let the two strings drift apart before ADR-6.',
+                '$reach: confirmation may claim to be running in the '
+                'background iff the search actually survives leaving the app — '
+                'the exact pairing whose absence let the two strings drift '
+                'apart before ADR-6.',
+          );
+          expect(
+            confirmation.toLowerCase().contains('keep cupola open'),
+            !survivesLeavingTheApp,
+            reason:
+                '$reach: confirmation tells the user to keep the app open iff '
+                'the search does NOT survive leaving it.',
           );
         }
       },

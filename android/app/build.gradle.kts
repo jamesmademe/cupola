@@ -115,6 +115,17 @@ dependencies {
     // Version matched to the one flutter_local_notifications 22.x declares, so
     // the app and the plugin never disagree on which backport is on the path.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    // For MainActivity.pruneFinishedWork, which drops WorkManager's stored copy
+    // of finished background searches — the arr API key travels in a job's
+    // inputData and the plugin never prunes.
+    //
+    // background_downloader declares the same artifact, but as `implementation`,
+    // so it is not on this module's compile path and the app has to ask for it
+    // itself. Pinned to the plugin's own version rather than a newer one: two
+    // WorkManager versions in one build is a runtime argument about which
+    // database schema wins. Re-check this line whenever the plugin is upgraded.
+    implementation("androidx.work:work-runtime-ktx:2.11.0")
 }
 
 flutter {

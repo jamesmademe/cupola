@@ -59,13 +59,31 @@ class ReleaseSearchHandoffCopy {
     ReleaseSearchReach.whileOpen =>
       'Keep it running and pick the release up later in Activity. Runs '
           'while Cupola is open.',
+    ReleaseSearchReach.whileOpenSwitchedOff =>
+      'Keep it running and pick the release up later in Activity. Runs '
+          'while Cupola is open — Background search is switched off, so '
+          'leaving the app ends it. Settings › Background search turns it '
+          'on.',
   };
 
-  static String confirmation(ReleaseSearchReach reach) =>
-      reach == ReleaseSearchReach.beyondTheApp
-      ? "Running in the background. You'll find it in Activity."
-      : "Still running. You'll find it in Activity — keep Cupola open "
-            'until it finishes.';
+  /// Shown on **every** handoff, which is what makes the second sentence the
+  /// discovery channel that actually works: the inline explainer above is
+  /// persisted per install, so anyone who met it before this feature existed
+  /// will never see it again. Named here rather than left implicit because it
+  /// is the one recurring mention of the setting in the whole app — and it
+  /// appears only while the user is using the handoff, which is exactly when
+  /// the limitation is about them.
+  static String confirmation(ReleaseSearchReach reach) => switch (reach) {
+    ReleaseSearchReach.beyondTheApp =>
+      "Running in the background. You'll find it in Activity.",
+    ReleaseSearchReach.whileOpenSwitchedOff =>
+      "Still running. You'll find it in Activity — keep Cupola open until it "
+          'finishes. Background search is off; Settings › Background search '
+          'lets the next one survive leaving the app.',
+    _ =>
+      "Still running. You'll find it in Activity — keep Cupola open "
+          'until it finishes.',
+  };
 
   static const emptyStateHint =
       'Start an interactive search and tap $action to move around the app '

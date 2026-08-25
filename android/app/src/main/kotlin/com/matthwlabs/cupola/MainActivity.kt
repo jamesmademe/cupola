@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.PersistableBundle
 import android.provider.Settings
+import androidx.work.WorkManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -42,6 +43,48 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TASK_HYGIENE_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "pruneFinishedWork" -> result.success(pruneFinishedWork())
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    /**
+     * Drops WorkManager's records of jobs that have already finished.
+     *
+     * A background release search is a `DataTask`, which the downloader plugin
+     * always runs through WorkManager — so the whole task, headers and the arr
+     * admin API key with them, is stored as the job's `inputData` in
+     * WorkManager's own database. That row outlives the search: the automatic
+     * pruning has a **one-day** threshold and runs only when the database next
+     * happens to be opened, and the plugin never prunes. Calling this at launch
+     * shortens the life of that copy from "at least a day, eventually" to
+     * "until the next launch".
+     *
+     * Two reasons it is safe to be this blunt. It only ever touches jobs in a
+     * terminal state — running work is untouched — and Cupola uses neither
+     * pause/resume nor `doRescheduleKilledTasks`, so there is no finished record
+     * anything here still needs. It also does the plugin a favour: with the work
+     * list empty, the plugin's own check for an orphaned `taskMap` becomes true
+     * on the following launch and clears the same key from preferences.
+     *
+     * Not routed through the downloader plugin because it does not expose this;
+     * `pruneWork` is WorkManager's own API and this is the only way to reach it.
+     */
+    private fun pruneFinishedWork(): Boolean {
+        return try {
+            WorkManager.getInstance(applicationContext).pruneWork()
+            true
+        } catch (e: IllegalStateException) {
+            // WorkManager was never initialised in this process — nothing has
+            // been enqueued, so there is nothing to prune either. Dart treats
+            // false as "not done" and simply tries again next launch.
+            false
+        }
     }
 
     /**
@@ -163,6 +206,7 @@ class MainActivity : FlutterActivity() {
     private companion object {
         const val SECURE_CLIPBOARD_CHANNEL = "com.matthwlabs.cupola/secure_clipboard"
         const val LOCAL_NETWORK_CHANNEL = "com.matthwlabs.cupola/local_network"
+        const val TASK_HYGIENE_CHANNEL = "com.matthwlabs.cupola/background_task_hygiene"
 
         /**
          * Spelled out rather than taken from `Manifest.permission`: the constant

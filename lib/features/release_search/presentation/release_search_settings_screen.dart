@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +15,7 @@ import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/features/release_search/data/release_search_notifications.dart';
 import 'package:cupola/features/release_search/data/release_search_transport.dart';
 import 'package:cupola/features/release_search/domain/release_search_reach.dart';
+import 'package:cupola/features/release_search/presentation/background_search_switch.dart';
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/release_search/domain/release_search_job.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_provider.dart';
@@ -35,6 +38,10 @@ class ReleaseSearchSettingsScreen extends ConsumerStatefulWidget {
 class _ReleaseSearchSettingsScreenState
     extends ConsumerState<ReleaseSearchSettingsScreen> {
   bool _asking = false;
+
+  /// Hands the flip to [BackgroundSearchSwitch], which owns the order.
+  Future<void> _toggleBackground(bool wanted) =>
+      ref.read(backgroundSearchSwitchProvider).set(wanted);
 
   /// Asks the OS **first**, then records what it answered — so a denied
   /// permission never leaves the toggle claiming to be on.
@@ -90,6 +97,19 @@ class _ReleaseSearchSettingsScreenState
       ReleaseSearchReach.whileOpenCleartext,
     );
 
+    // The platform question comes first here for the same reason it comes first
+    // in `reachFor`: where there is no background path, a switch would invent a
+    // missing capability and a warning would attach to a risk that does not
+    // exist.
+    //
+    // Read through `releaseSearchPlatformProvider` rather than from the host,
+    // because that is the provider's whole purpose: `flutter_test` runs on a
+    // desktop, so a direct `Platform` check would put every widget test on the
+    // desktop branch and leave the switch — and the disclosure that is the
+    // point of this screen — permanently unreachable from a test.
+    final platform = ref.watch(releaseSearchPlatformProvider);
+    final canRunInBackground = backgroundSearchSupported(platform: platform);
+
     return AmbientScaffold(
       appBar: const GlassAppBar(title: Text('Background search')),
       body: ListView(
@@ -100,6 +120,23 @@ class _ReleaseSearchSettingsScreenState
           FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
         children: [
+          if (canRunInBackground)
+            SettingsGroupCard(
+              children: [
+                _MasterRow(
+                  enabled: settings.backgroundEnabled,
+                  onChanged: _toggleBackground,
+                ),
+                _DisclosureBlock(
+                  isIOS: platform == null
+                      ? Platform.isIOS
+                      : platform == TargetPlatform.iOS,
+                ),
+              ],
+            )
+          else
+            const _DesktopStatusCard(),
+          const SizedBox(height: AppSpacing.lg),
           SettingsGroupCard(
             children: [
               _StepperRow(
@@ -141,6 +178,12 @@ class _ReleaseSearchSettingsScreenState
               _NotifyRow(
                 enabled: settings.notifyOnFinish,
                 busy: _asking,
+                // Nothing to announce when a search cannot outlive the app: the
+                // badge and the detail page already cover the in-app case.
+                // Disabled rather than reset — the preference (and the OS
+                // permission behind it) survives for when the master returns.
+                available: !canRunInBackground || settings.backgroundEnabled,
+                backgroundCapable: canRunInBackground,
                 foregroundOnlyServices: [
                   ...pinnedServices,
                   ...cleartextServices,
@@ -153,8 +196,226 @@ class _ReleaseSearchSettingsScreenState
           _LimitsCard(
             pinnedServices: pinnedServices,
             cleartextServices: cleartextServices,
+            backgroundActive: canRunInBackground && settings.backgroundEnabled,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The master switch: whether a search may be handed to the operating system.
+///
+/// Identical on iOS and Android by decision — the capability and the trade-off
+/// are the same, and only the *detail* of where the OS keeps its copy differs,
+/// which is what [_DisclosureBlock] varies. Absent on desktop, where
+/// [_DesktopStatusCard] takes its place.
+class _MasterRow extends StatelessWidget {
+  const _MasterRow({required this.enabled, required this.onChanged});
+
+  final bool enabled;
+  final Future<void> Function(bool value) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    const title = 'Background search';
+    final subtitle = enabled
+        ? 'A search keeps running after you leave the app.'
+        : 'Searches end when you leave Cupola. Turn on to let them finish on '
+              'their own.';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.cloud_sync_outlined,
+              size: 18,
+              color: colors.primary,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.lg),
+          Expanded(
+            child: Semantics(
+              container: true,
+              label: '$title. $subtitle',
+              child: ExcludeSemantics(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: theme.textTheme.titleSmall),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Switch(
+            value: enabled,
+            onChanged: (value) => onChanged(value),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The trade-off, in two levels: one honest sentence, and the detail behind a
+/// node the user can open.
+///
+/// Two levels rather than one wall of text, and an [ExpansionTile] rather than
+/// an icon with a tooltip: the detail has to be reachable by a screen reader as
+/// a labelled, expandable node, which an information glyph is not.
+class _DisclosureBlock extends StatelessWidget {
+  const _DisclosureBlock({required this.isIOS});
+
+  /// Which OS's storage is being described. Passed in rather than read from the
+  /// host so both variants are reachable from a test — the copy *is* the
+  /// feature here, and untestable copy is copy that drifts.
+  final bool isIOS;
+
+  /// The same sentence on both platforms, because the fact is the same one.
+  static const headline =
+      'While Cupola is suspended, the system runs the search on its behalf — '
+      'so the request, including this service\'s admin API key, sits in system '
+      'storage while the task runs.';
+
+  /// Where that copy lives, and what covers it, differs by OS — so this is the
+  /// half that is written twice. Both name the key plainly: it is administrative,
+  /// which is the whole reason any of this matters.
+  static String detailsFor({required bool isIOS}) {
+    if (isIOS) {
+      return "The system's working copy never leaves this device and is deleted "
+          'when the search ends — after '
+          '${kBackgroundSearchResourceTimeout.inMinutes} minutes at the latest. '
+          'If iOS closes Cupola before it can collect a result, that result '
+          'waits — key included — in the app\'s preferences until the next '
+          'launch, and preferences are part of device backups: an encrypted '
+          'Finder backup, or iCloud with Advanced Data Protection, covers that '
+          'copy. Turning this off cancels running background searches and '
+          'clears the stored records.';
+    }
+    return "The system's copies live in app-private storage that is excluded "
+        'from every backup — reading them takes a rooted device. Cupola clears '
+        'finished records at every launch. Turning this off cancels running '
+        'background searches and clears the stored records right away.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            headline,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
+              height: 1.5,
+            ),
+          ),
+          Theme(
+            // The tile is inside a card that already draws its own divisions.
+            data: theme.copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              title: Text(
+                'What is stored, and for how long',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: colors.primary,
+                ),
+              ),
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              expandedCrossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  detailsFor(isIOS: isIOS),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Desktop's answer in place of the switch: a statement, not a control.
+///
+/// macOS, Windows and Linux share one sentence because they share the reason —
+/// nothing suspends the app, so nothing is ever handed to the OS and no record
+/// exists to warn about. A switch here would advertise a capability as missing
+/// when it is simply always on, and a disclosure would attach a risk to a
+/// platform that does not carry it.
+class _DesktopStatusCard extends StatelessWidget {
+  const _DesktopStatusCard();
+
+  static const message =
+      'Searches keep running while Cupola is open — desktop never suspends the '
+      'app, so nothing is handed to the system and nothing is written to '
+      'system storage.';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return AppCard.surfaceOutlined(
+      child: Semantics(
+        container: true,
+        label: 'Background search. $message',
+        child: ExcludeSemantics(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.desktop_mac_outlined,
+                size: 18,
+                color: colors.onSurfaceVariant,
+              ),
+              const SizedBox(width: AppSpacing.lg),
+              Expanded(
+                child: Text(
+                  message,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -165,12 +426,22 @@ class _NotifyRow extends StatelessWidget {
   const _NotifyRow({
     required this.enabled,
     required this.busy,
+    required this.available,
+    required this.backgroundCapable,
     required this.foregroundOnlyServices,
     required this.onChanged,
   });
 
   final bool enabled;
   final bool busy;
+
+  /// Whether the setting can do anything at all right now. False only when the
+  /// master switch is off on a platform that has one.
+  final bool available;
+
+  /// Whether this platform has a background path at all — which is what
+  /// separates "not needed here" from "needs the master switch".
+  final bool backgroundCapable;
 
   /// Release-search services whose background reach is cut off by something
   /// about the instance itself — a certificate trusted only inside Cupola, or
@@ -181,7 +452,11 @@ class _NotifyRow extends StatelessWidget {
   final Future<void> Function(bool value) onChanged;
 
   String get _subtitle {
-    if (!backgroundSearchSupported()) {
+    if (!available) {
+      return 'Needs Background search — a search that ends with the app has '
+          'nothing to announce';
+    }
+    if (!backgroundCapable) {
       return 'Not needed here — the app keeps running';
     }
     if (foregroundOnlyServices.isEmpty) {
@@ -243,7 +518,10 @@ class _NotifyRow extends StatelessWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           else
-            Switch(value: enabled, onChanged: (value) => onChanged(value)),
+            Switch(
+              value: enabled && available,
+              onChanged: available ? (value) => onChanged(value) : null,
+            ),
         ],
       ),
     );
@@ -255,7 +533,17 @@ class _LimitsCard extends StatelessWidget {
   const _LimitsCard({
     required this.pinnedServices,
     required this.cleartextServices,
+    required this.backgroundActive,
   });
+
+  /// Whether searches can currently be handed to the OS at all.
+  ///
+  /// What it gates is every limit that only exists *because* of background
+  /// execution — the app-killed loss, the Android ceiling, the per-instance
+  /// downgrades. Listing those while the feature is off would describe a mode
+  /// the user is not in; the grab window and the privacy line are true either
+  /// way and stay.
+  final bool backgroundActive;
 
   /// Release-search services whose background reach is cut off by a
   /// certificate trusted only inside Cupola — see [ReleaseSearchReach].
@@ -266,9 +554,10 @@ class _LimitsCard extends StatelessWidget {
   /// apart from [pinnedServices] because the fix is a different one.
   final List<ServiceKey> cleartextServices;
 
-  /// Only stated where it is true, rather than hedged everywhere.
+  /// Only stated where it is true, rather than hedged everywhere — and only
+  /// while the ceiling can actually be hit.
   bool get androidCeilingApplies =>
-      defaultTargetPlatform == TargetPlatform.android;
+      backgroundActive && defaultTargetPlatform == TargetPlatform.android;
 
   @override
   Widget build(BuildContext context) {
@@ -297,12 +586,12 @@ class _LimitsCard extends StatelessWidget {
             'not a setting here — after it, grabbing needs a fresh search.',
           ),
           line(
-            backgroundSearchSupported()
+            backgroundActive
                 ? 'A search keeps going when you switch apps — but if Cupola is '
                       'closed while it waits, by you or by the system reclaiming '
                       'memory, the outcome is lost: no notification, and nothing '
                       'under Activity. Searching again is the only recovery.'
-                : 'A search runs as long as Cupola is running. Quitting the app '
+                : 'A search runs as long as Cupola is running. Leaving the app '
                       'ends it.',
           ),
           if (androidCeilingApplies)

@@ -16,8 +16,18 @@ enum ReleaseSearchReach {
   beyondTheApp,
 
   /// The foreground path, for a reason that is simply true of the platform:
-  /// macOS does not suspend apps, so there is nothing here to survive.
+  /// desktop does not suspend apps, so there is nothing here to survive.
   whileOpen,
+
+  /// The foreground path, because the user has switched Background search off.
+  ///
+  /// The only one of these four the user can lift from inside the app, and the
+  /// only one that is a *choice* rather than a fact — which is why it names the
+  /// setting wherever it is explained. Off is the default: handing a search to
+  /// the OS means handing it the arr admin key in writing (see
+  /// [ReleaseSearchSettings.backgroundEnabled]), so the capability is offered
+  /// rather than assumed.
+  whileOpenSwitchedOff,
 
   /// The foreground path, for a reason that is true of *this instance*: its
   /// origin has a self-signed certificate trusted only inside Cupola
@@ -53,7 +63,17 @@ enum ReleaseSearchReach {
 }
 
 /// Resolves the reach for a search against [service], given its saved
-/// [baseUrl] and whether that origin is pinned in-app.
+/// [baseUrl], whether that origin is pinned in-app, and whether the user has
+/// switched background search on.
+///
+/// **The order of the four answers is the design.** The platform comes first,
+/// because on desktop there is no background path to switch on and naming the
+/// setting there would invent a missing capability. [backgroundEnabled] comes
+/// next, because when the answer is "you turned it off" that is both the true
+/// cause and the only one the user can act on in a tap — a certificate or a
+/// scheme only starts mattering once the capability is wanted. The two
+/// per-instance facts come last, in the order that puts the permanent one
+/// before the fixable one.
 ///
 /// [platform] is injectable for the same reason [backgroundSearchSupported]
 /// takes one: `flutter_test` reports [TargetPlatform.android] for
@@ -61,15 +81,21 @@ enum ReleaseSearchReach {
 /// down a native path with no plugin behind it. Omit it in production and
 /// the real host answers, exactly as [backgroundSearchSupported] does by
 /// default.
+///
+/// [backgroundEnabled] is required rather than defaulted: a default would let a
+/// new call site quietly opt a user into handing their API key to the OS, which
+/// is exactly the decision this parameter exists to keep explicit.
 ReleaseSearchReach reachFor(
   ServiceKey service, {
   required String baseUrl,
   required bool certTrustedInApp,
+  required bool backgroundEnabled,
   TargetPlatform? platform,
 }) {
   if (!backgroundSearchSupported(platform: platform)) {
     return ReleaseSearchReach.whileOpen;
   }
+  if (!backgroundEnabled) return ReleaseSearchReach.whileOpenSwitchedOff;
   if (certTrustedInApp) return ReleaseSearchReach.whileOpenTrustedCert;
   // `isSecureScheme` rather than a bare `== 'https'`, so this reads the URL the
   // same way every client does: only an explicit `http://` is cleartext, and a

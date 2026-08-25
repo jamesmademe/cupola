@@ -234,6 +234,27 @@ Cupola is a native app rather than a web UI in a shell, and it is meant to feel 
 
 </details>
 
+<details>
+<summary><b>Searches that outlive the screen</b></summary>
+<br/>
+
+Interactive search is slow because your indexers are slow. Tap *Keep searching*, put the
+phone away, and the answer is waiting in Activity when you come back.
+
+On a phone that means the operating system runs the request for you — and to do that it
+writes the request down, API key included, until the search ends. Every app that works in
+the background pays this; no clever coding avoids it. So it ships **off**, and turning it
+on in **Settings → Background search** tells you the same thing in the same words. What
+Cupola does is keep the window narrow: a task expires after 11 minutes, finished records
+are cleared at every launch and the moment you switch the feature off, and on Android none
+of it is in a backup. On iOS one copy can ride along in a device backup — encrypt the
+backup, or use iCloud with Advanced Data Protection, and it is covered.
+
+On desktop the question never arises. Nothing suspends the app, so a search just keeps
+running while Cupola is open.
+
+</details>
+
 ---
 
 ## Install
@@ -339,6 +360,10 @@ your own machines.
 - **Pinning covers images too.** Posters and artwork use a separate HTTP stack, so
   they go through a dedicated pinned image cache rather than silently bypassing the
   pin.
+- **Background search is opt-in.** Letting a search survive leaving the app means
+  handing the request, API key and all, to the operating system for the length of the
+  task — so it is off until you turn it on, and the trade-off is written next to the
+  switch.
 
 The whole trust layer is one reviewable file: [`lib/core/network/cert_trust.dart`](lib/core/network/cert_trust.dart).
 

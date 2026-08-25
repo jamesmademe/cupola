@@ -177,8 +177,12 @@ class BackgroundReleaseSearchTransport implements ReleaseSearchTransport {
       url: url.toString(),
       headers: headers,
       httpRequestMethod: 'GET',
-      // Priority 0 is what routes this onto the OS's own job service on Android
-      // 14+; it is also the only lever available for this task type.
+      // Priority 0 would be what routes this onto Android's own job service —
+      // but not in 9.5.7: that path also requires a notificationConfig and
+      // SDK >= 34, and a DataTask from transmit() never has one. This task
+      // therefore always runs on WorkManager, which is where the nine-minute
+      // ceiling comes from. The value stays because it is the correct intent if
+      // the library ever wires DataTask up; it changes nothing today.
       priority: 0,
       retries: 0,
     );

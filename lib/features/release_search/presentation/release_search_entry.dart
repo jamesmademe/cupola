@@ -46,6 +46,9 @@ final releaseSearchReachProvider =
         service,
         baseUrl: baseUrl,
         certTrustedInApp: settings.pinForUrl(baseUrl) != null,
+        backgroundEnabled: ref.watch(
+          releaseSearchSettingsProvider.select((s) => s.backgroundEnabled),
+        ),
         platform: ref.watch(releaseSearchPlatformProvider),
       );
     });
@@ -58,12 +61,19 @@ final releaseSearchReachProvider =
 /// on `ApiClient`'s redirect guard and, when the origin is pinned, on the same
 /// pinned adapter the real client uses:
 ///
-/// * macOS, which does not suspend apps and so has nothing to survive;
+/// * desktop, which does not suspend apps and so has nothing to survive;
+/// * background search switched off, which is the user declining to have the
+///   request written to system storage at all;
 /// * a certificate trusted only inside Cupola, which the native task cannot
 ///   see at all;
 /// * a cleartext `http://` origin, where the native task's unstoppable redirect
 ///   following would let anyone on the path collect the API key — the one case
 ///   here that is a security boundary rather than a capability gap.
+///
+/// **This is where the opt-in is enforced, and it is the only place it needs to
+/// be.** Nothing else in the app constructs a `DataTask`, so a reach that is
+/// not [ReleaseSearchReach.beyondTheApp] cannot enqueue one — which is why the
+/// switch is a reach and not an `if` scattered over the call sites.
 final releaseSearchTransportProvider =
     Provider.family<ReleaseSearchTransport, ServiceKey>((ref, service) {
       final reach = ref.watch(releaseSearchReachProvider(service));
