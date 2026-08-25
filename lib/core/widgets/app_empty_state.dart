@@ -138,6 +138,34 @@ class AppEmptyState extends StatelessWidget {
   }
 }
 
+/// An [AppEmptyState] that owns the viewport, for a caller that *is* the page.
+///
+/// [AppEmptyState] is deliberately not scrollable — see the note in its build —
+/// and says that a full-page caller must therefore give it a scroll view whose
+/// `minHeight` is the viewport. This is that sentence as a widget, because three
+/// callers had the sentence and none had the scroll view: an error message long
+/// enough to wrap (a failed request quotes the address it failed on) grew the
+/// column past a phone and overflowed it, with the words that explain the
+/// failure clipped off the bottom.
+///
+/// Centred while it fits, scrollable once it does not, which is also what keeps
+/// it usable at an accessibility reading size.
+class AppEmptyStatePage extends StatelessWidget {
+  const AppEmptyStatePage({super.key, required this.emptyState});
+
+  final AppEmptyState emptyState;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => SingleChildScrollView(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+        child: emptyState,
+      ),
+    ),
+  );
+}
+
 /// How much room an [AppEmptyState] is allowed to take.
 enum AppEmptyStateDensity { full, compact, inline }
 

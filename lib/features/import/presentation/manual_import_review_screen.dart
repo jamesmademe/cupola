@@ -200,33 +200,37 @@ class _ManualImportReviewScreenState
     }
 
     if (state.error != null && state.items.isEmpty) {
-      return AppEmptyState(
-        icon: Icons.cloud_off_rounded,
-        title: 'Scan failed',
-        message: state.error,
-        accentColor: service.accent,
-        action: FilledButton.tonalIcon(
-          onPressed: () => ref
-              .read(manualImportFlowProvider.notifier)
-              .loadSelectedFolderItems(),
-          icon: const Icon(Icons.refresh_rounded, size: 18),
-          label: const Text('Scan again'),
+      return AppEmptyStatePage(
+        emptyState: AppEmptyState(
+          icon: Icons.cloud_off_rounded,
+          title: 'Scan failed',
+          message: state.error,
+          accentColor: service.accent,
+          action: FilledButton.tonalIcon(
+            onPressed: () => ref
+                .read(manualImportFlowProvider.notifier)
+                .loadSelectedFolderItems(),
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Scan again'),
+          ),
         ),
       );
     }
 
     if (state.items.isEmpty) {
-      return AppEmptyState(
-        icon: Icons.movie_filter_outlined,
-        title: 'No importable files',
-        message:
-            '${service.title} found nothing to import in this folder. '
-            'Try another folder.',
-        accentColor: service.accent,
-        action: FilledButton.tonalIcon(
-          onPressed: () => context.pop(),
-          icon: const Icon(Icons.folder_open_rounded, size: 18),
-          label: const Text('Choose another folder'),
+      return AppEmptyStatePage(
+        emptyState: AppEmptyState(
+          icon: Icons.movie_filter_outlined,
+          title: 'No importable files',
+          message:
+              '${service.title} found nothing to import in this folder. '
+              'Try another folder.',
+          accentColor: service.accent,
+          action: FilledButton.tonalIcon(
+            onPressed: () => context.pop(),
+            icon: const Icon(Icons.folder_open_rounded, size: 18),
+            label: const Text('Choose another folder'),
+          ),
         ),
       );
     }

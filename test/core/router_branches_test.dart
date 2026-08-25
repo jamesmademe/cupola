@@ -187,6 +187,52 @@ void main() {
       );
     });
 
+    testWidgets('pushing the import flow keeps the shell alive beneath it', (
+      tester,
+    ) async {
+      final router = await pumpRouter(tester);
+      expect(find.byType(ShellScreen), findsOneWidget);
+
+      // `push`, which is how every entry point reaches this flow: a `go` would
+      // replace the shell page in the root navigator and take all four branch
+      // stacks with it.
+      router.push('$manualImportBrowsePath?service=radarr&targetId=1');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FloatingBottomNavBar), findsNothing);
+      expect(
+        find.byType(ShellScreen, skipOffstage: false),
+        findsOneWidget,
+        reason: 'the shell, and every branch stack, is still underneath',
+      );
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'the station lays out inside a phone',
+      );
+    });
+
+    testWidgets('leaving the import flow lands back on a branch', (
+      tester,
+    ) async {
+      final router = await pumpRouter(tester);
+      router.push('$manualImportBrowsePath?service=radarr&targetId=1');
+      await tester.pumpAndSettle();
+
+      // What the flow's own Done button does.
+      router.go(NavTab.activity.routePath);
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.path, NavTab.activity.routePath);
+      expect(find.byType(FloatingBottomNavBar), findsOneWidget);
+
+      // Landing on Activity starts its Now poll, which is the correct
+      // behaviour and a pending timer at teardown. Switching away closes that
+      // gate — proof of the same mechanism, and it leaves the test tidy.
+      router.go(NavTab.services.routePath);
+      await tester.pumpAndSettle();
+    });
+
     testWidgets('the activity drill-down renders without a nav bar', (
       tester,
     ) async {
