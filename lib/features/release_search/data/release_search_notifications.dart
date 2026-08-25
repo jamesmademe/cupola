@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -70,12 +72,25 @@ ReleaseSearchNotice? noticeFor(
 /// user switches "Notify me when one finishes" on, which is the only moment the
 /// request means anything to them.
 class ReleaseSearchNotifications {
-  ReleaseSearchNotifications([FlutterLocalNotificationsPlugin? plugin])
+  ReleaseSearchNotifications([FlutterLocalNotificationsPlugin? plugin, this.onTap])
     : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   final FlutterLocalNotificationsPlugin _plugin;
 
+  /// Told a tapped notification's payload — the job id. Owned by the provider
+  /// that can navigate; the notice's "Tap to pick one" is a lie without it.
+  final void Function(String? payload)? onTap;
+
   bool _initialised = false;
+
+  /// Whether this platform can show these notifications at all.
+  ///
+  /// Windows and Linux have no branch in [requestPermission] and no
+  /// initialization settings in [initialise], so the toggle can never turn on
+  /// there — and the settings screen words that as a platform gap rather than
+  /// sending the user to hunt through system settings that are not the cause.
+  static bool get platformSupported =>
+      Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
 
   /// One channel, default importance. Not high: a search the user asked for
   /// finishing is news, not an alarm.
@@ -87,28 +102,45 @@ class ReleaseSearchNotifications {
   /// Deliberately no `zonedSchedule` anywhere in this class — that single
   /// omission is what keeps the Android manifest at one permission and clear of
   /// the Play-restricted exact-alarm permissions.
-  Future<void> initialise({void Function(String? payload)? onTap}) async {
+  Future<void> initialise() async {
     if (_initialised) return;
     _initialised = true;
-    await _plugin.initialize(
-      settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-        // Not requested here: asking at launch, before the user has expressed
-        // any interest, is the pattern this deliberately avoids.
-        iOS: DarwinInitializationSettings(
-          requestAlertPermission: false,
-          requestBadgePermission: false,
-          requestSoundPermission: false,
+    // Best-effort on purpose: a platform without the plugin behind it (or a
+    // test) must not take down whatever asked. The same posture show() takes —
+    // a notification that cannot post is a notification lost, nothing more.
+    try {
+      await _plugin.initialize(
+        settings: const InitializationSettings(
+          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          // Not requested here: asking at launch, before the user has expressed
+          // any interest, is the pattern this deliberately avoids.
+          iOS: DarwinInitializationSettings(
+            requestAlertPermission: false,
+            requestBadgePermission: false,
+            requestSoundPermission: false,
+          ),
+          macOS: DarwinInitializationSettings(
+            requestAlertPermission: false,
+            requestBadgePermission: false,
+            requestSoundPermission: false,
+          ),
         ),
-        macOS: DarwinInitializationSettings(
-          requestAlertPermission: false,
-          requestBadgePermission: false,
-          requestSoundPermission: false,
-        ),
-      ),
-      onDidReceiveNotificationResponse: (response) =>
-          onTap?.call(response.payload),
-    );
+        onDidReceiveNotificationResponse: (response) =>
+            onTap?.call(response.payload),
+      );
+      // A notification tapped after the OS relaunched the app still deserves
+      // its landing. Asked once, here, because this is the only moment early
+      // enough to catch it and late enough for a router to exist behind
+      // [onTap] — provided something calls initialise at startup, which the
+      // release-search lifecycle widget does.
+      final launch = await _plugin.getNotificationAppLaunchDetails();
+      if (launch?.didNotificationLaunchApp ?? false) {
+        onTap?.call(launch?.notificationResponse?.payload);
+      }
+    } catch (_) {
+      // Nothing to clean up; requestPermission still answers false and the
+      // toggle stays honest.
+    }
   }
 
   /// Asks the OS, at the moment the user turns the toggle on.
@@ -140,22 +172,28 @@ class ReleaseSearchNotifications {
 
   Future<void> show(ReleaseSearchNotice notice, {required String jobId}) async {
     await initialise();
-    await _plugin.show(
-      id: jobId.hashCode,
-      title: notice.title,
-      body: notice.body,
-      notificationDetails: const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _androidChannelId,
-          _androidChannelName,
-          channelDescription: _androidChannelDescription,
-          importance: Importance.defaultImportance,
-          priority: Priority.defaultPriority,
+    // Fire-and-forget by contract: the caller never awaits this, so an error
+    // here would surface as an unhandled zone error with nobody to act on it.
+    try {
+      await _plugin.show(
+        id: jobId.hashCode,
+        title: notice.title,
+        body: notice.body,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _androidChannelId,
+            _androidChannelName,
+            channelDescription: _androidChannelDescription,
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+          iOS: DarwinNotificationDetails(),
+          macOS: DarwinNotificationDetails(),
         ),
-        iOS: DarwinNotificationDetails(),
-        macOS: DarwinNotificationDetails(),
-      ),
-      payload: jobId,
-    );
+        payload: jobId,
+      );
+    } catch (_) {
+      // A notification that cannot post is a notification lost, nothing more.
+    }
   }
 }

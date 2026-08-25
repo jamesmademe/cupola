@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 
 /// Whether the app is currently in front of the user.
@@ -51,6 +54,15 @@ class _ReleaseSearchLifecycleState extends ConsumerState<ReleaseSearchLifecycle>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Registers the notification tap handler at startup — without this, a tap
+    // on a notice after the OS relaunched Cupola has no handler to land on
+    // until some search posts a new one. Post-frame so the router behind the
+    // handler exists before a cold-start tap is replayed; best-effort inside,
+    // so a platform without the plugin (or a test) is a no-op.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(ref.read(releaseSearchNotificationsProvider).initialise());
+    });
   }
 
   @override

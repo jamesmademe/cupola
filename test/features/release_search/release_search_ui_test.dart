@@ -5,10 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/release_search/data/release_search_notifications.dart';
 import 'package:cupola/features/release_search/domain/release_search_job.dart';
 import 'package:cupola/features/release_search/domain/release_search_reach.dart';
 import 'package:cupola/features/release_search/domain/release_search_target.dart';
+import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
+import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
+import 'package:cupola/features/release_search/presentation/release_search_settings_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_sheet.dart';
 import 'package:cupola/features/release_search/presentation/release_searches_body.dart';
 import 'package:cupola/features/release_search/presentation/widgets/release_search_job_card.dart';
@@ -523,4 +527,115 @@ void main() {
       );
     });
   });
+
+  group('a job outliving its launching page', () {
+    testWidgets(
+      'still notifies and restarts the queue after the page is gone',
+      (tester) async {
+        // The regression this pins: showReleaseSearch used to hand the job
+        // manager callbacks built on the launching widget's own ref, and a
+        // WidgetRef throws on any use after its widget unmounts. A search
+        // finishing after the page was popped — the flow the feature exists
+        // for — then lost its notification, and a queued job never started.
+        final firstAnswer = Completer<List<dynamic>>();
+        final notifications = _RecordingNotifications();
+        final second = ReleaseSearchTarget.movie(
+          movieId: 9,
+          label: 'Dune: Part Two',
+        );
+        final container = ProviderContainer(
+          overrides: [
+            currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+            releaseSearchRunnerProvider.overrideWithValue(
+              (target, token) => target == _season
+                  ? firstAnswer.future
+                  : Completer<List<dynamic>>().future,
+            ),
+            releaseSearchNotificationsProvider.overrideWithValue(notifications),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        // One slot, so the queued movie can only run if the queue pumps on
+        // after the season finishes; told when done, so a notice composes.
+        container
+            .read(releaseSearchSettingsProvider.notifier)
+            .setConcurrency(1);
+        container
+            .read(releaseSearchSettingsProvider.notifier)
+            .setNotifyOnFinish(true);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              theme: AppTheme.darkTheme(),
+              home: Scaffold(body: _SearchLauncher(target: _season)),
+            ),
+          ),
+        );
+        await tester.tap(find.text('search'));
+        await tester.pump();
+        container.read(releaseSearchJobsProvider.notifier).start(second);
+
+        // The launching page — sheet and all — goes away, then the app goes
+        // to the background, and only then does the search answer.
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: SizedBox()),
+          ),
+        );
+        container.read(appInForegroundProvider.notifier).set(false);
+        firstAnswer.complete([
+          {'guid': 'g0', 'indexerId': 3, 'title': 'Severance.S02.2160p'},
+        ]);
+        await tester.pump();
+
+        final jobs = container.read(releaseSearchJobsProvider);
+        expect(
+          jobs.firstWhere((j) => j.target == _season).status,
+          ReleaseSearchJobStatus.completed,
+        );
+        expect(
+          notifications.shown,
+          hasLength(1),
+          reason: 'the finished-search notice must survive the page',
+        );
+        expect(
+          jobs.firstWhere((j) => j.target == second).status,
+          ReleaseSearchJobStatus.running,
+          reason: 'the queue must pump on after a finished job',
+        );
+      },
+    );
+  });
+}
+
+/// Records what would have been posted, instead of touching the plugin.
+class _RecordingNotifications extends ReleaseSearchNotifications {
+  final shown = <String>[];
+
+  @override
+  Future<void> initialise() async {}
+
+  @override
+  Future<void> show(ReleaseSearchNotice notice, {required String jobId}) async {
+    shown.add(notice.title);
+  }
+}
+
+/// The smallest page that can launch a search the way the app does.
+class _SearchLauncher extends ConsumerWidget {
+  const _SearchLauncher({required this.target});
+
+  final ReleaseSearchTarget target;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return TextButton(
+      onPressed: () => showReleaseSearch(context, ref, target),
+      child: const Text('search'),
+    );
+  }
 }

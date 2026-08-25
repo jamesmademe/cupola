@@ -112,13 +112,18 @@ class SonarrService with ArrActivityMixin {
     int? seasonNumber,
     int? episodeId,
     CancelToken? cancelToken,
+    Duration? receiveTimeout,
   }) async {
     final params = <String, dynamic>{};
     if (seriesId != null) params['seriesId'] = seriesId;
     if (seasonNumber != null) params['seasonNumber'] = seasonNumber;
     if (episodeId != null) params['episodeId'] = episodeId;
 
-    return fetchReleases(params, cancelToken: cancelToken);
+    return fetchReleases(
+      params,
+      cancelToken: cancelToken,
+      receiveTimeout: receiveTimeout,
+    );
   }
 
   /// Grabs a specific release for download.

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
+import 'package:cupola/core/router.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/release_search/data/release_search_notifications.dart';
@@ -113,9 +114,33 @@ final releaseSearchTransportProvider =
       });
     });
 
-/// Posts the "your search finished" notices.
+/// Posts the "your search finished" notices, and gives their "Tap to pick one"
+/// somewhere to land: the Activity screen, which is where a finished search
+/// lives once the page that launched it is gone.
 final releaseSearchNotificationsProvider = Provider(
-  (ref) => ReleaseSearchNotifications(),
+  (ref) => ReleaseSearchNotifications(
+    null,
+    (payload) => ref.read(routerProvider).go('/activity'),
+  ),
+);
+
+/// The reach resolver handed to the job manager.
+///
+/// Resolved from the container rather than from the launching page's `ref` on
+/// purpose: the manager keeps this callback for the whole session, a job
+/// usually outlives the page that started it, and a `WidgetRef` throws on any
+/// use once its widget unmounts — which used to leave a failing job stuck on
+/// "running" forever, since the classifier could no longer even run.
+final releaseSearchReachResolverProvider = Provider<ReleaseSearchReachResolver>(
+  (ref) => (service) => ref.read(releaseSearchReachProvider(service)),
+);
+
+/// Everything that happens when a search finishes, resolved from the container
+/// for the same reason as [releaseSearchReachResolverProvider]: this callback
+/// is what posts the notification and restarts the queue, and it fires
+/// precisely when the launching page tends to be gone.
+final releaseSearchOnFinishedProvider = Provider<void Function(ReleaseSearchJob)>(
+  (ref) => (job) => _onSearchFinished(ref, job),
 );
 
 /// Performs a release search for any supported target.
@@ -144,30 +169,50 @@ final releaseSearchRunnerProvider = Provider<ReleaseSearchRunner>((ref) {
 });
 
 /// Runs the search through the service that owns the endpoint.
+///
+/// Carries the user's own ceiling with it: the services default to the
+/// feature's constant, and without this a timeout raised to ten minutes in
+/// Settings would still be cut at five on every foreground search — and then
+/// misread as a lost connection, because the classifier is told the ceiling
+/// the user set, not the one that actually fired.
 Future<List<dynamic>> _searchViaService(
   Ref ref,
   ReleaseSearchTarget target,
   CancelToken cancelToken,
 ) {
+  final timeout = ref.read(releaseSearchSettingsProvider).timeout;
   switch (target.service) {
     case ServiceKey.sonarr:
       final service = ref.read(sonarrServiceProvider);
       return target.scope == ReleaseSearchScope.episode
-          ? service.getReleases(episodeId: target.id, cancelToken: cancelToken)
+          ? service.getReleases(
+              episodeId: target.id,
+              cancelToken: cancelToken,
+              receiveTimeout: timeout,
+            )
           : service.getReleases(
               seriesId: target.id,
               seasonNumber: target.seasonNumber ?? 1,
               cancelToken: cancelToken,
+              receiveTimeout: timeout,
             );
     case ServiceKey.radarr:
       return ref
           .read(radarrServiceProvider)
-          .getReleases(target.id, cancelToken: cancelToken);
+          .getReleases(target.id, cancelToken: cancelToken, receiveTimeout: timeout);
     case ServiceKey.lidarr:
       final service = ref.read(lidarrServiceProvider);
       return target.scope == ReleaseSearchScope.album
-          ? service.getReleases(albumId: target.id, cancelToken: cancelToken)
-          : service.getReleases(artistId: target.id, cancelToken: cancelToken);
+          ? service.getReleases(
+              albumId: target.id,
+              cancelToken: cancelToken,
+              receiveTimeout: timeout,
+            )
+          : service.getReleases(
+              artistId: target.id,
+              cancelToken: cancelToken,
+              receiveTimeout: timeout,
+            );
     default:
       throw UnsupportedError(
         '${target.service.name} has no interactive release search',
@@ -251,12 +296,14 @@ Future<void> showReleaseSearch(
   HapticFeedback.selectionClick();
   final notifier = ref.read(releaseSearchJobsProvider.notifier);
   final settings = ref.read(releaseSearchSettingsProvider);
+  // Every callback below comes from the container, never from this widget's
+  // `ref`: they run when jobs finish, and jobs outlive pages.
   notifier.configure(
     runner: ref.read(releaseSearchRunnerProvider),
-    reachFor: (service) => ref.read(releaseSearchReachProvider(service)),
+    reachFor: ref.read(releaseSearchReachResolverProvider),
     concurrency: settings.concurrency,
     timeout: settings.timeout,
-    onFinished: (job) => _onSearchFinished(ref, job),
+    onFinished: ref.read(releaseSearchOnFinishedProvider),
   );
 
   final adopted = notifier.activeJobCovering(target);
@@ -278,7 +325,7 @@ Future<void> showReleaseSearch(
 }
 
 /// Everything that happens when a search finishes, in one place.
-void _onSearchFinished(WidgetRef ref, ReleaseSearchJob job) {
+void _onSearchFinished(Ref ref, ReleaseSearchJob job) {
   _recordHeadroom(ref, job);
 
   final notice = noticeFor(
@@ -297,7 +344,7 @@ void _onSearchFinished(WidgetRef ref, ReleaseSearchJob job) {
 /// Only a **cut-off** teaches anything about the ceiling: a lost connection or a
 /// server error says nothing about how long the path allows, and folding those in
 /// would report a limit that does not exist.
-void _recordHeadroom(WidgetRef ref, ReleaseSearchJob job) {
+void _recordHeadroom(Ref ref, ReleaseSearchJob job) {
   final notifier = ref.read(searchHeadroomProvider.notifier);
   final service = job.target.service;
   if (job.status == ReleaseSearchJobStatus.completed) {

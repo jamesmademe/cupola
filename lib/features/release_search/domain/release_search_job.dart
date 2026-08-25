@@ -257,9 +257,11 @@ StatusTone releaseSearchTone(ReleaseSearchJob job) {
 /// [reach] then decides *which* limitation: [ReleaseSearchReach.whileOpen] is
 /// a platform fact with nothing to fix, [ReleaseSearchReach.whileOpenTrustedCert]
 /// is permanent until the certificate is trusted at the OS level rather than
-/// only inside Cupola, [ReleaseSearchReach.whileOpenCleartext] lifts the moment
-/// the instance is reached over https, and only [ReleaseSearchReach.beyondTheApp]
-/// should never reach this branch at all — backgrounding does not interrupt it.
+/// only inside Cupola, and [ReleaseSearchReach.whileOpenCleartext] lifts the
+/// moment the instance is reached over https. [ReleaseSearchReach.beyondTheApp]
+/// never takes this branch at all — its transport runs on through suspension,
+/// so a failure there keeps its own identity (a gateway's status, a timeout)
+/// instead of being blamed on the user having left.
 ReleaseSearchFailure classifyReleaseSearchFailure(
   Object error, {
   required Duration elapsed,
@@ -336,14 +338,18 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
       error.type == DioExceptionType.sendTimeout ||
       error.type == DioExceptionType.connectionTimeout;
 
-  if (wasBackgrounded) {
+  // Only a reach that actually dies with the app may blame backgrounding.
+  // On [ReleaseSearchReach.beyondTheApp] the native task keeps running through
+  // suspension, so its failures — a proxy giving up, a task the OS lost — have
+  // nothing to do with the user having left, and saying "cannot continue in
+  // the background" on the one path built to do exactly that would be a lie.
+  if (wasBackgrounded && reach != ReleaseSearchReach.beyondTheApp) {
     return ReleaseSearchFailure(
       kind: ReleaseSearchFailureKind.interruptedByBackground,
       headline: 'Stopped when you left Cupola.',
       diagnosis: switch (reach) {
-        // Backgrounding a search that survives it should never land here —
-        // named rather than silently falling through the generic case below,
-        // so a bug in the resolver reads as a wrong sentence, not a crash.
+        // Unreachable by the guard above; kept because the switch must stay
+        // exhaustive, and a wrong sentence still beats a crash.
         ReleaseSearchReach.beyondTheApp =>
           'The search cannot continue while the app is in the background. '
               'Searching again asks your indexers a second time.',

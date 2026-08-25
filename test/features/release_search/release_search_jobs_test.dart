@@ -36,11 +36,13 @@ void main() {
   /// Wires a runner whose completion the test controls per target.
   Map<ReleaseSearchTarget, Completer<List<dynamic>>> wireManualRunner({
     int concurrency = kDefaultSearchConcurrency,
+    ReleaseSearchReach? reach,
   }) {
     final completers = <ReleaseSearchTarget, Completer<List<dynamic>>>{};
     notifier().configure(
       now: clock.call,
       concurrency: concurrency,
+      reachFor: reach == null ? null : (_) => reach,
       runner: (target, token) {
         final completer = completers.putIfAbsent(
           target,
@@ -479,8 +481,40 @@ void main() {
       expect(failure.diagnosis, contains('leave the network'));
     });
 
-    test('a backgrounded job blames the OS rather than the network', () {
-      final failure = classify(
+    test('a backgrounded job on a foreground-only reach blames the OS rather '
+        'than the network', () {
+      final failure = classifyReleaseSearchFailure(
+        DioException(
+          requestOptions: RequestOptions(),
+          type: DioExceptionType.receiveTimeout,
+        ),
+        elapsed: const Duration(seconds: 20),
+        configuredTimeout: const Duration(minutes: 5),
+        wasBackgrounded: true,
+        reach: ReleaseSearchReach.whileOpen,
+      );
+      expect(failure.kind, ReleaseSearchFailureKind.interruptedByBackground);
+      expect(failure.headline, contains('left Cupola'));
+    });
+
+    test('a backgrounded job on the background transport keeps the failure\'s '
+        'own identity', () {
+      // The native task runs on through suspension, so "you left the app" can
+      // never be why it failed — a gateway's 504 must still read as the proxy
+      // giving up, and a lost connection as a lost connection.
+      final gateway = classify(
+        withResponse(
+          504,
+          headers: {
+            'server': ['nginx'],
+          },
+        ),
+        wasBackgrounded: true,
+      );
+      expect(gateway.kind, ReleaseSearchFailureKind.gatewayTimeout);
+      expect(gateway.retryIsHarmful, isTrue);
+
+      final dropped = classify(
         DioException(
           requestOptions: RequestOptions(),
           type: DioExceptionType.receiveTimeout,
@@ -488,8 +522,7 @@ void main() {
         elapsed: const Duration(seconds: 20),
         wasBackgrounded: true,
       );
-      expect(failure.kind, ReleaseSearchFailureKind.interruptedByBackground);
-      expect(failure.headline, contains('left Cupola'));
+      expect(dropped.kind, ReleaseSearchFailureKind.connectionLost);
     });
 
     test('a certificate trusted only in-app names the cause and the remedy, '
@@ -547,7 +580,12 @@ void main() {
 
   group('backgrounding', () {
     test('a failure after backgrounding is attributed to the OS', () async {
-      final completers = wireManualRunner();
+      // On a foreground-only reach: only a search that actually dies with the
+      // app may blame the OS. The background transport keeps its failures'
+      // own identity — that case lives in `failure classification`.
+      final completers = wireManualRunner(
+        reach: ReleaseSearchReach.whileOpen,
+      );
       final job = notifier().start(season2);
 
       notifier().noteBackgrounded();

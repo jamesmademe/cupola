@@ -299,18 +299,21 @@ mixin ArrActivityMixin {
 
   /// Fetches release candidates for interactive search.
   ///
-  /// Takes [kReleaseSearchReceiveTimeout] rather than the client default: the
-  /// server fans out to every enabled indexer and answers only once the slowest
-  /// one has, so this is the one arr endpoint that legitimately runs for minutes.
+  /// Defaults to [kReleaseSearchReceiveTimeout] rather than the client default:
+  /// the server fans out to every enabled indexer and answers only once the
+  /// slowest one has, so this is the one arr endpoint that legitimately runs
+  /// for minutes. The release-search runner passes the user's own ceiling
+  /// instead, so the Settings value governs both transports.
   Future<List<dynamic>> fetchReleases(
     Map<String, dynamic> queryParameters, {
     CancelToken? cancelToken,
+    Duration? receiveTimeout,
   }) async {
     final response = await client.get(
       '/api/${config.apiVersion}/release',
       queryParameters: queryParameters,
       cancelToken: cancelToken,
-      receiveTimeout: kReleaseSearchReceiveTimeout,
+      receiveTimeout: receiveTimeout ?? kReleaseSearchReceiveTimeout,
     );
     return response.data as List<dynamic>;
   }

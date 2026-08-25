@@ -76,8 +76,13 @@ class RadarrService with ArrActivityMixin {
   Future<List<dynamic>> getReleases(
     int movieId, {
     CancelToken? cancelToken,
+    Duration? receiveTimeout,
   }) async {
-    return fetchReleases({'movieId': movieId}, cancelToken: cancelToken);
+    return fetchReleases(
+      {'movieId': movieId},
+      cancelToken: cancelToken,
+      receiveTimeout: receiveTimeout,
+    );
   }
 
   /// Grabs a specific release for download.

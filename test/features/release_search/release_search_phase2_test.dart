@@ -30,6 +30,7 @@ class _RecordingSonarrService extends FakeSonarrService {
     int? seasonNumber,
     int? episodeId,
     CancelToken? cancelToken,
+    Duration? receiveTimeout,
   }) async {
     releaseCalls++;
     return const [];
@@ -639,6 +640,82 @@ void main() {
       );
       expect(failure.kind, ReleaseSearchFailureKind.gatewayTimeout);
       expect(failure.retryIsHarmful, isTrue);
+    });
+
+    test('a failed task carrying an HTTP code is an HTTP error, not a timeout',
+        () {
+      // The shape the plugin actually produces for a non-2xx answer: natively
+      // anything but 200–206 becomes `failed`, and the code travels only inside
+      // the TaskException — `responseStatusCode` is serialized solely for
+      // complete/notFound. Reading the status code alone turned every proxy 504
+      // into "timeout", and the backgrounded variant into "stopped when you
+      // left Cupola" on the one path built to survive exactly that.
+      Object? thrown;
+      try {
+        decodeReleaseResponse(
+          status: TaskStatus.failed,
+          body: null,
+          statusCode: null,
+          exception: TaskHttpException('Gateway Time-out', 504),
+        );
+      } catch (e) {
+        thrown = e;
+      }
+      expect(
+        (thrown! as DioException).response?.statusCode,
+        504,
+        reason: 'the HTTP identity must survive the translation',
+      );
+
+      final failure = classifyReleaseSearchFailure(
+        thrown,
+        elapsed: const Duration(seconds: 62),
+        configuredTimeout: const Duration(minutes: 5),
+        wasBackgrounded: true,
+      );
+      expect(failure.kind, ReleaseSearchFailureKind.gatewayTimeout);
+      expect(failure.diagnosis, contains('read'));
+    });
+
+    test('a notFound answer is an HTTP 404, headers included', () {
+      // 404 is the one non-2xx the plugin gives its own status — and the only
+      // failed shape that still carries response headers, so the gateway that
+      // answered can be named.
+      Object? thrown;
+      try {
+        decodeReleaseResponse(
+          status: TaskStatus.notFound,
+          body: '<html>not here</html>',
+          statusCode: 404,
+          headers: const {'server': 'nginx'},
+        );
+      } catch (e) {
+        thrown = e;
+      }
+      final response = (thrown! as DioException).response;
+      expect(response?.statusCode, 404);
+      expect(response?.headers.value('server'), 'nginx');
+    });
+
+    test('a failed task with a non-HTTP exception stays in the timeout '
+        'vocabulary', () {
+      // A connection-type failure carries `httpResponseCode: -1`; treating
+      // that as an HTTP status would invent a response nobody sent.
+      expect(
+        () => decodeReleaseResponse(
+          status: TaskStatus.failed,
+          body: null,
+          statusCode: null,
+          exception: TaskConnectionException('The request timed out.'),
+        ),
+        throwsA(
+          isA<DioException>().having(
+            (e) => e.type,
+            'type',
+            DioExceptionType.receiveTimeout,
+          ),
+        ),
+      );
     });
 
     test('a body that is not a JSON list is refused, not trusted', () {

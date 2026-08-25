@@ -10,6 +10,7 @@ import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/features/release_search/data/release_search_notifications.dart';
 import 'package:cupola/features/release_search/data/release_search_transport.dart';
 import 'package:cupola/features/release_search/domain/release_search_reach.dart';
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
@@ -56,9 +57,14 @@ class _ReleaseSearchSettingsScreenState
     setState(() => _asking = false);
     notifier.setNotifyOnFinish(granted);
     if (!granted) {
+      // Two different refusals, two different fixes — sending a Windows user
+      // to hunt through system settings for a permission that was never asked
+      // for would be a wild-goose chase.
       SnackBarHelper.error(
         context,
-        'Notifications are turned off for Cupola in system settings.',
+        ReleaseSearchNotifications.platformSupported
+            ? 'Notifications are turned off for Cupola in system settings.'
+            : 'Cupola cannot show notifications on this platform.',
       );
     }
   }
@@ -292,8 +298,10 @@ class _LimitsCard extends StatelessWidget {
           ),
           line(
             backgroundSearchSupported()
-                ? 'A search keeps going when you switch apps, but it ends if you '
-                      'force-quit Cupola — no app can continue work after that.'
+                ? 'A search keeps going when you switch apps — but if Cupola is '
+                      'closed while it waits, by you or by the system reclaiming '
+                      'memory, the outcome is lost: no notification, and nothing '
+                      'under Activity. Searching again is the only recovery.'
                 : 'A search runs as long as Cupola is running. Quitting the app '
                       'ends it.',
           ),

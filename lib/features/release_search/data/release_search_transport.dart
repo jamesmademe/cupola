@@ -221,6 +221,8 @@ class BackgroundReleaseSearchTransport implements ReleaseSearchTransport {
         status: result.status,
         body: result.responseBody,
         statusCode: result.responseStatusCode,
+        exception: result.exception,
+        headers: result.responseHeaders,
       );
     } finally {
       settled = true;
@@ -244,10 +246,20 @@ RequestOptions _releaseRequestOptions() =>
 ///
 /// Separated out and public so the whole translation is testable without running
 /// a native task — which is the only way this path can be covered at all.
+///
+/// The one fact this function exists to preserve: **the plugin never reports
+/// `complete` for a non-2xx answer.** Natively a 404 becomes [TaskStatus.notFound]
+/// and every other HTTP error becomes [TaskStatus.failed], with the code carried
+/// only inside a [TaskHttpException] — and `responseStatusCode` is serialized
+/// solely for `complete`/`notFound`. Read the status code alone and every
+/// gateway 504 collapses into "timeout", telling the user to check their network
+/// when the fix is their proxy's read ceiling.
 List<dynamic> decodeReleaseResponse({
   required TaskStatus status,
   required String? body,
   required int? statusCode,
+  TaskException? exception,
+  Map<String, String>? headers,
 }) {
   final options = _releaseRequestOptions();
 
@@ -255,6 +267,34 @@ List<dynamic> decodeReleaseResponse({
     throw DioException.requestCancelled(
       requestOptions: options,
       reason: 'cancelled',
+    );
+  }
+
+  // The HTTP identity of the outcome, recovered from wherever the plugin put
+  // it. `httpResponseCode` is documented as valid only when positive.
+  final httpStatus = switch (status) {
+    TaskStatus.notFound => statusCode ?? 404,
+    TaskStatus.failed =>
+      exception is TaskHttpException && exception.httpResponseCode > 0
+          ? exception.httpResponseCode
+          : null,
+    _ => statusCode,
+  };
+
+  if (httpStatus != null && httpStatus >= 400) {
+    throw DioException(
+      requestOptions: options,
+      type: DioExceptionType.badResponse,
+      response: Response<dynamic>(
+        requestOptions: options,
+        statusCode: httpStatus,
+        // Present only for `notFound` (and `complete`) updates — but when they
+        // are, the classifier can name the gateway that answered.
+        headers: Headers.fromMap({
+          for (final entry in (headers ?? const <String, String>{}).entries)
+            entry.key: [entry.value],
+        }),
+      ),
     );
   }
 
@@ -267,17 +307,6 @@ List<dynamic> decodeReleaseResponse({
       requestOptions: options,
       type: DioExceptionType.receiveTimeout,
       error: 'background task ${status.name}',
-    );
-  }
-
-  if (statusCode != null && statusCode >= 400) {
-    throw DioException(
-      requestOptions: options,
-      type: DioExceptionType.badResponse,
-      response: Response<dynamic>(
-        requestOptions: options,
-        statusCode: statusCode,
-      ),
     );
   }
 

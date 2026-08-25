@@ -69,12 +69,17 @@ class LidarrService with ArrActivityMixin {
     int? artistId,
     int? albumId,
     CancelToken? cancelToken,
+    Duration? receiveTimeout,
   }) async {
     final params = <String, dynamic>{};
     if (artistId != null) params['artistId'] = artistId;
     if (albumId != null) params['albumId'] = albumId;
 
-    return fetchReleases(params, cancelToken: cancelToken);
+    return fetchReleases(
+      params,
+      cancelToken: cancelToken,
+      receiveTimeout: receiveTimeout,
+    );
   }
 
   /// Grabs a specific release for download.

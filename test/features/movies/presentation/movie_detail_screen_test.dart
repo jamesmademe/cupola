@@ -666,6 +666,7 @@ class _ReleasesRadarrService extends FakeRadarrService {
   Future<List<dynamic>> getReleases(
     int movieId, {
     CancelToken? cancelToken,
+    Duration? receiveTimeout,
   }) async => const [];
 }
 
