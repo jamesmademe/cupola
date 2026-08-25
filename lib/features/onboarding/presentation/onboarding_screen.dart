@@ -357,12 +357,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       _status[service] = result.status;
       _reason[service] = result.reason;
       _failureDetail[service] = result.detail;
+      _serverVersion[service] = result.serverVersion;
       _verifiedAgainst[service] = _fingerprintOf(service);
       if (certProbe != null) _pendingCert[service] = certProbe;
     });
   }
 
-      _serverVersion[service] = result.serverVersion;
   Future<void> _trustCertificate(ServiceKey service) async {
     final probe = _pendingCert[service];
     if (probe == null) return;
@@ -549,12 +549,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       _status.remove(service);
       _reason.remove(service);
       _failureDetail.remove(service);
+      _serverVersion.remove(service);
       _pendingCert.remove(service);
     });
     _advanceFrom(service);
   }
 
-      _serverVersion.remove(service);
   void _backFrom(ServiceKey service) {
     final index = _walk.indexOf(service);
     _goTo(index <= 0 ? _pickPage : _firstWalkPage + index - 1);
@@ -815,12 +815,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                   if (_picked.remove(service)) {
                                     _status.remove(service);
                                     _reason.remove(service);
+                                    _serverVersion.remove(service);
                                     _pendingCert.remove(service);
                                   } else {
                                     _picked.add(service);
                                     _skipped.remove(service);
                                   }
-                                    _serverVersion.remove(service);
                                 }),
                                 onContinue: _enterWalk,
                                 onBack: () => _goTo(_doorPage),
@@ -835,12 +835,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                   status: _status[walk[i]],
                                   reason: _reason[walk[i]],
                                   failureDetail: _failureDetail[walk[i]],
+                                  serverVersion: _serverVersion[walk[i]],
                                   verifying: _verifying[walk[i]] ?? false,
                                   certificateProbe: _pendingCert[walk[i]],
                                   trustedFingerprint: _pinFor(walk[i]),
                                   affectedServices: _servicesSharingOrigin(
                                     walk[i],
-                                  serverVersion: _serverVersion[walk[i]],
                                   ),
                                   next: i + 1 < walk.length
                                       ? walk[i + 1]

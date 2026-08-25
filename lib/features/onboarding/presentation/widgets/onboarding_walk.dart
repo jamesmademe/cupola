@@ -354,6 +354,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           status: status,
           reason: widget.reason,
           failureDetail: widget.failureDetail,
+          serverVersion: widget.serverVersion,
         ),
       ],
       if (widget.trustedFingerprint != null &&
@@ -363,7 +364,6 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           widget.affectedServices.length > 1
               ? "You trusted this server's own certificate — it also covers "
                     '${widget.affectedServices.where((s) => s != service).map((s) => s.title).join(', ')}.'
-          serverVersion: widget.serverVersion,
               : "You trusted this server's own certificate.",
           style: theme.textTheme.bodySmall!.copyWith(
             color: scheme.onSurfaceVariant,
@@ -459,23 +459,23 @@ class _Outcome extends StatelessWidget {
     required this.status,
     required this.reason,
     required this.failureDetail,
+    required this.serverVersion,
   });
 
   final ServiceKey service;
   final ServiceConnectionStatus status;
   final ServiceFailureReason? reason;
   final String? failureDetail;
+  final String? serverVersion;
 
   @override
   Widget build(BuildContext context) {
-    required this.serverVersion,
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final presentation = describeConnection(
       service,
       status: status,
       reason: reason,
-  final String? serverVersion;
     );
     final tone = statusToneColor(scheme, presentation.tone);
     final sentence = switch (status) {
@@ -520,15 +520,6 @@ class _Outcome extends StatelessWidget {
                     color: scheme.onSurface,
                   ),
                 ),
-                // The permission is the only failure in the vocabulary whose fix
-                // is not in this form, so it is the only one that earns a button:
-                // everything else is an address or a credential the user is
-                // already looking at.
-                if (reason == ServiceFailureReason.localNetworkBlocked) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: TextButton.icon(
                 // What the server said it is running. Amber when the version
                 // itself is the problem: "answered" is true and still not the
                 // whole answer on a release Cupola cannot drive.
@@ -544,6 +535,15 @@ class _Outcome extends StatelessWidget {
                     ),
                   ),
                 ],
+                // The permission is the only failure in the vocabulary whose fix
+                // is not in this form, so it is the only one that earns a button:
+                // everything else is an address or a credential the user is
+                // already looking at.
+                if (reason == ServiceFailureReason.localNetworkBlocked) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: TextButton.icon(
                       onPressed: () async {
                         final opened =
                             await LocalNetworkPermission.openSettings();

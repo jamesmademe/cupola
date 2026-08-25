@@ -601,6 +601,11 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       ServiceConnectionStatus.checking => result.messageFor(service),
     };
 
+    // The version the server named, when it named one. A separate line rather
+    // than more of [message] because it can carry its own tone: an answering
+    // server on an unsupported release is a qualified pass, not a plain one.
+    final versionNote = describeServerVersion(service, result.serverVersion);
+
     // A live region rather than an announcement: this panel appears below the
     // button while focus stays on it, so the verdict — the whole point of the
     // action — would otherwise have to be hunted for. `liveRegion` is the
@@ -609,11 +614,6 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // only things carrying it (the "Fill in the address" message, for one, never
     // says it failed).
     final banner = Semantics(
-    // The version the server named, when it named one. A separate line rather
-    // than more of [message] because it can carry its own tone: an answering
-    // server on an unsupported release is a qualified pass, not a plain one.
-    final versionNote = describeServerVersion(service, result.serverVersion);
-
       container: true,
       liveRegion: true,
       excludeSemantics: true,
@@ -658,14 +658,6 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
                   if (versionNote case final note?) ...[
                     const SizedBox(height: 2),
                     Text(
@@ -677,6 +669,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                       ),
                     ),
                   ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     if (result.reason != ServiceFailureReason.localNetworkBlocked) {
       return banner;
     }
