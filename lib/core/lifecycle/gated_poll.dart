@@ -24,6 +24,13 @@ extension GatedPoll on Ref {
   /// tick now, otherwise a one-shot for the remainder and then the steady
   /// cadence. That catch-up tick is deferred to a microtask because [onTick]
   /// invalidates providers, and doing that inside a provider's build is illegal.
+  ///
+  /// The stop is one frame plus a microtask behind the page going away: the
+  /// rebuild drops the watch, dropping the last listener schedules disposal, and
+  /// disposal cancels the timer. Against a multi-second interval that window
+  /// never contains a tick in practice — but a test that fast-forwards the clock
+  /// without pumping that frame first will see the old timer fire, which is the
+  /// test skipping the stop rather than the stop failing.
   void gatedPoll({
     required String id,
     required Duration interval,
