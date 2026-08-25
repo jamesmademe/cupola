@@ -31,17 +31,15 @@ final globalSearchResultsProvider = FutureProvider.autoDispose((ref) async {
   // `serviceSummaryProvider`: watch the narrow keys, read the model for the
   // work. A record, not a list, because `select` compares with `==` and lists
   // have identity equality.
-  ref.watch(
-    currentSettingsProvider.select(
-      (s) => (
-        _connectionOf(s, ServiceKey.seerr),
-        _connectionOf(s, ServiceKey.radarr),
-        _connectionOf(s, ServiceKey.sonarr),
-        _connectionOf(s, ServiceKey.lidarr),
-        _connectionOf(s, ServiceKey.bazarr),
-      ),
-    ),
-  );
+  for (final service in const [
+    ServiceKey.seerr,
+    ServiceKey.radarr,
+    ServiceKey.sonarr,
+    ServiceKey.lidarr,
+    ServiceKey.bazarr,
+  ]) {
+    _watchConnection(ref, service);
+  }
   final settings = ref.read(currentSettingsProvider);
   if (query.isEmpty) return const <GlobalSearchServiceResults>[];
 
@@ -69,13 +67,36 @@ typedef _SearchConnection = ({
   String? certFingerprint,
 });
 
-_SearchConnection _connectionOf(SettingsModel settings, ServiceKey service) {
-  final url = settings.urlFor(service);
-  return (
-    url: url,
-    apiKey: settings.apiKeyFor(service),
-    certFingerprint: settings.pinForUrl(url),
+/// The connection key for whichever instance of [service] is being read.
+///
+/// Keyed on the *first* instance instead, this leg would go stale the moment
+/// the lens moved: the service providers underneath are lens-aware, so the
+/// search would keep showing the previous server's answers behind a key that
+/// still described it and never refetch.
+_SearchConnection _watchConnection(Ref ref, ServiceKey service) {
+  final instanceId = ref.watch(activeInstanceProvider(service))?.id ?? '';
+  return ref.watch(
+    currentSettingsProvider.select((s) {
+      final instance = s.instanceById(instanceId);
+      if (instance == null) {
+        return (url: '', apiKey: '', certFingerprint: null);
+      }
+      return (
+        url: instance.url,
+        apiKey: instance.credential,
+        certFingerprint: s.pinForUrl(instance.url),
+      );
+    }),
   );
+}
+
+/// The name of the connection [service] answered from, or `''` when there is
+/// only one to answer from.
+String _lensLabelOf(Ref ref, ServiceKey service) {
+  if (!ref.read(hasMultipleInstancesProvider(service))) return '';
+  final instance = ref.read(activeInstanceProvider(service));
+  if (instance == null) return '';
+  return instance.label.isEmpty ? instance.id : instance.label;
 }
 
 Future<GlobalSearchServiceResults> _loadSeerrResults(
@@ -85,6 +106,7 @@ Future<GlobalSearchServiceResults> _loadSeerrResults(
 ) async {
   return _loadServiceResults(
     service: ServiceKey.seerr,
+    instanceLabel: _lensLabelOf(ref, ServiceKey.seerr),
     loadItems: () =>
         ref.read(seerrServiceProvider).search(query, cancelToken: cancelToken),
     toResult: _seerrResult,
@@ -99,6 +121,7 @@ Future<GlobalSearchServiceResults> _loadRadarrResults(
 ) async {
   return _loadServiceResults(
     service: ServiceKey.radarr,
+    instanceLabel: _lensLabelOf(ref, ServiceKey.radarr),
     loadItems: () => ref
         .read(radarrServiceProvider)
         .lookupMovies(query, cancelToken: cancelToken),
@@ -114,6 +137,7 @@ Future<GlobalSearchServiceResults> _loadSonarrResults(
 ) async {
   return _loadServiceResults(
     service: ServiceKey.sonarr,
+    instanceLabel: _lensLabelOf(ref, ServiceKey.sonarr),
     loadItems: () => ref
         .read(sonarrServiceProvider)
         .lookupSeries(query, cancelToken: cancelToken),
@@ -129,6 +153,7 @@ Future<GlobalSearchServiceResults> _loadLidarrResults(
 ) async {
   return _loadServiceResults(
     service: ServiceKey.lidarr,
+    instanceLabel: _lensLabelOf(ref, ServiceKey.lidarr),
     loadItems: () => ref
         .read(lidarrServiceProvider)
         .lookupArtists(query, cancelToken: cancelToken),
@@ -162,18 +187,23 @@ Future<GlobalSearchServiceResults> _loadServiceResults<T>({
   required ServiceKey service,
   required Future<List<T>> Function() loadItems,
   required GlobalSearchResult Function(T item) toResult,
+  String instanceLabel = '',
 }) async {
   try {
     final items = await loadItems();
     return GlobalSearchServiceResults(
       service: service,
       results: items.map(toResult).toList(growable: false),
+      instanceLabel: instanceLabel,
     );
   } catch (error) {
     return GlobalSearchServiceResults(
       service: service,
       results: const [],
       error: error,
+      // Named on the failure too: "Radarr did not answer" is a worse sentence
+      // than "Radarr · 4K did not answer" when the other one did.
+      instanceLabel: instanceLabel,
     );
   }
 }

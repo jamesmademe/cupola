@@ -45,10 +45,20 @@ class GlobalSearchServiceResults {
   final List<GlobalSearchResult> results;
   final Object? error;
 
+  /// Which connection answered, when the user has more than one of this
+  /// service. Empty otherwise, and that emptiness is the whole rule: a stack
+  /// with one Radarr must not grow a label naming the only Radarr there is.
+  ///
+  /// On the *section*, not on the rows. Every result under a heading came from
+  /// the same server — one leg, one connection — so a chip repeated down forty
+  /// rows would say the same thing forty times.
+  final String instanceLabel;
+
   const GlobalSearchServiceResults({
     required this.service,
     required this.results,
     this.error,
+    this.instanceLabel = '',
   });
 
   bool get hasError => error != null;

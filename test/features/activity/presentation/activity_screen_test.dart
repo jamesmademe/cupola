@@ -22,12 +22,15 @@ import 'package:cupola/features/series/data/sonarr_service.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/settings_scope.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 void main() {
   testWidgets('renders requests screen for discover', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
           requestsProvider.overrideWith((ref) async => <SeerrRequest>[]),
         ],
         child: const MaterialApp(
@@ -49,6 +52,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
           radarrServiceProvider.overrideWith((ref) => FakeRadarrService()),
         ],
         child: const MaterialApp(
@@ -130,6 +134,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
           ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith(
             (ref) async => const [
@@ -205,6 +210,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
           ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
           seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
@@ -251,6 +257,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
           ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
           seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
@@ -302,6 +309,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
           ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
           seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
@@ -359,6 +367,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
           ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
           seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
@@ -426,6 +435,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
           ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith(
             (ref) async => const [

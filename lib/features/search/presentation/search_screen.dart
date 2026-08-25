@@ -335,12 +335,37 @@ class _SearchSectionHeader extends StatelessWidget {
             child: Icon(service.icon, size: 14, color: service.accent),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text(
-            service.title,
-            style: Theme.of(
-              context,
-            ).textTheme.labelLarge?.weight(FontWeight.w700),
+          Flexible(
+            child: Text(
+              service.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.weight(FontWeight.w700),
+            ),
           ),
+          // Which connection answered. On the heading rather than on the rows:
+          // one leg queries one server, so every result below came from this
+          // one and a chip repeated down forty rows would say it forty times.
+          // Absent entirely while the service has a single connection.
+          if (group.instanceLabel.isNotEmpty) ...[
+            const SizedBox(width: AppSpacing.xs),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: service.accent.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: service.accent.withValues(alpha: 0.34),
+                ),
+              ),
+              child: Text(
+                group.instanceLabel.toUpperCase(),
+                style: AppTheme.eyebrow(service.accent),
+              ),
+            ),
+          ],
           const SizedBox(width: AppSpacing.xs),
           // A global search fans out to every configured service and they
           // answer at their own pace, so this count genuinely arrives — it
