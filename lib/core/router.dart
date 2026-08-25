@@ -973,7 +973,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute(
         navigatorContainerBuilder: buildBranchCrossFade,
         builder: (context, state, navigationShell) =>
-            ShellScreen(child: navigationShell),
+            ShellScreen(navigationShell: navigationShell),
         branches: [
           for (final tab in NavTab.values)
             StatefulShellBranch(
