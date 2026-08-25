@@ -1,7 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:cupola/core/lifecycle/gated_poll.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
@@ -36,68 +36,58 @@ class ManualImportProgressScreen extends ConsumerStatefulWidget {
 
 class _ManualImportProgressScreenState
     extends ConsumerState<ManualImportProgressScreen> {
-  Timer? _pollTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-      ref.read(manualImportFlowProvider.notifier).pollCommand();
-    });
-  }
-
-  @override
-  void dispose() {
-    _pollTimer?.cancel();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(manualImportFlowProvider);
     final command = state.command;
-    if (command == null || !command.isActive) {
-      _pollTimer?.cancel();
-    }
 
-    return ManualImportFrame(
-      service: widget.service,
-      title: 'Import Progress',
-      subtitle:
-          '${widget.service.title} · ${state.submittedItems.length} '
-          '${state.submittedItems.length == 1 ? 'file' : 'files'} submitted',
-      bottomBar: _TrackButtons(
+    return VisibilityPoller(
+      id: 'import.command',
+      interval: const Duration(seconds: 2),
+      // Two conditions, and the second is the one that used to be spelled as a
+      // `cancel()` inside `build`: there is nothing to ask about once the
+      // command has finished.
+      enabled: command?.isActive ?? false,
+      onTick: () => ref.read(manualImportFlowProvider.notifier).pollCommand(),
+      child: ManualImportFrame(
         service: widget.service,
-        command: command,
-        onDone: () => context.go('/activity'),
-      ),
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          ImportStationBar(service: widget.service, activeIndex: 2),
-          if (command == null)
-            AppEmptyState(
-              icon: Icons.downloading_rounded,
-              title: 'Import has not started',
-              message: 'Go back and confirm selected files to begin.',
-              accentColor: widget.service.accent,
-            )
-          else ...[
-            _CommandCard(
-              service: widget.service,
-              command: command,
-              fileCount: state.submittedItems.length,
-            ),
-            if (command.isCompleted) const _HistoryNote(),
-            for (final item in state.submittedItems)
-              _SubmittedFileRow(
+        title: 'Import Progress',
+        subtitle:
+            '${widget.service.title} · ${state.submittedItems.length} '
+            '${state.submittedItems.length == 1 ? 'file' : 'files'} submitted',
+        bottomBar: _TrackButtons(
+          service: widget.service,
+          command: command,
+          onDone: () => context.go('/activity'),
+        ),
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            ImportStationBar(service: widget.service, activeIndex: 2),
+            if (command == null)
+              AppEmptyState(
+                icon: Icons.downloading_rounded,
+                title: 'Import has not started',
+                message: 'Go back and confirm selected files to begin.',
+                accentColor: widget.service.accent,
+              )
+            else ...[
+              _CommandCard(
                 service: widget.service,
-                item: item,
                 command: command,
+                fileCount: state.submittedItems.length,
               ),
-            const SizedBox(height: AppSpacing.xl),
+              if (command.isCompleted) const _HistoryNote(),
+              for (final item in state.submittedItems)
+                _SubmittedFileRow(
+                  service: widget.service,
+                  item: item,
+                  command: command,
+                ),
+              const SizedBox(height: AppSpacing.xl),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

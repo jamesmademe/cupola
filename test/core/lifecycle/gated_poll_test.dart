@@ -80,17 +80,19 @@ void main() {
   }
 
   group('gatedPoll cadence', () {
-    testWidgets('ticks once on creation, then every interval', (tester) async {
+    testWidgets('first tick lands one interval in, then keeps cadence', (
+      tester,
+    ) async {
       await _pumpPage(tester);
-      // The catch-up tick is a microtask, so it lands on the next pump.
       await tester.pump();
+      // Nothing yet: the page just built and loaded its own data.
+      expect(ticks, isEmpty);
+
+      await elapse(tester, _interval);
       expect(ticks, hasLength(1));
 
       await elapse(tester, _interval);
       expect(ticks, hasLength(2));
-
-      await elapse(tester, _interval);
-      expect(ticks, hasLength(3));
     });
 
     testWidgets('onTick may invalidate providers — it never runs inside build', (
@@ -126,10 +128,14 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
+      // Far enough past the first due time that a catch-up tick is owed.
+      clock.note('test.invalidating');
+      now = now.add(_interval * 2);
+      await tester.pump(_interval);
 
       expect(tester.takeException(), isNull);
-      expect(ticks, hasLength(1));
+      expect(ticks, isNotEmpty);
+      expect(builds, greaterThan(1), reason: 'the target was invalidated');
     });
   });
 
@@ -138,10 +144,10 @@ void main() {
       tester,
     ) async {
       await _pumpPage(tester);
-      await tester.pump();
+      await elapse(tester, _interval);
       expect(ticks, hasLength(1));
 
-      // Leave after one second of a three-second interval.
+      // Leave after one second of the next three-second interval.
       await elapse(tester, const Duration(seconds: 1));
       await _pumpPage(tester, branchActive: false);
       await tester.pump();
@@ -161,10 +167,11 @@ void main() {
 
     testWidgets('a long absence earns an immediate tick', (tester) async {
       await _pumpPage(tester);
-      await tester.pump();
+      await elapse(tester, _interval);
       expect(ticks, hasLength(1));
 
       await _pumpPage(tester, branchActive: false);
+      await tester.pump();
       await elapse(tester, const Duration(minutes: 5));
       expect(ticks, hasLength(1));
 
@@ -190,7 +197,7 @@ void main() {
     testWidgets('a covering route stops the ticks', (tester) async {
       final navigatorKey = GlobalKey<NavigatorState>();
       await _pumpPage(tester, navigatorKey: navigatorKey);
-      await tester.pump();
+      await elapse(tester, _interval);
       expect(ticks, hasLength(1));
 
       navigatorKey.currentState!.push(
@@ -217,7 +224,7 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
+      await elapse(tester, _interval);
       expect(ticks, hasLength(1));
 
       capturedRef.read(appInForegroundProvider.notifier).set(false);
@@ -232,7 +239,7 @@ void main() {
       addTearDown(covering.dispose);
 
       await _pumpPage(tester, covering: covering);
-      await tester.pump();
+      await elapse(tester, _interval);
       expect(ticks, hasLength(1));
 
       covering.value = true;

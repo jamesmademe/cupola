@@ -1,7 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// ignore: implementation_imports
+
+import 'package:cupola/core/lifecycle/gated_poll.dart'; // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
@@ -165,16 +164,16 @@ class GlobalActivityItem {
 
 /// Auto-refresh for the "Now" bucket.
 ///
-/// `autoDispose` so the timer only runs while something is watching it — the
-/// screen watches it exclusively from the Now section, so leaving the tab or
-/// switching to History stops the polling instead of quietly refetching three
-/// services forever. Each tick bumps the queue-only version: the queues are
-/// live data, the Seerr requests are not.
+/// Three services per tick, so it runs on two conditions at once: the Now bucket
+/// is the selected one, and the Activity page is the page on screen. Each tick
+/// bumps the queue-only version — the queues are live data, the Seerr requests
+/// are not.
 final activityNowPollingProvider = Provider.autoDispose<void>((ref) {
-  final timer = Timer.periodic(_nowPollInterval, (_) {
-    ref.read(activityQueuePollVersionProvider.notifier).state++;
-  });
-  ref.onDispose(timer.cancel);
+  ref.gatedPoll(
+    id: 'activity.now',
+    interval: _nowPollInterval,
+    onTick: () => ref.read(activityQueuePollVersionProvider.notifier).state++,
+  );
 });
 
 /// The services that can appear in the global feed, in display order.

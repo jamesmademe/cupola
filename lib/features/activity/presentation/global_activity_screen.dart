@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
@@ -230,13 +231,17 @@ class _GlobalActivityScreenState extends ConsumerState<GlobalActivityScreen>
 
     final section = ref.watch(_activitySectionProvider);
 
-    // "Now" is the only bucket that claims to be live, so it is the only one that
-    // polls. This watch stays at the screen level and keys off the selected
-    // section rather than living inside the Now tab, because `TabBarView` keeps a
-    // visited child alive: a watch down there would go on refetching three
-    // services forever after the user moved to History.
+    // "Now" is the only bucket that claims to be live, so it is the only one
+    // that polls — and it polls only while this page is the page on screen.
+    //
+    // Both halves are needed and neither replaces the other. The section check
+    // stays because `TabBarView` keeps a visited child alive, so a watch inside
+    // the Now tab would go on refetching three services after the user moved to
+    // History. The visibility gate is the newer half: this screen itself is now
+    // kept alive when its tab is switched away from, so being mounted no longer
+    // means being read.
     if (section == _ActivitySection.now) {
-      ref.watch(activityNowPollingProvider);
+      ref.watchWhileLive(context, activityNowPollingProvider);
     }
 
     return AmbientScaffold(

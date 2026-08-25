@@ -154,12 +154,12 @@ void main() {
     ) async {
       await pump(tester);
       final afterMount = adapter.total;
-      expect(listTicks(), 1, reason: 'the catch-up tick on first mount');
+      expect(listTicks(), 0, reason: 'the page just loaded its own data');
 
       await elapse(tester, _interval);
       await tester.pump();
 
-      expect(listTicks(), 2);
+      expect(listTicks(), 1);
       // The chain the whole requirement rests on: a tick is an invalidation, and
       // an invalidation on a watched provider is traffic.
       expect(adapter.total, greaterThan(afterMount));
@@ -189,7 +189,7 @@ void main() {
       tester,
     ) async {
       final host = await pump(tester);
-      await tester.pump();
+      await elapse(tester, _interval);
       expect(listTicks(), 1);
 
       host.setBranchActive(false);

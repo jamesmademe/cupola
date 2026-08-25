@@ -26,11 +26,17 @@ class PollClock {
 
   void note(String id) => _last[id] = now();
 
-  /// How long until [id] is due. [Duration.zero] when it is due already, or has
-  /// never run at all.
+  /// How long until [id] is due. [Duration.zero] when it is due already.
+  ///
+  /// A poller that has never run gets a whole interval, not zero. The page that
+  /// starts it has just loaded the data it displays, so an immediate first tick
+  /// would be a second request for what is already on screen — waste of exactly
+  /// the kind the gate exists to prevent, and on the most expensive frame of the
+  /// page's life. Catching up is for a *return*, where the data on screen is
+  /// genuinely old.
   Duration timeUntilDue(String id, Duration interval) {
     final last = _last[id];
-    if (last == null) return Duration.zero;
+    if (last == null) return interval;
     final remaining = interval - now().difference(last);
     return remaining.isNegative ? Duration.zero : remaining;
   }

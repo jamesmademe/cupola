@@ -12,11 +12,13 @@ void main() {
       clock = PollClock()..now = () => now;
     });
 
-    test('a poller that has never run is due immediately', () {
+    test('a poller that has never run waits a whole interval', () {
+      // Not zero: the page that starts it has just loaded what it displays, so
+      // an immediate first tick would refetch it.
       expect(clock.hasRun('a'), isFalse);
       expect(
         clock.timeUntilDue('a', const Duration(seconds: 3)),
-        Duration.zero,
+        const Duration(seconds: 3),
       );
     });
 

@@ -20,10 +20,11 @@ extension GatedPoll on Ref {
   /// gate: the screen watches it through [PageGatedWatch.watchWhileLive], so
   /// losing visibility drops the last listener and disposal cancels the timer.
   ///
-  /// On creation the poller catches up. Due already — or never run — means one
-  /// tick now, otherwise a one-shot for the remainder and then the steady
-  /// cadence. That catch-up tick is deferred to a microtask because [onTick]
-  /// invalidates providers, and doing that inside a provider's build is illegal.
+  /// On creation the poller asks the clock when it is next due: a full interval
+  /// if it has never run — the page has just loaded what it shows — or whatever
+  /// is left of one, which can be nothing at all after a long absence. Only that
+  /// last case ticks straight away, and it is deferred to a microtask because
+  /// [onTick] invalidates providers, which is illegal inside a provider's build.
   ///
   /// The stop is one frame plus a microtask behind the page going away: the
   /// rebuild drops the watch, dropping the last listener schedules disposal, and
