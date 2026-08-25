@@ -565,7 +565,10 @@ class _PortalFloor extends StatelessWidget {
                         context,
                       ),
                     ),
-                    child: const ServiceMatrix(),
+                    // Picker, not readout: this floor exists to be tapped,
+                    // and a folded cell would reach the service while hiding
+                    // every connection but the one the lens already points at.
+                    child: const ServiceMatrix(role: ServiceMatrixRole.picker),
                   ),
                 ],
               ),
