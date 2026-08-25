@@ -26,6 +26,9 @@ import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/stream/presentation/widgets/jellyfin_viewer_picker.dart';
+import 'package:go_router/go_router.dart';
+import 'package:cupola/core/widgets/section_header.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
@@ -40,6 +43,18 @@ import 'package:cupola/features/settings/presentation/widgets/cert_trust_dialog.
 class ServiceSettingsScreen extends ConsumerStatefulWidget {
   final ServiceKey service;
 
+  /// Which connection this form edits. Null means the service's first one,
+  /// which is what every caller meant before there could be a second.
+  final String? instanceId;
+
+  /// Whether this form is adding a connection rather than editing one.
+  ///
+  /// Distinct from a null [instanceId] because a new instance has no id to name
+  /// until it is saved: minting one and passing it here would have the form
+  /// look for something that is not in settings yet and quietly fall back to
+  /// editing the first.
+  final bool isNew;
+
   /// Injectable so a widget test can stay off a real socket — see
   /// [CertificateProber].
   final CertificateProber certificateProber;
@@ -51,6 +66,8 @@ class ServiceSettingsScreen extends ConsumerStatefulWidget {
   const ServiceSettingsScreen({
     super.key,
     required this.service,
+    this.instanceId,
+    this.isNew = false,
     this.certificateProber = probeUntrustedCertificate,
     this.localNetworkProbe = probeLocalNetworkAccess,
   });
@@ -66,6 +83,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   late final TextEditingController _apiKeyController;
   late final TextEditingController _usernameController;
   late final TextEditingController _passwordController;
+  late final TextEditingController _labelController;
+
+  /// The connection being edited, as it stood when the form opened.
+  ///
+  /// Only [ServiceInstance.id] is relied on afterwards — every write re-reads
+  /// the live one by that id, so a value changed elsewhere while this form sat
+  /// open is not clobbered by a stale copy.
+  late final ServiceInstance _target;
 
   bool _saving = false;
   bool _testing = false;
@@ -95,16 +120,29 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   void initState() {
     super.initState();
     final settings = ref.read(currentSettingsProvider);
-    _urlController = TextEditingController(text: settings.urlFor(service));
+    final named = widget.instanceId == null
+        ? null
+        : settings.instanceById(widget.instanceId!);
+    _target = widget.isNew
+        ? settings.newInstanceFor(service)
+        // An id belonging to another service is ignored rather than trusted:
+        // writing this form's fields onto a Sonarr would be silent corruption.
+        : (named != null && named.service == service
+              ? named
+              : settings.primaryOf(service) ??
+                    settings.newInstanceFor(service));
+
+    _urlController = TextEditingController(text: _target.url);
     _apiKeyController = TextEditingController(
-      text: usesCredentials ? '' : settings.apiKeyFor(service),
+      text: usesCredentials ? '' : _target.credential,
     );
     _usernameController = TextEditingController(
-      text: usesCredentials ? settings.usernameFor(service) : '',
+      text: usesCredentials ? _target.username : '',
     );
     _passwordController = TextEditingController(
-      text: usesCredentials ? settings.passwordFor(service) : '',
+      text: usesCredentials ? _target.credential : '',
     );
+    _labelController = TextEditingController(text: _target.label);
 
     _initialValues = {
       for (final entry in _controllers.entries) entry.key: entry.value.text,
@@ -119,6 +157,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     'apiKey': _apiKeyController,
     'username': _usernameController,
     'password': _passwordController,
+    'label': _labelController,
   };
 
   /// Whether any field differs from what was loaded.
@@ -143,6 +182,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     _apiKeyController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
+    _labelController.dispose();
     super.dispose();
   }
 
@@ -175,9 +215,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       // has not been allowed onto the network reports the permission, and one
       // the user allows while the alert is up is simply tested again — the
       // retest that used to be theirs to work out.
+      final candidateInstance = candidate.instanceById(_target.id) ?? _target;
       var result = await diagnoseThroughLocalNetworkGate(
-        () => diagnoseService(service, candidate),
-        url: candidate.urlFor(service),
+        () => diagnoseInstance(candidateInstance, candidate),
+        url: candidateInstance.url,
         probe: widget.localNetworkProbe,
       );
 
@@ -189,7 +230,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       if (mounted &&
           result.isDisconnected &&
           certProbeWorthwhile(result.reason)) {
-        final url = candidate.urlFor(service);
+        final url = candidateInstance.url;
         final previousPin = candidate.pinForUrl(url);
         final probe = await widget.certificateProber(
           url,
@@ -263,7 +304,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // can only ever *add* a pin. Left behind, the entry outlives the address —
     // and because `pinForUrl` is keyed purely by origin, any service later
     // pointed back at it would silently reuse the stale trust with no prompt.
-    final priorUrl = current.urlFor(service);
+    final priorUrl = current.instanceById(_target.id)?.url ?? '';
     var updated = _updateServiceSettings(
       current,
     ).copyWithoutUnusedCertificate(priorUrl);
@@ -301,7 +342,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       final probe = result.certificateProbe;
       if (probe == null) return null;
 
-      final url = updated.urlFor(service);
+      final url = updated.instanceById(_target.id)?.url ?? '';
       final trust = await showCertTrustDialog(
         context,
         origin: UrlUtils.certOrigin(url) ?? url,
@@ -329,13 +370,30 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // Same normalisation onboarding applies, so a trailing slash or a scheme
     // typed in either screen ends up stored the one way the clients use.
     final url = UrlUtils.normalizeBaseUrl(_urlController.text);
-    return _writeService(
+    var next = _writeService(
       current,
       url: url,
       apiKey: _apiKeyController.text.trim(),
       username: _usernameController.text.trim(),
       password: _passwordController.text.trim(),
+      label: _labelController.text.trim(),
     );
+
+    // The sibling that was alone until a moment ago has no name, and it is
+    // about to need one: with two connections and one nameless, the badge and
+    // every badge-bearing row would fall back to showing its id. Derived from
+    // whatever actually tells the two apart — the port when they share a host,
+    // the host when they do not — and editable in its own form afterwards.
+    // Never the word "Default": that names a role, and the role moves.
+    if (_labelController.text.trim().isNotEmpty) {
+      for (final sibling in _siblings(next)) {
+        if (sibling.label.isNotEmpty) continue;
+        next = next.copyWithInstance(
+          sibling.copyWith(label: _derivedLabel(sibling, url)),
+        );
+      }
+    }
+    return next;
   }
 
   /// Writes this service's fields onto [current].
@@ -350,16 +408,20 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     required String apiKey,
     required String username,
     required String password,
+    String? label,
   }) {
-    if (usesCredentials) {
-      return current.copyWithCredentials(
-        service,
+    // Re-read by id rather than reusing the copy captured at initState: the
+    // chosen viewer, say, may have moved while this form was open and the
+    // captured copy would put it back.
+    final live = current.instanceById(_target.id) ?? _target;
+    return current.copyWithInstance(
+      live.copyWith(
         url: url,
-        username: username,
-        password: password,
-      );
-    }
-    return current.copyWithService(service, url: url, apiKey: apiKey);
+        credential: usesCredentials ? password : apiKey,
+        username: usesCredentials ? username : '',
+        label: label,
+      ),
+    );
   }
 
   Future<void> _removeConnection() async {
@@ -376,18 +438,19 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     if (!result.confirmed || !mounted) return;
 
     final before = ref.read(currentSettingsProvider);
-    final priorUrl = before.urlFor(service);
-    final cleared =
-        _writeService(before, url: '', apiKey: '', username: '', password: '')
-            // The `{url, apiKey}` pair is not all of what described that server:
-            // Jellyfin's chosen viewer sits outside it, and carrying it over to a
-            // *different* Jellyfin binds every per-viewer query to a user id that
-            // does not exist there.
-            .copyWithoutServiceExtras(service)
-            // Forget this origin's pin too, but only when nothing else configured
-            // still reaches it — removing Sonarr must never break Radarr's trust
-            // in the same reverse proxy.
-            .copyWithoutUnusedCertificate(priorUrl);
+    final priorUrl = before.instanceById(_target.id)?.url ?? '';
+    final cleared = before
+        // Drops the whole connection rather than blanking its fields, which
+        // takes the chosen viewer with it. `copyWithoutServiceExtras` used to
+        // do that job and is deliberately not called any more: it clears the
+        // viewer on *every* instance of the service, so removing one Jellyfin
+        // would have reset which person the other one reads through.
+        .copyWithoutInstance(_target.id)
+        // Forget this origin's pin too, but only when nothing else configured
+        // still reaches it — removing Sonarr must never break Radarr's trust
+        // in the same reverse proxy, and with instances that includes the
+        // service's own second connection behind it.
+        .copyWithoutUnusedCertificate(priorUrl);
 
     await ref.read(settingsProvider.notifier).updateSettings(cleared);
     if (!mounted) return;
@@ -441,6 +504,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               _buildInfoNote(context, note),
             ],
             const SizedBox(height: AppSpacing.xl),
+            // Before the address on purpose: name the thing, then say where it
+            // lives. By the time someone is here for a second connection they
+            // are already thinking "these two are different" — that is the
+            // moment the name costs nothing to give.
+            if (_needsLabel(settings)) ...[
+              _buildLabelField(settings),
+              const SizedBox(height: AppSpacing.lg),
+            ],
             _buildUrlField(),
             _buildTrustedCertificateIndicator(settings),
             const SizedBox(height: AppSpacing.lg),
@@ -472,8 +543,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               const SizedBox(height: AppSpacing.xxl),
               const JellyfinViewerPicker(),
             ],
+            const SizedBox(height: AppSpacing.xxl),
+            _buildConnectionsSection(context, settings),
             if (isConfigured) ...[
-              const SizedBox(height: AppSpacing.xxl),
+              const SizedBox(height: AppSpacing.lg),
               _buildRemoveRow(context),
             ],
           ],
@@ -717,6 +790,109 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     if (!opened && mounted) {
       SnackBarHelper.info(context, LocalNetworkPermission.remedy);
     }
+  }
+
+  /// A name for [instance], derived from what distinguishes it from [otherUrl].
+  ///
+  /// The port when the two share a host — the overwhelmingly common shape, two
+  /// arrs on one box — and the hostname when they do not. Falls back to the id
+  /// only when neither can be parsed, which is better than empty.
+  String _derivedLabel(ServiceInstance instance, String otherUrl) {
+    final mine = Uri.tryParse(instance.url);
+    final other = Uri.tryParse(otherUrl);
+    if (mine == null || mine.host.isEmpty) return instance.id;
+
+    if (other != null && other.host == mine.host && mine.hasPort) {
+      return '${mine.port}';
+    }
+    return mine.host.split('.').first;
+  }
+
+  /// The connections of this service other than the one on screen.
+  List<ServiceInstance> _siblings(SettingsModel settings) => settings
+      .instancesOf(service)
+      .where((instance) => instance.id != _target.id)
+      .toList(growable: false);
+
+  /// Whether this form needs to ask for a name.
+  ///
+  /// Exactly when there is something to tell it apart from. One connection
+  /// needs no name — it is "Radarr" — and asking for one would be a field that
+  /// earns nothing on the install almost everyone has.
+  bool _needsLabel(SettingsModel settings) => _siblings(settings).isNotEmpty;
+
+  Widget _buildLabelField(SettingsModel settings) {
+    return TextFormField(
+      controller: _labelController,
+      textInputAction: TextInputAction.next,
+      decoration: InputDecoration(
+        labelText: 'Name',
+        hintText: '4K, HD, Anime…',
+        helperText:
+            'Short. This is what tells it apart in search, in the queue, and '
+            'before every add.',
+        helperMaxLines: 2,
+        prefixIcon: const Icon(Icons.sell_outlined),
+      ),
+      validator: (value) {
+        final name = (value ?? '').trim();
+        if (name.isEmpty) return 'Give this one a name';
+        final clash = _siblings(
+          settings,
+        ).any((other) => other.label.toLowerCase() == name.toLowerCase());
+        // Two rows both called "4K" is the state this whole field exists to
+        // prevent, so it is refused rather than allowed and disambiguated by
+        // host somewhere downstream.
+        if (clash) return 'Another ${service.title} already uses that name';
+        return null;
+      },
+    );
+  }
+
+  /// The other connections of this service, and the way to add one.
+  Widget _buildConnectionsSection(
+    BuildContext context,
+    SettingsModel settings,
+  ) {
+    final siblings = _siblings(settings);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionHeader(
+          title: 'Connections',
+          showChevron: false,
+          subtitle: siblings.isEmpty
+              ? 'One ${service.title}. Add another if you run a second.'
+              : null,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SettingsGroupCard(
+          children: [
+            for (final sibling in siblings)
+              SettingsCard.grouped(
+                leading: Icon(service.icon),
+                title: sibling.label.isEmpty ? sibling.id : sibling.label,
+                subtitle: service.extractHost(sibling.url) ?? 'No address yet',
+                accentColor: service.accent,
+                semanticHint: 'edits that ${service.title} connection',
+                onTap: () => context.push(
+                  '/settings/service/${service.routeParam}?i=${sibling.id}',
+                ),
+              ),
+            SettingsCard.grouped(
+              leading: const Icon(Icons.add_rounded),
+              title: 'Add another ${service.title}',
+              subtitle: 'A second server, with its own address and key',
+              accentColor: service.accent,
+              semanticHint: 'adds a second ${service.title} connection',
+              onTap: () =>
+                  context.push('/settings/service/${service.routeParam}?new=1'),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildRemoveRow(BuildContext context) {

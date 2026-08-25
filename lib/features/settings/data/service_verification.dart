@@ -15,6 +15,7 @@ import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
@@ -512,17 +513,37 @@ Future<ServiceDiagnosis> diagnoseService(
   ServiceKey service,
   SettingsModel settings,
 ) {
-  if (!settings.isServiceConfigured(service)) {
+  final instance = settings.primaryOf(service);
+  if (instance == null) {
     return Future.value(const ServiceDiagnosis.notConfigured());
   }
-  final url = settings.urlFor(service);
+  return diagnoseInstance(instance, settings);
+}
+
+/// Diagnoses one specific connection.
+///
+/// The form that matters once a service can have more than one: [diagnoseService]
+/// answers for whichever is first, which is the wrong server to open a socket to
+/// while someone is on the settings screen for the second. [settings] is still
+/// needed for the two values that are not the instance's own — the pin, which
+/// belongs to a TLS origin, and the Plex client id, which belongs to the install.
+Future<ServiceDiagnosis> diagnoseInstance(
+  ServiceInstance instance,
+  SettingsModel settings,
+) {
+  if (!instance.isConfigured) {
+    return Future.value(const ServiceDiagnosis.notConfigured());
+  }
+  final service = instance.service;
   return diagnoseCredentials(
     service,
-    url: url,
-    apiKey: settings.apiKeyFor(service),
-    username: settings.usernameFor(service),
-    password: settings.passwordFor(service),
-    certFingerprint: settings.pinForUrl(url) ?? '',
+    url: instance.url,
+    // The credential sits in one slot and which vocabulary it answers to is the
+    // registry's call, exactly as it is in storage.
+    apiKey: service.usesApiKey ? instance.credential : '',
+    username: instance.username,
+    password: service.usesApiKey ? '' : instance.credential,
+    certFingerprint: settings.pinForUrl(instance.url) ?? '',
     clientIdentifier: settings.plexClientId,
   );
 }

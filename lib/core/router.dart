@@ -938,7 +938,15 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
           (s) => s.routeParam == normalizedParam,
           orElse: () => ServiceKey.seerr,
         );
-        return ServiceSettingsScreen(service: service);
+        // Query rather than a path segment: a connection is a parameter of
+        // the form, not a level of the hierarchy, and threading a segment
+        // through would have every nested settings route grow one it never
+        // reads.
+        return ServiceSettingsScreen(
+          service: service,
+          instanceId: state.uri.queryParameters['i'],
+          isNew: state.uri.queryParameters['new'] == '1',
+        );
       }),
     ],
   ),
