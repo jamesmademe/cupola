@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
@@ -168,13 +169,20 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
               extendBody: !hideNav,
               body: hideNav
                   ? widget.child
-                  : Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        PortalStage(controller: _portal, child: widget.child),
-                        if (!accessibleNav)
-                          PortalCoachMark(controller: _portal),
-                      ],
+                  // The Portal is a cover the route system cannot see: it
+                  // freezes the page's pixels while leaving its timers running.
+                  // Scoping the stage tells whatever polls under there to stop —
+                  // see `PageCoverageScope`.
+                  : PageCoverageScope(
+                      covering: _portal.covering,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          PortalStage(controller: _portal, child: widget.child),
+                          if (!accessibleNav)
+                            PortalCoachMark(controller: _portal),
+                        ],
+                      ),
                     ),
               bottomNavigationBar: hideNav
                   ? null
