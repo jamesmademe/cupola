@@ -1099,12 +1099,26 @@ class ServiceMatrixCell extends ConsumerWidget {
       _ => ServiceReachability.checking,
     };
 
+    // Folded across every connection of this service. With one it says exactly
+    // what `summary` already said; with more it is the only thing that can
+    // answer "is anything in here down", which is the question this cell exists
+    // to answer.
+    final folded = ref.watch(foldedServiceHealthProvider(service));
+    final degraded = folded.total > 1 && folded.offline > 0;
+
     // Falls back to the configured URL's host so the cell can name which
-    // instance it is talking about before the first response arrives.
-    final host =
-        summary.asData?.value.host ??
-        service.extractHost(settings.urlFor(service)) ??
-        '';
+    // instance it is talking about before the first response arrives. With more
+    // than one connection the address stops being the useful thing to say and
+    // the names take over — two URLs do not fit on a line, and showing one of
+    // them says "Radarr lives here" when that is half true.
+    final host = folded.total > 1
+        ? settings
+              .instancesOf(service)
+              .map((i) => i.label.isEmpty ? i.id : i.label)
+              .join(' · ')
+        : summary.asData?.value.host ??
+              service.extractHost(settings.urlFor(service)) ??
+              '';
 
     // Only asked for once the service has answered. Watching it while offline
     // would fan out a library fetch per unreachable service on every rebuild,
@@ -1115,10 +1129,15 @@ class ServiceMatrixCell extends ConsumerWidget {
 
     return _ServiceMatrixCellBody(
       service: service,
-      reachability: reachability,
-      signal: signal,
+      // A folded cell never reports a better state than its worst connection.
+      reachability: degraded ? ServiceReachability.offline : reachability,
+      // And it never shows a live figure summed over an incomplete set: a total
+      // that silently drops an unreachable connection is a wrong number, not a
+      // partial one.
+      signal: degraded ? null : signal,
       host: host,
       phase: phase,
+      degradedOf: degraded ? folded : null,
     );
   }
 }
@@ -1132,7 +1151,13 @@ class _ServiceMatrixCellBody extends StatelessWidget {
     required this.signal,
     required this.host,
     required this.phase,
+    this.degradedOf,
   });
+
+  /// Set only when this service has more than one connection and at least one
+  /// of them is unreachable. The state word then counts rather than naming a
+  /// state: "1 of 3 offline" is the whole of what the user needs from here.
+  final FoldedServiceHealth? degradedOf;
 
   final ServiceKey service;
   final ServiceReachability reachability;
@@ -1153,11 +1178,17 @@ class _ServiceMatrixCellBody extends StatelessWidget {
         ? colorScheme.surfaceContainer
         : colorScheme.surfaceContainerLow;
 
-    final statusLabel = switch (reachability) {
-      ServiceReachability.online => 'Online',
-      ServiceReachability.checking => 'Checking',
-      ServiceReachability.offline => 'Offline',
-    };
+    // A folded cell counts rather than naming a state. "Offline" on a Radarr
+    // with three connections and one down is false in both directions: two of
+    // them are answering, and saying so would hide the one that is not.
+    final folded = degradedOf;
+    final statusLabel = folded != null
+        ? '${folded.offline} of ${folded.total} offline'
+        : switch (reachability) {
+            ServiceReachability.online => 'Online',
+            ServiceReachability.checking => 'Checking',
+            ServiceReachability.offline => 'Offline',
+          };
 
     final detail = phase.detail;
     final showHost = detail > 0 && host.isNotEmpty;

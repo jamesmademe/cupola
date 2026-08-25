@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -262,7 +263,24 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
               ],
             )
           else
-            TextButton(onPressed: widget.onBack, child: const Text('Back')),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(onPressed: widget.onBack, child: const Text('Back')),
+                // The offer, and only after the server has answered: proving one
+                // works is the moment "there is a second one" becomes a thought
+                // the user is already having. It shares Back's row rather than
+                // taking one of its own — this screen's height is tuned against
+                // the ring, and a third row is what that tuning was fixing.
+                if (widget.status == ServiceConnectionStatus.connected)
+                  TextButton(
+                    onPressed: () => context.push(
+                      '/settings/service/${widget.service.routeParam}?new=1',
+                    ),
+                    child: Text('Add another ${widget.service.title}'),
+                  ),
+              ],
+            ),
         ],
       ),
     );
