@@ -20,7 +20,8 @@ final seriesSearchResultsProvider = FutureProvider<List<SonarrSeries>?>((
   ref,
 ) async {
   final query = ref.watch(seriesSearchQueryProvider);
-  final service = ref.read(sonarrServiceProvider);
+  // `watch`, not `read` — see `moviesSearchResultsProvider`.
+  final service = ref.watch(sonarrServiceProvider);
   final cancelToken = CancelToken();
   ref.onDispose(cancelToken.cancel);
   return loadNullableSearchResults(

@@ -554,6 +554,20 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
 ///
 /// Discover uses Seerr rather than an *arr service, so it is not
 /// supported by this provider.
+///
+/// **`watch`, not `read`, and the difference is a crash.** The three services
+/// underneath are lens-aware: each is rebuilt by `watchApiClient` when the
+/// connection it describes changes, and the outgoing `ApiClient` closes its
+/// `Dio` on dispose. Read once and held, this provider kept handing out a
+/// service whose transport had been shut — so a *write* from the Activity
+/// control room (an auto-search, a queue removal) threw `StateError` on a
+/// closed client, or, if the lens had moved before this ever rebuilt, went
+/// quietly to the connection the user had just navigated away from.
+///
+/// Not a family key on the instance, which is the fix this looks like it should
+/// need. The lens is already the identity of the service below; keying on it
+/// here would be a second copy of that answer, and a second place to get it
+/// wrong. `watch` says the same thing once.
 final resolvedArrServiceProvider =
     Provider.family<ArrActivityMixin, ServiceType>((ref, serviceType) {
       ref.watch(activityRefreshVersionProvider);
@@ -565,11 +579,11 @@ final resolvedArrServiceProvider =
 
       switch (serviceType) {
         case ServiceType.movies:
-          return ref.read(radarrServiceProvider);
+          return ref.watch(radarrServiceProvider);
         case ServiceType.series:
-          return ref.read(sonarrServiceProvider);
+          return ref.watch(sonarrServiceProvider);
         case ServiceType.music:
-          return ref.read(lidarrServiceProvider);
+          return ref.watch(lidarrServiceProvider);
         case ServiceType.discover:
           throw ArgumentError.value(
             serviceType,

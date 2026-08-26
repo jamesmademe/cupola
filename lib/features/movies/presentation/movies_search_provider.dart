@@ -23,7 +23,11 @@ final moviesSearchResultsProvider = FutureProvider<List<RadarrMovie>?>((
   ref,
 ) async {
   final query = ref.watch(moviesSearchQueryProvider);
-  final service = ref.read(radarrServiceProvider);
+  // `watch`, so a lens moved while a query is on screen re-runs the lookup
+  // against the connection now being read. Held by `read`, the results stayed
+  // the previous server's and never refreshed — and retyping the same query
+  // reused a service whose `Dio` had since been closed.
+  final service = ref.watch(radarrServiceProvider);
   final cancelToken = CancelToken();
   ref.onDispose(cancelToken.cancel);
   return loadNullableSearchResults(

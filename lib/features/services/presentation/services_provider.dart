@@ -7,7 +7,8 @@ import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/image_utils.dart';
-import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/dockge/data/dockge_client.dart';
+import 'package:cupola/features/dockge/data/dockge_service.dart';
 import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
@@ -34,7 +35,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
-import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/data/truenas_service.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/unraid/data/unraid_client.dart';
 
 /// A live reachability probe for one service.
@@ -264,19 +266,39 @@ Future<String?> _loadVersion(
     );
   }
 
+  // The two long-lived clients, and the two that used to lie. Their providers
+  // are built from the flat projections — the FIRST instance of the service —
+  // so probing the second connection through them asked the first one whether
+  // it was up and painted the answer on the second one's cell: a box that was
+  // switched off reading green, and `foldedServiceHealthProvider` counting zero
+  // offline. Every other branch here already builds a throwaway client from
+  // `instance`, which is what makes a per-connection probe per-connection;
+  // these two now do the same, and close it either way like the rest.
   if (service == ServiceKey.truenas) {
-    final info = await ref
-        .watch(truenasServiceProvider)
-        .getSystemInfo()
-        .timeout(const Duration(seconds: 8));
-    return info.version;
+    final client = TrueNasWsClient(
+      baseUrl: instance.url,
+      apiKey: instance.credential,
+      certFingerprint: settings.pinForUrl(instance.url),
+    );
+    return _versionOrNull(
+      () async => (await TrueNasService(client).getSystemInfo()).version ?? '',
+      timeout: const Duration(seconds: 8),
+      close: client.close,
+    );
   }
 
   if (service == ServiceKey.dockge) {
-    return ref
-        .watch(dockgeServiceProvider)
-        .fetchVersion()
-        .timeout(const Duration(seconds: 8));
+    final client = DockgeClient(
+      baseUrl: instance.url,
+      username: instance.username.isEmpty ? null : instance.username,
+      password: instance.credential.isEmpty ? null : instance.credential,
+      certFingerprint: settings.pinForUrl(instance.url),
+    );
+    return _versionOrNull(
+      () async => await DockgeService(client).fetchVersion() ?? '',
+      timeout: const Duration(seconds: 8),
+      close: client.close,
+    );
   }
 
   if (service == ServiceKey.sabnzbd) {

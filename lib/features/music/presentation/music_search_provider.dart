@@ -20,7 +20,8 @@ final musicSearchResultsProvider = FutureProvider<List<LidarrArtist>?>((
   ref,
 ) async {
   final query = ref.watch(musicSearchQueryProvider);
-  final service = ref.read(lidarrServiceProvider);
+  // `watch`, not `read` — see `moviesSearchResultsProvider`.
+  final service = ref.watch(lidarrServiceProvider);
   final cancelToken = CancelToken();
   ref.onDispose(cancelToken.cancel);
   return loadNullableSearchResults(
