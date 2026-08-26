@@ -71,6 +71,59 @@ void main() {
     expect(find.byType(WantedTab), findsOneWidget);
   });
 
+  testWidgets('a notification tap lands on Now › Searching, not on the sticky '
+      'selection', (tester) async {
+    // The device pass that found this: routing to /activity alone left the user
+    // on whichever bucket they had used last, so the Searching list was never
+    // built — and the sheet the notice promised had nobody to open it.
+    final container = ProviderContainer(
+      overrides: [
+        ...await settingsScopeOverrides(configured: activityServiceKeys),
+        requestsProvider.overrideWith((ref) async => const []),
+        seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
+        radarrServiceProvider.overrideWith((ref) => FakeRadarrService()),
+        sonarrServiceProvider.overrideWith((ref) => FakeSonarrService()),
+        lidarrServiceProvider.overrideWith((ref) => FakeLidarrService()),
+      ],
+    );
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: GlobalActivityScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Somewhere else entirely, the way a returning user would be.
+    await tester.tap(find.text('History'));
+    await tester.pumpAndSettle();
+    expect(find.text('Blocklist'), findsOneWidget);
+
+    // Called through a provider because the helper takes a `Ref` — the type the
+    // notification callback actually holds — and Riverpod 3 keeps a container's
+    // `Ref` view internal.
+    container.read(_selectSearchingProbe.notifier)();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('No searches running'),
+      findsOneWidget,
+      reason: 'the Searching list has to be the one on screen',
+    );
+    expect(
+      find.text('Blocklist'),
+      findsNothing,
+      reason: 'the tab indicator has to follow the selection, not lag behind it',
+    );
+
+    // The Searching list holds a ten-second window ticker while it is on
+    // screen, so the tree comes down and the container closes here rather than
+    // in a tear-down the timer check would beat.
+    await tester.pumpWidget(const SizedBox());
+    container.dispose();
+  });
+
   testWidgets('renders global activity with sections, grouping and filter', (
     tester,
   ) async {
@@ -501,3 +554,16 @@ class _ActivityRadarrService extends FakeRadarrService {
   @override
   Future<List<dynamic>> getAllMissing() async => missing;
 }
+
+/// Drives [selectActivitySearching] with a real `Ref`, the way the notification
+/// tap does in production: from a callback that runs *after* initialization,
+/// which is what Riverpod requires of anything that writes to other providers.
+class _SelectSearchingProbe extends Notifier<void> {
+  @override
+  void build() {}
+
+  void call() => selectActivitySearching(ref);
+}
+
+final _selectSearchingProbe =
+    NotifierProvider<_SelectSearchingProbe, void>(_SelectSearchingProbe.new);

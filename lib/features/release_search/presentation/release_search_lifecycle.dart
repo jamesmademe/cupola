@@ -83,6 +83,10 @@ class _ReleaseSearchLifecycleState extends ConsumerState<ReleaseSearchLifecycle>
       case AppLifecycleState.resumed:
         ref.read(appInForegroundProvider.notifier).set(true);
         notifier.refreshWindows();
+        // Where the user may just have been is system settings, and a
+        // notification permission revoked there is invisible from here. Asked
+        // again on every return rather than trusted from launch.
+        ref.invalidate(notificationPermissionProvider);
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
         break;

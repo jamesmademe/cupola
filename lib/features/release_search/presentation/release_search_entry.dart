@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/router.dart';
+import 'package:cupola/features/activity/presentation/global_activity_screen.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/release_search/data/release_search_notifications.dart';
@@ -125,13 +126,37 @@ final releaseSearchTransportProvider =
     });
 
 /// Posts the "your search finished" notices, and gives their "Tap to pick one"
-/// somewhere to land: the Activity screen, which is where a finished search
-/// lives once the page that launched it is gone.
+/// somewhere to land.
+///
+/// The notice promises a picker, so a tap has to reach one: the job id travels
+/// in the payload, is handed to [pendingReleaseSearchJobProvider], and the
+/// Searching list opens that job's sheet on arrival. When the job is gone — the
+/// app was killed rather than suspended, so nothing survived in memory — the
+/// route still lands on Activity, which is the honest fallback rather than a
+/// sheet for a job that no longer exists.
 final releaseSearchNotificationsProvider = Provider(
-  (ref) => ReleaseSearchNotifications(
-    null,
-    (payload) => ref.read(routerProvider).go('/activity'),
-  ),
+  (ref) => ReleaseSearchNotifications(null, (payload) {
+    if (payload != null &&
+        ref.read(releaseSearchJobsProvider.notifier).jobById(payload) != null) {
+      ref.read(pendingReleaseSearchJobProvider.notifier).request(payload);
+    }
+    // Both halves are needed, and the second is the one a device pass found
+    // missing: routing to /activity alone lands on whichever bucket the user
+    // last used, so the Searching list is never built and nothing consumes the
+    // request above.
+    selectActivitySearching(ref);
+    ref.read(routerProvider).go('/activity');
+  }),
+);
+
+/// Whether the OS is currently letting Cupola post notifications.
+///
+/// Kept as a provider rather than local state so the answer is asked once and
+/// read wherever it matters. Re-read by invalidating it — after the user
+/// touches the toggle, and whenever the app comes back from the background,
+/// since system settings are exactly where they may have just been.
+final notificationPermissionProvider = FutureProvider<bool?>(
+  (ref) => ref.read(releaseSearchNotificationsProvider).permissionGranted(),
 );
 
 /// The reach resolver handed to the job manager.

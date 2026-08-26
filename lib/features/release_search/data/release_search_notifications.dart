@@ -170,6 +170,47 @@ class ReleaseSearchNotifications {
     return false;
   }
 
+  /// What the OS currently allows, as opposed to what the user asked for.
+  ///
+  /// The two drift apart on their own: a permission granted here can be revoked
+  /// in system settings later, and nothing tells the app. Without this the
+  /// toggle keeps claiming to be on while every notice is silently dropped —
+  /// which is the failure mode a user reads as "the feature is broken".
+  ///
+  /// Null means *unknown*, and it is a real answer rather than a failure: the
+  /// platform has no branch here (Windows, Linux), or the plugin is not behind
+  /// it (a test). An unknown state must never be rendered as "denied", because
+  /// that would send someone to fix a permission nothing ever asked for.
+  Future<bool?> permissionGranted() async {
+    await initialise();
+    try {
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      if (android != null) return await android.areNotificationsEnabled();
+
+      final darwin = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
+      if (darwin != null) {
+        return (await darwin.checkPermissions())?.isEnabled;
+      }
+
+      final mac = _plugin
+          .resolvePlatformSpecificImplementation<
+            MacOSFlutterLocalNotificationsPlugin
+          >();
+      if (mac != null) {
+        return (await mac.checkPermissions())?.isEnabled;
+      }
+    } catch (_) {
+      // Unknown, not denied — see above.
+    }
+    return null;
+  }
+
   Future<void> show(ReleaseSearchNotice notice, {required String jobId}) async {
     await initialise();
     // Fire-and-forget by contract: the caller never awaits this, so an error

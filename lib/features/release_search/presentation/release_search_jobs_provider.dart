@@ -47,6 +47,30 @@ final releaseSearchJobsProvider =
       ReleaseSearchJobsNotifier.new,
     );
 
+/// The job a tapped notification is asking for, until something opens it.
+///
+/// A handoff rather than a navigation: the tap arrives in a plugin callback,
+/// which has no `BuildContext` and no business owning one. So the callback names
+/// the job here and routes to Activity, and the Searching list — which does have
+/// a context, and is where the user has just landed — opens the sheet and clears
+/// this. That keeps every `showModalBottomSheet` in the widget layer.
+///
+/// Null once consumed. Holding it would re-open the sheet on every rebuild.
+final pendingReleaseSearchJobProvider =
+    NotifierProvider<PendingReleaseSearchJobNotifier, String?>(
+      PendingReleaseSearchJobNotifier.new,
+    );
+
+class PendingReleaseSearchJobNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  // ignore: use_setters_to_change_properties
+  void request(String jobId) => state = jobId;
+
+  void clear() => state = null;
+}
+
 /// The job whose releases have finished but not yet been looked at — what the
 /// Activity badge counts.
 final unseenReleaseSearchCountProvider = Provider<int>((ref) {

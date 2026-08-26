@@ -63,6 +63,9 @@ class _ReleaseSearchSettingsScreenState
     if (!mounted) return;
     setState(() => _asking = false);
     notifier.setNotifyOnFinish(granted);
+    // The OS answer just changed, so the line under the row must be re-read
+    // rather than left showing what was true before the prompt.
+    ref.invalidate(notificationPermissionProvider);
     if (!granted) {
       // Two different refusals, two different fixes — sending a Windows user
       // to hunt through system settings for a permission that was never asked
@@ -109,6 +112,12 @@ class _ReleaseSearchSettingsScreenState
     // point of this screen — permanently unreachable from a test.
     final platform = ref.watch(releaseSearchPlatformProvider);
     final canRunInBackground = backgroundSearchSupported(platform: platform);
+    // Resolved once, from the same source, and handed down: reading
+    // `defaultTargetPlatform` inside the rows would make their copy report
+    // Android under test no matter which platform the test is exercising.
+    final isIOS = platform == null
+        ? Platform.isIOS
+        : platform == TargetPlatform.iOS;
 
     return AmbientScaffold(
       appBar: const GlassAppBar(title: Text('Background search')),
@@ -127,11 +136,7 @@ class _ReleaseSearchSettingsScreenState
                   enabled: settings.backgroundEnabled,
                   onChanged: _toggleBackground,
                 ),
-                _DisclosureBlock(
-                  isIOS: platform == null
-                      ? Platform.isIOS
-                      : platform == TargetPlatform.iOS,
-                ),
+                _DisclosureBlock(isIOS: isIOS),
               ],
             )
           else
@@ -184,6 +189,10 @@ class _ReleaseSearchSettingsScreenState
                 // permission behind it) survives for when the master returns.
                 available: !canRunInBackground || settings.backgroundEnabled,
                 backgroundCapable: canRunInBackground,
+                systemPermission: ref
+                    .watch(notificationPermissionProvider)
+                    .value,
+                isIOS: isIOS,
                 foregroundOnlyServices: [
                   ...pinnedServices,
                   ...cleartextServices,
@@ -428,6 +437,8 @@ class _NotifyRow extends StatelessWidget {
     required this.busy,
     required this.available,
     required this.backgroundCapable,
+    required this.systemPermission,
+    required this.isIOS,
     required this.foregroundOnlyServices,
     required this.onChanged,
   });
@@ -442,6 +453,18 @@ class _NotifyRow extends StatelessWidget {
   /// Whether this platform has a background path at all — which is what
   /// separates "not needed here" from "needs the master switch".
   final bool backgroundCapable;
+
+  /// What the OS says right now: true granted, false denied, null unknown.
+  ///
+  /// Shown because the app's own preference and the system permission drift
+  /// apart silently — a permission revoked in system settings leaves the toggle
+  /// on and every notice dropped, which reads as a broken feature rather than a
+  /// withdrawn permission.
+  final bool? systemPermission;
+
+  /// Which OS to name in the denial route. Passed in for the same reason
+  /// [_DisclosureBlock.isIOS] is.
+  final bool isIOS;
 
   /// Release-search services whose background reach is cut off by something
   /// about the instance itself — a certificate trusted only inside Cupola, or
@@ -466,6 +489,26 @@ class _NotifyRow extends StatelessWidget {
     return 'Only when Cupola is not in front of you — for $names, that '
         "includes a search stopping because it couldn't keep running in the "
         'background';
+  }
+
+  /// The system's own answer, said only when it adds something.
+  ///
+  /// Silent while unknown — a platform with no branch for this, or a plugin that
+  /// is not there — because "unknown" rendered as a status is worse than no
+  /// status at all. Silent too when the row is disabled by the master switch:
+  /// the row already explains itself, and a second sentence about a permission
+  /// that currently changes nothing is noise. A denial names the route rather
+  /// than just the problem.
+  String? get _permissionLine {
+    if (!available) return null;
+    return switch (systemPermission) {
+      true => 'System permission: granted',
+      false =>
+        isIOS
+            ? 'Blocked in Settings › Notifications › Cupola'
+            : "Blocked in your system's notification settings",
+      null => null,
+    };
   }
 
   @override
@@ -508,6 +551,23 @@ class _NotifyRow extends StatelessWidget {
                     color: colors.onSurfaceVariant,
                   ),
                 ),
+                if (_permissionLine case final line?)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      line,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        // The status vocabulary's own amber, not `tertiary` —
+                        // which in this theme is a palette accent and rendered
+                        // a blocked permission in green. Amber rather than red
+                        // because a permission the user can switch back on is
+                        // something to fix, not something that failed.
+                        color: systemPermission == false
+                            ? AppColors.warning
+                            : colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

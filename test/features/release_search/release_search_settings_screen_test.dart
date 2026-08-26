@@ -17,11 +17,15 @@ void main() {
     WidgetTester tester, {
     TargetPlatform? platform,
     bool backgroundEnabled = false,
+    // Null is the honest default here: without a plugin behind it the OS has no
+    // answer, which is exactly what an unconfigured host reports.
+    bool? permission,
   }) async {
     final container = ProviderContainer(
       overrides: [
         ...await settingsScopeOverrides(),
         releaseSearchPlatformProvider.overrideWith((ref) => platform),
+        notificationPermissionProvider.overrideWith((ref) async => permission),
       ],
     );
     addTearDown(container.dispose);
@@ -208,6 +212,58 @@ void main() {
         backgroundEnabled: true,
       );
       expect(find.textContaining('30 minutes'), findsOneWidget);
+    });
+  });
+
+  group('the system permission line', () {
+    testWidgets('says granted when the OS allows it', (tester) async {
+      await pumpScreen(
+        tester,
+        platform: TargetPlatform.iOS,
+        backgroundEnabled: true,
+        permission: true,
+      );
+      expect(find.text('System permission: granted'), findsOneWidget);
+    });
+
+    testWidgets('names the route when the OS has blocked it', (tester) async {
+      // The drift this closes: a permission revoked in system settings leaves
+      // the app's own toggle on and every notice silently dropped, which reads
+      // as a broken feature rather than a withdrawn permission.
+      await pumpScreen(
+        tester,
+        platform: TargetPlatform.iOS,
+        backgroundEnabled: true,
+        permission: false,
+      );
+      expect(
+        find.textContaining('Blocked in Settings'),
+        findsOneWidget,
+        reason: 'a denial has to name where to lift it, not just report itself',
+      );
+    });
+
+    testWidgets('stays silent when the platform cannot answer', (tester) async {
+      // Unknown is not denied: rendering it as a denial would send someone to
+      // fix a permission nothing ever asked for.
+      await pumpScreen(
+        tester,
+        platform: TargetPlatform.iOS,
+        backgroundEnabled: true,
+      );
+      expect(find.textContaining('System permission'), findsNothing);
+      expect(find.textContaining('Blocked'), findsNothing);
+    });
+
+    testWidgets('stays silent while the master switch is off', (tester) async {
+      // The row already explains why it is disabled; a second sentence about a
+      // permission that currently changes nothing is noise.
+      await pumpScreen(
+        tester,
+        platform: TargetPlatform.iOS,
+        permission: true,
+      );
+      expect(find.textContaining('System permission'), findsNothing);
     });
   });
 

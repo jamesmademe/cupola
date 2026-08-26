@@ -115,7 +115,7 @@ final Map<_ActivitySection, List<_ActivitySub>> _activitySubs = {
     // A background release search is live, and an expiring result is live too —
     // the gerund is what makes it a sibling of the two above rather than a
     // different kind of thing filed next to them.
-    _ActivitySub.custom(label: 'Searching', body: _releaseSearchesBody),
+    _ActivitySub.custom(label: _searchingSubLabel, body: _releaseSearchesBody),
   ],
   _ActivitySection.history: [
     // Paged: History can be thousands of rows, so it loads a window and
@@ -152,6 +152,31 @@ final _activitySubIndexProvider = StateProvider.family<int, _ActivitySection>(
 );
 
 /// Selected service filter; null means "all services".
+/// Selects **Now › Searching** from outside this screen.
+///
+/// Exists for the notification tap: a finished background search says "tap to
+/// pick one", and landing on whichever bucket the user last used — the sticky
+/// selection this screen is otherwise right to keep — answers a different
+/// question. The two providers behind the selection stay private; this is the
+/// one sanctioned way to move it, so the sticky behaviour has a single exception
+/// rather than a set of them.
+///
+/// Idempotent, and safe to call when the screen is not mounted: the state is
+/// provider-held, so a later mount reads it as its starting position.
+void selectActivitySearching(Ref ref) {
+  const section = _ActivitySection.now;
+  final index = _activitySubs[section]!.indexWhere(
+    (sub) => sub.label == _searchingSubLabel,
+  );
+  if (index < 0) return;
+  ref.read(_activitySectionProvider.notifier).state = section;
+  ref.read(_activitySubIndexProvider(section).notifier).state = index;
+}
+
+/// The label the sub is found by, so the lookup above cannot drift from the
+/// list below by a hard-coded index.
+const _searchingSubLabel = 'Searching';
+
 final _activityServiceFilterProvider = StateProvider<ServiceKey?>(
   (ref) => null,
 );
@@ -235,6 +260,16 @@ class _GlobalActivityScreenState extends ConsumerState<GlobalActivityScreen>
     ) {
       ref.invalidate(requestsProvider);
       ref.read(activityRefreshVersionProvider.notifier).state++;
+    });
+
+    // The other direction of the mirror above: `_syncSection` pushes the
+    // controller onto the provider, and until now nothing pushed the provider
+    // onto the controller — so a selection made from outside this screen (see
+    // [selectActivitySearching]) changed the body while the tab indicator stayed
+    // where it was. Guarded on the index so the listener cannot fight the
+    // gesture that is already animating.
+    ref.listen<_ActivitySection>(_activitySectionProvider, (previous, next) {
+      if (_tabs.index != next.index) _tabs.animateTo(next.index);
     });
 
     final section = ref.watch(_activitySectionProvider);

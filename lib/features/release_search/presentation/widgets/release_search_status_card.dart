@@ -6,6 +6,7 @@ import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/features/release_search/domain/release_search_job.dart';
 import 'package:cupola/features/release_search/domain/release_search_target.dart';
+import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_sheet.dart';
 
@@ -42,8 +43,12 @@ class ReleaseSearchStatusCard extends ConsumerWidget {
       ),
       ReleaseSearchJobStatus.running => (
         'Searching · ${formatElapsed(job.elapsedAt(now))}',
-        'Running while Cupola is open. Tap to watch it, or find it in '
-            'Activity.',
+        // Derived from the reach rather than stated here: this card is the third
+        // surface making the same promise, and the sentence is only true for the
+        // reach the search is actually running under.
+        ReleaseSearchHandoffCopy.runningConsequence(
+          ref.watch(releaseSearchReachProvider(job.target.service)),
+        ),
       ),
       ReleaseSearchJobStatus.completed =>
         job.releaseCount == 0

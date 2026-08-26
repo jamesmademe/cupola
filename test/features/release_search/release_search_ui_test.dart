@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,6 +20,7 @@ import 'package:cupola/features/release_search/presentation/release_searches_bod
 import 'package:cupola/features/release_search/presentation/widgets/release_search_job_card.dart';
 import 'package:cupola/features/release_search/presentation/widgets/release_search_status_card.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 final _season = ReleaseSearchTarget.season(
@@ -404,10 +407,19 @@ void main() {
       expect(find.textContaining('Searching'), findsNothing);
     });
 
-    testWidgets('a running job rewrites the consequence sentence', (
-      tester,
-    ) async {
-      final container = ProviderContainer();
+    /// Mounts the card over a running job, for a given reach.
+    Future<ProviderContainer> pumpRunningCard(
+      WidgetTester tester, {
+      required ReleaseSearchReach reach,
+    }) async {
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+          releaseSearchReachProvider(
+            ServiceKey.sonarr,
+          ).overrideWithValue(reach),
+        ],
+      );
       final notifier = container.read(releaseSearchJobsProvider.notifier);
       notifier.configure(runner: (_, __) => Completer<List<dynamic>>().future);
       notifier.start(_season);
@@ -422,16 +434,48 @@ void main() {
         ),
       );
       await tester.pump();
+      return container;
+    }
 
+    testWidgets('a running job states the promise its reach actually makes', (
+      tester,
+    ) async {
+      // Found on a device: the card used to say "while Cupola is open" for
+      // every reach, so with background search on it contradicted the sheet's
+      // own confirmation — two surfaces describing one build differently, which
+      // is the drift this feature's copy rules exist to prevent. Both
+      // directions are pinned, and the sentence comes from the same place the
+      // explainer and the confirmation do.
+      final open = await pumpRunningCard(
+        tester,
+        reach: ReleaseSearchReach.whileOpenSwitchedOff,
+      );
       expect(find.textContaining('Searching'), findsOneWidget);
       expect(
         find.textContaining('Running while Cupola is open'),
         findsOneWidget,
         reason: 'the phase-accurate promise, not an OS background',
       );
-
       await tester.pumpWidget(const SizedBox());
-      container.dispose();
+      open.dispose();
+
+      final background = await pumpRunningCard(
+        tester,
+        reach: ReleaseSearchReach.beyondTheApp,
+      );
+      expect(
+        find.textContaining('Running in the background'),
+        findsOneWidget,
+        reason:
+            'understating it here is still drift: the confirmation promised the '
+            'background, and the card must not take it back',
+      );
+      expect(
+        find.textContaining('while Cupola is open'),
+        findsNothing,
+      );
+      await tester.pumpWidget(const SizedBox());
+      background.dispose();
     });
 
     testWidgets('state appears only at the granularity it was launched', (
@@ -542,6 +586,134 @@ void main() {
         isNot(contains('while you do something else')),
         reason: 'that phrasing promises an OS background Phase 1 does not have',
       );
+    });
+  });
+
+  group('a tapped notification', () {
+    testWidgets('opens the sheet for the job it names', (tester) async {
+      // The notice says "Tap to pick one", so landing in Activity and asking
+      // for a second tap made the copy a small lie. Found on a device.
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      final notifier = container.read(releaseSearchJobsProvider.notifier);
+      final answer = Completer<List<dynamic>>();
+      notifier.configure(runner: (_, __) => answer.future);
+      final job = notifier.start(_season);
+      answer.complete([
+        {'guid': 'g0', 'indexerId': 3, 'title': 'Severance.S02.2160p'},
+      ]);
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+
+      container
+          .read(pendingReleaseSearchJobProvider.notifier)
+          .request(job.id);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.darkTheme(),
+            home: const Scaffold(body: ReleaseSearchesBody(bottomPadding: 0)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ReleaseSearchSheet), findsOneWidget);
+      expect(
+        container.read(pendingReleaseSearchJobProvider),
+        isNull,
+        reason: 'consumed once, or a rebuild would stack a second sheet',
+      );
+
+      // The list holds a 10-second window ticker while it is on screen, so the
+      // tree has to come down — and the container be disposed on the spot,
+      // since autoDispose would otherwise get there after the test has ended.
+      await tester.pumpWidget(const SizedBox());
+      container.dispose();
+    });
+
+    testWidgets('leaves a stopped search on its card, with no picker', (
+      tester,
+    ) async {
+      // The notice for a failure promises a verdict, not a choice — and the
+      // verdict, with Search again next to it, is already on the card here.
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      final notifier = container.read(releaseSearchJobsProvider.notifier);
+      final answer = Completer<List<dynamic>>();
+      notifier.configure(runner: (_, __) => answer.future);
+      final job = notifier.start(_season);
+      answer.completeError(
+        DioException(
+          requestOptions: RequestOptions(path: '/api/v3/release'),
+          response: Response<dynamic>(
+            requestOptions: RequestOptions(path: '/api/v3/release'),
+            statusCode: 504,
+          ),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      container.read(pendingReleaseSearchJobProvider.notifier).request(job.id);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.darkTheme(),
+            home: const Scaffold(body: ReleaseSearchesBody(bottomPadding: 0)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ReleaseSearchSheet), findsNothing);
+      expect(find.textContaining('reverse proxy'), findsOneWidget);
+      expect(container.read(pendingReleaseSearchJobProvider), isNull);
+
+      await tester.pumpWidget(const SizedBox());
+      container.dispose();
+    });
+
+    testWidgets('falls back to the list when the job is gone', (tester) async {
+      // What a cold start after a kill looks like: the payload names a job that
+      // no longer exists in memory. Landing on the list is honest; a sheet for a
+      // missing job is not.
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      container
+          .read(releaseSearchJobsProvider.notifier)
+          .configure(runner: (_, __) => Completer<List<dynamic>>().future);
+      container
+          .read(pendingReleaseSearchJobProvider.notifier)
+          .request('rs-does-not-exist');
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.darkTheme(),
+            home: const Scaffold(body: ReleaseSearchesBody(bottomPadding: 0)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ReleaseSearchSheet), findsNothing);
+      expect(container.read(pendingReleaseSearchJobProvider), isNull);
+
+      await tester.pumpWidget(const SizedBox());
+      container.dispose();
     });
   });
 
