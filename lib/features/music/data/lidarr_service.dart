@@ -13,6 +13,27 @@ final lidarrServiceProvider = Provider<LidarrService>((ref) {
   return LidarrService(watchApiClient(ref, ServiceKey.lidarr));
 });
 
+/// Lidarr bound to one named connection, whatever the lens is pointing at.
+///
+/// For the work that belongs to a *connection* rather than to a screen: a
+/// release search runs on the server it was started against, and the lens can
+/// move while it is queued. Empty id means the lens, which is what the plain
+/// [lidarrServiceProvider] answers; an id naming nothing throws "not configured"
+/// rather than quietly answering about some other server.
+///
+/// Not `autoDispose`: a caller reads this, awaits a request on it, and a
+/// disposal scheduled at the end of the read would close the `Dio` under the
+/// request. One live client per configured connection is the same bound the
+/// per-service providers already carry.
+final lidarrServiceForProvider = Provider.family<LidarrService, String>((
+  ref,
+  instanceId,
+) {
+  return LidarrService(
+    watchApiClient(ref, ServiceKey.lidarr, instanceId: instanceId),
+  );
+});
+
 /// Service for interacting with Lidarr API.
 ///
 /// Provides artist-specific operations plus shared activity operations

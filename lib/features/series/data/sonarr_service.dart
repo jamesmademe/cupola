@@ -12,6 +12,27 @@ final sonarrServiceProvider = Provider<SonarrService>((ref) {
   return SonarrService(watchApiClient(ref, ServiceKey.sonarr));
 });
 
+/// Sonarr bound to one named connection, whatever the lens is pointing at.
+///
+/// For the work that belongs to a *connection* rather than to a screen: a
+/// release search runs on the server it was started against, and the lens can
+/// move while it is queued. Empty id means the lens, which is what the plain
+/// [sonarrServiceProvider] answers; an id naming nothing throws "not configured"
+/// rather than quietly answering about some other server.
+///
+/// Not `autoDispose`: a caller reads this, awaits a request on it, and a
+/// disposal scheduled at the end of the read would close the `Dio` under the
+/// request. One live client per configured connection is the same bound the
+/// per-service providers already carry.
+final sonarrServiceForProvider = Provider.family<SonarrService, String>((
+  ref,
+  instanceId,
+) {
+  return SonarrService(
+    watchApiClient(ref, ServiceKey.sonarr, instanceId: instanceId),
+  );
+});
+
 /// Service for interacting with Sonarr API.
 ///
 /// Provides series-specific operations plus shared activity operations

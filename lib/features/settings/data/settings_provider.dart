@@ -120,17 +120,34 @@ class ActiveInstancesNotifier extends Notifier<Map<ServiceKey, String>> {
 /// `Dio` and is closed on dispose, so a rebuild costs real connections —
 /// switching theme, editing another service, or moving another service's lens
 /// must not trigger one.
-ServiceTransport watchTransport(Ref ref, ServiceKey service) {
-  final lensId = ref.watch(
-    activeInstancesProvider.select((lenses) => lenses[service]),
-  );
+///
+/// [instanceId] names a connection explicitly and skips the lens. Null or empty
+/// means "whichever one this service is being read through", which is what
+/// every caller meant before a service could have two. A **non-empty id that
+/// names nothing** is reported as not configured rather than falling back to
+/// the lens: the caller asked for one specific server, and quietly answering
+/// about a different one is how a background job started against the seedbox
+/// finishes against the box at home. The lens is not consulted at all in that
+/// case, so this does not rebuild when the lens moves.
+ServiceTransport watchTransport(
+  Ref ref,
+  ServiceKey service, {
+  String? instanceId,
+}) {
+  final pinned = instanceId != null && instanceId.isNotEmpty;
+  final lensId = pinned
+      ? instanceId
+      : ref.watch(activeInstancesProvider.select((lenses) => lenses[service]));
 
   return ref.watch(
     currentSettingsProvider.select((s) {
       final instances = s.instancesOf(service);
-      final instance =
-          instances.where((candidate) => candidate.id == lensId).firstOrNull ??
-          (instances.isEmpty ? null : instances.first);
+      final named = instances
+          .where((candidate) => candidate.id == lensId)
+          .firstOrNull;
+      final instance = pinned
+          ? named
+          : named ?? (instances.isEmpty ? null : instances.first);
 
       if (instance == null) {
         return (
@@ -219,8 +236,8 @@ final hasMultipleInstancesProvider = Provider.family<bool, ServiceKey>((
 /// A plain function taking [ref] rather than a provider: the callers already
 /// are providers, and a second provider layer would add a rebuild edge without
 /// adding an answer.
-ApiClient watchApiClient(Ref ref, ServiceKey service) {
-  final transport = watchTransport(ref, service);
+ApiClient watchApiClient(Ref ref, ServiceKey service, {String? instanceId}) {
+  final transport = watchTransport(ref, service, instanceId: instanceId);
   if (!transport.configured) {
     throw Exception('${service.title} not configured');
   }

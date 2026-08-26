@@ -220,11 +220,7 @@ class _ReleaseSearchSheetState extends ConsumerState<ReleaseSearchSheet> {
       setState(() => _jobId = fresh.id);
       throw const ReleaseGrabAbandoned();
     }
-    await ref.read(releaseGrabberProvider)(
-      widget.target.service,
-      guid,
-      indexerId,
-    );
+    await ref.read(releaseGrabberProvider)(widget.target, guid, indexerId);
   }
 
   /// Never silent: the dialog names the cost, the target and the likely wait.
@@ -268,7 +264,7 @@ class _ReleaseSearchSheetState extends ConsumerState<ReleaseSearchSheet> {
       );
     }
 
-    final reach = ref.watch(releaseSearchReachProvider(job.target.service));
+    final reach = ref.watch(releaseSearchReachProvider(job.target));
 
     if (_handingOff) return _HandoffConfirmation(job: job, reach: reach);
 

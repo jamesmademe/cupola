@@ -15,6 +15,7 @@ import 'package:cupola/features/release_search/domain/release_search_target.dart
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../test_helpers/fake_services.dart';
@@ -546,6 +547,19 @@ void main() {
     // reach, to the transport that runs. `releaseSearchPlatformProvider` is
     // overridden because the test host is a desktop, where the native path is
     // never chosen and neither rule would ever be exercised.
+    /// A target already bound to the connection the fixture configures.
+    ///
+    /// `copyWithService` mints the primary, whose id is the service's own route
+    /// param — so stamping with 'sonarr' names the very instance these tests set
+    /// up, and exercises the per-connection path rather than the unstamped
+    /// fallback.
+    ReleaseSearchTarget sonarrOn(String instanceId) =>
+        ReleaseSearchTarget.season(
+          seriesId: 1,
+          seasonNumber: 1,
+          label: 'Whatever',
+        ).stampedWith(instanceId);
+
     Future<ProviderContainer> containerFor(
       String sonarrUrl, {
       TargetPlatform platform = TargetPlatform.android,
@@ -576,7 +590,7 @@ void main() {
     test('an https instance still gets the background task', () async {
       final container = await containerFor(_httpsBase);
       expect(
-        container.read(releaseSearchTransportProvider(ServiceKey.sonarr)),
+        container.read(releaseSearchTransportProvider(sonarrOn('sonarr'))),
         isA<BackgroundReleaseSearchTransport>(),
       );
     });
@@ -584,7 +598,7 @@ void main() {
     test('a cleartext instance falls back to the in-app path', () async {
       final container = await containerFor(_httpBase);
       final transport = container.read(
-        releaseSearchTransportProvider(ServiceKey.sonarr),
+        releaseSearchTransportProvider(sonarrOn('sonarr')),
       );
 
       expect(transport, isNot(isA<BackgroundReleaseSearchTransport>()));
@@ -593,7 +607,7 @@ void main() {
       // search survives leaving the app when it does not.
       expect(transport.survivesBackgrounding, isFalse);
       expect(
-        container.read(releaseSearchReachProvider(ServiceKey.sonarr)),
+        container.read(releaseSearchReachProvider(sonarrOn('sonarr'))),
         ReleaseSearchReach.whileOpenCleartext,
       );
     });
@@ -607,7 +621,10 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           sonarrServiceProvider.overrideWithValue(service),
-          releaseSearchTransportProvider(ServiceKey.sonarr).overrideWithValue(
+          // Keyed on the target the runner will actually pass — unstamped
+          // here, which is the path a target built outside the entry point
+          // takes and the one this test is about.
+          releaseSearchTransportProvider(_target).overrideWithValue(
             ForegroundReleaseSearchTransport(
               (url, {headers, receiveTimeout, cancelToken}) async =>
                   throw StateError('the transport must not be used here'),
@@ -623,6 +640,114 @@ void main() {
       expect(service.releaseCalls, 1);
     });
 
+    // ── The connection, not the service ──────────────────────────────────
+    //
+    // Reach used to be read off `settings.urlFor(service)` — the FIRST instance
+    // — while the request was built and sent by the lens-aware service. These
+    // two say that is over, and the first is the security case: the https
+    // primary must not lend its scheme to the cleartext second connection and
+    // hand its API key to a background task that cannot be told to stop
+    // following redirects.
+    test(
+      'a cleartext SECOND connection is refused the background task',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            ...await settingsScopeOverrides(
+              customize: (settings) => settings
+                  .copyWithService(
+                    ServiceKey.sonarr,
+                    url: _httpsBase,
+                    apiKey: 'the-arr-admin-key',
+                  )
+                  .copyWithInstance(
+                    const ServiceInstance(
+                      id: 'sonarr-away111',
+                      service: ServiceKey.sonarr,
+                      label: 'Away',
+                      url: _httpBase,
+                      credential: 'the-other-key',
+                    ),
+                  ),
+            ),
+            releaseSearchPlatformProvider.overrideWith(
+              (ref) => TargetPlatform.android,
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        container
+            .read(releaseSearchSettingsProvider.notifier)
+            .setBackgroundEnabled(true);
+
+        // The primary is https, so a service-keyed reach said "beyondTheApp".
+        expect(
+          container.read(releaseSearchLensReachProvider(ServiceKey.sonarr)),
+          ReleaseSearchReach.beyondTheApp,
+        );
+        // The connection actually being searched is not.
+        expect(
+          container.read(
+            releaseSearchReachProvider(sonarrOn('sonarr-away111')),
+          ),
+          ReleaseSearchReach.whileOpenCleartext,
+        );
+        expect(
+          container.read(
+            releaseSearchTransportProvider(sonarrOn('sonarr-away111')),
+          ),
+          isNot(isA<BackgroundReleaseSearchTransport>()),
+        );
+      },
+    );
+
+    test('a pin on the second connection is the one that is read', () async {
+      // The mirror image, merely broken rather than dangerous: a self-signed
+      // second instance looked untrusted-but-fine because the FIRST one carried
+      // no pin, so every search against it went out on a path that could not
+      // present the certificate the user had already trusted.
+      const awayUrl = 'https://away.lan:8989';
+      final container = ProviderContainer(
+        overrides: [
+          ...await settingsScopeOverrides(
+            customize: (settings) => settings
+                .copyWithService(
+                  ServiceKey.sonarr,
+                  url: _httpsBase,
+                  apiKey: 'the-arr-admin-key',
+                )
+                .copyWithInstance(
+                  const ServiceInstance(
+                    id: 'sonarr-away111',
+                    service: ServiceKey.sonarr,
+                    label: 'Away',
+                    url: awayUrl,
+                    credential: 'the-other-key',
+                  ),
+                )
+                .copyWithTrustedCertificate(url: awayUrl, fingerprint: 'ab12'),
+          ),
+          releaseSearchPlatformProvider.overrideWith(
+            (ref) => TargetPlatform.android,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      container
+          .read(releaseSearchSettingsProvider.notifier)
+          .setBackgroundEnabled(true);
+
+      expect(
+        container.read(releaseSearchLensReachProvider(ServiceKey.sonarr)),
+        ReleaseSearchReach.beyondTheApp,
+        reason: 'the primary carries no pin',
+      );
+      expect(
+        container.read(releaseSearchReachProvider(sonarrOn('sonarr-away111'))),
+        ReleaseSearchReach.whileOpenTrustedCert,
+      );
+    });
+
     test(
       'the switch, off, keeps an https instance out of native code entirely',
       () async {
@@ -635,11 +760,11 @@ void main() {
           backgroundEnabled: false,
         );
         expect(
-          container.read(releaseSearchReachProvider(ServiceKey.sonarr)),
+          container.read(releaseSearchReachProvider(sonarrOn('sonarr'))),
           ReleaseSearchReach.whileOpenSwitchedOff,
         );
         expect(
-          container.read(releaseSearchTransportProvider(ServiceKey.sonarr)),
+          container.read(releaseSearchTransportProvider(sonarrOn('sonarr'))),
           isNot(isA<BackgroundReleaseSearchTransport>()),
           reason: 'the transport is the gate; nothing else builds a DataTask',
         );
@@ -690,7 +815,7 @@ void main() {
         backgroundEnabled: false,
       );
       expect(
-        container.read(releaseSearchTransportProvider(ServiceKey.sonarr)),
+        container.read(releaseSearchTransportProvider(sonarrOn('sonarr'))),
         isNot(isA<BackgroundReleaseSearchTransport>()),
       );
 
@@ -699,11 +824,11 @@ void main() {
           .setBackgroundEnabled(true);
 
       expect(
-        container.read(releaseSearchReachProvider(ServiceKey.sonarr)),
+        container.read(releaseSearchReachProvider(sonarrOn('sonarr'))),
         ReleaseSearchReach.beyondTheApp,
       );
       expect(
-        container.read(releaseSearchTransportProvider(ServiceKey.sonarr)),
+        container.read(releaseSearchTransportProvider(sonarrOn('sonarr'))),
         isA<BackgroundReleaseSearchTransport>(),
       );
     });
@@ -716,7 +841,7 @@ void main() {
         platform: TargetPlatform.macOS,
       );
       expect(
-        container.read(releaseSearchReachProvider(ServiceKey.sonarr)),
+        container.read(releaseSearchReachProvider(sonarrOn('sonarr'))),
         ReleaseSearchReach.whileOpen,
       );
     });

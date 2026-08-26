@@ -95,6 +95,32 @@ void main() {
       expect(artist.isCoveredBy(album), isFalse);
     });
 
+    test('nothing is covered across two connections of the same service', () {
+      // Two Sonarr have two unrelated series tables, so `seriesId 1` names two
+      // different shows. Adopting across them would answer a search for one
+      // library with releases found in the other.
+      final here = season2.stampedWith('sonarr');
+      final there = season2.stampedWith('sonarr-away111');
+      final episodeHere = episodeInSeason2.stampedWith('sonarr');
+
+      expect(here == there, isFalse, reason: 'same ids, different servers');
+      expect(here.hashCode == there.hashCode, isFalse);
+      expect(episodeHere.isCoveredBy(here), isTrue);
+      expect(episodeHere.isCoveredBy(there), isFalse);
+      expect(episodeHere.conflictsWith(there), isFalse);
+    });
+
+    test('an unstamped target is still its own identity', () {
+      // The shape a target has between construction and `showReleaseSearch`,
+      // and the one a hand-built fixture keeps.
+      expect(season2.instanceId, isEmpty);
+      expect(season2 == season2.stampedWith('sonarr'), isFalse);
+      expect(
+        season2.stampedWith('sonarr').stampedWith('sonarr'),
+        season2.stampedWith('sonarr'),
+      );
+    });
+
     test('an episode with no known season cannot be matched to one', () {
       // Without the parent ids there is nothing to compare, and guessing would
       // adopt a job that does not actually cover this episode.

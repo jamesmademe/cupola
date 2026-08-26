@@ -158,7 +158,7 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
   /// WorkManager ceiling stops applying at all, since it only governs the
   /// background path this instance cannot use.
   String? get _reachLimitText {
-    final reach = ref.watch(releaseSearchReachProvider(widget.service));
+    final reach = ref.watch(releaseSearchLensReachProvider(widget.service));
     final title = widget.service.title;
     final noCeiling = defaultTargetPlatform == TargetPlatform.android
         ? " — there's no minute ceiling either way, since that only applies to "

@@ -39,10 +39,25 @@ class ReleaseSearchTarget {
     required this.label,
     this.seasonNumber,
     this.parentId,
+    this.instanceId = '',
   });
 
   /// Sonarr, Radarr or Lidarr. Readarr has no interactive search.
   final ServiceKey service;
+
+  /// Which connection this search belongs to.
+  ///
+  /// **Part of identity, and that is the whole point.** `movieId 42` on
+  /// Radarr · 4K and `movieId 42` on Radarr · HD are two different films, and
+  /// without this they were one target: the thirty-minute results cache served
+  /// one server's releases for the other's film, and a queued job could be
+  /// adopted by a search running somewhere else entirely.
+  ///
+  /// Empty until [stampedWith] is called. Every target in the app is built by a
+  /// screen and handed to `showReleaseSearch`, which stamps it there — one
+  /// place, rather than a required argument at twenty construction sites that
+  /// would each have to go and ask the same question.
+  final String instanceId;
 
   final ReleaseSearchScope scope;
 
@@ -67,7 +82,8 @@ class ReleaseSearchTarget {
   }) : service = ServiceKey.sonarr,
        scope = ReleaseSearchScope.season,
        id = seriesId,
-       parentId = null;
+       parentId = null,
+       instanceId = '';
 
   ReleaseSearchTarget.episode({
     required int episodeId,
@@ -77,21 +93,24 @@ class ReleaseSearchTarget {
   }) : service = ServiceKey.sonarr,
        scope = ReleaseSearchScope.episode,
        id = episodeId,
-       parentId = seriesId;
+       parentId = seriesId,
+       instanceId = '';
 
   ReleaseSearchTarget.movie({required int movieId, required this.label})
     : service = ServiceKey.radarr,
       scope = ReleaseSearchScope.movie,
       id = movieId,
       seasonNumber = null,
-      parentId = null;
+      parentId = null,
+      instanceId = '';
 
   ReleaseSearchTarget.artist({required int artistId, required this.label})
     : service = ServiceKey.lidarr,
       scope = ReleaseSearchScope.artist,
       id = artistId,
       seasonNumber = null,
-      parentId = null;
+      parentId = null,
+      instanceId = '';
 
   ReleaseSearchTarget.album({
     required int albumId,
@@ -101,7 +120,8 @@ class ReleaseSearchTarget {
        scope = ReleaseSearchScope.album,
        id = albumId,
        seasonNumber = null,
-       parentId = artistId;
+       parentId = artistId,
+       instanceId = '';
 
   /// True when a search for `this` would be answered by a search for [other] —
   /// an episode by its season, an album by its artist.
@@ -111,6 +131,11 @@ class ReleaseSearchTarget {
   /// covers its albums but nothing above it.
   bool isCoveredBy(ReleaseSearchTarget other) {
     if (other.service != service) return false;
+    // Same server, or nothing is covered. Two Sonarr have two unrelated series
+    // tables, so `seriesId 7` on one says nothing at all about `seriesId 7` on
+    // the other — adopting across connections would hand the user a season's
+    // releases from a library that does not contain the episode they asked for.
+    if (other.instanceId != instanceId) return false;
     return switch (scope) {
       ReleaseSearchScope.episode =>
         other.scope == ReleaseSearchScope.season &&
@@ -131,19 +156,36 @@ class ReleaseSearchTarget {
   bool conflictsWith(ReleaseSearchTarget other) =>
       this == other || isCoveredBy(other) || other.isCoveredBy(this);
 
+  /// This target, bound to the connection [instanceId] names.
+  ///
+  /// Called once, by `showReleaseSearch`, before anything compares this target
+  /// against a running job or a cached result — so every target the job manager
+  /// ever sees is already stamped, and the empty default never reaches it.
+  ReleaseSearchTarget stampedWith(String instanceId) => ReleaseSearchTarget(
+    service: service,
+    scope: scope,
+    id: id,
+    label: label,
+    seasonNumber: seasonNumber,
+    parentId: parentId,
+    instanceId: instanceId,
+  );
+
   @override
   bool operator ==(Object other) =>
       other is ReleaseSearchTarget &&
       other.service == service &&
+      other.instanceId == instanceId &&
       other.scope == scope &&
       other.id == id &&
       other.seasonNumber == seasonNumber;
 
   @override
-  int get hashCode => Object.hash(service, scope, id, seasonNumber);
+  int get hashCode => Object.hash(service, instanceId, scope, id, seasonNumber);
 
   @override
   String toString() =>
-      'ReleaseSearchTarget(${service.name}, ${scope.name}, id: $id'
+      'ReleaseSearchTarget(${service.name}'
+      '${instanceId.isEmpty ? '' : '/$instanceId'}, ${scope.name}, id: $id'
       '${seasonNumber == null ? '' : ', season: $seasonNumber'})';
 }

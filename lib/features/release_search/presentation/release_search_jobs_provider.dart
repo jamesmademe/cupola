@@ -18,12 +18,17 @@ typedef ReleaseSearchRunner =
       CancelToken cancelToken,
     );
 
-/// Resolves how far a search on [ServiceKey] can travel — see
+/// Resolves how far a search for one target can travel — see
 /// [ReleaseSearchReach]. Injected the same way [ReleaseSearchRunner] is: the
 /// entry point that owns settings configures it once, so the manager stays
-/// free of knowing about certificates or reach beyond a key.
+/// free of knowing about certificates or reach beyond a target.
+///
+/// The target rather than its [ServiceKey], because reach is a property of the
+/// **connection**: two Radarr can differ in scheme and in whether their
+/// certificate is trusted only inside Cupola, and those are exactly the two
+/// facts reach is made of.
 typedef ReleaseSearchReachResolver =
-    ReleaseSearchReach Function(ServiceKey service);
+    ReleaseSearchReach Function(ReleaseSearchTarget target);
 
 /// How many searches may run at once by default.
 ///
@@ -435,7 +440,7 @@ class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
             elapsed: elapsed,
             configuredTimeout: _timeout,
             wasBackgrounded: current.wasBackgrounded,
-            reach: _reachFor(current.target.service),
+            reach: _reachFor(current.target),
           ),
         );
         _replace(finished);
