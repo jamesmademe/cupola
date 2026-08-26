@@ -97,7 +97,8 @@ void main() {
       final source = file.readAsStringSync();
       if (!source.contains('gatedPoll(') &&
           !source.contains('GatedPollTimer(') &&
-          !source.contains('VisibilityPoller(')) {
+          !source.contains('VisibilityPoller(') &&
+          !source.contains('RefreshOnReturn(')) {
         continue;
       }
       for (final match in idPattern.allMatches(source)) {
@@ -114,14 +115,17 @@ void main() {
       duplicated,
       isEmpty,
       reason:
-          'Two pollers sharing an id share a last-tick record, so one of them '
-          'would decide the other had just run and skip its own catch-up on '
-          'return. Ids are per poller — see `qbittorrent.detail.\$hash`, which '
-          'is per torrent for exactly this reason.',
+          'Two of these sharing an id share a last-tick record. Between two '
+          'pollers, one decides the other had just run and skips its catch-up. '
+          'Between a poller and a RefreshOnReturn it is worse and quieter: the '
+          "poller's ticks keep resetting the staleness clock, so the page never "
+          'looks old enough to refresh on return and nothing ever says so. Ids '
+          'are per unit of work — see `qbittorrent.detail.\$hash`, which is per '
+          'torrent for exactly this reason.',
     );
 
-    // Not a rule, a tripwire: if the app ever has no gated pollers left, this
-    // test is silently guarding nothing.
+    // Not a rule, a tripwire: if the app ever has no gated work left, this test
+    // is silently guarding nothing.
     expect(ids, isNotEmpty, reason: 'the scan found no gated pollers at all');
   });
 }

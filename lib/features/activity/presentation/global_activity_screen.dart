@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/theme.dart';
@@ -174,6 +175,13 @@ final _collapsedServicesProvider = StateProvider<Set<ServiceKey>>((ref) => {});
 /// choice into the app bar returns a whole row of vertical space to the content:
 /// on a phone the header was spending close to 200pt before the first row.
 class GlobalActivityScreen extends ConsumerStatefulWidget {
+  /// How stale the feed may be before returning to it earns a refetch.
+  ///
+  /// The Now bucket polls while it is on screen, so this only matters after
+  /// an absence — and it is the same two minutes the services dashboard
+  /// uses, because a queue and a control room go out of date together.
+  static const staleAfter = Duration(minutes: 2);
+
   const GlobalActivityScreen({super.key});
 
   @override
@@ -244,31 +252,38 @@ class _GlobalActivityScreenState extends ConsumerState<GlobalActivityScreen>
       ref.watchWhileLive(context, activityNowPollingProvider);
     }
 
-    return AmbientScaffold(
-      appBar: GlassAppBar(
-        title: const Text('Activity'),
-        actions: [
-          IconButton(
-            tooltip: 'Manual Import',
-            icon: const Icon(Icons.download_for_offline_outlined),
-            onPressed: () => showImportServicePickerSheet(context),
+    return RefreshOnReturn(
+      id: 'activity.feed',
+      maxAge: GlobalActivityScreen.staleAfter,
+      // The same refresh a re-tap performs, and silent: nobody pressed
+      // anything.
+      onStale: () => ref.triggerNavigationRefresh(NavigationSection.activity),
+      child: AmbientScaffold(
+        appBar: GlassAppBar(
+          title: const Text('Activity'),
+          actions: [
+            IconButton(
+              tooltip: 'Manual Import',
+              icon: const Icon(Icons.download_for_offline_outlined),
+              onPressed: () => showImportServicePickerSheet(context),
+            ),
+          ],
+          // Text-only tabs. `Tab(icon:, text:)` stacks the two and doubles the bar's
+          // height, which would hand back the vertical space this change exists to
+          // recover — and "Now", "History" and "Wanted" are unambiguous words that
+          // do not need a glyph to disambiguate them. The icons live on in the
+          // per-bucket empty states, where they have room.
+          bottom: TabBar(
+            controller: _tabs,
+            tabs: [for (final s in _ActivitySection.values) Tab(text: s.label)],
           ),
-        ],
-        // Text-only tabs. `Tab(icon:, text:)` stacks the two and doubles the bar's
-        // height, which would hand back the vertical space this change exists to
-        // recover — and "Now", "History" and "Wanted" are unambiguous words that
-        // do not need a glyph to disambiguate them. The icons live on in the
-        // per-bucket empty states, where they have room.
-        bottom: TabBar(
-          controller: _tabs,
-          tabs: [for (final s in _ActivitySection.values) Tab(text: s.label)],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabs,
-        children: [
-          for (final s in _ActivitySection.values) _BucketBody(section: s),
-        ],
+        body: TabBarView(
+          controller: _tabs,
+          children: [
+            for (final s in _ActivitySection.values) _BucketBody(section: s),
+          ],
+        ),
       ),
     );
   }

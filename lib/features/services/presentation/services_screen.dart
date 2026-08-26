@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
@@ -19,6 +20,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 class ServicesScreen extends ConsumerWidget {
   const ServicesScreen({super.key});
+
+  /// How stale the control room may be before returning to it earns a refetch.
+  ///
+  /// Generous on purpose: this screen reads thirteen services, so a return is
+  /// expensive and the figures it shows are not second-by-second. Two minutes is
+  /// long enough that tab-hopping never triggers it and short enough that a
+  /// screen left over lunch is not believed.
+  static const _staleAfter = Duration(minutes: 2);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,65 +47,75 @@ class ServicesScreen extends ConsumerWidget {
       (s) => !settings.isServiceConfigured(s),
     );
 
-    return AmbientScaffold(
-      // No accent passed: the room on this screen is lit by the brand primary.
-      // Thirteen service accents cannot light one room, so identity is confined
-      // to each matrix cell's icon tile — see the Room Light Rule's one
-      // documented exception in DESIGN.md.
-      appBar: const GlassAppBar(title: Text('Services')),
-      body: allUnconfigured
-          // The page owns the viewport, not the empty state — see the contract
-          // on `AppEmptyState`. Its height is entirely text, and at an
-          // accessibility reading size a 72pt icon well, a wrapped title, a
-          // two-line message and a button clear a short phone, taking the only
-          // button on the screen with them. The `minHeight` keeps it centred
-          // while it fits, so nothing moves at the default reading size.
-          //
-          // Default physics deliberately: there is no `RefreshIndicator` on this
-          // branch, because with nothing configured there is nothing to re-fetch
-          // — the screen rebuilds off settings.
-          ? LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  // The nav bar floats *over* this branch, so centring in the
-                  // full viewport puts the optical centre behind it and the
-                  // block reads low. Reserving the clearance inside the centring
-                  // box is what lifts it back onto the visible middle.
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: bottomPadding),
-                    child: _ServicesEmptyState(
-                      onSetUpServices: () => context.go('/settings/services'),
+    return RefreshOnReturn(
+      id: 'services.dashboard',
+      maxAge: _staleAfter,
+      // The same refresh a re-tap of the tab performs, rather than a second
+      // path to the same invalidations — and silent, because nobody pressed
+      // anything.
+      onStale: () => ref.triggerNavigationRefresh(NavigationSection.services),
+      child: AmbientScaffold(
+        // No accent passed: the room on this screen is lit by the brand primary.
+        // Thirteen service accents cannot light one room, so identity is confined
+        // to each matrix cell's icon tile — see the Room Light Rule's one
+        // documented exception in DESIGN.md.
+        appBar: const GlassAppBar(title: Text('Services')),
+        body: allUnconfigured
+            // The page owns the viewport, not the empty state — see the contract
+            // on `AppEmptyState`. Its height is entirely text, and at an
+            // accessibility reading size a 72pt icon well, a wrapped title, a
+            // two-line message and a button clear a short phone, taking the only
+            // button on the screen with them. The `minHeight` keeps it centred
+            // while it fits, so nothing moves at the default reading size.
+            //
+            // Default physics deliberately: there is no `RefreshIndicator` on this
+            // branch, because with nothing configured there is nothing to re-fetch
+            // — the screen rebuilds off settings.
+            ? LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    // The nav bar floats *over* this branch, so centring in the
+                    // full viewport puts the optical centre behind it and the
+                    // block reads low. Reserving the clearance inside the centring
+                    // box is what lifts it back onto the visible middle.
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: bottomPadding),
+                      child: _ServicesEmptyState(
+                        onSetUpServices: () => context.go('/settings/services'),
+                      ),
                     ),
                   ),
                 ),
+              )
+            : RefreshIndicator(
+                onRefresh: () => _refreshServicesDashboard(ref),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.only(bottom: bottomPadding),
+                  // Static in every state. What needs your hand comes before what
+                  // is happening on its own, which comes before browsing:
+                  //
+                  //  * the band is absent unless something stopped answering
+                  //  * the matrix is the instrument — health, launcher and live
+                  //    metrics in one object
+                  //  * In Flight is time-sensitive, so it is second rather than
+                  //    last, where it used to sit under three browse rails
+                  //  * Requests never filters and never renders empty by design;
+                  //    pending sorts to the top with its actions attached
+                  //  * Recently Added is the only browsing region left
+                  children: const [
+                    ServicesAlertBand(),
+                    ServiceMatrix(),
+                    ServicesInFlightSection(),
+                    ServicesRequestsSection(),
+                    ServicesRecentlyAddedSection(),
+                  ],
+                ),
               ),
-            )
-          : RefreshIndicator(
-              onRefresh: () => _refreshServicesDashboard(ref),
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(bottom: bottomPadding),
-                // Static in every state. What needs your hand comes before what
-                // is happening on its own, which comes before browsing:
-                //
-                //  * the band is absent unless something stopped answering
-                //  * the matrix is the instrument — health, launcher and live
-                //    metrics in one object
-                //  * In Flight is time-sensitive, so it is second rather than
-                //    last, where it used to sit under three browse rails
-                //  * Requests never filters and never renders empty by design;
-                //    pending sorts to the top with its actions attached
-                //  * Recently Added is the only browsing region left
-                children: const [
-                  ServicesAlertBand(),
-                  ServiceMatrix(),
-                  ServicesInFlightSection(),
-                  ServicesRequestsSection(),
-                  ServicesRecentlyAddedSection(),
-                ],
-              ),
-            ),
+      ),
     );
   }
 }
