@@ -18,6 +18,7 @@ import 'package:cupola/features/services/presentation/service_kpi_provider.dart'
 import 'package:cupola/features/services/presentation/service_matrix_collapse_provider.dart';
 import 'package:cupola/features/services/presentation/services_alert_band.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
 import 'package:cupola/features/services/presentation/services_screen.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -687,7 +688,8 @@ void main() {
       expect(
         find.semantics.byLabel('Furiosa'),
         containsSemantics(
-          value: '75% downloaded, Movie, Furiosa.2024.2160p.WEB-DL-GROUP',
+          value:
+              '75% downloaded, Radarr, Movie, Furiosa.2024.2160p.WEB-DL-GROUP',
           isButton: true,
           hasTapAction: true,
         ),
@@ -735,6 +737,29 @@ void main() {
           value: 'Movie, requested by sarah, Pending approval',
           isButton: true,
         ),
+      );
+    });
+
+    testWidgets('names the service the rows belong to', (tester) async {
+      // One source for the whole region, so it is named once under the title
+      // rather than repeated on five rows.
+      await _pumpServices(tester);
+      await _pumpDashboard(tester);
+
+      await _scrollTo(tester, find.text('Requests'));
+
+      // Under the section's own title, not just anywhere on a screen whose
+      // matrix already carries a Seerr cell.
+      expect(
+        find.descendant(
+          of: find.widgetWithText(SectionHeader, 'Requests'),
+          matching: find.text('Seerr'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.semantics.byLabel('Requests, 1 request awaiting approval, Seerr'),
+        findsOneWidget,
       );
     });
 
@@ -795,6 +820,21 @@ void main() {
       // The two rails this replaced no longer exist.
       expect(find.text('Recently Added · Movies'), findsNothing);
       expect(find.text('Recently Added · Series'), findsNothing);
+    });
+
+    testWidgets('prints which library each item came from', (tester) async {
+      // The accent dot is a colour, and a colour is not information: nothing on
+      // the tile used to say which of three detail screens a tap would open.
+      await _pumpServices(tester);
+      await _pumpDashboard(tester);
+
+      await _scrollTo(tester, find.text('Recently Added'));
+
+      // The source leads the caption, ahead of the item's own qualifier.
+      expect(find.text('Radarr · 2021'), findsOneWidget);
+      expect(find.text('Lidarr · 4 albums'), findsOneWidget);
+      // And the bare qualifier is gone from the rail.
+      expect(find.text('2021'), findsNothing);
     });
 
     testWidgets('speaks which library each item came from', (tester) async {
@@ -1309,7 +1349,8 @@ List<Override> _providerOverrides({
             ServiceQueueItem(
               service: ServiceKey.radarr,
               title: 'Furiosa',
-              subtitle: 'Movie · Furiosa.2024.2160p.WEB-DL-GROUP',
+              // As `_queueItemFromMap` builds it: the source leads.
+              subtitle: 'Radarr · Movie · Furiosa.2024.2160p.WEB-DL-GROUP',
               progress: 0.75,
               warning: null,
             ),

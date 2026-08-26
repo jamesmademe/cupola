@@ -779,7 +779,7 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(Ref ref) async {
           service: ServiceKey.qbittorrent,
           title: torrent.name,
           subtitle: joinDisplayParts([
-            _queueTypeLabel(ServiceKey.qbittorrent),
+            ServiceKey.qbittorrent.title,
             torrent.category.isEmpty ? null : torrent.category,
             formatSpeed(torrent.dlSpeed),
           ]),
@@ -803,7 +803,7 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(Ref ref) async {
           service: ServiceKey.sabnzbd,
           title: slot.filename,
           subtitle: joinDisplayParts([
-            _queueTypeLabel(ServiceKey.sabnzbd),
+            ServiceKey.sabnzbd.title,
             slot.category.isEmpty ? null : slot.category,
             slot.sizeLeftLabel,
           ]),
@@ -822,7 +822,7 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(Ref ref) async {
           service: ServiceKey.nzbget,
           title: group.name,
           subtitle: joinDisplayParts([
-            _queueTypeLabel(ServiceKey.nzbget),
+            ServiceKey.nzbget.title,
             group.category.isEmpty ? null : group.category,
             group.remainingLabel,
           ]),
@@ -913,6 +913,11 @@ ServiceQueueItem _queueItemFromMap(ServiceKey service, Map item) {
       'Unknown release';
   final quality = _queueQualityLabel(typedItem['quality']);
   final subtitle = joinDisplayParts([
+    // The source, always and first. The row's leading glyph already encoded it,
+    // but a glyph is not a name: a merged queue that mixes four arrs and three
+    // download clients was asking the user to recognise seven icons to know
+    // which screen a tap would open.
+    service.title,
     _queueTypeLabel(service),
     if (service == ServiceKey.sonarr) arrEpisodeCode(typedItem),
     quality,
@@ -928,15 +933,17 @@ ServiceQueueItem _queueItemFromMap(ServiceKey service, Map item) {
   );
 }
 
-String _queueTypeLabel(ServiceKey service) {
+String? _queueTypeLabel(ServiceKey service) {
   return switch (service) {
     ServiceKey.radarr => 'Movie',
     ServiceKey.sonarr => 'Series',
     ServiceKey.lidarr => 'Music',
     ServiceKey.readarr => 'Book',
-    // The download clients name themselves: the row's whole point is that the
-    // bytes are coming through this client rather than through an arr, and the
-    // media type is already in the release name.
+    // Nothing for the rest. Only an arr reaches this — the download clients
+    // build their own rows, and each already opens with the client's name,
+    // which is the whole point of the row: the bytes are coming through this
+    // client rather than through an arr, and the media type is in the release
+    // name behind it.
     ServiceKey.seerr ||
     ServiceKey.qbittorrent ||
     ServiceKey.transmission ||
@@ -949,7 +956,7 @@ String _queueTypeLabel(ServiceKey service) {
     ServiceKey.unraid ||
     ServiceKey.nginxProxyManager ||
     ServiceKey.jellyfin ||
-    ServiceKey.plex => service.title,
+    ServiceKey.plex => null,
   };
 }
 

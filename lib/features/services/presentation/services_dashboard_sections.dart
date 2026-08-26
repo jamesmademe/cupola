@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -103,6 +104,10 @@ class ServicesRequestsSection extends ConsumerWidget {
 
     return _ListSection<SeerrRequest>(
       title: 'Requests',
+      // One source, so it is named once under the title rather than on every
+      // row: a tap here opens a Seerr detail screen, and the accent alone never
+      // said so.
+      sourceLabel: ServiceKey.seerr.title,
       accent: ServiceKey.seerr.accent,
       sources: const [ServiceKey.seerr],
       asyncValue: requests,
@@ -114,9 +119,15 @@ class ServicesRequestsSection extends ConsumerWidget {
       titleBadge: pendingCount == 0
           ? null
           : _PendingCountBadge(count: pendingCount),
+      // Null when nothing is pending: the header then composes title plus
+      // subtitle on its own, which is exactly "Requests, Seerr". With a badge
+      // to fold in, the source is appended to the counted sentence instead.
       semanticLabel: pendingCount == 0
-          ? 'Requests'
-          : servicesRequestsHeaderLabel(pending: pendingCount),
+          ? null
+          : joinSpokenParts([
+              servicesRequestsHeaderLabel(pending: pendingCount),
+              ServiceKey.seerr.title,
+            ]),
       itemsBuilder: (items) =>
           sortRequestsPendingFirst(items, limit: servicesRequestsPreviewLimit)
               .map(
@@ -173,10 +184,12 @@ class ServicesRecentlyAddedSection extends ConsumerWidget {
       itemSubtitle: (item) => item.subtitle,
       imageUrl: (item, _) => item.posterUrl,
       heroTag: (item) => item.heroTag,
-      // Unlike the single-service rails this replaced, the accent varies per
-      // tile: it is the only thing saying which library an item came from.
+      // Unlike the single-service rails this replaced, the source varies per
+      // tile — so it is both coloured and named, ahead of the item's own
+      // qualifier. A user tapping a poster here is choosing between a Radarr,
+      // a Sonarr and a Lidarr detail screen.
       itemAccent: (item) => item.service.accent,
-      accentLabel: (item) => item.service.title,
+      sourceLabel: (item) => item.service.title,
       onTap: (item) => _openRecentlyAdded(context, item),
       limit: servicesRecentlyAddedLimit,
     );
@@ -239,14 +252,15 @@ class _PosterSection<T> extends StatelessWidget {
   /// and wrong for the merged one.
   final Color Function(T item)? itemAccent;
 
-  /// What [itemAccent] means, in words.
+  /// The service an item came from, in words — printed on the tile and spoken.
   ///
-  /// Required whenever [itemAccent] varies: the accent dot on a tile is the only
+  /// Required whenever [itemAccent] varies. The accent dot used to be the only
   /// thing distinguishing a Radarr item from a Sonarr one, and a colour is not
-  /// information. Left null on a single-service rail, where the accent is
-  /// constant and the header already named the service — announcing it on eight
-  /// consecutive tiles would be noise.
-  final String Function(T item)? accentLabel;
+  /// information: nothing on the tile said which library a tap would open. Left
+  /// null on a single-service rail, where the accent is constant and the header
+  /// already named the service — repeating it on eight consecutive tiles would
+  /// be noise on screen and in speech alike.
+  final String Function(T item)? sourceLabel;
 
   const _PosterSection({
     required this.title,
@@ -264,7 +278,7 @@ class _PosterSection<T> extends StatelessWidget {
     this.onRetry,
     this.limit = 10,
     this.itemAccent,
-    this.accentLabel,
+    this.sourceLabel,
   });
 
   @override
@@ -355,7 +369,7 @@ class _PosterSection<T> extends StatelessWidget {
                             subtitle: itemSubtitle(item),
                             imageUrl: imageUrl(item, settings),
                             accent: itemAccent?.call(item) ?? accent,
-                            accentLabel: accentLabel?.call(item),
+                            sourceLabel: sourceLabel?.call(item),
                             heroTag: heroTag?.call(item),
                             onTap: () => onTap(item),
                           );
@@ -403,6 +417,14 @@ class _ListSection<T> extends StatelessWidget {
   /// Overrides the header's spoken name. See [titleBadge].
   final String? semanticLabel;
 
+  /// The single service this section's rows come from, named under the title.
+  ///
+  /// For a region fed by exactly one service, where per-row labels would print
+  /// the same word on every line. A multi-source region leaves this null and
+  /// names the source on each row instead — there is no honest single answer to
+  /// put in a header that merges seven download clients.
+  final String? sourceLabel;
+
   const _ListSection({
     required this.title,
     required this.accent,
@@ -417,6 +439,7 @@ class _ListSection<T> extends StatelessWidget {
     this.onRetry,
     this.titleBadge,
     this.semanticLabel,
+    this.sourceLabel,
   });
 
   @override
@@ -429,6 +452,7 @@ class _ListSection<T> extends StatelessWidget {
       children: [
         SectionHeader(
           title: title,
+          subtitle: sourceLabel,
           showChevron: false,
           semanticLabel: semanticLabel,
           // A `Wrap`, not a `Row`: at an accessibility reading size "3 PENDING"
@@ -484,8 +508,8 @@ class _ServicePosterTile extends StatelessWidget {
   final String imageUrl;
   final Color accent;
 
-  /// The service the accent dot stands for, when the rail mixes services.
-  final String? accentLabel;
+  /// The service this item came from, when the rail mixes services.
+  final String? sourceLabel;
   final String? heroTag;
   final VoidCallback onTap;
 
@@ -495,17 +519,20 @@ class _ServicePosterTile extends StatelessWidget {
     required this.imageUrl,
     required this.accent,
     required this.onTap,
-    this.accentLabel,
+    this.sourceLabel,
     this.heroTag,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    // On a merged rail the accent dot is the only thing saying which library the
-    // item came from, so it has to be spoken. On a single-service rail
-    // `accentLabel` is null and the dot stays silent — see the note on it below.
-    final spoken = joinSpokenParts([accentLabel, subtitle]);
+    // The source leads the caption line on a merged rail: the year or album
+    // count qualifies the title, but which library the item lives in is what
+    // decides where a tap lands. On a single-service rail `sourceLabel` is null
+    // and the line is the qualifier alone — see the note on it above.
+    final caption = joinDisplayParts([sourceLabel, subtitle]);
+    // Same two parts, re-separated for the ear: `·` is decoration.
+    final spoken = joinSpokenParts([sourceLabel, subtitle]);
 
     return SizedBox(
       width: 96,
@@ -530,14 +557,14 @@ class _ServicePosterTile extends StatelessWidget {
                       imageUrl: imageUrl,
                     ),
                   ),
-                  // The dot encodes which service the item came from. Whether
-                  // that is worth saying depends on the rail: on a
-                  // single-service rail the accent is constant and the header
-                  // already named it, so repeating it on eight consecutive
-                  // tiles would be noise. On the merged Recently Added rail it
-                  // varies per tile and is the only carrier of that fact, so
-                  // the caller passes `accentLabel` and it is folded into the
-                  // tile's spoken value above.
+                  // The dot encodes which service the item came from, and on a
+                  // merged rail the caption below names it as well: the colour
+                  // is the fast read across a scrolling row, the word is the
+                  // one anybody can act on. Whether either is worth repeating
+                  // depends on the rail — on a single-service rail the accent
+                  // is constant and the header already named it, so
+                  // `sourceLabel` is null and the dot stays a silent, unnamed
+                  // flourish.
                   Positioned(
                     left: 6,
                     bottom: 6,
@@ -568,9 +595,9 @@ class _ServicePosterTile extends StatelessWidget {
                   ?.weight(FontWeight.w600)
                   .copyWith(color: colorScheme.onSurface),
             ),
-            if (subtitle.isNotEmpty)
+            if (caption.isNotEmpty)
               Text(
-                subtitle,
+                caption,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 // No `fontSize` override. A hard-coded 10 sat under the

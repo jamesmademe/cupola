@@ -26,7 +26,10 @@ void main() {
 
     // The title is the room's name, not a control: the dropdown picker it
     // used to open was retired when the Portal became the one switcher.
-    expect(find.byKey(const ValueKey('service-dashboard-switcher')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('service-dashboard-switcher')),
+      findsNothing,
+    );
 
     await tester.tap(find.byTooltip('Back to Services'));
     await tester.pumpAndSettle();

@@ -256,10 +256,14 @@ void main() {
           'Slow Horses',
         ]);
         expect(items[0].service, ServiceKey.radarr);
+        // The source leads every row: seven possible clients feed this list and
+        // the leading glyph alone never said which detail screen a tap opens.
+        expect(items[0].subtitle, startsWith('Radarr · Movie · '));
         expect(items[0].subtitle, contains('Furiosa.2024.2160p.WEB-DL-GROUP'));
         expect(items[0].progress, 0.75);
         expect(items[1].service, ServiceKey.sonarr);
         expect(items[1].title, 'The Boys');
+        expect(items[1].subtitle, startsWith('Sonarr · Series · S04E07'));
         expect(
           items[1].subtitle,
           contains('The.Boys.S04E07.1080p.WEB-DL-GROUP'),
