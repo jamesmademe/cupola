@@ -190,6 +190,12 @@ void main() {
         container.read(activeInstanceProvider(ServiceKey.radarr))?.id,
         'radarr-hd11111',
       );
+      // The other half of the invariant, and the half that was missing: the
+      // lens moving is only useful if the route follows it. Asserted on the
+      // destination rather than on the location string, because the cell
+      // navigates with `go` and a picker that moved the lens without
+      // travelling would leave the user on the floor it was tapped from.
+      expect(find.text('elsewhere'), findsOneWidget);
     });
 
     testWidgets('an unconfigured connection is not offered', (tester) async {
