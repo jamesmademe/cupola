@@ -431,9 +431,15 @@ Future<void> _pumpSeriesDetail(
             sonarrApiKey: 'key',
           ),
         ),
-        seriesDetailProvider.overrideWith(detailBuilder),
-        seriesEpisodesProvider.overrideWith(
-          episodesBuilder ?? (ref, seriesId) async => _episodes(),
+        // The page reads the connection-keyed families; an unstamped route
+        // resolves to the lens id, which is what these id shims ignore.
+        seriesDetailForProvider.overrideWith(
+          (ref, item) => detailBuilder(ref, item.id),
+        ),
+        seriesEpisodesForProvider.overrideWith(
+          (ref, item) => episodesBuilder == null
+              ? Future.value(_episodes())
+              : episodesBuilder(ref, item.id),
         ),
         sonarrServiceProvider.overrideWith(
           (ref) => sonarrService ?? FakeSonarrService(),

@@ -28,6 +28,15 @@ final sonarrServiceForProvider = Provider.family<SonarrService, String>((
   ref,
   instanceId,
 ) {
+  // The lens's own connection resolves to [sonarrServiceProvider] rather than to
+  // a second client for the same server. Without this the app kept two live
+  // `Dio`s pointed at one address whenever anything asked by id — and any
+  // override of the plain provider, which is how every test supplies a fake,
+  // was quietly bypassed on the path that names a connection.
+  final lens = ref.watch(activeInstanceProvider(ServiceKey.sonarr))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == lens) {
+    return ref.watch(sonarrServiceProvider);
+  }
   return SonarrService(
     watchApiClient(ref, ServiceKey.sonarr, instanceId: instanceId),
   );

@@ -199,6 +199,21 @@ final activeInstanceProvider = Provider.family<ServiceInstance?, ServiceKey>((
   );
 });
 
+/// The connection a screen should read, given what its route said.
+///
+/// [named] is the `?i=` a link carried, or null when it carried none — which is
+/// every link that predates a service being able to have two. Null falls
+/// through to the lens, so a page reached the ordinary way behaves exactly as
+/// it did.
+///
+/// A plain function rather than a provider, for the same reason
+/// [watchApiClient] is one: the callers are already widgets holding a `ref`,
+/// and a provider layer would add a rebuild edge without adding an answer.
+String effectiveInstanceId(WidgetRef ref, ServiceKey service, String? named) {
+  if (named != null && named.isNotEmpty) return named;
+  return ref.watch(activeInstanceProvider(service))?.id ?? '';
+}
+
 /// Whether [service] has more than one connection — the question every surface
 /// asks before it decides to show a label at all.
 final hasMultipleInstancesProvider = Provider.family<bool, ServiceKey>((

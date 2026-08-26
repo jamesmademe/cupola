@@ -432,27 +432,59 @@ final servicesMoviesProvider = moviesProvider;
 final servicesSeriesProvider = seriesProvider;
 final servicesMusicProvider = musicProvider;
 
+/// The Radarr queue of one named connection, indexed by movie id.
+///
+/// A queue is a property of a server, and the ids in it are that server's. Read
+/// through the lens while the page it badges belongs to a different connection,
+/// every badge is answering about a different film that happens to share an id.
+/// Empty id means the lens, which is what [radarrQueueSnapshotProvider] passes.
+final radarrQueueSnapshotForProvider =
+    FutureProvider.family<ArrQueueSnapshot, String>((ref, instanceId) async {
+      final service = instanceId.isEmpty
+          ? ref.watch(radarrServiceProvider)
+          : ref.watch(radarrServiceForProvider(instanceId));
+      return _loadArrQueueSnapshot(
+        service.getQueue,
+        (item) => [
+          intOrNull(mapOrNull(item['movie'])?['id'] ?? item['movieId']),
+        ],
+      );
+    });
+
 /// The Radarr queue indexed by movie id.
 ///
 /// Every surface that badges a movie — grid, poster rail, detail page — reads
 /// this one snapshot, so they cannot disagree about what is downloading.
+/// Delegates to the connection the lens points at, so the surfaces that never
+/// name one keep the shape they always had.
 final radarrQueueSnapshotProvider = FutureProvider<ArrQueueSnapshot>((
   ref,
 ) async {
-  return _loadArrQueueSnapshot(
-    () => ref.watch(radarrServiceProvider).getQueue(),
-    (item) => [intOrNull(mapOrNull(item['movie'])?['id'] ?? item['movieId'])],
-  );
+  final lens = ref.watch(activeInstanceProvider(ServiceKey.radarr))?.id ?? '';
+  return ref.watch(radarrQueueSnapshotForProvider(lens).future);
 });
+
+/// The Sonarr queue of one named connection. See
+/// [radarrQueueSnapshotForProvider].
+final sonarrQueueSnapshotForProvider =
+    FutureProvider.family<ArrQueueSnapshot, String>((ref, instanceId) async {
+      final service = instanceId.isEmpty
+          ? ref.watch(sonarrServiceProvider)
+          : ref.watch(sonarrServiceForProvider(instanceId));
+      return _loadArrQueueSnapshot(
+        service.getQueue,
+        (item) => [
+          intOrNull(mapOrNull(item['series'])?['id'] ?? item['seriesId']),
+        ],
+      );
+    });
 
 /// The Sonarr queue indexed by series id.
 final sonarrQueueSnapshotProvider = FutureProvider<ArrQueueSnapshot>((
   ref,
 ) async {
-  return _loadArrQueueSnapshot(
-    () => ref.watch(sonarrServiceProvider).getQueue(),
-    (item) => [intOrNull(mapOrNull(item['series'])?['id'] ?? item['seriesId'])],
-  );
+  final lens = ref.watch(activeInstanceProvider(ServiceKey.sonarr))?.id ?? '';
+  return ref.watch(sonarrQueueSnapshotForProvider(lens).future);
 });
 
 /// How many artists the album → artist fallback may probe, and how many of

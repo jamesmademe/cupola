@@ -166,30 +166,67 @@ class ServiceRoutes {
   /// Compose editor for a stack, e.g. `/services/dockge/stack/immich/edit`.
   static String dockgeStackEdit(String name) => '$dockgeStackBase/$name/edit';
 
-  static String radarrMovie(int id, {String? heroTag}) {
-    return _withQuery('$radarrMovieBase/$id', {'heroTag': heroTag});
+  /// ## `i`: which connection a detail page belongs to
+  ///
+  /// Every detail route below takes an optional `?i=<instanceId>`. Absent — the
+  /// shape every link in the app had before there could be two of a service —
+  /// means "whichever one this service is being read through", so nothing that
+  /// does not care has to say anything.
+  ///
+  /// A **query** rather than a path segment, and the difference is a hundred
+  /// lines: `state.uri` is the whole URI at every level of nesting, so a nested
+  /// route reads it without being told, while `pathParameters` is a map
+  /// accumulated down the tree and a new segment would have to be declared on
+  /// every one of the descendants under it. It is also not `extra`: go_router
+  /// replaces a non-JSON-encodable extra with null, silently, when it
+  /// serialises the match list for state restoration — a vector that survives
+  /// normal use and evaporates when the OS kills the app is the worst of the
+  /// three options.
+  static String radarrMovie(int id, {String? heroTag, String? instanceId}) {
+    return _withQuery('$radarrMovieBase/$id', {
+      'heroTag': heroTag,
+      'i': instanceId,
+    });
   }
 
-  static String sonarrSeries(int id, {String? heroTag}) {
-    return _withQuery('$sonarrSeriesBase/$id', {'heroTag': heroTag});
+  static String sonarrSeries(int id, {String? heroTag, String? instanceId}) {
+    return _withQuery('$sonarrSeriesBase/$id', {
+      'heroTag': heroTag,
+      'i': instanceId,
+    });
   }
 
-  static String lidarrArtist(int id, {String? heroTag}) {
-    return _withQuery('$lidarrArtistBase/$id', {'heroTag': heroTag});
+  static String lidarrArtist(int id, {String? heroTag, String? instanceId}) {
+    return _withQuery('$lidarrArtistBase/$id', {
+      'heroTag': heroTag,
+      'i': instanceId,
+    });
   }
 
   static String qbittorrentTorrent(String hash) {
     return '$qbittorrentTorrentBase/$hash';
   }
 
-  static String bazarrSeries(int sonarrSeriesId, {String? heroTag}) {
+  static String bazarrSeries(
+    int sonarrSeriesId, {
+    String? heroTag,
+    String? instanceId,
+  }) {
     return _withQuery('$bazarrSeriesBase/$sonarrSeriesId', {
       'heroTag': heroTag,
+      'i': instanceId,
     });
   }
 
-  static String bazarrMovie(int radarrId, {String? heroTag}) {
-    return _withQuery('$bazarrMovieBase/$radarrId', {'heroTag': heroTag});
+  static String bazarrMovie(
+    int radarrId, {
+    String? heroTag,
+    String? instanceId,
+  }) {
+    return _withQuery('$bazarrMovieBase/$radarrId', {
+      'heroTag': heroTag,
+      'i': instanceId,
+    });
   }
 
   static String seerrDetail({
@@ -197,11 +234,13 @@ class ServiceRoutes {
     required int id,
     String? heroTag,
     String? posterUrl,
+    String? instanceId,
   }) {
     final normalizedMediaType = mediaType == 'tv' ? 'tv' : 'movie';
     return _withQuery('$seerr/$normalizedMediaType/$id', {
       'heroTag': heroTag,
       'posterUrl': posterUrl,
+      'i': instanceId,
     });
   }
 

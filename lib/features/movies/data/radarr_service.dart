@@ -27,6 +27,15 @@ final radarrServiceForProvider = Provider.family<RadarrService, String>((
   ref,
   instanceId,
 ) {
+  // The lens's own connection resolves to [radarrServiceProvider] rather than to
+  // a second client for the same server. Without this the app kept two live
+  // `Dio`s pointed at one address whenever anything asked by id — and any
+  // override of the plain provider, which is how every test supplies a fake,
+  // was quietly bypassed on the path that names a connection.
+  final lens = ref.watch(activeInstanceProvider(ServiceKey.radarr))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == lens) {
+    return ref.watch(radarrServiceProvider);
+  }
   return RadarrService(
     watchApiClient(ref, ServiceKey.radarr, instanceId: instanceId),
   );

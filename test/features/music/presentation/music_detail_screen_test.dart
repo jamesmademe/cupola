@@ -424,9 +424,15 @@ Future<void> _pumpMusicDetail(
             lidarrApiKey: 'key',
           ),
         ),
-        musicDetailProvider.overrideWith(detailBuilder),
-        musicAlbumsProvider.overrideWith(
-          albumsBuilder ?? (ref, artistId) async => _albums(),
+        // The page reads the connection-keyed families; an unstamped route
+        // resolves to the lens id, which is what these id shims ignore.
+        musicDetailForProvider.overrideWith(
+          (ref, item) => detailBuilder(ref, item.id),
+        ),
+        musicAlbumsForProvider.overrideWith(
+          (ref, item) => albumsBuilder == null
+              ? Future.value(_albums())
+              : albumsBuilder(ref, item.id),
         ),
         lidarrServiceProvider.overrideWith(
           (ref) => lidarrService ?? FakeLidarrService(),

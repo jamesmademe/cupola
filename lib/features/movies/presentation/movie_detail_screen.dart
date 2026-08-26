@@ -29,11 +29,25 @@ class MovieDetailScreen extends ConsumerStatefulWidget {
   final String heroTag;
   final RadarrMovie? initialMovie;
 
+  /// The connection this page belongs to, from the route's `?i=`.
+  ///
+  /// Null for every link that does not name one, which is all of them outside
+  /// a multi-connection search — and then the page reads through the lens, as
+  /// it always did.
+  ///
+  /// **Load-bearing for the whole page, not just the fetch.** A page shown for
+  /// one Radarr while its queue badge, its quality profile and its poster came
+  /// from another is worse than a page that failed to load: every part of it
+  /// looks right. So the id resolved here is the one every source below is
+  /// keyed on.
+  final String? instanceId;
+
   const MovieDetailScreen({
     super.key,
     required this.movieId,
     required this.heroTag,
     this.initialMovie,
+    this.instanceId,
   });
 
   @override
@@ -44,11 +58,38 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     with
         QualityProfileMixin<MovieDetailScreen>,
         ArrDetailActionsMixin<MovieDetailScreen> {
+  /// The connection resolved in the last build, for the callbacks to reuse.
+  ///
+  /// Held rather than re-resolved, because `effectiveInstanceId` watches the
+  /// lens and a callback is not a build. The two can only disagree between a
+  /// lens move and the frame that follows it, and a write is dispatched from a
+  /// frame the user is looking at.
+  String _instanceId = '';
+
+  /// Radarr, bound to the connection this page belongs to.
+  ///
+  /// Every read AND every write on this screen goes through it. Reading through
+  /// the lens instead is how a page opened for one server sends its "search for
+  /// this movie" to another — with a `movieId` that names a different film
+  /// there.
+  RadarrService get _radarr => _instanceId.isEmpty
+      ? ref.read(radarrServiceProvider)
+      : ref.read(radarrServiceForProvider(_instanceId));
+
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(currentSettingsProvider);
+    final instanceId = effectiveInstanceId(
+      ref,
+      ServiceKey.radarr,
+      widget.instanceId,
+    );
+    _instanceId = instanceId;
+    final connection = ref.watch(
+      currentSettingsProvider.select((s) => s.instanceById(instanceId)),
+    );
+    final item = (instanceId: instanceId, id: widget.movieId);
     final movieAsync = widget.movieId > 0
-        ? ref.watch(movieDetailProvider(widget.movieId))
+        ? ref.watch(movieDetailForProvider(item))
         : const AsyncData<RadarrMovie?>(null);
     final movie = movieAsync.asData?.value ?? widget.initialMovie;
 
@@ -67,24 +108,27 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         // Recover in place. With no id there is no provider to re-run, so the
         // retry is withheld rather than offered and doing nothing.
         onRetry: widget.movieId > 0
-            ? () => ref.invalidate(movieDetailProvider(widget.movieId))
+            ? () => ref.invalidate(movieDetailForProvider(item))
             : null,
       );
     }
 
     _syncQualityProfiles(movie);
 
+    // The connection this page is bound to, not `settings.radarrUrl` — that
+    // resolves to the FIRST Radarr, so a poster served by the arr rather than
+    // by TMDB was fetched from one server with another's key.
     final viewModel = MovieDetailViewModel.fromMovie(
       movie,
-      baseUrl: settings.radarrUrl,
-      apiKey: settings.radarrApiKey,
+      baseUrl: connection?.url ?? '',
+      apiKey: connection?.credential ?? '',
     );
     final infoGroups = viewModel.buildInfoGroups(currentProfileName ?? '');
 
     // Without the queue the badge cannot tell "nothing on disk" from "being
     // downloaded right now", and every in-flight movie reads as Missing.
     final queueEntry = ref
-        .watch(radarrQueueSnapshotProvider)
+        .watch(radarrQueueSnapshotForProvider(instanceId))
         .maybeWhen(
           data: (snapshot) => snapshot.entryFor(movie.id),
           orElse: () => null,
@@ -102,7 +146,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       // The same load the retry button re-runs, on the gesture the hero was
       // already accepting and doing nothing with.
       onRefresh: widget.movieId > 0
-          ? () async => ref.invalidate(movieDetailProvider(widget.movieId))
+          ? () async => ref.invalidate(movieDetailForProvider(item))
           : null,
       body: _buildBody(
         viewModel,
@@ -121,7 +165,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
 
     ensureQualityProfiles(
       profileId: movie.qualityProfileId,
-      fetchProfiles: () => ref.read(radarrServiceProvider).getQualityProfiles(),
+      fetchProfiles: () => _radarr.getQualityProfiles(),
     );
   }
 
@@ -304,10 +348,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       serviceName: 'Radarr',
       subject: 'movie',
       monitored: monitored,
-      write: () => ref
-          .read(radarrServiceProvider)
-          .updateMovieMonitored(movieId, monitored),
-      invalidate: [movieDetailProvider(movieId), moviesProvider],
+      write: () => _radarr.updateMovieMonitored(movieId, monitored),
+      // The page's own connection, not the lens: invalidating the lens-keyed
+      // family would refresh a page nobody is looking at and leave this one
+      // showing the state it had before the write.
+      invalidate: [
+        movieDetailForProvider((instanceId: _instanceId, id: movieId)),
+        moviesProvider,
+      ],
     );
   }
 
@@ -317,9 +365,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       mediaTitle: mediaTitle,
       serviceName: 'Radarr',
       consequence: 'an upgrade',
-      write: () => ref
-          .read(radarrServiceProvider)
-          .updateMovieProfile(widget.movieId, profileId),
+      write: () => _radarr.updateMovieProfile(widget.movieId, profileId),
       invalidate: [moviesProvider],
     );
   }
@@ -331,13 +377,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       subject: 'movie',
       title: title,
       mediaType: DeleteMediaType.movie,
-      write: (deleteFiles, addExclusion) => ref
-          .read(radarrServiceProvider)
-          .deleteMovie(
-            widget.movieId,
-            deleteFiles: deleteFiles,
-            addImportExclusion: addExclusion,
-          ),
+      write: (deleteFiles, addExclusion) => _radarr.deleteMovie(
+        widget.movieId,
+        deleteFiles: deleteFiles,
+        addImportExclusion: addExclusion,
+      ),
     );
   }
 
@@ -350,7 +394,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       // started", "Search started for entire series" and "Album search
       // started", which read as three different features.
       successMessage: 'Radarr is searching for this movie',
-      search: () => ref.read(radarrServiceProvider).searchMovie(widget.movieId),
+      search: () => _radarr.searchMovie(widget.movieId),
     );
   }
 

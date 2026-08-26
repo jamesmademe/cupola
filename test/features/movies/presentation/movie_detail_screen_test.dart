@@ -625,12 +625,18 @@ Future<void> _pumpMovieDetail(
             radarrApiKey: 'key',
           ),
         ),
-        movieDetailProvider.overrideWith(detailBuilder),
+        // The page reads the connection-keyed family; an unstamped route
+        // resolves to the lens id, which is what the id shim below ignores.
+        movieDetailForProvider.overrideWith(
+          (ref, item) => detailBuilder(ref, item.id),
+        ),
         radarrServiceProvider.overrideWith(
           (ref) => radarrService ?? FakeRadarrService(),
         ),
         if (queueSnapshot != null)
-          radarrQueueSnapshotProvider.overrideWith((ref) => queueSnapshot),
+          radarrQueueSnapshotForProvider.overrideWith(
+            (ref, instanceId) => queueSnapshot,
+          ),
       ],
       child: MaterialApp(
         home: Scaffold(
