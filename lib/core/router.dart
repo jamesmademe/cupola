@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
@@ -93,6 +94,26 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
 
 const double _serviceDashboardTopPadding = kToolbarHeight;
+
+/// The page for a top-level tab: a short fade instead of the platform default.
+///
+/// Android's default here was [ZoomPageTransitionsBuilder], and on device it
+/// was the tab switch's whole stutter: every switch spent 5–8 frames at
+/// 30–38ms of raster scaling and cross-fading two full opaque screens — the
+/// same cost on every switch, so not shader warm-up. Tabs are siblings, not a
+/// hierarchy; a fade is what Material prescribes for top-level destinations,
+/// and it costs one blend per frame instead of the Zoom's layered scale.
+Page<void> _tabPage(GoRouterState state, Widget child) => CustomTransitionPage(
+  key: state.pageKey,
+  transitionDuration: AppAnimation.durationSm,
+  reverseTransitionDuration: AppAnimation.durationSm,
+  transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+      FadeTransition(
+        opacity: animation.drive(CurveTween(curve: Curves.easeOut)),
+        child: child,
+      ),
+  child: child,
+);
 
 /// A route whose page is a plain [RouteUtils.cupertinoPage] around [child].
 ///
@@ -871,7 +892,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/services',
-            builder: (context, state) => const ServicesScreen(),
+            pageBuilder: (context, state) =>
+                _tabPage(state, const ServicesScreen()),
             routes: [
               _discoverRoutes(path: 'seerr'),
               _moviesRoutes(path: 'radarr'),
@@ -895,7 +917,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/activity',
-            builder: (context, state) => const GlobalActivityScreen(),
+            pageBuilder: (context, state) =>
+                _tabPage(state, const GlobalActivityScreen()),
           ),
           GoRoute(
             path: manualImportBrowsePath,
@@ -938,7 +961,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/search',
-            builder: (context, state) => const SearchScreen(),
+            pageBuilder: (context, state) =>
+                _tabPage(state, const SearchScreen()),
           ),
           _discoverRoutes(path: '/discover', redirectLocation: '/services'),
           _moviesRoutes(path: '/movies', redirectLocation: '/services'),
@@ -946,7 +970,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           _musicRoutes(path: '/music', redirectLocation: '/services'),
           GoRoute(
             path: '/settings',
-            builder: (context, state) => const SettingsHomeScreen(),
+            pageBuilder: (context, state) =>
+                _tabPage(state, const SettingsHomeScreen()),
             routes: [
               GoRoute(
                 path: 'background-search',
