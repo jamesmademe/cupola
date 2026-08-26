@@ -95,7 +95,14 @@ Future<void> _showLensSheet(
   WidgetRef ref,
   ServiceKey service,
 ) {
-  final instances = ref.read(currentSettingsProvider).instancesOf(service);
+  // Configured only. The sheet is the one control that *persists* a lens, so a
+  // row here for a connection with no address is an offer to point the whole
+  // app at nothing — and `select` writes to disk, so the app would come back up
+  // that way at the next cold start, showing a NotConfiguredPlaceholder with
+  // the working connection two centimetres away in the same sheet.
+  final instances = ref
+      .read(currentSettingsProvider)
+      .configuredInstancesOf(service);
   final activeId = ref.read(activeInstanceProvider(service))?.id;
 
   return AppBottomSheet.show<void>(

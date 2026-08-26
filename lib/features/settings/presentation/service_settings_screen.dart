@@ -453,6 +453,20 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         .copyWithoutUnusedCertificate(priorUrl);
 
     await ref.read(settingsProvider.notifier).updateSettings(cleared);
+
+    // The lens outlives the connection it names unless something says
+    // otherwise. Harmless while it is only ever *resolved* — `activeInstance`
+    // falls back to the first instance when the id matches nothing — but the id
+    // stays on disk for good, and the day a badge or a `?i=` NAMES it rather
+    // than resolving it, the app is carrying a pointer to a server that was
+    // deleted months ago.
+    //
+    // Only when it was this connection: clearing unconditionally would send a
+    // lens deliberately parked on the second connection back to the first
+    // because the user removed the third.
+    if (ref.read(activeInstancesProvider)[service] == _target.id) {
+      await ref.read(activeInstancesProvider.notifier).clear(service);
+    }
     if (!mounted) return;
 
     Navigator.of(context).pop();

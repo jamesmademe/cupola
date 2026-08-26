@@ -40,6 +40,7 @@ Future<ProviderContainer> _pump(
   ServiceKey service = ServiceKey.radarr,
   String? instanceId,
   bool isNew = false,
+  Map<ServiceKey, String> lenses = const {},
 }) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
@@ -48,6 +49,7 @@ Future<ProviderContainer> _pump(
       sharedPreferencesProvider.overrideWithValue(prefs),
       secureSettingsStoreProvider.overrideWithValue(FakeSecureSettingsStore()),
       initialSettingsProvider.overrideWithValue(settings),
+      initialActiveInstancesProvider.overrideWithValue(lenses),
     ],
   );
   addTearDown(container.dispose);
@@ -69,6 +71,19 @@ Future<ProviderContainer> _pump(
   );
   await tester.pumpAndSettle();
   return container;
+}
+
+/// Scrolls to the destructive action, taps it and confirms.
+Future<void> _removeThisConnection(WidgetTester tester) async {
+  await tester.scrollUntilVisible(
+    find.text('Remove Radarr'),
+    300,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.tap(find.text('Remove Radarr'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+  await tester.pumpAndSettle();
 }
 
 Future<LocalNetworkAccess> _nothingIsBlockingUs(
@@ -228,6 +243,57 @@ void main() {
     final saved = container.read(currentSettingsProvider);
     expect(saved.instancesOf(ServiceKey.radarr), hasLength(1));
     expect(saved.primaryOf(ServiceKey.radarr)?.id, 'radarr');
+  });
+
+  testWidgets('removing the connection being read forgets the lens', (
+    tester,
+  ) async {
+    final container = await _pump(
+      tester,
+      settings: const SettingsModel(instances: [_fourK, _hd]),
+      instanceId: 'radarr-hd11111',
+      lenses: const {ServiceKey.radarr: 'radarr-hd11111'},
+    );
+
+    await _removeThisConnection(tester);
+
+    // Resolution alone would have hidden this: `activeInstanceProvider` falls
+    // back to the first instance when the id matches nothing, so the app looks
+    // right. But the dead id stays on disk for good, and the day a badge or a
+    // `?i=` NAMES it instead of resolving it, the app is carrying a pointer to
+    // a server that was deleted.
+    expect(
+      container.read(activeInstancesProvider),
+      isNot(contains(ServiceKey.radarr)),
+    );
+  });
+
+  testWidgets('removing a different connection leaves the lens where it was', (
+    tester,
+  ) async {
+    const third = ServiceInstance(
+      id: 'radarr-third11',
+      service: ServiceKey.radarr,
+      label: 'Seedbox',
+      url: 'https://box.lan:7880',
+      credential: 'key-third',
+    );
+    final container = await _pump(
+      tester,
+      settings: const SettingsModel(instances: [_fourK, _hd, third]),
+      instanceId: 'radarr-third11',
+      lenses: const {ServiceKey.radarr: 'radarr-hd11111'},
+    );
+
+    await _removeThisConnection(tester);
+
+    // The counterweight. Clearing unconditionally would send a lens
+    // deliberately parked on HD back to 4K because the user tidied up a third
+    // connection neither of them was reading.
+    expect(
+      container.read(activeInstancesProvider)[ServiceKey.radarr],
+      'radarr-hd11111',
+    );
   });
 
   test('a removed connection takes its own viewer, not the survivor\'s', () {

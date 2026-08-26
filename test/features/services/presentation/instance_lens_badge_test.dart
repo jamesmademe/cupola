@@ -152,6 +152,41 @@ void main() {
     expect(find.text('4K'), findsNothing);
   });
 
+  testWidgets('a connection with no address is not offered as a lens', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pump(
+      tester,
+      settings: const SettingsModel(
+        instances: [
+          _fourK,
+          _hd,
+          // Named but never finished: the state a form is in between "Add
+          // another Radarr" and typing the address.
+          ServiceInstance(
+            id: 'radarr-blank11',
+            service: ServiceKey.radarr,
+            label: 'Half done',
+          ),
+        ],
+      ),
+      prefs: prefs,
+    );
+
+    await tester.tap(find.byType(InstanceLensBadge));
+    await tester.pumpAndSettle();
+
+    expect(find.text('HD'), findsOneWidget);
+    // `select` persists, so offering this row is offering to point the whole
+    // app at nothing — and to have it come back up that way tomorrow.
+    expect(find.text('Half done'), findsNothing);
+    expect(find.text('2 connections. Pick the one to read.'), findsNothing);
+    expect(find.text('Two connections. Pick the one to read.'), findsOneWidget);
+  });
+
   testWidgets('the choice is remembered for the next launch', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();

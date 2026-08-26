@@ -149,10 +149,26 @@ class SettingsModel {
       .where((instance) => instance.isConfigured)
       .toList(growable: false);
 
-  /// Whether [service] has more than one instance — the question every surface
-  /// asks before it decides to show a label at all.
+  /// Every instance of [service] that is set up enough to be worth talking to.
+  ///
+  /// The per-service counterpart of [configuredInstances], and the list every
+  /// surface that *offers a choice* has to use. [instancesOf] includes the slot
+  /// a half-finished form is sitting in, which is right for the settings screen
+  /// — the user is looking at it — and wrong everywhere else.
+  List<ServiceInstance> configuredInstancesOf(ServiceKey service) => instances
+      .where((instance) => instance.service == service && instance.isConfigured)
+      .toList(growable: false);
+
+  /// Whether [service] has more than one connection worth reading — the
+  /// question every surface asks before it decides to show a label at all.
+  ///
+  /// Counts the **configured** ones, not the slots. Counting slots meant that
+  /// starting to add a second connection lit the badge, the app-bar label and
+  /// every provenance chip across the app before that connection had an address
+  /// — announcing a fold the user could not yet use, and naming the new slot by
+  /// its id because it had no label yet either.
   bool hasMultipleInstances(ServiceKey service) =>
-      instancesOf(service).length > 1;
+      configuredInstancesOf(service).length > 1;
 
   /// Returns a copy with [instance] written in: replacing the entry with the
   /// same id, or appended when there is none.

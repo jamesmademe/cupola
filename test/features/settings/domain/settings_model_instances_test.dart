@@ -52,6 +52,27 @@ void main() {
       expect(settings.instanceById('radarr-aaa1111')?.label, 'HD');
       expect(settings.instanceById('nope'), isNull);
     });
+
+    test('a half-filled slot is not a connection the UI may offer', () {
+      // The state between "Add another Radarr" and typing an address. It is a
+      // real entry in the list — the settings form is looking at it — and it is
+      // not something any other surface may count, name or point a lens at.
+      final adding = SettingsModel(
+        instances: [
+          _radarr('radarr', label: '4K', url: 'https://nas:7878'),
+          const ServiceInstance(
+            id: 'radarr-bbb2222',
+            service: ServiceKey.radarr,
+          ),
+        ],
+      );
+
+      expect(adding.instancesOf(ServiceKey.radarr), hasLength(2));
+      expect(adding.configuredInstancesOf(ServiceKey.radarr), hasLength(1));
+      // The whole point: the badge, the app-bar label and every provenance
+      // chip stay off until the second connection can actually answer.
+      expect(adding.hasMultipleInstances(ServiceKey.radarr), isFalse);
+    });
   });
 
   group('the flat names resolve to the first instance', () {
