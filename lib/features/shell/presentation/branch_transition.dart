@@ -12,17 +12,24 @@ import 'package:cupola/core/lifecycle/page_activity.dart';
 /// everything else that container does — including, load-bearing, the
 /// [Offstage] + [TickerMode] pair described on [_BranchLayer].
 ///
+/// The transition is the arriving branch fading and rising over the one it
+/// replaces, and every part of that sentence was settled by measurement on a
+/// physical device rather than by taste. Cross-fading both layers cost 18ms of
+/// average raster per switch against 10ms for a hard cut, because two
+/// full-screen `saveLayer`s per frame is the same bill the Android zoom
+/// transition was dropped for. Fading only the incoming layer halves that, and
+/// the rise happens inside the layer the fade already pays for.
+///
 /// Uniform on every platform by construction: no `TargetPlatform` is consulted
 /// anywhere here. Tabs are siblings, and a fade is what Material prescribes for
-/// moving between top-level destinations — the platform page transitions (on
-/// Android, a zoom that cost 30–38ms of raster per frame on a real device) are
-/// for pushing a child over a parent, which is what a branch root's own page
+/// moving between top-level destinations — the platform page transitions are for
+/// pushing a child over a parent, which is what a branch root's own page
 /// transition still does.
-Widget buildBranchCrossFade(
+Widget buildBranchTransition(
   BuildContext context,
   StatefulNavigationShell navigationShell,
   List<Widget> children,
-) => BranchCrossFade(
+) => BranchTransition(
   currentIndex: navigationShell.currentIndex,
   children: children,
 );
@@ -32,8 +39,8 @@ Widget buildBranchCrossFade(
 /// Public because [StatefulNavigationShell] cannot be constructed outside
 /// go_router, and the index is the only thing this reads off it: a test drives
 /// the real widget instead of a stand-in for it.
-class BranchCrossFade extends StatefulWidget {
-  const BranchCrossFade({
+class BranchTransition extends StatefulWidget {
+  const BranchTransition({
     super.key,
     required this.currentIndex,
     required this.children,
@@ -43,10 +50,10 @@ class BranchCrossFade extends StatefulWidget {
   final List<Widget> children;
 
   @override
-  State<BranchCrossFade> createState() => _BranchCrossFadeState();
+  State<BranchTransition> createState() => _BranchTransitionState();
 }
 
-class _BranchCrossFadeState extends State<BranchCrossFade>
+class _BranchTransitionState extends State<BranchTransition>
     with SingleTickerProviderStateMixin {
   late final AnimationController _fade = AnimationController(
     vsync: this,
@@ -57,7 +64,6 @@ class _BranchCrossFadeState extends State<BranchCrossFade>
   late final Animation<double> _incoming = _fade.drive(
     CurveTween(curve: AppAnimation.emphasizedCurve),
   );
-  late final Animation<double> _outgoing = ReverseAnimation(_incoming);
 
   /// The branch being shown. Tracked separately from the widget's own index so
   /// the frame the index changes still knows where it came from.
@@ -74,7 +80,7 @@ class _BranchCrossFadeState extends State<BranchCrossFade>
   }
 
   @override
-  void didUpdateWidget(BranchCrossFade oldWidget) {
+  void didUpdateWidget(BranchTransition oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.currentIndex == _current) return;
 
@@ -93,20 +99,39 @@ class _BranchCrossFadeState extends State<BranchCrossFade>
   }
 
   @override
-  Widget build(BuildContext context) => Stack(
-    fit: StackFit.expand,
-    children: [
+  Widget build(BuildContext context) {
+    // Paint order, not branch order: the incoming branch goes LAST so it is on
+    // top of the one it is replacing.
+    //
+    // Ordering by index instead was a bug with a tell — the fade only showed in
+    // one direction. Going to a higher-numbered tab it landed on top and faded
+    // in; going to a lower-numbered one it faded in *underneath* a fully opaque
+    // layer, which is invisible, and read as the hard cut this transition exists
+    // to avoid.
+    //
+    // The keys are what make reordering safe: each layer holds a branch's
+    // Navigator, so it has to be re-parented rather than rebuilt.
+    final order = [
       for (var index = 0; index < widget.children.length; index++)
-        _BranchLayer(
-          key: ValueKey<int>(index),
-          branchIndex: index,
-          isCurrent: index == _current,
-          isOutgoing: index == _outgoingIndex,
-          opacity: index == _current ? _incoming : _outgoing,
-          child: widget.children[index],
-        ),
-    ],
-  );
+        if (index != _current) index,
+      _current,
+    ];
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        for (final index in order)
+          _BranchLayer(
+            key: ValueKey<int>(index),
+            branchIndex: index,
+            isCurrent: index == _current,
+            isOutgoing: index == _outgoingIndex,
+            opacity: index == _current ? _incoming : null,
+            child: widget.children[index],
+          ),
+      ],
+    );
+  }
 }
 
 /// One branch, in whichever of the three states it is in: current, fading out,
@@ -124,7 +149,10 @@ class _BranchLayer extends StatelessWidget {
   final int branchIndex;
   final bool isCurrent;
   final bool isOutgoing;
-  final Animation<double> opacity;
+
+  /// Null for a layer that is not animating, which is every layer but the
+  /// incoming one.
+  final Animation<double>? opacity;
   final Widget child;
 
   @override
@@ -154,15 +182,33 @@ class _BranchLayer extends StatelessWidget {
             excluding: !isCurrent,
             child: IgnorePointer(
               ignoring: !isCurrent,
-              // `FadeTransition`, not `Opacity`: it listens for repaint only —
-              // no rebuild per frame — and skips its layer entirely at opacity
-              // 1, so a settled shell pays nothing for the machinery. The
-              // boundary hands the engine a cached raster to blend during the
-              // fade instead of re-rasterising a whole screen every frame.
-              child: FadeTransition(
-                opacity: opacity,
-                child: RepaintBoundary(child: child),
-              ),
+              // The incoming branch fades in OVER the outgoing one, which keeps
+              // its full opacity underneath and therefore needs no opacity
+              // layer at all.
+              //
+              // Cross-fading the two instead — each in its own FadeTransition —
+              // was measured on device at 18ms of average raster per switch
+              // against 10ms for a hard cut: two full-screen `saveLayer`s per
+              // frame, which is the same bill the Zoom transition was dropped
+              // for. One layer buys the move for about a millisecond.
+              //
+              // The rise is a transform inside that one layer, so it is free:
+              // a bare opacity ramp on a whole screen reads as a dissolve, and
+              // what a tab switch wants to say is that something arrived.
+              // Small on purpose — 4% over 200ms — because the destination must
+              // not appear to zoom.
+              child: opacity == null
+                  ? RepaintBoundary(child: child)
+                  : FadeTransition(
+                      opacity: opacity!,
+                      child: ScaleTransition(
+                        scale: Tween<double>(
+                          begin: 0.96,
+                          end: 1,
+                        ).animate(opacity!),
+                        child: RepaintBoundary(child: child),
+                      ),
+                    ),
             ),
           ),
         ),

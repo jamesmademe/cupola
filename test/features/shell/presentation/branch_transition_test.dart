@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/app_animation.dart';
-import 'package:cupola/features/shell/presentation/branch_cross_fade.dart';
+import 'package:cupola/features/shell/presentation/branch_transition.dart';
 
 /// A widget that spins forever, so a test can ask whether its ticker was muted.
 class _Spinner extends StatefulWidget {
@@ -29,7 +29,7 @@ class _SpinnerState extends State<_Spinner>
   Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
-/// Drives [buildBranchCrossFade] the way `StatefulShellRoute` does, without a
+/// Drives [buildBranchTransition] the way `StatefulShellRoute` does, without a
 /// router: the container only ever reads `currentIndex` and the child list.
 class _Harness extends StatefulWidget {
   const _Harness({required this.children, this.disableAnimations = false});
@@ -52,7 +52,7 @@ class _HarnessState extends State<_Harness> {
     data: MediaQueryData(disableAnimations: widget.disableAnimations),
     child: Directionality(
       textDirection: TextDirection.ltr,
-      child: BranchCrossFade(currentIndex: index, children: widget.children),
+      child: BranchTransition(currentIndex: index, children: widget.children),
     ),
   );
 }
@@ -173,6 +173,53 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(taps, 0);
+    });
+
+    testWidgets('the incoming branch is painted on top, in both directions', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const _Harness(
+          children: [
+            Text('branch 0'),
+            Text('branch 1'),
+            Text('branch 2'),
+            Text('branch 3'),
+          ],
+        ),
+      );
+
+      /// Where the given branch sits in paint order — last is on top.
+      int depthOf(int branch) {
+        final layers = find
+            .byType(Offstage, skipOffstage: false)
+            .evaluate()
+            .toList();
+        return layers.indexWhere(
+          (element) => find
+              .descendant(
+                of: find.byWidget(element.widget, skipOffstage: false),
+                matching: find.text('branch $branch', skipOffstage: false),
+              )
+              .evaluate()
+              .isNotEmpty,
+        );
+      }
+
+      // Forwards: 0 -> 3.
+      tester.state<_HarnessState>(find.byType(_Harness)).switchTo(3);
+      await tester.pump();
+      expect(depthOf(3), 3, reason: 'the incoming branch must be last');
+
+      // Backwards: 3 -> 0, the direction that used to fade underneath an opaque
+      // layer and therefore not at all.
+      tester.state<_HarnessState>(find.byType(_Harness)).switchTo(0);
+      await tester.pump();
+      expect(
+        depthOf(0),
+        3,
+        reason: 'a lower-numbered tab must still come out on top',
+      );
     });
 
     testWidgets('Reduce Motion switches branches with no intermediate frame', (

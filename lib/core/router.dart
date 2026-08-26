@@ -10,7 +10,7 @@ import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
-import 'package:cupola/features/shell/presentation/branch_cross_fade.dart';
+import 'package:cupola/features/shell/presentation/branch_transition.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_screen.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
@@ -971,7 +971,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // `NavTab.values[index]`, so a branch out of `NavTab` order would select
       // the wrong tab rather than fail. Asserted below.
       StatefulShellRoute(
-        navigatorContainerBuilder: buildBranchCrossFade,
+        navigatorContainerBuilder: buildBranchTransition,
         builder: (context, state, navigationShell) =>
             ShellScreen(navigationShell: navigationShell),
         branches: [

@@ -11,7 +11,7 @@ import 'package:cupola/features/release_search/presentation/release_search_jobs_
 import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
-import 'package:cupola/features/shell/presentation/branch_cross_fade.dart';
+import 'package:cupola/features/shell/presentation/branch_transition.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
 
 import '../../../test_helpers/semantics_announcements.dart';
@@ -489,7 +489,7 @@ Future<_ShellHarness> _pumpShell(
     initialLocation: initialLocation,
     routes: [
       StatefulShellRoute(
-        navigatorContainerBuilder: buildBranchCrossFade,
+        navigatorContainerBuilder: buildBranchTransition,
         builder: (context, state, navigationShell) =>
             ShellScreen(navigationShell: navigationShell),
         branches: [
