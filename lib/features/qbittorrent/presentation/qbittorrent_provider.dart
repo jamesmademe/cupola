@@ -1,7 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// ignore: implementation_imports
+
+import 'package:cupola/core/lifecycle/gated_poll.dart'; // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
@@ -256,32 +255,50 @@ final selectedTorrentHashesProvider = StateProvider.autoDispose<Set<String>>(
   (ref) => {},
 );
 
-final torrentPollingEnabledProvider = StateProvider<bool>((ref) => true);
-
+/// The torrent list's live refresh, for as long as the list is what the user is
+/// looking at.
+///
+/// Watched through `WidgetRef.watchWhileLive`, so this provider's own lifetime is
+/// the gate: the moment the page is not the page on screen the watch is dropped,
+/// the last listener goes, and the timer with it.
 final torrentPollingProvider = Provider.autoDispose<void>((ref) {
-  final enabled = ref.watch(torrentPollingEnabledProvider);
-  if (!enabled) return;
-  final timer = Timer.periodic(const Duration(seconds: 3), (_) {
-    ref.invalidate(allTorrentsProvider);
-    ref.invalidate(torrentsProvider);
-    ref.invalidate(transferInfoProvider);
-  });
-  ref.onDispose(() => timer.cancel());
+  ref.gatedPoll(
+    id: 'qbittorrent.list',
+    interval: _pollInterval,
+    onTick: () {
+      ref.invalidate(allTorrentsProvider);
+      ref.invalidate(torrentsProvider);
+      ref.invalidate(transferInfoProvider);
+    },
+  );
 });
 
+/// One torrent's own live refresh.
+///
+/// Invalidates only what the detail screen displays, and it is the only poll
+/// running while the detail is open: the list it was pushed from is covered, so
+/// that gate is shut. The saving is the list's whole tick — an unfiltered
+/// `/torrents/info` plus `/transfer/info` — not this screen's own filtered
+/// `/torrents/info`, which is a different request to the same endpoint and is
+/// what this page actually reads.
+///
+/// Popping back gives the list a catch-up tick, so what it shows is a frame
+/// behind the return rather than up to three seconds stale.
 final torrentDetailPollingProvider = Provider.autoDispose.family<void, String>((
   ref,
   hash,
 ) {
-  // The underlying QbittorrentScreen keeps running torrentPollingProvider
-  // (which already invalidates allTorrentsProvider / torrentsProvider /
-  // transferInfoProvider). Here we only refresh the detail-scoped
-  // providers so we don't double-fetch /torrents/info on every tick.
-  final timer = Timer.periodic(const Duration(seconds: 3), (_) {
-    ref.invalidate(qbittorrentTorrentsProvider(hash));
-    ref.invalidate(torrentFilesProvider(hash));
-    ref.invalidate(torrentTrackersProvider(hash));
-    ref.invalidate(torrentPropertiesProvider(hash));
-  });
-  ref.onDispose(() => timer.cancel());
+  ref.gatedPoll(
+    id: 'qbittorrent.detail.$hash',
+    interval: _pollInterval,
+    onTick: () {
+      ref.invalidate(qbittorrentTorrentsProvider(hash));
+      ref.invalidate(torrentFilesProvider(hash));
+      ref.invalidate(torrentTrackersProvider(hash));
+      ref.invalidate(torrentPropertiesProvider(hash));
+    },
+  );
 });
+
+/// The cadence both qBittorrent polls run at.
+const _pollInterval = Duration(seconds: 3);

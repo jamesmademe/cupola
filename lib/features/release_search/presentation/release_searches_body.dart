@@ -1,9 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/lifecycle/gated_poll.dart';
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/features/release_search/domain/release_search_job.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
@@ -12,14 +12,16 @@ import 'package:cupola/features/release_search/presentation/widgets/release_sear
 
 /// Keeps the windows honest while the section is on screen.
 ///
-/// Watcher-scoped on purpose, following `activityNowPollingProvider`: the ticker
-/// runs only while something is watching it and dies with the last watcher, so a
-/// section the user has navigated away from is not re-rendering once a second.
+/// No network of its own — it re-evaluates in-memory grab windows — but it can
+/// start a queued search as a consequence, which is reason enough to hold it to
+/// the same rule as everything else: a section nobody is looking at does not get
+/// to begin an indexer search.
 final releaseSearchTickProvider = Provider.autoDispose<void>((ref) {
-  final timer = Timer.periodic(const Duration(seconds: 10), (_) {
-    ref.read(releaseSearchJobsProvider.notifier).refreshWindows();
-  });
-  ref.onDispose(timer.cancel);
+  ref.gatedPoll(
+    id: 'releaseSearch.windows',
+    interval: const Duration(seconds: 10),
+    onTick: () => ref.read(releaseSearchJobsProvider.notifier).refreshWindows(),
+  );
 });
 
 /// Activity › Now › **Searching**.
@@ -35,7 +37,7 @@ class ReleaseSearchesBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(releaseSearchTickProvider);
+    ref.watchWhileLive(context, releaseSearchTickProvider);
     final jobs = ref.watch(releaseSearchJobsProvider);
     final now = DateTime.now();
 

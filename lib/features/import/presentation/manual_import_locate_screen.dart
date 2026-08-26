@@ -112,15 +112,20 @@ class _LocateBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (state.error != null && state.rootFolders.isEmpty) {
-      return AppEmptyState(
-        icon: Icons.cloud_off_rounded,
-        title: 'Manual import unavailable',
-        message: state.error,
-        accentColor: service.accent,
-        action: FilledButton.tonalIcon(
-          onPressed: onRetry,
-          icon: const Icon(Icons.refresh_rounded, size: 18),
-          label: const Text('Try again'),
+      // The message here is the service's own error text, which quotes the
+      // address it could not reach: long enough to wrap, so the page has to be
+      // able to scroll.
+      return AppEmptyStatePage(
+        emptyState: AppEmptyState(
+          icon: Icons.cloud_off_rounded,
+          title: 'Manual import unavailable',
+          message: state.error,
+          accentColor: service.accent,
+          action: FilledButton.tonalIcon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Try again'),
+          ),
         ),
       );
     }

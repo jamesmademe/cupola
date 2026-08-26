@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
@@ -47,7 +48,9 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(torrentDetailPollingProvider(widget.hash));
+    // Only while this detail is the page on screen: a sort sheet over it, a
+    // switch to another tab, or the app going away all stop the poll.
+    ref.watchWhileLive(context, torrentDetailPollingProvider(widget.hash));
     final torrentAsync = ref.watch(qbittorrentTorrentsProvider(widget.hash));
 
     return AsyncValueWidget<List<Torrent>>(

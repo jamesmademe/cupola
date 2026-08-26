@@ -621,7 +621,11 @@ class _SearchEmptyState extends ConsumerWidget {
           const SizedBox(height: AppSpacing.lg),
           Center(
             child: FilledButton.icon(
-              onPressed: () => context.push('/settings'),
+              // `go`, not `push`: a push keeps the *origin* branch's navigator,
+              // so Settings would render inside the Search tab while the bar
+              // stayed lit on Search. `go` switches to the Settings branch,
+              // which is what the button says it does.
+              onPressed: () => context.go('/settings'),
               icon: const Icon(Icons.settings_rounded, size: 18),
               label: const Text('Open Settings'),
             ),

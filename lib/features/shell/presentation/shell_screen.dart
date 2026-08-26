@@ -5,15 +5,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
+import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/presentation/portal_coach_mark.dart';
 import 'package:cupola/features/shell/presentation/service_portal.dart';
 
@@ -22,9 +23,14 @@ import 'package:cupola/features/shell/presentation/service_portal.dart';
 /// Uses a custom [FloatingBottomNavBar] with rounded corners and floating design.
 /// Outlined icons for unselected state and filled icons for selected state.
 class ShellScreen extends ConsumerStatefulWidget {
-  final Widget child;
+  /// The four branch navigators, and the tab index that says which one shows.
+  ///
+  /// Carries a `GlobalKey` of its own, so crossing the rail breakpoint
+  /// re-parents it instead of rebuilding it: every branch's stack survives a
+  /// resize, which the single-navigator shell could not offer.
+  final StatefulNavigationShell navigationShell;
 
-  const ShellScreen({super.key, required this.child});
+  const ShellScreen({super.key, required this.navigationShell});
 
   /// Width at or above which navigation moves from a bottom bar to a side rail.
   ///
@@ -66,7 +72,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   /// A cancellable timer, not a bare delay: the shell may be torn down first.
   void _armDemoBounce() {
     if (!mounted) return;
-    if (_isImportRoute(context)) return;
     if (MediaQuery.sizeOf(context).width >= ShellScreen._railBreakpoint) return;
     if (MediaQuery.accessibleNavigationOf(context)) return;
     if (!ref.read(portalHintsProvider).demoBouncePending) return;
@@ -88,8 +93,11 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
 
   @override
   Widget build(BuildContext context) {
-    final hideNav = _isImportRoute(context);
-    final selectedIndex = hideNav ? -1 : _calculateSelectedIndex(context);
+    // Straight off the shell, which is the authority: with four stacks the
+    // location and the visible branch can disagree — an imperative push from
+    // another tab lands on this branch while the path reads like somebody
+    // else's — and it is the branch that the bar must agree with.
+    final selectedIndex = widget.navigationShell.currentIndex;
     final useRail =
         MediaQuery.sizeOf(context).width >= ShellScreen._railBreakpoint;
     // The Portal's drag is unusable under a screen reader; there the bar keeps
@@ -146,65 +154,53 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
           ? Scaffold(
               body: Row(
                 children: [
-                  if (!hideNav)
-                    // SafeArea on the rail side only: in landscape the notch and
-                    // the rounded corner sit on the leading edge, and the rail
-                    // was laid out underneath them. The content keeps its own
-                    // insets.
-                    SafeArea(
-                      right: false,
-                      child: _ServicesNavRail(
-                        selectedIndex: selectedIndex,
-                        destinations: destinations,
-                        onDestinationSelected: (int idx) =>
-                            _onItemTapped(idx, context, selectedIndex),
-                      ),
+                  // SafeArea on the rail side only: in landscape the notch and
+                  // the rounded corner sit on the leading edge, and the rail
+                  // was laid out underneath them. The content keeps its own
+                  // insets.
+                  SafeArea(
+                    right: false,
+                    child: _ServicesNavRail(
+                      selectedIndex: selectedIndex,
+                      destinations: destinations,
+                      onDestinationSelected: (int idx) =>
+                          _onItemTapped(idx, context, selectedIndex),
                     ),
-                  Expanded(child: widget.child),
+                  ),
+                  Expanded(child: widget.navigationShell),
                 ],
               ),
             )
           : Scaffold(
-              extendBody: !hideNav,
-              body: hideNav
-                  ? widget.child
-                  : Stack(
+              extendBody: true,
+              body:
+                  // The Portal is a cover the route system cannot see: it
+                  // freezes the page's pixels while leaving its timers running.
+                  // Scoping the stage tells whatever polls under there to stop —
+                  // see `PageCoverageScope`.
+                  PageCoverageScope(
+                    covering: _portal.covering,
+                    child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        PortalStage(controller: _portal, child: widget.child),
+                        PortalStage(
+                          controller: _portal,
+                          child: widget.navigationShell,
+                        ),
                         if (!accessibleNav)
                           PortalCoachMark(controller: _portal),
                       ],
                     ),
-              bottomNavigationBar: hideNav
-                  ? null
-                  : FloatingBottomNavBar(
-                      selectedIndex: selectedIndex,
-                      onDestinationSelected: (int idx) =>
-                          _onItemTapped(idx, context, selectedIndex),
-                      destinations: destinations,
-                      verticalDragDelegate: accessibleNav ? null : _portal,
-                    ),
+                  ),
+              bottomNavigationBar: FloatingBottomNavBar(
+                selectedIndex: selectedIndex,
+                onDestinationSelected: (int idx) =>
+                    _onItemTapped(idx, context, selectedIndex),
+                destinations: destinations,
+                verticalDragDelegate: accessibleNav ? null : _portal,
+              ),
             ),
     );
-  }
-
-  static bool _isImportRoute(BuildContext context) {
-    final location = GoRouterState.of(context).uri.path;
-    return location.startsWith(manualImportPathPrefix);
-  }
-
-  static int _calculateSelectedIndex(BuildContext context) {
-    final location = GoRouterState.of(context).uri.path;
-
-    for (var index = 0; index < NavTab.values.length; index++) {
-      final tab = NavTab.values[index];
-      if (location.startsWith(tab.routePath)) {
-        return index;
-      }
-    }
-
-    return -1;
   }
 
   void _onItemTapped(int index, BuildContext context, int currentIndex) {
@@ -217,10 +213,23 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     if (portalWasOpen) _portal.closeFromUi();
 
     final tab = NavTab.values[index];
-    final currentPath = GoRouterState.of(context).uri.path;
 
-    if (index == currentIndex && currentPath == tab.routePath) {
+    if (index == currentIndex) {
       if (portalWasOpen) return;
+
+      // "Am I deep in this tab?" asked of the branch's own Navigator rather
+      // than by comparing the location to the tab's root path. The comparison
+      // was right while one stack meant the location and the visible page could
+      // not disagree; with four of them they can, and whether this branch has
+      // something to pop is the structural question anyway.
+      if (branchNavigatorKeyFor(tab).currentState?.canPop() ?? false) {
+        // Take me back where I started. `initialLocation: true` navigates the
+        // branch to its root, which pops it and nothing else: a return journey
+        // must not also fire a fetch.
+        widget.navigationShell.goBranch(index, initialLocation: true);
+        return;
+      }
+
       final section = _refreshSectionFor(tab);
       if (section != null) {
         ref.triggerNavigationRefresh(section);
@@ -235,8 +244,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     }
 
     // Not announced: switching tabs replaces the whole screen, which is its own
-    // feedback.
-    context.go(tab.routePath);
+    // feedback. `goBranch`, not `go`: it restores the branch's own stack, which
+    // is the entire point of the four navigators.
+    widget.navigationShell.goBranch(index);
   }
 
   FloatingNavDestination _destinationFor(NavTab tab, int searchesWaiting) {

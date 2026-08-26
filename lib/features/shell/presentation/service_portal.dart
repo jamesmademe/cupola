@@ -147,6 +147,19 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   /// the hint is no longer needed.
   VoidCallback? onOpened;
 
+  /// Whether the Portal is over the page under it.
+  ///
+  /// The page's own pixels are frozen by [snapshot] the moment this turns true,
+  /// but its timers are not: a poller under an open Portal would go on fetching
+  /// to update a texture. Pages read this through `PageCoverageScope` and stop.
+  ///
+  /// A boolean derived from [portal] rather than the animation itself, because
+  /// what depends on it must rebuild when the Portal opens and when it closes —
+  /// twice — and not on each of the 400ms of frames in between. Assigning an
+  /// unchanged value to a [ValueNotifier] does not notify, so the debounce is
+  /// the notifier's own.
+  final ValueNotifier<bool> covering = ValueNotifier<bool>(false);
+
   @override
   ValueListenable<double> get verticalLift => _lift;
 
@@ -170,8 +183,9 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
 
   void _switchMode({required bool engage}) {
     _blendFrom = portal.value;
-    _blend.duration =
-        engage ? PortalPhysics.engageBlend : PortalPhysics.disengageBlend;
+    _blend.duration = engage
+        ? PortalPhysics.engageBlend
+        : PortalPhysics.disengageBlend;
     _blend.forward(from: 0);
   }
 
@@ -186,7 +200,11 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   void _onPortalTick() {
     final v = portal.value;
     if (v > 0 && !snapshot.allowSnapshotting) snapshot.allowSnapshotting = true;
-    if (v == 0 && snapshot.allowSnapshotting) snapshot.allowSnapshotting = false;
+    if (v == 0 && snapshot.allowSnapshotting)
+      snapshot.allowSnapshotting = false;
+    // Same threshold as the snapshot above: the page is covered from the first
+    // frame it stops being what the user sees.
+    covering.value = v > 0;
   }
 
   // ---------------------------------------------------------------- bar drag
@@ -231,9 +249,10 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
     if (_engaged) {
       // Finger above threshold coming back down: the bar rises slowly to
       // meet it, so re-grab is a touch, not a cut.
-      final approach = ((PortalPhysics.threshold - _rawUp) /
-              math.max(1.0, PortalPhysics.threshold - _engageLift))
-          .clamp(0.0, 1.0);
+      final approach =
+          ((PortalPhysics.threshold - _rawUp) /
+                  math.max(1.0, PortalPhysics.threshold - _engageLift))
+              .clamp(0.0, 1.0);
       final lift = _engageLift * approach;
       if (lift > _lift.value || !_barSpring.isAnimating) {
         _stopBarAnim();
@@ -242,10 +261,13 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
     } else {
       if (dy < 0) {
         // Rising: the bar's real elastic formula, portal-tuned parameters.
-        final resistance = PortalPhysics.baseResistance /
+        final resistance =
+            PortalPhysics.baseResistance /
             (1 + _lift.value / PortalPhysics.falloff);
-        _lift.value =
-            (_lift.value - dy * resistance).clamp(0.0, PortalPhysics.threshold);
+        _lift.value = (_lift.value - dy * resistance).clamp(
+          0.0,
+          PortalPhysics.threshold,
+        );
       } else if (_lift.value > 0) {
         // Descending while lifted: the bar is in the finger's hand, 1:1.
         _lift.value = math.max(0.0, _lift.value - dy);
@@ -269,7 +291,8 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
     }
     // A release completes ONLY beyond the safe zone (or with a flick past the
     // gate); a downward flick always cancels.
-    final commit = _engaged &&
+    final commit =
+        _engaged &&
         _releaseTarget(vUp, _rawUp >= PortalPhysics.safeZone) == 1.0;
     _engaged = false;
     if (_lift.value != 0) {
@@ -370,8 +393,10 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
     if (_lift.value == end) return;
     _stopBarAnim();
     _barSpring.duration = duration;
-    final anim = Tween<double>(begin: _lift.value, end: end)
-        .animate(CurvedAnimation(parent: _barSpring, curve: curve));
+    final anim = Tween<double>(
+      begin: _lift.value,
+      end: end,
+    ).animate(CurvedAnimation(parent: _barSpring, curve: curve));
     void tick() => _lift.value = anim.value;
     anim.addListener(tick);
     _barAnim = anim;
@@ -395,6 +420,7 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
     _barSpring.dispose();
     _blend.dispose();
     _lift.dispose();
+    covering.dispose();
     snapshot.dispose();
   }
 }
@@ -526,10 +552,7 @@ class _PortalFloor extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [
-                          panelColor.withValues(alpha: 0),
-                          panelColor,
-                        ],
+                        colors: [panelColor.withValues(alpha: 0), panelColor],
                       ),
                     ),
                   ),
@@ -570,7 +593,8 @@ class _PortalCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
     final h = controller.screenHeight;
-    final finalBottom = PortalPhysics.cardTopInset + h * PortalPhysics.cardScale;
+    final finalBottom =
+        PortalPhysics.cardTopInset + h * PortalPhysics.cardScale;
     // Linear on purpose — see the library doc.
     final top = PortalPhysics.cardTopInset * t;
     final bottom = h - t * (h - finalBottom);

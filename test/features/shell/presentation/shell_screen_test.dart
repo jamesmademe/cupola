@@ -9,6 +9,9 @@ import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
+import 'package:cupola/features/shell/domain/shell_branches.dart';
+import 'package:cupola/features/shell/presentation/branch_transition.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
 
 import '../../../test_helpers/semantics_announcements.dart';
@@ -60,16 +63,19 @@ void main() {
       expect(find.byIcon(Icons.settings_outlined), findsNothing);
     });
 
-    testWidgets('does not select a tab for unmatched shell routes', (
+    // Replaces "does not select a tab for unmatched shell routes". There is no
+    // such thing any more: every route inside the shell belongs to a branch by
+    // construction, and a page with no tab of its own — the manual-import flow,
+    // the activity drill-down — is a route above the shell, which the bar is not
+    // part of at all.
+    testWidgets('a route outside the shell has no nav bar to select in', (
       tester,
     ) async {
       await _pumpShell(tester, initialLocation: '/outside');
 
       expect(find.text('OutsidePage'), findsOneWidget);
-      expect(find.byIcon(Icons.view_list_rounded), findsNothing);
-      expect(find.byIcon(Icons.monitor_heart_rounded), findsNothing);
-      expect(find.byIcon(Icons.search_rounded), findsNothing);
-      expect(find.byIcon(Icons.settings), findsNothing);
+      expect(find.byType(FloatingBottomNavBar), findsNothing);
+      expect(find.byType(ShellScreen), findsNothing);
     });
 
     testWidgets('tapping Search navigates to /search', (tester) async {
@@ -128,6 +134,117 @@ void main() {
         );
       },
     );
+
+    // ── What four navigators buy, and what they must not cost ──────────────
+
+    testWidgets('each branch keeps its own stack across a switch', (
+      tester,
+    ) async {
+      final harness = await _pumpShell(
+        tester,
+        initialLocation: '/services/radarr/movie/42',
+      );
+
+      await tester.tap(_navItem('Search'));
+      await tester.pumpAndSettle();
+      expect(find.text('SearchPage'), findsOneWidget);
+
+      await tester.tap(_navItem('Services'));
+      await tester.pumpAndSettle();
+
+      // Not the tab's root: the page that was open when it was left.
+      expect(harness.router.state.uri.path, '/services/radarr/movie/42');
+      expect(find.text('MovieDetailPage'), findsOneWidget);
+    });
+
+    testWidgets('a switched-away branch is kept alive, not rebuilt', (
+      tester,
+    ) async {
+      await _pumpShell(tester);
+      expect(_ProbePage.mounts['ServicesPage'], 1);
+
+      await tester.tap(_navItem('Search'));
+      await tester.pumpAndSettle();
+      await tester.tap(_navItem('Services'));
+      await tester.pumpAndSettle();
+
+      // Still one: this is the whole performance claim. A return costs no
+      // construction, and everything the page had subscribed to stayed
+      // subscribed — the 26 provider fetches a rebuilt /services used to re-run
+      // never happen.
+      expect(_ProbePage.mounts['ServicesPage'], 1);
+      expect(_ProbePage.mounts['SearchPage'], 1);
+    });
+
+    testWidgets('returning to a branch root pops it and refreshes nothing', (
+      tester,
+    ) async {
+      // The contract most easily broken by a future refactor: `goBranch` with
+      // `initialLocation: true` must be a navigation, never a refresh.
+      final harness = await _pumpShell(
+        tester,
+        initialLocation: '/services/radarr/movie/42',
+      );
+
+      await tester.tap(_navItem('Services'));
+      await tester.pumpAndSettle();
+
+      expect(harness.router.state.uri.path, '/services');
+      for (final section in NavigationSection.values) {
+        expect(
+          harness.container.read(navigationRefreshProvider(section)),
+          0,
+          reason: 'popping a branch must not fetch anything',
+        );
+      }
+    });
+
+    testWidgets('a re-tap deep in a branch pops it whatever the location says', (
+      tester,
+    ) async {
+      // With four stacks the location can belong to a branch other than the
+      // visible one, which is why the shell asks the navigator rather than the
+      // path. Services is deep here while Search shows: tapping Services must
+      // land on its own root.
+      final harness = await _pumpShell(
+        tester,
+        initialLocation: '/services/radarr/movie/42',
+      );
+      await tester.tap(_navItem('Search'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(_navItem('Services'));
+      await tester.pumpAndSettle();
+      expect(find.text('MovieDetailPage'), findsOneWidget);
+
+      await tester.tap(_navItem('Services'));
+      await tester.pumpAndSettle();
+
+      expect(harness.router.state.uri.path, '/services');
+      expect(find.text('ServicesPage'), findsOneWidget);
+    });
+
+    testWidgets('crossing the rail breakpoint keeps every branch stack', (
+      tester,
+    ) async {
+      final harness = await _pumpShell(
+        tester,
+        initialLocation: '/services/radarr/movie/42',
+      );
+
+      // Widen past 840 so the bar becomes the rail, then narrow back. The shell
+      // is re-parented rather than rebuilt, which the single-navigator shell
+      // could not do.
+      tester.view.physicalSize = const Size(1200, 900);
+      await tester.pumpAndSettle();
+      expect(find.byType(FloatingBottomNavBar), findsNothing);
+
+      tester.view.physicalSize = const Size(400, 900);
+      await tester.pumpAndSettle();
+
+      expect(harness.router.state.uri.path, '/services/radarr/movie/42');
+      expect(find.text('MovieDetailPage'), findsOneWidget);
+    });
 
     testWidgets('re-tapping the active Services tab announces the refresh', (
       tester,
@@ -319,6 +436,40 @@ Future<void> _sendLifecycle(
   await tester.pumpAndSettle();
 }
 
+/// A harness page that counts its own mounts.
+///
+/// The point of four navigators is that leaving a tab no longer destroys it, and
+/// "was it destroyed?" is not a question a `Text` can answer. Each mount is one
+/// full construction of the page — the cost this migration exists to stop
+/// paying, and the moment every provider the page watches would be re-read.
+class _ProbePage extends StatefulWidget {
+  const _ProbePage(this.label);
+
+  final String label;
+
+  /// Mounts per label, reset by [_pumpShell].
+  static final Map<String, int> mounts = {};
+
+  @override
+  State<_ProbePage> createState() => _ProbePageState();
+}
+
+class _ProbePageState extends State<_ProbePage> {
+  @override
+  void initState() {
+    super.initState();
+    _ProbePage.mounts.update(
+      widget.label,
+      (count) => count + 1,
+      ifAbsent: () => 1,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      Scaffold(body: Text(widget.label, textDirection: TextDirection.ltr));
+}
+
 Future<_ShellHarness> _pumpShell(
   WidgetTester tester, {
   String initialLocation = '/services',
@@ -327,38 +478,68 @@ Future<_ShellHarness> _pumpShell(
   Size viewport = const Size(400, 900),
   List<Override> overrides = const [],
 }) async {
+  _ProbePage.mounts.clear();
   final container = ProviderContainer(overrides: overrides);
+  // Mirrors production's shape, because that shape is what the shell now reads:
+  // four branches in `NavTab` order, each with its own navigator key, behind the
+  // real cross-fade container. `/outside` sits at ROOT, where the manual-import
+  // flow and the activity drill-down live — a route with no tab of its own is
+  // now a route outside the shell, not an unmatched route inside it.
   final router = GoRouter(
     initialLocation: initialLocation,
     routes: [
-      ShellRoute(
-        builder: (context, state, child) => ShellScreen(child: child),
-        routes: [
-          GoRoute(
-            path: '/services',
-            builder: (_, __) => const Scaffold(body: Text('ServicesPage')),
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        builder: (context, state, navigationShell) =>
+            ShellScreen(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            navigatorKey: branchNavigatorKeyFor(NavTab.services),
+            routes: [
+              GoRoute(
+                path: '/services',
+                builder: (_, __) => const _ProbePage('ServicesPage'),
+                routes: [
+                  GoRoute(
+                    path: 'radarr/movie/:id',
+                    builder: (_, __) => const _ProbePage('MovieDetailPage'),
+                  ),
+                ],
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/activity',
-            builder: (_, __) => const Scaffold(body: Text('ActivityPage')),
+          StatefulShellBranch(
+            navigatorKey: branchNavigatorKeyFor(NavTab.activity),
+            routes: [
+              GoRoute(
+                path: '/activity',
+                builder: (_, __) => const _ProbePage('ActivityPage'),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/search',
-            builder: (_, __) => const Scaffold(body: Text('SearchPage')),
+          StatefulShellBranch(
+            navigatorKey: branchNavigatorKeyFor(NavTab.search),
+            routes: [
+              GoRoute(
+                path: '/search',
+                builder: (_, __) => const _ProbePage('SearchPage'),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/services/radarr/movie/:id',
-            builder: (_, __) => const Scaffold(body: Text('MovieDetailPage')),
-          ),
-          GoRoute(
-            path: '/settings',
-            builder: (_, __) => const Scaffold(body: Text('SettingsPage')),
-          ),
-          GoRoute(
-            path: '/outside',
-            builder: (_, __) => const Scaffold(body: Text('OutsidePage')),
+          StatefulShellBranch(
+            navigatorKey: branchNavigatorKeyFor(NavTab.settings),
+            routes: [
+              GoRoute(
+                path: '/settings',
+                builder: (_, __) => const _ProbePage('SettingsPage'),
+              ),
+            ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/outside',
+        builder: (_, __) => const _ProbePage('OutsidePage'),
       ),
     ],
   );

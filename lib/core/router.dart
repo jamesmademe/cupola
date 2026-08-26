@@ -8,6 +8,9 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
+import 'package:cupola/features/shell/domain/shell_branches.dart';
+import 'package:cupola/features/shell/presentation/branch_transition.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_screen.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
@@ -91,7 +94,6 @@ import 'package:cupola/features/discover/presentation/person_detail_screen.dart'
 import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
-final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
 
 const double _serviceDashboardTopPadding = kToolbarHeight;
 
@@ -864,6 +866,84 @@ String _preserveQuery(Uri source, String path) {
   return '$path$query';
 }
 
+/// The route at the root of each tab's own navigator.
+///
+/// A switch on [NavTab] rather than a hand-ordered list, so the branch order
+/// cannot drift from `NavTab.values`: the shell maps
+/// `StatefulNavigationShell.currentIndex` straight onto that enum, and a
+/// mismatch would quietly select the wrong tab instead of failing anywhere
+/// visible. Exhaustive, so a fifth tab cannot be added without deciding what
+/// its branch opens on.
+RouteBase _branchRootFor(NavTab tab) => switch (tab) {
+  NavTab.services => GoRoute(
+    path: '/services',
+    pageBuilder: (context, state) => _tabPage(state, const ServicesScreen()),
+    routes: [
+      _discoverRoutes(path: 'seerr'),
+      _moviesRoutes(path: 'radarr'),
+      _seriesRoutes(path: 'sonarr'),
+      _musicRoutes(path: 'lidarr'),
+      _qbittorrentRoutes(path: 'qbittorrent'),
+      _bazarrRoutes(path: 'bazarr'),
+      _truenasRoutes(path: 'truenas'),
+      _dockgeRoutes(path: 'dockge'),
+      _prowlarrRoutes(path: 'prowlarr'),
+      _readarrRoutes(path: 'readarr'),
+      _sabnzbdRoutes(path: 'sabnzbd'),
+      _nzbgetRoutes(path: 'nzbget'),
+      _unraidRoutes(path: 'unraid'),
+      _transmissionRoutes(path: 'transmission'),
+      // `npm`, not `nginxProxyManager` — see `ServiceKey.routeParam`.
+      _npmRoutes(path: ServiceKey.nginxProxyManager.routeParam),
+      _streamRoutes(service: ServiceKey.jellyfin, path: 'jellyfin'),
+      _streamRoutes(service: ServiceKey.plex, path: 'plex'),
+    ],
+  ),
+  NavTab.activity => GoRoute(
+    path: '/activity',
+    pageBuilder: (context, state) =>
+        _tabPage(state, const GlobalActivityScreen()),
+  ),
+  NavTab.search => GoRoute(
+    path: '/search',
+    pageBuilder: (context, state) => _tabPage(state, const SearchScreen()),
+  ),
+  NavTab.settings => GoRoute(
+    path: '/settings',
+    pageBuilder: (context, state) =>
+        _tabPage(state, const SettingsHomeScreen()),
+    routes: [
+      GoRoute(
+        path: 'background-search',
+        builder: (context, state) => const ReleaseSearchSettingsScreen(),
+      ),
+      _page('appearance', (state) => const SettingsAppearanceScreen()),
+      _page('hints', (state) => const SettingsHintsScreen()),
+      _page('connections', (state) => const SettingsConnectionsScreen()),
+      // Former name of the connections screen, kept so an existing
+      // deep link or a shortcut does not dead-end.
+      GoRoute(
+        path: 'services',
+        redirect: (context, state) => '/settings/connections',
+      ),
+      _page('region', (state) => const SettingsRegionScreen()),
+      _page('certificates', (state) => const TrustedCertificatesScreen()),
+      _page('service/:service', (state) {
+        final serviceParam = state.pathParameters['service'];
+        // Accept 'jellyseerr' as a legacy alias for 'seerr'.
+        final normalizedParam = serviceParam == 'jellyseerr'
+            ? 'seerr'
+            : serviceParam;
+        final service = ServiceKey.values.firstWhere(
+          (s) => s.routeParam == normalizedParam,
+          orElse: () => ServiceKey.seerr,
+        );
+        return ServiceSettingsScreen(service: service);
+      }),
+    ],
+  ),
+};
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerRefreshNotifierProvider);
   final onboardingDone = ref.read(onboardingCompletedProvider);
@@ -884,133 +964,88 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),
       ),
-      ShellRoute(
-        navigatorKey: _shellNavigatorKey,
-        builder: (context, state, child) {
-          return ShellScreen(child: child);
-        },
-        routes: [
-          GoRoute(
-            path: '/services',
-            pageBuilder: (context, state) =>
-                _tabPage(state, const ServicesScreen()),
-            routes: [
-              _discoverRoutes(path: 'seerr'),
-              _moviesRoutes(path: 'radarr'),
-              _seriesRoutes(path: 'sonarr'),
-              _musicRoutes(path: 'lidarr'),
-              _qbittorrentRoutes(path: 'qbittorrent'),
-              _bazarrRoutes(path: 'bazarr'),
-              _truenasRoutes(path: 'truenas'),
-              _dockgeRoutes(path: 'dockge'),
-              _prowlarrRoutes(path: 'prowlarr'),
-              _readarrRoutes(path: 'readarr'),
-              _sabnzbdRoutes(path: 'sabnzbd'),
-              _nzbgetRoutes(path: 'nzbget'),
-              _unraidRoutes(path: 'unraid'),
-              _transmissionRoutes(path: 'transmission'),
-              // `npm`, not `nginxProxyManager` — see `ServiceKey.routeParam`.
-              _npmRoutes(path: ServiceKey.nginxProxyManager.routeParam),
-              _streamRoutes(service: ServiceKey.jellyfin, path: 'jellyfin'),
-              _streamRoutes(service: ServiceKey.plex, path: 'plex'),
-            ],
-          ),
-          GoRoute(
-            path: '/activity',
-            pageBuilder: (context, state) =>
-                _tabPage(state, const GlobalActivityScreen()),
-          ),
-          GoRoute(
-            path: manualImportBrowsePath,
-            pageBuilder: (context, state) => _manualImportPage(
-              state,
-              (service, targetId) => ManualImportLocateScreen(
-                service: service,
-                targetId: targetId,
-                initialPath: state.uri.queryParameters['path'],
-              ),
+      // One Navigator per tab, all four alive at once behind a cross-fade.
+      //
+      // The order of [branches] is a contract, not a layout: the shell maps a
+      // bar tap and `StatefulNavigationShell.currentIndex` straight onto
+      // `NavTab.values[index]`, so a branch out of `NavTab` order would select
+      // the wrong tab rather than fail. Asserted below.
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        builder: (context, state, navigationShell) =>
+            ShellScreen(navigationShell: navigationShell),
+        branches: [
+          for (final tab in NavTab.values)
+            StatefulShellBranch(
+              navigatorKey: branchNavigatorKeyFor(tab),
+              routes: [_branchRootFor(tab)],
             ),
-          ),
-          GoRoute(
-            path: manualImportReviewPath,
-            pageBuilder: (context, state) => _manualImportPage(
-              state,
-              (service, targetId) => ManualImportReviewScreen(
-                service: service,
-                targetId: targetId,
-              ),
-            ),
-          ),
-          // Steps of the retired four-screen flow; an old deep link lands on
-          // the merged Review station instead of dead-ending.
-          GoRoute(
-            path: manualImportFolderPath,
-            redirect: (context, state) => _redirectLegacyManualImport(state),
-          ),
-          GoRoute(
-            path: manualImportMatchPath,
-            redirect: (context, state) => _redirectLegacyManualImport(state),
-          ),
-          GoRoute(
-            path: manualImportProgressPath,
-            pageBuilder: (context, state) => _manualImportPage(
-              state,
-              (service, targetId) =>
-                  ManualImportProgressScreen(service: service),
-            ),
-          ),
-          GoRoute(
-            path: '/search',
-            pageBuilder: (context, state) =>
-                _tabPage(state, const SearchScreen()),
-          ),
-          _discoverRoutes(path: '/discover', redirectLocation: '/services'),
-          _moviesRoutes(path: '/movies', redirectLocation: '/services'),
-          _seriesRoutes(path: '/series', redirectLocation: '/services'),
-          _musicRoutes(path: '/music', redirectLocation: '/services'),
-          GoRoute(
-            path: '/settings',
-            pageBuilder: (context, state) =>
-                _tabPage(state, const SettingsHomeScreen()),
-            routes: [
-              GoRoute(
-                path: 'background-search',
-                builder: (context, state) =>
-                    const ReleaseSearchSettingsScreen(),
-              ),
-              _page('appearance', (state) => const SettingsAppearanceScreen()),
-              _page('hints', (state) => const SettingsHintsScreen()),
-              _page(
-                'connections',
-                (state) => const SettingsConnectionsScreen(),
-              ),
-              // Former name of the connections screen, kept so an existing
-              // deep link or a shortcut does not dead-end.
-              GoRoute(
-                path: 'services',
-                redirect: (context, state) => '/settings/connections',
-              ),
-              _page('region', (state) => const SettingsRegionScreen()),
-              _page(
-                'certificates',
-                (state) => const TrustedCertificatesScreen(),
-              ),
-              _page('service/:service', (state) {
-                final serviceParam = state.pathParameters['service'];
-                // Accept 'jellyseerr' as a legacy alias for 'seerr'.
-                final normalizedParam = serviceParam == 'jellyseerr'
-                    ? 'seerr'
-                    : serviceParam;
-                final service = ServiceKey.values.firstWhere(
-                  (s) => s.routeParam == normalizedParam,
-                  orElse: () => ServiceKey.seerr,
-                );
-                return ServiceSettingsScreen(service: service);
-              }),
-            ],
-          ),
         ],
       ),
+      // The manual-import flow: three stations, on the ROOT navigator rather
+      // than inside a branch.
+      //
+      // It is full-bleed (it reserves no nav-bar clearance and the bar is not
+      // drawn over it) and it belongs to no tab: it is reached from a service
+      // page, from a queue item, from a review screen. Left inside a branch it
+      // would be a page on that tab's stack, so its flow state and its
+      // two-second command poll would survive a switch away from it — the exact
+      // leak this architecture exists to remove. At root it unmounts when left.
+      //
+      // Every entry point uses `push`, and must keep doing so: a `go` here would
+      // replace the shell page in the root navigator and take all four branch
+      // stacks with it.
+      GoRoute(
+        path: manualImportBrowsePath,
+        pageBuilder: (context, state) => _manualImportPage(
+          state,
+          (service, targetId) => ManualImportLocateScreen(
+            service: service,
+            targetId: targetId,
+            initialPath: state.uri.queryParameters['path'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: manualImportReviewPath,
+        pageBuilder: (context, state) => _manualImportPage(
+          state,
+          (service, targetId) =>
+              ManualImportReviewScreen(service: service, targetId: targetId),
+        ),
+      ),
+      // Steps of the retired four-screen flow; an old deep link lands on
+      // the merged Review station instead of dead-ending.
+      GoRoute(
+        path: manualImportFolderPath,
+        redirect: (context, state) => _redirectLegacyManualImport(state),
+      ),
+      GoRoute(
+        path: manualImportMatchPath,
+        redirect: (context, state) => _redirectLegacyManualImport(state),
+      ),
+      GoRoute(
+        path: manualImportProgressPath,
+        pageBuilder: (context, state) => _manualImportPage(
+          state,
+          (service, targetId) => ManualImportProgressScreen(service: service),
+        ),
+      ),
+      // The retired top-level locations, kept so old deep links land somewhere.
+      // Every path they match resolves to a redirect into `/services/...`, so
+      // their builders are unreachable — they exist only to give the matcher
+      // something to match before the redirect runs.
+      //
+      // At root because under a `StatefulShellRoute` there is no shell level to
+      // be a sibling of any more: the route list is derived from the branches.
+      // Putting four dead trees inside the services branch would read as part of
+      // that tab's subtree and invite someone to give them a real builder.
+      _discoverRoutes(path: '/discover', redirectLocation: '/services'),
+      _moviesRoutes(path: '/movies', redirectLocation: '/services'),
+      _seriesRoutes(path: '/series', redirectLocation: '/services'),
+      _musicRoutes(path: '/music', redirectLocation: '/services'),
+      // The per-service activity drill-down: already full-screen above the
+      // shell, and unchanged by the migration.
       GoRoute(
         path: '/activity/:type',
         builder: (context, state) {

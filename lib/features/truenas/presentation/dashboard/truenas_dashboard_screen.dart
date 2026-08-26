@@ -1,10 +1,11 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/lifecycle/gated_poll.dart';
+import 'package:cupola/core/lifecycle/page_activity.dart';
+import 'package:cupola/core/lifecycle/poll_clock.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
@@ -139,10 +140,8 @@ class TrueNasDashboardScreen extends ConsumerStatefulWidget {
       _TrueNasDashboardScreenState();
 }
 
-class _TrueNasDashboardScreenState extends ConsumerState<TrueNasDashboardScreen>
-    with WidgetsBindingObserver {
-  Timer? _timer;
-
+class _TrueNasDashboardScreenState
+    extends ConsumerState<TrueNasDashboardScreen> {
   /// Fast cadence for live metrics (CPU / memory / network).
   static const _liveInterval = Duration(seconds: 3);
 
@@ -152,41 +151,25 @@ class _TrueNasDashboardScreenState extends ConsumerState<TrueNasDashboardScreen>
   static const _slowEvery = 5;
   int _tick = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _startTimer();
-  }
+  /// The screen owns its timer rather than a provider, because each tick is a
+  /// hop on the WebSocket the TrueNAS client holds open — not a provider
+  /// invalidation this page can express any other way. [GatedPollTimer] gives it
+  /// the same visibility contract a gated provider gets.
+  GatedPollTimer? _live;
 
   @override
   void dispose() {
-    _timer?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
+    _live?.dispose();
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Pause live polling while the app is backgrounded to save battery and
-    // avoid needless WebSocket traffic.
-    if (state == AppLifecycleState.resumed) {
-      _startTimer();
-    } else {
-      _timer?.cancel();
+  void _onLiveTick() {
+    ref.invalidate(truenasDashboardMetricsProvider);
+    _tick++;
+    if (_tick % _slowEvery == 0) {
+      ref.invalidate(truenasDashboardProvider);
+      ref.invalidate(truenasDashboardInterfacesProvider);
     }
-  }
-
-  void _startTimer() {
-    _timer?.cancel();
-    _timer = Timer.periodic(_liveInterval, (_) {
-      ref.invalidate(truenasDashboardMetricsProvider);
-      _tick++;
-      if (_tick % _slowEvery == 0) {
-        ref.invalidate(truenasDashboardProvider);
-        ref.invalidate(truenasDashboardInterfacesProvider);
-      }
-    });
   }
 
   void _refresh() {
@@ -197,6 +180,18 @@ class _TrueNasDashboardScreenState extends ConsumerState<TrueNasDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    // The most expensive poll in the app: one `getLiveGraphs` RPC every three
+    // seconds, plus two more every fifteen, over a socket that may be crossing a
+    // VPN. It used to pause only while the app was backgrounded — so it went on
+    // spending that from behind another tab, or under the Storage page pushed on
+    // top of it, for as long as the app lived.
+    (_live ??= GatedPollTimer(
+      id: 'truenas.dashboard.live',
+      interval: _liveInterval,
+      onTick: _onLiveTick,
+      clock: ref.read(pollClockProvider),
+    )).setLive(watchPageActivity(context, ref).isLive);
+
     final dashboard = ref.watch(truenasDashboardProvider);
 
     return TrueNasSectionScaffold(

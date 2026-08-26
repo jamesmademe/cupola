@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
@@ -24,33 +25,15 @@ class QbittorrentScreen extends ConsumerStatefulWidget {
   ConsumerState<QbittorrentScreen> createState() => _QbittorrentScreenState();
 }
 
-class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen>
-    with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Pause polling while the app is in the background to save battery and
-    // avoid hammering the qBittorrent WebUI when the user can't see it.
-    final enabled = state == AppLifecycleState.resumed;
-    if (ref.read(torrentPollingEnabledProvider) != enabled) {
-      ref.read(torrentPollingEnabledProvider.notifier).state = enabled;
-    }
-  }
-
+class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
   @override
   Widget build(BuildContext context) {
-    ref.watch(torrentPollingProvider);
+    // Poll only while this page is the page on screen. Replaces an observer of
+    // its own that paused on app background: that covered one of the four ways
+    // this list stops being read, and missed the three the shell now reports —
+    // another tab showing, a torrent's detail pushed on top, the Portal open
+    // over it.
+    ref.watchWhileLive(context, torrentPollingProvider);
     final torrentsAsync = ref.watch(torrentsProvider);
     final selectedHashes = ref.watch(selectedTorrentHashesProvider);
 
