@@ -583,9 +583,7 @@ void main() {
       // On a foreground-only reach: only a search that actually dies with the
       // app may blame the OS. The background transport keeps its failures'
       // own identity — that case lives in `failure classification`.
-      final completers = wireManualRunner(
-        reach: ReleaseSearchReach.whileOpen,
-      );
+      final completers = wireManualRunner(reach: ReleaseSearchReach.whileOpen);
       final job = notifier().start(season2);
 
       notifier().noteBackgrounded();

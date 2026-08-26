@@ -202,7 +202,8 @@ void main() {
       expect(
         notifier.jobById(job.id)!.status,
         ReleaseSearchJobStatus.completed,
-        reason: 'its releases are still grabbable; cancelling it would discard '
+        reason:
+            'its releases are still grabbable; cancelling it would discard '
             'work the user can still use',
       );
     });
@@ -242,10 +243,7 @@ void main() {
         BackgroundSearchSwitch.cancelHeadline,
         reason: 'the card has to say why it stopped, not just that it did',
       );
-      expect(
-        c.read(releaseSearchSettingsProvider).backgroundEnabled,
-        isFalse,
-      );
+      expect(c.read(releaseSearchSettingsProvider).backgroundEnabled, isFalse);
       expect(
         pruneCalls,
         hasLength(1),

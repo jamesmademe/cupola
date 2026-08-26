@@ -118,7 +118,8 @@ void main() {
     expect(
       find.text('Blocklist'),
       findsNothing,
-      reason: 'the tab indicator has to follow the selection, not lag behind it',
+      reason:
+          'the tab indicator has to follow the selection, not lag behind it',
     );
 
     // The Searching list holds a ten-second window ticker while it is on
@@ -575,5 +576,6 @@ class _SelectSearchingProbe extends Notifier<void> {
   void call() => selectActivitySearching(ref);
 }
 
-final _selectSearchingProbe =
-    NotifierProvider<_SelectSearchingProbe, void>(_SelectSearchingProbe.new);
+final _selectSearchingProbe = NotifierProvider<_SelectSearchingProbe, void>(
+  _SelectSearchingProbe.new,
+);

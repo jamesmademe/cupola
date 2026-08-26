@@ -470,10 +470,7 @@ void main() {
             'understating it here is still drift: the confirmation promised the '
             'background, and the card must not take it back',
       );
-      expect(
-        find.textContaining('while Cupola is open'),
-        findsNothing,
-      );
+      expect(find.textContaining('while Cupola is open'), findsNothing);
       await tester.pumpWidget(const SizedBox());
       background.dispose();
     });
@@ -607,9 +604,7 @@ void main() {
       ]);
       await tester.runAsync(() => Future<void>.delayed(Duration.zero));
 
-      container
-          .read(pendingReleaseSearchJobProvider.notifier)
-          .request(job.id);
+      container.read(pendingReleaseSearchJobProvider.notifier).request(job.id);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -734,7 +729,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
-            currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+            currentSettingsProvider.overrideWith(
+              (ref) => const SettingsModel(),
+            ),
             releaseSearchRunnerProvider.overrideWithValue(
               (target, token) => target == _season
                   ? firstAnswer.future

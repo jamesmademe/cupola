@@ -72,8 +72,10 @@ ReleaseSearchNotice? noticeFor(
 /// user switches "Notify me when one finishes" on, which is the only moment the
 /// request means anything to them.
 class ReleaseSearchNotifications {
-  ReleaseSearchNotifications([FlutterLocalNotificationsPlugin? plugin, this.onTap])
-    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+  ReleaseSearchNotifications([
+    FlutterLocalNotificationsPlugin? plugin,
+    this.onTap,
+  ]) : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   final FlutterLocalNotificationsPlugin _plugin;
 

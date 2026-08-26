@@ -167,16 +167,19 @@ final notificationPermissionProvider = FutureProvider<bool?>(
 /// use once its widget unmounts — which used to leave a failing job stuck on
 /// "running" forever, since the classifier could no longer even run.
 final releaseSearchReachResolverProvider = Provider<ReleaseSearchReachResolver>(
-  (ref) => (service) => ref.read(releaseSearchReachProvider(service)),
+  (ref) =>
+      (service) => ref.read(releaseSearchReachProvider(service)),
 );
 
 /// Everything that happens when a search finishes, resolved from the container
 /// for the same reason as [releaseSearchReachResolverProvider]: this callback
 /// is what posts the notification and restarts the queue, and it fires
 /// precisely when the launching page tends to be gone.
-final releaseSearchOnFinishedProvider = Provider<void Function(ReleaseSearchJob)>(
-  (ref) => (job) => _onSearchFinished(ref, job),
-);
+final releaseSearchOnFinishedProvider =
+    Provider<void Function(ReleaseSearchJob)>(
+      (ref) =>
+          (job) => _onSearchFinished(ref, job),
+    );
 
 /// Performs a release search for any supported target.
 ///
@@ -234,7 +237,11 @@ Future<List<dynamic>> _searchViaService(
     case ServiceKey.radarr:
       return ref
           .read(radarrServiceProvider)
-          .getReleases(target.id, cancelToken: cancelToken, receiveTimeout: timeout);
+          .getReleases(
+            target.id,
+            cancelToken: cancelToken,
+            receiveTimeout: timeout,
+          );
     case ServiceKey.lidarr:
       final service = ref.read(lidarrServiceProvider);
       return target.scope == ReleaseSearchScope.album

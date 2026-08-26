@@ -276,10 +276,7 @@ class _MasterRow extends StatelessWidget {
               ),
             ),
           ),
-          Switch(
-            value: enabled,
-            onChanged: (value) => onChanged(value),
-          ),
+          Switch(value: enabled, onChanged: (value) => onChanged(value)),
         ],
       ),
     );
