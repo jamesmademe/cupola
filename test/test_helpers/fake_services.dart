@@ -44,6 +44,7 @@ class FakeRadarrService extends RadarrService {
   Future<List<RadarrMovie>> lookupMovies(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async => const [];
 
   @override
@@ -100,6 +101,7 @@ class FakeSonarrService extends SonarrService {
   Future<List<SonarrSeries>> lookupSeries(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async => const [];
 
   @override
@@ -159,6 +161,7 @@ class FakeLidarrService extends LidarrService {
   Future<List<LidarrArtist>> lookupArtists(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async => const [];
 
   @override

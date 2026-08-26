@@ -273,11 +273,23 @@ mixin ArrActivityMixin {
   /// keystroke, and a discarded round should stop paying for itself rather than
   /// run to completion. Failures — cancellation included — degrade to an empty
   /// list, like every other browse path.
+  /// [reportFailure] decides whether a dead server is allowed to look like an
+  /// empty library.
+  ///
+  /// Swallowing is the right default for a search-as-you-type field inside one
+  /// service: the user is mid-word, the box is theirs, and an error banner that
+  /// appears and vanishes between keystrokes is noise. It is the wrong default
+  /// for the global search, and with several connections per service it becomes
+  /// actively misleading — "No Radarr · Away results" reads as "that library
+  /// does not have it" when what happened is that the box is off. There the
+  /// caller passes true and gets the throw, which its own section turns into a
+  /// stated failure.
   Future<List<T>> lookupItems<T>(
     String endpoint,
     String term,
     T Function(Map<String, dynamic>) fromJson, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     if (term.isEmpty) {
       return [];
@@ -293,6 +305,7 @@ mixin ArrActivityMixin {
       final data = response.data as List<dynamic>;
       return await _mapArrItems(data, fromJson);
     } catch (_) {
+      if (reportFailure) rethrow;
       return [];
     }
   }

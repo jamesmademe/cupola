@@ -129,12 +129,14 @@ class LidarrService with ArrActivityMixin {
   Future<List<LidarrArtist>> lookupArtists(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) {
     return lookupItems(
       'artist/lookup',
       term,
       LidarrArtist.fromJson,
       cancelToken: cancelToken,
+      reportFailure: reportFailure,
     );
   }
 

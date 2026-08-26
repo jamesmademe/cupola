@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,6 +19,7 @@ import 'package:cupola/features/search/presentation/global_search_provider.dart'
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
@@ -91,11 +93,23 @@ void main() {
       '/services/sonarr/series/20',
       '/services/lidarr/artist/30',
     ]);
+    // Keyed on the CONNECTION and on the row's position, not on the service:
+    // the same id names different things on two servers, and a lookup result
+    // that is not in the library carries `id == 0`, so two of those in one
+    // section used to produce the identical tag — an assert in debug.
     expect(routes.map((uri) => uri.queryParameters['heroTag']), [
-      'search_seerr_movie_101',
-      'search_radarr_movie_10',
-      'search_sonarr_series_20',
-      'search_lidarr_artist_30',
+      'search_seerr_movie_101_0',
+      'search_radarr_movie_10_0',
+      'search_sonarr_series_20_0',
+      'search_lidarr_artist_30_0',
+    ]);
+    // And the connection travels with the row, so the detail page it opens
+    // reads the server that listed it.
+    expect(routes.map((uri) => uri.queryParameters['i']), [
+      'seerr',
+      'radarr',
+      'sonarr',
+      'lidarr',
     ]);
     // The tag on the model and the tag in its route are the same string —
     // a mismatch would silently produce a flightless navigation.
@@ -105,6 +119,79 @@ void main() {
         result.heroTag,
       );
     }
+  });
+
+  test('two connections of one service answer as two sections', () async {
+    final container = _container(
+      radarr: _SearchRadarrService(
+        results: [buildMovie(id: 10, title: 'Dune', year: 2024)],
+      ),
+      // The second connection needs its own fake: `radarrServiceForProvider`
+      // only collapses onto the plain provider for the LENS's id, which is
+      // exactly the distinction being tested.
+      extra: [
+        radarrServiceForProvider('radarr-away111').overrideWithValue(
+          _SearchRadarrService(
+            results: [buildMovie(id: 11, title: 'Dune', year: 2024)],
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(_testSettings.notifier).state = container
+        .read(_testSettings)
+        .copyWithInstance(
+          const ServiceInstance(
+            id: 'radarr-away111',
+            service: ServiceKey.radarr,
+            label: 'Away',
+            url: 'http://away.local:7878',
+            credential: 'key-away',
+          ),
+        );
+    container.read(globalSearchQueryProvider.notifier).state = 'dune';
+
+    final groups = await container.read(globalSearchResultsProvider.future);
+    final radarrGroups = groups
+        .where((group) => group.service == ServiceKey.radarr)
+        .toList();
+
+    // One section per connection, so nothing has to be reconciled between them
+    // — which is what makes the missing external id on Lidarr and Bazarr stop
+    // mattering.
+    expect(radarrGroups, hasLength(2));
+    expect(radarrGroups.map((g) => g.instanceLabel), ['radarr', 'Away']);
+    // And the row's route names the server that listed it.
+    expect(
+      radarrGroups
+          .expand((g) => g.results)
+          .map((r) => Uri.parse(r.route).queryParameters['i']),
+      ['radarr', 'radarr-away111'],
+    );
+  });
+
+  test('a dead connection is told apart from an empty one', () async {
+    // The distinction the whole fan-out rests on: with a section per
+    // connection, "No Radarr · Away results" reads as "that library does not
+    // have it". It must not also mean "the box is off".
+    final container = _container(
+      radarr: _SearchRadarrService(throwOnLookup: true),
+      sonarr: _SearchSonarrService(results: const []),
+    );
+    addTearDown(container.dispose);
+    container.read(globalSearchQueryProvider.notifier).state = 'dune';
+
+    final groups = await container.read(globalSearchResultsProvider.future);
+
+    expect(
+      groups.singleWhere((g) => g.service == ServiceKey.radarr).hasError,
+      isTrue,
+      reason: 'the lookup used to swallow this and return an empty list',
+    );
+    expect(
+      groups.singleWhere((g) => g.service == ServiceKey.sonarr).hasError,
+      isFalse,
+    );
   });
 
   test('preserves partial service failures', () async {
@@ -192,17 +279,21 @@ void main() {
     container.read(globalSearchResultsProvider);
     await Future<void>.delayed(Duration.zero);
 
-    for (final leg in [
-      seerr.leg,
-      radarr.leg,
-      sonarr.leg,
-      lidarr.leg,
-      bazarr.leg,
-    ]) {
+    // The first four legs only, because the pool is four wide and every one of
+    // them is parked at the gate — which is the semaphore doing its job rather
+    // than a gap in the test.
+    for (final leg in [seerr.leg, radarr.leg, sonarr.leg, lidarr.leg]) {
       expect(leg.tokens, hasLength(2));
       expect(leg.tokens.first!.isCancelled, isTrue);
       expect(leg.tokens.last!.isCancelled, isFalse);
     }
+    expect(
+      bazarr.leg.tokens,
+      isEmpty,
+      reason:
+          'the fifth leg waits for a slot rather than opening a fifth '
+          'connection to somebody\'s home server',
+    );
   });
 
   test(
@@ -253,6 +344,10 @@ final _testSettings = StateProvider<SettingsModel>(
     sonarrApiKey: 'key',
     lidarrUrl: 'http://lidarr.local:8686',
     lidarrApiKey: 'key',
+    // Configured like the rest: the fan-out only runs a leg per CONFIGURED
+    // connection, so a service left out of here has no section to assert on.
+    bazarrUrl: 'http://bazarr.local:6767',
+    bazarrApiKey: 'key',
   ),
 );
 
@@ -262,10 +357,12 @@ ProviderContainer _container({
   SonarrService? sonarr,
   LidarrService? lidarr,
   BazarrService? bazarr,
+  List<Override> extra = const [],
 }) {
   return ProviderContainer(
     overrides: [
-      if (bazarr != null) bazarrServiceProvider.overrideWithValue(bazarr),
+      ...extra,
+      bazarrServiceProvider.overrideWithValue(bazarr ?? _SearchBazarrService()),
       currentSettingsProvider.overrideWith((ref) => ref.watch(_testSettings)),
       seerrServiceProvider.overrideWith(
         (ref) => seerr ?? _SearchSeerrService(),
@@ -331,6 +428,7 @@ class _SearchRadarrService extends FakeRadarrService {
   Future<List<RadarrMovie>> lookupMovies(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     await leg.record(cancelToken);
     if (throwOnLookup) throw Exception('radarr down');
@@ -349,6 +447,7 @@ class _SearchSonarrService extends FakeSonarrService {
   Future<List<SonarrSeries>> lookupSeries(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     await leg.record(cancelToken);
     return results;
@@ -366,6 +465,7 @@ class _SearchLidarrService extends FakeLidarrService {
   Future<List<LidarrArtist>> lookupArtists(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     await leg.record(cancelToken);
     return results;

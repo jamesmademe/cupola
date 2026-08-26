@@ -406,6 +406,7 @@ class _FakeRadarr extends shared.FakeRadarrService {
   Future<List<radarr.RadarrMovie>> lookupMovies(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     lookupMoviesCallCount += 1;
     if (throwOnLookupMovies) throw Exception('radarr ratings lookup failed');
@@ -440,6 +441,7 @@ class _FakeSonarr extends shared.FakeSonarrService {
   Future<List<sonarr.SonarrSeries>> lookupSeries(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     lookupSeriesCallCount += 1;
     if (throwOnLookupSeries) throw Exception('sonarr ratings lookup failed');

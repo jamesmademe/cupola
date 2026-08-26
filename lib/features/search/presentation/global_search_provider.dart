@@ -17,188 +17,197 @@ import 'package:cupola/features/search/domain/global_search_result.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
 
 final globalSearchQueryProvider = StateProvider<String>((ref) => '');
 
-final globalSearchResultsProvider = FutureProvider.autoDispose((ref) async {
-  final query = ref.watch(globalSearchQueryProvider).trim();
-  // The five connections this fans out to, not the whole model. A bare
-  // `ref.watch(currentSettingsProvider)` re-ran on every settings write — and
-  // with the cancel token below, a theme-mode toggle would abort the user's
-  // in-flight five-service search and start it again. Same shape as
-  // `serviceSummaryProvider`: watch the narrow keys, read the model for the
-  // work. A record, not a list, because `select` compares with `==` and lists
-  // have identity equality.
-  for (final service in const [
-    ServiceKey.seerr,
-    ServiceKey.radarr,
-    ServiceKey.sonarr,
-    ServiceKey.lidarr,
-    ServiceKey.bazarr,
-  ]) {
-    _watchConnection(ref, service);
-  }
-  final settings = ref.read(currentSettingsProvider);
-  if (query.isEmpty) return const <GlobalSearchServiceResults>[];
+/// One leg of the fan-out: one service, one of its connections.
+typedef _SearchLeg = ({ServiceInstance instance, bool named});
 
-  // One token for the whole fan-out. Riverpod disposes this build before it
-  // starts the next one, so the moment a keystroke supersedes the query every
-  // request still in flight for the old one is aborted instead of running to
-  // completion — five services answering a question nobody is asking any more.
-  final cancelToken = CancelToken();
-  ref.onDispose(cancelToken.cancel);
-
-  return Future.wait([
-    _loadSeerrResults(ref, query, cancelToken),
-    _loadRadarrResults(ref, query, settings, cancelToken),
-    _loadSonarrResults(ref, query, settings, cancelToken),
-    _loadLidarrResults(ref, query, settings, cancelToken),
-    _loadBazarrResults(ref, query, cancelToken),
-  ]);
-});
-
-/// Everything one search leg reads out of settings, as a single comparable
-/// value. A record, so `select` gets structural equality for free.
-typedef _SearchConnection = ({
-  String url,
-  String apiKey,
-  String? certFingerprint,
-});
-
-/// The connection key for whichever instance of [service] is being read.
+/// How many legs may be in the air at once.
 ///
-/// Keyed on the *first* instance instead, this leg would go stale the moment
-/// the lens moved: the service providers underneath are lens-aware, so the
-/// search would keep showing the previous server's answers behind a key that
-/// still described it and never refetch.
-_SearchConnection _watchConnection(Ref ref, ServiceKey service) {
-  final instanceId = ref.watch(activeInstanceProvider(service))?.id ?? '';
-  return ref.watch(
-    currentSettingsProvider.select((s) {
-      final instance = s.instanceById(instanceId);
-      if (instance == null) {
-        return (url: '', apiKey: '', certFingerprint: null);
-      }
-      return (
-        url: instance.url,
-        apiKey: instance.credential,
-        certFingerprint: s.pinForUrl(instance.url),
+/// Five services with one connection each was a `Future.wait` over five. With
+/// several connections each it is a fan-out over as many as the user has
+/// configured, all against home servers on one link — so it is bounded. Four
+/// rather than the release search's two: these are cheap lookups, and an arr is
+/// not rate-limited against its owner the way an indexer is.
+const _maxLegsInFlight = 4;
+
+/// The services the global search fans out to, in the order their sections
+/// appear.
+const _searchableServices = [
+  ServiceKey.seerr,
+  ServiceKey.radarr,
+  ServiceKey.sonarr,
+  ServiceKey.lidarr,
+  ServiceKey.bazarr,
+];
+
+/// The global search, one section per **connection**.
+///
+/// One leg per configured connection rather than per service, so two Radarr
+/// answer as two sections. That is what makes the fan-out cheap to read: a
+/// section is one server, so nothing has to be reconciled between them, and
+/// "which of my libraries has it" is answered by where the row is rather than
+/// by a chip on it. It is also what removes the deduplication problem entirely
+/// — two instances never meet in one list, so Lidarr and Bazarr having no
+/// external id stops mattering.
+///
+/// Still a `Future` and still all-or-nothing, which is a stated cost rather
+/// than an oversight: one configured-but-switched-off server holds every other
+/// section behind its timeout, and fanning out multiplies how many servers can
+/// be in that state. The bounded pool caps the concurrency, not the wait.
+/// Rendering each leg as it lands is the fix, and it is deliberately not folded
+/// in here — it turns this into a stream, which changes what `.future` means
+/// for every consumer, and that belongs in a change of its own.
+final globalSearchResultsProvider =
+    FutureProvider.autoDispose<List<GlobalSearchServiceResults>>((ref) async {
+      final query = ref.watch(globalSearchQueryProvider).trim();
+
+      // The connections this fans out to, as one comparable scalar. Not the
+      // whole model — a theme toggle would abort the user's in-flight search
+      // and start it again — and not a `List`, which compares by identity and
+      // would never settle. Every field that decides which server is reached is
+      // in here, so a connection edited mid-search re-runs and nothing else
+      // does.
+      ref.watch(
+        currentSettingsProvider.select((s) {
+          final parts = <String>[];
+          for (final service in _searchableServices) {
+            for (final instance in s.configuredInstancesOf(service)) {
+              parts.add(
+                '${instance.id}|${instance.url}|${instance.credential}'
+                '|${s.pinForUrl(instance.url)}',
+              );
+            }
+          }
+          return parts.join(';');
+        }),
       );
-    }),
-  );
-}
 
-/// The name of the connection [service] answered from, or `''` when there is
-/// only one to answer from.
-String _lensLabelOf(Ref ref, ServiceKey service) {
-  if (!ref.read(hasMultipleInstancesProvider(service))) return '';
-  final instance = ref.read(activeInstanceProvider(service));
-  if (instance == null) return '';
-  return instance.label.isEmpty ? instance.id : instance.label;
-}
+      final settings = ref.read(currentSettingsProvider);
+      if (query.isEmpty) return const <GlobalSearchServiceResults>[];
 
-Future<GlobalSearchServiceResults> _loadSeerrResults(
+      final legs = <_SearchLeg>[
+        for (final service in _searchableServices)
+          for (final instance in settings.configuredInstancesOf(service))
+            (
+              instance: instance,
+              // Named only when there is something to tell apart: a stack with
+              // one Radarr must not grow a label naming the only Radarr there
+              // is.
+              named: settings.configuredInstancesOf(service).length > 1,
+            ),
+      ];
+      if (legs.isEmpty) return const <GlobalSearchServiceResults>[];
+
+      // One token for the whole fan-out. Riverpod disposes this build before it
+      // starts the next one, so the moment a keystroke supersedes the query
+      // every request still in flight for the old one is aborted rather than
+      // run to completion — a dozen servers answering a question nobody is
+      // asking.
+      final cancelToken = CancelToken();
+      ref.onDispose(cancelToken.cancel);
+
+      // Slots, not an append list: the sections appear in the legs' own order,
+      // never in the order the servers happened to answer.
+      final done = List<GlobalSearchServiceResults?>.filled(legs.length, null);
+
+      // A hand-rolled bounded pool: four workers pulling from one cursor is the
+      // whole of it, and the alternative is a dependency for eight lines.
+      var cursor = 0;
+      Future<void> worker() async {
+        while (true) {
+          final index = cursor++;
+          if (index >= legs.length) return;
+          done[index] = await _runLeg(ref, legs[index], query, cancelToken);
+        }
+      }
+
+      await Future.wait([for (var w = 0; w < _maxLegsInFlight; w++) worker()]);
+      return [
+        for (final group in done)
+          if (group != null) group,
+      ];
+    });
+
+Future<GlobalSearchServiceResults> _runLeg(
   Ref ref,
+  _SearchLeg leg,
   String query,
   CancelToken cancelToken,
-) async {
-  return _loadServiceResults(
-    service: ServiceKey.seerr,
-    instanceLabel: _lensLabelOf(ref, ServiceKey.seerr),
-    loadItems: () =>
-        ref.read(seerrServiceProvider).search(query, cancelToken: cancelToken),
-    toResult: _seerrResult,
-  );
+) {
+  final instance = leg.instance;
+  final label = leg.named
+      ? (instance.label.isEmpty ? instance.id : instance.label)
+      : '';
+  return switch (instance.service) {
+    ServiceKey.seerr => _loadLeg(
+      leg: leg,
+      instanceLabel: label,
+      loadItems: () => ref
+          .read(seerrServiceProvider)
+          .search(query, cancelToken: cancelToken),
+      toResult: (item, index) => _seerrResult(item, instance, index),
+    ),
+    ServiceKey.radarr => _loadLeg(
+      leg: leg,
+      instanceLabel: label,
+      loadItems: () => ref
+          .read(radarrServiceForProvider(instance.id))
+          .lookupMovies(query, cancelToken: cancelToken, reportFailure: true),
+      toResult: (item, index) => _radarrResult(item, instance, index),
+    ),
+    ServiceKey.sonarr => _loadLeg(
+      leg: leg,
+      instanceLabel: label,
+      loadItems: () => ref
+          .read(sonarrServiceForProvider(instance.id))
+          .lookupSeries(query, cancelToken: cancelToken, reportFailure: true),
+      toResult: (item, index) => _sonarrResult(item, instance, index),
+    ),
+    ServiceKey.lidarr => _loadLeg(
+      leg: leg,
+      instanceLabel: label,
+      loadItems: () => ref
+          .read(lidarrServiceForProvider(instance.id))
+          .lookupArtists(query, cancelToken: cancelToken, reportFailure: true),
+      toResult: (item, index) => _lidarrResult(item, instance, index),
+    ),
+    // Bazarr is the one leg with no server-side search: `searchLibrary` matches
+    // client side against a snapshot of the library it caches for a short
+    // window, so a debounced round of keystrokes costs one download rather than
+    // one each. Which is also why its token cannot abort the transfer — the
+    // download in flight belongs to the next query as much as to this one. It
+    // still stops the match once the round is superseded.
+    _ => _loadLeg(
+      leg: leg,
+      instanceLabel: label,
+      loadItems: () => ref
+          .read(bazarrServiceProvider)
+          .searchLibrary(query, cancelToken: cancelToken),
+      toResult: (item, index) => _bazarrResult(item, instance, index),
+    ),
+  };
 }
 
-Future<GlobalSearchServiceResults> _loadRadarrResults(
-  Ref ref,
-  String query,
-  SettingsModel settings,
-  CancelToken cancelToken,
-) async {
-  return _loadServiceResults(
-    service: ServiceKey.radarr,
-    instanceLabel: _lensLabelOf(ref, ServiceKey.radarr),
-    loadItems: () => ref
-        .read(radarrServiceProvider)
-        .lookupMovies(query, cancelToken: cancelToken),
-    toResult: (item) => _radarrResult(item, settings),
-  );
-}
-
-Future<GlobalSearchServiceResults> _loadSonarrResults(
-  Ref ref,
-  String query,
-  SettingsModel settings,
-  CancelToken cancelToken,
-) async {
-  return _loadServiceResults(
-    service: ServiceKey.sonarr,
-    instanceLabel: _lensLabelOf(ref, ServiceKey.sonarr),
-    loadItems: () => ref
-        .read(sonarrServiceProvider)
-        .lookupSeries(query, cancelToken: cancelToken),
-    toResult: (item) => _sonarrResult(item, settings),
-  );
-}
-
-Future<GlobalSearchServiceResults> _loadLidarrResults(
-  Ref ref,
-  String query,
-  SettingsModel settings,
-  CancelToken cancelToken,
-) async {
-  return _loadServiceResults(
-    service: ServiceKey.lidarr,
-    instanceLabel: _lensLabelOf(ref, ServiceKey.lidarr),
-    loadItems: () => ref
-        .read(lidarrServiceProvider)
-        .lookupArtists(query, cancelToken: cancelToken),
-    toResult: (item) => _lidarrResult(item, settings),
-  );
-}
-
-/// Bazarr is the one leg with no server-side search: `searchLibrary` matches
-/// client side against a snapshot of the library it caches for a short window,
-/// so a debounced round of keystrokes costs one download rather than one each.
-/// See `BazarrService._libraryIndex`.
-///
-/// Which is also why this is the one leg whose token cannot abort the transfer:
-/// the download in flight belongs to the *next* query as much as to this one.
-/// It still stops the match once the round is superseded.
-Future<GlobalSearchServiceResults> _loadBazarrResults(
-  Ref ref,
-  String query,
-  CancelToken cancelToken,
-) async {
-  return _loadServiceResults(
-    service: ServiceKey.bazarr,
-    loadItems: () => ref
-        .read(bazarrServiceProvider)
-        .searchLibrary(query, cancelToken: cancelToken),
-    toResult: _bazarrResult,
-  );
-}
-
-Future<GlobalSearchServiceResults> _loadServiceResults<T>({
-  required ServiceKey service,
+Future<GlobalSearchServiceResults> _loadLeg<T>({
+  required _SearchLeg leg,
   required Future<List<T>> Function() loadItems,
-  required GlobalSearchResult Function(T item) toResult,
+  required GlobalSearchResult Function(T item, int index) toResult,
   String instanceLabel = '',
 }) async {
   try {
     final items = await loadItems();
     return GlobalSearchServiceResults(
-      service: service,
-      results: items.map(toResult).toList(growable: false),
+      service: leg.instance.service,
+      results: [for (var i = 0; i < items.length; i++) toResult(items[i], i)],
       instanceLabel: instanceLabel,
     );
   } catch (error) {
     return GlobalSearchServiceResults(
-      service: service,
+      service: leg.instance.service,
       results: const [],
       error: error,
       // Named on the failure too: "Radarr did not answer" is a worse sentence
@@ -210,17 +219,34 @@ Future<GlobalSearchServiceResults> _loadServiceResults<T>({
 
 /// Tag shared by a result's poster and the detail page it flies into.
 ///
-/// [kind] discriminates within a service, because Bazarr and Seerr can each
-/// return a movie and a series carrying the same id — two Heroes with one tag
-/// on the same screen throws.
-String _heroTag(ServiceKey service, String kind, int id) =>
-    'search_${service.routeParam}_${kind}_$id';
+/// Four parts, and each one closes a collision that was live:
+///
+/// * [kind], because Bazarr and Seerr can each return a movie and a series
+///   carrying the same id;
+/// * the **connection**, because the same film is in both Radarr and the same
+///   id names different films on each — with one section per connection, both
+///   are on screen at once;
+/// * the **position**, because a lookup result that is not in the library has
+///   `id == 0` (the code uses `id > 0` as the library test), so two unowned
+///   films in one section produced the identical tag. Two Heroes with one tag
+///   on the same screen is an assert in debug, which is to say a crash — and it
+///   has been true since before instances existed. Nothing caught it because
+///   the search screen has never been opened on a device.
+///
+/// The position is only a tiebreak within one round of results and never
+/// travels anywhere that outlives the list, so a reorder cannot strand it.
+String _heroTag(ServiceInstance instance, String kind, int id, int index) =>
+    'search_${instance.id}_${kind}_${id}_$index';
 
-GlobalSearchResult _seerrResult(MediaPreview item) {
+GlobalSearchResult _seerrResult(
+  MediaPreview item,
+  ServiceInstance instance,
+  int index,
+) {
   final type = item.mediaType == 'tv' ? 'Series' : 'Movie';
   final year = item.year;
   final imageUrl = ImageUtils.buildTmdbPosterUrl(item.posterPath);
-  final heroTag = _heroTag(ServiceKey.seerr, item.mediaType, item.id);
+  final heroTag = _heroTag(instance, item.mediaType, item.id, index);
   return GlobalSearchResult(
     service: ServiceKey.seerr,
     id: item.id,
@@ -238,17 +264,24 @@ GlobalSearchResult _seerrResult(MediaPreview item) {
       id: item.id,
       heroTag: heroTag,
       posterUrl: imageUrl,
+      instanceId: instance.id,
     ),
   );
 }
 
-GlobalSearchResult _radarrResult(RadarrMovie item, SettingsModel settings) {
+GlobalSearchResult _radarrResult(
+  RadarrMovie item,
+  ServiceInstance instance,
+  int index,
+) {
+  // This connection's address and key, not the first Radarr's. A poster the
+  // arr serves itself is fetched from the server that listed it.
   final image = ImageUtils.extractPosterUrl(
     item.images,
-    baseUrl: settings.radarrUrl,
-    apiKey: settings.radarrApiKey,
+    baseUrl: instance.url,
+    apiKey: instance.credential,
   );
-  final heroTag = _heroTag(ServiceKey.radarr, 'movie', item.id);
+  final heroTag = _heroTag(instance, 'movie', item.id, index);
   return GlobalSearchResult(
     service: ServiceKey.radarr,
     id: item.id,
@@ -261,18 +294,27 @@ GlobalSearchResult _radarrResult(RadarrMovie item, SettingsModel settings) {
     imageHeaders: image.headers,
     tags: ['Movie', item.hasFile ? 'Available' : 'Missing'],
     heroTag: heroTag,
-    route: ServiceRoutes.radarrMovie(item.id, heroTag: heroTag),
+    route: ServiceRoutes.radarrMovie(
+      item.id,
+      heroTag: heroTag,
+      instanceId: instance.id,
+    ),
     routeExtra: item,
   );
 }
 
-GlobalSearchResult _sonarrResult(SonarrSeries item, SettingsModel settings) {
+GlobalSearchResult _sonarrResult(
+  SonarrSeries item,
+  ServiceInstance instance,
+  int index,
+) {
   final image = ImageUtils.extractPosterUrl(
     item.images,
-    baseUrl: settings.sonarrUrl,
-    apiKey: settings.sonarrApiKey,
+    // This connection's, not the first Sonarr's.
+    baseUrl: instance.url,
+    apiKey: instance.credential,
   );
-  final heroTag = _heroTag(ServiceKey.sonarr, 'series', item.id);
+  final heroTag = _heroTag(instance, 'series', item.id, index);
   return GlobalSearchResult(
     service: ServiceKey.sonarr,
     id: item.id,
@@ -285,15 +327,23 @@ GlobalSearchResult _sonarrResult(SonarrSeries item, SettingsModel settings) {
     imageHeaders: image.headers,
     tags: ['Series', item.status],
     heroTag: heroTag,
-    route: ServiceRoutes.sonarrSeries(item.id, heroTag: heroTag),
+    route: ServiceRoutes.sonarrSeries(
+      item.id,
+      heroTag: heroTag,
+      instanceId: instance.id,
+    ),
     routeExtra: item,
   );
 }
 
-GlobalSearchResult _bazarrResult(BazarrSearchHit item) {
+GlobalSearchResult _bazarrResult(
+  BazarrSearchHit item,
+  ServiceInstance instance,
+  int index,
+) {
   final type = item.isMovie ? 'Movie' : 'Series';
   final kind = item.isMovie ? 'movie' : 'series';
-  final heroTag = _heroTag(ServiceKey.bazarr, kind, item.id);
+  final heroTag = _heroTag(instance, kind, item.id, index);
   return GlobalSearchResult(
     service: ServiceKey.bazarr,
     id: item.id,
@@ -305,23 +355,31 @@ GlobalSearchResult _bazarrResult(BazarrSearchHit item) {
     imageHeaders: null,
     tags: ['Subtitles', type],
     heroTag: heroTag,
+    // Bazarr's id is a THIRD server's — `radarrId` / `sonarrSeriesId` — so the
+    // connection stamped here is Bazarr's own, and the arr page it lands on
+    // resolves through its own lens. Two Bazarr paired to two different arrs
+    // would collide on the route itself, which is a knot this does not untie.
     route: item.isMovie
         ? ServiceRoutes.bazarrMovie(item.id, heroTag: heroTag)
         : ServiceRoutes.bazarrSeries(item.id, heroTag: heroTag),
   );
 }
 
-GlobalSearchResult _lidarrResult(LidarrArtist item, SettingsModel settings) {
+GlobalSearchResult _lidarrResult(
+  LidarrArtist item,
+  ServiceInstance instance,
+  int index,
+) {
   final image = ImageUtils.extractPosterUrl(
     item.images,
-    baseUrl: settings.lidarrUrl,
-    apiKey: settings.lidarrApiKey,
+    baseUrl: instance.url,
+    apiKey: instance.credential,
     coverTypes: const ['poster', 'fanart', 'banner'],
   );
   final albumLabel = item.albumCount == 1
       ? '1 album'
       : '${item.albumCount} albums';
-  final heroTag = _heroTag(ServiceKey.lidarr, 'artist', item.id);
+  final heroTag = _heroTag(instance, 'artist', item.id, index);
   return GlobalSearchResult(
     service: ServiceKey.lidarr,
     id: item.id,
@@ -331,7 +389,11 @@ GlobalSearchResult _lidarrResult(LidarrArtist item, SettingsModel settings) {
     imageHeaders: image.headers,
     tags: ['Artist', item.hasFiles ? 'Available' : 'Missing'],
     heroTag: heroTag,
-    route: ServiceRoutes.lidarrArtist(item.id, heroTag: heroTag),
+    route: ServiceRoutes.lidarrArtist(
+      item.id,
+      heroTag: heroTag,
+      instanceId: instance.id,
+    ),
     routeExtra: item,
   );
 }

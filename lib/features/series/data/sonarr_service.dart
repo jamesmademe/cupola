@@ -173,12 +173,14 @@ class SonarrService with ArrActivityMixin {
   Future<List<SonarrSeries>> lookupSeries(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) {
     return lookupItems(
       'series/lookup',
       term,
       SonarrSeries.fromJson,
       cancelToken: cancelToken,
+      reportFailure: reportFailure,
     );
   }
 

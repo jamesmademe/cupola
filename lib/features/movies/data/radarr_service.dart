@@ -132,12 +132,14 @@ class RadarrService with ArrActivityMixin {
   Future<List<RadarrMovie>> lookupMovies(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) {
     return lookupItems(
       'movie/lookup',
       term,
       RadarrMovie.fromJson,
       cancelToken: cancelToken,
+      reportFailure: reportFailure,
     );
   }
 

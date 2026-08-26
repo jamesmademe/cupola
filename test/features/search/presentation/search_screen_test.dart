@@ -89,7 +89,7 @@ void main() {
     // page's Hero has a matching destination.
     expect(
       router.state.uri.queryParameters['heroTag'],
-      'search_radarr_movie_10',
+      'search_radarr_movie_10_0',
     );
     expect(find.text('Movie detail 10 Dune'), findsOneWidget);
   });
@@ -102,7 +102,7 @@ void main() {
     final hero = tester.widget<Hero>(
       find.ancestor(of: find.byType(ContentCard), matching: find.byType(Hero)),
     );
-    expect(hero.tag, 'search_radarr_movie_10');
+    expect(hero.tag, 'search_radarr_movie_10_0');
     // Same toggle every other poster Hero uses, so the interactive swipe-back
     // carries this one home too.
     expect(hero.transitionOnUserGestures, MediaPosterCard.flightOnUserGestures);
@@ -215,9 +215,13 @@ Future<void> _pumpFrames(WidgetTester tester) async {
 _overrides({bool withPoster = false}) {
   return [
     currentSettingsProvider.overrideWith(
+      // Both configured: the fan-out only runs a leg per configured
+      // connection, so an unconfigured Seerr has no section to be empty.
       (ref) => settingsWith(
         radarrUrl: 'http://radarr.local:7878',
         radarrApiKey: 'key',
+        seerrUrl: 'http://seerr.local:5055',
+        seerrApiKey: 'key',
       ),
     ),
     globalSearchQueryProvider.overrideWith((ref) => 'dune'),
@@ -250,5 +254,6 @@ class _SearchRadarrService extends FakeRadarrService {
   Future<List<RadarrMovie>> lookupMovies(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async => results;
 }

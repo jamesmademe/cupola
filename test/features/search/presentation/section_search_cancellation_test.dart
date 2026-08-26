@@ -232,6 +232,7 @@ class _GateRadarrService extends FakeRadarrService {
   Future<List<RadarrMovie>> lookupMovies(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     tokens.add(cancelToken);
     await gate?.future;
@@ -249,6 +250,7 @@ class _GateSonarrService extends FakeSonarrService {
   Future<List<SonarrSeries>> lookupSeries(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     tokens.add(cancelToken);
     await gate?.future;
@@ -266,6 +268,7 @@ class _GateLidarrService extends FakeLidarrService {
   Future<List<LidarrArtist>> lookupArtists(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     tokens.add(cancelToken);
     await gate?.future;
