@@ -215,11 +215,20 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
   /// two fields, which on iOS costs two animations and a relayout of the beat.
   void _pass(FocusNode next) => next.requestFocus();
 
-  /// The end of the form: the keyboard goes away and the screen comes back, with
-  /// the pinned actions — Test, Skip, Back — already under the thumb. It does not
-  /// run the test itself: a network probe is a labelled button's job, not a
-  /// return key's.
-  void _close() => FocusManager.instance.primaryFocus?.unfocus();
+  /// The end of the form: the return key does what the primary button does —
+  /// runs the test. The keyboard goes with it (the test itself dismisses it), so
+  /// the outcome and the pinned actions — Test, Skip, Back — come back into
+  /// view instead of being answered behind the keys.
+  ///
+  /// Guarded on [OnboardingWalk.verifying] the same way the button is: a second
+  /// return while a probe is in flight would start another one.
+  void _submit() {
+    if (widget.verifying) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      return;
+    }
+    widget.onTest();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -287,7 +296,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           isSecret: true,
           focusNode: _credential,
           action: TextInputAction.done,
-          onSubmitted: (_) => _close(),
+          onSubmitted: (_) => _submit(),
           hint: 'Paste the ${service.credentialLabel.toLowerCase()}',
           help: service.credentialPath == null
               ? null
@@ -313,7 +322,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           isSecret: true,
           focusNode: _password,
           action: TextInputAction.done,
-          onSubmitted: (_) => _close(),
+          onSubmitted: (_) => _submit(),
           hint: 'Optional',
           help:
               'Leave both empty if your ${service.title} instance does not '
@@ -354,6 +363,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           status: status,
           reason: widget.reason,
           failureDetail: widget.failureDetail,
+          serverVersion: widget.serverVersion,
         ),
       ],
       if (widget.trustedFingerprint != null &&
@@ -363,7 +373,6 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           widget.affectedServices.length > 1
               ? "You trusted this server's own certificate — it also covers "
                     '${widget.affectedServices.where((s) => s != service).map((s) => s.title).join(', ')}.'
-          serverVersion: widget.serverVersion,
               : "You trusted this server's own certificate.",
           style: theme.textTheme.bodySmall!.copyWith(
             color: scheme.onSurfaceVariant,
@@ -459,23 +468,23 @@ class _Outcome extends StatelessWidget {
     required this.status,
     required this.reason,
     required this.failureDetail,
+    required this.serverVersion,
   });
 
   final ServiceKey service;
   final ServiceConnectionStatus status;
   final ServiceFailureReason? reason;
   final String? failureDetail;
+  final String? serverVersion;
 
   @override
   Widget build(BuildContext context) {
-    required this.serverVersion,
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final presentation = describeConnection(
       service,
       status: status,
       reason: reason,
-  final String? serverVersion;
     );
     final tone = statusToneColor(scheme, presentation.tone);
     final sentence = switch (status) {
@@ -520,15 +529,6 @@ class _Outcome extends StatelessWidget {
                     color: scheme.onSurface,
                   ),
                 ),
-                // The permission is the only failure in the vocabulary whose fix
-                // is not in this form, so it is the only one that earns a button:
-                // everything else is an address or a credential the user is
-                // already looking at.
-                if (reason == ServiceFailureReason.localNetworkBlocked) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: TextButton.icon(
                 // What the server said it is running. Amber when the version
                 // itself is the problem: "answered" is true and still not the
                 // whole answer on a release Cupola cannot drive.
@@ -544,6 +544,15 @@ class _Outcome extends StatelessWidget {
                     ),
                   ),
                 ],
+                // The permission is the only failure in the vocabulary whose fix
+                // is not in this form, so it is the only one that earns a button:
+                // everything else is an address or a credential the user is
+                // already looking at.
+                if (reason == ServiceFailureReason.localNetworkBlocked) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: TextButton.icon(
                       onPressed: () async {
                         final opened =
                             await LocalNetworkPermission.openSettings();

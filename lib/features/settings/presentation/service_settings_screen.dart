@@ -155,6 +155,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     if (_testing || _saving) return;
     if (!_formKey.currentState!.validate()) return;
 
+    // The answer to a test is rendered under the fields, and behind a reverse
+    // proxy the wait for it can run to fifteen seconds — spending them behind
+    // half a screen of keys is the one thing this screen can avoid. Dismissed
+    // here rather than in each caller: the button, the return key and the
+    // retest after trusting a certificate all come through this method.
+    // After validation, so a rejected field keeps the caret where the fix is.
+    FocusScope.of(context).unfocus();
+
     setState(() {
       _testing = true;
       _testResult = null;
@@ -601,6 +609,11 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       ServiceConnectionStatus.checking => result.messageFor(service),
     };
 
+    // The version the server named, when it named one. A separate line rather
+    // than more of [message] because it can carry its own tone: an answering
+    // server on an unsupported release is a qualified pass, not a plain one.
+    final versionNote = describeServerVersion(service, result.serverVersion);
+
     // A live region rather than an announcement: this panel appears below the
     // button while focus stays on it, so the verdict — the whole point of the
     // action — would otherwise have to be hunted for. `liveRegion` is the
@@ -609,11 +622,6 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // only things carrying it (the "Fill in the address" message, for one, never
     // says it failed).
     final banner = Semantics(
-    // The version the server named, when it named one. A separate line rather
-    // than more of [message] because it can carry its own tone: an answering
-    // server on an unsupported release is a qualified pass, not a plain one.
-    final versionNote = describeServerVersion(service, result.serverVersion);
-
       container: true,
       liveRegion: true,
       excludeSemantics: true,
@@ -658,14 +666,6 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
                   if (versionNote case final note?) ...[
                     const SizedBox(height: 2),
                     Text(
@@ -677,6 +677,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                       ),
                     ),
                   ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     if (result.reason != ServiceFailureReason.localNetworkBlocked) {
       return banner;
     }
@@ -965,7 +973,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       ),
       keyboardType: TextInputType.visiblePassword,
       textInputAction: TextInputAction.done,
-      onFieldSubmitted: (_) => _saveSettings(),
+      // The last field ends the form by *checking* it, not by committing it:
+      // saving an address that was never tried is how a wrong key ends up
+      // persisted, and the test is one step short of the save anyway.
+      onFieldSubmitted: (_) => _testConnection(),
       obscureText: !_revealApiKey,
       validator: _validateApiKey,
     );
@@ -1000,7 +1011,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       ),
       keyboardType: TextInputType.visiblePassword,
       textInputAction: TextInputAction.done,
-      onFieldSubmitted: (_) => _saveSettings(),
+      // Same as the API-key field: the return key tests, it does not save.
+      onFieldSubmitted: (_) => _testConnection(),
       obscureText: true,
     );
   }

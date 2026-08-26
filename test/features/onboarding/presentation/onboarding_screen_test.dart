@@ -639,7 +639,7 @@ void main() {
       expect(findLine('Where does Sonarr live?'), findsNothing);
     });
 
-    testWidgets('the return key walks down the form', (tester) async {
+    testWidgets('the return key walks the form and then tests', (tester) async {
       await _pumpOnboarding(tester, viewport: phone);
       await reachTheForm(tester);
 
@@ -659,9 +659,15 @@ void main() {
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
 
-      // The last field ends the form: the keyboard goes and the pinned actions
-      // are under the thumb. It does not fire the test itself.
+      // The last field ends the form by running the test — and the test takes
+      // the keyboard with it, so the outcome and the pinned actions are what
+      // comes back rather than a verdict answered behind the keys.
       expect(tester.widget<TextField>(apiKey).focusNode?.hasFocus, isFalse);
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(
+        find.textContaining('Enter the address and the api key'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('the address field stays clear of the keyboard', (

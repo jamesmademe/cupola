@@ -398,6 +398,60 @@ void main() {
       );
     });
 
+    testWidgets('testing the connection puts the keyboard away', (
+      tester,
+    ) async {
+      await _pumpServiceSettings(
+        tester,
+        service: ServiceKey.radarr,
+        settings: const SettingsModel(
+          radarrUrl: 'https://radarr.local:7878',
+          radarrApiKey: 'key',
+        ),
+      );
+
+      await tester.showKeyboard(_fieldByLabel('API Key'));
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isTrue);
+
+      await tester.tap(find.text('Test connection'));
+      await tester.pumpAndSettle();
+
+      // The verdict lands under the fields, and behind a reverse proxy the wait
+      // for it runs to fifteen seconds — neither is worth spending behind a
+      // keyboard the form is done with.
+      expect(tester.testTextInput.isVisible, isFalse);
+    });
+
+    testWidgets('the return key tests the connection rather than saving it', (
+      tester,
+    ) async {
+      final harness = await _pumpServiceSettings(
+        tester,
+        service: ServiceKey.radarr,
+        settings: const SettingsModel(
+          radarrUrl: 'https://radarr.local:7878',
+          radarrApiKey: 'old-key',
+        ),
+      );
+
+      await tester.enterText(_fieldByLabel('API Key'), 'typed-key');
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isTrue);
+
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      // Committing a key nobody tried is how a wrong one ends up persisted, so
+      // the last field checks the form instead of saving it.
+      expect(find.text('Testing…'), findsOneWidget);
+
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(harness.container.read(settingsProvider).radarrApiKey, 'old-key');
+      expect(find.text('LauncherPage'), findsNothing);
+    });
+
     testWidgets('a blocked local network names the permission and offers the '
         'one control that fixes it', (tester) async {
       // The reported bug, from the other side: the address and the key are both
