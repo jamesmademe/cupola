@@ -12,19 +12,15 @@ final manualImportServiceProvider =
         throw Exception('${service.title} does not support manual import');
       }
 
-      final settings = ref.watch(currentSettingsProvider);
-      final baseUrl = settings.urlFor(service);
-      final apiKey = settings.apiKeyFor(service);
-      if (baseUrl.isEmpty || apiKey.isEmpty) {
-        throw Exception('${service.title} not configured');
-      }
-
+      // The seventh place settings became a client, and the only one that was
+      // building an `ApiClient` by hand. Three consequences, all fixed by
+      // going through the choke point: it read `urlFor`/`apiKeyFor`, so an
+      // import always went to the FIRST connection whatever the lens said; it
+      // watched the whole `SettingsModel`, so every save rebuilt it; and it
+      // never registered `onDispose(close)`, so each of those rebuilds leaked a
+      // `Dio`.
       return ManualImportService(
-        client: ApiClient(
-          baseUrl: baseUrl,
-          apiKey: apiKey,
-          pinnedCertFingerprint: settings.pinForUrl(baseUrl),
-        ),
+        client: watchApiClient(ref, service),
         service: service,
       );
     });

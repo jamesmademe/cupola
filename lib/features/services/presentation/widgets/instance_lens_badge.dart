@@ -33,6 +33,11 @@ class InstanceLensBadge extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // A service whose screens do not read through the lens gets no lens. The
+    // badge would change its own label and nothing else — which is worse than
+    // absent, because the user has no way to tell the difference and would
+    // reasonably read the rest of the screen as the other server's.
+    if (!service.readsThroughLens) return const SizedBox.shrink();
     if (!ref.watch(hasMultipleInstancesProvider(service))) {
       return const SizedBox.shrink();
     }

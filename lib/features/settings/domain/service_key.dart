@@ -301,6 +301,49 @@ extension ServiceKeyExtension on ServiceKey {
   /// class would mean defending an arbitrary line at every one of them.
   bool get supportsMultipleInstances => true;
 
+  /// Whether this service's screens actually read through the lens.
+  ///
+  /// **Configuring a second connection is allowed for everything** — see
+  /// [supportsMultipleInstances]. This is the narrower question: does moving the
+  /// lens change what the screens show? Where the answer is no, the lens badge
+  /// and the Portal's per-connection cells are hidden, because an affordance
+  /// that changes a label and nothing else is a lie the user has no way to
+  /// detect.
+  ///
+  /// The three that say no are not an oversight and not a backlog item with a
+  /// date. Each has a reason of its own:
+  ///
+  /// * **Jellyfin** keeps a chosen viewer per connection, and every user-scoped
+  ///   query is built from it. Following the lens means carrying that id
+  ///   through the client, which its own client does not do yet.
+  /// * **Plex** authenticates with a token that *is* a user, and sends one
+  ///   per-install client id; the naive conversion would register a second
+  ///   device against the user's server.
+  /// * **TrueNAS** speaks WebSocket JSON-RPC through a long-lived client with
+  ///   its own eight API surfaces, and is a quarter of the routes under
+  ///   `/services` on its own.
+  ///
+  /// Exhaustive on purpose, like [usesApiKey] and [credentialStorageSuffix]: a
+  /// `!=` chain would quietly promise the lens on behalf of a service added
+  /// later, which is exactly the lie this exists to stop.
+  bool get readsThroughLens => switch (this) {
+    ServiceKey.jellyfin || ServiceKey.plex || ServiceKey.truenas => false,
+    ServiceKey.seerr ||
+    ServiceKey.radarr ||
+    ServiceKey.sonarr ||
+    ServiceKey.lidarr ||
+    ServiceKey.qbittorrent ||
+    ServiceKey.transmission ||
+    ServiceKey.bazarr ||
+    ServiceKey.dockge ||
+    ServiceKey.prowlarr ||
+    ServiceKey.readarr ||
+    ServiceKey.sabnzbd ||
+    ServiceKey.nzbget ||
+    ServiceKey.unraid ||
+    ServiceKey.nginxProxyManager => true,
+  };
+
   /// What the *non-secret* half of a credential pair is called.
   ///
   /// The sibling of [credentialLabel], and it exists for one service: Nginx

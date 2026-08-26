@@ -198,6 +198,36 @@ void main() {
       expect(find.text('elsewhere'), findsOneWidget);
     });
 
+    testWidgets('a service that ignores the lens stays folded', (tester) async {
+      // Two Jellyfin get one cell even here. A cell per connection would let
+      // the user pick a destination the app then silently ignores — the picker
+      // telling the same lie the badge is hidden to avoid.
+      const home = ServiceInstance(
+        id: 'jellyfin',
+        service: ServiceKey.jellyfin,
+        label: 'Home',
+        url: 'https://home.lan:8096',
+        credential: 'k',
+      );
+      const away = ServiceInstance(
+        id: 'jellyfin-away11',
+        service: ServiceKey.jellyfin,
+        label: 'Away',
+        url: 'https://away.lan:8096',
+        credential: 'k',
+      );
+      await _pump(
+        tester,
+        role: ServiceMatrixRole.picker,
+        instances: const [_fourK, _hd, home, away],
+      );
+
+      expect(_cell('jellyfin'), findsOneWidget);
+      expect(_cell('jellyfin', 'jellyfin-away11'), findsNothing);
+      // And the service that does read through the lens is unaffected.
+      expect(_cell('radarr', 'radarr-hd11111'), findsOneWidget);
+    });
+
     testWidgets('an unconfigured connection is not offered', (tester) async {
       const blank = ServiceInstance(
         id: 'radarr-blank11',

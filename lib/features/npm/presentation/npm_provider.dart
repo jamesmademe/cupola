@@ -16,27 +16,19 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// with no rate limiting, on an account whose password is the key to every
 /// route on the box.
 final npmClientProvider = Provider<NpmClient>((ref) {
-  // Selected rather than watching the whole model, and here that matters twice
-  // over: a rebuild closes the live Dio AND throws away the bearer token, so
-  // watching every field meant a theme change forced a fresh login.
-  final transport = ref.watch(
-    currentSettingsProvider.select(
-      (s) => (
-        configured: s.isServiceConfigured(ServiceKey.nginxProxyManager),
-        url: s.npmUrl,
-        username: s.npmUsername,
-        password: s.npmPassword,
-        pin: s.pinForUrl(s.npmUrl),
-      ),
-    ),
-  );
+  // `watchTransport` rather than a hand-written select, and here the narrowness
+  // matters twice over: a rebuild closes the live Dio AND throws away the
+  // bearer token, so watching every field meant a theme change forced a fresh
+  // login. It also follows the lens, which the hand-written version could not:
+  // the fields it read were `npmUrl` and friends, always the first connection.
+  final transport = watchTransport(ref, ServiceKey.nginxProxyManager);
   if (!transport.configured) {
     throw Exception('Nginx Proxy Manager not configured');
   }
   final client = NpmClient(
     url: transport.url,
     identity: transport.username.isEmpty ? null : transport.username,
-    secret: transport.password.isEmpty ? null : transport.password,
+    secret: transport.apiKey.isEmpty ? null : transport.apiKey,
     certFingerprint: transport.pin,
   );
   ref.onDispose(() => client.close());

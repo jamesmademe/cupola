@@ -152,6 +152,43 @@ void main() {
     expect(find.text('4K'), findsNothing);
   });
 
+  testWidgets('a service that does not read through the lens shows none', (
+    tester,
+  ) async {
+    // Jellyfin, Plex and TrueNAS keep their own clients and are still bound to
+    // the first connection. A badge there would change its own label and
+    // nothing else — and the user has no way to tell, so they would read the
+    // whole screen as the other server's.
+    await _pump(
+      tester,
+      service: ServiceKey.jellyfin,
+      settings: const SettingsModel(
+        instances: [
+          ServiceInstance(
+            id: 'jellyfin',
+            service: ServiceKey.jellyfin,
+            label: 'Home',
+            url: 'https://home.lan:8096',
+            credential: 'k',
+          ),
+          ServiceInstance(
+            id: 'jellyfin-away11',
+            service: ServiceKey.jellyfin,
+            label: 'Away',
+            url: 'https://away.lan:8096',
+            credential: 'k',
+          ),
+        ],
+      ),
+    );
+
+    expect(
+      tester.getSize(find.byType(InstanceLensBadge)),
+      Size.zero,
+      reason: 'two connections, and still no lens to offer',
+    );
+  });
+
   testWidgets('a connection with no address is not offered as a lens', (
     tester,
   ) async {

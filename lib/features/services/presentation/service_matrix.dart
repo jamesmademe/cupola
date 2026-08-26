@@ -452,7 +452,13 @@ class ServiceMatrix extends ConsumerWidget {
 
       final subjects = <MatrixCellSubject>[
         for (final service in services)
-          if (role == ServiceMatrixRole.readout)
+          // A folded cell in the readout, and also in the picker for the three
+          // services whose screens do not read through the lens: a cell per
+          // connection there would let the user pick a destination the app then
+          // silently ignores, which is the picker telling the same lie the badge
+          // is hidden to avoid. One cell reaches the service, which is all it
+          // can honestly offer.
+          if (role == ServiceMatrixRole.readout || !service.readsThroughLens)
             (service: service, instanceId: null)
           else
             for (final instance in settings.instancesOf(service))
@@ -466,6 +472,7 @@ class ServiceMatrix extends ConsumerWidget {
           domain: domain,
           subjects: subjects,
           expanded: expanded.contains(domain),
+          role: role,
           // Only the first band demonstrates the fold. A page that folds three
           // bands shut in sequence has not hinted at an affordance, it has
           // animated a list.
@@ -514,12 +521,21 @@ class _DomainBand extends ConsumerStatefulWidget {
     required this.domain,
     required this.subjects,
     required this.expanded,
+    required this.role,
     this.demo = false,
   });
 
   final ServiceDomain domain;
   final List<MatrixCellSubject> subjects;
   final bool expanded;
+
+  /// What the matrix is being asked for — see [ServiceMatrixRole].
+  ///
+  /// Carried down rather than inferred from whether a subject names a
+  /// connection. Those two agreed until the services that do not read through
+  /// the lens started folding inside the picker too, and the rules that hang
+  /// off this — no live figure, no fold demo — are rules about the role.
+  final ServiceMatrixRole role;
 
   /// Whether this band may play the fold demo on the first `/services` of the
   /// launch: it mounts **open** and folds itself shut with the real close
@@ -701,10 +717,15 @@ class _DomainBandState extends ConsumerState<_DomainBand>
         down++;
       } else if (reachability == ServiceReachability.online &&
           attention == null) {
-        // Suppressed on a picker cell: the signal provider answers per
-        // service, which is the lens's figure, not this connection's. A right
-        // number under the wrong name is worse than no number.
-        final signal = subject.instanceId != null
+        // Suppressed on the picker, and gated on the ROLE rather than on
+        // whether this cell names a connection. The signal provider answers per
+        // service — which is the lens's figure, not this connection's — so a
+        // right number under the wrong name is worse than no number. Inferring
+        // the picker from `instanceId != null` was true only while every picker
+        // cell named a connection: the three services that do not read through
+        // the lens are folded even here, and would otherwise have gone and
+        // fetched a figure on the Portal's floor.
+        final signal = widget.role == ServiceMatrixRole.picker
             ? null
             : ref.watch(serviceSignalProvider(subject.service)).asData?.value;
         if (signal != null && signal.needsAttention) {
@@ -775,7 +796,7 @@ class _DomainBandState extends ConsumerState<_DomainBand>
         // it — which is both more honest (the height and the cards can no
         // longer disagree about how open the band is) and one less zero-
         // duration implicit-animation footgun to route around.
-        _ServiceMatrixBand(subjects: subjects, phase: phase),
+        _ServiceMatrixBand(subjects: subjects, phase: phase, role: widget.role),
       ],
     );
   }
@@ -998,10 +1019,15 @@ class _GridGeometry {
 /// nested scrollable would need shrink-wrapping and physics juggling for a grid
 /// that never scrolls on its own.
 class _ServiceMatrixBand extends StatelessWidget {
-  const _ServiceMatrixBand({required this.subjects, required this.phase});
+  const _ServiceMatrixBand({
+    required this.subjects,
+    required this.phase,
+    required this.role,
+  });
 
   final List<MatrixCellSubject> subjects;
   final _FoldPhase phase;
+  final ServiceMatrixRole role;
 
   @override
   Widget build(BuildContext context) {
@@ -1103,6 +1129,7 @@ class _ServiceMatrixBand extends StatelessWidget {
                       child: ServiceMatrixCell(
                         service: subjects[i].service,
                         instanceId: subjects[i].instanceId,
+                        role: role,
                         phase: phase,
                       ),
                     ),
@@ -1122,6 +1149,7 @@ class ServiceMatrixCell extends ConsumerWidget {
     super.key,
     required this.service,
     this.instanceId,
+    this.role = ServiceMatrixRole.readout,
     this.phase = const _FoldPhase(0),
   });
 
@@ -1130,6 +1158,13 @@ class ServiceMatrixCell extends ConsumerWidget {
   /// The connection this cell stands for, or null when it stands for the
   /// service folded across all of them. See [ServiceMatrixRole].
   final String? instanceId;
+
+  /// What this cell is being asked for. Decides whether it carries a live
+  /// figure: the signal provider answers for the *lens*, so on a picker — where
+  /// the whole point is that the cell stands for one destination rather than
+  /// for whichever one is currently being read — a figure is a right number
+  /// under the wrong name.
+  final ServiceMatrixRole role;
 
   /// How far open the card's band is. Every dimension and every opacity inside
   /// reads off this, so there is no state in which the card is "half compact"
@@ -1188,15 +1223,21 @@ class ServiceMatrixCell extends ConsumerWidget {
     // Only asked for once the service has answered. Watching it while offline
     // would fan out a library fetch per unreachable service on every rebuild,
     // and there is nothing to paint with the result.
-    // Never on a picker cell: `serviceSignalProvider` answers for the lens, so
-    // the figure would belong to a different connection than the name above it.
+    // Never on the picker: `serviceSignalProvider` answers for the lens, so the
+    // figure would belong to a different connection than the name above it.
+    // Gated on the role rather than on `instanceId == null`, which agreed with
+    // it only while every picker cell named a connection — the three services
+    // that do not read through the lens fold even here, and this is the watch
+    // that would have sent them fetching on the Portal's floor.
     final signal =
-        instanceId == null && reachability == ServiceReachability.online
+        role == ServiceMatrixRole.readout &&
+            reachability == ServiceReachability.online
         ? ref.watch(serviceSignalProvider(service)).asData?.value
         : null;
 
     return _ServiceMatrixCellBody(
       service: service,
+      role: role,
       // A folded cell never reports a better state than its worst connection.
       reachability: degraded ? ServiceReachability.offline : reachability,
       // And it never shows a live figure summed over an incomplete set: a total
@@ -1225,10 +1266,15 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
     required this.signal,
     required this.host,
     required this.phase,
+    required this.role,
     this.degradedOf,
     this.instanceId,
     required this.displayName,
   });
+
+  /// What the matrix is being asked for. Decides whether the live line is
+  /// rendered at all — see [ServiceMatrixCell.role].
+  final ServiceMatrixRole role;
 
   /// Set on a picker cell, and what makes its key and its destination differ
   /// from the folded cell for the same service.
@@ -1335,7 +1381,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
         // card carries it. Rendering the tier with no figure to put in it also
         // overflowed the fixed cell height by a pixel, which is the layout
         // saying the same thing.
-        if (detail > 0 && instanceId == null)
+        if (detail > 0 && role == ServiceMatrixRole.readout)
           _Unroll(
             value: detail,
             child: _CellLiveLine(
