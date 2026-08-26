@@ -223,6 +223,81 @@ void main() {
     expect(saved.instancesOf(ServiceKey.radarr).last.label, 'HD');
   });
 
+  testWidgets('behind one reverse proxy the path is what differs', (
+    tester,
+  ) async {
+    // Same host, same port, two paths — one proxy fronting both. Naming them by
+    // hostname gave both "nas", which is what they have in COMMON, and it is
+    // the deployment ADR-6 exists to serve: those two necessarily share a
+    // single certificate pin, so the label is the only thing left to tell them
+    // apart.
+    const proxied = ServiceInstance(
+      id: 'radarr',
+      service: ServiceKey.radarr,
+      url: 'https://nas.lan/radarr',
+      credential: 'k',
+    );
+    final container = await _pump(
+      tester,
+      settings: const SettingsModel(instances: [proxied]),
+      isNew: true,
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Server URL'),
+      'https://nas.lan/radarr4k',
+    );
+    await tester.enterText(find.widgetWithText(TextFormField, 'API Key'), 'k2');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Name'), '4K');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    final saved = container.read(currentSettingsProvider);
+    expect(saved.primaryOf(ServiceKey.radarr)?.label, 'radarr');
+    expect(saved.instancesOf(ServiceKey.radarr).last.label, '4K');
+  });
+
+  testWidgets('a derived name never collides with the typed one', (
+    tester,
+  ) async {
+    // The field validator compares against siblings as they stand in the model,
+    // where the one being derived still has an empty label — so a collision
+    // introduced BY the derivation slipped through it entirely, and two
+    // connections shared a name in the badge, the sheet and every chip.
+    const nameless = ServiceInstance(
+      id: 'radarr',
+      service: ServiceKey.radarr,
+      url: 'https://nas.lan:7878',
+      credential: 'k',
+    );
+    final container = await _pump(
+      tester,
+      settings: const SettingsModel(instances: [nameless]),
+      isNew: true,
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Server URL'),
+      'https://nas.lan:7879',
+    );
+    await tester.enterText(find.widgetWithText(TextFormField, 'API Key'), 'k2');
+    // The exact string the derivation is about to produce for the sibling.
+    await tester.enterText(find.widgetWithText(TextFormField, 'Name'), '7878');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    final saved = container.read(currentSettingsProvider);
+    final labels = saved
+        .instancesOf(ServiceKey.radarr)
+        .map((i) => i.label)
+        .toList();
+    expect(labels, hasLength(2));
+    expect(labels.toSet(), hasLength(2), reason: 'two names, not one twice');
+    expect(labels, contains('7878'));
+  });
+
   testWidgets('removing one connection leaves the other alone', (tester) async {
     final container = await _pump(
       tester,

@@ -386,12 +386,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // the host when they do not — and editable in its own form afterwards.
     // Never the word "Default": that names a role, and the role moves.
     if (_labelController.text.trim().isNotEmpty) {
-      for (final sibling in _siblings(next)) {
-        if (sibling.label.isNotEmpty) continue;
-        next = next.copyWithInstance(
-          sibling.copyWith(label: _derivedLabel(sibling, url)),
-        );
-      }
+      next = _deriveSiblingLabels(next, url);
     }
     return next;
   }
@@ -808,18 +803,81 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   /// A name for [instance], derived from what distinguishes it from [otherUrl].
   ///
-  /// The port when the two share a host — the overwhelmingly common shape, two
-  /// arrs on one box — and the hostname when they do not. Falls back to the id
-  /// only when neither can be parsed, which is better than empty.
+  /// Three shapes, in the order they tell the two apart:
+  ///
+  /// * the **port**, when they share a host — two arrs on one box, the
+  ///   overwhelmingly common homelab;
+  /// * the **first path segment**, when they share a host *and* a port —
+  ///   `media.lan/radarr` beside `media.lan/radarr4k`, which is one reverse
+  ///   proxy fronting both. This branch is not an edge case worth skipping: it
+  ///   is the deployment ADR-6 exists to serve, those two instances necessarily
+  ///   share a single certificate pin, and it is precisely where the user has
+  ///   the least other signal to tell them apart. Without it both were labelled
+  ///   `media` — what they have in **common**;
+  /// * the **hostname**, when they are on different boxes.
+  ///
+  /// Falls back to the id only when nothing parses, which is better than empty.
+  /// Never the word "Default": that names a role, and the role moves the first
+  /// time the list is reordered.
+  ///
+  /// Uniqueness is the caller's job — see [_deriveSiblingLabels]. This answers
+  /// "what is different about it", which can legitimately come out the same for
+  /// two connections that really are near-identical.
   String _derivedLabel(ServiceInstance instance, String otherUrl) {
     final mine = Uri.tryParse(instance.url);
     final other = Uri.tryParse(otherUrl);
     if (mine == null || mine.host.isEmpty) return instance.id;
 
-    if (other != null && other.host == mine.host && mine.hasPort) {
-      return '${mine.port}';
+    final sameHost = other != null && other.host == mine.host;
+    if (sameHost) {
+      if (mine.port != other.port) return '${mine.port}';
+      final segment = mine.pathSegments
+          .where((part) => part.isNotEmpty)
+          .firstOrNull;
+      if (segment != null) return segment;
     }
     return mine.host.split('.').first;
+  }
+
+  /// Names every sibling that has no name yet, and makes sure no two of them
+  /// come out the same.
+  ///
+  /// The uniqueness pass is the half that was missing, and its absence was
+  /// invisible from the field validator: that compares the typed name against
+  /// the siblings *as they stand in the model*, where the one being derived
+  /// still has an empty label. So a derivation that collided with what the user
+  /// had just typed — or with another derivation — was written anyway, and two
+  /// connections ended up sharing a name in the badge, the lens sheet and every
+  /// provenance chip, with nothing on screen able to tell them apart.
+  ///
+  /// A colliding name is suffixed with what is left to distinguish it: the
+  /// port, or failing that a counter. Ugly beats ambiguous — and it is editable
+  /// in the sibling's own form the moment the user disagrees.
+  SettingsModel _deriveSiblingLabels(SettingsModel next, String url) {
+    final taken = <String>{
+      for (final instance in _siblings(next))
+        if (instance.label.isNotEmpty) instance.label.toLowerCase(),
+      _labelController.text.trim().toLowerCase(),
+    };
+
+    var updated = next;
+    for (final sibling in _siblings(next)) {
+      if (sibling.label.isNotEmpty) continue;
+      final base = _derivedLabel(sibling, url);
+      var candidate = base;
+      if (taken.contains(candidate.toLowerCase())) {
+        final port = Uri.tryParse(sibling.url)?.port;
+        candidate = port == null || port == 0 ? base : '$base:$port';
+      }
+      var counter = 2;
+      while (taken.contains(candidate.toLowerCase())) {
+        candidate = '$base $counter';
+        counter++;
+      }
+      taken.add(candidate.toLowerCase());
+      updated = updated.copyWithInstance(sibling.copyWith(label: candidate));
+    }
+    return updated;
   }
 
   /// The connections of this service other than the one on screen.
