@@ -301,6 +301,23 @@ extension ServiceKeyExtension on ServiceKey {
   /// class would mean defending an arbitrary line at every one of them.
   bool get supportsMultipleInstances => true;
 
+  /// Whether the global search runs a **leg per connection** for this service.
+  ///
+  /// Narrower than [readsThroughLens], and the difference is the tap rather
+  /// than the query. A section per connection is only honest if the row under
+  /// it opens the server that listed it, which needs two things: a way to build
+  /// a client for a named connection, and a detail route that carries and
+  /// honours one. The three arrs have both. Seerr's detail path is the Discover
+  /// feature, whose thirty-odd reads all resolve through the lens; Bazarr's ids
+  /// are a *third* server's (`radarrId` / `sonarrSeriesId`), so its row does not
+  /// even land on a Bazarr page. Both therefore search the lens and get one
+  /// section, unlabelled — which is what they did before, rather than two
+  /// sections with identical contents under two different names.
+  bool get searchesPerConnection => switch (this) {
+    ServiceKey.radarr || ServiceKey.sonarr || ServiceKey.lidarr => true,
+    _ => false,
+  };
+
   /// Whether this service's screens actually read through the lens.
   ///
   /// **Configuring a second connection is allowed for everything** — see

@@ -91,14 +91,24 @@ final globalSearchResultsProvider =
 
       final legs = <_SearchLeg>[
         for (final service in _searchableServices)
-          for (final instance in settings.configuredInstancesOf(service))
-            (
-              instance: instance,
-              // Named only when there is something to tell apart: a stack with
-              // one Radarr must not grow a label naming the only Radarr there
-              // is.
-              named: settings.configuredInstancesOf(service).length > 1,
-            ),
+          if (service.searchesPerConnection)
+            for (final instance in settings.configuredInstancesOf(service))
+              (
+                instance: instance,
+                // Named only when there is something to tell apart: a stack
+                // with one Radarr must not grow a label naming the only Radarr
+                // there is.
+                named: settings.configuredInstancesOf(service).length > 1,
+              )
+          else
+            // One leg, on the lens, unlabelled. Seerr and Bazarr have no way to
+            // open a named connection from a row — see
+            // `ServiceKeyExtension.searchesPerConnection` — and two sections
+            // with identical contents under two different names is a worse
+            // answer than the one section they had before.
+            for (final instance in [ref.watch(activeInstanceProvider(service))])
+              if (instance != null && instance.isConfigured)
+                (instance: instance, named: false),
       ];
       if (legs.isEmpty) return const <GlobalSearchServiceResults>[];
 
@@ -264,7 +274,9 @@ GlobalSearchResult _seerrResult(
       id: item.id,
       heroTag: heroTag,
       posterUrl: imageUrl,
-      instanceId: instance.id,
+      // No `i` here on purpose: Discover resolves through the lens end to end,
+      // so a connection in the URL would be a claim the page cannot honour.
+      // The day it can, this is the one line that changes.
     ),
   );
 }

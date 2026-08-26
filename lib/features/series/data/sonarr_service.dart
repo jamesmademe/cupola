@@ -33,7 +33,16 @@ final sonarrServiceForProvider = Provider.family<SonarrService, String>((
   // `Dio`s pointed at one address whenever anything asked by id — and any
   // override of the plain provider, which is how every test supplies a fake,
   // was quietly bypassed on the path that names a connection.
-  final lens = ref.watch(activeInstanceProvider(ServiceKey.sonarr))?.id ?? '';
+  //
+  // `read`, deliberately, and this is the load-bearing part. Watching the lens
+  // would rebuild EVERY entry of this family whenever the lens moved — entries
+  // for connections that did not change — and `watchApiClient` closes the
+  // outgoing client on dispose. A release search running against the seedbox
+  // would have its `Dio` shut under it because the user tapped a badge on
+  // another screen. The cost of reading is that an entry minted before the lens
+  // landed on its id keeps a client of its own until it is disposed: one extra
+  // connection, rather than a request that fails.
+  final lens = ref.read(activeInstanceProvider(ServiceKey.sonarr))?.id ?? '';
   if (instanceId.isEmpty || instanceId == lens) {
     return ref.watch(sonarrServiceProvider);
   }

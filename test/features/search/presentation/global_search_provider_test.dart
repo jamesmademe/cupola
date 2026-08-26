@@ -106,7 +106,11 @@ void main() {
     // And the connection travels with the row, so the detail page it opens
     // reads the server that listed it.
     expect(routes.map((uri) => uri.queryParameters['i']), [
-      'seerr',
+      // Seerr carries none: Discover resolves through the lens end to end, so a
+      // connection in its URL would be a claim the page cannot honour. Its
+      // section is the lens's, singular and unlabelled — see
+      // `ServiceKeyExtension.searchesPerConnection`.
+      null,
       'radarr',
       'sonarr',
       'lidarr',

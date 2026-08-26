@@ -310,11 +310,14 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
               // shows its own search, an episode row its own — never each
               // other's.
               seasonIndicator: (seasonNumber) => ReleaseSearchRowChip(
+                // Stamped: target equality includes the connection, so an
+                // unstamped one matches no running job and the dot never
+                // lights.
                 target: ReleaseSearchTarget.season(
                   seriesId: widget.seriesId,
                   seasonNumber: seasonNumber,
                   label: 'Season $seasonNumber',
-                ),
+                ).stampedWith(_instanceId),
               ),
               episodeIndicator: (episode) => ReleaseSearchRowDot(
                 target: ReleaseSearchTarget.episode(
@@ -322,7 +325,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
                   seriesId: widget.seriesId,
                   seasonNumber: episode.seasonNumber,
                   label: 'Episode ${episode.episodeNumber}',
-                ),
+                ).stampedWith(_instanceId),
               ),
               onSearchSeason: (seasonNumber) =>
                   _searchSeason(context, seasonNumber),
@@ -458,7 +461,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         label: seasonNumber != null
             ? '${truncateTitle(title)} · Season $seasonNumber'
             : truncateTitle(title),
-      ),
+      ).stampedWith(_instanceId),
     );
   }
 
@@ -542,7 +545,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         seriesId: widget.seriesId,
         seasonNumber: seasonNumber,
         label: '${truncateTitle(title)} · one episode',
-      ),
+      ).stampedWith(_instanceId),
     );
   }
 

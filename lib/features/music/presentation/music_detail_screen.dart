@@ -303,10 +303,13 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
               leadingBox: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 child: ReleaseSearchStatusCard(
+                  // Stamped: target equality includes the connection, so an
+                  // unstamped one matches no running job and the card stays
+                  // blank for the whole search.
                   target: ReleaseSearchTarget.artist(
                     artistId: widget.artistId,
                     label: truncateTitle(viewModel.title),
-                  ),
+                  ).stampedWith(_instanceId),
                 ),
               ),
               sliver: MusicAlbumsList(
@@ -433,7 +436,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
       ReleaseSearchTarget.artist(
         artistId: widget.artistId,
         label: truncateTitle(title),
-      ),
+      ).stampedWith(_instanceId),
     );
   }
 
@@ -474,7 +477,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
         albumId: albumId,
         artistId: widget.artistId,
         label: '${truncateTitle(title)} · one album',
-      ),
+      ).stampedWith(_instanceId),
     );
   }
 

@@ -110,6 +110,21 @@ void main() {
       expect(episodeHere.conflictsWith(there), isFalse);
     });
 
+    test('the status card and the job it watches agree on the connection', () {
+      // The asymmetry that broke the card: `showReleaseSearch` stamps before it
+      // starts the job, so a detail screen handing an UNSTAMPED target to
+      // `jobForTargetProvider` matches nothing and the card stays blank for the
+      // whole search. Both sides stamp with the page's connection.
+      final started = movie.stampedWith('radarr');
+      final watched = ReleaseSearchTarget.movie(
+        movieId: 9,
+        label: 'Dune: Part Two',
+      ).stampedWith('radarr');
+
+      expect(watched, started);
+      expect(movie == started, isFalse, reason: 'unstamped matches nothing');
+    });
+
     test('an unstamped target is still its own identity', () {
       // The shape a target has between construction and `showReleaseSearch`,
       // and the one a hand-built fixture keeps.

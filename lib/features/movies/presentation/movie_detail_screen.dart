@@ -257,10 +257,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         if (viewModel.isInLibrary)
           MediaDetailSlot.box(
             child: ReleaseSearchStatusCard(
+              // Stamped with the page's own connection: the job the card is
+              // looking for was started against this server, and target
+              // equality now includes it — an unstamped target matches nothing
+              // and the card stays blank for the whole search.
               target: ReleaseSearchTarget.movie(
                 movieId: widget.movieId,
                 label: truncateTitle(viewModel.title),
-              ),
+              ).stampedWith(_instanceId),
             ),
           ),
         if (viewModel.isInLibrary)
@@ -412,7 +416,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       ReleaseSearchTarget.movie(
         movieId: widget.movieId,
         label: truncateTitle(title),
-      ),
+      ).stampedWith(_instanceId),
     );
   }
 }

@@ -54,8 +54,8 @@ final releaseSearchPlatformProvider = Provider<TargetPlatform?>((ref) => null);
 /// instance looked untrusted-but-fine because the first one carried no pin, and
 /// every search against it failed on a certificate the app had been told to
 /// trust.
-final releaseSearchReachProvider =
-    Provider.family<ReleaseSearchReach, ReleaseSearchTarget>((ref, target) {
+final releaseSearchReachProvider = Provider.autoDispose
+    .family<ReleaseSearchReach, ReleaseSearchTarget>((ref, target) {
       final settings = ref.watch(currentSettingsProvider);
       return _reachOf(ref, target.service, _urlOf(settings, target), settings);
     });
@@ -114,12 +114,17 @@ ReleaseSearchReach _reachOf(
 ///   following would let anyone on the path collect the API key — the one case
 ///   here that is a security boundary rather than a capability gap.
 ///
+/// `autoDispose`, unlike almost everything else here: the key is a
+/// [ReleaseSearchTarget] with value equality, so without it every episode ever
+/// searched would leave a permanent entry listening to `currentSettingsProvider`
+/// — a listener list that only grows for the life of the app.
+///
 /// **This is where the opt-in is enforced, and it is the only place it needs to
 /// be.** Nothing else in the app constructs a `DataTask`, so a reach that is
 /// not [ReleaseSearchReach.beyondTheApp] cannot enqueue one — which is why the
 /// switch is a reach and not an `if` scattered over the call sites.
-final releaseSearchTransportProvider =
-    Provider.family<ReleaseSearchTransport, ReleaseSearchTarget>((ref, target) {
+final releaseSearchTransportProvider = Provider.autoDispose
+    .family<ReleaseSearchTransport, ReleaseSearchTarget>((ref, target) {
       final reach = ref.watch(releaseSearchReachProvider(target));
       if (reach == ReleaseSearchReach.beyondTheApp) {
         return const BackgroundReleaseSearchTransport();
@@ -427,9 +432,15 @@ Future<void> showReleaseSearch(
   // the user is looking at — and it has to ask BEFORE adoption and the results
   // cache are consulted, since the connection is now part of what makes two
   // targets the same target.
-  target = target.stampedWith(
-    ref.read(activeInstanceProvider(target.service))?.id ?? '',
-  );
+  //
+  // Only when the caller left it blank: a detail page opened for a connection
+  // other than the lens already knows which server it belongs to, and stamping
+  // over that would send its search somewhere else.
+  if (target.instanceId.isEmpty) {
+    target = target.stampedWith(
+      ref.read(activeInstanceProvider(target.service))?.id ?? '',
+    );
+  }
   final notifier = ref.read(releaseSearchJobsProvider.notifier);
   final settings = ref.read(releaseSearchSettingsProvider);
   // Every callback below comes from the container, never from this widget's
