@@ -406,7 +406,7 @@ void main() {
       await _pumpServiceSettings(
         tester,
         service: ServiceKey.radarr,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'key',
         ),
@@ -431,7 +431,7 @@ void main() {
       final harness = await _pumpServiceSettings(
         tester,
         service: ServiceKey.radarr,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'old-key',
         ),
