@@ -165,6 +165,37 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     (entry) => entry.value.text != _initialValues[entry.key],
   );
 
+  /// Takes on a name this connection was given somewhere other than here.
+  ///
+  /// There is exactly one writer: the *sibling's* form. Saving a second
+  /// connection derives a name for the first one — see [_deriveSiblingLabels]
+  /// — and the first one's form is very often still on the stack underneath,
+  /// holding the empty string it loaded when that connection was the only one
+  /// there was. Coming back to it, [_needsLabel] is now true, so the field
+  /// appears empty and its validator refuses to save a connection the user
+  /// never touched and which *has* a name — one already on the badge, in the
+  /// lens sheet and above its section in search.
+  ///
+  /// Only when the field holds exactly what it loaded. An adoption that
+  /// overwrote a half-typed name would trade a stale field for a lost edit,
+  /// which is the worse of the two.
+  ///
+  /// The listener is detached across the write so the assignment does not read
+  /// as the user typing: that would clear a test result the values are still
+  /// good for, and mark a form dirty that nobody has edited. Moving
+  /// `_initialValues` along with it is the other half of the same point — the
+  /// adopted name is the new baseline, not an unsaved change to warn about on
+  /// the way out.
+  void _adoptPersistedLabel(String persisted) {
+    if (persisted == _labelController.text) return;
+    if (_labelController.text != _initialValues['label']) return;
+
+    _labelController.removeListener(_onFieldChanged);
+    _labelController.text = persisted;
+    _labelController.addListener(_onFieldChanged);
+    _initialValues['label'] = persisted;
+  }
+
   void _onFieldChanged() {
     // A test result describes the values that were tested; once they change it
     // is stale and claiming otherwise would be worse than showing nothing. The
@@ -485,6 +516,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   }
 
   Widget _buildScaffold(BuildContext context) {
+    // Written by the sibling's form while this one sat open — see
+    // [_adoptPersistedLabel]. Listened for rather than read: this form is not
+    // rebuilt by being returned to, so nothing else would notice.
+    ref.listen(
+      currentSettingsProvider.select(
+        (s) => s.instanceById(_target.id)?.label ?? '',
+      ),
+      (_, persisted) => _adoptPersistedLabel(persisted),
+    );
+
     final settings = ref.watch(currentSettingsProvider);
     final isConfigured = settings.isServiceConfigured(service);
 

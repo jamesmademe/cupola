@@ -298,6 +298,109 @@ void main() {
     expect(labels, contains('7878'));
   });
 
+  testWidgets('the name the sibling\'s save wrote reaches the field', (
+    tester,
+  ) async {
+    // The flow that broke on the device: this form is open on the only
+    // connection, the user adds a second from the form pushed on top of it,
+    // and saving that one derives a name for THIS one. Coming back, the field
+    // the validator now insists on was empty — the controller still held what
+    // it loaded, an empty string — so a connection the user never touched, and
+    // which already had a persisted name showing in the badge, in the lens
+    // sheet and above its search section, refused to save.
+    const nameless = ServiceInstance(
+      id: 'radarr',
+      service: ServiceKey.radarr,
+      url: 'https://nas.lan:7878',
+      credential: 'k',
+    );
+    final container = await _pump(
+      tester,
+      settings: const SettingsModel(instances: [nameless]),
+    );
+    expect(find.widgetWithText(TextFormField, 'Name'), findsNothing);
+
+    // Exactly what the other form's save writes: the sibling appended, and a
+    // name derived onto this one from what tells the two apart.
+    await container
+        .read(settingsProvider.notifier)
+        .updateSettings(
+          const SettingsModel(
+            instances: [
+              ServiceInstance(
+                id: 'radarr',
+                service: ServiceKey.radarr,
+                label: '7878',
+                url: 'https://nas.lan:7878',
+                credential: 'k',
+              ),
+              ServiceInstance(
+                id: 'radarr-hd11111',
+                service: ServiceKey.radarr,
+                label: 'HD',
+                url: 'https://nas.lan:7879',
+                credential: 'k2',
+              ),
+            ],
+          ),
+        );
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextFormField, 'Name'), findsOneWidget);
+    expect(
+      find.text('7878'),
+      findsOneWidget,
+      reason: 'the field must show the name that is actually persisted',
+    );
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Give this one a name'), findsNothing);
+    expect(
+      container
+          .read(currentSettingsProvider)
+          .primaryOf(ServiceKey.radarr)
+          ?.label,
+      '7878',
+    );
+  });
+
+  testWidgets('an edit in progress survives a sibling being saved', (
+    tester,
+  ) async {
+    // The counterweight to the adoption above: it must never reach in and
+    // overwrite something the user is in the middle of typing.
+    final container = await _pump(
+      tester,
+      settings: const SettingsModel(instances: [_fourK, _hd]),
+    );
+
+    await tester.enterText(find.widgetWithText(TextFormField, 'Name'), 'Attic');
+    await tester.pumpAndSettle();
+
+    await container
+        .read(settingsProvider.notifier)
+        .updateSettings(
+          const SettingsModel(
+            instances: [
+              ServiceInstance(
+                id: 'radarr',
+                service: ServiceKey.radarr,
+                label: 'Basement',
+                url: 'https://nas.lan:7878',
+                credential: 'key-4k',
+              ),
+              _hd,
+            ],
+          ),
+        );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Attic'), findsOneWidget);
+    expect(find.text('Basement'), findsNothing);
+  });
+
   testWidgets('removing one connection leaves the other alone', (tester) async {
     final container = await _pump(
       tester,
