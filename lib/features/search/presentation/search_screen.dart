@@ -458,19 +458,19 @@ class _SearchResultCard extends StatelessWidget {
     );
   }
 
-  Color _resultActionColor() {
-    if (result.tags.any((tag) => tag.toLowerCase().contains('available'))) {
-      return AppColors.success;
-    }
-    return result.service.accent;
-  }
+  /// Green tick for a title the server already holds, the service's own accent
+  /// and a plus for one it does not.
+  ///
+  /// Reads the row's own [GlobalSearchResult.inLibrary] rather than sniffing
+  /// the tags for the substring `available`: that tied the affordance to a
+  /// label's wording, and to a field (`hasFile`) the lookup endpoints never
+  /// populate — so the tick never appeared and every row invited an add,
+  /// including the ones already sitting on the server.
+  Color _resultActionColor() =>
+      result.inLibrary ? AppColors.success : result.service.accent;
 
-  IconData _resultActionIcon() {
-    if (result.tags.any((tag) => tag.toLowerCase().contains('available'))) {
-      return Icons.check_rounded;
-    }
-    return Icons.add_rounded;
-  }
+  IconData _resultActionIcon() =>
+      result.inLibrary ? Icons.check_rounded : Icons.add_rounded;
 }
 
 /// A result's poster, flying into its detail page as a shared element.

@@ -19,6 +19,15 @@ class GlobalSearchResult {
   /// kind this is also owns making the tag unique.
   final String heroTag;
 
+  /// Whether the server that listed this row already holds the title.
+  ///
+  /// A separate fact from anything in [tags], which are words on a chip: this
+  /// is what the row's trailing affordance reads to decide between "already
+  /// here" and "add it". It used to sniff the tags for the substring
+  /// `available`, which tied a semantic decision to a label's wording — and to
+  /// a field the lookup endpoints never populate.
+  final bool inLibrary;
+
   const GlobalSearchResult({
     required this.service,
     required this.id,
@@ -29,6 +38,7 @@ class GlobalSearchResult {
     required this.tags,
     required this.route,
     required this.heroTag,
+    this.inLibrary = false,
     this.routeExtra,
   });
 

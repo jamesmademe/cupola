@@ -27,7 +27,12 @@ void main() {
     expect(findLine('1 result'), findsOneWidget);
     expect(find.text('Dune'), findsOneWidget);
     expect(find.text('Movie'), findsOneWidget);
-    expect(find.text('Available'), findsWidgets);
+    // The fixture arrives the way `movie/lookup` really answers — a library id
+    // and `hasFile: false` — so the marker and the trailing affordance have to
+    // come from the id. They used to come from `hasFile`, which meant a movie
+    // sitting on the server showed "Missing" and an "add it" plus.
+    expect(find.text('In library'), findsWidgets);
+    expect(find.text('Missing'), findsNothing);
     expect(_posterSizedContentCard(tester), findsOneWidget);
     expect(_solidActionIcon(Icons.check_rounded), findsOneWidget);
   });
@@ -233,6 +238,9 @@ _overrides({bool withPoster = false}) {
             id: 10,
             title: 'Dune',
             year: 2024,
+            // What the lookup endpoint actually sends for a movie the server
+            // already holds: the library id, and no file flag.
+            hasFile: false,
             images: withPoster
                 ? const [
                     {'coverType': 'poster', 'url': '/MediaCover/10/poster.jpg'},

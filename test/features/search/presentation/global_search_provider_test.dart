@@ -15,6 +15,7 @@ import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/search/domain/global_search_result.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
@@ -172,6 +173,74 @@ void main() {
           .map((r) => Uri.parse(r.route).queryParameters['i']),
       ['radarr', 'radarr-away111'],
     );
+  });
+
+  test('the library marker is derived from the id, not from hasFile', () async {
+    // `/movie/lookup` is a TMDB proxy: it stamps the library id onto a title
+    // the server already has, and leaves `hasFile` false for every row. So the
+    // fixture says what the wire says — a movie in the library, with a file on
+    // disk, arriving with `hasFile: false`. Deriving the marker from that field
+    // is what made "Aladdin (2019)" read as Missing in search while its own
+    // detail page said "Available, 1 file".
+    final container = _container(
+      radarr: _SearchRadarrService(
+        results: [
+          buildMovie(id: 42, title: 'Aladdin', year: 2019, hasFile: false),
+          buildMovie(id: 0, title: 'Aladdin', year: 1992, hasFile: false),
+        ],
+      ),
+      // Same endpoint shape: Sonarr and Lidarr attach `statistics` in the
+      // library controller, never in the lookup one, so anything read off it
+      // is false for every row here too.
+      sonarr: _SearchSonarrService(
+        results: [
+          buildSeries(id: 7, title: 'Foundation', year: 2021),
+          buildSeries(id: 0, title: 'Foundation', year: 1988),
+        ],
+      ),
+      lidarr: _SearchLidarrService(
+        results: [
+          buildArtist(id: 9, artistName: 'Boards of Canada'),
+          buildArtist(id: 0, artistName: 'Boards of Canada Tribute'),
+          // The one shape that does carry statistics: an album count only
+          // appears when the payload actually has one.
+          buildArtist(
+            id: 11,
+            artistName: 'Bibio',
+            statistics: const {'albumCount': 3},
+          ),
+        ],
+      ),
+    );
+    addTearDown(container.dispose);
+    container.read(globalSearchQueryProvider.notifier).state = 'aladdin';
+
+    final groups = await container.read(globalSearchResultsProvider.future);
+    GlobalSearchServiceResults group(ServiceKey service) =>
+        groups.singleWhere((g) => g.service == service);
+
+    final movies = group(ServiceKey.radarr).results;
+    expect(movies.first.tags, ['Movie', 'In library']);
+    expect(movies.first.subtitle, '2019 · In library');
+    expect(movies.map((r) => r.inLibrary), [true, false]);
+    // Nothing claimed about the one the server does not have: the section it
+    // sits under already names the library that was asked.
+    expect(movies.last.tags, ['Movie']);
+    expect(movies.last.subtitle, '1992');
+
+    final series = group(ServiceKey.sonarr).results;
+    expect(series.map((r) => r.inLibrary), [true, false]);
+    expect(series.first.tags, ['Series', 'continuing', 'In library']);
+    expect(series.last.tags, ['Series', 'continuing']);
+
+    final artists = group(ServiceKey.lidarr).results;
+    expect(artists.map((r) => r.inLibrary), [true, false, true]);
+    expect(artists.first.tags, ['Artist', 'In library']);
+    expect(artists[1].tags, ['Artist']);
+    // `albumCount` is 0 for every statistics-less lookup row, so "0 albums"
+    // was a fact about the endpoint rather than about the artist.
+    expect(artists.first.subtitle, '');
+    expect(artists.last.subtitle, '3 albums');
   });
 
   test('a dead connection is told apart from an empty one', () async {

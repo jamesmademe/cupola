@@ -248,6 +248,30 @@ Future<GlobalSearchServiceResults> _loadLeg<T>({
 String _heroTag(ServiceInstance instance, String kind, int id, int index) =>
     'search_${instance.id}_${kind}_${id}_$index';
 
+/// The word a row wears when the server that listed it already holds the title.
+///
+/// One string, and a deliberately modest one. The lookup endpoints every arr
+/// leg calls (`movie/lookup`, `series/lookup`, `artist/lookup`) are metadata
+/// proxies: they answer from TMDB/TVDB/MusicBrainz and stamp the **library id**
+/// onto anything the server recognises as its own — nothing else. `hasFile` is
+/// left false on every row, and `statistics` (Sonarr's episode counts,
+/// Lidarr's track counts) is attached by the library controllers, never by the
+/// lookup ones. Reading a badge off those fields is reading a fact about the
+/// endpoint, not about the media, which is why "Aladdin (2019)" read as
+/// *Missing* in search while its own detail page said *Available, 1 file*.
+///
+/// So the honest pair is "in library" against nothing at all, and the third
+/// state the badge used to imply — in the library but without the file — is
+/// simply not knowable here. `hasFile` is not consulted even as an optimistic
+/// upgrade: it would put two different words on two rows in the same state
+/// depending on which Radarr answered, and a row that says nothing is a
+/// smaller lie than one that says the wrong thing.
+///
+/// Nothing is said about a row the server does not have. The section it sits
+/// under already names the library that was asked, so "not in library" would
+/// be the heading repeated once per row.
+const _inLibraryTag = 'In library';
+
 GlobalSearchResult _seerrResult(
   MediaPreview item,
   ServiceInstance instance,
@@ -294,17 +318,21 @@ GlobalSearchResult _radarrResult(
     apiKey: instance.credential,
   );
   final heroTag = _heroTag(instance, 'movie', item.id, index);
+  // `id > 0` is the library test the rest of the file already uses — see
+  // `_heroTag` — and the only one this payload supports. See [_inLibraryTag].
+  final inLibrary = item.id > 0;
   return GlobalSearchResult(
     service: ServiceKey.radarr,
     id: item.id,
     title: item.title,
     subtitle: [
       if (item.year > 0) item.year.toString(),
-      item.hasFile ? 'Available' : 'Missing',
+      if (inLibrary) _inLibraryTag,
     ].join(' · '),
     imageUrl: image.url,
     imageHeaders: image.headers,
-    tags: ['Movie', item.hasFile ? 'Available' : 'Missing'],
+    tags: ['Movie', if (inLibrary) _inLibraryTag],
+    inLibrary: inLibrary,
     heroTag: heroTag,
     route: ServiceRoutes.radarrMovie(
       item.id,
@@ -327,6 +355,12 @@ GlobalSearchResult _sonarrResult(
     apiKey: instance.credential,
   );
   final heroTag = _heroTag(instance, 'series', item.id, index);
+  // `status` stays: it is the *series'* own state — continuing, ended — which
+  // comes from the metadata and is therefore populated on a lookup row. It has
+  // never said anything about this library, which is the gap [_inLibraryTag]
+  // fills. `hasFiles` is the field that would have lied here, and it is
+  // deliberately not read.
+  final inLibrary = item.id > 0;
   return GlobalSearchResult(
     service: ServiceKey.sonarr,
     id: item.id,
@@ -334,10 +368,12 @@ GlobalSearchResult _sonarrResult(
     subtitle: [
       if (item.year > 0) item.year.toString(),
       item.status,
+      if (inLibrary) _inLibraryTag,
     ].join(' · '),
     imageUrl: image.url,
     imageHeaders: image.headers,
-    tags: ['Series', item.status],
+    tags: ['Series', item.status, if (inLibrary) _inLibraryTag],
+    inLibrary: inLibrary,
     heroTag: heroTag,
     route: ServiceRoutes.sonarrSeries(
       item.id,
@@ -388,10 +424,18 @@ GlobalSearchResult _lidarrResult(
     apiKey: instance.credential,
     coverTypes: const ['poster', 'fanart', 'banner'],
   );
-  final albumLabel = item.albumCount == 1
-      ? '1 album'
-      : '${item.albumCount} albums';
+  // Only when the payload carries one. `albumCount` reads `statistics`, which
+  // the lookup controller does not attach, so every row said "0 albums" — a
+  // fact about the endpoint dressed up as a fact about the artist.
+  final albumLabel = switch (item.albumCount) {
+    0 => '',
+    1 => '1 album',
+    final count => '$count albums',
+  };
   final heroTag = _heroTag(instance, 'artist', item.id, index);
+  // Same statistics gap as the album count: `hasFiles` counts track files and
+  // is false for every lookup row. See [_inLibraryTag].
+  final inLibrary = item.id > 0;
   return GlobalSearchResult(
     service: ServiceKey.lidarr,
     id: item.id,
@@ -399,7 +443,8 @@ GlobalSearchResult _lidarrResult(
     subtitle: albumLabel,
     imageUrl: image.url,
     imageHeaders: image.headers,
-    tags: ['Artist', item.hasFiles ? 'Available' : 'Missing'],
+    tags: ['Artist', if (inLibrary) _inLibraryTag],
+    inLibrary: inLibrary,
     heroTag: heroTag,
     route: ServiceRoutes.lidarrArtist(
       item.id,
