@@ -7,6 +7,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/settings_connections_screen.dart';
@@ -121,6 +122,47 @@ void main() {
           hint: 'opens Radarr settings',
         ),
       );
+    });
+
+    testWidgets('a second connection is visible on the Connections screen', (
+      tester,
+    ) async {
+      // The screen is called Connections and had no way of showing that a
+      // service had two: one row, the first connection's host, and a counter
+      // that quite correctly counts services. Nothing on it revealed the
+      // second Radarr — the one screen in the app that did not know.
+      await _pumpConnectionsScreen(
+        tester,
+        settings:
+            settingsWith(
+              radarrUrl: 'https://radarr.local:7878',
+              radarrApiKey: 'key',
+              sonarrUrl: 'https://sonarr.local:8989',
+              sonarrApiKey: 'key',
+            ).copyWithInstance(
+              const ServiceInstance(
+                id: 'radarr-away111',
+                service: ServiceKey.radarr,
+                label: 'Away',
+                url: 'https://away.local:7878',
+                credential: 'key-away',
+              ),
+            ),
+        diagnosis: const ServiceDiagnosis.connected(),
+      );
+
+      expect(find.text('radarr.local:7878 · 2 connections'), findsOneWidget);
+      expect(
+        find.semantics.byLabel(
+          'Radarr, Connected, radarr.local:7878, 2 connections',
+        ),
+        findsOneWidget,
+      );
+      // The service with one is left exactly as it was: a stack with a single
+      // Sonarr must not grow a count of one.
+      expect(find.text('sonarr.local:8989'), findsOneWidget);
+      // And the counter still counts SERVICES, which is what it says.
+      expect(find.text('2 of ${ServiceKey.values.length}'), findsOneWidget);
     });
 
     testWidgets('a failing row leads with the cause, not the host', (
