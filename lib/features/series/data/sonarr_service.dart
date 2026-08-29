@@ -193,6 +193,56 @@ class SonarrService with ArrActivityMixin {
     );
   }
 
+  /// Adds [series] — a `series/lookup` row — to this Sonarr's library.
+  ///
+  /// The seasons travel back untouched: Sonarr builds the library entry from
+  /// them, and an add that drops them lands a series with no seasons to
+  /// monitor. `addOptions.searchForMissingEpisodes` is the half that makes
+  /// this an add rather than a bookmark.
+  ///
+  /// [monitored] decides both halves at once — the series flag and
+  /// `addOptions.monitor` — because a series that is not monitored with every
+  /// episode monitored is a contradiction Sonarr resolves by grabbing nothing,
+  /// having first queued a search sweep for the lot.
+  ///
+  /// Throws on failure rather than degrading; see [RadarrService.addMovie].
+  Future<SonarrSeries> addSeries(
+    SonarrSeries series, {
+    required int qualityProfileId,
+    required String rootFolderPath,
+    bool monitored = true,
+    bool searchForMissingEpisodes = true,
+  }) async {
+    final response = await client.post(
+      '/api/v3/series',
+      data: {
+        'title': series.title,
+        // Sonarr keys the new entry on these two, not on the title.
+        'titleSlug': series.titleSlug,
+        'tvdbId': series.tvdbId,
+        'year': series.year,
+        'images': series.images,
+        'seasons': series.seasons,
+        'seriesType': series.seriesType ?? 'standard',
+        'qualityProfileId': qualityProfileId,
+        'rootFolderPath': rootFolderPath,
+        'monitored': monitored,
+        'seasonFolder': true,
+        'addOptions': {
+          'monitor': monitored ? 'all' : 'none',
+          'searchForMissingEpisodes': searchForMissingEpisodes,
+          'searchForCutoffUnmetEpisodes': false,
+        },
+      },
+    );
+    return SonarrSeries.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Fetches the root folders configured on this Sonarr.
+  Future<List<Map<String, dynamic>>> getRootFolders() async {
+    return fetchRootFolders();
+  }
+
   /// Finds a series in the library by its TVDB ID.
   /// Returns null if not found in the library.
   Future<SonarrSeries?> getSeriesByTvdbId(int tvdbId) async {

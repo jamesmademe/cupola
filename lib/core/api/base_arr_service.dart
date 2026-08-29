@@ -375,6 +375,20 @@ mixin ArrActivityMixin {
     }
   }
 
+  /// Fetches the root folders this server is configured to file media under.
+  ///
+  /// Unlike [fetchQualityProfiles], a failure here travels. The two are read
+  /// side by side by the add sheet, and an empty list from this one is a
+  /// sentence — "this server has nowhere to put it" — that the sheet renders
+  /// as a dead end. Swallowing the error would make an unreachable server say
+  /// exactly that, which is the mistake `lookupItems` used to make: offline
+  /// and empty became the same answer.
+  Future<List<Map<String, dynamic>>> fetchRootFolders() async {
+    final response = await client.get('/api/${config.apiVersion}/rootfolder');
+    final data = response.data as List<dynamic>;
+    return data.cast<Map<String, dynamic>>();
+  }
+
   /// Updates an item's quality profile.
   Future<void> updateItemProfile(
     String resourcePath,

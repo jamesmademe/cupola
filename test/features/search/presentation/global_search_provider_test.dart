@@ -15,6 +15,7 @@ import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/search/domain/global_search_result.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
@@ -241,6 +242,49 @@ void main() {
     // was a fact about the endpoint rather than about the artist.
     expect(artists.first.subtitle, '');
     expect(artists.last.subtitle, '3 albums');
+  });
+
+  test('the plus is offered only where an add can really happen', () async {
+    final container = _container(
+      radarr: _SearchRadarrService(
+        results: [
+          buildMovie(id: 42, title: 'Aladdin'),
+          buildMovie(id: 0, title: 'Aladdin'),
+        ],
+      ),
+      lidarr: _SearchLidarrService(
+        results: [
+          // Lidarr keys an artist on its MusicBrainz id and refuses an add
+          // without one, so a lookup row that arrives without it gets no
+          // affordance rather than one that cannot be honoured.
+          buildArtist(id: 0, artistName: 'Nameless'),
+          buildArtist(id: 0, artistName: 'Bibio', foreignArtistId: 'mbid-9'),
+        ],
+      ),
+    );
+    addTearDown(container.dispose);
+    container.read(globalSearchQueryProvider.notifier).state = 'aladdin';
+
+    final groups = await container.read(globalSearchResultsProvider.future);
+    GlobalSearchServiceResults group(ServiceKey service) =>
+        groups.singleWhere((g) => g.service == service);
+
+    final movies = group(ServiceKey.radarr).results;
+    // Nothing to add on a row the server already holds.
+    expect(movies.first.addRequest, isNull);
+    expect(movies.last.addRequest, isA<RadarrAddRequest>());
+    // Bound to the CONNECTION that listed it, which is what the sheet posts to.
+    expect(movies.last.addRequest!.instanceId, 'radarr');
+
+    final artists = group(ServiceKey.lidarr).results;
+    expect(artists.first.addRequest, isNull);
+    expect(artists.last.addRequest, isA<LidarrAddRequest>());
+    expect(artists.last.addRequest!.externalId, 'mbid-9');
+
+    // Seerr's rows are untouched: its request flow lives on its detail page.
+    for (final row in group(ServiceKey.seerr).results) {
+      expect(row.addRequest, isNull);
+    }
   });
 
   test('a dead connection is told apart from an empty one', () async {

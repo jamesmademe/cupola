@@ -261,6 +261,31 @@ void main() {
         {'id': 2, 'sourceTitle': 'Imported.Release'},
       ]);
     });
+
+    test('fetchRootFolders reads the server\'s configured libraries', () async {
+      client.getResponseData = [
+        {'id': 1, 'path': '/data/movies', 'accessible': true},
+        {'id': 2, 'path': '/data/movies-4k', 'accessible': true},
+      ];
+
+      final folders = await service.fetchRootFolders();
+
+      expect(client.lastGetPath, '/api/v3/rootfolder');
+      expect(folders.map((folder) => folder['path']), [
+        '/data/movies',
+        '/data/movies-4k',
+      ]);
+    });
+
+    test('fetchRootFolders lets a failure through', () async {
+      // Deliberately unlike [fetchQualityProfiles], which degrades to `[]`.
+      // An add sheet that cannot reach the server must say so: an empty list
+      // here would render as "this server has no libraries configured", which
+      // is D13's lesson — offline made indistinguishable from empty.
+      client.getException = Exception('connection refused');
+
+      expect(service.fetchRootFolders(), throwsA(isA<Exception>()));
+    });
   });
 }
 

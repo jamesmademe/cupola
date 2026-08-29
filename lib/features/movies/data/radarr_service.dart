@@ -152,6 +152,54 @@ class RadarrService with ArrActivityMixin {
     );
   }
 
+  /// Adds [movie] — a `movie/lookup` row — to this Radarr's library.
+  ///
+  /// [movie] is posted back very nearly as it arrived: Radarr builds the
+  /// library entry from the metadata it proxied, and the three fields the user
+  /// chose ([qualityProfileId], [rootFolderPath], [monitored]) are what turn a
+  /// lookup row into one. `addOptions.searchForMovie` is the half that makes
+  /// this an add rather than a bookmark — without it the movie is tracked and
+  /// nothing is ever grabbed.
+  ///
+  /// [minimumAvailability] defaults to whatever the lookup row carried, which
+  /// is the server's own configured default for new movies.
+  ///
+  /// Throws on failure rather than degrading. Radarr answers 400 for a movie
+  /// it already holds, and a caller that cannot tell that from a success would
+  /// report an add that never happened.
+  Future<RadarrMovie> addMovie(
+    RadarrMovie movie, {
+    required int qualityProfileId,
+    required String rootFolderPath,
+    bool monitored = true,
+    bool searchForMovie = true,
+  }) async {
+    final response = await client.post(
+      '/api/v3/movie',
+      data: {
+        'title': movie.title,
+        // Radarr keys the new entry on these two, not on the title.
+        'titleSlug': movie.titleSlug,
+        'tmdbId': movie.tmdbId,
+        'year': movie.year,
+        // Posted back so the library entry has artwork before the first
+        // metadata refresh runs.
+        'images': movie.images,
+        'qualityProfileId': qualityProfileId,
+        'rootFolderPath': rootFolderPath,
+        'monitored': monitored,
+        'minimumAvailability': movie.minimumAvailability ?? 'released',
+        'addOptions': {'searchForMovie': searchForMovie},
+      },
+    );
+    return RadarrMovie.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Fetches the root folders configured on this Radarr.
+  Future<List<Map<String, dynamic>>> getRootFolders() async {
+    return fetchRootFolders();
+  }
+
   /// Finds a movie in the library by its TMDB ID.
   /// Returns null if not found in the library.
   Future<RadarrMovie?> getMovieByTmdbId(int tmdbId) async {

@@ -8,6 +8,14 @@ class RadarrMovie {
   final int id;
   final String title;
   final String sortTitle;
+
+  /// Radarr's own url-safe key for the movie (`dune-438631`).
+  ///
+  /// Read for exactly one reason: adding. Every other screen has a library
+  /// entry already, and Radarr keys a *new* one on this — an add posted
+  /// without it is rejected. It comes down on the `movie/lookup` row, so the
+  /// only cost of carrying it is this field.
+  final String titleSlug;
   final int sizeOnDisk;
   final String status;
   final String? overview;
@@ -39,6 +47,7 @@ class RadarrMovie {
     required this.id,
     required this.title,
     required this.sortTitle,
+    this.titleSlug = '',
     required this.sizeOnDisk,
     required this.status,
     this.overview,
@@ -84,6 +93,7 @@ class RadarrMovie {
       id: json['id'] ?? 0,
       title: json['title'] ?? 'Unknown',
       sortTitle: json['sortTitle'] ?? '',
+      titleSlug: json['titleSlug'] ?? '',
       sizeOnDisk: json['sizeOnDisk'] ?? 0,
       status: json['status'] ?? 'unknown',
       overview: json['overview'],

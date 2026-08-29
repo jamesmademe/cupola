@@ -159,6 +159,102 @@ void main() {
         expect(found, isNull);
       });
     });
+
+    group('addSeries', () {
+      SonarrSeries lookupHit() => const SonarrSeries(
+        // What `series/lookup` sends for a series the server does NOT have.
+        id: 0,
+        title: 'Severance',
+        sortTitle: 'severance',
+        titleSlug: 'severance',
+        status: 'continuing',
+        monitored: false,
+        year: 2022,
+        images: [
+          {'coverType': 'poster', 'url': '/MediaCover/0/poster.jpg'},
+        ],
+        tvdbId: 371980,
+        runtime: 50,
+        genres: [],
+        seasons: [
+          {'seasonNumber': 1, 'monitored': true},
+          {'seasonNumber': 2, 'monitored': true},
+        ],
+        seriesType: 'standard',
+      );
+
+      test('posts the lookup payload with the chosen options', () async {
+        final client = FakeApiClient()
+          ..postResponseData = {'id': 91, 'title': 'Severance'};
+        final service = SonarrService(client);
+
+        final added = await service.addSeries(
+          lookupHit(),
+          qualityProfileId: 6,
+          rootFolderPath: '/data/tv',
+          monitored: true,
+          searchForMissingEpisodes: true,
+        );
+
+        expect(client.lastPostPath, '/api/v3/series');
+        final body = client.lastPostData as Map<String, dynamic>;
+        expect(body['tvdbId'], 371980);
+        expect(body['titleSlug'], 'severance');
+        expect(body['title'], 'Severance');
+        // The seasons travel back untouched: Sonarr builds the library entry
+        // from them, and an add without them lands a series with no seasons.
+        expect(body['seasons'], hasLength(2));
+        expect(body['qualityProfileId'], 6);
+        expect(body['rootFolderPath'], '/data/tv');
+        expect(body['monitored'], isTrue);
+        expect(body['seasonFolder'], isTrue);
+        expect(body['addOptions'], {
+          'monitor': 'all',
+          'searchForMissingEpisodes': true,
+          'searchForCutoffUnmetEpisodes': false,
+        });
+        expect(added.id, 91);
+      });
+
+      test('an unmonitored add monitors no episodes either', () async {
+        final client = FakeApiClient()..postResponseData = {'id': 92};
+        final service = SonarrService(client);
+
+        await service.addSeries(
+          lookupHit(),
+          qualityProfileId: 6,
+          rootFolderPath: '/data/tv',
+          monitored: false,
+          searchForMissingEpisodes: false,
+        );
+
+        final body = client.lastPostData as Map<String, dynamic>;
+        expect(body['monitored'], isFalse);
+        // Not `all`: a series that is not monitored with every episode
+        // monitored is a contradiction Sonarr resolves by grabbing nothing —
+        // and it would still queue a search sweep.
+        expect(body['addOptions'], {
+          'monitor': 'none',
+          'searchForMissingEpisodes': false,
+          'searchForCutoffUnmetEpisodes': false,
+        });
+      });
+
+      test('a rejected add is not swallowed', () async {
+        final client = FakeApiClient()
+          ..postException = Exception('400 SeriesExistsValidator');
+        final service = SonarrService(client);
+
+        expect(
+          service.addSeries(
+            lookupHit(),
+            qualityProfileId: 6,
+            rootFolderPath: '/data/tv',
+          ),
+          throwsA(isA<Exception>()),
+        );
+      });
+    });
   });
 }
 

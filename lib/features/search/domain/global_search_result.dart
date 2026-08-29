@@ -1,3 +1,4 @@
+import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class GlobalSearchResult {
@@ -28,6 +29,23 @@ class GlobalSearchResult {
   /// a field the lookup endpoints never populate.
   final bool inLibrary;
 
+  /// What it would take to add this row to the server that listed it, or null
+  /// when there is nothing honest to offer.
+  ///
+  /// Null on three kinds of row, for three different reasons: one the server
+  /// already holds (there is nothing to add), a Seerr or Bazarr row (neither
+  /// is a library this app can write into from here — Seerr's own request flow
+  /// lives on its detail page), and a Lidarr artist the lookup returned with no
+  /// MusicBrainz id (Lidarr keys an artist on that id, so an add without it
+  /// would be refused). The trailing plus is drawn from this rather than from
+  /// the service, so an affordance can never outlive what is behind it — which
+  /// is the defect this field exists to close: every arr row wore a plus that
+  /// led to a detail page saying "add it in Radarr".
+  ///
+  /// It carries the CONNECTION, not the lens. Two Radarr answer as two
+  /// sections and the user chose one by choosing where to touch.
+  final ArrAddRequest? addRequest;
+
   const GlobalSearchResult({
     required this.service,
     required this.id,
@@ -39,6 +57,7 @@ class GlobalSearchResult {
     required this.route,
     required this.heroTag,
     this.inLibrary = false,
+    this.addRequest,
     this.routeExtra,
   });
 

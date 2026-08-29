@@ -13,6 +13,7 @@ import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/search/domain/global_search_result.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
@@ -333,6 +334,11 @@ GlobalSearchResult _radarrResult(
     imageHeaders: image.headers,
     tags: ['Movie', if (inLibrary) _inLibraryTag],
     inLibrary: inLibrary,
+    // The connection that listed it. A row in the Away section adds to Away,
+    // whatever the lens is pointing at.
+    addRequest: inLibrary
+        ? null
+        : RadarrAddRequest(instanceId: instance.id, movie: item),
     heroTag: heroTag,
     route: ServiceRoutes.radarrMovie(
       item.id,
@@ -374,6 +380,9 @@ GlobalSearchResult _sonarrResult(
     imageHeaders: image.headers,
     tags: ['Series', item.status, if (inLibrary) _inLibraryTag],
     inLibrary: inLibrary,
+    addRequest: inLibrary
+        ? null
+        : SonarrAddRequest(instanceId: instance.id, series: item),
     heroTag: heroTag,
     route: ServiceRoutes.sonarrSeries(
       item.id,
@@ -445,6 +454,12 @@ GlobalSearchResult _lidarrResult(
     imageHeaders: image.headers,
     tags: ['Artist', if (inLibrary) _inLibraryTag],
     inLibrary: inLibrary,
+    // No id, no plus. Lidarr keys an artist on its MusicBrainz id and refuses
+    // an add without one, so a row the lookup returned without it gets no
+    // affordance rather than one that cannot be honoured.
+    addRequest: inLibrary || item.foreignArtistId.isEmpty
+        ? null
+        : LidarrAddRequest(instanceId: instance.id, artist: item),
     heroTag: heroTag,
     route: ServiceRoutes.lidarrArtist(
       item.id,

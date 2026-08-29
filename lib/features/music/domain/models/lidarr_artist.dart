@@ -7,6 +7,14 @@ export 'package:cupola/core/models/rating_source.dart';
 class LidarrArtist {
   final int id;
   final String artistName;
+
+  /// The MusicBrainz id Lidarr keys an artist on.
+  ///
+  /// The model dropped this until now, which is precisely what made an add
+  /// impossible to build: Lidarr identifies an artist by this id and not by
+  /// name, so `POST /artist` without it is rejected. It comes down on every
+  /// `artist/lookup` row.
+  final String foreignArtistId;
   final String status;
   final String? overview;
   final bool monitored;
@@ -24,6 +32,7 @@ class LidarrArtist {
   const LidarrArtist({
     required this.id,
     required this.artistName,
+    this.foreignArtistId = '',
     required this.status,
     this.overview,
     required this.monitored,
@@ -58,6 +67,7 @@ class LidarrArtist {
     return LidarrArtist(
       id: json['id'] ?? 0,
       artistName: json['artistName'] ?? 'Unknown',
+      foreignArtistId: json['foreignArtistId'] ?? '',
       status: json['status'] ?? 'unknown',
       overview: json['overview'],
       monitored: json['monitored'] ?? false,

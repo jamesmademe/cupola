@@ -150,6 +150,95 @@ void main() {
         expect(found, isNull);
       });
     });
+
+    group('addMovie', () {
+      RadarrMovie lookupHit() => RadarrMovie(
+        // What `movie/lookup` sends for a title the server does NOT have: no
+        // library id, and the metadata it proxied from TMDB.
+        id: 0,
+        title: 'Dune',
+        sortTitle: 'dune',
+        titleSlug: 'dune-438631',
+        sizeOnDisk: 0,
+        status: 'released',
+        hasFile: false,
+        monitored: false,
+        year: 2021,
+        images: const [
+          {'coverType': 'poster', 'url': '/MediaCover/0/poster.jpg'},
+        ],
+        tmdbId: 438631,
+        runtime: 155,
+        genres: const [],
+        minimumAvailability: 'announced',
+      );
+
+      test('posts the lookup payload with the chosen options', () async {
+        final client = FakeApiClient()
+          ..postResponseData = {'id': 77, 'title': 'Dune', 'tmdbId': 438631};
+        final service = RadarrService(client);
+
+        final added = await service.addMovie(
+          lookupHit(),
+          qualityProfileId: 4,
+          rootFolderPath: '/data/movies',
+          monitored: true,
+          searchForMovie: true,
+        );
+
+        expect(client.lastPostPath, '/api/v3/movie');
+        final body = client.lastPostData as Map<String, dynamic>;
+        expect(body['tmdbId'], 438631);
+        // Radarr keys the library entry on the slug, and the lookup row is the
+        // only place it comes from.
+        expect(body['titleSlug'], 'dune-438631');
+        expect(body['title'], 'Dune');
+        expect(body['year'], 2021);
+        expect(body['images'], hasLength(1));
+        expect(body['qualityProfileId'], 4);
+        expect(body['rootFolderPath'], '/data/movies');
+        expect(body['monitored'], isTrue);
+        expect(body['minimumAvailability'], 'announced');
+        // The half that makes this an add rather than a bookmark.
+        expect(body['addOptions'], {'searchForMovie': true});
+        // The created resource comes back with the library id it was given.
+        expect(added.id, 77);
+      });
+
+      test('an unmonitored, unsearched add says so', () async {
+        final client = FakeApiClient()..postResponseData = {'id': 78};
+        final service = RadarrService(client);
+
+        await service.addMovie(
+          lookupHit(),
+          qualityProfileId: 4,
+          rootFolderPath: '/data/movies',
+          monitored: false,
+          searchForMovie: false,
+        );
+
+        final body = client.lastPostData as Map<String, dynamic>;
+        expect(body['monitored'], isFalse);
+        expect(body['addOptions'], {'searchForMovie': false});
+      });
+
+      test('a rejected add is not swallowed', () async {
+        // Radarr answers 400 for a movie it already holds. Returning normally
+        // here would leave the sheet reporting a success that never happened.
+        final client = FakeApiClient()
+          ..postException = Exception('400 MovieExistsValidator');
+        final service = RadarrService(client);
+
+        expect(
+          service.addMovie(
+            lookupHit(),
+            qualityProfileId: 4,
+            rootFolderPath: '/data/movies',
+          ),
+          throwsA(isA<Exception>()),
+        );
+      });
+    });
   });
 }
 
