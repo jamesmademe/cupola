@@ -287,6 +287,52 @@ void main() {
     }
   });
 
+  test('a row whose metadata source could not match it offers no add', () async {
+    // TWO of them per section, which is the whole point: `libraryKey` is built
+    // from the external id, so a pair of unmatched rows shared `…:0` and
+    // adding either flipped both to owned. The same collision `_heroTag`
+    // documents, one field over. Closed at the source — no id, no add — since
+    // the missing id is also why the server would refuse the post.
+    final container = _container(
+      radarr: _SearchRadarrService(
+        results: [
+          buildMovie(id: 0, tmdbId: 0, title: 'Aladdin'),
+          buildMovie(id: 0, tmdbId: 0, title: 'Aladdin II'),
+        ],
+      ),
+      sonarr: _SearchSonarrService(
+        results: [
+          // Sonarr really does return these, for shows it can only match on
+          // TMDB.
+          buildSeries(id: 0, tvdbId: 0, title: 'Unmatched One'),
+          buildSeries(id: 0, tvdbId: 0, title: 'Unmatched Two'),
+        ],
+      ),
+    );
+    addTearDown(container.dispose);
+    container.read(globalSearchQueryProvider.notifier).state = 'aladdin';
+
+    final groups = await container.read(globalSearchResultsProvider.future);
+    List<GlobalSearchResult> rows(ServiceKey service) =>
+        groups.singleWhere((g) => g.service == service).results;
+
+    final movies = rows(ServiceKey.radarr);
+    expect(movies, hasLength(2));
+    expect(movies.map((row) => row.addRequest), everyElement(isNull));
+
+    final series = rows(ServiceKey.sonarr);
+    expect(series, hasLength(2));
+    expect(series.map((row) => row.addRequest), everyElement(isNull));
+
+    // Not in the library either, so nothing else on the row is standing in for
+    // the missing affordance: these are addable-looking rows that cannot be
+    // added.
+    expect(
+      [...movies, ...series].map((row) => row.inLibrary),
+      everyElement(isFalse),
+    );
+  });
+
   test('a dead connection is told apart from an empty one', () async {
     // The distinction the whole fan-out rests on: with a section per
     // connection, "No Radarr · Away results" reads as "that library does not

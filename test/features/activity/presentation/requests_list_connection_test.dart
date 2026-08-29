@@ -119,6 +119,37 @@ void main() {
     expect(find.text('From the second'), findsNothing);
   });
 
+  // A link outlives the connection it names: the user opens a request row,
+  // deletes that Seerr in Settings, then comes back to the screen from history
+  // or a deep link. The title resolves `named` to null and falls back to the
+  // lens; handing the dead id to the list as well would print "not configured"
+  // under a header naming a server that is up.
+  testWidgets('a link naming a connection that is gone falls back to the lens', (
+    tester,
+  ) async {
+    final lens = _RequestsSeerrService([_request(1, 'From the first')]);
+    final other = _RequestsSeerrService([_request(1, 'From the second')]);
+
+    final container = ProviderContainer(
+      overrides: [
+        ...await _settings(),
+        seerrServiceProvider.overrideWith((ref) => lens),
+        seerrServiceForProvider(_second.id).overrideWithValue(other),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await _pump(tester, container: container, instanceId: 'seerr-deleted');
+
+    // The header names the lens — the first Seerr, which carries no label, so
+    // the suffix falls to its id.
+    expect(find.text('Requests · seerr'), findsOneWidget);
+    // …and the list under it is that same server's, rather than an error state
+    // about a connection nothing on this screen mentions.
+    expect(find.text('From the first'), findsOneWidget);
+    expect(find.textContaining('not configured'), findsNothing);
+  });
+
   // Every write on this screen is keyed by a per-instance request id too.
   testWidgets('a delete on this list goes to the connection it belongs to', (
     tester,
