@@ -20,6 +20,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/presentation/branch_transition.dart';
+import 'package:cupola/features/shell/presentation/service_portal.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
@@ -492,6 +493,124 @@ void main() {
 
       expect(find.byType(ServiceMatrix), findsOneWidget);
     });
+
+    // The hook above is REACTIVE — it closes because the content under the card
+    // moved. A tap on the cell the lens already points at, from the page that
+    // cell leads to, moves neither the path nor the lens, so nothing reacted
+    // and the Portal sat there over a snapshot looking broken. Closing on the
+    // *act* is the fix, and it lives at the cell.
+    testWidgets('tapping the cell the lens is already on closes the Portal', (
+      tester,
+    ) async {
+      final harness = await _pumpShell(
+        tester,
+        initialLocation: '/services/radarr',
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+
+      // The lens is PARKED on the first connection, not merely defaulting to
+      // it. Without this the map has no entry for Radarr, `select` writes one,
+      // and the hook below closes the Portal on a lens that did move — which
+      // is how a green test would have covered a defect the device reproduces
+      // at will.
+      await harness.container
+          .read(activeInstancesProvider.notifier)
+          .select(ServiceKey.radarr, 'radarr');
+      await tester.pumpAndSettle();
+
+      await _openPortal(tester);
+      expect(find.byType(ServiceMatrix), findsOneWidget);
+      expect(
+        harness.container.read(activeInstanceProvider(ServiceKey.radarr))?.id,
+        'radarr',
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('service-matrix-cell-radarr-radarr')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byType(ServiceMatrix),
+        findsNothing,
+        reason:
+            'a tap on a picker cell is an act on the Portal and must close it '
+            'even when it moves nothing underneath',
+      );
+      // And it really was a no-op underneath: neither input the hook watches
+      // changed, which is why the hook could never have caught this.
+      expect(harness.router.state.uri.path, '/services/radarr');
+      expect(
+        harness.container.read(activeInstanceProvider(ServiceKey.radarr))?.id,
+        'radarr',
+      );
+    });
+
+    testWidgets('a cell that does move the lens still closes exactly once', (
+      tester,
+    ) async {
+      // The counterweight to the fix: with the cell closing on the act AND the
+      // hook closing on the lens moving, the same close must not be started
+      // twice — a second spring launched from the first one's current value
+      // with no velocity is a visible hitch.
+      final harness = await _pumpShell(
+        tester,
+        initialLocation: '/services/radarr',
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+
+      await _openPortal(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('service-matrix-cell-radarr-radarr-hd11111')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ServiceMatrix), findsNothing);
+      expect(
+        harness.container.read(activeInstanceProvider(ServiceKey.radarr))?.id,
+        'radarr-hd11111',
+      );
+    });
+  });
+
+  // The single-animation half of the story above, asked of the machine rather
+  // than of the tree: the tree only shows that it ended closed.
+  group('ServicePortalController', () {
+    testWidgets('a close already under way is not restarted', (tester) async {
+      // Two identical closes, one interrupted halfway by a second request. A
+      // restarted spring throws away the velocity it had built, so it is
+      // measurably further from home at the same instant — which on the device
+      // is the hitch the user sees.
+      Future<double> valueAfter({required bool closeTwice}) async {
+        final controller = ServicePortalController(vsync: const TestVSync());
+        addTearDown(controller.dispose);
+        controller.portal.value = 1;
+        controller.closeFromUi();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 60));
+        if (closeTwice) controller.closeFromUi();
+        await tester.pump(const Duration(milliseconds: 60));
+        final value = controller.portal.value;
+        // Read first, then let the spring finish: a ticker still running when
+        // the test ends is an error of its own, and it would mask this one.
+        await tester.pumpAndSettle();
+        return value;
+      }
+
+      final once = await valueAfter(closeTwice: false);
+      final twice = await valueAfter(closeTwice: true);
+
+      expect(once, lessThan(1));
+      expect(
+        twice,
+        closeTo(once, 1e-6),
+        reason: 'the second request must leave the first spring alone',
+      );
+    });
   });
 }
 
@@ -636,6 +755,12 @@ Future<_ShellHarness> _pumpShell(
                   GoRoute(
                     path: 'radarr/movie/:id',
                     builder: (_, __) => const _ProbePage('MovieDetailPage'),
+                  ),
+                  // Where a matrix cell lands. One segment, so it cannot
+                  // swallow the two-segment detail route above it.
+                  GoRoute(
+                    path: ':service',
+                    builder: (_, __) => const _ProbePage('ServiceDashboard'),
                   ),
                 ],
               ),

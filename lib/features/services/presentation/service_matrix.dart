@@ -135,7 +135,9 @@ import 'package:cupola/features/services/presentation/service_kpi_provider.dart'
 import 'package:cupola/features/services/presentation/service_matrix_collapse_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/shell/presentation/portal_dismiss_scope.dart';
 
 /// Reachability of one service, as the matrix paints it.
 ///
@@ -1143,6 +1145,16 @@ class _ServiceMatrixBand extends StatelessWidget {
   }
 }
 
+/// What to call one connection on a line that has room for a few words.
+///
+/// The label when there is one — it is what the user typed to tell the two
+/// apart — and the host otherwise, which is at least an address they can check.
+/// Never the id: it is a generated string nobody has ever seen.
+String _connectionName(ServiceKey service, ServiceInstance instance) =>
+    instance.label.isNotEmpty
+    ? instance.label
+    : service.extractHost(instance.url) ?? instance.url;
+
 /// One service: identity, reachability, live figure, and — expanded — its host.
 class ServiceMatrixCell extends ConsumerWidget {
   const ServiceMatrixCell({
@@ -1204,18 +1216,34 @@ class ServiceMatrixCell extends ConsumerWidget {
         : null;
     final degraded = folded != null && folded.total > 1 && folded.offline > 0;
 
+    // The lens, on a folded cell that has more than one connection to fold.
+    // Watched conditionally for the same reason `signal` below is: this is the
+    // only shape of cell that has anything to say about it.
+    final lens = folded != null && settings.hasMultipleInstances(service)
+        ? ref.watch(activeInstanceProvider(service))
+        : null;
+
     // Falls back to the configured URL's host so the cell can name which
     // instance it is talking about before the first response arrives. With more
     // than one connection the address stops being the useful thing to say and
-    // the names take over — two URLs do not fit on a line, and showing one of
+    // the LENS takes over — two URLs do not fit on a line, and showing one of
     // them says "Radarr lives here" when that is half true.
+    //
+    // Named, not listed, and the two halves of the card are why. The pip is
+    // aggregated over every connection (`foldedServiceHealthProvider`, and it
+    // stays that way — "is anything in here down" is what the dot is for), but
+    // the FIGURE is the lens's alone. A subtitle that listed both therefore put
+    // one number under two names: "Radarr · radarr · LAN · 0 movies" while the
+    // other Radarr held 83 films is a false statement, not an omission, and it
+    // even changed unit as the lens moved. So the subtitle names the connection
+    // the figure belongs to, and the count keeps the sibling from vanishing —
+    // the shape `ServiceConnectionRow` already uses on the Connections screen,
+    // rather than a second invention for the same problem.
     final host = instance != null
         ? service.extractHost(instance.url) ?? instance.url
-        : (folded != null && folded.total > 1)
-        ? settings
-              .instancesOf(service)
-              .map((i) => i.label.isEmpty ? i.id : i.label)
-              .join(' · ')
+        : lens != null
+        ? '${_connectionName(service, lens)} · '
+              '${settings.configuredInstancesOf(service).length} connections'
         : summary.asData?.value.host ??
               service.extractHost(settings.urlFor(service)) ??
               '';
@@ -1321,6 +1349,11 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
 
     final detail = phase.detail;
     final showHost = detail > 0 && host.isNotEmpty;
+
+    // Resolved here rather than in the tap handler: an inherited lookup belongs
+    // in build, where the dependency it registers means something. Null on the
+    // `/services` dashboard, which has no layer above it to dismiss.
+    final dismissPortal = PortalDismissScope.maybeOf(context);
 
     // One structure for both densities, not two branches — the folded card is
     // the open card with its lower two lines rolled up to nothing. Written as a
@@ -1435,7 +1468,20 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
       // travelling means here; the route is nested under `/services`, so back
       // still returns to the dashboard. The argument is stronger for a picker
       // cell than for a readout one: the picker only ever exists on that floor.
+      // Three acts, and the first one is unconditional. Choosing a cell is an
+      // action ON the Portal, so it closes the Portal — always, before anything
+      // else is known about where it leads. The shell's route hook closes on a
+      // different question ("did the content under the card move?"), and the
+      // answer to that is *no* for the commonest tap of all: the cell for the
+      // connection the lens already points at, tapped from the page it leads
+      // to, moves neither the path nor the lens and left the Portal sitting
+      // over a dead snapshot. `closeFromUi` is idempotent, so the tap that DOES
+      // move something still gets exactly one closing animation.
+      //
+      // Null off the floor: the same cell renders on the `/services` dashboard,
+      // where there is nothing above it to close.
       onTap: () async {
+        dismissPortal?.call();
         final id = instanceId;
         if (id != null) {
           await ref.read(activeInstancesProvider.notifier).select(service, id);

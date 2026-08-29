@@ -48,6 +48,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/services/presentation/service_matrix.dart';
+import 'package:cupola/features/shell/presentation/portal_dismiss_scope.dart';
 
 /// Hand-tuned physics of the Portal gesture. See the library doc before
 /// touching anything here.
@@ -139,6 +140,10 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   bool _engaged = false;
   bool _closing = false;
 
+  /// Where the last release spring was aimed, or null while the finger owns the
+  /// Portal. Read by [closeFromUi] to tell "close it" from "close it again".
+  double? _springTarget;
+
   /// Set by [PortalStage] each layout; the geometry has no other input.
   double screenHeight = 800;
 
@@ -214,6 +219,10 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
     portal.stop();
     _stopBarAnim();
     _blend.stop();
+    // The finger has taken the Portal back, so whatever the last spring was
+    // aiming at is no longer what is happening — and [closeFromUi] must arm
+    // again for the release this drag ends in.
+    _springTarget = null;
     _closing = portal.value > 0.5;
     _dragStartY = globalY;
     _engaged = false;
@@ -337,8 +346,19 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   // ------------------------------------------------------------------- APIs
 
   /// Close from any UI affordance: tab tap, tap on the receded card, floor
-  /// pull-down. Safe to call when already closed.
+  /// pull-down, a picker cell being chosen. Safe to call when already closed,
+  /// and safe to call twice.
+  ///
+  /// Idempotent on purpose, and that is load-bearing since the floor's cells
+  /// started closing on the act: choosing a cell that also moves the lens asks
+  /// for the close twice — once from the cell, once from the shell's route hook
+  /// a frame later. A second [_springTo] would restart the spring from wherever
+  /// the first had reached with zero velocity, which is a visible hitch
+  /// two-thirds of the way home. So a close already under way is left to
+  /// finish; anything that takes the Portal back — a new drag — clears the flag
+  /// and this arms again.
   void closeFromUi() {
+    if (_springTarget == 0 && !_engaged && !_closing) return;
     _blend.stop();
     _closing = false;
     _engaged = false;
@@ -362,6 +382,7 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   }
 
   void _springTo(double target, double velocity) {
+    _springTarget = target;
     portal
         .animateWith(
           SpringSimulation(
@@ -568,7 +589,18 @@ class _PortalFloor extends StatelessWidget {
                     // Picker, not readout: this floor exists to be tapped,
                     // and a folded cell would reach the service while hiding
                     // every connection but the one the lens already points at.
-                    child: const ServiceMatrix(role: ServiceMatrixRole.picker),
+                    //
+                    // Wrapped so a cell can close the Portal on the ACT of
+                    // being tapped. The shell's route hook closes it when the
+                    // content under the card moves, which is a different
+                    // question and misses the tap that moves nothing — see
+                    // [PortalDismissScope].
+                    child: PortalDismissScope(
+                      onDismiss: controller.closeFromUi,
+                      child: const ServiceMatrix(
+                        role: ServiceMatrixRole.picker,
+                      ),
+                    ),
                   ),
                 ],
               ),

@@ -130,6 +130,14 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // The path comparison stays on the FULL path — never weaken it to the
     // service's routeParam. A hook keyed on the service alone would hold the
     // Portal open across `/services/radarr` → `/services/radarr/movie/12`.
+    //
+    // And this hook is only half the story: it is REACTIVE, and closing on an
+    // ACTION lives elsewhere. A picker cell closes the Portal itself, through
+    // `PortalDismissScope`, because a tap that navigates to the path it is
+    // already on without moving the lens moves neither of the two inputs below
+    // and is invisible from here. Do not answer that case by widening these
+    // conditions — the question this hook asks ("has the content under the card
+    // moved, so is the snapshot dead?") is a different one, and it is right.
     final location = GoRouterState.of(context).uri.path;
     final lenses = ref.watch(activeInstancesProvider);
     final pathMoved = _lastLocation != null && _lastLocation != location;
