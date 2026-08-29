@@ -267,6 +267,45 @@ void main() {
     expect(find.text('Import 2 files'), findsOneWidget);
   });
 
+  testWidgets('a filtered view counts what it shows, and names what it hides', (
+    tester,
+  ) async {
+    await _pumpReview(tester);
+
+    await tester.enterText(find.byType(TextField), 'boruto');
+    await tester.pump();
+
+    // Both counts under the header describe the two rows on screen — not the
+    // five ready files of the whole scan, which is the fraction nobody could
+    // reconcile with "Showing 2 of 8 files" directly above it.
+    expect(
+      find.text('2 of 2 selected · 3 selected out of view'),
+      findsOneWidget,
+    );
+    expect(find.text('3 of them are not in view'), findsOneWidget);
+
+    // Clearing the group leaves a selection made entirely of files the filter
+    // is hiding, and the button still spends all of it. The first checkbox in a
+    // filtered view is the Boruto group's own select-all.
+    await tester.tap(find.byType(Checkbox).first, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('0 of 2 selected · 3 selected out of view'),
+      findsOneWidget,
+    );
+    expect(find.text('Import 3 files'), findsOneWidget);
+    expect(find.text('None of these 3 files are in view'), findsOneWidget);
+  });
+
+  testWidgets('an unfiltered view says nothing about scope', (tester) async {
+    await _pumpReview(tester);
+
+    expect(find.text('5 of 5 selected'), findsOneWidget);
+    expect(find.textContaining('not in view'), findsNothing);
+    expect(find.textContaining('out of view'), findsNothing);
+  });
+
   testWidgets('a filter with no hits says so instead of showing nothing', (
     tester,
   ) async {

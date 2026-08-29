@@ -33,6 +33,61 @@ const _autoCollapseThreshold = 20;
 /// the filter is the primary way in.
 const _filterThreshold = 6;
 
+/// The part of the scan that is actually on screen.
+///
+/// Every count under a section header describes *this*, never the whole scan.
+/// The two used to be mixed on one screen — "Showing 64 of 1970 files" above a
+/// section reading "59 of 123 selected" — and the fraction that named neither
+/// the visible list nor a selection the user could see was the one number
+/// nobody could reconcile.
+class _VisibleFiles {
+  final List<ManualImportItem> attention;
+  final List<ManualImportItem> ready;
+  final List<ManualImportItem> other;
+  final List<ManualImportItem> imported;
+
+  /// The text filter alone, without the facet chips — the sections that are
+  /// deliberately outside the facet row (a batch in flight) still use it.
+  final bool Function(ManualImportItem) matchesQuery;
+
+  const _VisibleFiles({
+    required this.attention,
+    required this.ready,
+    required this.other,
+    required this.imported,
+    required this.matchesQuery,
+  });
+
+  int get length =>
+      attention.length + ready.length + other.length + imported.length;
+
+  Set<String> get _paths => {
+    for (final item in attention) item.path,
+    for (final item in ready) item.path,
+    for (final item in other) item.path,
+    for (final item in imported) item.path,
+  };
+
+  /// How many ticked files the current view is hiding.
+  ///
+  /// Not a rounding error: the scan preselects every ready file, so filtering
+  /// down to one series and clearing it leaves a full selection of files the
+  /// user cannot see — and the import button would spend it silently.
+  int offScreenSelectedCount(ManualImportFlowState state) {
+    final shown = _paths;
+    return state.selectedItems
+        .where((item) => !shown.contains(item.path))
+        .length;
+  }
+
+  /// Ticked files of [items] that are on screen.
+  int selectedAmong(ManualImportFlowState state, List<ManualImportItem> items) {
+    return items
+        .where((item) => state.selectedPaths.contains(item.path))
+        .length;
+  }
+}
+
 /// Station 2 — Review: the scanned files, grouped by what they need and by what
 /// they matched to.
 ///
@@ -150,6 +205,7 @@ class _ManualImportReviewScreenState
     final state = ref.watch(manualImportFlowProvider);
     final folder = state.selectedFolder;
     final folderName = folder == null ? '…' : manualImportPathName(folder);
+    final view = _visibleFiles(state);
 
     return ManualImportFrame(
       service: widget.service,
@@ -187,12 +243,15 @@ class _ManualImportReviewScreenState
       bottomBar: ManualImportReviewFooter(
         service: widget.service,
         targetId: widget.targetId,
+        // The import button spends the whole selection, not the part of it on
+        // screen, so a filtered view has to say how much of that it is hiding.
+        offScreenSelectedCount: view.offScreenSelectedCount(state),
       ),
-      child: _buildBody(state),
+      child: _buildBody(state, view),
     );
   }
 
-  Widget _buildBody(ManualImportFlowState state) {
+  Widget _buildBody(ManualImportFlowState state, _VisibleFiles view) {
     final service = widget.service;
 
     if (state.isLoadingItems) {
@@ -235,7 +294,7 @@ class _ManualImportReviewScreenState
       );
     }
 
-    final rows = _buildRows(state);
+    final rows = _buildRows(state, view);
 
     return ListView.builder(
       // Lazy: a real downloads folder is hundreds of files, and building every
@@ -246,18 +305,20 @@ class _ManualImportReviewScreenState
     );
   }
 
-  /// Flattens the whole screen into a single row list so the list can stay lazy
-  /// while still carrying headers, group headers and per-file rows.
-  List<Widget> _buildRows(ManualImportFlowState state) {
+  /// Everything that survives both filters — the chip row and the text field.
+  ///
+  /// Computed once per build and handed to both the list and the footer, so the
+  /// counts under the section headers and the warning above the import button
+  /// can never disagree about what "in view" means.
+  _VisibleFiles _visibleFiles(ManualImportFlowState state) {
     final service = widget.service;
     final query = _query;
 
     bool matches(ManualImportItem item) =>
         manualImportMatchesQuery(service, item, query);
 
-    /// Everything of one facet that survives both filters — the chip row and
-    /// the text field. A hidden facet contributes nothing at all, which is what
-    /// keeps its section header from appearing above no rows.
+    /// A hidden facet contributes nothing at all, which is what keeps its
+    /// section header from appearing above no rows.
     List<ManualImportItem> visible(
       List<ManualImportItem> items,
       ManualImportFacet facet,
@@ -265,13 +326,26 @@ class _ManualImportReviewScreenState
         ? items.where(matches).toList(growable: false)
         : const <ManualImportItem>[];
 
-    final attention = visible(
-      state.attentionItems,
-      ManualImportFacet.attention,
+    return _VisibleFiles(
+      attention: visible(state.attentionItems, ManualImportFacet.attention),
+      ready: visible(state.readyItems, ManualImportFacet.ready),
+      other: visible(state.otherItems, ManualImportFacet.other),
+      imported: visible(state.importedItems, ManualImportFacet.imported),
+      matchesQuery: matches,
     );
-    final ready = visible(state.readyItems, ManualImportFacet.ready);
-    final other = visible(state.otherItems, ManualImportFacet.other);
-    final imported = visible(state.importedItems, ManualImportFacet.imported);
+  }
+
+  /// Flattens the whole screen into a single row list so the list can stay lazy
+  /// while still carrying headers, group headers and per-file rows.
+  List<Widget> _buildRows(ManualImportFlowState state, _VisibleFiles view) {
+    final service = widget.service;
+    final query = _query;
+
+    final matches = view.matchesQuery;
+    final attention = view.attention;
+    final ready = view.ready;
+    final other = view.other;
+    final imported = view.imported;
 
     final rows = <Widget>[
       ImportStationBar(service: service, activeIndex: 1),
@@ -390,7 +464,15 @@ class _ManualImportReviewScreenState
       rows.addAll(_attentionRows(state, attention));
     }
     if (ready.isNotEmpty || imported.isNotEmpty) {
-      rows.addAll(_matchedRows(state, ready: ready, imported: imported));
+      rows.addAll(
+        _matchedRows(
+          state,
+          view,
+          ready: ready,
+          imported: imported,
+          offScreenSelected: view.offScreenSelectedCount(state),
+        ),
+      );
     }
     if (other.isNotEmpty) {
       rows.add(
@@ -521,9 +603,11 @@ class _ManualImportReviewScreenState
   /// between S01E04 and S01E06, in the same group, in broadcast order — where
   /// the gap it explains actually is.
   List<Widget> _matchedRows(
-    ManualImportFlowState state, {
+    ManualImportFlowState state,
+    _VisibleFiles view, {
     required List<ManualImportItem> ready,
     required List<ManualImportItem> imported,
+    required int offScreenSelected,
   }) {
     final service = widget.service;
 
@@ -552,10 +636,13 @@ class _ManualImportReviewScreenState
       (title) => !_isGroupExpanded(title, defaultExpanded: defaultExpanded),
     );
 
-    final readyTotal = state.readyItems.length;
-    final importedTotal = state.importedItems.length;
-    final reimportCount = state.selectedReimportItems.length;
-    final selectedReady = state.selectedItems.length - reimportCount;
+    // Deliberately the counts of what is *under this header*, not of the whole
+    // scan. The header sits directly on top of these rows, so a fraction taken
+    // from anywhere else is a fraction the user cannot check by counting.
+    final readyTotal = ready.length;
+    final importedTotal = imported.length;
+    final reimportCount = view.selectedAmong(state, imported);
+    final selectedReady = view.selectedAmong(state, ready);
 
     final rows = <Widget>[
       SectionHeader.action(
@@ -566,6 +653,9 @@ class _ManualImportReviewScreenState
             reimportCount == 0
                 ? '$importedTotal already in the library'
                 : '$reimportCount of $importedTotal being re-imported',
+          // Whatever the view is hiding is still going in the import, so it is
+          // named here rather than left to be discovered on the Track screen.
+          if (offScreenSelected > 0) '$offScreenSelected selected out of view',
         ].join(' · '),
         trailing: titles.length > 1
             ? TextButton(

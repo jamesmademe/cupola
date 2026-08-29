@@ -374,15 +374,27 @@ class ManualImportReviewFooter extends ConsumerWidget {
   final ServiceKey service;
   final int? targetId;
 
+  /// Ticked files the current filter is keeping off screen.
+  ///
+  /// The button spends the whole selection, and the scan preselects every ready
+  /// file — so narrowing to one series and clearing it leaves a button that
+  /// imports precisely what the user is not looking at. The count stays whole
+  /// (that is what will be sent); the line above it says how much of it is out
+  /// of sight.
+  final int offScreenSelectedCount;
+
   const ManualImportReviewFooter({
     super.key,
     required this.service,
     this.targetId,
+    this.offScreenSelectedCount = 0,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(manualImportFlowProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final count = state.selectedItems.length;
     final label = count == 0
         ? 'Nothing selected to import'
@@ -390,39 +402,82 @@ class ManualImportReviewFooter extends ConsumerWidget {
         ? 'Import 1 file'
         : 'Import $count files';
 
+    final offScreen = offScreenSelectedCount.clamp(0, count);
+    final String? scopeNote = offScreen == 0
+        ? null
+        : offScreen == count
+        ? (count == 1
+              ? 'The selected file is not in view'
+              : 'None of these $count files are in view')
+        : '$offScreen of them are not in view';
+
     return Padding(
       padding: const EdgeInsets.only(left: AppSpacing.lg),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _ImportModeMenu(service: service),
-          Expanded(
-            child: ImportPrimaryButton(
-              service: service,
-              icon: Icons.check_circle_outline_rounded,
-              label: label,
-              loading: state.isSubmitting,
-              onPressed: !state.canImportSelected
-                  ? null
-                  : () async {
-                      final notifier = ref.read(
-                        manualImportFlowProvider.notifier,
-                      );
-                      final command = await notifier.confirmImport();
-                      if (command == null || !context.mounted) return;
-                      // Await the pop: coming back from Track re-reads the
-                      // folder, so the list reflects what the service actually
-                      // did with the files instead of the state we left behind.
-                      await context.push(
-                        manualImportLocation(
-                          manualImportProgressPath,
-                          service,
-                          targetId: targetId,
-                        ),
-                      );
-                      if (!context.mounted) return;
-                      await notifier.refreshAfterImport();
-                    },
+          if (scopeNote != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xs,
+                0,
+                AppSpacing.lg,
+                AppSpacing.xs,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.visibility_off_rounded,
+                    size: 14,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      scopeNote,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall!.tabular.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
+          Row(
+            children: [
+              _ImportModeMenu(service: service),
+              Expanded(
+                child: ImportPrimaryButton(
+                  service: service,
+                  icon: Icons.check_circle_outline_rounded,
+                  label: label,
+                  loading: state.isSubmitting,
+                  onPressed: !state.canImportSelected
+                      ? null
+                      : () async {
+                          final notifier = ref.read(
+                            manualImportFlowProvider.notifier,
+                          );
+                          final command = await notifier.confirmImport();
+                          if (command == null || !context.mounted) return;
+                          // Await the pop: coming back from Track re-reads the
+                          // folder, so the list reflects what the service actually
+                          // did with the files instead of the state we left behind.
+                          await context.push(
+                            manualImportLocation(
+                              manualImportProgressPath,
+                              service,
+                              targetId: targetId,
+                            ),
+                          );
+                          if (!context.mounted) return;
+                          await notifier.refreshAfterImport();
+                        },
+                ),
+              ),
+            ],
           ),
         ],
       ),
