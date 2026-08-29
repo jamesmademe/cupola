@@ -47,18 +47,18 @@ class BackgroundSearchSwitch {
       // Nothing to clean up on the way in, and nothing to ask: the OS wants no
       // permission for a background task. The next search simply gets the
       // native transport.
-      _ref.read(releaseSearchSettingsProvider.notifier).setBackgroundEnabled(
-        true,
-      );
+      _ref
+          .read(releaseSearchSettingsProvider.notifier)
+          .setBackgroundEnabled(true);
       return;
     }
 
     _ref
         .read(releaseSearchJobsProvider.notifier)
         .cancelAll(headline: cancelHeadline, diagnosis: cancelDiagnosis);
-    _ref.read(releaseSearchSettingsProvider.notifier).setBackgroundEnabled(
-      false,
-    );
+    _ref
+        .read(releaseSearchSettingsProvider.notifier)
+        .setBackgroundEnabled(false);
     await _ref.read(backgroundTaskHygieneProvider).pruneFinishedWork();
   }
 }

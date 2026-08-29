@@ -155,34 +155,36 @@ void main() {
       );
     });
 
-    test('switching background search off outranks every per-instance reason',
-        () {
-      // The order in `reachFor` is the design: when the user has switched the
-      // capability off, that is both the true cause and the only one they can
-      // lift in a tap. A pinned certificate or a cleartext origin only starts
-      // mattering once the capability is wanted — reporting those first would
-      // send someone to fix an instance over a switch they turned off
-      // themselves.
-      for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
-        for (final certTrusted in [true, false]) {
-          for (final base in [_httpsBase, _httpBase]) {
-            expect(
-              reachFor(
-                ServiceKey.sonarr,
-                baseUrl: base,
-                certTrustedInApp: certTrusted,
-                backgroundEnabled: false,
-                platform: platform,
-              ),
-              ReleaseSearchReach.whileOpenSwitchedOff,
-              reason:
-                  '$platform / cert=$certTrusted / $base: off is off, and it '
-                  'is the reason that gets named',
-            );
+    test(
+      'switching background search off outranks every per-instance reason',
+      () {
+        // The order in `reachFor` is the design: when the user has switched the
+        // capability off, that is both the true cause and the only one they can
+        // lift in a tap. A pinned certificate or a cleartext origin only starts
+        // mattering once the capability is wanted — reporting those first would
+        // send someone to fix an instance over a switch they turned off
+        // themselves.
+        for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+          for (final certTrusted in [true, false]) {
+            for (final base in [_httpsBase, _httpBase]) {
+              expect(
+                reachFor(
+                  ServiceKey.sonarr,
+                  baseUrl: base,
+                  certTrustedInApp: certTrusted,
+                  backgroundEnabled: false,
+                  platform: platform,
+                ),
+                ReleaseSearchReach.whileOpenSwitchedOff,
+                reason:
+                    '$platform / cert=$certTrusted / $base: off is off, and it '
+                    'is the reason that gets named',
+              );
+            }
           }
         }
-      }
-    });
+      },
+    );
 
     test('on desktop the platform still answers, switch or no switch', () {
       // The one reason that outranks the switch. Desktop has no background path
@@ -621,56 +623,64 @@ void main() {
       expect(service.releaseCalls, 1);
     });
 
-    test('the switch, off, keeps an https instance out of native code entirely',
-        () async {
-      // The claim the opt-in rests on: with the feature off, nothing is handed
-      // to the OS *at all* — not "handed and cancelled quickly", not "handed
-      // without notification". This asserts it at the only place that could
-      // enqueue, and then again one layer up at the runner.
-      final container = await containerFor(
-        _httpsBase,
-        backgroundEnabled: false,
-      );
-      expect(
-        container.read(releaseSearchReachProvider(ServiceKey.sonarr)),
-        ReleaseSearchReach.whileOpenSwitchedOff,
-      );
-      expect(
-        container.read(releaseSearchTransportProvider(ServiceKey.sonarr)),
-        isNot(isA<BackgroundReleaseSearchTransport>()),
-        reason: 'the transport is the gate; nothing else builds a DataTask',
-      );
-    });
+    test(
+      'the switch, off, keeps an https instance out of native code entirely',
+      () async {
+        // The claim the opt-in rests on: with the feature off, nothing is handed
+        // to the OS *at all* — not "handed and cancelled quickly", not "handed
+        // without notification". This asserts it at the only place that could
+        // enqueue, and then again one layer up at the runner.
+        final container = await containerFor(
+          _httpsBase,
+          backgroundEnabled: false,
+        );
+        expect(
+          container.read(releaseSearchReachProvider(ServiceKey.sonarr)),
+          ReleaseSearchReach.whileOpenSwitchedOff,
+        );
+        expect(
+          container.read(releaseSearchTransportProvider(ServiceKey.sonarr)),
+          isNot(isA<BackgroundReleaseSearchTransport>()),
+          reason: 'the transport is the gate; nothing else builds a DataTask',
+        );
+      },
+    );
 
-    test('the switch, off, routes the search through the arr service', () async {
-      // And the foreground route is a real one rather than a dead end: the
-      // service answers, which is what keeps `ApiClient`'s redirect guard and
-      // the pinned adapter in the path.
-      final service = _RecordingSonarrService();
-      final container = ProviderContainer(
-        overrides: [
-          ...await settingsScopeOverrides(
-            customize: (settings) => settings.copyWithService(
-              ServiceKey.sonarr,
-              url: _httpsBase,
-              apiKey: 'the-arr-admin-key',
+    test(
+      'the switch, off, routes the search through the arr service',
+      () async {
+        // And the foreground route is a real one rather than a dead end: the
+        // service answers, which is what keeps `ApiClient`'s redirect guard and
+        // the pinned adapter in the path.
+        final service = _RecordingSonarrService();
+        final container = ProviderContainer(
+          overrides: [
+            ...await settingsScopeOverrides(
+              customize: (settings) => settings.copyWithService(
+                ServiceKey.sonarr,
+                url: _httpsBase,
+                apiKey: 'the-arr-admin-key',
+              ),
             ),
-          ),
-          releaseSearchPlatformProvider.overrideWith(
-            (ref) => TargetPlatform.android,
-          ),
-          sonarrServiceProvider.overrideWithValue(service),
-        ],
-      );
-      addTearDown(container.dispose);
-      container
-          .read(releaseSearchSettingsProvider.notifier)
-          .setBackgroundEnabled(false);
+            releaseSearchPlatformProvider.overrideWith(
+              (ref) => TargetPlatform.android,
+            ),
+            sonarrServiceProvider.overrideWithValue(service),
+          ],
+        );
+        addTearDown(container.dispose);
+        container
+            .read(releaseSearchSettingsProvider.notifier)
+            .setBackgroundEnabled(false);
 
-      await container.read(releaseSearchRunnerProvider)(_target, CancelToken());
+        await container.read(releaseSearchRunnerProvider)(
+          _target,
+          CancelToken(),
+        );
 
-      expect(service.releaseCalls, 1);
-    });
+        expect(service.releaseCalls, 1);
+      },
+    );
 
     test('turning the switch on restores the background transport', () async {
       // The other direction, because a gate that cannot be opened is not a
@@ -784,8 +794,7 @@ void main() {
       expect(failure.retryIsHarmful, isTrue);
     });
 
-    test('a failed task carrying an HTTP code is an HTTP error, not a timeout',
-        () {
+    test('a failed task carrying an HTTP code is an HTTP error, not a timeout', () {
       // The shape the plugin actually produces for a non-2xx answer: natively
       // anything but 200–206 becomes `failed`, and the code travels only inside
       // the TaskException — `responseStatusCode` is serialized solely for

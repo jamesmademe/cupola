@@ -149,16 +149,17 @@ void main() {
 
       expect(find.textContaining('Needs Background search'), findsNothing);
       expect(
-        tester.widgetList<Switch>(find.byType(Switch)).every(
-          (s) => s.onChanged != null,
-        ),
+        tester
+            .widgetList<Switch>(find.byType(Switch))
+            .every((s) => s.onChanged != null),
         isTrue,
         reason: 'with the master on, nothing on this screen is inert',
       );
     });
 
-    testWidgets('with the master off the limits card describes the in-app mode',
-        (tester) async {
+    testWidgets('with the master off the limits card describes the in-app mode', (
+      tester,
+    ) async {
       await pumpScreen(tester, platform: TargetPlatform.android);
 
       expect(
@@ -258,11 +259,7 @@ void main() {
     testWidgets('stays silent while the master switch is off', (tester) async {
       // The row already explains why it is disabled; a second sentence about a
       // permission that currently changes nothing is noise.
-      await pumpScreen(
-        tester,
-        platform: TargetPlatform.iOS,
-        permission: true,
-      );
+      await pumpScreen(tester, platform: TargetPlatform.iOS, permission: true);
       expect(find.textContaining('System permission'), findsNothing);
     });
   });
@@ -282,7 +279,8 @@ void main() {
       expect(
         find.textContaining('admin API key'),
         findsNothing,
-        reason: 'nothing is handed to the system here, so there is no cost to '
+        reason:
+            'nothing is handed to the system here, so there is no cost to '
             'disclose',
       );
     });

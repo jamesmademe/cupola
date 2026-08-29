@@ -92,10 +92,7 @@ class PortalHintsNotifier extends Notifier<PortalHintsState> {
   /// Re-enabling re-arms the one-shot demo: the lesson replays whole.
   void setEnabled(bool enabled) {
     if (state.enabled == enabled) return;
-    state = state.copyWith(
-      enabled: enabled,
-      demoShown: enabled ? false : null,
-    );
+    state = state.copyWith(enabled: enabled, demoShown: enabled ? false : null);
     _persist();
   }
 
