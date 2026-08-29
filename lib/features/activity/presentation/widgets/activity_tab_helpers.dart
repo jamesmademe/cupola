@@ -83,6 +83,12 @@ Future<void> showWantedInteractiveSearch(
   ServiceType serviceType,
   Map<String, dynamic> item, {
   String? title,
+
+  /// The connection this row came off, for the surfaces that show more than
+  /// one. Empty leaves the target unstamped, and `showReleaseSearch` falls back
+  /// to the lens exactly as it did before — which is what the per-service
+  /// Activity screen, whose title names its lens, actually wants.
+  String instanceId = '',
 }) async {
   final itemId = extractWantedItemId(serviceType, item);
   if (itemId == null) return;
@@ -115,7 +121,11 @@ Future<void> showWantedInteractiveSearch(
   };
   if (target == null) return;
 
-  await showReleaseSearch(context, ref, target);
+  await showReleaseSearch(
+    context,
+    ref,
+    instanceId.isEmpty ? target : target.stampedWith(instanceId),
+  );
 }
 
 String _fallbackLabel(ServiceType serviceType) {

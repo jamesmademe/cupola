@@ -313,6 +313,11 @@ extension ServiceKeyExtension on ServiceKey {
   /// even land on a Bazarr page. Both therefore search the lens and get one
   /// section, unlabelled — which is what they did before, rather than two
   /// sections with identical contents under two different names.
+  ///
+  /// Not contradicted by /activity fanning Seerr out over its connections: a
+  /// request row opens the *requests list*, which carries `?i=` and honours it,
+  /// not a Discover media page. The line here is drawn by the destination, and
+  /// Seerr's search destination is still the lens-bound one.
   bool get searchesPerConnection => switch (this) {
     ServiceKey.radarr || ServiceKey.sonarr || ServiceKey.lidarr => true,
     _ => false,

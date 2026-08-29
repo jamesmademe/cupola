@@ -63,6 +63,41 @@ final seerrServiceProvider = Provider<SeerrService>((ref) {
   return SeerrService(watchApiClient(ref, ServiceKey.seerr));
 });
 
+/// Seerr bound to one named connection, whatever the lens is pointing at.
+///
+/// The same shape — and for the same reasons — as `radarrServiceForProvider`;
+/// read its comment before touching this one. What it buys here is /activity:
+/// the feed lists the requests of every configured Seerr, and a request id is
+/// **per instance**, so approving id 42 through the lens approves a different
+/// person's request on a different server and reports success.
+///
+/// Empty id means the lens, which is what the plain [seerrServiceProvider]
+/// answers. The lens's own id collapses onto that provider too, rather than
+/// opening a second `Dio` at the same address — and, just as load-bearing, so
+/// that an override of the plain provider (how the whole suite supplies a fake
+/// Seerr) is not quietly bypassed on the path that names a connection.
+///
+/// `read` of the lens, deliberately: watching it would rebuild every entry of
+/// this family whenever the lens moved — entries for connections that did not
+/// change — and `watchApiClient` closes the outgoing client on dispose, which
+/// would cut a request already in flight. The cost is that an entry minted
+/// before the lens landed on its id keeps a client of its own until disposal.
+///
+/// Not `autoDispose`: a caller reads this, awaits on it, and a disposal
+/// scheduled at the end of the read would close the `Dio` under the request.
+final seerrServiceForProvider = Provider.family<SeerrService, String>((
+  ref,
+  instanceId,
+) {
+  final lens = ref.read(activeInstanceProvider(ServiceKey.seerr))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == lens) {
+    return ref.watch(seerrServiceProvider);
+  }
+  return SeerrService(
+    watchApiClient(ref, ServiceKey.seerr, instanceId: instanceId),
+  );
+});
+
 class SeerrService {
   final ApiClient _client;
 
@@ -91,31 +126,37 @@ class SeerrService {
 
   SeerrService(this._client);
 
+  /// Every request this server holds, hydrated.
+  ///
+  /// **Throws when the first page does not come back**, and that is the
+  /// contract rather than an oversight. This used to wrap the whole load in
+  /// `catch (e) { return []; }`, so a Seerr that was unreachable and a Seerr
+  /// with no requests produced byte-identical output — and no caller could tell
+  /// them apart, least of all /activity, which now lists several Seerrs at once
+  /// and has to say which of them did not answer. A *later* page failing is
+  /// still absorbed by [_requestPageSafely]: the pages that arrived are real,
+  /// and blanking them would be the same lie in the other direction.
   Future<List<SeerrRequest>> getRequests() async {
-    try {
-      final first = await _requestPage(0);
-      final all = <SeerrRequest>[...first.items];
+    final first = await _requestPage(0);
+    final all = <SeerrRequest>[...first.items];
 
-      // The server reports the true count on the first page, so the remaining
-      // pages can all be asked for in parallel.
-      if (all.length < first.total) {
-        final pages = await Future.wait([
-          for (
-            var skip = _requestPageSize;
-            skip < first.total;
-            skip += _requestPageSize
-          )
-            _requestPageSafely(skip),
-        ]);
-        for (final page in pages) {
-          all.addAll(page.items);
-        }
+    // The server reports the true count on the first page, so the remaining
+    // pages can all be asked for in parallel.
+    if (all.length < first.total) {
+      final pages = await Future.wait([
+        for (
+          var skip = _requestPageSize;
+          skip < first.total;
+          skip += _requestPageSize
+        )
+          _requestPageSafely(skip),
+      ]);
+      for (final page in pages) {
+        all.addAll(page.items);
       }
-
-      return await _hydrateRequests(all);
-    } catch (e) {
-      return [];
     }
+
+    return _hydrateRequests(all);
   }
 
   Future<({List<SeerrRequest> items, int total})> _requestPage(int skip) async {

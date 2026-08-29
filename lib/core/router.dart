@@ -1074,7 +1074,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             (e) => e.name == typeStr,
             orElse: () => ServiceType.movies,
           );
-          return ActivityScreen(serviceType: type);
+          // `?i=` reaches the requests branch only, because that is the only
+          // branch that honours it: the \*arr tabs under here read their queue
+          // through the lens from top to bottom, and handing them a connection
+          // they ignore is how this route grew a parameter nothing read the
+          // first time. Giving those tabs one is that feature's work.
+          return ActivityScreen(
+            serviceType: type,
+            instanceId: type == ServiceType.discover
+                ? state.uri.queryParameters['i']
+                : null,
+          );
         },
       ),
     ],

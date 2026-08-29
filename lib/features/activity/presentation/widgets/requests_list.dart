@@ -27,14 +27,24 @@ import 'package:cupola/features/discover/presentation/discover_provider.dart';
 /// `CupolaTextStyle.weight`, since `copyWith(fontWeight:)` on the bundled
 /// variable Inter does not reach the `wght` axis and silently renders Regular.
 class RequestsList extends ConsumerWidget {
-  const RequestsList({super.key});
+  const RequestsList({super.key, this.instanceId = ''});
+
+  /// Which Seerr this list belongs to, from the route's `?i=`.
+  ///
+  /// Empty means the lens, which is what every link that predates a service
+  /// having two still carries. A named connection is the /activity case: the
+  /// feed merges every configured Seerr, so a request row can come off a server
+  /// the lens is not on — and both the list and every write on it have to
+  /// follow the row rather than the lens, because a Seerr request id is per
+  /// instance.
+  final String instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final requestsAsync = ref.watch(requestsProvider);
+    final requestsAsync = ref.watch(requestsForProvider(instanceId));
 
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(requestsProvider),
+      onRefresh: () async => ref.invalidate(requestsForProvider(instanceId)),
       child: requestsAsync.when(
         loading: () => ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -46,7 +56,7 @@ class RequestsList extends ConsumerWidget {
           children: [
             AppErrorState(
               error: err,
-              onRetry: () => ref.invalidate(requestsProvider),
+              onRetry: () => ref.invalidate(requestsForProvider(instanceId)),
             ),
           ],
         ),
@@ -71,7 +81,7 @@ class RequestsList extends ConsumerWidget {
             padding: const EdgeInsets.only(top: AppSpacing.md),
             itemCount: requests.length,
             itemBuilder: (context, index) =>
-                _RequestCard(request: requests[index]),
+                _RequestCard(request: requests[index], instanceId: instanceId),
           );
         },
       ),
@@ -82,7 +92,10 @@ class RequestsList extends ConsumerWidget {
 class _RequestCard extends ConsumerWidget {
   final SeerrRequest request;
 
-  const _RequestCard({required this.request});
+  /// The connection this card's request lives on — see [RequestsList].
+  final String instanceId;
+
+  const _RequestCard({required this.request, required this.instanceId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -226,7 +239,9 @@ class _RequestCard extends ConsumerWidget {
     await _run(
       context,
       ref,
-      action: () => ref.read(seerrServiceProvider).approveRequest(request.id),
+      action: () => ref
+          .read(seerrServiceForProvider(instanceId))
+          .approveRequest(request.id),
       successMessage: 'Request approved',
       failureMessage: 'Could not approve the request',
     );
@@ -247,7 +262,9 @@ class _RequestCard extends ConsumerWidget {
     await _run(
       context,
       ref,
-      action: () => ref.read(seerrServiceProvider).declineRequest(request.id),
+      action: () => ref
+          .read(seerrServiceForProvider(instanceId))
+          .declineRequest(request.id),
       successMessage: 'Request declined',
       failureMessage: 'Could not decline the request',
     );
@@ -268,7 +285,9 @@ class _RequestCard extends ConsumerWidget {
     await _run(
       context,
       ref,
-      action: () => ref.read(seerrServiceProvider).deleteRequest(request.id),
+      action: () => ref
+          .read(seerrServiceForProvider(instanceId))
+          .deleteRequest(request.id),
       successMessage: 'Request deleted',
       failureMessage: 'Could not delete the request',
     );
@@ -305,6 +324,10 @@ class _RequestCard extends ConsumerWidget {
       }
       return;
     }
+    // The whole family, not this entry alone: the lens's own id collapses onto
+    // the plain provider, so dropping one and not the other leaves a stale copy
+    // of the same list for the next reader.
     ref.invalidate(requestsProvider);
+    ref.invalidate(requestsForProvider);
   }
 }

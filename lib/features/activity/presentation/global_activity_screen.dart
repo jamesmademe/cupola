@@ -258,7 +258,7 @@ class _GlobalActivityScreenState extends ConsumerState<GlobalActivityScreen>
       previous,
       next,
     ) {
-      ref.invalidate(requestsProvider);
+      _invalidateRequests(ref);
       ref.read(activityRefreshVersionProvider.notifier).state++;
     });
 
@@ -359,7 +359,7 @@ class _BucketBody extends ConsumerWidget {
     final configuredServices = ref.watch(configuredActivityServicesProvider);
 
     void refresh() {
-      ref.invalidate(requestsProvider);
+      _invalidateRequests(ref);
       ref.read(activityRefreshVersionProvider.notifier).state++;
     }
 
@@ -920,7 +920,15 @@ class _StackHealthStrip extends StatelessWidget {
     final failed = feed.failures.toList(growable: false);
     if (failed.isEmpty) return const SizedBox.shrink();
 
-    final names = failed.map((r) => r.service.title).join(', ');
+    // Named by connection, never by service alone: "Sonarr did not respond"
+    // is a false statement while the other Sonarr is answering, and it leaves
+    // the user with no way to know which server to go and look at.
+    final names = failed.map((r) => r.title).join(', ');
+    // And the noun follows: two failures of one service are two connections,
+    // not two services.
+    final noun = failed.any((r) => r.label.isNotEmpty)
+        ? 'connections'
+        : 'services';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -949,7 +957,7 @@ class _StackHealthStrip extends StatelessWidget {
                   Text(
                     failed.length == 1
                         ? '$names did not respond'
-                        : '${failed.length} services did not respond',
+                        : '${failed.length} $noun did not respond',
                     style: theme.textTheme.titleSmall?.weight(FontWeight.w700),
                   ),
                   const SizedBox(height: AppSpacing.xs),
@@ -996,10 +1004,7 @@ class _ServiceStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final results = {
-      for (final result in feed?.results ?? const <ActivityServiceResult>[])
-        result.service: result,
-    };
+    final results = feed?.results ?? const <ActivityServiceResult>[];
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -1024,10 +1029,18 @@ class _ServiceStrip extends StatelessWidget {
               label: service.title,
               icon: service.icon,
               accent: service.accent,
-              count: results[service]?.items.length,
+              // Summed over the service's connections. The pills stay per
+              // service — which connection a row came off is what the row says
+              // — so this figure has to be the whole of what that service is
+              // doing, not whichever connection was merged last.
+              count: _countFor(results, service),
               // A service that did not answer shows that instead of a count, so
-              // the number 0 never stands in for "no idea".
-              failed: results[service]?.failed ?? false,
+              // the number 0 never stands in for "no idea". Only when *nothing*
+              // of it was reached: with one connection down and another
+              // answering, the number is short but it is still a number, and
+              // saying "no idea" would hide the rows already on screen. The
+              // health strip is what reports the shortfall, by connection.
+              failed: _allFailedFor(results, service),
               selected: selected == service,
               onTap: () => onSelected(service),
             ),
@@ -1035,6 +1048,29 @@ class _ServiceStrip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// [service]'s items across every connection, or null while none has answered.
+int? _countFor(List<ActivityServiceResult> results, ServiceKey service) {
+  var total = 0;
+  var any = false;
+  for (final result in results) {
+    if (result.service != service || !result.configured) continue;
+    any = true;
+    total += result.items.length;
+  }
+  return any ? total : null;
+}
+
+/// Whether every configured connection of [service] failed.
+bool _allFailedFor(List<ActivityServiceResult> results, ServiceKey service) {
+  var any = false;
+  for (final result in results) {
+    if (result.service != service || !result.configured) continue;
+    if (!result.failed) return false;
+    any = true;
+  }
+  return any;
 }
 
 class _ServiceTile extends StatelessWidget {
@@ -1202,4 +1238,15 @@ class _ScrollableState extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Drops every cached request list before the feed reloads.
+///
+/// The whole family, not just the lens's entry: /activity merges every
+/// configured Seerr, and `requestsForProvider` collapses the lens's own id onto
+/// [requestsProvider] — so dropping one and not the other leaves a pull-to-
+/// refresh reading a stale list for some of the connections on screen.
+void _invalidateRequests(WidgetRef ref) {
+  ref.invalidate(requestsProvider);
+  ref.invalidate(requestsForProvider);
 }

@@ -865,6 +865,10 @@ class _PendingRequestRow extends ConsumerWidget {
               onPressed: () => ActivityActions.approveRequest(
                 context,
                 ref,
+                // The lens, and correctly: this section reads
+                // `servicesRequestsProvider`, which is the lens's Seerr. The
+                // aggregated list is /activity's, and its rows carry their own.
+                instanceId: '',
                 requestId: request.id,
                 title: title,
               ),
@@ -874,6 +878,7 @@ class _PendingRequestRow extends ConsumerWidget {
               onPressed: () => ActivityActions.declineRequest(
                 context,
                 ref,
+                instanceId: '',
                 requestId: request.id,
                 title: title,
               ),
