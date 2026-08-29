@@ -7,6 +7,7 @@ import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/core/providers/provider_retry.dart';
 
 /// Jellyfin client bound to the current settings.
 ///
@@ -73,7 +74,11 @@ final jellyfinSessionsProvider = FutureProvider<List<StreamSession>>((
   ref,
 ) async {
   return ref.watch(jellyfinServerProvider).getSessions();
-});
+  // `retry: noProviderRetry` below, because `streamActivityProvider` awaits
+  // this inside a `try` written to carry on without a dark server — and it
+  // walks the media servers one at a time, so ten backing-off retries here are
+  // spent before Plex is even asked. See [noProviderRetry].
+}, retry: noProviderRetry);
 
 /// The libraries this server exposes.
 final jellyfinLibrariesProvider = FutureProvider<List<StreamLibrary>>((

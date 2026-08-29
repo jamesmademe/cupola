@@ -5,6 +5,7 @@ import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cupola/core/providers/provider_retry.dart';
 
 /// Sort key for the "Top Rated" rows.
 const kTopRatedSort = 'vote_average.desc';
@@ -21,7 +22,7 @@ typedef GenreRowKey = ({String mediaType, int genreId});
 final requestsProvider = FutureProvider<List<SeerrRequest>>((ref) async {
   final service = ref.watch(seerrServiceProvider);
   return service.getRequests();
-}, retry: _noRetry);
+}, retry: noProviderRetry);
 
 /// The request history of **one named connection**, whatever the lens is on.
 ///
@@ -44,28 +45,7 @@ final requestsForProvider = FutureProvider.family<List<SeerrRequest>, String>((
     return ref.watch(requestsProvider.future);
   }
   return ref.watch(seerrServiceForProvider(instanceId)).getRequests();
-}, retry: _noRetry);
-
-/// No automatic retry for the two request providers above.
-///
-/// `ProviderContainer.defaultRetry` retries a build that throws **ten** times,
-/// backing off exponentially to a 6.4s ceiling — and it retries an `Exception`,
-/// which is what a `DioException` is, though not an `Error`. So the cost is not
-/// "a slower error" and not a hang either: it is roughly forty seconds of
-/// backoff plus ten round trips before `await ref.read(provider.future)`
-/// completes at all.
-///
-/// Both callers that matter here await exactly that inside a `try` whose whole
-/// job is to report the failure promptly — the /activity Seerr leg, whose
-/// `Future.wait` would hold the entire feed for that long on one dead Seerr
-/// instead of showing the other one's requests, and the services dashboard's
-/// pull-to-refresh, whose spinner would stay down for it. Retrying is the
-/// user's call: both surfaces already offer a Retry.
-///
-/// The same shape is awaited elsewhere and still retries — see
-/// `stream_activity_provider.dart` and the `settle()` calls in
-/// `services_screen.dart`. Left alone deliberately, not overlooked.
-Duration? _noRetry(int retryCount, Object error) => null;
+}, retry: noProviderRetry);
 
 // Basic providers for the main Discover screen (Carousels) - fetching page 1
 final discoverMoviesProvider = FutureProvider<List<MediaPreview>>((ref) async {

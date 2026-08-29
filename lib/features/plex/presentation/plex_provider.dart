@@ -7,6 +7,7 @@ import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/core/providers/provider_retry.dart';
 
 /// Plex client bound to the current settings.
 ///
@@ -72,7 +73,8 @@ final plexCapabilitiesProvider = FutureProvider<PlexServerCapabilities?>((
 /// away. `ref.invalidate(plexSessionsProvider)` is the refresh.
 final plexSessionsProvider = FutureProvider<List<StreamSession>>((ref) async {
   return ref.watch(plexClientProvider).getSessions();
-});
+  // No automatic retry, for the reason [jellyfinSessionsProvider] gives.
+}, retry: noProviderRetry);
 
 /// The libraries ("sections") this server exposes.
 final plexLibrariesProvider = FutureProvider<List<StreamLibrary>>((ref) async {
