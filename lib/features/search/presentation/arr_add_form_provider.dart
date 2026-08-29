@@ -233,7 +233,7 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
           rootFolders: _paths(folders),
           metadataProfiles: const <ArrProfileOption>[],
         );
-      default:
+      case ServiceKey.lidarr:
         final service = ref.read(lidarrServiceForProvider(arg.instanceId));
         final (profiles, folders, metadata) = await (
           service.getQualityProfiles(),
@@ -244,6 +244,16 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
           profiles: _profiles(profiles),
           rootFolders: _paths(folders),
           metadataProfiles: _profiles(metadata),
+        );
+      // Named rather than defaulted. `ArrAddRequest` is sealed so that an arr
+      // added later is a compile error instead of a plus over a sheet that
+      // cannot post; a `default:` here handed that guarantee back, by quietly
+      // fetching Lidarr's profiles for whatever key arrived.
+      default:
+        throw ArgumentError.value(
+          arg.service,
+          'service',
+          'has no add form; only Radarr, Sonarr and Lidarr can be added to',
         );
     }
   }
@@ -270,7 +280,17 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
   Future<String?> submit(ArrAddRequest request) async {
     final profileId = state.profileId;
     final rootFolder = state.rootFolder;
-    if (profileId == null || rootFolder == null) return null;
+    // A sentence, not null: null is this method's word for "it is on the
+    // server now", and a caller that gets it back closes the sheet and marks
+    // the row added. Refusing to post and reporting success is the same lie the
+    // doc above says this method exists to prevent — `canSubmit` keeps the
+    // button off, but the contract must hold without it.
+    final metadataProfileId = state.metadataProfileId;
+    if (profileId == null ||
+        rootFolder == null ||
+        (request is LidarrAddRequest && metadataProfileId == null)) {
+      return _refuse(request, 'the form is not filled in');
+    }
 
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
@@ -301,13 +321,18 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
               .addArtist(
                 artist,
                 qualityProfileId: profileId,
-                metadataProfileId: state.metadataProfileId!,
+                metadataProfileId: metadataProfileId!,
                 rootFolderPath: rootFolder,
                 monitored: state.monitored,
                 searchForMissingAlbums: state.searchOnAdd,
               );
       }
       ref.read(libraryAdditionsProvider.notifier).markAdded(request.libraryKey);
+      // Cleared on the way out as well as on the way in. This entry is keyed on
+      // the connection, not on the item, and outlives the sheet by however long
+      // `autoDispose` takes: leaving the flag set means the next row's sheet
+      // opens with `canSubmit` false and a dead Add button.
+      state = state.copyWith(isSubmitting: false);
       return null;
     } catch (error) {
       final message = "Couldn't add ${request.title} to $connectionName.";
@@ -318,6 +343,18 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
       );
       return message;
     }
+  }
+
+  /// Reports a post that was never attempted, in the same two registers a
+  /// failed one uses, so the caller cannot mistake it for success.
+  String _refuse(ArrAddRequest request, String detail) {
+    final message = "Couldn't add ${request.title} to $connectionName.";
+    state = state.copyWith(
+      isSubmitting: false,
+      error: message,
+      errorDetail: detail,
+    );
+    return message;
   }
 }
 

@@ -336,7 +336,12 @@ GlobalSearchResult _radarrResult(
     inLibrary: inLibrary,
     // The connection that listed it. A row in the Away section adds to Away,
     // whatever the lens is pointing at.
-    addRequest: inLibrary
+    // No TMDB id, no add: the id is what Radarr keys the new entry on, and it
+    // is also what `libraryKey` remembers the add under — so a row without one
+    // would both fail on the server and share `…:0` with every other row in the
+    // same state, flipping them all to owned when any one of them was added.
+    // The same shape as the Hero-tag collision that `_heroTag` documents.
+    addRequest: inLibrary || item.tmdbId <= 0
         ? null
         : RadarrAddRequest(instanceId: instance.id, movie: item),
     heroTag: heroTag,
@@ -380,7 +385,9 @@ GlobalSearchResult _sonarrResult(
     imageHeaders: image.headers,
     tags: ['Series', item.status, if (inLibrary) _inLibraryTag],
     inLibrary: inLibrary,
-    addRequest: inLibrary
+    // No TVDB id, no add — and Sonarr really does return such rows, for shows
+    // it can only match on TMDB. See the note in `_radarrResult`.
+    addRequest: inLibrary || item.tvdbId <= 0
         ? null
         : SonarrAddRequest(instanceId: instance.id, series: item),
     heroTag: heroTag,

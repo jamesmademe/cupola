@@ -71,7 +71,13 @@ class ActivityScreen extends ConsumerWidget {
       return AmbientScaffold(
         accent: _accent,
         appBar: GlassAppBar(title: Text('Requests$suffix')),
-        body: RequestsList(instanceId: instanceId ?? ''),
+        // The id the TITLE resolved to, not the one the link carried. A link
+        // naming a connection that has since been removed resolves `named` to
+        // null and falls the title back to the lens; handing the dead id to the
+        // list as well would put "not configured" under a header naming a
+        // server that is up. The two have to be the same fact or neither can be
+        // trusted.
+        body: RequestsList(instanceId: named == null ? '' : named.id),
       );
     }
 

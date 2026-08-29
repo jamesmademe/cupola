@@ -39,12 +39,25 @@ class RequestsList extends ConsumerWidget {
   /// instance.
   final String instanceId;
 
+  /// Drops both providers, never the family entry alone.
+  ///
+  /// For the lens — an empty id, which is every link that predates a second
+  /// Seerr — `requestsForProvider` is a passthrough of `requestsProvider`.
+  /// Invalidating only the entry rebuilds it, re-reads the value the plain
+  /// provider is still holding, and hands back the identical list: a
+  /// pull-to-refresh that fetches nothing. `_RequestCard._run` already drops
+  /// both for the same reason.
+  void _reload(WidgetRef ref) {
+    ref.invalidate(requestsProvider);
+    ref.invalidate(requestsForProvider(instanceId));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final requestsAsync = ref.watch(requestsForProvider(instanceId));
 
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(requestsForProvider(instanceId)),
+      onRefresh: () async => _reload(ref),
       child: requestsAsync.when(
         loading: () => ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -53,12 +66,7 @@ class RequestsList extends ConsumerWidget {
         ),
         error: (err, stack) => ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            AppErrorState(
-              error: err,
-              onRetry: () => ref.invalidate(requestsForProvider(instanceId)),
-            ),
-          ],
+          children: [AppErrorState(error: err, onRetry: () => _reload(ref))],
         ),
         data: (requests) {
           if (requests.isEmpty) {

@@ -243,6 +243,20 @@ typedef ActivityConnection = ({
   String label,
 });
 
+/// What a paged bucket keys its cursors and its accumulated pages on.
+///
+/// Identity only, and deliberately not [ActivityConnection]: a record compares
+/// by every field, and that one also carries `label` — a rendering detail
+/// derived from settings, which flips from empty to a name the moment a second
+/// connection of the same service is configured. Keyed on the whole record, a
+/// cursor stored before that change can never be looked up after it, and the
+/// bucket's Load more quietly stops answering. The connection travels
+/// alongside, in [PagedArrFeedNotifier._connections].
+typedef ActivityPageKey = (GlobalActivityKind, ServiceType, String);
+
+ActivityPageKey _pageKey(GlobalActivityKind kind, ActivityConnection c) =>
+    (kind, c.serviceType, c.instanceId);
+
 /// Every configured \*arr connection, in the user's own instance order.
 ///
 /// The unit the feed loads, and the change this whole pass is about: /activity
@@ -478,7 +492,7 @@ class PagedArrFeedState {
   final bool refreshing;
   final bool loadingMore;
   final bool loadMoreFailed;
-  final Map<(GlobalActivityKind, ActivityConnection), PagedCursor> cursors;
+  final Map<ActivityPageKey, PagedCursor> cursors;
 
   const PagedArrFeedState({
     this.feed,
@@ -493,7 +507,7 @@ class PagedArrFeedState {
     bool? refreshing,
     bool? loadingMore,
     bool? loadMoreFailed,
-    Map<(GlobalActivityKind, ActivityConnection), PagedCursor>? cursors,
+    Map<ActivityPageKey, PagedCursor>? cursors,
   }) {
     return PagedArrFeedState(
       feed: feed ?? this.feed,
@@ -523,8 +537,12 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
   final List<GlobalActivityKind> kinds;
 
   /// Accumulated items per (kind, connection) pair.
-  final Map<(GlobalActivityKind, ActivityConnection), List<GlobalActivityItem>>
-  _items = {};
+  final Map<ActivityPageKey, List<GlobalActivityItem>> _items = {};
+
+  /// The connection behind each key, for the sake of the label the rows and
+  /// the health strip print. Rebuilt with the cursors on every reload, so it
+  /// always describes the connections the current pages actually came from.
+  final Map<ActivityPageKey, ActivityConnection> _connections = {};
 
   /// The most recent first-page load, so tests can await it.
   Future<void> _loading = Future.value();
@@ -557,8 +575,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
       for (final entry in current.cursors.entries)
         if (entry.value.hasMore) entry.key,
     ];
-    final fetched =
-        <(GlobalActivityKind, ActivityConnection), List<GlobalActivityItem>>{};
+    final fetched = <ActivityPageKey, List<GlobalActivityItem>>{};
     await Future.wait([for (final pair in pairs) _loadNextPage(pair, fetched)]);
 
     if (generation != _generation) return;
@@ -567,7 +584,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
       _items.putIfAbsent(entry.key, () => []).addAll(entry.value);
     }
 
-    final cursors = <(GlobalActivityKind, ActivityConnection), PagedCursor>{};
+    final cursors = <ActivityPageKey, PagedCursor>{};
     for (final entry in current.cursors.entries) {
       final pair = entry.key;
       final cursor = entry.value;
@@ -587,10 +604,10 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
   Future<void> _reload() async {
     final generation = ++_generation;
     _items.clear();
+    _connections.clear();
 
-    final cursors = <(GlobalActivityKind, ActivityConnection), PagedCursor>{};
-    final loaded =
-        <(GlobalActivityKind, ActivityConnection), List<GlobalActivityItem>>{};
+    final cursors = <ActivityPageKey, PagedCursor>{};
+    final loaded = <ActivityPageKey, List<GlobalActivityItem>>{};
     final connections = activityArrConnections(ref.read(settingsProvider));
 
     await Future.wait([
@@ -612,11 +629,11 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
   Future<void> _loadFirstPage(
     GlobalActivityKind kind,
     ActivityConnection connection,
-    Map<(GlobalActivityKind, ActivityConnection), PagedCursor> cursors,
-    Map<(GlobalActivityKind, ActivityConnection), List<GlobalActivityItem>>
-    loaded,
+    Map<ActivityPageKey, PagedCursor> cursors,
+    Map<ActivityPageKey, List<GlobalActivityItem>> loaded,
   ) async {
-    final pair = (kind, connection);
+    final pair = _pageKey(kind, connection);
+    _connections[pair] = connection;
 
     try {
       final arrService = ref.read(
@@ -654,20 +671,17 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
   }
 
   Future<void> _loadNextPage(
-    (GlobalActivityKind, ActivityConnection) pair,
-    Map<(GlobalActivityKind, ActivityConnection), List<GlobalActivityItem>>
-    fetched,
+    ActivityPageKey pair,
+    Map<ActivityPageKey, List<GlobalActivityItem>> fetched,
   ) async {
-    final (kind, connection) = pair;
+    final (kind, serviceType, instanceId) = pair;
     final cursor = state.cursors[pair];
-    if (cursor == null || !cursor.hasMore) return;
+    final connection = _connections[pair];
+    if (cursor == null || !cursor.hasMore || connection == null) return;
 
     try {
       final arrService = ref.read(
-        connectionArrServiceProvider((
-          connection.serviceType,
-          connection.instanceId,
-        )),
+        connectionArrServiceProvider((serviceType, instanceId)),
       );
       final raw = await _loadRawItems(
         arrService,
@@ -684,9 +698,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
     }
   }
 
-  ActivityFeed _buildFeed(
-    Map<(GlobalActivityKind, ActivityConnection), PagedCursor> cursors,
-  ) {
+  ActivityFeed _buildFeed(Map<ActivityPageKey, PagedCursor> cursors) {
     final results = <ActivityServiceResult>[
       // The services with nothing configured, once each rather than once per
       // kind — they have no connection to be keyed on.
@@ -694,12 +706,13 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
         ActivityServiceResult.unconfigured(service),
     ];
     for (final entry in cursors.entries) {
-      final (_, connection) = entry.key;
+      final (_, serviceType, instanceId) = entry.key;
+      final connection = _connections[entry.key];
       results.add(
         ActivityServiceResult(
-          service: connection.service,
-          instanceId: connection.instanceId,
-          label: connection.label,
+          service: connection?.service ?? _serviceKeyFor(serviceType),
+          instanceId: instanceId,
+          label: connection?.label ?? '',
           items: _items[entry.key] ?? const [],
           configured: entry.value.configured,
           error: entry.value.error,

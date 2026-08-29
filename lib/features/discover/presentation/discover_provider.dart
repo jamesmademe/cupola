@@ -48,14 +48,23 @@ final requestsForProvider = FutureProvider.family<List<SeerrRequest>, String>((
 
 /// No automatic retry for the two request providers above.
 ///
-/// Riverpod's default is exponential backoff, and the consequence is not
-/// "slower error": a provider that keeps retrying **never settles**, so
-/// `await ref.read(provider.future)` never completes. Both callers that matter
-/// here await exactly that inside a `try` in order to report the failure — the
-/// /activity Seerr leg, whose `Future.wait` would otherwise hang the whole feed
-/// on one dead Seerr rather than showing the other one's requests, and the
-/// services dashboard's pull-to-refresh, whose spinner would never retract.
-/// Retrying is the user's call: both surfaces already offer a Retry.
+/// `ProviderContainer.defaultRetry` retries a build that throws **ten** times,
+/// backing off exponentially to a 6.4s ceiling — and it retries an `Exception`,
+/// which is what a `DioException` is, though not an `Error`. So the cost is not
+/// "a slower error" and not a hang either: it is roughly forty seconds of
+/// backoff plus ten round trips before `await ref.read(provider.future)`
+/// completes at all.
+///
+/// Both callers that matter here await exactly that inside a `try` whose whole
+/// job is to report the failure promptly — the /activity Seerr leg, whose
+/// `Future.wait` would hold the entire feed for that long on one dead Seerr
+/// instead of showing the other one's requests, and the services dashboard's
+/// pull-to-refresh, whose spinner would stay down for it. Retrying is the
+/// user's call: both surfaces already offer a Retry.
+///
+/// The same shape is awaited elsewhere and still retries — see
+/// `stream_activity_provider.dart` and the `settle()` calls in
+/// `services_screen.dart`. Left alone deliberately, not overlooked.
 Duration? _noRetry(int retryCount, Object error) => null;
 
 // Basic providers for the main Discover screen (Carousels) - fetching page 1
