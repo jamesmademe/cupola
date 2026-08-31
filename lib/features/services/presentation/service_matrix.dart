@@ -454,13 +454,10 @@ class ServiceMatrix extends ConsumerWidget {
 
       final subjects = <MatrixCellSubject>[
         for (final service in services)
-          // A folded cell in the readout, and also in the picker for the three
-          // services whose screens do not read through the lens: a cell per
-          // connection there would let the user pick a destination the app then
-          // silently ignores, which is the picker telling the same lie the badge
-          // is hidden to avoid. One cell reaches the service, which is all it
-          // can honestly offer.
-          if (role == ServiceMatrixRole.readout || !service.readsThroughLens)
+          // A folded cell in the readout; one cell per connection in the picker.
+          // No service is exempt: every client now resolves through the lens, so
+          // a picker cell always reaches the connection it names.
+          if (role == ServiceMatrixRole.readout)
             (service: service, instanceId: null)
           else
             for (final instance in settings.instancesOf(service))
@@ -706,7 +703,12 @@ class _DomainBandState extends ConsumerState<_DomainBand>
     for (final subject in widget.subjects) {
       final summary = subject.instanceId == null
           ? ref.watch(serviceSummaryProvider(subject.service))
-          : ref.watch(instanceSummaryProvider(subject.instanceId!));
+          : ref.watch(
+              instanceSummaryProvider((
+                service: subject.service,
+                instanceId: subject.instanceId!,
+              )),
+            );
       final reachability = switch (summary) {
         AsyncData(:final value) =>
           value.isOnline
@@ -722,11 +724,7 @@ class _DomainBandState extends ConsumerState<_DomainBand>
         // Suppressed on the picker, and gated on the ROLE rather than on
         // whether this cell names a connection. The signal provider answers per
         // service — which is the lens's figure, not this connection's — so a
-        // right number under the wrong name is worse than no number. Inferring
-        // the picker from `instanceId != null` was true only while every picker
-        // cell named a connection: the three services that do not read through
-        // the lens are folded even here, and would otherwise have gone and
-        // fetched a figure on the Portal's floor.
+        // right number under the wrong name is worse than no number.
         final signal = widget.role == ServiceMatrixRole.picker
             ? null
             : ref.watch(serviceSignalProvider(subject.service)).asData?.value;
@@ -1188,7 +1186,9 @@ class ServiceMatrixCell extends ConsumerWidget {
     final instanceId = this.instanceId;
     final summary = instanceId == null
         ? ref.watch(serviceSummaryProvider(service))
-        : ref.watch(instanceSummaryProvider(instanceId));
+        : ref.watch(
+            instanceSummaryProvider((service: service, instanceId: instanceId)),
+          );
     final settings = ref.watch(currentSettingsProvider);
     final instance = instanceId == null
         ? null
@@ -1252,11 +1252,10 @@ class ServiceMatrixCell extends ConsumerWidget {
     // would fan out a library fetch per unreachable service on every rebuild,
     // and there is nothing to paint with the result.
     // Never on the picker: `serviceSignalProvider` answers for the lens, so the
-    // figure would belong to a different connection than the name above it.
-    // Gated on the role rather than on `instanceId == null`, which agreed with
-    // it only while every picker cell named a connection — the three services
-    // that do not read through the lens fold even here, and this is the watch
-    // that would have sent them fetching on the Portal's floor.
+    // figure would belong to a different connection than the name above it —
+    // and on that floor the whole point of a cell is that it stands for one
+    // connection rather than for whichever one is currently being read. Gated on
+    // the role, which is the cause; `instanceId == null` is only its shape.
     final signal =
         role == ServiceMatrixRole.readout &&
             reachability == ServiceReachability.online

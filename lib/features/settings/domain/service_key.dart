@@ -299,13 +299,24 @@ extension ServiceKeyExtension on ServiceKey {
   /// households, a seedbox qBittorrent beside the one at home: none of these
   /// are stranger than 4K-and-1080p Radarr, and carving out a "singleton"
   /// class would mean defending an arbitrary line at every one of them.
+  ///
+  /// True means **reachable**, not merely storable. There was briefly a second
+  /// flag here — `readsThroughLens` — that said no for Jellyfin, Plex and
+  /// TrueNAS, whose clients were still built from the flat first-instance
+  /// projections; it hid their lens badge and folded their picker cells, so a
+  /// second connection of those three could be configured, probed and counted
+  /// and then never opened. Their three client providers now go through
+  /// `watchTransport` like everyone else, which is all that was ever missing,
+  /// and the flag is gone rather than left standing at a permanent `true`.
   bool get supportsMultipleInstances => true;
 
   /// Whether the global search runs a **leg per connection** for this service.
   ///
-  /// Narrower than [readsThroughLens], and the difference is the tap rather
-  /// than the query. A section per connection is only honest if the row under
-  /// it opens the server that listed it, which needs two things: a way to build
+  /// Narrower than [supportsMultipleInstances], and the difference is the tap
+  /// rather than the query. Every service now reads through the lens, so moving
+  /// it changes what any screen shows; a *section per connection*, though, is
+  /// only honest if the row under it opens the server that listed it, which
+  /// needs two things: a way to build
   /// a client for a named connection, and a detail route that carries and
   /// honours one. The three arrs have both. Seerr's detail path is the Discover
   /// feature, whose thirty-odd reads all resolve through the lens; Bazarr's ids
@@ -321,49 +332,6 @@ extension ServiceKeyExtension on ServiceKey {
   bool get searchesPerConnection => switch (this) {
     ServiceKey.radarr || ServiceKey.sonarr || ServiceKey.lidarr => true,
     _ => false,
-  };
-
-  /// Whether this service's screens actually read through the lens.
-  ///
-  /// **Configuring a second connection is allowed for everything** — see
-  /// [supportsMultipleInstances]. This is the narrower question: does moving the
-  /// lens change what the screens show? Where the answer is no, the lens badge
-  /// and the Portal's per-connection cells are hidden, because an affordance
-  /// that changes a label and nothing else is a lie the user has no way to
-  /// detect.
-  ///
-  /// The three that say no are not an oversight and not a backlog item with a
-  /// date. Each has a reason of its own:
-  ///
-  /// * **Jellyfin** keeps a chosen viewer per connection, and every user-scoped
-  ///   query is built from it. Following the lens means carrying that id
-  ///   through the client, which its own client does not do yet.
-  /// * **Plex** authenticates with a token that *is* a user, and sends one
-  ///   per-install client id; the naive conversion would register a second
-  ///   device against the user's server.
-  /// * **TrueNAS** speaks WebSocket JSON-RPC through a long-lived client with
-  ///   its own eight API surfaces, and is a quarter of the routes under
-  ///   `/services` on its own.
-  ///
-  /// Exhaustive on purpose, like [usesApiKey] and [credentialStorageSuffix]: a
-  /// `!=` chain would quietly promise the lens on behalf of a service added
-  /// later, which is exactly the lie this exists to stop.
-  bool get readsThroughLens => switch (this) {
-    ServiceKey.jellyfin || ServiceKey.plex || ServiceKey.truenas => false,
-    ServiceKey.seerr ||
-    ServiceKey.radarr ||
-    ServiceKey.sonarr ||
-    ServiceKey.lidarr ||
-    ServiceKey.qbittorrent ||
-    ServiceKey.transmission ||
-    ServiceKey.bazarr ||
-    ServiceKey.dockge ||
-    ServiceKey.prowlarr ||
-    ServiceKey.readarr ||
-    ServiceKey.sabnzbd ||
-    ServiceKey.nzbget ||
-    ServiceKey.unraid ||
-    ServiceKey.nginxProxyManager => true,
   };
 
   /// What the *non-secret* half of a credential pair is called.

@@ -320,6 +320,59 @@ void main() {
     });
   });
 
+  group('worstDiagnosis', () {
+    // The kernel of the per-service fold. `diagnoseService` probes every
+    // configured connection and hands the results here, so a Connections row
+    // that prints "2 connections" cannot report the state of one of them.
+    test('one unreachable connection is never hidden behind a healthy one', () {
+      expect(
+        worstDiagnosis(const [
+          ServiceDiagnosis(ServiceConnectionStatus.connected),
+          ServiceDiagnosis(
+            ServiceConnectionStatus.disconnected,
+            ServiceFailureReason.unreachable,
+          ),
+        ]).status,
+        ServiceConnectionStatus.disconnected,
+      );
+    });
+
+    test('the reason travels with the state, so the row can name it', () {
+      expect(
+        worstDiagnosis(const [
+          ServiceDiagnosis(ServiceConnectionStatus.connected),
+          ServiceDiagnosis(
+            ServiceConnectionStatus.disconnected,
+            ServiceFailureReason.unauthorized,
+          ),
+        ]).reason,
+        ServiceFailureReason.unauthorized,
+      );
+    });
+
+    test('all healthy stays healthy', () {
+      expect(
+        worstDiagnosis(const [
+          ServiceDiagnosis(ServiceConnectionStatus.connected),
+          ServiceDiagnosis(ServiceConnectionStatus.connected),
+        ]).status,
+        ServiceConnectionStatus.connected,
+      );
+    });
+
+    test('a connection still checking outranks one that answered', () {
+      // Otherwise a row settles on "Connected" while a sibling is mid-probe and
+      // then flips to red a second later.
+      expect(
+        worstDiagnosis(const [
+          ServiceDiagnosis(ServiceConnectionStatus.connected),
+          ServiceDiagnosis.checking(),
+        ]).status,
+        ServiceConnectionStatus.checking,
+      );
+    });
+  });
+
   group('connectionFailureMessage', () {
     test('a redirect gets its own advice, not the generic shrug', () {
       final redirected = connectionFailureMessage(

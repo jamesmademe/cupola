@@ -290,9 +290,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                       ),
                 );
             if (!mounted) return;
-            result = await diagnoseService(
-              service,
-              _updateServiceSettings(ref.read(currentSettingsProvider)),
+            // The retest goes to the same connection the first test did.
+            // `diagnoseService` folds every connection of the service, so it
+            // could answer about a sibling that was never part of this trust
+            // decision.
+            final retried = _updateServiceSettings(
+              ref.read(currentSettingsProvider),
+            );
+            result = await diagnoseInstance(
+              retried.instanceById(_target.id) ?? candidateInstance,
+              retried,
             );
           }
         }
@@ -364,8 +371,13 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   ) async {
     setState(() => _saving = true);
     try {
-      final result = await diagnoseServiceWithCertProbe(
-        service,
+      // This connection, not the service: the origin whose certificate is about
+      // to be probed — and offered for trust — has to be the one whose address
+      // is in the field above.
+      final target = updated.instanceById(_target.id);
+      if (target == null) return null;
+      final result = await diagnoseInstanceWithCertProbe(
+        target,
         updated,
         probe: widget.certificateProber,
       );
@@ -373,7 +385,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       final probe = result.certificateProbe;
       if (probe == null) return null;
 
-      final url = updated.instanceById(_target.id)?.url ?? '';
+      final url = target.url;
       final trust = await showCertTrustDialog(
         context,
         origin: UrlUtils.certOrigin(url) ?? url,
@@ -527,7 +539,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     );
 
     final settings = ref.watch(currentSettingsProvider);
-    final isConfigured = settings.isServiceConfigured(service);
+    // **This connection's** state, not the service's. `isServiceConfigured` is
+    // true as soon as *any* instance is set up, which on the add-a-connection
+    // form meant an empty page announcing "Connected" (the first connection's
+    // status), offering a viewer picker bound to the first server, and showing
+    // a Remove row for a connection that does not exist yet — its confirm
+    // dialog removed nothing and simply popped the screen.
+    final isConfigured =
+        settings.instanceById(_target.id)?.isConfigured ?? false;
 
     return AmbientScaffold(
       // The room takes the colour of the service being worked on.
@@ -589,9 +608,15 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             // connection exists, because the viewer list comes from `/Users` on
             // the server — offering it before there is a server to ask would be
             // a control that can only fail.
+            // Bound to the connection this form edits. Read and written through
+            // the service's flat projection, it listed the users of *this*
+            // server and saved the chosen one onto the FIRST connection —
+            // leaving that server pointed at a user id from a different user
+            // table, which is the exact failure `ServiceInstance.viewerId`
+            // exists to prevent.
             if (service.needsViewerSelection && isConfigured) ...[
               const SizedBox(height: AppSpacing.xxl),
-              const JellyfinViewerPicker(),
+              JellyfinViewerPicker(instanceId: _target.id),
             ],
             const SizedBox(height: AppSpacing.xxl),
             _buildConnectionsSection(context, settings),
@@ -652,7 +677,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                     color: colorScheme.onSurfaceVariant,
                   )
                 else if (isConfigured)
-                  _SavedConnectionStatus(service: service)
+                  _SavedConnectionStatus(instanceId: _target.id)
                 else
                   _HeaderStatus(
                     icon: Icons.add_link_rounded,
@@ -1392,15 +1417,28 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
 /// The saved connection's state, watched live so trusting a certificate or
 /// saving a new key updates the header without a reload.
+///
+/// Keyed on the **connection**, not the service. `serviceDiagnosisProvider`
+/// folds every connection into its worst answer — the right shape for a row
+/// that says "Radarr", and the wrong one over a form whose address field
+/// belongs to exactly one server: it reported the first Radarr's state above
+/// the second Radarr's credentials.
 class _SavedConnectionStatus extends ConsumerWidget {
-  const _SavedConnectionStatus({required this.service});
+  const _SavedConnectionStatus({required this.instanceId});
 
-  final ServiceKey service;
+  final String instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final async = ref.watch(serviceDiagnosisProvider(service));
+    final service = ref
+        .watch(
+          currentSettingsProvider.select((s) => s.instanceById(instanceId)),
+        )
+        ?.service;
+    if (service == null) return const SizedBox.shrink();
+
+    final async = ref.watch(instanceDiagnosisProvider(instanceId));
     final diagnosis = async.when(
       loading: () => const ServiceDiagnosis.checking(),
       error: (_, __) =>

@@ -133,11 +133,18 @@ class ServiceInstance {
     return url.isNotEmpty && credential.isNotEmpty;
   }
 
-  /// What this instance is called in a sentence: the service on its own when it
-  /// is the only one, and `Radarr · 4K` when it is not.
+  /// The join: `Radarr` with no label, `Radarr · 4K` with one.
   ///
-  /// The join used everywhere a write is confirmed ("Added to Radarr · 4K") and
-  /// wherever a row has to name its origin in full.
+  /// **Formatting only — it cannot answer whether the label should be shown.**
+  /// A label outlives the sibling that made it necessary: derive one for the
+  /// original Radarr when a second is added, remove the second, and the survivor
+  /// still carries `4K` while every badge, chip and section heading has gone
+  /// quiet again because they all ask `hasMultipleInstances` first. Reading this
+  /// getter directly therefore printed "Added to Radarr · 7878" for the only
+  /// Radarr there is.
+  ///
+  /// Call [SettingsModel.connectionTitle] instead wherever a sentence names a
+  /// connection; it applies the same rule as the rest of the app.
   String get displayTitle =>
       label.isEmpty ? service.title : '${service.title} · $label';
 

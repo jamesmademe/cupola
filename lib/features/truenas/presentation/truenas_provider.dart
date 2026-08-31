@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/data/apps_api.dart';
 import 'package:cupola/features/truenas/data/credentials_api.dart';
 import 'package:cupola/features/truenas/data/data_protection_api.dart';
@@ -15,23 +16,26 @@ import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/truenas/data/virt_api.dart';
 import 'package:cupola/features/truenas/domain/truenas_version.dart';
 
-/// Long-lived WebSocket client for TrueNAS, rebuilt when its URL/API key
-/// change. Closed automatically when disposed.
+/// Long-lived WebSocket client for TrueNAS, rebuilt when the connection it
+/// describes changes. Closed automatically when disposed.
+///
+/// Follows the **lens**. It used to read the flat `truenasUrl`/`truenasApiKey`
+/// projections, which are always the *first* connection, so a second NAS could
+/// be configured, probed and counted and never once read. Every one of the eight
+/// domain APIs below watches this single client, so they all follow with it —
+/// the breadth of the surface was never the obstacle it looked like.
+///
+/// Moving the lens tears the socket down and opens another, which is exactly
+/// what editing the address already did.
 final truenasClientProvider = Provider<TrueNasWsClient>((ref) {
-  final url = ref.watch(currentSettingsProvider.select((s) => s.truenasUrl));
-  final apiKey = ref.watch(
-    currentSettingsProvider.select((s) => s.truenasApiKey),
-  );
-  final certFingerprint = ref.watch(
-    currentSettingsProvider.select((s) => s.pinForUrl(s.truenasUrl)),
-  );
-  if (url.isEmpty || apiKey.isEmpty) {
+  final transport = watchTransport(ref, ServiceKey.truenas);
+  if (!transport.configured) {
     throw const TrueNasException('TrueNAS not configured');
   }
   final client = TrueNasWsClient(
-    baseUrl: url,
-    apiKey: apiKey,
-    certFingerprint: certFingerprint,
+    baseUrl: transport.url,
+    apiKey: transport.apiKey,
+    certFingerprint: transport.pin,
   );
   ref.onDispose(client.close);
   return client;

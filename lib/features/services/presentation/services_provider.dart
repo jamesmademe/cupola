@@ -81,7 +81,9 @@ final foldedServiceHealthProvider =
       var offline = 0;
       var checking = 0;
       for (final id in ids) {
-        final summary = ref.watch(instanceSummaryProvider(id));
+        final summary = ref.watch(
+          instanceSummaryProvider((service: service, instanceId: id)),
+        );
         switch (summary) {
           case AsyncData(:final value):
             if (!value.isOnline) offline++;
@@ -94,28 +96,36 @@ final foldedServiceHealthProvider =
       return (total: ids.length, offline: offline, checking: checking);
     });
 
+/// One connection, named by what it is as well as by which one.
+///
+/// The service travels with the id so a probe for a connection that has since
+/// been removed can still say what kind of thing it was. Keyed on the id alone,
+/// the "gone" branch had nothing to answer with and named `ServiceKey.radarr` —
+/// a Plex cell removed mid-flight reported an offline *Radarr*.
+typedef InstanceRef = ({ServiceKey service, String instanceId});
+
 /// A live reachability probe for one *connection*.
 ///
-/// Keyed by instance id, because two Radarr behind two addresses are two
+/// Keyed by connection, because two Radarr behind two addresses are two
 /// different answers to "is it up" and the matrix has to be able to say which
 /// one is down. [serviceSummaryProvider] is the per-service view of this.
-final instanceSummaryProvider = FutureProvider.family<ServiceSummary, String>((
-  ref,
-  instanceId,
-) async {
-  // Watch the narrow key; read the whole model for the work. The
-  // per-client branches in [_loadVersion] each reach for their own fields,
-  // and none of them is anything but a projection of the key below.
-  ref.watch(
-    currentSettingsProvider.select((s) => _connectionOfInstance(s, instanceId)),
-  );
-  final settings = ref.read(currentSettingsProvider);
-  final instance = settings.instanceById(instanceId);
-  if (instance == null) {
-    return _offlineSummary(ServiceKey.radarr, host: '');
-  }
-  return _loadServiceSummary(ref, instance, settings);
-});
+final instanceSummaryProvider =
+    FutureProvider.family<ServiceSummary, InstanceRef>((ref, key) async {
+      // Watch the narrow key; read the whole model for the work. The
+      // per-client branches in [_loadVersion] each reach for their own fields,
+      // and none of them is anything but a projection of the key below.
+      ref.watch(
+        currentSettingsProvider.select(
+          (s) => _connectionOfInstance(s, key.instanceId),
+        ),
+      );
+      final settings = ref.read(currentSettingsProvider);
+      final instance = settings.instanceById(key.instanceId);
+      if (instance == null) {
+        return _offlineSummary(key.service, host: '');
+      }
+      return _loadServiceSummary(ref, instance, settings);
+    });
 
 /// The health of the connection [service] is currently seen through.
 ///
@@ -135,7 +145,12 @@ final serviceSummaryProvider =
               '',
         );
       }
-      return ref.watch(instanceSummaryProvider(instance.id).future);
+      return ref.watch(
+        instanceSummaryProvider((
+          service: service,
+          instanceId: instance.id,
+        )).future,
+      );
     });
 
 /// Everything a status probe reads about one service, as a single comparable
@@ -806,24 +821,28 @@ final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
   // compares with `==`, and a `List` has identity equality, so a list would
   // report a change on every rebuild and quietly preserve the bug it was meant
   // to fix. Records compare structurally, nested records included.
-  for (final service in const [
-    ServiceKey.radarr,
-    ServiceKey.sonarr,
-    ServiceKey.lidarr,
-    ServiceKey.readarr,
-    ServiceKey.qbittorrent,
-    ServiceKey.sabnzbd,
-    ServiceKey.nzbget,
-  ]) {
-    _watchConnection(ref, service);
-  }
-  final settings = ref.read(currentSettingsProvider);
+  final connections = {
+    for (final service in const [
+      ServiceKey.radarr,
+      ServiceKey.sonarr,
+      ServiceKey.lidarr,
+      ServiceKey.readarr,
+      ServiceKey.qbittorrent,
+      ServiceKey.sabnzbd,
+      ServiceKey.nzbget,
+    ])
+      service: _watchConnection(ref, service),
+  };
 
   Future<List<ServiceQueueItem>> from(
     ServiceKey service,
     Future<List<ServiceQueueItem>> Function() load,
   ) async {
-    if (!settings.isServiceConfigured(service)) return const [];
+    // The connection the loaders below actually read, not the service. Gated on
+    // `isServiceConfigured` — true as soon as *any* instance is set up — this
+    // asked the second Radarr for its queue on the first one's account, and the
+    // failure went into the `catch` as an empty list.
+    if (!(connections[service]?.configured ?? false)) return const [];
     try {
       return await load();
     } catch (_) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,7 +10,9 @@ import 'package:cupola/features/settings/data/settings_service.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/settings/presentation/service_settings_screen.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
 
@@ -41,6 +44,7 @@ Future<ProviderContainer> _pump(
   String? instanceId,
   bool isNew = false,
   Map<ServiceKey, String> lenses = const {},
+  List<Override> overrides = const [],
 }) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
@@ -50,6 +54,7 @@ Future<ProviderContainer> _pump(
       secureSettingsStoreProvider.overrideWithValue(FakeSecureSettingsStore()),
       initialSettingsProvider.overrideWithValue(settings),
       initialActiveInstancesProvider.overrideWithValue(lenses),
+      ...overrides,
     ],
   );
   addTearDown(container.dispose);
@@ -91,7 +96,91 @@ Future<LocalNetworkAccess> _nothingIsBlockingUs(
   Duration timeout = Duration.zero,
 }) async => LocalNetworkAccess.unrestricted;
 
+const _jellyfinHome = ServiceInstance(
+  id: 'jellyfin',
+  service: ServiceKey.jellyfin,
+  label: 'Home',
+  url: 'https://home.lan:8096',
+  credential: 'key-home',
+  viewerId: 'home-user',
+);
+const _jellyfinAway = ServiceInstance(
+  id: 'jellyfin-away11',
+  service: ServiceKey.jellyfin,
+  label: 'Away',
+  url: 'https://away.lan:8096',
+  credential: 'key-away',
+);
+
 void main() {
+  group('a form speaks for the connection it edits, not for the service', () {
+    testWidgets('the add form offers no Remove for a connection that is not '
+        'there yet', (tester) async {
+      // Gated on `isServiceConfigured` — true as soon as *any* instance is set
+      // up — the add form showed the destructive row, and confirming it removed
+      // nothing and silently popped the screen.
+      await _pump(
+        tester,
+        settings: const SettingsModel(instances: [_fourK]),
+        isNew: true,
+      );
+
+      expect(find.text('Remove Radarr'), findsNothing);
+    });
+
+    testWidgets('the add form does not wear the first connection\'s status', (
+      tester,
+    ) async {
+      // "Connected" over an empty address field, because the header read
+      // `serviceDiagnosisProvider(radarr)` — the first Radarr, which is up.
+      await _pump(
+        tester,
+        settings: const SettingsModel(instances: [_fourK]),
+        isNew: true,
+      );
+
+      expect(find.text('Not set up yet'), findsOneWidget);
+    });
+
+    testWidgets('the viewer picker saves onto the Jellyfin being edited', (
+      tester,
+    ) async {
+      // Read and written through `settings.jellyfinUserId` / `copyWithViewer`,
+      // both of which resolve to the FIRST instance, this control listed the
+      // users of the server on screen and saved the choice onto the other one —
+      // leaving that one bound to an id from a user table it has never seen.
+      final container = await _pump(
+        tester,
+        settings: const SettingsModel(
+          instances: [_jellyfinHome, _jellyfinAway],
+        ),
+        service: ServiceKey.jellyfin,
+        instanceId: _jellyfinAway.id,
+        overrides: [
+          jellyfinViewersForProvider(_jellyfinAway.id).overrideWith(
+            (ref) async => const [StreamViewer(id: 'away-user', name: 'Ada')],
+          ),
+        ],
+      );
+
+      await tester.scrollUntilVisible(
+        find.text('Ada'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Ada'));
+      await tester.pumpAndSettle();
+
+      final saved = container.read(currentSettingsProvider);
+      expect(saved.instanceById(_jellyfinAway.id)!.viewerId, 'away-user');
+      expect(
+        saved.instanceById(_jellyfinHome.id)!.viewerId,
+        'home-user',
+        reason: 'the connection nobody was editing must not move',
+      );
+    });
+  });
+
   testWidgets('a lone connection is never asked for a name', (tester) async {
     await _pump(
       tester,

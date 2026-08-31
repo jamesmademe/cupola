@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
@@ -16,40 +17,81 @@ import 'package:cupola/core/providers/provider_retry.dart';
 /// `'not configured'` substring is load-bearing — `AsyncValueWidget` string-matches
 /// it to render `NotConfiguredPlaceholder` instead of an error.
 ///
-/// `jellyfinUserId` is read here rather than passed per call, so choosing a
-/// different household member in settings rebuilds this provider and invalidates
-/// every dependent lens. That is why nothing downstream is keyed by viewer: the
-/// viewer is part of *which client you are talking to*, not part of a query's
-/// identity.
-/// Field-by-field `select`, not a bare `watch` of the whole `SettingsModel`, and
-/// that is a correctness point rather than a micro-optimisation: this provider
-/// closes a live `Dio` in `onDispose`, so rebuilding it cancels every in-flight
-/// Stream request and invalidates every surface downstream. Watching the whole
-/// object made a theme-mode toggle do exactly that. Same shape as
-/// `truenasClientProvider`.
+/// Follows the **lens**, like every other service's client. It used to read the
+/// flat `jellyfinUrl`/`jellyfinApiKey`/`jellyfinUserId` projections, which are
+/// always the *first* connection — so a second Jellyfin could be configured,
+/// probed and counted and never once read.
+///
+/// The chosen viewer is read here rather than passed per call, so picking a
+/// different household member rebuilds this provider and invalidates every
+/// dependent lens. That is why nothing downstream is keyed by viewer: the viewer
+/// is part of *which client you are talking to*, not part of a query's identity.
+/// It comes off the resolved instance for the same reason the address does —
+/// two servers have two user tables.
+///
+/// `watchTransport`, not a bare `watch` of the whole `SettingsModel`, and that is
+/// a correctness point rather than a micro-optimisation: this provider closes a
+/// live `Dio` in `onDispose`, so rebuilding it cancels every in-flight Stream
+/// request and invalidates every surface downstream. Watching the whole object
+/// made a theme-mode toggle do exactly that.
 final jellyfinClientProvider = Provider<JellyfinClient>((ref) {
-  final url = ref.watch(currentSettingsProvider.select((s) => s.jellyfinUrl));
-  final apiKey = ref.watch(
-    currentSettingsProvider.select((s) => s.jellyfinApiKey),
+  return _jellyfinClient(ref, instanceId: null);
+});
+
+/// Jellyfin bound to one named connection, whatever the lens is pointing at.
+///
+/// The same shape as `radarrServiceForProvider` — read its comment before
+/// touching this one. What it buys here is the settings form: the viewer picker
+/// lists `/Users` of the connection being edited, which is not necessarily the
+/// one the rest of the app is reading through, and a user id only means anything
+/// against the server that issued it.
+///
+/// The lens's own id collapses onto [jellyfinClientProvider] rather than opening
+/// a second socket to the same server — and so an override of the plain provider
+/// is not quietly bypassed on the path that names a connection. `read` of the
+/// lens for the same reason the \*arr families give: watching it would rebuild
+/// every entry whenever the lens moved, and a rebuild closes the outgoing `Dio`
+/// under whatever it was carrying.
+final jellyfinClientForProvider = Provider.family<JellyfinClient, String>((
+  ref,
+  instanceId,
+) {
+  final lens = ref.read(activeInstanceProvider(ServiceKey.jellyfin))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == lens) {
+    return ref.watch(jellyfinClientProvider);
+  }
+  return _jellyfinClient(ref, instanceId: instanceId);
+});
+
+/// Builds a client for one connection: the lens's when [instanceId] is null.
+///
+/// The viewer is read from the **instance**, not from `settings.jellyfinUserId`.
+/// That projection is the first connection's, so following the lens without this
+/// would have every user-scoped query on the second server carry a user id from
+/// the first server's user table — an id that does not exist there.
+JellyfinClient _jellyfinClient(Ref ref, {required String? instanceId}) {
+  final transport = watchTransport(
+    ref,
+    ServiceKey.jellyfin,
+    instanceId: instanceId,
   );
-  final userId = ref.watch(
-    currentSettingsProvider.select((s) => s.jellyfinUserId),
-  );
-  final certFingerprint = ref.watch(
-    currentSettingsProvider.select((s) => s.pinForUrl(s.jellyfinUrl)),
-  );
-  if (url.isEmpty || apiKey.isEmpty) {
+  if (!transport.configured) {
     throw Exception('Jellyfin not configured');
   }
+  final viewerId = ref.watch(
+    currentSettingsProvider.select(
+      (s) => s.instanceById(transport.instanceId)?.viewerId ?? '',
+    ),
+  );
   final client = JellyfinClient(
-    baseUrl: url,
-    apiKey: apiKey,
-    userId: userId,
-    pinnedCertFingerprint: certFingerprint,
+    baseUrl: transport.url,
+    apiKey: transport.apiKey,
+    userId: viewerId,
+    pinnedCertFingerprint: transport.pin,
   );
   ref.onDispose(client.close);
   return client;
-});
+}
 
 /// The same client, seen through the interface the Stream surfaces are written
 /// against.
@@ -95,6 +137,17 @@ final jellyfinLibrariesProvider = FutureProvider<List<StreamLibrary>>((
 final jellyfinViewersProvider = FutureProvider<List<StreamViewer>>((ref) async {
   return ref.watch(jellyfinServerProvider).getViewers();
 });
+
+/// The same list, from one named connection.
+///
+/// What the settings picker reads: it is filling in a viewer for the connection
+/// whose form is on screen, and a user id is only meaningful against the server
+/// that issued it. Empty id means the lens, which is what every caller meant
+/// before Jellyfin could have two.
+final jellyfinViewersForProvider =
+    FutureProvider.family<List<StreamViewer>, String>((ref, instanceId) async {
+      return ref.watch(jellyfinClientForProvider(instanceId)).getViewers();
+    });
 
 /// One item at any depth, by id.
 ///

@@ -369,6 +369,52 @@ void main() {
       expect(radarr.lastPageSize, 200);
     });
 
+    test('a failed load-more page stays retryable and says so', () async {
+      // The page that never arrived used to be read as the page that proved the
+      // list had ended: `lastPageFull` was derived from the missing result,
+      // came out false, and took `hasMore` with it — so one unreachable
+      // connection closed its own half of the feed for good, looking exactly
+      // like a list that had run out. `loadMoreFailed` was never set by
+      // anything either, which left the footer's retry unreachable code.
+      final radarr = _FlakySecondPageRadarrService(
+        firstPage: [
+          for (var i = 0; i < 50; i++)
+            {
+              'sourceTitle': 'Release $i',
+              'eventType': 'grabbed',
+              'date': '2026-04-02T11:18:00Z',
+            },
+        ],
+      );
+      final container = createContainer(radarrService: radarr);
+
+      final notifier = container.read(globalHistoryFeedProvider.notifier);
+      await notifier.loading;
+      expect(container.read(globalHistoryFeedProvider).hasMore, isTrue);
+
+      await notifier.loadMore();
+
+      final state = container.read(globalHistoryFeedProvider);
+      expect(state.loadMoreFailed, isTrue, reason: 'the footer offers a retry');
+      expect(
+        state.hasMore,
+        isTrue,
+        reason:
+            'a page that did not arrive says nothing about whether one is '
+            'there',
+      );
+      expect(state.feed!.items, hasLength(50), reason: 'page one still stands');
+
+      // And the retry actually reaches the server again rather than being a
+      // button over an exhausted cursor.
+      radarr.failNext = false;
+      await notifier.loadMore();
+
+      final recovered = container.read(globalHistoryFeedProvider);
+      expect(recovered.loadMoreFailed, isFalse);
+      expect(recovered.feed!.items, hasLength(60));
+    });
+
     test('a failed first page is reported, not swallowed', () async {
       final container = createContainer(
         radarrService: _ThrowingHistoryRadarrService(),
@@ -509,6 +555,36 @@ class _PagedHistoryRadarrService extends FakeRadarrService {
     final slice = records.sublist(_served, end);
     _served = end;
     return slice;
+  }
+}
+
+/// Serves page one, then throws once before serving the rest.
+class _FlakySecondPageRadarrService extends FakeRadarrService {
+  _FlakySecondPageRadarrService({required this.firstPage});
+
+  final List<dynamic> firstPage;
+  bool failNext = true;
+  bool _servedFirst = false;
+
+  @override
+  Future<List<dynamic>> getHistory({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    if (!_servedFirst) {
+      _servedFirst = true;
+      return firstPage;
+    }
+    if (failNext) throw Exception('Radarr went away mid-scroll');
+    return [
+      for (var i = 0; i < 10; i++)
+        {
+          'sourceTitle': 'Late release $i',
+          'eventType': 'grabbed',
+          'date': '2026-04-02T11:18:00Z',
+        },
+    ];
   }
 }
 

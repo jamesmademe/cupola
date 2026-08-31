@@ -643,7 +643,10 @@ Future<List<Override>> _lensOverrides() async {
       const SettingsModel(instances: _lensInstances),
     ),
     for (final instance in _lensInstances)
-      instanceSummaryProvider(instance.id).overrideWith(
+      instanceSummaryProvider((
+        service: instance.service,
+        instanceId: instance.id,
+      )).overrideWith(
         (ref) async => ServiceSummary(
           service: instance.service,
           status: ServiceSummaryStatus.online,

@@ -276,7 +276,12 @@ void main() {
       expect(state.isLoading, isFalse);
       expect(state.canSubmit, isFalse);
       expect(state.profiles, isEmpty);
-      expect(state.error, "Couldn't reach Bazarr · Away.");
+      // "Bazarr", not "Bazarr · Away": there is one Bazarr in this model, and a
+      // connection is named only when there is a second to tell it apart from.
+      // The label on the fixture is left over from a sibling this test does not
+      // configure — exactly the state `SettingsModel.connectionTitle` exists to
+      // read past, since a real one is left behind by removing that sibling.
+      expect(state.error, "Couldn't reach Bazarr.");
       expect(state.errorDetail, contains('has no add form'));
     },
   );

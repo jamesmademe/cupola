@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -263,24 +262,24 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
               ],
             )
           else
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton(onPressed: widget.onBack, child: const Text('Back')),
-                // The offer, and only after the server has answered: proving one
-                // works is the moment "there is a second one" becomes a thought
-                // the user is already having. It shares Back's row rather than
-                // taking one of its own — this screen's height is tuned against
-                // the ring, and a third row is what that tuning was fixing.
-                if (widget.status == ServiceConnectionStatus.connected)
-                  TextButton(
-                    onPressed: () => context.push(
-                      '/settings/service/${widget.service.routeParam}?new=1',
-                    ),
-                    child: Text('Add another ${widget.service.title}'),
-                  ),
-              ],
-            ),
+            // No "Add another <Service>" here, and it is not an omission.
+            //
+            // It was tried, as a push to `/settings/service/<param>?new=1` the
+            // moment the server answered. The router's own redirect sends every
+            // location other than `/onboarding` back to `/onboarding` until the
+            // walk is finished (`router.dart`, `redirect:`), and go_router
+            // applies that to imperative pushes too — so the button pushed a
+            // *second* onboarding screen on top of the one in progress. Widening
+            // the redirect is not the fix either: the destination lives inside
+            // the Settings branch of the `StatefulShellRoute`, so honouring it
+            // would drop the user into the tabbed shell, nav bar and all, in the
+            // middle of a flow that has no tabs.
+            //
+            // A second connection during onboarding therefore belongs to the
+            // walk itself — another page in the flow, not a door out of it —
+            // which is its own change. Settings → Connections offers it the
+            // moment the walk ends.
+            TextButton(onPressed: widget.onBack, child: const Text('Back')),
         ],
       ),
     );

@@ -508,23 +508,60 @@ Future<ServiceDiagnosis> _explainCredentialRefusal(
   );
 }
 
-/// Verifies [service] using the credentials already saved in [settings].
+/// Verifies **every** configured connection of [service] and reports the worst
+/// answer among them.
+///
+/// Folded rather than answered off the first instance, and that is the whole of
+/// what this function had to learn: the surfaces that read it — the Connections
+/// row, the Settings home list — speak in services and now also print how many
+/// connections a service has. "Connected · radarr.lan · 2 connections" while the
+/// second Radarr is switched off is a green row for a stack with a dead server
+/// in it, and it is green on the one screen the user would go to in order to fix
+/// it. `ServiceMatrixCell` already folds its pip the same way, through
+/// [foldedServiceHealthProvider].
+///
+/// The cost is one probe per connection instead of one per service. That is the
+/// honest price of the count beside it: before, the second connection was never
+/// asked at all.
 Future<ServiceDiagnosis> diagnoseService(
   ServiceKey service,
   SettingsModel settings,
-) {
-  final instance = settings.primaryOf(service);
-  if (instance == null) {
-    return Future.value(const ServiceDiagnosis.notConfigured());
-  }
-  return diagnoseInstance(instance, settings);
+) async {
+  final instances = settings.configuredInstancesOf(service);
+  if (instances.isEmpty) return const ServiceDiagnosis.notConfigured();
+
+  final results = await Future.wait([
+    for (final instance in instances) diagnoseInstance(instance, settings),
+  ]);
+  return worstDiagnosis(results);
 }
+
+/// The diagnosis a folded readout should show: the one the user most needs to
+/// act on.
+///
+/// Ordered by how much attention the state wants rather than by enum order, so
+/// a single unreachable connection is never hidden behind a sibling that is up.
+ServiceDiagnosis worstDiagnosis(List<ServiceDiagnosis> results) {
+  var worst = results.first;
+  for (final result in results.skip(1)) {
+    if (_attention(result.status) > _attention(worst.status)) worst = result;
+  }
+  return worst;
+}
+
+int _attention(ServiceConnectionStatus status) => switch (status) {
+  ServiceConnectionStatus.disconnected => 3,
+  ServiceConnectionStatus.notConfigured => 2,
+  ServiceConnectionStatus.checking => 1,
+  ServiceConnectionStatus.connected => 0,
+};
 
 /// Diagnoses one specific connection.
 ///
 /// The form that matters once a service can have more than one: [diagnoseService]
-/// answers for whichever is first, which is the wrong server to open a socket to
-/// while someone is on the settings screen for the second. [settings] is still
+/// folds every connection into one answer, which is right for a row that names
+/// the service and wrong for a form that is editing exactly one of them.
+/// [settings] is still
 /// needed for the two values that are not the instance's own — the pin, which
 /// belongs to a TLS origin, and the Plex client id, which belongs to the install.
 Future<ServiceDiagnosis> diagnoseInstance(
@@ -626,20 +663,24 @@ bool certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
   _ => true,
 };
 
-/// Verifies [service] against [settings] and, when it fails in a way a
+/// Verifies one connection against [settings] and, when it fails in a way a
 /// certificate could explain, attaches the probe so the UI can offer to trust
 /// it. Every service can reach this since ADR-6 — there is no
 /// pinning-capability gate left to check. Never trusts anything itself.
-Future<ServiceDiagnosis> diagnoseServiceWithCertProbe(
-  ServiceKey service,
+///
+/// Takes the instance rather than the service: the caller is a form editing one
+/// connection, and probing the origin of a *different* one would put the trust
+/// prompt in front of the user for a certificate they were not asked about.
+Future<ServiceDiagnosis> diagnoseInstanceWithCertProbe(
+  ServiceInstance instance,
   SettingsModel settings, {
   CertificateProber probe = probeUntrustedCertificate,
 }) async {
-  final diagnosis = await diagnoseService(service, settings);
+  final diagnosis = await diagnoseInstance(instance, settings);
   if (!diagnosis.isDisconnected || !certProbeWorthwhile(diagnosis.reason)) {
     return diagnosis;
   }
-  final url = settings.urlFor(service);
+  final url = instance.url;
   final certProbe = await probe(
     url,
     pinnedFingerprint: settings.pinForUrl(url) ?? '',
@@ -704,8 +745,27 @@ String connectionFailureMessage(
   }
 }
 
-/// The connection state of a single service, refreshed whenever its saved
+/// The connection state of one **connection**, refreshed whenever its saved
 /// address or credentials change.
+///
+/// What a form editing a named connection has to read. [serviceDiagnosisProvider]
+/// folds every connection of a service into its worst answer, which is right for
+/// a row that speaks in services and wrong under a form whose fields belong to
+/// exactly one server: it would report "Connected" over the second Radarr's
+/// address because the first one is up.
+///
+/// Carries the same "no local-network gate" caveat as the per-service provider
+/// below, and for the same reason.
+final instanceDiagnosisProvider =
+    FutureProvider.family<ServiceDiagnosis, String>((ref, instanceId) async {
+      final settings = ref.watch(currentSettingsProvider);
+      final instance = settings.instanceById(instanceId);
+      if (instance == null) return const ServiceDiagnosis.notConfigured();
+      return diagnoseInstance(instance, settings);
+    });
+
+/// The connection state of a single service — folded across every connection it
+/// has, so the answer is never better than its worst one. See [diagnoseService].
 final serviceDiagnosisProvider =
     FutureProvider.family<ServiceDiagnosis, ServiceKey>((ref, service) async {
       final settings = ref.watch(currentSettingsProvider);

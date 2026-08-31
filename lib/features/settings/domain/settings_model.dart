@@ -323,6 +323,23 @@ class SettingsModel {
     return _upsertPrimary(service, viewerId: viewerId);
   }
 
+  /// What to call the connection [id] in a sentence.
+  ///
+  /// The one home for the rule every surface follows: a connection is named
+  /// **only when there is more than one of its service to tell apart**. With a
+  /// single Radarr this is "Radarr" whatever label the instance happens to be
+  /// carrying — and it very often is carrying one, because a label derived when
+  /// a second connection was added outlives that connection's removal.
+  ///
+  /// [fallback] names the service for an id that matches nothing, which is what
+  /// a link or a queued job from a connection since removed still holds.
+  String connectionTitle(String id, ServiceKey fallback) {
+    final instance = instanceById(id);
+    if (instance == null) return fallback.title;
+    if (!hasMultipleInstances(instance.service)) return instance.service.title;
+    return instance.displayTitle;
+  }
+
   /// Whether any instance of [service] is set up enough to talk to.
   bool isServiceConfigured(ServiceKey service) =>
       instancesOf(service).any((instance) => instance.isConfigured);

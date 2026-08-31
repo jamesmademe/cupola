@@ -20,10 +20,12 @@ Future<void> showArrAddSheet(
   WidgetRef ref,
   ArrAddRequest request,
 ) {
-  final instance = ref
+  // Through `connectionTitle`, not `displayTitle`: a lone Radarr must not be
+  // announced as "Radarr · 7878" because it kept the name a since-removed
+  // sibling made it derive.
+  final connectionName = ref
       .read(currentSettingsProvider)
-      .instanceById(request.instanceId);
-  final connectionName = instance?.displayTitle ?? request.service.title;
+      .connectionTitle(request.instanceId, request.service);
 
   return AppBottomSheet.show<void>(
     context: context,

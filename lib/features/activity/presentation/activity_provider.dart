@@ -576,7 +576,10 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
         if (entry.value.hasMore) entry.key,
     ];
     final fetched = <ActivityPageKey, List<GlobalActivityItem>>{};
-    await Future.wait([for (final pair in pairs) _loadNextPage(pair, fetched)]);
+    final failed = <ActivityPageKey>{};
+    await Future.wait([
+      for (final pair in pairs) _loadNextPage(pair, fetched, failed),
+    ]);
 
     if (generation != _generation) return;
 
@@ -589,16 +592,32 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
       final pair = entry.key;
       final cursor = entry.value;
       final extra = fetched[pair];
+      final didFail = failed.contains(pair);
       cursors[pair] = PagedCursor(
         fetched: cursor.fetched + (extra?.length ?? 0),
         nextPage: cursor.nextPage + (extra == null ? 0 : 1),
-        lastPageFull: (extra?.length ?? 0) == _pagedMorePageSize,
+        // A page that never arrived says nothing about whether one exists, so
+        // the pair keeps the answer it already had and stays retryable. Derived
+        // from the missing page instead, `lastPageFull` came out false, `hasMore`
+        // went false with it, and one unreachable connection ended its own half
+        // of the list for good — looking, on screen, exactly like a list that
+        // had run out.
+        lastPageFull: didFail
+            ? cursor.lastPageFull
+            : (extra?.length ?? 0) == _pagedMorePageSize,
         configured: cursor.configured,
         error: cursor.error,
       );
     }
 
-    state = PagedArrFeedState(feed: _buildFeed(cursors), cursors: cursors);
+    // Reported, so the footer offers the retry it already knows how to draw.
+    // Nothing ever set this, which left `_LoadMoreFooter`'s failure branch
+    // unreachable code.
+    state = PagedArrFeedState(
+      feed: _buildFeed(cursors),
+      cursors: cursors,
+      loadMoreFailed: failed.isNotEmpty,
+    );
   }
 
   Future<void> _reload() async {
@@ -673,6 +692,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
   Future<void> _loadNextPage(
     ActivityPageKey pair,
     Map<ActivityPageKey, List<GlobalActivityItem>> fetched,
+    Set<ActivityPageKey> failed,
   ) async {
     final (kind, serviceType, instanceId) = pair;
     final cursor = state.cursors[pair];
@@ -694,7 +714,9 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
           .map((item) => _arrItem(kind, connection, stringKeyMap(item)))
           .toList(growable: false);
     } catch (_) {
-      // The pair keeps its cursor, so the footer can offer a retry.
+      // Recorded so [loadMore] can leave this pair's `hasMore` alone and light
+      // the footer's retry. Swallowed silently, the pair looked exhausted.
+      failed.add(pair);
     }
   }
 

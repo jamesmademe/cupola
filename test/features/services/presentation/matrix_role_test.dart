@@ -66,9 +66,10 @@ Future<ProviderContainer> _pump(
         (ref) => SettingsModel(instances: instances),
       ),
       for (final instance in instances)
-        instanceSummaryProvider(
-          instance.id,
-        ).overrideWith((ref) async => _up(instance.service)),
+        instanceSummaryProvider((
+          service: instance.service,
+          instanceId: instance.id,
+        )).overrideWith((ref) async => _up(instance.service)),
     ],
   );
   addTearDown(container.dispose);
@@ -261,10 +262,14 @@ void main() {
       expect(find.text('elsewhere'), findsOneWidget);
     });
 
-    testWidgets('a service that ignores the lens stays folded', (tester) async {
-      // Two Jellyfin get one cell even here. A cell per connection would let
-      // the user pick a destination the app then silently ignores — the picker
-      // telling the same lie the badge is hidden to avoid.
+    testWidgets('a media server gets a cell per connection too', (
+      tester,
+    ) async {
+      // Jellyfin, Plex and TrueNAS were folded even on the picker, because
+      // their clients were built from the flat first-instance projections and a
+      // cell per connection would have offered a destination the app then
+      // ignored. Their clients go through `watchTransport` now, so the picker
+      // owes them the same cell per connection as everyone else.
       const home = ServiceInstance(
         id: 'jellyfin',
         service: ServiceKey.jellyfin,
@@ -285,9 +290,11 @@ void main() {
         instances: const [_fourK, _hd, home, away],
       );
 
-      expect(_cell('jellyfin'), findsOneWidget);
-      expect(_cell('jellyfin', 'jellyfin-away11'), findsNothing);
-      // And the service that does read through the lens is unaffected.
+      expect(_cell('jellyfin', 'jellyfin'), findsOneWidget);
+      expect(_cell('jellyfin', 'jellyfin-away11'), findsOneWidget);
+      // The folded cell is what a picker must never fall back to: it reaches
+      // the service and hides every connection but the lens's.
+      expect(_cell('jellyfin'), findsNothing);
       expect(_cell('radarr', 'radarr-hd11111'), findsOneWidget);
     });
 

@@ -46,9 +46,10 @@ ProviderContainer _container(Map<String, bool> upById) {
         (ref) => const SettingsModel(instances: [_fourK, _hd, _anime]),
       ),
       for (final entry in upById.entries)
-        instanceSummaryProvider(
-          entry.key,
-        ).overrideWith((ref) async => _summary(online: entry.value)),
+        instanceSummaryProvider((
+          service: ServiceKey.radarr,
+          instanceId: entry.key,
+        )).overrideWith((ref) async => _summary(online: entry.value)),
     ],
   );
   addTearDown(container.dispose);
@@ -91,7 +92,12 @@ void main() {
     for (final id in container.read(
       serviceInstanceIdsProvider(ServiceKey.radarr),
     )) {
-      await container.read(instanceSummaryProvider(id).future);
+      await container.read(
+        instanceSummaryProvider((
+          service: ServiceKey.radarr,
+          instanceId: id,
+        )).future,
+      );
     }
 
     final folded = container.read(
@@ -112,7 +118,12 @@ void main() {
     for (final id in container.read(
       serviceInstanceIdsProvider(ServiceKey.radarr),
     )) {
-      await container.read(instanceSummaryProvider(id).future);
+      await container.read(
+        instanceSummaryProvider((
+          service: ServiceKey.radarr,
+          instanceId: id,
+        )).future,
+      );
     }
 
     final folded = container.read(
@@ -148,12 +159,14 @@ void main() {
         initialActiveInstancesProvider.overrideWithValue({
           ServiceKey.radarr: 'radarr-hd11111',
         }),
-        instanceSummaryProvider(
-          'radarr',
-        ).overrideWith((ref) async => _summary(online: true)),
-        instanceSummaryProvider(
-          'radarr-hd11111',
-        ).overrideWith((ref) async => _summary(online: false)),
+        instanceSummaryProvider((
+          service: ServiceKey.radarr,
+          instanceId: 'radarr',
+        )).overrideWith((ref) async => _summary(online: true)),
+        instanceSummaryProvider((
+          service: ServiceKey.radarr,
+          instanceId: 'radarr-hd11111',
+        )).overrideWith((ref) async => _summary(online: false)),
       ],
     );
     addTearDown(container.dispose);

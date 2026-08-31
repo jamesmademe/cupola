@@ -207,40 +207,34 @@ class ServiceRoutes {
     return '$qbittorrentTorrentBase/$hash';
   }
 
-  static String bazarrSeries(
-    int sonarrSeriesId, {
-    String? heroTag,
-    String? instanceId,
-  }) {
+  /// No `i` on the two Bazarr routes, and that is the honest shape rather than
+  /// an omission: a Bazarr row's id is a **third** server's (`radarrId` /
+  /// `sonarrSeriesId`), so the connection that matters at the destination is an
+  /// arr's, which nothing on the row knows. They briefly took an `instanceId`
+  /// that no caller passed and no route read.
+  static String bazarrSeries(int sonarrSeriesId, {String? heroTag}) {
     return _withQuery('$bazarrSeriesBase/$sonarrSeriesId', {
       'heroTag': heroTag,
-      'i': instanceId,
     });
   }
 
-  static String bazarrMovie(
-    int radarrId, {
-    String? heroTag,
-    String? instanceId,
-  }) {
-    return _withQuery('$bazarrMovieBase/$radarrId', {
-      'heroTag': heroTag,
-      'i': instanceId,
-    });
+  static String bazarrMovie(int radarrId, {String? heroTag}) {
+    return _withQuery('$bazarrMovieBase/$radarrId', {'heroTag': heroTag});
   }
 
+  /// Likewise no `i`: Discover resolves through the lens end to end, so a
+  /// connection in the URL would be a claim the page cannot honour. The day
+  /// `_discoverDetailPage` reads one, this is where it goes back.
   static String seerrDetail({
     required String mediaType,
     required int id,
     String? heroTag,
     String? posterUrl,
-    String? instanceId,
   }) {
     final normalizedMediaType = mediaType == 'tv' ? 'tv' : 'movie';
     return _withQuery('$seerr/$normalizedMediaType/$id', {
       'heroTag': heroTag,
       'posterUrl': posterUrl,
-      'i': instanceId,
     });
   }
 

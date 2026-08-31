@@ -358,6 +358,41 @@ void main() {
       );
     });
 
+    test('connectionTitle drops a label the sibling took with it', () {
+      // A label outlives what made it necessary: adding a second Radarr derives
+      // a name for the first, and removing the second leaves that name behind.
+      // Every badge and chip goes quiet again because they all ask
+      // `hasMultipleInstances` first — `displayTitle` does not, so a sentence
+      // built straight off it announced "Radarr \u00b7 7878" for the only Radarr
+      // there is.
+      final lone = SettingsModel(
+        instances: [_radarr('radarr', label: '7878', url: 'https://nas:7878')],
+      );
+
+      expect(lone.instanceById('radarr')!.displayTitle, 'Radarr \u00b7 7878');
+      expect(lone.connectionTitle('radarr', ServiceKey.radarr), 'Radarr');
+    });
+
+    test('connectionTitle names the connection once there are two', () {
+      final pair = SettingsModel(
+        instances: [
+          _radarr('radarr', label: 'Home', url: 'https://home:7878'),
+          _radarr('radarr-away11', label: 'Away', url: 'https://away:7878'),
+        ],
+      );
+
+      expect(
+        pair.connectionTitle('radarr-away11', ServiceKey.radarr),
+        'Radarr \u00b7 Away',
+      );
+      // An id naming nothing \u2014 a queued job from a connection since removed \u2014
+      // falls back to the service rather than to an empty sentence.
+      expect(
+        pair.connectionTitle('radarr-gone11', ServiceKey.radarr),
+        'Radarr',
+      );
+    });
+
     test('servicesSharingOriginOf names the service once, not twice', () {
       // The sentence version: "forgetting this also affects Radarr, Radarr"
       // is how a per-instance list reads to someone who thinks in servers.

@@ -152,13 +152,13 @@ void main() {
     expect(find.text('4K'), findsNothing);
   });
 
-  testWidgets('a service that does not read through the lens shows none', (
-    tester,
-  ) async {
-    // Jellyfin, Plex and TrueNAS keep their own clients and are still bound to
-    // the first connection. A badge there would change its own label and
-    // nothing else — and the user has no way to tell, so they would read the
-    // whole screen as the other server's.
+  testWidgets('a media server gets a badge like everyone else', (tester) async {
+    // Jellyfin, Plex and TrueNAS used to be exempt: their clients were built
+    // from the flat first-instance projections, so a badge there would have
+    // changed its own label and nothing else. All three go through
+    // `watchTransport` now — including Jellyfin's chosen viewer, which is read
+    // off the resolved instance rather than off `settings.jellyfinUserId` —
+    // so the badge is honest and the exemption is gone.
     await _pump(
       tester,
       service: ServiceKey.jellyfin,
@@ -183,9 +183,9 @@ void main() {
     );
 
     expect(
-      tester.getSize(find.byType(InstanceLensBadge)),
-      Size.zero,
-      reason: 'two connections, and still no lens to offer',
+      find.text('HOME'),
+      findsOneWidget,
+      reason: 'two Jellyfin, so the badge names the one being read',
     );
   });
 
