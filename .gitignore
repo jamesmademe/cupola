@@ -10,7 +10,7 @@
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+build/
 dist/
 
 # Symbolication related
