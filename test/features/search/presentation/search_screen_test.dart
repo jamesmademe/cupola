@@ -217,6 +217,8 @@ Future<void> _pumpFrames(WidgetTester tester) async {
   }
 }
 
+// `Override` is not exported by `flutter_riverpod` — see the note in main.dart.
+// ignore: strict_top_level_inference
 _overrides({bool withPoster = false}) {
   return [
     currentSettingsProvider.overrideWith(

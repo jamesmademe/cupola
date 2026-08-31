@@ -75,7 +75,7 @@ class ReleaseSearchTarget {
   /// The containing entity: `seriesId` for an episode, `artistId` for an album.
   final int? parentId;
 
-  ReleaseSearchTarget.season({
+  const ReleaseSearchTarget.season({
     required int seriesId,
     required int this.seasonNumber,
     required this.label,
@@ -85,7 +85,7 @@ class ReleaseSearchTarget {
        parentId = null,
        instanceId = '';
 
-  ReleaseSearchTarget.episode({
+  const ReleaseSearchTarget.episode({
     required int episodeId,
     required this.label,
     int? seriesId,
@@ -96,7 +96,7 @@ class ReleaseSearchTarget {
        parentId = seriesId,
        instanceId = '';
 
-  ReleaseSearchTarget.movie({required int movieId, required this.label})
+  const ReleaseSearchTarget.movie({required int movieId, required this.label})
     : service = ServiceKey.radarr,
       scope = ReleaseSearchScope.movie,
       id = movieId,
@@ -104,7 +104,7 @@ class ReleaseSearchTarget {
       parentId = null,
       instanceId = '';
 
-  ReleaseSearchTarget.artist({required int artistId, required this.label})
+  const ReleaseSearchTarget.artist({required int artistId, required this.label})
     : service = ServiceKey.lidarr,
       scope = ReleaseSearchScope.artist,
       id = artistId,
@@ -112,7 +112,7 @@ class ReleaseSearchTarget {
       parentId = null,
       instanceId = '';
 
-  ReleaseSearchTarget.album({
+  const ReleaseSearchTarget.album({
     required int albumId,
     required this.label,
     int? artistId,

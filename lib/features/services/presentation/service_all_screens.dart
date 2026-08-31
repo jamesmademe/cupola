@@ -145,7 +145,7 @@ class _FilterChipRow extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         itemCount: filters.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
         itemBuilder: (context, index) {
           final filter = filters[index];
           final isSelected = filter == selected;

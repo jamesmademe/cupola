@@ -11,9 +11,9 @@
 ///
 /// A toggle fails for a second reason. On a stack with auto-approvals — a normal
 /// configuration — the pending side is permanently empty, so the control exists
-/// to be dismissed once and ignored forever. And on a hub where thirteen services
-/// each get one matrix cell, spending a control row on a Seerr-only sub-choice
-/// over-serves one service out of thirteen.
+/// to be dismissed once and ignored forever. And on a hub where every service
+/// gets one matrix cell, spending a control row on a Seerr-only sub-choice
+/// over-serves one of them at the expense of the rest.
 ///
 /// So the region never filters. It **sorts**, pending first, and every request
 /// stays reachable in every data condition. "Is anything waiting on me" is

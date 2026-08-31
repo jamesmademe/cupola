@@ -209,7 +209,7 @@ void main() {
     // Both arrs configured: the provider now skips any source the user has not
     // set up, so an unconfigured service contributes nothing rather than a
     // failed fetch.
-    final _bothArrs = settingsWith(
+    final bothArrs = settingsWith(
       radarrUrl: 'http://radarr.local:7878',
       radarrApiKey: 'key',
       sonarrUrl: 'http://sonarr.local:8989',
@@ -220,7 +220,7 @@ void main() {
       'combines Radarr and Sonarr queue items with media-first hierarchy',
       () async {
         final container = _container(
-          settings: _bothArrs,
+          settings: bothArrs,
           radarrService: _QueueRadarrService([
             {
               'title': 'Furiosa.2024.2160p.WEB-DL-GROUP',
@@ -301,7 +301,7 @@ void main() {
 
     test('caps the preview and keeps the closest to landing', () async {
       final container = _container(
-        settings: _bothArrs,
+        settings: bothArrs,
         radarrService: _QueueRadarrService([
           for (var index = 0; index < 8; index++)
             {
@@ -328,7 +328,7 @@ void main() {
     test('an unrelated settings change does not re-poll the queue', () async {
       final radarr = _CountingQueueRadarrService();
       final container = _mutableSettingsContainer(
-        initial: _bothArrs,
+        initial: bothArrs,
         radarrService: radarr,
       );
 
@@ -337,7 +337,7 @@ void main() {
 
       container
           .read(_settingsHolderProvider.notifier)
-          .set(_bothArrs.copyWith(themeMode: AppThemeMode.light));
+          .set(bothArrs.copyWith(themeMode: AppThemeMode.light));
       await container.read(servicesQueueProvider.future);
 
       expect(radarr.calls, 1, reason: 'the queue does not depend on the theme');
@@ -349,7 +349,7 @@ void main() {
       // queue.
       final radarr = _CountingQueueRadarrService();
       final container = _mutableSettingsContainer(
-        initial: _bothArrs,
+        initial: bothArrs,
         radarrService: radarr,
       );
 
@@ -357,7 +357,7 @@ void main() {
       container
           .read(_settingsHolderProvider.notifier)
           .set(
-            _bothArrs.copyWithService(
+            bothArrs.copyWithService(
               ServiceKey.radarr,
               url: 'http://moved.local:7878',
             ),
@@ -396,7 +396,7 @@ void main() {
 
     test('keeps queue available when one service fails', () async {
       final container = _container(
-        settings: _bothArrs,
+        settings: bothArrs,
         radarrService: _ThrowingRadarrService(),
         sonarrService: _QueueSonarrService([
           {'title': 'Shogun', 'size': 100, 'sizeleft': 0},

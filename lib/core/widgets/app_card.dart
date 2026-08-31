@@ -478,12 +478,7 @@ class SettingsCard extends StatelessWidget {
     final effectiveAccentColor = accentColor ?? colorScheme.primary;
 
     final spokenLabel =
-        semanticLabel ??
-        [
-          title,
-          if (subtitleLeadingLabel != null) subtitleLeadingLabel!,
-          if (subtitle != null) subtitle!,
-        ].join(', ');
+        semanticLabel ?? [title, ?subtitleLeadingLabel, ?subtitle].join(', ');
 
     final row = Row(
       children: [

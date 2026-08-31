@@ -107,7 +107,7 @@ class ManualImportFrame extends StatelessWidget {
         child: Column(
           children: [
             Expanded(child: child),
-            if (bottomBar != null) bottomBar!,
+            ?bottomBar,
           ],
         ),
       ),

@@ -194,7 +194,7 @@ class _ReelCommandButtonState extends State<ReelCommandButton> {
     final candidates = <String>[
       widget.label,
       if (widget.busyLabel case final busy?) ...[busy, '$busy...'],
-      if (widget.failureLabel case final f?) f,
+      ?widget.failureLabel,
       ...widget.slotLabels,
     ];
     var widest = 0.0;

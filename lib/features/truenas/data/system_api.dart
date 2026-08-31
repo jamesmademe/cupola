@@ -67,7 +67,7 @@ class TrueNasSystemApi extends TrueNasApiBase {
           'subject': 'Cupola test email',
           'text': 'This is a test email from Cupola.',
         },
-        if (config != null) config,
+        ?config,
       ]);
 
   Future<List<Map<String, dynamic>>> getCertificates() =>

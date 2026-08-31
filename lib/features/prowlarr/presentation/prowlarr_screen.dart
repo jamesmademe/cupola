@@ -418,7 +418,7 @@ class _HistoryTile extends StatelessWidget {
     final source = prowlarrHistorySource(item);
     final title = prowlarrHistoryTitle(item);
     final subtitleParts = <String>[
-      if (source != null) source,
+      ?source,
       if (item.date != null) prowlarrRelativeTime(item.date!),
     ];
 

@@ -23,7 +23,7 @@ class ServicesScreen extends ConsumerWidget {
 
   /// How stale the control room may be before returning to it earns a refetch.
   ///
-  /// Generous on purpose: this screen reads thirteen services, so a return is
+  /// Generous on purpose: this screen reads every service, so a return is
   /// expensive and the figures it shows are not second-by-second. Two minutes is
   /// long enough that tab-hopping never triggers it and short enough that a
   /// screen left over lunch is not believed.

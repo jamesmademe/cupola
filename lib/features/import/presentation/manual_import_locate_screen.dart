@@ -236,10 +236,7 @@ class _RootFolderChip extends StatelessWidget {
     return PressableScale(
       onTap: onTap,
       semanticLabel: 'Root folder ${folder.displayName}',
-      semanticValue: [
-        if (subtitle != null) subtitle,
-        if (selected) 'selected',
-      ].join(', '),
+      semanticValue: [?subtitle, if (selected) 'selected'].join(', '),
       excludeChildSemantics: true,
       child: AnimatedContainer(
         duration: AppAnimation.durationSm,

@@ -24,8 +24,8 @@ class AppSkeleton {
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         itemCount: count,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
-        itemBuilder: (_, __) =>
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
+        itemBuilder: (_, _) =>
             ShimmerPlaceholder.card(width: width, height: height),
       ),
     );

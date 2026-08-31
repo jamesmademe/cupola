@@ -1,0 +1,11 @@
+# The lint set the project has always declared but never applied.
+#
+# `flutter_lints` sits in `dev_dependencies`, but a lint package only takes
+# effect through an `include:` from this file — and this file did not exist, so
+# `flutter analyze --fatal-infos`, locally and in CI, was checking language
+# diagnostics and not one lint rule. Adding it turned up 181 issues across the
+# tree, six of them `use_build_context_synchronously`.
+#
+# Kept to the stock Flutter set on purpose: the point is to have the gate the
+# repo already claimed, not a house style nobody agreed to.
+include: package:flutter_lints/flutter.yaml

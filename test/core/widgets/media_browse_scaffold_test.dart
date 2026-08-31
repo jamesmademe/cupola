@@ -476,7 +476,7 @@ Widget _buildTestScaffold() {
     imagesExtractor: (_) => null,
     idExtractor: (item) => item.hashCode,
     settingsSelector: (settings) => (settings.radarrUrl, settings.radarrApiKey),
-    onItemTap: (_, __, ___) {},
+    onItemTap: (_, _, _) {},
   );
 }
 
@@ -511,7 +511,7 @@ Widget _buildCustomTestApp({
         statusExtractor: statusExtractor,
         settingsSelector: (settings) =>
             (settings.radarrUrl, settings.radarrApiKey),
-        onItemTap: onItemTap ?? (_, __, ___) {},
+        onItemTap: onItemTap ?? (_, _, _) {},
       ),
     ),
   );

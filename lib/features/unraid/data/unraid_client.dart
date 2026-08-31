@@ -89,10 +89,7 @@ class UnraidClient {
     try {
       final response = await _dio.post(
         '/graphql',
-        data: {
-          'query': document,
-          if (variables != null) 'variables': variables,
-        },
+        data: {'query': document, 'variables': ?variables},
         options: Options(
           headers: {'x-api-key': _apiKey, 'Content-Type': 'application/json'},
         ),

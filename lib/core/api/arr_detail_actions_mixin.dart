@@ -72,7 +72,7 @@ mixin ArrDetailActionsMixin<T extends ConsumerStatefulWidget>
     setState(() => isUpdatingMonitoredState = true);
     try {
       await write();
-      if (!mounted) return;
+      if (!context.mounted) return;
       for (final provider in invalidate) {
         ref.invalidate(provider);
       }
@@ -86,7 +86,7 @@ mixin ArrDetailActionsMixin<T extends ConsumerStatefulWidget>
             : '$serviceName has stopped monitoring this $subject',
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       SnackBarHelper.error(
         context,
         "Couldn't change monitoring in $serviceName.",
@@ -213,7 +213,7 @@ mixin ArrDetailActionsMixin<T extends ConsumerStatefulWidget>
   ///
   /// [successMessage] is the whole sentence: the three services search
   /// different scopes ("this movie", "every monitored episode", "every
-  /// monitored album"), so only the shape — "<Service> is searching <what>" —
+  /// monitored album"), so only the shape — `"<Service> is searching <what>"` —
   /// is shared, not the words.
   Future<void> triggerSearch({
     required BuildContext context,

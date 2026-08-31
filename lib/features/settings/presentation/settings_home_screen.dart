@@ -27,7 +27,7 @@ import 'package:cupola/features/settings/presentation/widgets/service_connection
 
 /// The settings index.
 ///
-/// Connections lead, and they lead *by exception*: with thirteen services, a
+/// Connections lead, and they lead *by exception*: with this many services, a
 /// list of the healthy ones is an inventory nobody reads, so the summary states
 /// the count and only failing services get a row of their own. Everything else
 /// on this screen is a preference.

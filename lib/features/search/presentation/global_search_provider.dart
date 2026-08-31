@@ -137,10 +137,7 @@ final globalSearchResultsProvider =
       }
 
       await Future.wait([for (var w = 0; w < _maxLegsInFlight; w++) worker()]);
-      return [
-        for (final group in done)
-          if (group != null) group,
-      ];
+      return [for (final group in done) ?group];
     });
 
 Future<GlobalSearchServiceResults> _runLeg(

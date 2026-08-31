@@ -145,7 +145,7 @@ String? _itemSubtitle(Map<String, dynamic> item, StreamItemKind kind) {
       // is unreadable without the numbers and the season name is not always set.
       return [
         if (series != null && series.isNotEmpty) series,
-        if (code != null) code,
+        ?code,
       ].join(' · ').ifEmptyNull();
     case StreamItemKind.season:
       return item['SeriesName']?.toString().ifEmptyNull();
@@ -335,7 +335,7 @@ StreamSession? jellyfinStreamSessionFromJson(Map<String, dynamic> session) {
     userName: session['UserName']?.toString() ?? '',
     title: isEpisode ? seriesName : name,
     subtitle: isEpisode
-        ? [if (episodeCode != null) episodeCode, name].join(' · ').ifEmptyNull()
+        ? [?episodeCode, name].join(' · ').ifEmptyNull()
         : _itemSubtitle(nowPlaying, kind),
     deviceLabel: _deviceLabel(session),
     posterPath: jellyfinPosterPath(nowPlaying),

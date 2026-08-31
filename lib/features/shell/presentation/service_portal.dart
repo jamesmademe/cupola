@@ -205,8 +205,9 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   void _onPortalTick() {
     final v = portal.value;
     if (v > 0 && !snapshot.allowSnapshotting) snapshot.allowSnapshotting = true;
-    if (v == 0 && snapshot.allowSnapshotting)
+    if (v == 0 && snapshot.allowSnapshotting) {
       snapshot.allowSnapshotting = false;
+    }
     // Same threshold as the snapshot above: the page is covered from the first
     // frame it stops being what the user sees.
     covering.value = v > 0;

@@ -360,7 +360,7 @@ class _PosterSection<T> extends StatelessWidget {
                           horizontal: AppSpacing.lg,
                         ),
                         itemCount: visibleItems.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (_, _) =>
                             const SizedBox(width: AppSpacing.carouselGap),
                         itemBuilder: (context, index) {
                           final item = visibleItems[index];

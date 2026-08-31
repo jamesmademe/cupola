@@ -41,7 +41,7 @@ import 'package:cupola/core/reel_motion.dart';
 class ReelLine extends StatelessWidget {
   /// A plain rolling line.
   const ReelLine(
-    String this.text, {
+    this.text, {
     super.key,
     this.style,
     this.options = ReelMotion.figure,

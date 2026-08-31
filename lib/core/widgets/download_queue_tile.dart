@@ -88,7 +88,7 @@ class DownloadQueueTile extends StatelessWidget {
                         .tabular
                         .copyWith(color: accent),
                   ),
-                  if (actions != null) actions!,
+                  ?actions,
                 ],
               ),
               const SizedBox(height: AppSpacing.xs),

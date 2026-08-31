@@ -241,7 +241,7 @@ class _ActionBar extends ConsumerWidget {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !context.mounted) return;
     final ok = await runDockgeAction(
       context,
       ref,

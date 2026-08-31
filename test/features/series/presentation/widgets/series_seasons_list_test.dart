@@ -362,7 +362,7 @@ void main() {
     }
   });
   group('the collapse control', () {
-    List<SonarrEpisode> _run(int count, {int seasonNumber = 1}) => [
+    List<SonarrEpisode> run(int count, {int seasonNumber = 1}) => [
       for (var number = 1; number <= count; number++)
         _episode(
           id: seasonNumber * 1000 + number,
@@ -377,7 +377,7 @@ void main() {
     /// The footer control lives after a lazy sliver, so on a short viewport it
     /// is simply not built — and a test that scrolls to find it has to guess
     /// which direction to scroll after every tap. Height is the honest fixture.
-    void _tallView(WidgetTester tester) {
+    void tallView(WidgetTester tester) {
       tester.view.physicalSize = const Size(600, 3000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -387,7 +387,7 @@ void main() {
       await _pump(
         tester,
         seasons: [_season(1, episodeCount: 5, fileCount: 5)],
-        episodes: _run(5),
+        episodes: run(5),
       );
 
       expect(find.text('S1E5'), findsOneWidget);
@@ -398,11 +398,11 @@ void main() {
     testWidgets('a long season builds only the collapsed count', (
       tester,
     ) async {
-      _tallView(tester);
+      tallView(tester);
       await _pump(
         tester,
         seasons: [_season(1, episodeCount: 25, fileCount: 25)],
-        episodes: _run(25),
+        episodes: run(25),
       );
 
       // Capped, not hidden: the rows past the cap were never built.
@@ -414,11 +414,11 @@ void main() {
     testWidgets('expanding reveals the rest and offers the way back', (
       tester,
     ) async {
-      _tallView(tester);
+      tallView(tester);
       await _pump(
         tester,
         seasons: [_season(1, episodeCount: 25, fileCount: 25)],
-        episodes: _run(25),
+        episodes: run(25),
       );
 
       await tester.tap(find.text('Show all 25 episodes'));
@@ -435,14 +435,14 @@ void main() {
     });
 
     testWidgets('switching container returns to collapsed', (tester) async {
-      _tallView(tester);
+      tallView(tester);
       await _pump(
         tester,
         seasons: [
           _season(1, episodeCount: 25, fileCount: 25),
           _season(2, episodeCount: 25, fileCount: 25),
         ],
-        episodes: [..._run(25), ..._run(25, seasonNumber: 2)],
+        episodes: [...run(25), ...run(25, seasonNumber: 2)],
       );
 
       await tester.tap(find.text('Show all 25 episodes'));
@@ -458,11 +458,11 @@ void main() {
     });
 
     testWidgets('the toggle clears the 48dp touch minimum', (tester) async {
-      _tallView(tester);
+      tallView(tester);
       await _pump(
         tester,
         seasons: [_season(1, episodeCount: 25, fileCount: 25)],
-        episodes: _run(25),
+        episodes: run(25),
       );
 
       // Matched as a `ButtonStyleButton`: `TextButton.icon` does not put a

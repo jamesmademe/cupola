@@ -61,7 +61,7 @@ class ServiceKpiPeek extends StatelessWidget {
         height: railHeight,
         children: List.generate(4, (_) => const _KpiSkeletonCard()),
       ),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (items) {
         if (items.isEmpty) return const SizedBox.shrink();
         return _rail(
@@ -96,7 +96,7 @@ class ServiceKpiPeek extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           padding: padding,
           itemCount: children.length,
-          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+          separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
           itemBuilder: (_, index) => children[index],
         ),
       ),

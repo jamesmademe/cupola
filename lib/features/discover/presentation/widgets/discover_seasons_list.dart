@@ -119,7 +119,7 @@ class DiscoverSeasonsList extends StatelessWidget {
           ? ''
           : 'Episode ${episode.episodeNumber}',
       title: title,
-      facts: <String>[if (airDate != null) airDate],
+      facts: <String>[?airDate],
     );
   }
 

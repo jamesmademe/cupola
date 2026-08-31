@@ -67,7 +67,7 @@ class ServiceConnectionRow extends ConsumerWidget {
       loading: () => const ServiceDiagnosis.checking(),
       // A provider that threw tells us the same thing a failed probe does: we
       // could not confirm the service, and we cannot say why.
-      error: (_, __) =>
+      error: (_, _) =>
           const ServiceDiagnosis(ServiceConnectionStatus.disconnected),
       data: (value) => value,
     );

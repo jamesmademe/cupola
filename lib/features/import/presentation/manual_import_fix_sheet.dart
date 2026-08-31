@@ -557,10 +557,10 @@ class _ManualImportFixSheetState extends ConsumerState<_ManualImportFixSheet> {
     return ManualImportFixAssignment(
       match: match,
       episode: episode,
-      episodes: [if (episode != null) episode],
+      episodes: [?episode],
       album: _album,
       track: track,
-      tracks: [if (track != null) track],
+      tracks: [?track],
     );
   }
 }

@@ -156,10 +156,7 @@ class MediaChildTile extends StatelessWidget {
     final resolvedProgress = progress;
 
     final spokenLabel = <String>[
-      if (ordinalLabel != null)
-        ordinalLabel!
-      else if (ordinal != null)
-        ordinal!,
+      if (ordinalLabel != null) ordinalLabel! else ?ordinal,
       title,
       ...facts,
     ].where((part) => part.trim().isNotEmpty).join(', ');

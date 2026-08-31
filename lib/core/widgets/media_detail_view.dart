@@ -661,7 +661,7 @@ class _MediaDetailHeader extends StatelessWidget {
               ),
             ),
           ),
-          if (background != null) background!,
+          ?background,
           // Poster row: glued to the rising bottom edge (content speed) plus
           // an exit push so it slides under the incoming content and is fully
           // clipped by the time the bar owns the band. Never wrapped in an

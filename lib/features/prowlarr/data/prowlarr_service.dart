@@ -52,10 +52,7 @@ class ProwlarrService {
   }) async {
     final response = await client.get(
       '/api/v1/indexerstats',
-      queryParameters: {
-        if (startDate != null) 'startDate': startDate,
-        if (endDate != null) 'endDate': endDate,
-      },
+      queryParameters: {'startDate': ?startDate, 'endDate': ?endDate},
     );
     return ProwlarrIndexerStats.fromJson(mapOrNull(response.data) ?? const {});
   }
@@ -81,7 +78,7 @@ class ProwlarrService {
         'pageSize': pageSize,
         'sortKey': sortKey,
         'sortDirection': sortDirection,
-        if (eventType != null) 'eventType': eventType,
+        'eventType': ?eventType,
       },
     );
     // History pages can carry up to ~100 records; parse off the main isolate
@@ -107,7 +104,7 @@ class ProwlarrService {
       queryParameters: {
         'indexerId': indexerId,
         'limit': limit,
-        if (eventType != null) 'eventType': eventType,
+        'eventType': ?eventType,
       },
     );
     return jsonObjects(response.data, ProwlarrHistoryItem.fromJson);
@@ -333,15 +330,15 @@ class ProwlarrService {
         '/api/v1/indexer/bulk',
         data: {
           'ids': ids,
-          if (enable != null) 'enable': enable,
-          if (priority != null) 'priority': priority,
-          if (appProfileId != null) 'appProfileId': appProfileId,
+          'enable': ?enable,
+          'priority': ?priority,
+          'appProfileId': ?appProfileId,
           if (tags != null) ...{'tags': tags, 'applyTags': applyTags},
-          if (minimumSeeders != null) 'minimumSeeders': minimumSeeders,
-          if (seedRatio != null) 'seedRatio': seedRatio,
-          if (seedTime != null) 'seedTime': seedTime,
-          if (packSeedTime != null) 'packSeedTime': packSeedTime,
-          if (preferMagnetUrl != null) 'preferMagnetUrl': preferMagnetUrl,
+          'minimumSeeders': ?minimumSeeders,
+          'seedRatio': ?seedRatio,
+          'seedTime': ?seedTime,
+          'packSeedTime': ?packSeedTime,
+          'preferMagnetUrl': ?preferMagnetUrl,
         },
       ),
       'Could not update the selected indexers',
@@ -454,7 +451,7 @@ class ProwlarrService {
   static String? _validationDetail(dynamic data) {
     final entries = <Map<String, dynamic>>[
       if (data is List) ...data.whereType<Map>().map(stringKeyMap),
-      if (mapOrNull(data) case final map?) map,
+      ?mapOrNull(data),
     ];
     final messages = entries
         .map(ProwlarrValidationFailure.fromJson)

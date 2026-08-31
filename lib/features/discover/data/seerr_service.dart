@@ -343,11 +343,7 @@ class SeerrService {
     try {
       final response = await _client.get(
         path,
-        queryParameters: {
-          'page': page,
-          if (genre != null) 'genre': genre,
-          if (sortBy != null) 'sortBy': sortBy,
-        },
+        queryParameters: {'page': page, 'genre': ?genre, 'sortBy': ?sortBy},
       );
       final results = response.data['results'] as List<dynamic>;
       return await _mapPreviews(results, forcedMediaType);

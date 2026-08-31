@@ -214,7 +214,7 @@ class _BazarrWantedTabState extends ConsumerState<_BazarrWantedTab> {
           vertical: AppSpacing.md,
         ),
         itemCount: _items.length + (hasMore ? 1 : 0),
-        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) {
           if (index >= _items.length) {
             return Padding(
@@ -366,8 +366,8 @@ class _BazarrWantedShimmerList extends StatelessWidget {
         vertical: AppSpacing.md,
       ),
       itemCount: 6,
-      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, __) => ShimmerPlaceholder(
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+      itemBuilder: (_, _) => ShimmerPlaceholder(
         height: 64,
         borderRadius: AppRadius.borderRadiusMd,
       ),

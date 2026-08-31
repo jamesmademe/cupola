@@ -712,7 +712,7 @@ class _ActivityData extends ConsumerWidget {
     // Order, widgets, padding and physics are unchanged; only the construction
     // became lazy, which is what the filtered path above already did.
     final rows = <Object>[
-      if (health != null) health,
+      ?health,
       for (final service in orderedServices) ...[
         service,
         if (!collapsed.contains(service)) ...grouped[service]!,
@@ -1223,7 +1223,7 @@ class _ScrollableState extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(bottom: bottomPadding),
         children: [
-          if (header != null) header!,
+          ?header,
           // A minimum, not a fixed height. This was `SizedBox(height: 320)`
           // wrapped around states that are columns of `Text`: at a large reading
           // size the content outgrew the box and Flutter painted its overflow

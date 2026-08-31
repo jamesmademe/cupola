@@ -51,7 +51,7 @@ class DomainSectionHeader extends StatelessWidget {
             ),
             // Left audible: callers use it for a live count, which is worth its
             // own node.
-            if (trailing != null) trailing!,
+            ?trailing,
           ],
         ),
       ),

@@ -85,8 +85,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     if (MediaQuery.sizeOf(context).width >= ShellScreen._railBreakpoint) return;
     if (MediaQuery.accessibleNavigationOf(context)) return;
     if (!ref.read(portalHintsProvider).demoBouncePending) return;
-    // Un respiro dopo il primo frame: il bounce deve leggersi come un gesto
-    // della barra, non come un glitch di avvio.
+    // A breath after the first frame: the bounce has to read as a gesture of
+    // the bar, not as a startup glitch.
     _demoTimer = Timer(const Duration(milliseconds: 700), () {
       if (!mounted || !ref.read(portalHintsProvider).demoBouncePending) return;
       ref.read(portalHintsProvider.notifier).markDemoShown();
@@ -154,8 +154,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
           // journey being counted is a *journey*, and it should say so.
           _lastLocation == NavTab.services.routePath &&
           location.startsWith('${NavTab.services.routePath}/')) {
-        // Dashboard → servizio senza passare dal Portale: esattamente il
-        // tragitto che il Portale sostituisce. Il coach mark conta questi.
+        // Dashboard → service without going through the Portal: exactly the
+        // journey the Portal replaces. The coach mark counts these.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             ref.read(portalHintsProvider.notifier).noteManualJourney();

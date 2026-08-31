@@ -233,7 +233,6 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
   @override
   Widget build(BuildContext context) {
     return OnboardingBeat(
-      children: _form(context),
       actions: Column(
         children: [
           OnboardingFooter(
@@ -282,6 +281,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
             TextButton(onPressed: widget.onBack, child: const Text('Back')),
         ],
       ),
+      children: _form(context),
     );
   }
 

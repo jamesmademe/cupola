@@ -110,7 +110,7 @@ class ReleaseSearchesBody extends ConsumerWidget {
         bottomPadding,
       ),
       itemCount: jobs.length,
-      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         final job = jobs[index];
         final queueIndex = queued.indexWhere((j) => j.id == job.id);

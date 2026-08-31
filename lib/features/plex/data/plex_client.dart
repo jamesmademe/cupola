@@ -559,7 +559,7 @@ class PlexClient implements StreamServerClient {
       final container = await _container(
         '/library/sections/${_pathSegment(libraryId)}/all',
         queryParameters: {
-          if (type != null) 'type': type,
+          'type': ?type,
           'X-Plex-Container-Start': 0,
           'X-Plex-Container-Size': 0,
         },
@@ -966,14 +966,14 @@ class PlexClient implements StreamServerClient {
       case StreamLibraryLens.recentlyAdded:
         return (
           path: '$section/all',
-          query: {if (type != null) 'type': type, 'sort': 'addedAt:desc'},
+          query: {'type': ?type, 'sort': 'addedAt:desc'},
           keep: null,
         );
       case StreamLibraryLens.unplayed:
         return (
           path: '$section/all',
           query: {
-            if (type != null) 'type': type,
+            'type': ?type,
             // The filter is spelled differently per section type, and sending
             // the wrong spelling returns the *whole* library rather than an
             // error — a silently wrong lens. A show is unplayed when it has
@@ -989,7 +989,7 @@ class PlexClient implements StreamServerClient {
       case StreamLibraryLens.all:
         return (
           path: '$section/all',
-          query: {if (type != null) 'type': type, 'sort': 'titleSort'},
+          query: {'type': ?type, 'sort': 'titleSort'},
           keep: null,
         );
     }

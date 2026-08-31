@@ -8,7 +8,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// Built on [AppEmptyState] rather than as its own layout, because a service you
 /// have not set up is a normal daily condition, not a fault: the app is meant to
-/// have thirteen integrations and nobody runs all of them. It used to paint a
+/// have more integrations than anybody runs at once. It used to paint a
 /// 64pt settings glyph in `colorScheme.error` — alarm chrome for a state the user
 /// created on purpose by not filling in a form — and `AppEmptyState`'s own doc
 /// already named this placeholder as one of the states it exists to unify.
@@ -30,9 +30,11 @@ class NotConfiguredPlaceholder extends StatelessWidget {
   /// [ServiceKey.setupNote] is rendered, so the guidance those copies printed
   /// inline (Unraid's GraphQL sandbox, Plex's token flavour) is one tap away and
   /// stated once rather than duplicated per surface.
-  NotConfiguredPlaceholder.forService(ServiceKey service, {super.key})
-    : service = service,
-      serviceName = service.title;
+  // `ServiceKey this.service` rather than a plain `this.service`: the field is
+  // nullable for the generic form, and narrowing the formal here is what keeps
+  // this constructor's promise that there IS a service.
+  NotConfiguredPlaceholder.forService(ServiceKey this.service, {super.key})
+    : serviceName = service.title;
 
   final String serviceName;
 

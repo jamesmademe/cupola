@@ -158,7 +158,7 @@ void main() {
       final notifier = c.read(releaseSearchJobsProvider.notifier);
       notifier.configure(
         concurrency: 1,
-        runner: (_, __) => Completer<List<dynamic>>().future,
+        runner: (_, _) => Completer<List<dynamic>>().future,
       );
 
       final running = notifier.start(_season);
@@ -185,7 +185,7 @@ void main() {
       final c = await container();
       final notifier = c.read(releaseSearchJobsProvider.notifier);
       final answer = Completer<List<dynamic>>();
-      notifier.configure(runner: (_, __) => answer.future);
+      notifier.configure(runner: (_, _) => answer.future);
 
       final job = notifier.start(_season);
       answer.complete([
@@ -230,7 +230,7 @@ void main() {
       addTearDown(c.dispose);
 
       final notifier = c.read(releaseSearchJobsProvider.notifier);
-      notifier.configure(runner: (_, __) => Completer<List<dynamic>>().future);
+      notifier.configure(runner: (_, _) => Completer<List<dynamic>>().future);
       c.read(releaseSearchSettingsProvider.notifier).setBackgroundEnabled(true);
       final job = notifier.start(_season);
 
@@ -270,7 +270,7 @@ void main() {
       addTearDown(c.dispose);
 
       final notifier = c.read(releaseSearchJobsProvider.notifier);
-      notifier.configure(runner: (_, __) => Completer<List<dynamic>>().future);
+      notifier.configure(runner: (_, _) => Completer<List<dynamic>>().future);
       final job = notifier.start(_season);
 
       await c.read(backgroundSearchSwitchProvider).set(true);

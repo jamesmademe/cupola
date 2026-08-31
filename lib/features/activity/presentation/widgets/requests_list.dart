@@ -229,7 +229,7 @@ class _RequestCard extends ConsumerWidget {
       if (request.type == 'tv' && seasons != null && seasons.isNotEmpty)
         'Seasons $seasons',
       request.profileName ?? request.profileId?.toString() ?? 'Default profile',
-      if (createdAt != null) createdAt,
+      ?createdAt,
     ].join(' · ');
   }
 

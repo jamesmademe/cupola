@@ -46,7 +46,7 @@ import 'package:cupola/features/unraid/data/unraid_client.dart';
 /// connection and waits out a 5–8 second timeout ([_loadVersion] builds a fresh
 /// qBittorrent/SABnzbd/NZBGet/Unraid client per call). Watching the whole
 /// `SettingsModel` meant that every settings write — a theme-mode toggle
-/// included — re-probed all fifteen services, and a single Save can write twice
+/// included — re-probed every service, and a single Save can write twice
 /// because answering the cert-trust prompt writes again. Keyed on the service's
 /// own connection details, only the service that actually changed re-probes.
 /// The ids of every connection of [service], in order, as a stable value.

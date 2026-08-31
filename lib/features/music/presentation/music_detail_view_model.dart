@@ -46,10 +46,7 @@ class MusicDetailViewModel {
     this.path,
   });
 
-  List<String> get metadataItems => [
-    if (albumCountLabel != null) albumCountLabel!,
-    if (trackCountLabel != null) trackCountLabel!,
-  ];
+  List<String> get metadataItems => [?albumCountLabel, ?trackCountLabel];
 
   String? get albumCountLabel => albumCount > 0
       ? '$albumCount ${albumCount == 1 ? 'Album' : 'Albums'}'

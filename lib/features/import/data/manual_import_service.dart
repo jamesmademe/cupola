@@ -129,10 +129,7 @@ class ManualImportService {
   }) async {
     final response = await client.get(
       '$_prefix/episode',
-      queryParameters: {
-        'seriesId': seriesId,
-        if (seasonNumber != null) 'seasonNumber': seasonNumber,
-      },
+      queryParameters: {'seriesId': seriesId, 'seasonNumber': ?seasonNumber},
     );
     return jsonObjects(
       response.data,

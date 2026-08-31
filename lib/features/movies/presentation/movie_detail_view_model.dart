@@ -56,7 +56,7 @@ class MovieDetailViewModel {
 
   List<String> get metadataItems => [
     year,
-    if (runtimeStr != null) runtimeStr!,
+    ?runtimeStr,
   ].where((item) => item.isNotEmpty).toList(growable: false);
 
   List<MediaInfoGroup> buildInfoGroups([String? qualityProfileName]) {

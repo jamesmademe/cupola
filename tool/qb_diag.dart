@@ -1,5 +1,5 @@
-// Diagnostica connessione qBittorrent: replica il percorso dell'onboarding
-// ma stampa l'errore reale invece del generico "unreachable".
+// qBittorrent connection diagnostic: walks the same path onboarding does,
+// but prints the real error instead of the generic "unreachable".
 //
 //   dart run tool/qb_diag.dart <url> [username] [password]
 import 'dart:io';
@@ -18,7 +18,8 @@ Future<void> main(List<String> args) async {
   var user = args.length > 1 && args[1].isNotEmpty ? args[1] : null;
   var pass = args.length > 2 && args[2].isNotEmpty ? args[2] : null;
 
-  // Credenziali chieste a runtime: non finiscono in argv ne' nella history.
+  // Credentials are asked for at runtime: they reach neither argv nor the
+  // shell history.
   if (user == null) {
     stdout.write('username qBittorrent (invio = nessuna auth): ');
     final typed = stdin.readLineSync()?.trim() ?? '';
@@ -32,17 +33,17 @@ Future<void> main(List<String> args) async {
     stdout.writeln();
   }
 
-  // 1. Cosa fa il normalizzatore dell'app con l'URL inserito.
+  // 1. What the app's normaliser makes of the URL as typed.
   final client = QbittorrentClient(url: rawUrl, username: user, password: pass);
-  print('input url        : $rawUrl');
-  print('normalized base  : ${client.baseUrl}');
-  print('has credentials  : ${client.hasCredentials}');
+  stdout.writeln('input url        : $rawUrl');
+  stdout.writeln('normalized base  : ${client.baseUrl}');
+  stdout.writeln('has credentials  : ${client.hasCredentials}');
   if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {
-    print('!! nessuno schema nell\'URL -> l\'app ha assunto HTTPS');
+    stdout.writeln('!! nessuno schema nell\'URL -> l\'app ha assunto HTTPS');
   }
-  print('');
+  stdout.writeln('');
 
-  // 2. Raw login, senza retry/interceptor, per vedere status + body.
+  // 2. A raw login, no retry and no interceptor, to see status and body.
   final jar = CookieJar();
   final dio = Dio(
     BaseOptions(
@@ -58,19 +59,19 @@ Future<void> main(List<String> args) async {
     try {
       await body();
     } on DioException catch (e) {
-      print('$label -> DioException ${e.type}');
-      print('  message: ${e.message}');
-      print('  error  : ${e.error}');
+      stdout.writeln('$label -> DioException ${e.type}');
+      stdout.writeln('  message: ${e.message}');
+      stdout.writeln('  error  : ${e.error}');
     } catch (e) {
-      print('$label -> ${e.runtimeType}: $e');
+      stdout.writeln('$label -> ${e.runtimeType}: $e');
     } finally {
-      print('  elapsed: ${sw.elapsedMilliseconds}ms\n');
+      stdout.writeln('  elapsed: ${sw.elapsedMilliseconds}ms\n');
     }
   }
 
   await step('GET /api/v2/app/version (senza login)', () async {
     final r = await dio.get('/api/v2/app/version');
-    print('GET version (no auth) -> HTTP ${r.statusCode}: ${r.data}');
+    stdout.writeln('GET version (no auth) -> HTTP ${r.statusCode}: ${r.data}');
   });
 
   if (user != null) {
@@ -83,29 +84,29 @@ Future<void> main(List<String> args) async {
           headers: {'Referer': client.baseUrl, 'Origin': client.baseUrl},
         ),
       );
-      print('POST login -> HTTP ${r.statusCode}: "${r.data}"');
+      stdout.writeln('POST login -> HTTP ${r.statusCode}: "${r.data}"');
       final setCookie = r.headers.map['set-cookie'] ?? const [];
-      // Il SID e' un token di sessione: logghiamo solo la forma, non il valore.
-      print(
+      // The SID is a session token: log only its shape, never its value.
+      stdout.writeln(
         '  set-cookie: ${setCookie.map((c) => c.split('=').first).toList()}'
         ' (${setCookie.length} cookie)',
       );
       final cookies = await jar.loadForRequest(Uri.parse(client.baseUrl));
-      print('  cookie jar: ${cookies.map((c) => c.name).toList()}');
+      stdout.writeln('  cookie jar: ${cookies.map((c) => c.name).toList()}');
     });
 
     await step('GET /api/v2/app/version (dopo login)', () async {
       final r = await dio.get('/api/v2/app/version');
-      print('GET version (auth) -> HTTP ${r.statusCode}: ${r.data}');
+      stdout.writeln('GET version (auth) -> HTTP ${r.statusCode}: ${r.data}');
     });
   }
 
-  // 3. Il percorso esatto dell'app: getVersion() con il timeout dell'onboarding.
+  // 3. The app's exact path: getVersion() on the onboarding timeout.
   await step(
     'QbittorrentClient.getVersion() [timeout 8s come onboarding]',
     () async {
       final v = await client.getVersion().timeout(const Duration(seconds: 8));
-      print('app path -> versione: "$v"  => CONNECTED');
+      stdout.writeln('app path -> versione: "$v"  => CONNECTED');
     },
   );
 

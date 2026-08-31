@@ -168,7 +168,7 @@ class TransmissionClient {
 
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
-    if (_sessionId != null) sessionIdHeader: _sessionId!,
+    sessionIdHeader: ?_sessionId,
     if ((username?.trim() ?? '').isNotEmpty)
       'Authorization': 'Basic ${base64Credentials(username!, password ?? '')}',
   };

@@ -47,7 +47,7 @@ class DiscoverCarousel extends StatelessWidget {
     return items.when(
       loading: () =>
           _shell(child: AppSkeleton.posterRow(height: _posterHeight)),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (list) {
         if (list.isEmpty) return const SizedBox.shrink();
         return _shell(
@@ -57,7 +57,7 @@ class DiscoverCarousel extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               itemCount: list.length,
-              separatorBuilder: (_, __) =>
+              separatorBuilder: (_, _) =>
                   const SizedBox(width: AppSpacing.carouselGap),
               itemBuilder: (context, index) =>
                   _tile(context, list[index], index),

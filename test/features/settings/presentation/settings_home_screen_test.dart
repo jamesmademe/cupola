@@ -54,7 +54,7 @@ void main() {
     });
 
     testWidgets('healthy services stay off this screen', (tester) async {
-      // Thirteen services means a list of the working ones is an inventory
+      // This many services means a list of the working ones is an inventory
       // nobody reads. Only trouble earns a row here.
       await _pumpSettingsHome(
         tester,
@@ -247,7 +247,7 @@ void main() {
               routes: [
                 GoRoute(
                   path: '/settings',
-                  builder: (_, __) => const SettingsHomeScreen(),
+                  builder: (_, _) => const SettingsHomeScreen(),
                 ),
               ],
             ),
@@ -303,7 +303,7 @@ void main() {
               routes: [
                 GoRoute(
                   path: '/settings',
-                  builder: (_, __) => const SettingsHomeScreen(),
+                  builder: (_, _) => const SettingsHomeScreen(),
                 ),
               ],
             ),
@@ -340,15 +340,15 @@ Future<void> _pumpSettingsHome(
     routes: [
       GoRoute(
         path: '/settings',
-        builder: (_, __) => const SettingsHomeScreen(),
+        builder: (_, _) => const SettingsHomeScreen(),
         routes: [
           GoRoute(
             path: 'region',
-            builder: (_, __) => const Scaffold(body: Text('RegionPage')),
+            builder: (_, _) => const Scaffold(body: Text('RegionPage')),
           ),
           GoRoute(
             path: 'connections',
-            builder: (_, __) => const Scaffold(body: Text('ConnectionsPage')),
+            builder: (_, _) => const Scaffold(body: Text('ConnectionsPage')),
           ),
           GoRoute(
             path: 'service/:service',

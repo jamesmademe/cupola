@@ -242,7 +242,7 @@ void main() {
     testWidgets('lists every job, newest first', (tester) async {
       final container = ProviderContainer();
       final notifier = container.read(releaseSearchJobsProvider.notifier);
-      notifier.configure(runner: (_, __) => Completer<List<dynamic>>().future);
+      notifier.configure(runner: (_, _) => Completer<List<dynamic>>().future);
       notifier.start(_season);
       notifier.start(
         ReleaseSearchTarget.movie(movieId: 9, label: 'Dune: Part Two'),
@@ -286,7 +286,7 @@ void main() {
       final notifier = container.read(releaseSearchJobsProvider.notifier);
 
       final completer = Completer<List<dynamic>>();
-      notifier.configure(now: clock.call, runner: (_, __) => completer.future);
+      notifier.configure(now: clock.call, runner: (_, _) => completer.future);
 
       final job = notifier.start(_season);
       completer.complete([
@@ -421,7 +421,7 @@ void main() {
         ],
       );
       final notifier = container.read(releaseSearchJobsProvider.notifier);
-      notifier.configure(runner: (_, __) => Completer<List<dynamic>>().future);
+      notifier.configure(runner: (_, _) => Completer<List<dynamic>>().future);
       notifier.start(_season);
 
       await tester.pumpWidget(
@@ -480,7 +480,7 @@ void main() {
     ) async {
       final container = ProviderContainer();
       final notifier = container.read(releaseSearchJobsProvider.notifier);
-      notifier.configure(runner: (_, __) => Completer<List<dynamic>>().future);
+      notifier.configure(runner: (_, _) => Completer<List<dynamic>>().future);
       notifier.start(_season);
 
       // An episode inside the searching season must stay silent: a readout
@@ -597,7 +597,7 @@ void main() {
       );
       final notifier = container.read(releaseSearchJobsProvider.notifier);
       final answer = Completer<List<dynamic>>();
-      notifier.configure(runner: (_, __) => answer.future);
+      notifier.configure(runner: (_, _) => answer.future);
       final job = notifier.start(_season);
       answer.complete([
         {'guid': 'g0', 'indexerId': 3, 'title': 'Severance.S02.2160p'},
@@ -643,7 +643,7 @@ void main() {
       );
       final notifier = container.read(releaseSearchJobsProvider.notifier);
       final answer = Completer<List<dynamic>>();
-      notifier.configure(runner: (_, __) => answer.future);
+      notifier.configure(runner: (_, _) => answer.future);
       final job = notifier.start(_season);
       answer.completeError(
         DioException(
@@ -688,7 +688,7 @@ void main() {
       );
       container
           .read(releaseSearchJobsProvider.notifier)
-          .configure(runner: (_, __) => Completer<List<dynamic>>().future);
+          .configure(runner: (_, _) => Completer<List<dynamic>>().future);
       container
           .read(pendingReleaseSearchJobProvider.notifier)
           .request('rs-does-not-exist');

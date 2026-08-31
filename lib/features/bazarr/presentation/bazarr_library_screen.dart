@@ -97,7 +97,7 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
   static const int _pageSize = 50;
 
   final ScrollController _scrollController = ScrollController();
-  final List<BazarrLibraryEntry> _items = [];
+  final List<_BazarrLibraryEntry> _items = [];
   int _start = 0;
   int? _total;
   bool _initialLoading = true;
@@ -135,7 +135,7 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
       setState(() {
         _items
           ..clear()
-          ..addAll(page.data.map(BazarrLibraryEntry.from));
+          ..addAll(page.data.map(_BazarrLibraryEntry.from));
         _start = page.data.length;
         _total = page.total;
         _initialLoading = false;
@@ -161,7 +161,7 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
           : await service.getMovies(start: _start, length: _pageSize);
       if (!mounted) return;
       setState(() {
-        _items.addAll(page.data.map(BazarrLibraryEntry.from));
+        _items.addAll(page.data.map(_BazarrLibraryEntry.from));
         _start += page.data.length;
         _total = page.total;
         _loadingMore = false;
@@ -194,8 +194,8 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
           vertical: AppSpacing.md,
         ),
         itemCount: 8,
-        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-        itemBuilder: (_, __) => ShimmerPlaceholder(
+        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+        itemBuilder: (_, _) => ShimmerPlaceholder(
           height: 64,
           borderRadius: AppRadius.borderRadiusMd,
         ),
@@ -233,7 +233,7 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
           vertical: AppSpacing.md,
         ),
         itemCount: _items.length + (hasMore ? 1 : 0),
-        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) {
           if (index >= _items.length) {
             return Padding(
@@ -260,17 +260,17 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
   }
 }
 
-class BazarrLibraryEntry {
-  BazarrLibraryEntry({
+class _BazarrLibraryEntry {
+  _BazarrLibraryEntry({
     required this.kind,
     required this.id,
     required this.title,
     required this.subtitle,
   });
 
-  factory BazarrLibraryEntry.from(dynamic item) {
+  factory _BazarrLibraryEntry.from(dynamic item) {
     if (item is BazarrSeries) {
-      return BazarrLibraryEntry(
+      return _BazarrLibraryEntry(
         kind: _BazarrLibraryTabKind.series,
         id: item.sonarrSeriesId,
         title: item.title ?? 'Untitled series',
@@ -279,14 +279,14 @@ class BazarrLibraryEntry {
     }
     if (item is BazarrMovie) {
       final year = item.year != null ? ' (${item.year})' : '';
-      return BazarrLibraryEntry(
+      return _BazarrLibraryEntry(
         kind: _BazarrLibraryTabKind.movies,
         id: item.radarrId,
         title: '${item.title ?? 'Untitled movie'}$year',
         subtitle: item.path ?? item.sortTitle ?? '',
       );
     }
-    return BazarrLibraryEntry(
+    return _BazarrLibraryEntry(
       kind: _BazarrLibraryTabKind.series,
       id: 0,
       title: 'Unknown',
@@ -303,7 +303,7 @@ class BazarrLibraryEntry {
 class _BazarrLibraryRow extends StatelessWidget {
   const _BazarrLibraryRow({required this.entry});
 
-  final BazarrLibraryEntry entry;
+  final _BazarrLibraryEntry entry;
 
   @override
   Widget build(BuildContext context) {

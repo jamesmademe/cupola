@@ -105,7 +105,7 @@ Map<String, dynamic> _generatedMoviePage(int count, {int? totalSize}) {
   return {
     'MediaContainer': {
       'size': count,
-      if (totalSize != null) 'totalSize': totalSize,
+      'totalSize': ?totalSize,
       'offset': 0,
       'allowSync': true,
       'identifier': 'com.plexapp.plugins.library',
@@ -1312,7 +1312,7 @@ void main() {
 
   group('artwork', () {
     test('the token stays in a header, never in the URL', () async {
-      final source = await _client(
+      final source = _client(
         CapturingHttpAdapter(response: {}),
       ).imageFor('/library/metadata/20418/thumb/1748102400');
 
@@ -1325,7 +1325,7 @@ void main() {
     test(
       'a width goes through the photo transcoder with a relative inner url',
       () async {
-        final source = await _client(
+        final source = _client(
           CapturingHttpAdapter(response: {}),
         ).imageFor('/library/metadata/20418/thumb/1748102400', width: 300);
 
@@ -1349,10 +1349,10 @@ void main() {
     test('an absolute artwork path resolves to nothing', () async {
       final client = _client(CapturingHttpAdapter(response: {}));
       expect(
-        await client.imageFor('https://metadata-static.plex.tv/a/thumb.jpg'),
+        client.imageFor('https://metadata-static.plex.tv/a/thumb.jpg'),
         isNull,
       );
-      expect(await client.imageFor(''), isNull);
+      expect(client.imageFor(''), isNull);
     });
   });
 

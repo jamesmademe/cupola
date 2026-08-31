@@ -88,8 +88,7 @@ class SectionHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final spokenLabel =
-        semanticLabel ?? [title, if (subtitle != null) subtitle!].join(', ');
+    final spokenLabel = semanticLabel ?? [title, ?subtitle].join(', ');
 
     // Title and optional subtitle, as one label rather than two stops: a
     // subtitle read on its own has no context.
@@ -169,7 +168,7 @@ class SectionHeader extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(child: titleBlock),
-                if (end != null) end,
+                ?end,
               ],
             ),
     );

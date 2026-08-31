@@ -623,7 +623,7 @@ class LibraryDetailActions extends StatelessWidget {
 
     final trailingChildren = <Widget>[
       if (hasPrimary) ...visible.map(secondaryDisc),
-      if (overflowDisc != null) overflowDisc,
+      ?overflowDisc,
     ];
     final trailing = trailingChildren.isEmpty
         ? null

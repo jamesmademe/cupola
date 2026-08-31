@@ -101,7 +101,7 @@ class AppSheetHeader extends StatelessWidget {
             ],
           ),
         ),
-        if (trailing != null) trailing!,
+        ?trailing,
         if (showClose)
           IconButton(
             icon: const Icon(Icons.close_rounded),
@@ -196,11 +196,7 @@ class AppBottomSheet extends StatelessWidget {
 
     final column = Column(
       mainAxisSize: draggable ? MainAxisSize.max : MainAxisSize.min,
-      children: [
-        if (showHandle) const AppSheetHandle(),
-        if (header != null) header,
-        body,
-      ],
+      children: [if (showHandle) const AppSheetHandle(), ?header, body],
     );
 
     final content = draggable

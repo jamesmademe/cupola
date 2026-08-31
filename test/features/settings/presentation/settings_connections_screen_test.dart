@@ -205,7 +205,7 @@ Future<void> _pumpConnectionsScreen(
     routes: [
       GoRoute(
         path: '/settings/connections',
-        builder: (_, __) => const SettingsConnectionsScreen(),
+        builder: (_, _) => const SettingsConnectionsScreen(),
       ),
       GoRoute(
         path: '/settings/service/:service',

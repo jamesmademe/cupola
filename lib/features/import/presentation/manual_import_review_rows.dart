@@ -246,7 +246,7 @@ class ReadyGroupHeader extends StatelessWidget {
               label: title,
               value: [
                 if (total > 0) '$selectedCount of $total selected',
-                if (libraryNote != null) libraryNote,
+                ?libraryNote,
               ].join(', '),
               hint: expanded ? 'collapses the group' : 'expands the group',
               onTap: onToggleExpanded,
@@ -280,7 +280,7 @@ class ReadyGroupHeader extends StatelessWidget {
                                   selectedCount == 0
                                       ? '$total ${total == 1 ? 'file' : 'files'}'
                                       : '$selectedCount of $total selected',
-                                if (libraryNote != null) libraryNote,
+                                ?libraryNote,
                               ].join(' · '),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -468,7 +468,7 @@ class MatchedFileRow extends StatelessWidget {
           item.fileName,
           if (identity.quality != null) identity.quality!,
           info.semanticLabel,
-          if (warning != null) warning,
+          ?warning,
           if (imported) 'already in your ${service.title} library',
           if (selected)
             imported ? 'ticked to be imported again' : 'included in import',

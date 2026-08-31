@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart'
+    show LicenseEntryWithLineBreaks, LicenseRegistry;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,6 +17,7 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  _registerBundledFontLicense();
   final prefs = await SharedPreferences.getInstance();
   final secureSettingsStore = createSecureSettingsStore();
   final settingsService = SettingsService(prefs, secureSettingsStore);
@@ -41,10 +45,32 @@ void main() async {
   );
 }
 
+/// Puts Inter's SIL OFL 1.1 into the licence page Flutter builds from
+/// [LicenseRegistry].
+///
+/// The registry only knows about licences declared in package metadata, and a
+/// font dropped into `assets/` has none — so the one obligation the OFL puts on
+/// a binary that bundles the font, that its licence travel with it, would go
+/// unmet in every shipped build. Registered before `runApp` because the
+/// registry is read lazily and the callback must already be there when the
+/// licence page asks.
+void _registerBundledFontLicense() {
+  LicenseRegistry.addLicense(() async* {
+    yield LicenseEntryWithLineBreaks(const <String>[
+      'Inter',
+    ], await rootBundle.loadString('assets/fonts/OFL.txt'));
+  });
+}
+
 Future<SettingsModel> _loadInitialSettings(SettingsService settingsService) {
   return settingsService.loadSettings();
 }
 
+// `Override` has no public name: riverpod declares it in `src/core/override.dart`
+// and `flutter_riverpod`'s export list leaves it out, so the return type cannot
+// be written without an implementation import. Same reason as the
+// `implementation_imports` ignores elsewhere in the tree.
+// ignore: strict_top_level_inference
 _buildProviderOverrides({
   required SharedPreferences prefs,
   required SecureSettingsStore secureSettingsStore,

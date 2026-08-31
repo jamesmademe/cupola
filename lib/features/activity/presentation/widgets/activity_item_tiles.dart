@@ -1097,7 +1097,7 @@ List<Widget> _buildWantedChips(
   final showDateChip = !(isCutoff && serviceType == ServiceType.movies);
 
   return [
-    if (monitored != null) monitored,
+    ?monitored,
     if (quality != null) TagChip(text: quality),
     if (showDateChip && date != null)
       TagChip(text: formatIsoDate(date), color: AppColors.info),

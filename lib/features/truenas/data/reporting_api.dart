@@ -97,9 +97,7 @@ class TrueNasReportingApi extends TrueNasApiBase {
     int? maxPoints,
   }) async {
     final graphs = names
-        .map(
-          (n) => {'name': n, if (identifier != null) 'identifier': identifier},
-        )
+        .map((n) => {'name': n, 'identifier': ?identifier})
         .toList();
     // `reporting.get_data` takes `[graphs, query]` where each graph is
     // `{name, identifier?}`. `query.page` has a server-side minimum of 1 —

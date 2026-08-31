@@ -391,7 +391,7 @@ class JellyfinClient implements StreamServerClient {
         'fields': _browseFields,
         // `UserData` is omitted from the response entirely unless both are
         // present, so they travel together or not at all.
-        if (userId != null) 'userId': userId,
+        'userId': ?userId,
         if (userId != null) 'enableUserData': true,
       }, cancelToken: cancelToken);
       return items.isEmpty ? null : items.first;
@@ -562,12 +562,12 @@ class JellyfinClient implements StreamServerClient {
       'limit': limit,
       'fields': _browseFields,
       'enableImages': true,
-      if (includeItemTypes != null) 'includeItemTypes': includeItemTypes,
+      'includeItemTypes': ?includeItemTypes,
       // `UserData` is omitted from the response entirely unless both of these are
       // present, and without it every item reads as unwatched with no resume
       // point. Passed even on `recentlyAdded`, which does not *need* a viewer, so
       // that the row still shows progress for the configured one.
-      if (userId != null) 'userId': userId,
+      'userId': ?userId,
       if (userId != null) 'enableUserData': true,
     };
   }
@@ -647,7 +647,7 @@ class JellyfinClient implements StreamServerClient {
     // including MediaSources, MediaStreams and People — so none is sent.
     final response = await _api.get(
       '/Items/$itemId',
-      queryParameters: {if (userId != null) 'userId': userId},
+      queryParameters: {'userId': ?userId},
       cancelToken: cancelToken,
     );
     final data = response.data;

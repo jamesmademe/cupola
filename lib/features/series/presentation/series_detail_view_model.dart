@@ -88,8 +88,8 @@ class SeriesDetailViewModel {
 
   List<String> get metadataItems => [
     year,
-    if (episodeSummary != null) episodeSummary!,
-    if (runtimeStr != null) runtimeStr!,
+    ?episodeSummary,
+    ?runtimeStr,
   ].where((item) => item.isNotEmpty).toList(growable: false);
 
   List<MediaInfoGroup> buildInfoGroups([String? qualityProfileName]) {

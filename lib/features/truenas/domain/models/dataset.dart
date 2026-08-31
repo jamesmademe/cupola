@@ -3,15 +3,17 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart';
 /// Reads the `parsed` (numeric) value out of a ZFS property object
 /// (`{value, rawvalue, parsed, source}`), or a bare number.
 int? _propInt(dynamic prop) {
-  if (prop is Map)
+  if (prop is Map) {
     return intOrNull(prop['parsed']) ?? intOrNull(prop['rawvalue']);
+  }
   return intOrNull(prop);
 }
 
 /// Reads the display `value` out of a ZFS property object, or a bare string.
 String? _propString(dynamic prop) {
-  if (prop is Map)
+  if (prop is Map) {
     return stringOrNull(prop['value']) ?? stringOrNull(prop['rawvalue']);
+  }
   return stringOrNull(prop);
 }
 

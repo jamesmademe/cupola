@@ -391,7 +391,7 @@ class _NetworkCard extends StatelessWidget {
     return interfaces.when(
       skipLoadingOnReload: true,
       loading: () => AppSkeleton.listRows(count: 2),
-      error: (_, __) => AppCard.surfaceOutlined(
+      error: (_, _) => AppCard.surfaceOutlined(
         child: Text(
           'Network data unavailable',
           style: theme.textTheme.bodySmall,

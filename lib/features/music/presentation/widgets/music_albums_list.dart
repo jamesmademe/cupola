@@ -91,8 +91,8 @@ class MusicAlbumsList extends StatelessWidget {
       title: album.title,
       facts: <String>[
         if (album.year.isNotEmpty) album.year,
-        if (summary != null) summary,
-        if (statusWord != null) statusWord,
+        ?summary,
+        ?statusWord,
       ],
       status: status,
       progress: album.trackCount > 0 ? album.completionPercent : null,
@@ -120,7 +120,7 @@ class MusicAlbumsList extends StatelessWidget {
       title: album.title,
       subtitle: <String>[
         if (album.year.isNotEmpty) album.year,
-        if (summary != null) summary,
+        ?summary,
       ].join(' • '),
       icon: Icons.album_rounded,
       accent: ServiceKey.lidarr.accent,
@@ -268,10 +268,7 @@ class _AlbumTracksSheetState extends State<_AlbumTracksSheet> {
             ordinal: track.displayTrackNumber,
             ordinalLabel: 'Track ${track.displayTrackNumber}',
             title: track.title,
-            facts: <String>[
-              track.formattedDuration,
-              if (statusWord != null) statusWord,
-            ],
+            facts: <String>[track.formattedDuration, ?statusWord],
             status: status,
           ),
         );

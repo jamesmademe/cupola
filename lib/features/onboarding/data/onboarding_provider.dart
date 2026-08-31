@@ -25,7 +25,7 @@ final onboardingCompletedProvider = StateProvider<bool>((ref) {
 /// router re-evaluates its redirect without recreating the [GoRouter].
 class RouterRefreshNotifier extends ChangeNotifier {
   RouterRefreshNotifier(Ref ref) {
-    ref.listen<bool>(onboardingCompletedProvider, (_, __) {
+    ref.listen<bool>(onboardingCompletedProvider, (_, _) {
       notifyListeners();
     });
   }

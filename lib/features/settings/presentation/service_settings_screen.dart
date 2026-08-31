@@ -518,8 +518,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       // there is something to lose, and the guard only asks.
       canPop: !_isDirty,
       onPopInvokedWithResult: (didPop, _) async {
-        if (didPop || !mounted) return;
-        if (await _confirmDiscard() && mounted) {
+        if (didPop || !context.mounted) return;
+        if (await _confirmDiscard() && context.mounted) {
           Navigator.of(context).pop();
         }
       },
@@ -1441,7 +1441,7 @@ class _SavedConnectionStatus extends ConsumerWidget {
     final async = ref.watch(instanceDiagnosisProvider(instanceId));
     final diagnosis = async.when(
       loading: () => const ServiceDiagnosis.checking(),
-      error: (_, __) =>
+      error: (_, _) =>
           const ServiceDiagnosis(ServiceConnectionStatus.disconnected),
       data: (value) => value,
     );

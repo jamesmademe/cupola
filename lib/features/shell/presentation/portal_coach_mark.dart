@@ -37,7 +37,7 @@ class _PortalCoachMarkState extends ConsumerState<PortalCoachMark> {
       portalHintsProvider.select((s) => s.coachVisible),
     );
     if (visible && !_wasVisible) {
-      // L'invito arriva insieme alle parole: un solo bounce, non un loop.
+      // The invitation arrives with the words: one bounce, not a loop.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) widget.controller.playDemoBounce();
       });
@@ -48,10 +48,10 @@ class _PortalCoachMarkState extends ConsumerState<PortalCoachMark> {
     final colorScheme = theme.colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
 
-    // Appena sopra la barra. Dentro un body con `extendBody: true` lo Scaffold
-    // consegna un MediaQuery il cui padding.bottom COMPRENDE già l'intera
-    // bottomNavigationBar (barra + safe area): quella quota È il lato
-    // superiore della barra — non sommarci le metriche della barra sopra.
+    // Just above the bar. Inside a body with `extendBody: true` the Scaffold
+    // hands down a MediaQuery whose padding.bottom ALREADY includes the whole
+    // bottomNavigationBar (bar + safe area): that figure IS the bar's top
+    // edge — do not add the bar's own metrics on top of it.
     return Positioned(
       left: 0,
       right: 0,
@@ -61,7 +61,7 @@ class _PortalCoachMarkState extends ConsumerState<PortalCoachMark> {
         child: ExcludeSemantics(
           excluding: !visible,
           child: AnimatedBuilder(
-            // Il coach non parla sopra il Portale: appena t sale, sparisce.
+            // The coach does not talk over the Portal: as soon as t rises, it goes.
             animation: widget.controller.portal,
             builder: (context, child) => Opacity(
               opacity: (1 - widget.controller.portal.value * 3).clamp(0.0, 1.0),
@@ -105,7 +105,7 @@ class _PortalCoachMarkState extends ConsumerState<PortalCoachMark> {
                           ),
                           onPressed: () {
                             HapticFeedback.selectionClick();
-                            // Lo stesso switch di Settings → Hints → Portal.
+                            // The same switch as Settings → Hints → Portal.
                             ref
                                 .read(portalHintsProvider.notifier)
                                 .setEnabled(false);

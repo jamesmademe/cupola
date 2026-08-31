@@ -372,7 +372,7 @@ Map<String, dynamic> _artistJson({
     'monitored': monitored,
     'images': const [],
     'genres': const [],
-    if (qualityProfileId != null) 'qualityProfileId': qualityProfileId,
+    'qualityProfileId': ?qualityProfileId,
   };
 }
 

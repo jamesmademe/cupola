@@ -321,8 +321,8 @@ class ServiceMatrixMetrics {
 /// still growing under it — is what makes an expanding card feel like two
 /// unrelated animations that happen to share a start time.
 @immutable
-class _FoldPhase {
-  const _FoldPhase(this.t);
+class FoldPhase {
+  const FoldPhase(this.t);
 
   /// Linear progress, 0 folded to 1 open. Every curve below is applied to this
   /// and never to an already-curved value.
@@ -500,7 +500,7 @@ class ServiceMatrix extends ConsumerWidget {
 
 /// One domain of the matrix: a foldable header over its cards.
 ///
-/// The fold exists because thirteen services is a lot of instrument to scroll
+/// The fold exists because a hub this wide is a lot of instrument to scroll
 /// past on the way to Downloading, and which third of the stack you actually
 /// watch is personal. Its state is persisted, and the matrix opens folded — see
 /// [expandedServiceDomainsProvider].
@@ -682,7 +682,7 @@ class _DomainBandState extends ConsumerState<_DomainBand>
         child: _RollupLine(rollup: rollup),
         builder: (context, child) => _build(
           context,
-          _FoldPhase(_controller.value),
+          FoldPhase(_controller.value),
           rollup: rollup,
           rollupLine: child!,
         ),
@@ -733,16 +733,13 @@ class _DomainBandState extends ConsumerState<_DomainBand>
         }
       }
     }
-    final rollupParts = [
-      if (attention != null) attention,
-      if (down > 0) '$down down',
-    ];
+    final rollupParts = [?attention, if (down > 0) '$down down'];
     return rollupParts.isEmpty ? null : rollupParts.join(' · ');
   }
 
   Widget _build(
     BuildContext context,
-    _FoldPhase phase, {
+    FoldPhase phase, {
     required String? rollup,
     required Widget rollupLine,
   }) {
@@ -807,7 +804,7 @@ class _DomainBandState extends ConsumerState<_DomainBand>
   /// carried by the asymmetric gaps alone.
   Widget _engravedHeader(
     BuildContext context, {
-    required _FoldPhase phase,
+    required FoldPhase phase,
     required VoidCallback onToggle,
     required Widget rollupLine,
   }) {
@@ -1026,7 +1023,7 @@ class _ServiceMatrixBand extends StatelessWidget {
   });
 
   final List<MatrixCellSubject> subjects;
-  final _FoldPhase phase;
+  final FoldPhase phase;
   final ServiceMatrixRole role;
 
   @override
@@ -1160,7 +1157,7 @@ class ServiceMatrixCell extends ConsumerWidget {
     required this.service,
     this.instanceId,
     this.role = ServiceMatrixRole.readout,
-    this.phase = const _FoldPhase(0),
+    this.phase = const FoldPhase(0),
   });
 
   final ServiceKey service;
@@ -1179,7 +1176,7 @@ class ServiceMatrixCell extends ConsumerWidget {
   /// How far open the card's band is. Every dimension and every opacity inside
   /// reads off this, so there is no state in which the card is "half compact"
   /// in one respect and "fully open" in another.
-  final _FoldPhase phase;
+  final FoldPhase phase;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1319,7 +1316,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
   final ServiceReachability reachability;
   final ServiceSignal? signal;
   final String host;
-  final _FoldPhase phase;
+  final FoldPhase phase;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1558,7 +1555,7 @@ class _CellIdentity extends StatelessWidget {
   final String displayName;
   final ServiceReachability reachability;
   final Color surface;
-  final _FoldPhase phase;
+  final FoldPhase phase;
 
   @override
   Widget build(BuildContext context) {

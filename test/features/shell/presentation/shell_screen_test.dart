@@ -753,17 +753,17 @@ Future<_ShellHarness> _pumpShell(
             routes: [
               GoRoute(
                 path: '/services',
-                builder: (_, __) => const _ProbePage('ServicesPage'),
+                builder: (_, _) => const _ProbePage('ServicesPage'),
                 routes: [
                   GoRoute(
                     path: 'radarr/movie/:id',
-                    builder: (_, __) => const _ProbePage('MovieDetailPage'),
+                    builder: (_, _) => const _ProbePage('MovieDetailPage'),
                   ),
                   // Where a matrix cell lands. One segment, so it cannot
                   // swallow the two-segment detail route above it.
                   GoRoute(
                     path: ':service',
-                    builder: (_, __) => const _ProbePage('ServiceDashboard'),
+                    builder: (_, _) => const _ProbePage('ServiceDashboard'),
                   ),
                 ],
               ),
@@ -774,7 +774,7 @@ Future<_ShellHarness> _pumpShell(
             routes: [
               GoRoute(
                 path: '/activity',
-                builder: (_, __) => const _ProbePage('ActivityPage'),
+                builder: (_, _) => const _ProbePage('ActivityPage'),
               ),
             ],
           ),
@@ -783,7 +783,7 @@ Future<_ShellHarness> _pumpShell(
             routes: [
               GoRoute(
                 path: '/search',
-                builder: (_, __) => const _ProbePage('SearchPage'),
+                builder: (_, _) => const _ProbePage('SearchPage'),
               ),
             ],
           ),
@@ -792,7 +792,7 @@ Future<_ShellHarness> _pumpShell(
             routes: [
               GoRoute(
                 path: '/settings',
-                builder: (_, __) => const _ProbePage('SettingsPage'),
+                builder: (_, _) => const _ProbePage('SettingsPage'),
               ),
             ],
           ),
@@ -800,7 +800,7 @@ Future<_ShellHarness> _pumpShell(
       ),
       GoRoute(
         path: '/outside',
-        builder: (_, __) => const _ProbePage('OutsidePage'),
+        builder: (_, _) => const _ProbePage('OutsidePage'),
       ),
     ],
   );

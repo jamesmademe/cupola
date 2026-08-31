@@ -156,8 +156,8 @@ class AppIcon extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorWidget: (_, __, ___) => placeholder,
-        placeholder: (_, __) => placeholder,
+        errorWidget: (_, _, _) => placeholder,
+        placeholder: (_, _) => placeholder,
       ),
     );
   }

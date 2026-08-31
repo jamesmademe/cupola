@@ -191,11 +191,8 @@ void main() {
       'UserName': 'matt',
       'Client': 'Jellyfin Web',
       'DeviceName': 'Chrome',
-      'PlayState': {
-        if (playMethod != null) 'PlayMethod': playMethod,
-        'PositionTicks': 13500000000,
-      },
-      if (transcodingInfo != null) 'TranscodingInfo': transcodingInfo,
+      'PlayState': {'PlayMethod': ?playMethod, 'PositionTicks': 13500000000},
+      'TranscodingInfo': ?transcodingInfo,
       'NowPlayingItem': {
         'Id': 'ep1',
         'Name': "Woe's Hollow",

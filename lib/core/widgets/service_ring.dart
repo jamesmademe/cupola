@@ -43,7 +43,7 @@ enum ServiceRingState {
 /// mark, and a connected service draws a spoke to the centre.
 ///
 /// This is the second sanctioned exception to the Room Light Rule, on the same
-/// terms as `/services`: the surface is inherently about all fifteen services at
+/// terms as `/services`: the surface is inherently about every service at
 /// once, so accents are *confined* — a service's colour appears on its own node
 /// and nowhere else. Nothing on the ring borrows a status tone.
 ///

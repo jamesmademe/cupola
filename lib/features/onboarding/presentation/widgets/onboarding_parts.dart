@@ -386,18 +386,6 @@ class OnboardingDoor extends StatelessWidget {
     final theme = Theme.of(context);
     return OnboardingBeat(
       alignment: MainAxisAlignment.end,
-      children: [
-        const OnePunchline(),
-        const SizedBox(height: AppSpacing.lg),
-        Text(
-          '${ServiceKey.values.length} self-hosted services — media, '
-          'downloads, storage — on one screen, talking straight to your own '
-          'boxes. No cloud in the middle.',
-          style: theme.textTheme.bodyLarge!.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
       actions: Column(
         children: [
           SizedBox(
@@ -411,6 +399,18 @@ class OnboardingDoor extends StatelessWidget {
           TextButton(onPressed: onSkip, child: const Text('Skip for now')),
         ],
       ),
+      children: [
+        const OnePunchline(),
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          '${ServiceKey.values.length} self-hosted services — media, '
+          'downloads, storage — on one screen, talking straight to your own '
+          'boxes. No cloud in the middle.',
+          style: theme.textTheme.bodyLarge!.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -460,7 +460,7 @@ class _AccentedHeadline extends StatelessWidget {
 
 // ── Beat 2: the pick ────────────────────────────────────────────────────────
 
-/// Fifteen services as accent chips in four labelled sectors, and the ring above
+/// Every service as an accent chip in four labelled sectors, and the ring above
 /// as a live readout of the choice.
 class OnboardingPick extends StatelessWidget {
   const OnboardingPick({
@@ -480,6 +480,18 @@ class OnboardingPick extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return OnboardingBeat(
+      actions: OnboardingFooter(
+        secondary: OutlinedButton(onPressed: onBack, child: const Text('Back')),
+        // The count is the only thing on this beat that reports the choice back,
+        // and it changes on every chip tap — so it rolls. The slot is reserved
+        // for the longest label the button can ever hold, which is why tapping
+        // the fifteenth service moves a digit rather than the whole word.
+        primary: ReelCommandButton(
+          label: picked.isEmpty ? 'Continue' : 'Continue with ${picked.length}',
+          slotLabels: ['Continue with ${ServiceKey.values.length}'],
+          onPressed: () async => onContinue(),
+        ),
+      ),
       children: [
         _AccentedHeadline(
           before: '',
@@ -520,18 +532,6 @@ class OnboardingPick extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
         ],
       ],
-      actions: OnboardingFooter(
-        secondary: OutlinedButton(onPressed: onBack, child: const Text('Back')),
-        // The count is the only thing on this beat that reports the choice back,
-        // and it changes on every chip tap — so it rolls. The slot is reserved
-        // for the longest label the button can ever hold, which is why tapping
-        // the fifteenth service moves a digit rather than the whole word.
-        primary: ReelCommandButton(
-          label: picked.isEmpty ? 'Continue' : 'Continue with ${picked.length}',
-          slotLabels: ['Continue with ${ServiceKey.values.length}'],
-          onPressed: () async => onContinue(),
-        ),
-      ),
     );
   }
 }
@@ -686,6 +686,15 @@ class OnboardingClose extends StatelessWidget {
         .copyWith(color: scheme.onSurface);
     return OnboardingBeat(
       alignment: MainAxisAlignment.end,
+      actions: OnboardingFooter(
+        secondary: silent.isEmpty
+            ? OutlinedButton(onPressed: onReview, child: const Text('Review'))
+            : OutlinedButton(
+                onPressed: () => onFix(silent.first),
+                child: Text('Fix ${silent.first.title}'),
+              ),
+        primary: _FinishButton(onFinish: onFinish),
+      ),
       children: [
         if (_countLines case final lines?)
           for (final line in lines)
@@ -716,15 +725,6 @@ class OnboardingClose extends StatelessWidget {
           ),
         ),
       ],
-      actions: OnboardingFooter(
-        secondary: silent.isEmpty
-            ? OutlinedButton(onPressed: onReview, child: const Text('Review'))
-            : OutlinedButton(
-                onPressed: () => onFix(silent.first),
-                child: Text('Fix ${silent.first.title}'),
-              ),
-        primary: _FinishButton(onFinish: onFinish),
-      ),
     );
   }
 }

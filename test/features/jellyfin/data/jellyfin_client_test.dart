@@ -841,7 +841,7 @@ void main() {
 
   group('imageFor', () {
     test('keeps the credential in a header and out of the URL', () async {
-      final source = await _client(
+      final source = _client(
         CapturingHttpAdapter(response: const {}),
       ).imageFor('/Items/$_movieId/Images/Primary?tag=abc123');
 
@@ -856,7 +856,7 @@ void main() {
     });
 
     test('adds maxWidth while preserving the cache-busting tag', () async {
-      final source = await _client(
+      final source = _client(
         CapturingHttpAdapter(response: const {}),
       ).imageFor('/Items/$_movieId/Images/Primary?tag=abc123', width: 400);
 
@@ -866,7 +866,7 @@ void main() {
 
     test('treats a bare id as that item primary image', () async {
       // A deep-linked detail screen has the id before it has any image tag.
-      final source = await _client(
+      final source = _client(
         CapturingHttpAdapter(response: const {}),
       ).imageFor(_movieId);
 
@@ -878,7 +878,7 @@ void main() {
       // server and an admin API key must not be attached to a host the user never
       // configured — the same guarantee `SameOriginRedirectInterceptor` gives the
       // API calls.
-      final source = await _client(
+      final source = _client(
         CapturingHttpAdapter(response: const {}),
       ).imageFor('https://images.example.com/poster.jpg');
 
@@ -888,7 +888,7 @@ void main() {
 
     test('an empty path resolves to nothing', () async {
       expect(
-        await _client(CapturingHttpAdapter(response: const {})).imageFor('  '),
+        _client(CapturingHttpAdapter(response: const {})).imageFor('  '),
         isNull,
       );
     });

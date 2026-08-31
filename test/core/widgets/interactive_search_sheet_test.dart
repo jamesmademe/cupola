@@ -306,7 +306,7 @@ void main() {
       await _showSheet(
         tester,
         releases: _sampleReleases,
-        onGrabRelease: (_, __) async {
+        onGrabRelease: (_, _) async {
           attempts++;
           throw const ReleaseGrabAbandoned();
         },
@@ -333,7 +333,7 @@ void main() {
       await _showSheet(
         tester,
         releases: _sampleReleases,
-        onGrabRelease: (_, __) => completer.future,
+        onGrabRelease: (_, _) => completer.future,
       );
 
       await _startGrabInFlight(tester);
@@ -364,7 +364,7 @@ void main() {
       await _showSheet(
         tester,
         releases: _sampleReleases,
-        onGrabRelease: (_, __) => completer.future,
+        onGrabRelease: (_, _) => completer.future,
       );
 
       await _startGrabInFlight(tester);
@@ -471,7 +471,7 @@ Future<void> _pumpSheet(
         body: InteractiveSearchSheet(
           releases: releases,
           title: 'Releases',
-          onGrabRelease: (_, __) async {},
+          onGrabRelease: (_, _) async {},
           scrollController: controller,
         ),
       ),
@@ -537,7 +537,7 @@ class _InteractiveSearchSheetLauncherState
       if (!mounted) return;
 
       final releases = widget.releases;
-      final onGrabRelease = widget.onGrabRelease ?? (String _, int __) async {};
+      final onGrabRelease = widget.onGrabRelease ?? (String _, int _) async {};
 
       if (releases != null) {
         InteractiveSearchSheet.show(
