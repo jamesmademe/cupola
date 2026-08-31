@@ -20,3 +20,19 @@ it.
 Copies obtained under the MIT License remain governed by that license. The change
 to the Apache License, Version 2.0 applies to distribution of this project going
 forward and does not revoke any rights previously granted.
+
+---
+
+Third-party components
+
+Inter, the typeface bundled in assets/fonts/Inter.ttf, is Copyright 2016 The
+Inter Project Authors (https://github.com/rsms/inter) and is licensed under the
+SIL Open Font License, Version 1.1. Its full licence text accompanies the font
+in assets/fonts/OFL.txt, and the app registers that text with Flutter's licence
+registry so it also reaches the shipped binaries. "Inter" is a trademark of
+rsms; its use here names the typeface and implies no endorsement.
+
+Cupola communicates with third-party services (Seerr, the *arr applications,
+download clients, media servers and infrastructure tools). Their names and marks
+belong to their respective owners and are used only to identify what the app
+connects to.

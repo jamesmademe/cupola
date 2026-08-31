@@ -36,8 +36,10 @@ does.
   two media servers, and the infrastructure underneath: TrueNAS, Unraid, Dockge,
   Nginx Proxy Manager. Every one of them first-class, none of them a bolt-on.
 - **Your instances are the backend.** There is no Cupola server, no relay, no
-  telemetry, no sign-up. The app speaks directly to the hosts you own; credentials
-  live in the device keychain and never leave it.
+  telemetry, no sign-up. The app speaks directly to the hosts you own, and
+  credentials live in the device keychain. The one exception is documented rather
+  than hidden: [background search](#security--privacy) hands a request to the OS,
+  API key included, which is why it ships off.
 - **Built for home-lab reality.** Self-signed certificates, services behind a
   reverse proxy, boxes that are asleep or unreachable: all normal daily states,
   handled as such instead of as errors.
@@ -143,8 +145,8 @@ Two columns are worth reading before you judge an integration:
 
 | Service | What Cupola does | Auth | Control | Tested |
 | --- | --- | --- | --- | :-: |
-| **Jellyfin** | Who is watching right now, transcode reasons, resume points, library browsing and item detail | API key + user | Read-only | ✅ |
-| **Plex** | The same session-first board, driven by Plex's own semantics | Token | Read-only | ○ |
+| **Jellyfin** | Who is watching right now, transcode reasons, resume points, library browsing and item detail; stop a session | API key + user | Read + stop | ✅ |
+| **Plex** | The same session-first board, driven by Plex's own semantics; stop a session with a reason | Token | Read + stop | ○ |
 
 ### Infrastructure
 
@@ -261,7 +263,8 @@ running while Cupola is open.
 
 > **Just want to use it?** Grab the file for your platform from
 > [**Releases**](https://github.com/matthw-labs/seekarr/releases). No toolchain
-> needed.
+> needed. Releases before 1.0.0 were published under the project's former name,
+> Seekarr, and cover fewer services than this page describes.
 
 | Platform | Status | Download |
 | --- | --- | --- |
@@ -343,11 +346,17 @@ A few notes worth knowing up front:
 
 ## Security & privacy
 
-Cupola has no server-side component, so there is nowhere for your data to go but
-your own machines.
+Cupola has no server-side component, so there is no Cupola-shaped place for your
+data to go.
 
 - **No account, no cloud, no telemetry.** Nothing is collected, and there is no
   backend to collect it.
+- **One third party, for pictures only.** Poster, backdrop and cast artwork is
+  fetched straight from TMDB's CDN (`image.tmdb.org`), because that is where your
+  Seerr's metadata points. Those requests carry no credential and no identifier of
+  yours — but they are requests to a host that is not yours, and TMDB sees the IP
+  they come from. Everything else, metadata included, comes from your own
+  instances.
 - **Secrets stay on the device.** API keys, tokens and passwords go into
   `flutter_secure_storage`: Keychain on Apple platforms, Keystore-backed on
   Android. Plaintext settings from older versions are migrated on first launch.
@@ -424,7 +433,7 @@ lib/
 | --- | --- |
 | UI | Flutter + Material 3, bundled Inter, `DynamicColorBuilder` |
 | State | Riverpod 3: `FutureProvider` for loads, `NotifierProvider` for persisted state |
-| Navigation | go_router; every detail route resolves from path params alone, so deep links work |
+| Navigation | go_router; every detail route resolves from path params alone, so any screen is addressable by path (no URL scheme is registered yet, so nothing outside the app can open one) |
 | HTTP | Dio, shared `ApiClient` with `X-Api-Key` for the *arr family |
 | Other transports | qBittorrent WebUI v2 form login, Socket.IO for Dockge, WebSocket JSON-RPC for TrueNAS |
 | Storage | `flutter_secure_storage` for secrets, `shared_preferences` for settings |
@@ -450,20 +459,22 @@ written up in [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Project status
 
 We develop Cupola actively and run it on our own stacks every day. Everything on this
-page is shipped on `main` and in the latest release rather than planned, and the badge
-at the top of this file always points at the current version.
+page is implemented and running rather than planned. The badge at the top points at the
+latest published release, which trails `main` between tags — 1.0.0 is the first release
+of the Cupola line, and everything before it was published as Seekarr.
 
 - **17 services integrated.** **8 we have verified against real instances**, 3
-  partially, 6 written to the official API but not yet exercised live; 7 are read-only
+  partially, 6 written to the official API but not yet exercised live; 5 are read-only
   for now. The [tables above](#supported-services) say which is which, per service.
-- **~200 test files** covering models, services, providers and widgets, offline by
+- **~240 test files** covering models, services, providers and widgets, offline by
   default, with an opt-in Docker-backed end-to-end tier
 - **Known gap: screen readers.** Dynamic Type and contrast are handled; VoiceOver and
   TalkBack coverage is real work in progress and we are closing it screen by screen.
   New UI ships labelled.
 - **Explicit non-goals**, so nobody files them as bugs: no server or cloud component,
   no web client, no account layer, and no localisation. English-only is a decision we
-  made, not a gap. Tablets keep working but are not a design target.
+  made, not a gap. Tablets keep working but are not a design target. CI does build for
+  web, but only as a compile check — the result is not a product and is not published.
 
 ---
 
@@ -486,7 +497,9 @@ Setup notes, conventions and PR expectations: [**CONTRIBUTING.md**](CONTRIBUTING
 <summary><b>Does Cupola need a server, or an account?</b></summary>
 <br/>
 No. It talks straight to your instances over LAN, VPN or a reverse proxy. There is
-no Cupola backend, so there is nothing to sign up for and nothing that phones home.
+no Cupola backend, so there is nothing to sign up for and nothing reporting back to
+us. The only request that leaves your network is artwork from TMDB's image CDN —
+see [Security & privacy](#security--privacy).
 </details>
 
 <details>
@@ -562,3 +575,8 @@ Licensed under the **[Apache License 2.0](LICENSE)**.
 Cupola was previously distributed under the MIT License. That licence still covers
 copies obtained before the change, and its original notice is preserved in
 [LICENSE-MIT](LICENSE-MIT); see [NOTICE](NOTICE) for details.
+
+The bundled typeface, [Inter](https://github.com/rsms/inter), is licensed
+separately under the SIL Open Font License 1.1 — its text ships alongside the
+font in [assets/fonts/OFL.txt](assets/fonts/OFL.txt). Service names and marks
+belong to their owners and are used only to identify what Cupola connects to.

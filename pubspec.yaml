@@ -1,5 +1,5 @@
 name: cupola
-description: A Flutter app for managing self-hosted Seerr, Radarr, Sonarr, and Lidarr services.
+description: One native client for a self-hosted media stack and the box it runs on.
 homepage: https://github.com/matthw-labs/seekarr
 repository: https://github.com/matthw-labs/seekarr
 issue_tracker: https://github.com/matthw-labs/seekarr/issues
@@ -20,7 +20,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.8.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ^3.10.0
@@ -125,6 +125,10 @@ flutter:
     # hexagon's edge midpoints, around the central circular window. Rendered from
     # `assets/brand/cupola_mark.svg`, which is the vector source of record.
     - assets/brand/cupola_mark.png
+    # Inter ships under the SIL OFL 1.1, whose clause 2 requires the licence to
+    # travel with the font. Bundled so `main.dart` can hand it to
+    # `LicenseRegistry`, which is what puts it in the app's own licence page.
+    - assets/fonts/OFL.txt
 
   # To add assets to your application, add an assets section, like this:
   # assets:

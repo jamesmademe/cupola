@@ -112,7 +112,7 @@ if [[ "$TARGET" == "ios" || "$TARGET" == "all" ]]; then
     (cd "$IPA_WORK_DIR" && zip -qr - Payload/) > "$IPA_PATH"
     rm -rf "$IPA_WORK_DIR"
 
-    printf '==> IPA pronto per il sideload: %s\n' "$IPA_PATH"
+    printf '==> IPA ready for sideloading: %s\n' "$IPA_PATH"
   fi
 fi
 
