@@ -19,6 +19,23 @@ import 'package:cupola/features/discover/presentation/discover_provider.dart';
 /// Each one confirms first (destructive, and irreversible on the client side),
 /// reports the outcome, and bumps [activityRefreshVersionProvider] so every
 /// bucket re-reads rather than leaving a removed row on screen.
+///
+/// ## Every write takes the connection it acts on
+///
+/// These used to resolve the service through the **lens** — whichever Radarr
+/// the user last looked at. That was correct only while the feed showed one
+/// server. Now that /activity merges every connection, the lens and the row are
+/// different facts, and \*arr record ids are per server: each one numbers its
+/// queue from one, so `id: 7` names a different download on each Sonarr.
+/// Sending a removal to the lens would delete somebody else's download and
+/// report success. So the caller passes the row's own `instanceId` and it
+/// resolves through [connectionArrServiceProvider]; an empty id still means
+/// "the lens", which is what the per-service Activity screen wants.
+///
+/// The same is true of the two request actions, for the same reason in Seerr's
+/// vocabulary: a request id is per instance, so approving id 42 through the
+/// lens approves a different person's request on a different server — and
+/// reports success. They resolve through `seerrServiceForProvider`.
 class ActivityActions {
   ActivityActions._();
 
@@ -32,6 +49,7 @@ class ActivityActions {
     BuildContext context,
     WidgetRef ref, {
     required ServiceType serviceType,
+    required String instanceId,
     required int recordId,
     required String title,
   }) async {
@@ -65,7 +83,7 @@ class ActivityActions {
       context,
       ref,
       action: () => ref
-          .read(resolvedArrServiceProvider(serviceType))
+          .read(connectionArrServiceProvider((serviceType, instanceId)))
           .removeFromQueue(
             recordId,
             removeFromClient: result.option('removeFromClient'),
@@ -86,6 +104,7 @@ class ActivityActions {
     BuildContext context,
     WidgetRef ref, {
     required ServiceType serviceType,
+    required String instanceId,
     required int recordId,
     required String title,
   }) async {
@@ -107,7 +126,7 @@ class ActivityActions {
       context,
       ref,
       action: () => ref
-          .read(resolvedArrServiceProvider(serviceType))
+          .read(connectionArrServiceProvider((serviceType, instanceId)))
           .removeFromQueue(recordId, removeFromClient: true, blocklist: true),
       successMessage: 'Blocklisted — searching for another release',
       failureMessage: 'Could not blocklist this release',
@@ -119,6 +138,7 @@ class ActivityActions {
     BuildContext context,
     WidgetRef ref, {
     required ServiceType serviceType,
+    required String instanceId,
     required int recordId,
     required String title,
   }) async {
@@ -137,7 +157,7 @@ class ActivityActions {
       context,
       ref,
       action: () => ref
-          .read(resolvedArrServiceProvider(serviceType))
+          .read(connectionArrServiceProvider((serviceType, instanceId)))
           .deleteBlocklistItem(recordId),
       successMessage: 'Removed from blocklist',
       failureMessage: 'Could not remove from blocklist',
@@ -153,6 +173,7 @@ class ActivityActions {
   static Future<void> approveRequest(
     BuildContext context,
     WidgetRef ref, {
+    required String instanceId,
     required int requestId,
     required String title,
   }) async {
@@ -171,7 +192,9 @@ class ActivityActions {
     await _run(
       context,
       ref,
-      action: () => ref.read(seerrServiceProvider).approveRequest(requestId),
+      action: () => ref
+          .read(seerrServiceForProvider(instanceId))
+          .approveRequest(requestId),
       successMessage: 'Request approved',
       failureMessage: 'Could not approve this request',
       invalidateRequests: true,
@@ -182,6 +205,7 @@ class ActivityActions {
   static Future<void> declineRequest(
     BuildContext context,
     WidgetRef ref, {
+    required String instanceId,
     required int requestId,
     required String title,
   }) async {
@@ -202,7 +226,9 @@ class ActivityActions {
     await _run(
       context,
       ref,
-      action: () => ref.read(seerrServiceProvider).declineRequest(requestId),
+      action: () => ref
+          .read(seerrServiceForProvider(instanceId))
+          .declineRequest(requestId),
       successMessage: 'Request declined',
       failureMessage: 'Could not decline this request',
       invalidateRequests: true,
@@ -223,7 +249,10 @@ class ActivityActions {
     required String failureMessage,
 
     /// Seerr requests arrive through a separately cached provider, so bumping
-    /// the feed version alone re-runs the merge over the same stale list.
+    /// the feed version alone re-runs the merge over the same stale list. The
+    /// whole family goes, not just the acted-on connection: the lens's own
+    /// entry collapses onto the plain provider, so the two have to be dropped
+    /// together or the feed re-reads one of them stale.
     bool invalidateRequests = false,
   }) async {
     try {
@@ -244,7 +273,10 @@ class ActivityActions {
       return;
     }
 
-    if (invalidateRequests) ref.invalidate(requestsProvider);
+    if (invalidateRequests) {
+      ref.invalidate(requestsProvider);
+      ref.invalidate(requestsForProvider);
+    }
     ref.read(activityRefreshVersionProvider.notifier).state++;
   }
 }

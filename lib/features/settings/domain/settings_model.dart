@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show ThemeMode;
 
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 enum AppThemeMode {
@@ -28,84 +29,50 @@ enum AppThemeMode {
       _modesByName[value] ?? AppThemeMode.dark;
 }
 
+/// Everything Cupola persists, keyed on connections rather than on services.
+///
+/// ## The shape, and why it changed
+///
+/// This used to be forty-one flat fields — `radarrUrl`, `radarrApiKey`,
+/// `sonarrUrl`, and so on — one pair per service, with a private registry
+/// mapping a [ServiceKey] onto the right two. That shape said a service *is* a
+/// connection, and it cannot hold a second Radarr: there is exactly one
+/// `radarrUrl` and nowhere to put the other one.
+///
+/// So [instances] is now the single source of truth and everything else reads
+/// through it. The flat names survive as **getters** — see the "legacy
+/// projections" section — because a hundred call sites across the app read
+/// `settings.radarrUrl`, several of them inside Riverpod `select`s where a
+/// stable scalar is the whole point. They resolve to the *first* instance of
+/// their service, which is what they always meant.
+///
+/// Two values deliberately stay off [instances], and the distinction is not
+/// cosmetic:
+///
+/// * [plexClientId] identifies this **install**, not any server. Minted once,
+///   never regenerated, shared by every Plex instance — a second id would
+///   register a second device against the user's server.
+/// * [trustedCertificates] is keyed by TLS **origin**, not by service or
+///   instance, per ADR-6: a certificate belongs to the host that presents it,
+///   so two instances behind one reverse proxy share one trust decision and
+///   cannot diverge.
 class SettingsModel {
-  final String seerrUrl;
-  final String seerrApiKey;
-  final String radarrUrl;
-  final String radarrApiKey;
-  final String sonarrUrl;
-  final String sonarrApiKey;
-  final String lidarrUrl;
-  final String lidarrApiKey;
-  final String qbittorrentUrl;
-  final String qbittorrentUsername;
-  final String qbittorrentPassword;
-  final String transmissionUrl;
-  final String transmissionUsername;
-  final String transmissionPassword;
-  final String npmUrl;
-
-  /// The Nginx Proxy Manager account's email address.
+  /// Every configured connection, in the user's own order.
   ///
-  /// Held in the generic username slot because that is structurally what it is
-  /// — the non-secret half of a credential pair — but NPM calls it an email and
-  /// so does the field, via [ServiceKeyExtension.usernameLabel]. Typing a bare
-  /// username into `POST /api/tokens` is rejected, so labelling it "Username"
-  /// would have been an invitation to fail the login.
-  final String npmUsername;
-  final String npmPassword;
-  final String bazarrUrl;
-  final String bazarrApiKey;
-  final String truenasUrl;
-  final String truenasApiKey;
-  final String dockgeUrl;
-  final String dockgeUsername;
-  final String dockgePassword;
-  final String prowlarrUrl;
-  final String prowlarrApiKey;
-  final String readarrUrl;
-  final String readarrApiKey;
-  final String sabnzbdUrl;
-  final String sabnzbdApiKey;
-  final String nzbgetUrl;
-  final String nzbgetUsername;
-  final String nzbgetPassword;
-  final String unraidUrl;
-  final String unraidApiKey;
-  final String jellyfinUrl;
-  final String jellyfinApiKey;
-  final String plexUrl;
-
-  /// The user's own `X-Plex-Token`, pasted by hand.
-  ///
-  /// Named for what Plex calls it rather than squeezed into an `apiKey` field,
-  /// though it occupies the generic credential slot in [_serviceSettingsAccess]
-  /// exactly as `qbittorrentPassword` does. Cupola never mints this: every
-  /// documented way to obtain a Plex token is a plex.tv call, and reaching for
-  /// one would break the product's first principle. A pasted token is validated
-  /// by the user's own server.
-  final String plexToken;
+  /// Order is meaning here: the first instance of a service is the one a bare
+  /// `/services/radarr` resolves to and the one a write defaults to offering.
+  /// It is **not** identity — ids are stable, so reordering changes which
+  /// instance is primary without moving a single stored value.
+  final List<ServiceInstance> instances;
 
   /// Opaque per-install identifier sent as `X-Plex-Client-Identifier`.
   ///
-  /// Generated once and then persisted forever — **not** per launch. Plex
-  /// registers a new "device" against the user's server for every distinct
-  /// identifier it sees, so a value regenerated on startup would litter their
-  /// admin panel with a permanent row per app launch. Not a secret, so it lives
-  /// in plain [SharedPreferences] beside the URL.
+  /// Generated once and then persisted forever — **not** per launch, and not
+  /// per instance. Plex registers a new "device" against the user's server for
+  /// every distinct identifier it sees, so a value regenerated on startup would
+  /// litter their admin panel with a permanent row per app launch. Not a
+  /// secret, so it lives in plain `SharedPreferences` beside the URLs.
   final String plexClientId;
-
-  /// Which Jellyfin user's watch state the library is read through.
-  ///
-  /// Required rather than optional, and the reason is structural: a Jellyfin API
-  /// key authenticates as Administrator with **no user attached** (an empty
-  /// `UserId` claim), so it can see every session but cannot answer "have I
-  /// watched this". Resume positions, next-up and unplayed filters are all
-  /// user-scoped, so the library has to be entered through a person chosen from
-  /// `/Users`. Plex has no equivalent field because its token *is* the user and
-  /// `/library/*` takes no impersonation parameter — that asymmetry is a real
-  /// property of the two APIs, not a gap here.
-  final String jellyfinUserId;
 
   /// Trusted self-signed/untrusted TLS certificates (trust-on-first-use),
   /// keyed by [UrlUtils.certOrigin] rather than by service — a certificate
@@ -121,272 +88,28 @@ class SettingsModel {
   final String region;
   final AppThemeMode themeMode;
 
-  static final Map<ServiceKey, _ServiceSettingsAccess>
-  _serviceSettingsAccess = {
-    ServiceKey.seerr: _ServiceSettingsAccess(
-      url: (settings) => settings.seerrUrl,
-      apiKey: (settings) => settings.seerrApiKey,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(seerrUrl: url, seerrApiKey: apiKey),
-    ),
-    ServiceKey.radarr: _ServiceSettingsAccess(
-      url: (settings) => settings.radarrUrl,
-      apiKey: (settings) => settings.radarrApiKey,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(radarrUrl: url, radarrApiKey: apiKey),
-    ),
-    ServiceKey.sonarr: _ServiceSettingsAccess(
-      url: (settings) => settings.sonarrUrl,
-      apiKey: (settings) => settings.sonarrApiKey,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(sonarrUrl: url, sonarrApiKey: apiKey),
-    ),
-    ServiceKey.lidarr: _ServiceSettingsAccess(
-      url: (settings) => settings.lidarrUrl,
-      apiKey: (settings) => settings.lidarrApiKey,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(lidarrUrl: url, lidarrApiKey: apiKey),
-    ),
-    ServiceKey.qbittorrent: _ServiceSettingsAccess(
-      url: (settings) => settings.qbittorrentUrl,
-      apiKey: (settings) => settings.qbittorrentPassword,
-      username: (settings) => settings.qbittorrentUsername,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(qbittorrentUrl: url, qbittorrentPassword: apiKey),
-      updateUsername: (settings, username) =>
-          settings.copyWith(qbittorrentUsername: username),
-    ),
-    ServiceKey.transmission: _ServiceSettingsAccess(
-      url: (settings) => settings.transmissionUrl,
-      apiKey: (settings) => settings.transmissionPassword,
-      username: (settings) => settings.transmissionUsername,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(transmissionUrl: url, transmissionPassword: apiKey),
-      updateUsername: (settings, username) =>
-          settings.copyWith(transmissionUsername: username),
-    ),
-    ServiceKey.nginxProxyManager: _ServiceSettingsAccess(
-      url: (settings) => settings.npmUrl,
-      apiKey: (settings) => settings.npmPassword,
-      username: (settings) => settings.npmUsername,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(npmUrl: url, npmPassword: apiKey),
-      updateUsername: (settings, username) =>
-          settings.copyWith(npmUsername: username),
-    ),
-    ServiceKey.bazarr: _ServiceSettingsAccess(
-      url: (settings) => settings.bazarrUrl,
-      apiKey: (settings) => settings.bazarrApiKey,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(bazarrUrl: url, bazarrApiKey: apiKey),
-    ),
-    ServiceKey.truenas: _ServiceSettingsAccess(
-      url: (settings) => settings.truenasUrl,
-      apiKey: (settings) => settings.truenasApiKey,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(truenasUrl: url, truenasApiKey: apiKey),
-    ),
-    ServiceKey.dockge: _ServiceSettingsAccess(
-      url: (settings) => settings.dockgeUrl,
-      apiKey: (settings) => settings.dockgePassword,
-      username: (settings) => settings.dockgeUsername,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(dockgeUrl: url, dockgePassword: apiKey),
-      updateUsername: (settings, username) =>
-          settings.copyWith(dockgeUsername: username),
-    ),
-    ServiceKey.prowlarr: _ServiceSettingsAccess(
-      url: (settings) => settings.prowlarrUrl,
-      apiKey: (settings) => settings.prowlarrApiKey,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(prowlarrUrl: url, prowlarrApiKey: apiKey),
-    ),
-    ServiceKey.readarr: _ServiceSettingsAccess(
-      url: (settings) => settings.readarrUrl,
-      apiKey: (settings) => settings.readarrApiKey,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(readarrUrl: url, readarrApiKey: apiKey),
-    ),
-    ServiceKey.sabnzbd: _ServiceSettingsAccess(
-      url: (settings) => settings.sabnzbdUrl,
-      apiKey: (settings) => settings.sabnzbdApiKey,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(sabnzbdUrl: url, sabnzbdApiKey: apiKey),
-    ),
-    ServiceKey.nzbget: _ServiceSettingsAccess(
-      url: (settings) => settings.nzbgetUrl,
-      apiKey: (settings) => settings.nzbgetPassword,
-      username: (settings) => settings.nzbgetUsername,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(nzbgetUrl: url, nzbgetPassword: apiKey),
-      updateUsername: (settings, username) =>
-          settings.copyWith(nzbgetUsername: username),
-    ),
-    ServiceKey.unraid: _ServiceSettingsAccess(
-      url: (settings) => settings.unraidUrl,
-      apiKey: (settings) => settings.unraidApiKey,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(unraidUrl: url, unraidApiKey: apiKey),
-    ),
-    ServiceKey.jellyfin: _ServiceSettingsAccess(
-      url: (settings) => settings.jellyfinUrl,
-      apiKey: (settings) => settings.jellyfinApiKey,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(jellyfinUrl: url, jellyfinApiKey: apiKey),
-    ),
-    // The token takes the generic credential slot, the same way
-    // `qbittorrentPassword` does — `plexClientId` and `jellyfinUserId` stay
-    // off this map on purpose, because `update` is hard-wired to
-    // `{url, apiKey}` and both stand alone as third values already handled
-    // outside it, the same way `trustedCertificates` is keyed by origin
-    // rather than by service and so cannot live in a per-service map at all.
-    ServiceKey.plex: _ServiceSettingsAccess(
-      url: (settings) => settings.plexUrl,
-      apiKey: (settings) => settings.plexToken,
-      update: (settings, {url, apiKey}) =>
-          settings.copyWith(plexUrl: url, plexToken: apiKey),
-    ),
-  };
-
-  static String normalizeRegion(String? region) {
-    final normalized = region?.trim().toUpperCase() ?? '';
-    return normalized.isEmpty ? 'US' : normalized;
-  }
-
   const SettingsModel({
-    this.seerrUrl = '',
-    this.seerrApiKey = '',
-    this.radarrUrl = '',
-    this.radarrApiKey = '',
-    this.sonarrUrl = '',
-    this.sonarrApiKey = '',
-    this.lidarrUrl = '',
-    this.lidarrApiKey = '',
-    this.qbittorrentUrl = '',
-    this.qbittorrentUsername = '',
-    this.qbittorrentPassword = '',
-    this.transmissionUrl = '',
-    this.transmissionUsername = '',
-    this.transmissionPassword = '',
-    this.npmUrl = '',
-    this.npmUsername = '',
-    this.npmPassword = '',
-    this.bazarrUrl = '',
-    this.bazarrApiKey = '',
-    this.truenasUrl = '',
-    this.truenasApiKey = '',
-    this.dockgeUrl = '',
-    this.dockgeUsername = '',
-    this.dockgePassword = '',
-    this.prowlarrUrl = '',
-    this.prowlarrApiKey = '',
-    this.readarrUrl = '',
-    this.readarrApiKey = '',
-    this.sabnzbdUrl = '',
-    this.sabnzbdApiKey = '',
-    this.nzbgetUrl = '',
-    this.nzbgetUsername = '',
-    this.nzbgetPassword = '',
-    this.unraidUrl = '',
-    this.unraidApiKey = '',
-    this.jellyfinUrl = '',
-    this.jellyfinApiKey = '',
-    this.jellyfinUserId = '',
-    this.plexUrl = '',
-    this.plexToken = '',
+    this.instances = const [],
     this.plexClientId = '',
     this.trustedCertificates = const {},
     this.region = 'US',
     this.themeMode = AppThemeMode.dark,
   });
 
+  static String normalizeRegion(String? region) {
+    final normalized = region?.trim().toUpperCase() ?? '';
+    return normalized.isEmpty ? 'US' : normalized;
+  }
+
   SettingsModel copyWith({
-    String? seerrUrl,
-    String? seerrApiKey,
-    String? radarrUrl,
-    String? radarrApiKey,
-    String? sonarrUrl,
-    String? sonarrApiKey,
-    String? lidarrUrl,
-    String? lidarrApiKey,
-    String? qbittorrentUrl,
-    String? qbittorrentUsername,
-    String? qbittorrentPassword,
-    String? transmissionUrl,
-    String? transmissionUsername,
-    String? transmissionPassword,
-    String? npmUrl,
-    String? npmUsername,
-    String? npmPassword,
-    String? bazarrUrl,
-    String? bazarrApiKey,
-    String? truenasUrl,
-    String? truenasApiKey,
-    String? dockgeUrl,
-    String? dockgeUsername,
-    String? dockgePassword,
-    String? prowlarrUrl,
-    String? prowlarrApiKey,
-    String? readarrUrl,
-    String? readarrApiKey,
-    String? sabnzbdUrl,
-    String? sabnzbdApiKey,
-    String? nzbgetUrl,
-    String? nzbgetUsername,
-    String? nzbgetPassword,
-    String? unraidUrl,
-    String? unraidApiKey,
-    String? jellyfinUrl,
-    String? jellyfinApiKey,
-    String? jellyfinUserId,
-    String? plexUrl,
-    String? plexToken,
+    List<ServiceInstance>? instances,
     String? plexClientId,
     Map<String, String>? trustedCertificates,
     String? region,
     AppThemeMode? themeMode,
   }) {
     return SettingsModel(
-      seerrUrl: seerrUrl ?? this.seerrUrl,
-      seerrApiKey: seerrApiKey ?? this.seerrApiKey,
-      radarrUrl: radarrUrl ?? this.radarrUrl,
-      radarrApiKey: radarrApiKey ?? this.radarrApiKey,
-      sonarrUrl: sonarrUrl ?? this.sonarrUrl,
-      sonarrApiKey: sonarrApiKey ?? this.sonarrApiKey,
-      lidarrUrl: lidarrUrl ?? this.lidarrUrl,
-      lidarrApiKey: lidarrApiKey ?? this.lidarrApiKey,
-      qbittorrentUrl: qbittorrentUrl ?? this.qbittorrentUrl,
-      qbittorrentUsername: qbittorrentUsername ?? this.qbittorrentUsername,
-      qbittorrentPassword: qbittorrentPassword ?? this.qbittorrentPassword,
-      transmissionUrl: transmissionUrl ?? this.transmissionUrl,
-      transmissionUsername: transmissionUsername ?? this.transmissionUsername,
-      transmissionPassword: transmissionPassword ?? this.transmissionPassword,
-      npmUrl: npmUrl ?? this.npmUrl,
-      npmUsername: npmUsername ?? this.npmUsername,
-      npmPassword: npmPassword ?? this.npmPassword,
-      bazarrUrl: bazarrUrl ?? this.bazarrUrl,
-      bazarrApiKey: bazarrApiKey ?? this.bazarrApiKey,
-      truenasUrl: truenasUrl ?? this.truenasUrl,
-      truenasApiKey: truenasApiKey ?? this.truenasApiKey,
-      dockgeUrl: dockgeUrl ?? this.dockgeUrl,
-      dockgeUsername: dockgeUsername ?? this.dockgeUsername,
-      dockgePassword: dockgePassword ?? this.dockgePassword,
-      prowlarrUrl: prowlarrUrl ?? this.prowlarrUrl,
-      prowlarrApiKey: prowlarrApiKey ?? this.prowlarrApiKey,
-      readarrUrl: readarrUrl ?? this.readarrUrl,
-      readarrApiKey: readarrApiKey ?? this.readarrApiKey,
-      sabnzbdUrl: sabnzbdUrl ?? this.sabnzbdUrl,
-      sabnzbdApiKey: sabnzbdApiKey ?? this.sabnzbdApiKey,
-      nzbgetUrl: nzbgetUrl ?? this.nzbgetUrl,
-      nzbgetUsername: nzbgetUsername ?? this.nzbgetUsername,
-      nzbgetPassword: nzbgetPassword ?? this.nzbgetPassword,
-      unraidUrl: unraidUrl ?? this.unraidUrl,
-      unraidApiKey: unraidApiKey ?? this.unraidApiKey,
-      jellyfinUrl: jellyfinUrl ?? this.jellyfinUrl,
-      jellyfinApiKey: jellyfinApiKey ?? this.jellyfinApiKey,
-      jellyfinUserId: jellyfinUserId ?? this.jellyfinUserId,
-      plexUrl: plexUrl ?? this.plexUrl,
-      plexToken: plexToken ?? this.plexToken,
+      instances: instances ?? this.instances,
       plexClientId: plexClientId ?? this.plexClientId,
       trustedCertificates: trustedCertificates ?? this.trustedCertificates,
       region: region ?? this.region,
@@ -396,71 +119,158 @@ class SettingsModel {
 
   ThemeMode get resolvedThemeMode => themeMode.materialThemeMode;
 
-  _ServiceSettingsAccess _serviceAccessFor(ServiceKey service) {
-    return _serviceSettingsAccess[service]!;
-  }
+  // === Instances ===========================================================
 
-  /// Returns the URL configured for [service].
-  String urlFor(ServiceKey service) {
-    return _serviceAccessFor(service).url(this);
-  }
+  /// Every instance of [service], in order. Empty when none is configured.
+  List<ServiceInstance> instancesOf(ServiceKey service) => instances
+      .where((instance) => instance.service == service)
+      .toList(growable: false);
 
-  /// Returns the API key configured for [service].
-  String apiKeyFor(ServiceKey service) {
-    return _serviceAccessFor(service).apiKey(this);
-  }
-
-  /// Returns a copy with the URL and/or API key updated for [service].
-  SettingsModel copyWithService(
-    ServiceKey service, {
-    String? url,
-    String? apiKey,
-  }) {
-    return _serviceAccessFor(service).update(this, url: url, apiKey: apiKey);
-  }
-
-  /// Returns a copy with [service]'s URL, username and/or password updated.
+  /// The instance a bare reference to [service] means: the first one.
   ///
-  /// The credential-authenticated counterpart to [copyWithService], and the
-  /// replacement for the `copyWithQbittorrent`/`copyWithDockge`/`copyWithNzbget`
-  /// family this grew out of. That shape did not scale honestly: each new
-  /// credential service added a near-identical method here **and** a `switch`
-  /// arm in onboarding **and** one in the settings screen, and the compiler
-  /// checked none of the three. It has already failed once in exactly that way —
-  /// NZBGet shipped with a username field that persisted correctly and was
-  /// rendered by no screen at all, because two of the three sites were updated
-  /// and the third was not.
-  ///
-  /// Now the registry answers it: the username half is written through
-  /// [_ServiceSettingsAccess.updateUsername], which exists for precisely the
-  /// services [ServiceKeyExtension.usesApiKey] excludes.
-  ///
-  /// Asserts rather than silently no-ops on an API-key service, because passing
-  /// one here is a programming error — the caller meant [copyWithService], and
-  /// quietly dropping the write is how a credential goes missing.
-  SettingsModel copyWithCredentials(
-    ServiceKey service, {
-    String? url,
-    String? username,
-    String? password,
-  }) {
-    final access = _serviceAccessFor(service);
-    assert(
-      access.updateUsername != null,
-      '${service.name} authenticates with an API key — use copyWithService.',
-    );
-    var updated = access.update(this, url: url, apiKey: password);
-    if (username != null && access.updateUsername != null) {
-      updated = access.updateUsername!(updated, username);
+  /// Null when the service has none — which is different from having one that
+  /// is blank, and the two are told apart by [isServiceConfigured].
+  ServiceInstance? primaryOf(ServiceKey service) {
+    for (final instance in instances) {
+      if (instance.service == service) return instance;
     }
-    return updated;
+    return null;
   }
+
+  ServiceInstance? instanceById(String id) {
+    for (final instance in instances) {
+      if (instance.id == id) return instance;
+    }
+    return null;
+  }
+
+  /// Every instance that is set up enough to be worth talking to.
+  List<ServiceInstance> get configuredInstances => instances
+      .where((instance) => instance.isConfigured)
+      .toList(growable: false);
+
+  /// Every instance of [service] that is set up enough to be worth talking to.
+  ///
+  /// The per-service counterpart of [configuredInstances], and the list every
+  /// surface that *offers a choice* has to use. [instancesOf] includes the slot
+  /// a half-finished form is sitting in, which is right for the settings screen
+  /// — the user is looking at it — and wrong everywhere else.
+  List<ServiceInstance> configuredInstancesOf(ServiceKey service) => instances
+      .where((instance) => instance.service == service && instance.isConfigured)
+      .toList(growable: false);
+
+  /// Whether [service] has more than one connection worth reading — the
+  /// question every surface asks before it decides to show a label at all.
+  ///
+  /// Counts the **configured** ones, not the slots. Counting slots meant that
+  /// starting to add a second connection lit the badge, the app-bar label and
+  /// every provenance chip across the app before that connection had an address
+  /// — announcing a fold the user could not yet use, and naming the new slot by
+  /// its id because it had no label yet either.
+  bool hasMultipleInstances(ServiceKey service) =>
+      configuredInstancesOf(service).length > 1;
+
+  /// Returns a copy with [instance] written in: replacing the entry with the
+  /// same id, or appended when there is none.
+  ///
+  /// Appending rather than inserting keeps the user's order intact, and keeps
+  /// the first instance of a service first — which is what makes "primary" a
+  /// stable answer across an edit to some other service.
+  SettingsModel copyWithInstance(ServiceInstance instance) {
+    final updated = List<ServiceInstance>.of(instances);
+    final index = updated.indexWhere((other) => other.id == instance.id);
+    if (index >= 0) {
+      updated[index] = instance;
+    } else {
+      updated.add(instance);
+    }
+    return copyWith(instances: updated);
+  }
+
+  /// Returns a copy without the instance [id], and without the per-instance
+  /// values that belonged to it.
+  ///
+  /// Does **not** touch [trustedCertificates]: a pin belongs to an origin that
+  /// another instance may still be reached at, and deciding that is
+  /// [copyWithoutUnusedCertificate]'s job — call it after this, so "still
+  /// configured" describes the state being saved.
+  SettingsModel copyWithoutInstance(String id) {
+    final updated = instances
+        .where((instance) => instance.id != id)
+        .toList(growable: false);
+    if (updated.length == instances.length) return this;
+    return copyWith(instances: updated);
+  }
+
+  /// The instance [service]'s next connection should take, minted against the
+  /// ids already in use so it can never collide with one.
+  ServiceInstance newInstanceFor(ServiceKey service) => ServiceInstance(
+    id: ServiceInstance.mintId(service, instances.map((i) => i.id)),
+    service: service,
+  );
+
+  // === Per-service access, resolved through the first instance =============
+
+  /// Writes to [service]'s first instance, creating it when there is none.
+  ///
+  /// The one path that mints a primary, which is why it lives here rather than
+  /// at the call sites: a new service configured for the first time has to land
+  /// on the id whose storage keys predate this class, or its credential would
+  /// be written somewhere the previous version never looked.
+  SettingsModel _upsertPrimary(
+    ServiceKey service, {
+    String? url,
+    String? credential,
+    String? username,
+    String? viewerId,
+  }) {
+    final existing = primaryOf(service);
+    if (existing != null) {
+      return copyWithInstance(
+        existing.copyWith(
+          url: url,
+          credential: credential,
+          username: username,
+          viewerId: viewerId,
+        ),
+      );
+    }
+
+    final candidate =
+        ServiceInstance(
+          id: ServiceInstance.mintId(service, instances.map((i) => i.id)),
+          service: service,
+        ).copyWith(
+          url: url,
+          credential: credential,
+          username: username,
+          viewerId: viewerId,
+        );
+
+    // Nothing worth recording, so record nothing. Without this guard the load
+    // path mints an instance for all seventeen services on every start — it
+    // walks the whole enum writing whatever it found, and finds `''` for the
+    // sixteen the user never set up. An instance list that is never empty makes
+    // "does this service have one" unanswerable, and persists sixteen blanks
+    // to prove it.
+    if (candidate.url.isEmpty &&
+        candidate.credential.isEmpty &&
+        candidate.username.isEmpty &&
+        candidate.viewerId.isEmpty) {
+      return this;
+    }
+    return copyWithInstance(candidate);
+  }
+
+  /// Returns the URL configured for [service]'s first instance.
+  String urlFor(ServiceKey service) => primaryOf(service)?.url ?? '';
+
+  /// Returns the API key configured for [service]'s first instance.
+  String apiKeyFor(ServiceKey service) => primaryOf(service)?.credential ?? '';
 
   /// The username configured for [service], or `''` for the services that
   /// authenticate with an API key and so have none.
-  String usernameFor(ServiceKey service) {
-    return _serviceAccessFor(service).username?.call(this) ?? '';
-  }
+  String usernameFor(ServiceKey service) => primaryOf(service)?.username ?? '';
 
   /// The password configured for [service], or `''` for the services that
   /// authenticate with an API key and so have none.
@@ -473,6 +283,67 @@ class SettingsModel {
     return service.usesApiKey ? '' : apiKeyFor(service);
   }
 
+  /// Returns a copy with the URL and/or API key updated for [service]'s first
+  /// instance.
+  SettingsModel copyWithService(
+    ServiceKey service, {
+    String? url,
+    String? apiKey,
+  }) {
+    return _upsertPrimary(service, url: url, credential: apiKey);
+  }
+
+  /// Returns a copy with [service]'s URL, username and/or password updated.
+  ///
+  /// The credential-authenticated counterpart to [copyWithService]. Asserts
+  /// rather than silently no-ops on an API-key service, because passing one
+  /// here is a programming error — the caller meant [copyWithService], and
+  /// quietly dropping the write is how a credential goes missing.
+  SettingsModel copyWithCredentials(
+    ServiceKey service, {
+    String? url,
+    String? username,
+    String? password,
+  }) {
+    assert(
+      !service.usesApiKey,
+      '${service.name} authenticates with an API key — use copyWithService.',
+    );
+    return _upsertPrimary(
+      service,
+      url: url,
+      credential: password,
+      username: username,
+    );
+  }
+
+  /// Returns a copy with the chosen viewer updated for [service]'s first
+  /// instance. Jellyfin only — see [ServiceKeyExtension.needsViewerSelection].
+  SettingsModel copyWithViewer(ServiceKey service, String viewerId) {
+    return _upsertPrimary(service, viewerId: viewerId);
+  }
+
+  /// What to call the connection [id] in a sentence.
+  ///
+  /// The one home for the rule every surface follows: a connection is named
+  /// **only when there is more than one of its service to tell apart**. With a
+  /// single Radarr this is "Radarr" whatever label the instance happens to be
+  /// carrying — and it very often is carrying one, because a label derived when
+  /// a second connection was added outlives that connection's removal.
+  ///
+  /// [fallback] names the service for an id that matches nothing, which is what
+  /// a link or a queued job from a connection since removed still holds.
+  String connectionTitle(String id, ServiceKey fallback) {
+    final instance = instanceById(id);
+    if (instance == null) return fallback.title;
+    if (!hasMultipleInstances(instance.service)) return instance.service.title;
+    return instance.displayTitle;
+  }
+
+  /// Whether any instance of [service] is set up enough to talk to.
+  bool isServiceConfigured(ServiceKey service) =>
+      instancesOf(service).any((instance) => instance.isConfigured);
+
   /// Returns a copy with [service]'s per-server extras cleared.
   ///
   /// The `{url, apiKey}` pair [copyWithService] reaches is not all of what
@@ -481,24 +352,27 @@ class SettingsModel {
   /// behind, re-adding a different Jellyfin binds every per-viewer query to a
   /// user id that does not exist there, and the picker shows nothing selected.
   ///
-  /// `plexClientId` is deliberately **not** cleared and is not the same kind of
+  /// [plexClientId] is deliberately **not** cleared and is not the same kind of
   /// value: it identifies this *install* rather than any one server, is minted
   /// exactly once, and `SettingsService.saveSettings` refuses to overwrite it
   /// for that reason.
   SettingsModel copyWithoutServiceExtras(ServiceKey service) {
-    if (service.needsViewerSelection) return copyWith(jellyfinUserId: '');
-    return this;
+    if (!service.needsViewerSelection) return this;
+    final updated = instances
+        .map(
+          (instance) => instance.service == service
+              ? instance.copyWith(viewerId: '')
+              : instance,
+        )
+        .toList(growable: false);
+    return copyWith(instances: updated);
   }
+
+  // === Certificates (ADR-6) ================================================
 
   /// The trusted fingerprint for the TLS origin [rawUrl] belongs to, or null
   /// when nothing is pinned there (or [rawUrl] cannot carry a certificate at
   /// all — see [UrlUtils.certOrigin]).
-  ///
-  /// Every service is reachable through this — see ADR-6 in
-  /// `context/decisions.md`. There is deliberately no per-`ServiceKey`
-  /// overload: a certificate belongs to the origin, and looking one up by
-  /// service would need that service's *own* saved URL anyway, which the
-  /// caller already has.
   String? pinForUrl(String rawUrl) {
     final origin = UrlUtils.certOrigin(rawUrl);
     if (origin == null) return null;
@@ -534,7 +408,7 @@ class SettingsModel {
   }
 
   /// Returns a copy that forgets [priorUrl]'s pinned certificate unless some
-  /// service *still configured in this copy* is reached at that origin.
+  /// instance *still configured in this copy* is reached at that origin.
   ///
   /// The one guard for every path that stops using an address — removing a
   /// connection, editing a URL to point somewhere else — because all of them
@@ -545,72 +419,128 @@ class SettingsModel {
   /// [pinForUrl] is keyed purely by origin, the next service pointed at that
   /// address would silently reuse it with no trust prompt.
   ///
+  /// Asks [instancesSharingOriginOf] rather than [servicesSharingOriginOf], and
+  /// that is the whole difference between correct and nearly correct here: two
+  /// instances of one service behind the same proxy are two users of that pin,
+  /// and a per-service answer collapses them into one. Removing either would
+  /// then forget a certificate the other still needs.
+  ///
   /// Call it *after* writing the new (or cleared) values, so "still
   /// configured" describes the state being saved rather than the one being
   /// left. A no-op for an empty [priorUrl] or one that carries no TLS origin.
   SettingsModel copyWithoutUnusedCertificate(String priorUrl) {
     if (priorUrl.trim().isEmpty) return this;
-    final stillUsed = servicesSharingOriginOf(
+    final stillUsed = instancesSharingOriginOf(
       priorUrl,
-    ).any(isServiceConfigured);
+    ).any((instance) => instance.isConfigured);
     if (stillUsed) return this;
     return copyWithTrustedCertificate(url: priorUrl, fingerprint: '');
   }
 
-  /// Every configured service whose saved URL resolves to the same TLS
-  /// origin as [rawUrl] — the set one trust decision on that origin actually
-  /// covers, and so the set a "forget this certificate" also breaks.
-  List<ServiceKey> servicesSharingOriginOf(String rawUrl) {
+  /// Every configured instance whose saved URL resolves to the same TLS origin
+  /// as [rawUrl] — the set one trust decision on that origin actually covers.
+  List<ServiceInstance> instancesSharingOriginOf(String rawUrl) {
     final origin = UrlUtils.certOrigin(rawUrl);
     if (origin == null) return const [];
-    return ServiceKey.values
-        .where((service) {
-          final serviceUrl = urlFor(service);
-          return serviceUrl.isNotEmpty &&
-              UrlUtils.certOrigin(serviceUrl) == origin;
-        })
+    return instances
+        .where(
+          (instance) =>
+              instance.url.isNotEmpty &&
+              UrlUtils.certOrigin(instance.url) == origin,
+        )
         .toList(growable: false);
   }
 
-  bool isServiceConfigured(ServiceKey service) {
-    // A credential-authenticated service can legitimately run without auth
-    // behind a reverse proxy, so only the URL is strictly required there. Which
-    // services those are is the registry's answer, not a list repeated here.
-    if (!service.usesApiKey) return urlFor(service).isNotEmpty;
-    return urlFor(service).isNotEmpty && apiKeyFor(service).isNotEmpty;
+  /// Every configured service reached at the same TLS origin as [rawUrl], with
+  /// no service named twice.
+  ///
+  /// The naming half of [instancesSharingOriginOf], for the screens that warn
+  /// "forgetting this certificate also affects…": a list of instances would
+  /// say "Radarr, Radarr" where the user thinks in servers. Correctness paths
+  /// take the instance list; sentences take this one.
+  List<ServiceKey> servicesSharingOriginOf(String rawUrl) {
+    final seen = <ServiceKey>{};
+    for (final instance in instancesSharingOriginOf(rawUrl)) {
+      seen.add(instance.service);
+    }
+    return seen.toList(growable: false);
   }
-}
 
-class _ServiceSettingsAccess {
-  final String Function(SettingsModel settings) url;
-  final String Function(SettingsModel settings) apiKey;
+  // === Legacy projections ==================================================
+  //
+  // The forty-one names this class used to store, kept as reads onto the first
+  // instance of each service. Around a hundred call sites use them, several
+  // inside Riverpod `select`s where the point is a stable scalar, and rewriting
+  // all of them to `urlFor(ServiceKey.radarr)` would be churn with no reader
+  // served. New code should reach for [instancesOf] or [primaryOf] — these say
+  // "the first one" without being able to say anything else.
 
-  /// Only for the services [ServiceKeyExtension.usesApiKey] excludes, whose
-  /// credential is a username/password pair — the password takes the generic
-  /// [apiKey] slot and this carries the other half. Null everywhere else, which
-  /// is what makes [SettingsModel.usernameFor] a table lookup instead of a
-  /// second hand-maintained list of the credential-authenticated services.
-  final String Function(SettingsModel settings)? username;
+  String get seerrUrl => urlFor(ServiceKey.seerr);
+  String get seerrApiKey => apiKeyFor(ServiceKey.seerr);
+  String get radarrUrl => urlFor(ServiceKey.radarr);
+  String get radarrApiKey => apiKeyFor(ServiceKey.radarr);
+  String get sonarrUrl => urlFor(ServiceKey.sonarr);
+  String get sonarrApiKey => apiKeyFor(ServiceKey.sonarr);
+  String get lidarrUrl => urlFor(ServiceKey.lidarr);
+  String get lidarrApiKey => apiKeyFor(ServiceKey.lidarr);
+  String get qbittorrentUrl => urlFor(ServiceKey.qbittorrent);
+  String get qbittorrentUsername => usernameFor(ServiceKey.qbittorrent);
+  String get qbittorrentPassword => apiKeyFor(ServiceKey.qbittorrent);
+  String get transmissionUrl => urlFor(ServiceKey.transmission);
+  String get transmissionUsername => usernameFor(ServiceKey.transmission);
+  String get transmissionPassword => apiKeyFor(ServiceKey.transmission);
+  String get npmUrl => urlFor(ServiceKey.nginxProxyManager);
 
-  final SettingsModel Function(
-    SettingsModel settings, {
-    String? url,
-    String? apiKey,
-  })
-  update;
+  /// The Nginx Proxy Manager account's email address.
+  ///
+  /// Held in the generic username slot because that is structurally what it is
+  /// — the non-secret half of a credential pair — but NPM calls it an email and
+  /// so does the field, via [ServiceKeyExtension.usernameLabel]. Typing a bare
+  /// username into `POST /api/tokens` is rejected, so labelling it "Username"
+  /// would have been an invitation to fail the login.
+  String get npmUsername => usernameFor(ServiceKey.nginxProxyManager);
+  String get npmPassword => apiKeyFor(ServiceKey.nginxProxyManager);
+  String get bazarrUrl => urlFor(ServiceKey.bazarr);
+  String get bazarrApiKey => apiKeyFor(ServiceKey.bazarr);
+  String get truenasUrl => urlFor(ServiceKey.truenas);
+  String get truenasApiKey => apiKeyFor(ServiceKey.truenas);
+  String get dockgeUrl => urlFor(ServiceKey.dockge);
+  String get dockgeUsername => usernameFor(ServiceKey.dockge);
+  String get dockgePassword => apiKeyFor(ServiceKey.dockge);
+  String get prowlarrUrl => urlFor(ServiceKey.prowlarr);
+  String get prowlarrApiKey => apiKeyFor(ServiceKey.prowlarr);
+  String get readarrUrl => urlFor(ServiceKey.readarr);
+  String get readarrApiKey => apiKeyFor(ServiceKey.readarr);
+  String get sabnzbdUrl => urlFor(ServiceKey.sabnzbd);
+  String get sabnzbdApiKey => apiKeyFor(ServiceKey.sabnzbd);
+  String get nzbgetUrl => urlFor(ServiceKey.nzbget);
+  String get nzbgetUsername => usernameFor(ServiceKey.nzbget);
+  String get nzbgetPassword => apiKeyFor(ServiceKey.nzbget);
+  String get unraidUrl => urlFor(ServiceKey.unraid);
+  String get unraidApiKey => apiKeyFor(ServiceKey.unraid);
+  String get jellyfinUrl => urlFor(ServiceKey.jellyfin);
+  String get jellyfinApiKey => apiKeyFor(ServiceKey.jellyfin);
 
-  /// Writes the username half of a credential pair. Non-null exactly when
-  /// [username] is, so [SettingsModel.copyWithCredentials] can read the
-  /// registry instead of switching on the service — the same reason [username]
-  /// itself exists.
-  final SettingsModel Function(SettingsModel settings, String username)?
-  updateUsername;
+  /// Which Jellyfin user's watch state the library is read through.
+  ///
+  /// Required rather than optional, and the reason is structural: a Jellyfin API
+  /// key authenticates as Administrator with **no user attached** (an empty
+  /// `UserId` claim), so it can see every session but cannot answer "have I
+  /// watched this". Resume positions, next-up and unplayed filters are all
+  /// user-scoped, so the library has to be entered through a person chosen from
+  /// `/Users`. Plex has no equivalent field because its token *is* the user and
+  /// `/library/*` takes no impersonation parameter — that asymmetry is a real
+  /// property of the two APIs, not a gap here.
+  String get jellyfinUserId => primaryOf(ServiceKey.jellyfin)?.viewerId ?? '';
+  String get plexUrl => urlFor(ServiceKey.plex);
 
-  const _ServiceSettingsAccess({
-    required this.url,
-    required this.apiKey,
-    required this.update,
-    this.username,
-    this.updateUsername,
-  });
+  /// The user's own `X-Plex-Token`, pasted by hand.
+  ///
+  /// Named for what Plex calls it rather than squeezed into an `apiKey` field,
+  /// though it occupies the generic credential slot exactly as
+  /// `qbittorrentPassword` does. Cupola never mints this: every documented way
+  /// to obtain a Plex token is a plex.tv call, and reaching for one would break
+  /// the product's first principle. A pasted token is validated by the user's
+  /// own server.
+  String get plexToken => apiKeyFor(ServiceKey.plex);
 }

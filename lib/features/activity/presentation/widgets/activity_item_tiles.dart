@@ -9,6 +9,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart' as dynamic_utils;
 import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/connection_badge.dart';
 import 'package:cupola/core/widgets/media_search_popup_menu.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/tag_chip.dart';
@@ -20,6 +21,7 @@ import 'package:cupola/features/activity/presentation/widgets/activity_tab_helpe
 import 'package:cupola/features/activity/presentation/widgets/detail_sheets.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class QueueItemTile extends StatelessWidget {
@@ -319,6 +321,18 @@ class GlobalActivityItemTile extends ConsumerWidget {
         (item.kind == GlobalActivityKind.missing ||
             item.kind == GlobalActivityKind.cutoff) &&
         extractWantedItemId(item.serviceType, raw) != null;
+    // Resolved here rather than inside [_writeActions] because it is the one
+    // decision on this row that needs a `ref`. Short-circuited so only a queue
+    // row that would actually offer the hand-off subscribes to the lens — the
+    // History list builds thousands of these.
+    final canManualImport =
+        item.kind == GlobalActivityKind.queue &&
+        item.service.supportsManualImport &&
+        _manualImportFolder != null &&
+        (item.instanceId.isEmpty ||
+            item.instanceId ==
+                ref.watch(activeInstanceProvider(item.service))?.id);
+    final writeActions = _writeActions(canManualImport: canManualImport);
     final icon = switch (item.kind) {
       GlobalActivityKind.request => Icons.person_add_alt_1_rounded,
       GlobalActivityKind.queue => Icons.downloading_rounded,
@@ -349,9 +363,12 @@ class GlobalActivityItemTile extends ConsumerWidget {
         // back, nothing but the requests list. `push` keeps the return path.
         onTap: switch (item.kind) {
           GlobalActivityKind.request => () => context.push(
-            '/activity/${ServiceType.discover.name}',
+            _requestsLocation(item.instanceId),
           ),
-          _ => item.raw == null ? null : () => _showDetails(context, ref),
+          _ =>
+            item.raw == null
+                ? null
+                : () => _showDetails(context, ref, writeActions),
         },
         backgroundColor: colorScheme.surfaceContainer,
         borderColor: colorScheme.outlineVariant,
@@ -406,6 +423,16 @@ class GlobalActivityItemTile extends ConsumerWidget {
                       // in the same 11pt weight as the status it competed with.
                       // The accent-tinted icon well still carries the identity.
                       StatusBadge(info: item.status),
+                      // Which server this row came off. On the row rather than
+                      // on the group header, because the header groups by
+                      // *service* and two connections interleave inside it —
+                      // the one place the search sections do not have to say
+                      // it, since one leg there is one server. Empty, and so
+                      // absent, whenever the service has a single connection.
+                      ConnectionBadge(
+                        label: item.instanceLabel,
+                        accent: accent,
+                      ),
                       // When each event happened. `sortDate` was already being
                       // parsed to order the feed but never shown, which left the
                       // History list unable to answer its own question — several
@@ -466,9 +493,9 @@ class GlobalActivityItemTile extends ConsumerWidget {
                     _showInteractiveSearch(context, ref, raw),
                 iconSize: 18,
               ),
-            ] else if (_writeActions.isNotEmpty) ...[
+            ] else if (writeActions.isNotEmpty) ...[
               const SizedBox(width: AppSpacing.xs),
-              _RowActionsMenu(item: item, actions: _writeActions),
+              _RowActionsMenu(item: item, actions: writeActions),
             ],
           ],
         ),
@@ -480,7 +507,9 @@ class GlobalActivityItemTile extends ConsumerWidget {
   ///
   /// Empty for history (nothing to change about something that happened) and
   /// whenever the record has no id to act on.
-  List<_RowAction> get _writeActions {
+  ///
+  /// [canManualImport] gates the manual-import fast path — see the switch.
+  List<_RowAction> _writeActions({required bool canManualImport}) {
     // Requests are checked before the `recordId` guard, not after: they are the
     // one kind that carries no \*arr record at all, so that guard would drop them
     // before they were ever considered.
@@ -502,8 +531,14 @@ class GlobalActivityItemTile extends ConsumerWidget {
       GlobalActivityKind.queue => [
         // The rescue fast-path: a stuck download's row can jump straight into
         // manual import with the download's own output folder pre-seeded.
-        if (item.service.supportsManualImport && _manualImportFolder != null)
-          _RowAction.manualImport,
+        // Offered only for the connection the lens is on, which is a gap
+        // rather than a rule: `manualImportLocation` carries a service and no
+        // connection, and every screen in the import flow resolves through the
+        // lens. Sending a row from the other Radarr there would browse the
+        // wrong server's filesystem and import into it — so the affordance is
+        // withheld rather than made to lie. Restoring it needs `?i=` on the
+        // import routes, which is that feature's work, not this one's.
+        if (canManualImport) _RowAction.manualImport,
         _RowAction.blocklistAndRetry,
         _RowAction.removeFromQueue,
       ],
@@ -516,7 +551,11 @@ class GlobalActivityItemTile extends ConsumerWidget {
     dynamic_utils.stringOrNull(item.raw?['outputPath']),
   );
 
-  void _showDetails(BuildContext context, WidgetRef ref) {
+  void _showDetails(
+    BuildContext context,
+    WidgetRef ref,
+    List<_RowAction> writeActions,
+  ) {
     final raw = item.raw;
     if (raw == null) return;
     switch (item.kind) {
@@ -524,10 +563,10 @@ class GlobalActivityItemTile extends ConsumerWidget {
         DetailSheets.showQueueDetail(
           context,
           raw,
-          actions: _writeActions.isEmpty
+          actions: writeActions.isEmpty
               ? null
               : _SheetActions(
-                  actions: _writeActions,
+                  actions: writeActions,
                   // The tile's own context and ref, deliberately: the sheet
                   // closes before the action runs, so anything captured from
                   // *inside* it is disposed by the time the confirmation
@@ -559,7 +598,9 @@ class GlobalActivityItemTile extends ConsumerWidget {
   ) {
     runWantedAutoSearch(
       context,
-      ref.read(resolvedArrServiceProvider(item.serviceType)),
+      ref.read(
+        connectionArrServiceProvider((item.serviceType, item.instanceId)),
+      ),
       item.serviceType,
       raw,
     );
@@ -578,6 +619,11 @@ class GlobalActivityItemTile extends ConsumerWidget {
       // The subject alone: the sheet's own heading already says "Releases", and
       // `showWantedInteractiveSearch` caps whatever it is handed.
       title: item.title,
+      // A release search runs on the server that listed the row. Stamped here
+      // rather than left to `showReleaseSearch`, which falls back to the lens —
+      // right for a screen that shows one connection, wrong for a feed that
+      // merges several.
+      instanceId: item.instanceId,
     );
   }
 }
@@ -714,17 +760,25 @@ class _RowActionsMenu extends ConsumerWidget {
                       : colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(width: AppSpacing.md),
-                Text(
-                  action.label,
-                  // Recoloured from the ambient row style, not built from
-                  // scratch: a bare `TextStyle(color:)` only happened to keep
-                  // the family and size because `Text` merges an inheriting
-                  // style, which makes the base invisible at the call site.
-                  style: action.destructive
-                      ? DefaultTextStyle.of(
-                          context,
-                        ).style.copyWith(color: colorScheme.error)
-                      : null,
+                // Flexible, because the longest label does not fit: a Material
+                // 3 popup is capped at 280pt and "Remove from blocklist" plus
+                // its glyph and gutter wants 326, so the row overflowed by 70
+                // and painted the debug stripe over the menu. Wrapping rather
+                // than ellipsising — a menu item that reads "Remove from
+                // blockli…" is worse than one that takes two lines.
+                Flexible(
+                  child: Text(
+                    action.label,
+                    // Recoloured from the ambient row style, not built from
+                    // scratch: a bare `TextStyle(color:)` only happened to keep
+                    // the family and size because `Text` merges an inheriting
+                    // style, which makes the base invisible at the call site.
+                    style: action.destructive
+                        ? DefaultTextStyle.of(
+                            context,
+                          ).style.copyWith(color: colorScheme.error)
+                        : null,
+                  ),
                 ),
               ],
             ),
@@ -745,6 +799,26 @@ class _RowActionsMenu extends ConsumerWidget {
 /// `recordId == null` guard covering the whole method, which quietly made every
 /// action \*arr-shaped: a Seerr request is keyed by its own id and has no \*arr
 /// record, so it could never have reached the switch.
+/// Where a request row goes: the requests list **of its own connection**.
+///
+/// The `?i=` is the navigation half of the per-connection routing. /activity
+/// merges every configured Seerr, so a row can belong to a server the lens is
+/// not on — and the destination resolves its list, and every write on it, from
+/// the lens unless it is told otherwise. Without this, tapping a row from the
+/// second Seerr opened the first Seerr's requests: the defect moved rather than
+/// closed.
+///
+/// This route carried an `?i=` once before and it was removed in review,
+/// correctly, because nothing read it. `ActivityScreen` reads it now.
+///
+/// Omitted when the row names no connection — a single-Seerr stack, or a
+/// fixture predating the merge — so the ordinary link stays the ordinary link.
+String _requestsLocation(String instanceId) {
+  final path = '/activity/${ServiceType.discover.name}';
+  if (instanceId.isEmpty) return path;
+  return Uri(path: path, queryParameters: {'i': instanceId}).toString();
+}
+
 void _runRowAction(
   BuildContext context,
   WidgetRef ref,
@@ -758,6 +832,8 @@ void _runRowAction(
       ActivityActions.approveRequest(
         context,
         ref,
+        // The row's own connection, never the lens: a request id is per Seerr.
+        instanceId: item.instanceId,
         requestId: requestId,
         title: item.title,
       );
@@ -767,6 +843,7 @@ void _runRowAction(
       ActivityActions.declineRequest(
         context,
         ref,
+        instanceId: item.instanceId,
         requestId: requestId,
         title: item.title,
       );
@@ -789,6 +866,8 @@ void _runRowAction(
         context,
         ref,
         serviceType: item.serviceType,
+        // The row's own connection, never the lens: see [ActivityActions].
+        instanceId: item.instanceId,
         recordId: recordId,
         title: item.title,
       );
@@ -799,6 +878,8 @@ void _runRowAction(
         context,
         ref,
         serviceType: item.serviceType,
+        // The row's own connection, never the lens: see [ActivityActions].
+        instanceId: item.instanceId,
         recordId: recordId,
         title: item.title,
       );
@@ -809,6 +890,8 @@ void _runRowAction(
         context,
         ref,
         serviceType: item.serviceType,
+        // The row's own connection, never the lens: see [ActivityActions].
+        instanceId: item.instanceId,
         recordId: recordId,
         title: item.title,
       );

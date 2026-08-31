@@ -6,6 +6,9 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
 /// Picks whose watch state the Jellyfin library is read through.
@@ -26,13 +29,32 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 /// `/library/*` accepts no impersonation parameter, so a Plex library has exactly
 /// one perspective. The control is absent there rather than showing a list of one.
 class JellyfinViewerPicker extends ConsumerWidget {
-  const JellyfinViewerPicker({super.key});
+  const JellyfinViewerPicker({super.key, this.instanceId = ''});
+
+  /// Which connection this picker fills in for.
+  ///
+  /// **Load-bearing, not decoration.** A Jellyfin user id exists only in one
+  /// server's user table, so listing and saving have to happen against the same
+  /// connection. Read and written through `settings.jellyfinUserId` /
+  /// `copyWithViewer`, both of which resolve to the *first* instance, this
+  /// control listed the users of the server whose form was on screen and then
+  /// saved the chosen one onto a different server — leaving that one bound to an
+  /// id it has never heard of, which breaks every user-scoped query on it
+  /// (Continue watching, Next up, unplayed) and silently.
+  ///
+  /// Empty means the lens, which is what every caller meant before Jellyfin
+  /// could have two.
+  final String instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final selectedId = ref.watch(currentSettingsProvider).jellyfinUserId;
-    final viewersAsync = ref.watch(jellyfinViewersProvider);
+    final selectedId = ref.watch(
+      currentSettingsProvider.select(
+        (s) => _instanceOf(s, instanceId)?.viewerId ?? '',
+      ),
+    );
+    final viewersAsync = ref.watch(jellyfinViewersForProvider(instanceId));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -80,13 +102,26 @@ class JellyfinViewerPicker extends ConsumerWidget {
 
   Future<void> _select(WidgetRef ref, StreamViewer viewer) async {
     final settings = ref.read(currentSettingsProvider);
+    final instance = _instanceOf(settings, instanceId);
+    if (instance == null) return;
     await ref
         .read(settingsProvider.notifier)
-        .updateSettings(settings.copyWith(jellyfinUserId: viewer.id));
+        // Onto the instance the list came from, never through `copyWithViewer`
+        // — that writes the service's first connection whatever this form is
+        // editing. See [instanceId].
+        .updateSettings(
+          settings.copyWithInstance(instance.copyWith(viewerId: viewer.id)),
+        );
     // The client is rebuilt from the new id, which invalidates every per-viewer
     // lens with it — see `jellyfinClientProvider`, where the viewer is part of
     // *which client you are talking to* rather than part of a page's identity.
   }
+}
+
+/// The connection [id] names, or the one the lens is on when it names none.
+ServiceInstance? _instanceOf(SettingsModel settings, String id) {
+  if (id.isEmpty) return settings.primaryOf(ServiceKey.jellyfin);
+  return settings.instanceById(id);
 }
 
 class _ViewerList extends StatelessWidget {

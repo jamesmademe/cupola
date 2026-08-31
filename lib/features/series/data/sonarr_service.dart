@@ -12,6 +12,45 @@ final sonarrServiceProvider = Provider<SonarrService>((ref) {
   return SonarrService(watchApiClient(ref, ServiceKey.sonarr));
 });
 
+/// Sonarr bound to one named connection, whatever the lens is pointing at.
+///
+/// For the work that belongs to a *connection* rather than to a screen: a
+/// release search runs on the server it was started against, and the lens can
+/// move while it is queued. Empty id means the lens, which is what the plain
+/// [sonarrServiceProvider] answers; an id naming nothing throws "not configured"
+/// rather than quietly answering about some other server.
+///
+/// Not `autoDispose`: a caller reads this, awaits a request on it, and a
+/// disposal scheduled at the end of the read would close the `Dio` under the
+/// request. One live client per configured connection is the same bound the
+/// per-service providers already carry.
+final sonarrServiceForProvider = Provider.family<SonarrService, String>((
+  ref,
+  instanceId,
+) {
+  // The lens's own connection resolves to [sonarrServiceProvider] rather than to
+  // a second client for the same server. Without this the app kept two live
+  // `Dio`s pointed at one address whenever anything asked by id — and any
+  // override of the plain provider, which is how every test supplies a fake,
+  // was quietly bypassed on the path that names a connection.
+  //
+  // `read`, deliberately, and this is the load-bearing part. Watching the lens
+  // would rebuild EVERY entry of this family whenever the lens moved — entries
+  // for connections that did not change — and `watchApiClient` closes the
+  // outgoing client on dispose. A release search running against the seedbox
+  // would have its `Dio` shut under it because the user tapped a badge on
+  // another screen. The cost of reading is that an entry minted before the lens
+  // landed on its id keeps a client of its own until it is disposed: one extra
+  // connection, rather than a request that fails.
+  final lens = ref.read(activeInstanceProvider(ServiceKey.sonarr))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == lens) {
+    return ref.watch(sonarrServiceProvider);
+  }
+  return SonarrService(
+    watchApiClient(ref, ServiceKey.sonarr, instanceId: instanceId),
+  );
+});
+
 /// Service for interacting with Sonarr API.
 ///
 /// Provides series-specific operations plus shared activity operations
@@ -143,13 +182,65 @@ class SonarrService with ArrActivityMixin {
   Future<List<SonarrSeries>> lookupSeries(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) {
     return lookupItems(
       'series/lookup',
       term,
       SonarrSeries.fromJson,
       cancelToken: cancelToken,
+      reportFailure: reportFailure,
     );
+  }
+
+  /// Adds [series] — a `series/lookup` row — to this Sonarr's library.
+  ///
+  /// The seasons travel back untouched: Sonarr builds the library entry from
+  /// them, and an add that drops them lands a series with no seasons to
+  /// monitor. `addOptions.searchForMissingEpisodes` is the half that makes
+  /// this an add rather than a bookmark.
+  ///
+  /// [monitored] decides both halves at once — the series flag and
+  /// `addOptions.monitor` — because a series that is not monitored with every
+  /// episode monitored is a contradiction Sonarr resolves by grabbing nothing,
+  /// having first queued a search sweep for the lot.
+  ///
+  /// Throws on failure rather than degrading; see [RadarrService.addMovie].
+  Future<SonarrSeries> addSeries(
+    SonarrSeries series, {
+    required int qualityProfileId,
+    required String rootFolderPath,
+    bool monitored = true,
+    bool searchForMissingEpisodes = true,
+  }) async {
+    final response = await client.post(
+      '/api/v3/series',
+      data: {
+        'title': series.title,
+        // Sonarr keys the new entry on these two, not on the title.
+        'titleSlug': series.titleSlug,
+        'tvdbId': series.tvdbId,
+        'year': series.year,
+        'images': series.images,
+        'seasons': series.seasons,
+        'seriesType': series.seriesType ?? 'standard',
+        'qualityProfileId': qualityProfileId,
+        'rootFolderPath': rootFolderPath,
+        'monitored': monitored,
+        'seasonFolder': true,
+        'addOptions': {
+          'monitor': monitored ? 'all' : 'none',
+          'searchForMissingEpisodes': searchForMissingEpisodes,
+          'searchForCutoffUnmetEpisodes': false,
+        },
+      },
+    );
+    return SonarrSeries.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Fetches the root folders configured on this Sonarr.
+  Future<List<Map<String, dynamic>>> getRootFolders() async {
+    return fetchRootFolders();
   }
 
   /// Finds a series in the library by its TVDB ID.

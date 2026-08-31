@@ -135,7 +135,9 @@ import 'package:cupola/features/services/presentation/service_kpi_provider.dart'
 import 'package:cupola/features/services/presentation/service_matrix_collapse_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/shell/presentation/portal_dismiss_scope.dart';
 
 /// Reachability of one service, as the matrix paints it.
 ///
@@ -144,6 +146,27 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// its border resolve to error red — so every service flashed as failed on cold
 /// open, before a single request had come back.
 enum ServiceReachability { online, checking, offline }
+
+/// What the matrix is being asked for.
+///
+/// The same widget answers two different questions, and the fold is the
+/// difference. On the dashboard it is a *readout*: "is anything in here wrong",
+/// and folding several connections into one cell is density well spent. As the
+/// Portal's floor it is a *picker*: "where do I go", and there every reachable
+/// destination has to have its own cell — a picker that hides a destination is
+/// a wall.
+///
+/// Named for the role rather than for the fold, because the fold is the
+/// consequence and the role is the cause.
+enum ServiceMatrixRole { readout, picker }
+
+/// What one cell stands for: a service folded across its connections, or one
+/// named connection.
+///
+/// A record rather than a class hierarchy — it is two fields and it needs
+/// nothing but equality, which is exactly what a record gives for free and what
+/// the band's `ValueKey` depends on.
+typedef MatrixCellSubject = ({ServiceKey service, String? instanceId});
 
 /// Layout constants for the matrix grid.
 class ServiceMatrixMetrics {
@@ -407,7 +430,9 @@ class _Unroll extends StatelessWidget {
 
 /// The whole matrix: domain bands of cells, then the unconfigured affordance.
 class ServiceMatrix extends ConsumerWidget {
-  const ServiceMatrix({super.key});
+  const ServiceMatrix({super.key, this.role = ServiceMatrixRole.readout});
+
+  final ServiceMatrixRole role;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -427,15 +452,34 @@ class ServiceMatrix extends ConsumerWidget {
           .toList(growable: false);
       if (services.isEmpty) continue;
 
+      final subjects = <MatrixCellSubject>[
+        for (final service in services)
+          // A folded cell in the readout; one cell per connection in the picker.
+          // No service is exempt: every client now resolves through the lens, so
+          // a picker cell always reaches the connection it names.
+          if (role == ServiceMatrixRole.readout)
+            (service: service, instanceId: null)
+          else
+            for (final instance in settings.instancesOf(service))
+              if (instance.isConfigured)
+                (service: service, instanceId: instance.id),
+      ];
+      if (subjects.isEmpty) continue;
+
       bands.add(
         _DomainBand(
           domain: domain,
-          services: services,
+          subjects: subjects,
           expanded: expanded.contains(domain),
+          role: role,
           // Only the first band demonstrates the fold. A page that folds three
           // bands shut in sequence has not hinted at an affordance, it has
           // animated a list.
-          demo: bands.isEmpty,
+          //
+          // And never as a picker. The demo is a one-per-launch flag; letting
+          // the Portal's floor spend it would mean the dashboard — the surface
+          // the lesson is about — never plays it at all.
+          demo: bands.isEmpty && role == ServiceMatrixRole.readout,
         ),
       );
     }
@@ -474,14 +518,23 @@ class ServiceMatrix extends ConsumerWidget {
 class _DomainBand extends ConsumerStatefulWidget {
   const _DomainBand({
     required this.domain,
-    required this.services,
+    required this.subjects,
     required this.expanded,
+    required this.role,
     this.demo = false,
   });
 
   final ServiceDomain domain;
-  final List<ServiceKey> services;
+  final List<MatrixCellSubject> subjects;
   final bool expanded;
+
+  /// What the matrix is being asked for — see [ServiceMatrixRole].
+  ///
+  /// Carried down rather than inferred from whether a subject names a
+  /// connection. Those two agreed until the services that do not read through
+  /// the lens started folding inside the picker too, and the rules that hang
+  /// off this — no live figure, no fold demo — are rules about the role.
+  final ServiceMatrixRole role;
 
   /// Whether this band may play the fold demo on the first `/services` of the
   /// launch: it mounts **open** and folds itself shut with the real close
@@ -647,8 +700,15 @@ class _DomainBandState extends ConsumerState<_DomainBand>
   String? _rollup() {
     var down = 0;
     String? attention;
-    for (final service in widget.services) {
-      final summary = ref.watch(serviceSummaryProvider(service));
+    for (final subject in widget.subjects) {
+      final summary = subject.instanceId == null
+          ? ref.watch(serviceSummaryProvider(subject.service))
+          : ref.watch(
+              instanceSummaryProvider((
+                service: subject.service,
+                instanceId: subject.instanceId!,
+              )),
+            );
       final reachability = switch (summary) {
         AsyncData(:final value) =>
           value.isOnline
@@ -661,7 +721,13 @@ class _DomainBandState extends ConsumerState<_DomainBand>
         down++;
       } else if (reachability == ServiceReachability.online &&
           attention == null) {
-        final signal = ref.watch(serviceSignalProvider(service)).asData?.value;
+        // Suppressed on the picker, and gated on the ROLE rather than on
+        // whether this cell names a connection. The signal provider answers per
+        // service — which is the lens's figure, not this connection's — so a
+        // right number under the wrong name is worse than no number.
+        final signal = widget.role == ServiceMatrixRole.picker
+            ? null
+            : ref.watch(serviceSignalProvider(subject.service)).asData?.value;
         if (signal != null && signal.needsAttention) {
           attention = '${signal.value} ${signal.label}';
         }
@@ -681,7 +747,7 @@ class _DomainBandState extends ConsumerState<_DomainBand>
     required Widget rollupLine,
   }) {
     final domain = widget.domain;
-    final services = widget.services;
+    final subjects = widget.subjects;
     final expanded = widget.expanded;
 
     void toggle() {
@@ -707,7 +773,7 @@ class _DomainBandState extends ConsumerState<_DomainBand>
           // VoiceOver spells out all-caps tokens it does not recognise.
           label: domain.label,
           value: joinSpokenParts([
-            serviceDomainBandValue(serviceCount: services.length),
+            serviceDomainBandValue(serviceCount: subjects.length),
             if (rollup != null && !expanded) spokenFromDotted(rollup),
           ]),
           hint: expanded ? 'collapses this group' : 'expands this group',
@@ -730,7 +796,7 @@ class _DomainBandState extends ConsumerState<_DomainBand>
         // it — which is both more honest (the height and the cards can no
         // longer disagree about how open the band is) and one less zero-
         // duration implicit-animation footgun to route around.
-        _ServiceMatrixBand(services: services, phase: phase),
+        _ServiceMatrixBand(subjects: subjects, phase: phase, role: widget.role),
       ],
     );
   }
@@ -783,7 +849,7 @@ class _DomainBandState extends ConsumerState<_DomainBand>
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
-                    '· ${widget.services.length}',
+                    '· ${widget.subjects.length}',
                     style: AppTheme.eyebrow(dim),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -953,10 +1019,15 @@ class _GridGeometry {
 /// nested scrollable would need shrink-wrapping and physics juggling for a grid
 /// that never scrolls on its own.
 class _ServiceMatrixBand extends StatelessWidget {
-  const _ServiceMatrixBand({required this.services, required this.phase});
+  const _ServiceMatrixBand({
+    required this.subjects,
+    required this.phase,
+    required this.role,
+  });
 
-  final List<ServiceKey> services;
+  final List<MatrixCellSubject> subjects;
   final _FoldPhase phase;
+  final ServiceMatrixRole role;
 
   @override
   Widget build(BuildContext context) {
@@ -994,7 +1065,7 @@ class _ServiceMatrixBand extends StatelessWidget {
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final folded = _GridGeometry.resolve(
-            count: services.length,
+            count: subjects.length,
             availableWidth: width,
             cellHeight: compactHeight,
             rowGap: ServiceMatrixMetrics.compactRowGap,
@@ -1002,7 +1073,7 @@ class _ServiceMatrixBand extends StatelessWidget {
             textScale: textScale,
           );
           final open = _GridGeometry.resolve(
-            count: services.length,
+            count: subjects.length,
             availableWidth: width,
             cellHeight: fullHeight,
             rowGap: ServiceMatrixMetrics.gap,
@@ -1037,13 +1108,13 @@ class _ServiceMatrixBand extends StatelessWidget {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  for (var i = 0; i < services.length; i++)
+                  for (var i = 0; i < subjects.length; i++)
                     Positioned.fromRect(
                       // Keyed by service, so the element — and the ink, the
                       // press state, the provider subscriptions — follows the
                       // card across a reflow instead of being recycled into
                       // whichever card happens to land at that index.
-                      key: ValueKey(services[i]),
+                      key: ValueKey(subjects[i]),
                       rect: Rect.fromLTWH(
                         lerpDouble(folded.xOf(i), open.xOf(i), reflow)!,
                         lerpDouble(
@@ -1056,7 +1127,9 @@ class _ServiceMatrixBand extends StatelessWidget {
                         cellHeight,
                       ),
                       child: ServiceMatrixCell(
-                        service: services[i],
+                        service: subjects[i].service,
+                        instanceId: subjects[i].instanceId,
+                        role: role,
                         phase: phase,
                       ),
                     ),
@@ -1070,15 +1143,38 @@ class _ServiceMatrixBand extends StatelessWidget {
   }
 }
 
+/// What to call one connection on a line that has room for a few words.
+///
+/// The label when there is one — it is what the user typed to tell the two
+/// apart — and the host otherwise, which is at least an address they can check.
+/// Never the id: it is a generated string nobody has ever seen.
+String _connectionName(ServiceKey service, ServiceInstance instance) =>
+    instance.label.isNotEmpty
+    ? instance.label
+    : service.extractHost(instance.url) ?? instance.url;
+
 /// One service: identity, reachability, live figure, and — expanded — its host.
 class ServiceMatrixCell extends ConsumerWidget {
   const ServiceMatrixCell({
     super.key,
     required this.service,
+    this.instanceId,
+    this.role = ServiceMatrixRole.readout,
     this.phase = const _FoldPhase(0),
   });
 
   final ServiceKey service;
+
+  /// The connection this cell stands for, or null when it stands for the
+  /// service folded across all of them. See [ServiceMatrixRole].
+  final String? instanceId;
+
+  /// What this cell is being asked for. Decides whether it carries a live
+  /// figure: the signal provider answers for the *lens*, so on a picker — where
+  /// the whole point is that the cell stands for one destination rather than
+  /// for whichever one is currently being read — a figure is a right number
+  /// under the wrong name.
+  final ServiceMatrixRole role;
 
   /// How far open the card's band is. Every dimension and every opacity inside
   /// reads off this, so there is no state in which the card is "half compact"
@@ -1087,8 +1183,16 @@ class ServiceMatrixCell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final summary = ref.watch(serviceSummaryProvider(service));
+    final instanceId = this.instanceId;
+    final summary = instanceId == null
+        ? ref.watch(serviceSummaryProvider(service))
+        : ref.watch(
+            instanceSummaryProvider((service: service, instanceId: instanceId)),
+          );
     final settings = ref.watch(currentSettingsProvider);
+    final instance = instanceId == null
+        ? null
+        : settings.instanceById(instanceId);
 
     final reachability = switch (summary) {
       AsyncData(:final value) =>
@@ -1099,40 +1203,117 @@ class ServiceMatrixCell extends ConsumerWidget {
       _ => ServiceReachability.checking,
     };
 
+    // Folded across every connection of this service. With one it says exactly
+    // what `summary` already said; with more it is the only thing that can
+    // answer "is anything in here down", which is the question this cell exists
+    // to answer.
+    // Only a folded cell folds. A picker cell stands for exactly one
+    // connection and reports that connection's own state — reading the
+    // service's rollup there would mark a healthy server offline because a
+    // different one is.
+    final folded = instanceId == null
+        ? ref.watch(foldedServiceHealthProvider(service))
+        : null;
+    final degraded = folded != null && folded.total > 1 && folded.offline > 0;
+
+    // The lens, on a folded cell that has more than one connection to fold.
+    // Watched conditionally for the same reason `signal` below is: this is the
+    // only shape of cell that has anything to say about it.
+    final lens = folded != null && settings.hasMultipleInstances(service)
+        ? ref.watch(activeInstanceProvider(service))
+        : null;
+
     // Falls back to the configured URL's host so the cell can name which
-    // instance it is talking about before the first response arrives.
-    final host =
-        summary.asData?.value.host ??
-        service.extractHost(settings.urlFor(service)) ??
-        '';
+    // instance it is talking about before the first response arrives. With more
+    // than one connection the address stops being the useful thing to say and
+    // the LENS takes over — two URLs do not fit on a line, and showing one of
+    // them says "Radarr lives here" when that is half true.
+    //
+    // Named, not listed, and the two halves of the card are why. The pip is
+    // aggregated over every connection (`foldedServiceHealthProvider`, and it
+    // stays that way — "is anything in here down" is what the dot is for), but
+    // the FIGURE is the lens's alone. A subtitle that listed both therefore put
+    // one number under two names: "Radarr · radarr · LAN · 0 movies" while the
+    // other Radarr held 83 films is a false statement, not an omission, and it
+    // even changed unit as the lens moved. So the subtitle names the connection
+    // the figure belongs to, and the count keeps the sibling from vanishing —
+    // the shape `ServiceConnectionRow` already uses on the Connections screen,
+    // rather than a second invention for the same problem.
+    final host = instance != null
+        ? service.extractHost(instance.url) ?? instance.url
+        : lens != null
+        ? '${_connectionName(service, lens)} · '
+              '${settings.configuredInstancesOf(service).length} connections'
+        : summary.asData?.value.host ??
+              service.extractHost(settings.urlFor(service)) ??
+              '';
 
     // Only asked for once the service has answered. Watching it while offline
     // would fan out a library fetch per unreachable service on every rebuild,
     // and there is nothing to paint with the result.
-    final signal = reachability == ServiceReachability.online
+    // Never on the picker: `serviceSignalProvider` answers for the lens, so the
+    // figure would belong to a different connection than the name above it —
+    // and on that floor the whole point of a cell is that it stands for one
+    // connection rather than for whichever one is currently being read. Gated on
+    // the role, which is the cause; `instanceId == null` is only its shape.
+    final signal =
+        role == ServiceMatrixRole.readout &&
+            reachability == ServiceReachability.online
         ? ref.watch(serviceSignalProvider(service)).asData?.value
         : null;
 
     return _ServiceMatrixCellBody(
       service: service,
-      reachability: reachability,
-      signal: signal,
+      role: role,
+      // A folded cell never reports a better state than its worst connection.
+      reachability: degraded ? ServiceReachability.offline : reachability,
+      // And it never shows a live figure summed over an incomplete set: a total
+      // that silently drops an unreachable connection is a wrong number, not a
+      // partial one.
+      signal: degraded ? null : signal,
       host: host,
       phase: phase,
+      degradedOf: degraded ? folded : null,
+      instanceId: instanceId,
+      // A picker cell is named for the connection; the service is already said
+      // by the glyph and the accent beside it.
+      displayName: instance == null
+          ? service.title
+          : (instance.label.isEmpty ? service.title : instance.label),
     );
   }
 }
 
 /// The painted cell, split from the provider reads so every state is reachable
 /// by passing values in rather than by staging a container.
-class _ServiceMatrixCellBody extends StatelessWidget {
+class _ServiceMatrixCellBody extends ConsumerWidget {
   const _ServiceMatrixCellBody({
     required this.service,
     required this.reachability,
     required this.signal,
     required this.host,
     required this.phase,
+    required this.role,
+    this.degradedOf,
+    this.instanceId,
+    required this.displayName,
   });
+
+  /// What the matrix is being asked for. Decides whether the live line is
+  /// rendered at all — see [ServiceMatrixCell.role].
+  final ServiceMatrixRole role;
+
+  /// Set on a picker cell, and what makes its key and its destination differ
+  /// from the folded cell for the same service.
+  final String? instanceId;
+
+  /// What this cell calls itself.
+  final String displayName;
+
+  /// Set only when this service has more than one connection and at least one
+  /// of them is unreachable. The state word then counts rather than naming a
+  /// state: "1 of 3 offline" is the whole of what the user needs from here.
+  final FoldedServiceHealth? degradedOf;
 
   final ServiceKey service;
   final ServiceReachability reachability;
@@ -1141,7 +1322,7 @@ class _ServiceMatrixCellBody extends StatelessWidget {
   final _FoldPhase phase;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isOnline = reachability == ServiceReachability.online;
@@ -1153,14 +1334,25 @@ class _ServiceMatrixCellBody extends StatelessWidget {
         ? colorScheme.surfaceContainer
         : colorScheme.surfaceContainerLow;
 
-    final statusLabel = switch (reachability) {
-      ServiceReachability.online => 'Online',
-      ServiceReachability.checking => 'Checking',
-      ServiceReachability.offline => 'Offline',
-    };
+    // A folded cell counts rather than naming a state. "Offline" on a Radarr
+    // with three connections and one down is false in both directions: two of
+    // them are answering, and saying so would hide the one that is not.
+    final folded = degradedOf;
+    final statusLabel = folded != null
+        ? '${folded.offline} of ${folded.total} offline'
+        : switch (reachability) {
+            ServiceReachability.online => 'Online',
+            ServiceReachability.checking => 'Checking',
+            ServiceReachability.offline => 'Offline',
+          };
 
     final detail = phase.detail;
     final showHost = detail > 0 && host.isNotEmpty;
+
+    // Resolved here rather than in the tap handler: an inherited lookup belongs
+    // in build, where the dependency it registers means something. Null on the
+    // `/services` dashboard, which has no layer above it to dismiss.
+    final dismissPortal = PortalDismissScope.maybeOf(context);
 
     // One structure for both densities, not two branches — the folded card is
     // the open card with its lower two lines rolled up to nothing. Written as a
@@ -1182,6 +1374,7 @@ class _ServiceMatrixCellBody extends StatelessWidget {
           children: [
             _CellIdentity(
               service: service,
+              displayName: displayName,
               reachability: reachability,
               surface: surface,
               phase: phase,
@@ -1214,7 +1407,13 @@ class _ServiceMatrixCellBody extends StatelessWidget {
               ),
           ],
         ),
-        if (detail > 0)
+        // Absent on a picker cell. "What is it doing" is a readout question;
+        // this cell is a destination, and its reachability is already carried
+        // by the dot in the identity row — the same way the compact readout
+        // card carries it. Rendering the tier with no figure to put in it also
+        // overflowed the fixed cell height by a pixel, which is the layout
+        // saying the same thing.
+        if (detail > 0 && role == ServiceMatrixRole.readout)
           _Unroll(
             value: detail,
             child: _CellLiveLine(
@@ -1247,22 +1446,54 @@ class _ServiceMatrixCellBody extends StatelessWidget {
     )!;
 
     return AppCard.surfaceOutlined(
-      key: ValueKey('service-matrix-cell-${service.routeParam}'),
-      // `go`, not `push`, because this same cell is rendered in two places: on
-      // the Services dashboard, and on the Portal's floor — which lives ABOVE
-      // the branch navigators and can be opened from any tab. A push keeps the
-      // origin branch, so travelling to Radarr from Activity would have stacked
-      // a service page on the Activity tab with the bar still lit on Activity.
-      // `go` lands on the Services branch, which is what travelling means here;
-      // the route is nested under `/services`, so back still returns to the
-      // dashboard.
-      onTap: () => context.go('/services/${service.routeParam}'),
+      // Suffixed only on a picker cell. The readout key is what nine assertions
+      // in the services-screen test address, and a folded cell still stands for
+      // the service, so the name it had is still the true one.
+      key: ValueKey(
+        instanceId == null
+            ? 'service-matrix-cell-${service.routeParam}'
+            : 'service-matrix-cell-${service.routeParam}-$instanceId',
+      ),
+      // Two acts, not one. Navigating alone would land on whichever connection
+      // the lens already pointed at — which is the cell the user did *not*
+      // tap — so the lens moves first and the route follows it.
+      //
+      // And `go`, not `push`, because this same cell is rendered in two places:
+      // on the Services dashboard, and on the Portal's floor — which lives
+      // ABOVE the branch navigators and can be opened from any tab. A push
+      // keeps the origin branch, so travelling to Radarr from Activity would
+      // have stacked a service page on the Activity tab with the bar still lit
+      // on Activity. `go` lands on the Services branch, which is what
+      // travelling means here; the route is nested under `/services`, so back
+      // still returns to the dashboard. The argument is stronger for a picker
+      // cell than for a readout one: the picker only ever exists on that floor.
+      // Three acts, and the first one is unconditional. Choosing a cell is an
+      // action ON the Portal, so it closes the Portal — always, before anything
+      // else is known about where it leads. The shell's route hook closes on a
+      // different question ("did the content under the card move?"), and the
+      // answer to that is *no* for the commonest tap of all: the cell for the
+      // connection the lens already points at, tapped from the page it leads
+      // to, moves neither the path nor the lens and left the Portal sitting
+      // over a dead snapshot. `closeFromUi` is idempotent, so the tap that DOES
+      // move something still gets exactly one closing animation.
+      //
+      // Null off the floor: the same cell renders on the `/services` dashboard,
+      // where there is nothing above it to close.
+      onTap: () async {
+        dismissPortal?.call();
+        final id = instanceId;
+        if (id != null) {
+          await ref.read(activeInstancesProvider.notifier).select(service, id);
+        }
+        if (!context.mounted) return;
+        context.go('/services/${service.routeParam}');
+      },
       // The card dips under the thumb instead of rippling. A ripple flooding a
       // 32pt box is how a chip signals selection, not how a surface signals a
       // touch — the same judgment as the radius above, and the reason
       // `AppCardPressFeedback` exists.
       pressFeedback: AppCardPressFeedback.scale,
-      semanticLabel: service.title,
+      semanticLabel: displayName,
       // Spoken in full regardless of density: the compact card paints only a
       // name and a dot, but a screen reader user loses nothing by folding — the
       // figure and the host are still one property read away. Eye and ear are
@@ -1313,12 +1544,18 @@ class _ServiceMatrixCellBody extends StatelessWidget {
 class _CellIdentity extends StatelessWidget {
   const _CellIdentity({
     required this.service,
+    required this.displayName,
     required this.reachability,
     required this.surface,
     required this.phase,
   });
 
   final ServiceKey service;
+
+  /// What the cell calls itself: the service, or the connection's own name on
+  /// a picker cell. The glyph and the accent already say which service it is,
+  /// so the word is free to say which *one*.
+  final String displayName;
   final ServiceReachability reachability;
   final Color surface;
   final _FoldPhase phase;
@@ -1365,7 +1602,7 @@ class _CellIdentity extends StatelessWidget {
         SizedBox(width: lerpDouble(AppSpacing.xs, AppSpacing.sm, t)),
         Expanded(
           child: Text(
-            service.title,
+            displayName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             // Interpolated rather than swapped at a threshold: the name grows

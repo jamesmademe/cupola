@@ -363,9 +363,14 @@ void main() {
       expect(requests.single.media?.posterPath, '/hydrated.jpg');
     });
 
-    test('returns [] on network error', () async {
+    // Deliberately the opposite of what this asserted before. Swallowing the
+    // failure into `[]` made "this Seerr is unreachable" and "this Seerr has no
+    // requests" the same answer, and /activity now shows several Seerrs at once
+    // — it has to be able to say which one did not answer, and to leave the
+    // others' lists alone while it does.
+    test('throws when the first page does not come back', () async {
       client.getException = Exception('offline');
-      expect(await service.getRequests(), isEmpty);
+      expect(service.getRequests(), throwsA(isA<Exception>()));
     });
   });
 

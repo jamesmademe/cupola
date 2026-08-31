@@ -12,16 +12,7 @@ import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 final unraidClientProvider = Provider<UnraidClient>((ref) {
   // Selected rather than watching the whole model: this provider closes a live
   // Dio on dispose, so an unrelated settings write must not rebuild it.
-  final transport = ref.watch(
-    currentSettingsProvider.select(
-      (s) => (
-        configured: s.isServiceConfigured(ServiceKey.unraid),
-        url: s.unraidUrl,
-        apiKey: s.unraidApiKey,
-        pin: s.pinForUrl(s.unraidUrl),
-      ),
-    ),
-  );
+  final transport = watchTransport(ref, ServiceKey.unraid);
   if (!transport.configured) {
     throw Exception('Unraid not configured');
   }

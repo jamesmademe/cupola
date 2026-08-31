@@ -26,6 +26,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import '../../../test_helpers/reel_finders.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 /// How many services the more-services hint has left to offer, derived rather
 /// than written down.
 ///
@@ -1273,7 +1275,7 @@ List<Override> _providerOverrides({
     currentSettingsProvider.overrideWith(
       (ref) =>
           settings ??
-          const SettingsModel(
+          settingsWith(
             seerrUrl: 'http://seerr.local:5055',
             seerrApiKey: 'key',
             radarrUrl: 'http://radarr.local:7878',

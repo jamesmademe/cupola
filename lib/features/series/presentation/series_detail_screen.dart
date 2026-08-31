@@ -34,11 +34,17 @@ class SeriesDetailScreen extends ConsumerStatefulWidget {
   final String heroTag;
   final SonarrSeries? initialSeries;
 
+  /// The connection this page belongs to, from the route's `?i=`. Null falls
+  /// through to the lens — see [MovieDetailScreen.instanceId] for why every
+  /// source on the page has to agree with it.
+  final String? instanceId;
+
   const SeriesDetailScreen({
     super.key,
     required this.seriesId,
     required this.heroTag,
     this.initialSeries,
+    this.instanceId,
   });
 
   @override
@@ -52,14 +58,33 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
   final Set<int> _searchingSeasons = {};
   final Set<int> _searchingEpisodes = {};
 
+  /// The connection resolved in the last build, for the callbacks to reuse —
+  /// see [_MovieDetailScreenState] for why it is held rather than re-resolved.
+  String _instanceId = '';
+
+  /// Sonarr, bound to the connection this page belongs to. Every read and
+  /// every write on this screen goes through it.
+  SonarrService get _sonarr => _instanceId.isEmpty
+      ? ref.read(sonarrServiceProvider)
+      : ref.read(sonarrServiceForProvider(_instanceId));
+
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(currentSettingsProvider);
+    final instanceId = effectiveInstanceId(
+      ref,
+      ServiceKey.sonarr,
+      widget.instanceId,
+    );
+    _instanceId = instanceId;
+    final connection = ref.watch(
+      currentSettingsProvider.select((s) => s.instanceById(instanceId)),
+    );
+    final detailRef = (instanceId: instanceId, id: widget.seriesId);
     final seriesAsync = widget.seriesId > 0
-        ? ref.watch(seriesDetailProvider(widget.seriesId))
+        ? ref.watch(seriesDetailForProvider(detailRef))
         : const AsyncData<SonarrSeries?>(null);
     final episodesAsync = widget.seriesId > 0
-        ? ref.watch(seriesEpisodesProvider(widget.seriesId))
+        ? ref.watch(seriesEpisodesForProvider(detailRef))
         : const AsyncData<List<SonarrEpisode>>(<SonarrEpisode>[]);
     final series = seriesAsync.asData?.value ?? widget.initialSeries;
 
@@ -82,8 +107,8 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         // offered rather than one that does nothing.
         onRetry: widget.seriesId > 0
             ? () {
-                ref.invalidate(seriesDetailProvider(widget.seriesId));
-                ref.invalidate(seriesEpisodesProvider(widget.seriesId));
+                ref.invalidate(seriesDetailForProvider(detailRef));
+                ref.invalidate(seriesEpisodesForProvider(detailRef));
               }
             : null,
       );
@@ -93,15 +118,16 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
 
     final viewModel = SeriesDetailViewModel.fromSeries(
       series,
-      baseUrl: settings.sonarrUrl,
-      apiKey: settings.sonarrApiKey,
+      // The page's own connection, never `sonarrUrl` — that is the first one.
+      baseUrl: connection?.url ?? '',
+      apiKey: connection?.credential ?? '',
     );
     final infoGroups = viewModel.buildInfoGroups(currentProfileName ?? '');
 
     // Without the queue the badge cannot tell "nothing on disk" from "being
     // downloaded right now", and every in-flight series reads as Missing.
     final queueEntry = ref
-        .watch(sonarrQueueSnapshotProvider)
+        .watch(sonarrQueueSnapshotForProvider(instanceId))
         .maybeWhen(
           data: (snapshot) => snapshot.entryFor(series.id),
           orElse: () => null,
@@ -122,8 +148,8 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       // retry button re-runs.
       onRefresh: widget.seriesId > 0
           ? () async {
-              ref.invalidate(seriesDetailProvider(widget.seriesId));
-              ref.invalidate(seriesEpisodesProvider(widget.seriesId));
+              ref.invalidate(seriesDetailForProvider(detailRef));
+              ref.invalidate(seriesEpisodesForProvider(detailRef));
             }
           : null,
       body: _buildBody(
@@ -158,7 +184,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
 
     ensureQualityProfiles(
       profileId: series.qualityProfileId,
-      fetchProfiles: () => ref.read(sonarrServiceProvider).getQualityProfiles(),
+      fetchProfiles: () => _sonarr.getQualityProfiles(),
     );
   }
 
@@ -284,11 +310,14 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
               // shows its own search, an episode row its own — never each
               // other's.
               seasonIndicator: (seasonNumber) => ReleaseSearchRowChip(
+                // Stamped: target equality includes the connection, so an
+                // unstamped one matches no running job and the dot never
+                // lights.
                 target: ReleaseSearchTarget.season(
                   seriesId: widget.seriesId,
                   seasonNumber: seasonNumber,
                   label: 'Season $seasonNumber',
-                ),
+                ).stampedWith(_instanceId),
               ),
               episodeIndicator: (episode) => ReleaseSearchRowDot(
                 target: ReleaseSearchTarget.episode(
@@ -296,7 +325,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
                   seriesId: widget.seriesId,
                   seasonNumber: episode.seasonNumber,
                   label: 'Episode ${episode.episodeNumber}',
-                ),
+                ).stampedWith(_instanceId),
               ),
               onSearchSeason: (seasonNumber) =>
                   _searchSeason(context, seasonNumber),
@@ -395,7 +424,10 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       write: () => ref
           .read(sonarrServiceProvider)
           .updateSeriesMonitored(seriesId, monitored),
-      invalidate: [seriesDetailProvider(seriesId), seriesProvider],
+      invalidate: [
+        seriesDetailForProvider((instanceId: _instanceId, id: seriesId)),
+        seriesProvider,
+      ],
     );
   }
 
@@ -407,8 +439,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       // scope matters here more than anywhere: this one search covers every
       // monitored episode of the show.
       successMessage: 'Sonarr is searching for every monitored episode',
-      search: () =>
-          ref.read(sonarrServiceProvider).searchSeries(widget.seriesId),
+      search: () => _sonarr.searchSeries(widget.seriesId),
     );
   }
 
@@ -430,7 +461,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         label: seasonNumber != null
             ? '${truncateTitle(title)} · Season $seasonNumber'
             : truncateTitle(title),
-      ),
+      ).stampedWith(_instanceId),
     );
   }
 
@@ -438,7 +469,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     HapticFeedback.selectionClick();
     setState(() => _searchingSeasons.add(seasonNumber));
     try {
-      final sonarrService = ref.read(sonarrServiceProvider);
+      final sonarrService = _sonarr;
       await sonarrService.searchSeason(widget.seriesId, seasonNumber);
       if (!context.mounted) return;
       SnackBarHelper.success(
@@ -478,7 +509,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     HapticFeedback.selectionClick();
     setState(() => _searchingEpisodes.add(episodeId));
     try {
-      final sonarrService = ref.read(sonarrServiceProvider);
+      final sonarrService = _sonarr;
       await sonarrService.searchEpisodes([episodeId]);
       if (!context.mounted) return;
       SnackBarHelper.success(context, 'Sonarr is searching this episode');
@@ -514,7 +545,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         seriesId: widget.seriesId,
         seasonNumber: seasonNumber,
         label: '${truncateTitle(title)} · one episode',
-      ),
+      ).stampedWith(_instanceId),
     );
   }
 

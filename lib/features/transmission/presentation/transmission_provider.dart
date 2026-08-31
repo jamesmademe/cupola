@@ -17,26 +17,20 @@ import 'package:cupola/features/transmission/domain/models/transmission_models.d
 /// hundred allowed login failures and locking the user out until they restart
 /// it. A fresh client per request would throw both away every tick.
 final transmissionClientProvider = Provider<TransmissionClient>((ref) {
-  // Selected rather than watching the whole model: this provider closes a live
-  // Dio on dispose, so an unrelated settings write must not rebuild it.
-  final transport = ref.watch(
-    currentSettingsProvider.select(
-      (s) => (
-        configured: s.isServiceConfigured(ServiceKey.transmission),
-        url: s.transmissionUrl,
-        username: s.transmissionUsername,
-        password: s.transmissionPassword,
-        pin: s.pinForUrl(s.transmissionUrl),
-      ),
-    ),
-  );
+  // `watchTransport`, which is the same narrow select this used to spell out by
+  // hand plus the one thing the hand-written version could not do: follow the
+  // lens. Spelled out here, the four fields resolved to `transmissionUrl` and
+  // friends — the FIRST connection — so moving the lens to the seedbox changed
+  // the badge in the app bar and nothing else. The label said one daemon and
+  // every torrent on screen came from the other.
+  final transport = watchTransport(ref, ServiceKey.transmission);
   if (!transport.configured) {
     throw Exception('Transmission not configured');
   }
   final client = TransmissionClient(
     url: transport.url,
     username: transport.username.isEmpty ? null : transport.username,
-    password: transport.password.isEmpty ? null : transport.password,
+    password: transport.apiKey.isEmpty ? null : transport.apiKey,
     certFingerprint: transport.pin,
   );
   ref.onDispose(() => client.close());

@@ -7,7 +7,8 @@ import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/image_utils.dart';
-import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/dockge/data/dockge_client.dart';
+import 'package:cupola/features/dockge/data/dockge_service.dart';
 import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
@@ -29,11 +30,13 @@ import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.da
 import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
-import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/data/truenas_service.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/unraid/data/unraid_client.dart';
 
 /// A live reachability probe for one service.
@@ -46,18 +49,107 @@ import 'package:cupola/features/unraid/data/unraid_client.dart';
 /// included — re-probed all fifteen services, and a single Save can write twice
 /// because answering the cert-trust prompt writes again. Keyed on the service's
 /// own connection details, only the service that actually changed re-probes.
-final serviceSummaryProvider =
-    FutureProvider.family<ServiceSummary, ServiceKey>((ref, service) async {
+/// The ids of every connection of [service], in order, as a stable value.
+///
+/// Joined and re-split rather than selected as a `List`: `instancesOf` builds a
+/// fresh one on every call and lists compare by identity, so selecting one
+/// would rebuild every consumer on every unrelated settings write.
+final serviceInstanceIdsProvider = Provider.family<List<String>, ServiceKey>((
+  ref,
+  service,
+) {
+  final joined = ref.watch(
+    currentSettingsProvider.select(
+      (s) => s.instancesOf(service).map((i) => i.id).join(','),
+    ),
+  );
+  return joined.isEmpty ? const [] : joined.split(',');
+});
+
+/// Health for a service folded across all of its connections.
+///
+/// [offline] is what the matrix needs and what a per-service probe cannot say:
+/// with three Radarr and one unreachable, "online" is a lie and "offline" is a
+/// different one. The cell reports the worst state it contains and how many are
+/// in it, so a folded card never claims to be healthier than its worst
+/// connection.
+typedef FoldedServiceHealth = ({int total, int offline, int checking});
+
+final foldedServiceHealthProvider =
+    Provider.family<FoldedServiceHealth, ServiceKey>((ref, service) {
+      final ids = ref.watch(serviceInstanceIdsProvider(service));
+      var offline = 0;
+      var checking = 0;
+      for (final id in ids) {
+        final summary = ref.watch(
+          instanceSummaryProvider((service: service, instanceId: id)),
+        );
+        switch (summary) {
+          case AsyncData(:final value):
+            if (!value.isOnline) offline++;
+          case AsyncError():
+            offline++;
+          default:
+            checking++;
+        }
+      }
+      return (total: ids.length, offline: offline, checking: checking);
+    });
+
+/// One connection, named by what it is as well as by which one.
+///
+/// The service travels with the id so a probe for a connection that has since
+/// been removed can still say what kind of thing it was. Keyed on the id alone,
+/// the "gone" branch had nothing to answer with and named `ServiceKey.radarr` —
+/// a Plex cell removed mid-flight reported an offline *Radarr*.
+typedef InstanceRef = ({ServiceKey service, String instanceId});
+
+/// A live reachability probe for one *connection*.
+///
+/// Keyed by connection, because two Radarr behind two addresses are two
+/// different answers to "is it up" and the matrix has to be able to say which
+/// one is down. [serviceSummaryProvider] is the per-service view of this.
+final instanceSummaryProvider =
+    FutureProvider.family<ServiceSummary, InstanceRef>((ref, key) async {
       // Watch the narrow key; read the whole model for the work. The
       // per-client branches in [_loadVersion] each reach for their own fields,
       // and none of them is anything but a projection of the key below.
       ref.watch(
-        currentSettingsProvider.select((s) => _connectionOf(s, service)),
+        currentSettingsProvider.select(
+          (s) => _connectionOfInstance(s, key.instanceId),
+        ),
       );
-      return _loadServiceSummary(
-        ref,
-        service,
-        ref.read(currentSettingsProvider),
+      final settings = ref.read(currentSettingsProvider);
+      final instance = settings.instanceById(key.instanceId);
+      if (instance == null) {
+        return _offlineSummary(key.service, host: '');
+      }
+      return _loadServiceSummary(ref, instance, settings);
+    });
+
+/// The health of the connection [service] is currently seen through.
+///
+/// Delegates rather than probing: a screen asking "is Prowlarr up" means the
+/// Prowlarr it is reading, which is the lens's, not whichever happens to be
+/// first. Two dozen call sites keep their shape and quietly become lens-aware.
+final serviceSummaryProvider =
+    FutureProvider.family<ServiceSummary, ServiceKey>((ref, service) async {
+      final instance = ref.watch(activeInstanceProvider(service));
+      if (instance == null) {
+        return _offlineSummary(
+          service,
+          host:
+              service.extractHost(
+                ref.read(currentSettingsProvider).urlFor(service),
+              ) ??
+              '',
+        );
+      }
+      return ref.watch(
+        instanceSummaryProvider((
+          service: service,
+          instanceId: instance.id,
+        )).future,
       );
     });
 
@@ -75,14 +167,40 @@ typedef _ServiceConnection = ({
   String? certFingerprint,
 });
 
-_ServiceConnection _connectionOf(SettingsModel settings, ServiceKey service) {
-  final url = settings.urlFor(service);
+/// The connection key for whichever instance of [service] is currently being
+/// read.
+///
+/// Two watches, both narrow. Keying on the *first* instance instead would leave
+/// every derived fetch stale the moment the lens moved: the clients underneath
+/// are lens-aware, so they would go to the new server while the key that decides
+/// whether to refetch still described the old one.
+_ServiceConnection _watchConnection(Ref ref, ServiceKey service) {
+  final instanceId = ref.watch(activeInstanceProvider(service))?.id ?? '';
+  return ref.watch(
+    currentSettingsProvider.select((s) => _connectionOfInstance(s, instanceId)),
+  );
+}
+
+_ServiceConnection _connectionOfInstance(
+  SettingsModel settings,
+  String instanceId,
+) {
+  final instance = settings.instanceById(instanceId);
+  if (instance == null) {
+    return (
+      configured: false,
+      url: '',
+      apiKey: '',
+      username: '',
+      certFingerprint: null,
+    );
+  }
   return (
-    configured: settings.isServiceConfigured(service),
-    url: url,
-    apiKey: settings.apiKeyFor(service),
-    username: settings.usernameFor(service),
-    certFingerprint: settings.pinForUrl(url),
+    configured: instance.isConfigured,
+    url: instance.url,
+    apiKey: instance.credential,
+    username: instance.username,
+    certFingerprint: settings.pinForUrl(instance.url),
   );
 }
 
@@ -108,17 +226,18 @@ final serviceStatusClientFactoryProvider = Provider<ServiceStatusClientFactory>(
 
 Future<ServiceSummary> _loadServiceSummary(
   Ref ref,
-  ServiceKey service,
+  ServiceInstance instance,
   SettingsModel settings,
 ) async {
-  final host = service.extractHost(settings.urlFor(service)) ?? '';
-  if (!settings.isServiceConfigured(service)) {
+  final service = instance.service;
+  final host = service.extractHost(instance.url) ?? '';
+  if (!instance.isConfigured) {
     return _offlineSummary(service, host: host);
   }
 
   final String? version;
   try {
-    version = await _loadVersion(ref, settings, service);
+    version = await _loadVersion(ref, settings, instance);
   } catch (_) {
     return _offlineSummary(service, host: host);
   }
@@ -143,18 +262,15 @@ ServiceSummary _offlineSummary(ServiceKey service, {required String host}) {
 Future<String?> _loadVersion(
   Ref ref,
   SettingsModel settings,
-  ServiceKey service,
+  ServiceInstance instance,
 ) async {
+  final service = instance.service;
   if (service == ServiceKey.qbittorrent) {
     final client = QbittorrentClient(
-      url: settings.qbittorrentUrl,
-      username: settings.qbittorrentUsername.isNotEmpty
-          ? settings.qbittorrentUsername
-          : null,
-      password: settings.qbittorrentPassword.isNotEmpty
-          ? settings.qbittorrentPassword
-          : null,
-      certFingerprint: settings.pinForUrl(settings.qbittorrentUrl),
+      url: instance.url,
+      username: instance.username.isNotEmpty ? instance.username : null,
+      password: instance.credential.isNotEmpty ? instance.credential : null,
+      certFingerprint: settings.pinForUrl(instance.url),
     );
     // Login-then-version is two hops on a cold client, so this gets the same
     // headroom as Transmission's 409 handshake pair.
@@ -165,26 +281,46 @@ Future<String?> _loadVersion(
     );
   }
 
+  // The two long-lived clients, and the two that used to lie. Their providers
+  // are built from the flat projections — the FIRST instance of the service —
+  // so probing the second connection through them asked the first one whether
+  // it was up and painted the answer on the second one's cell: a box that was
+  // switched off reading green, and `foldedServiceHealthProvider` counting zero
+  // offline. Every other branch here already builds a throwaway client from
+  // `instance`, which is what makes a per-connection probe per-connection;
+  // these two now do the same, and close it either way like the rest.
   if (service == ServiceKey.truenas) {
-    final info = await ref
-        .watch(truenasServiceProvider)
-        .getSystemInfo()
-        .timeout(const Duration(seconds: 8));
-    return info.version;
+    final client = TrueNasWsClient(
+      baseUrl: instance.url,
+      apiKey: instance.credential,
+      certFingerprint: settings.pinForUrl(instance.url),
+    );
+    return _versionOrNull(
+      () async => (await TrueNasService(client).getSystemInfo()).version ?? '',
+      timeout: const Duration(seconds: 8),
+      close: client.close,
+    );
   }
 
   if (service == ServiceKey.dockge) {
-    return ref
-        .watch(dockgeServiceProvider)
-        .fetchVersion()
-        .timeout(const Duration(seconds: 8));
+    final client = DockgeClient(
+      baseUrl: instance.url,
+      username: instance.username.isEmpty ? null : instance.username,
+      password: instance.credential.isEmpty ? null : instance.credential,
+      certFingerprint: settings.pinForUrl(instance.url),
+    );
+    return _versionOrNull(
+      () async => await DockgeService(client).fetchVersion() ?? '',
+      timeout: const Duration(seconds: 8),
+      close: client.close,
+    );
   }
 
   if (service == ServiceKey.sabnzbd) {
     final client = SabnzbdClient(
-      url: settings.sabnzbdUrl,
-      apiKey: settings.sabnzbdApiKey,
-      certFingerprint: settings.pinForUrl(settings.sabnzbdUrl),
+      url: instance.url,
+      apiKey: instance.credential,
+      certFingerprint: settings.pinForUrl(instance.url),
     );
     return _versionOrNull(
       client.getVersion,
@@ -195,14 +331,10 @@ Future<String?> _loadVersion(
 
   if (service == ServiceKey.nzbget) {
     final client = NzbgetClient(
-      url: settings.nzbgetUrl,
-      username: settings.nzbgetUsername.isEmpty
-          ? null
-          : settings.nzbgetUsername,
-      password: settings.nzbgetPassword.isEmpty
-          ? null
-          : settings.nzbgetPassword,
-      certFingerprint: settings.pinForUrl(settings.nzbgetUrl),
+      url: instance.url,
+      username: instance.username.isEmpty ? null : instance.username,
+      password: instance.credential.isEmpty ? null : instance.credential,
+      certFingerprint: settings.pinForUrl(instance.url),
     );
     return _versionOrNull(
       client.version,
@@ -213,14 +345,10 @@ Future<String?> _loadVersion(
 
   if (service == ServiceKey.transmission) {
     final client = TransmissionClient(
-      url: settings.transmissionUrl,
-      username: settings.transmissionUsername.isEmpty
-          ? null
-          : settings.transmissionUsername,
-      password: settings.transmissionPassword.isEmpty
-          ? null
-          : settings.transmissionPassword,
-      certFingerprint: settings.pinForUrl(settings.transmissionUrl),
+      url: instance.url,
+      username: instance.username.isEmpty ? null : instance.username,
+      password: instance.credential.isEmpty ? null : instance.credential,
+      certFingerprint: settings.pinForUrl(instance.url),
     );
     // Two hops on a cold client — the 409 handshake, then the real call — so
     // this gets the same headroom as qBittorrent's login-then-version pair.
@@ -233,10 +361,10 @@ Future<String?> _loadVersion(
 
   if (service == ServiceKey.nginxProxyManager) {
     final client = NpmClient(
-      url: settings.npmUrl,
-      identity: settings.npmUsername.isEmpty ? null : settings.npmUsername,
-      secret: settings.npmPassword.isEmpty ? null : settings.npmPassword,
-      certFingerprint: settings.pinForUrl(settings.npmUrl),
+      url: instance.url,
+      identity: instance.username.isEmpty ? null : instance.username,
+      secret: instance.credential.isEmpty ? null : instance.credential,
+      certFingerprint: settings.pinForUrl(instance.url),
     );
     // `GET /api/` is unauthenticated, so the reachability probe costs no
     // token exchange — which matters because this provider re-runs on every
@@ -250,9 +378,9 @@ Future<String?> _loadVersion(
 
   if (service == ServiceKey.unraid) {
     final client = UnraidClient(
-      url: settings.unraidUrl,
-      apiKey: settings.unraidApiKey,
-      certFingerprint: settings.pinForUrl(settings.unraidUrl),
+      url: instance.url,
+      apiKey: instance.credential,
+      certFingerprint: settings.pinForUrl(instance.url),
     );
     return _versionOrNull(
       client.version,
@@ -262,10 +390,10 @@ Future<String?> _loadVersion(
   }
 
   final createClient = ref.watch(serviceStatusClientFactoryProvider);
-  final url = settings.urlFor(service);
+  final url = instance.url;
   final client = createClient(
     baseUrl: url,
-    apiKey: settings.apiKeyFor(service),
+    apiKey: instance.credential,
     pinnedCertFingerprint: settings.pinForUrl(url),
   );
 
@@ -319,27 +447,59 @@ final servicesMoviesProvider = moviesProvider;
 final servicesSeriesProvider = seriesProvider;
 final servicesMusicProvider = musicProvider;
 
+/// The Radarr queue of one named connection, indexed by movie id.
+///
+/// A queue is a property of a server, and the ids in it are that server's. Read
+/// through the lens while the page it badges belongs to a different connection,
+/// every badge is answering about a different film that happens to share an id.
+/// Empty id means the lens, which is what [radarrQueueSnapshotProvider] passes.
+final radarrQueueSnapshotForProvider =
+    FutureProvider.family<ArrQueueSnapshot, String>((ref, instanceId) async {
+      final service = instanceId.isEmpty
+          ? ref.watch(radarrServiceProvider)
+          : ref.watch(radarrServiceForProvider(instanceId));
+      return _loadArrQueueSnapshot(
+        service.getQueue,
+        (item) => [
+          intOrNull(mapOrNull(item['movie'])?['id'] ?? item['movieId']),
+        ],
+      );
+    });
+
 /// The Radarr queue indexed by movie id.
 ///
 /// Every surface that badges a movie — grid, poster rail, detail page — reads
 /// this one snapshot, so they cannot disagree about what is downloading.
+/// Delegates to the connection the lens points at, so the surfaces that never
+/// name one keep the shape they always had.
 final radarrQueueSnapshotProvider = FutureProvider<ArrQueueSnapshot>((
   ref,
 ) async {
-  return _loadArrQueueSnapshot(
-    () => ref.watch(radarrServiceProvider).getQueue(),
-    (item) => [intOrNull(mapOrNull(item['movie'])?['id'] ?? item['movieId'])],
-  );
+  final lens = ref.watch(activeInstanceProvider(ServiceKey.radarr))?.id ?? '';
+  return ref.watch(radarrQueueSnapshotForProvider(lens).future);
 });
+
+/// The Sonarr queue of one named connection. See
+/// [radarrQueueSnapshotForProvider].
+final sonarrQueueSnapshotForProvider =
+    FutureProvider.family<ArrQueueSnapshot, String>((ref, instanceId) async {
+      final service = instanceId.isEmpty
+          ? ref.watch(sonarrServiceProvider)
+          : ref.watch(sonarrServiceForProvider(instanceId));
+      return _loadArrQueueSnapshot(
+        service.getQueue,
+        (item) => [
+          intOrNull(mapOrNull(item['series'])?['id'] ?? item['seriesId']),
+        ],
+      );
+    });
 
 /// The Sonarr queue indexed by series id.
 final sonarrQueueSnapshotProvider = FutureProvider<ArrQueueSnapshot>((
   ref,
 ) async {
-  return _loadArrQueueSnapshot(
-    () => ref.watch(sonarrServiceProvider).getQueue(),
-    (item) => [intOrNull(mapOrNull(item['series'])?['id'] ?? item['seriesId'])],
-  );
+  final lens = ref.watch(activeInstanceProvider(ServiceKey.sonarr))?.id ?? '';
+  return ref.watch(sonarrQueueSnapshotForProvider(lens).future);
 });
 
 /// How many artists the album → artist fallback may probe, and how many of
@@ -495,15 +655,9 @@ final servicesRecentlyAddedProvider = FutureProvider<List<RecentlyAddedItem>>((
   // One narrow watch per source rather than the whole `SettingsModel`: the rail
   // depends on three URL/key pairs, and watching the object rebuilt — and
   // refetched — the entire rail on any settings write, a theme toggle included.
-  final radarr = ref.watch(
-    currentSettingsProvider.select((s) => _connectionOf(s, ServiceKey.radarr)),
-  );
-  final sonarr = ref.watch(
-    currentSettingsProvider.select((s) => _connectionOf(s, ServiceKey.sonarr)),
-  );
-  final lidarr = ref.watch(
-    currentSettingsProvider.select((s) => _connectionOf(s, ServiceKey.lidarr)),
-  );
+  final radarr = _watchConnection(ref, ServiceKey.radarr);
+  final sonarr = _watchConnection(ref, ServiceKey.sonarr);
+  final lidarr = _watchConnection(ref, ServiceKey.lidarr);
 
   Future<List<RecentlyAddedItem>> from(
     _ServiceConnection connection,
@@ -667,26 +821,28 @@ final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
   // compares with `==`, and a `List` has identity equality, so a list would
   // report a change on every rebuild and quietly preserve the bug it was meant
   // to fix. Records compare structurally, nested records included.
-  ref.watch(
-    currentSettingsProvider.select(
-      (s) => (
-        _connectionOf(s, ServiceKey.radarr),
-        _connectionOf(s, ServiceKey.sonarr),
-        _connectionOf(s, ServiceKey.lidarr),
-        _connectionOf(s, ServiceKey.readarr),
-        _connectionOf(s, ServiceKey.qbittorrent),
-        _connectionOf(s, ServiceKey.sabnzbd),
-        _connectionOf(s, ServiceKey.nzbget),
-      ),
-    ),
-  );
-  final settings = ref.read(currentSettingsProvider);
+  final connections = {
+    for (final service in const [
+      ServiceKey.radarr,
+      ServiceKey.sonarr,
+      ServiceKey.lidarr,
+      ServiceKey.readarr,
+      ServiceKey.qbittorrent,
+      ServiceKey.sabnzbd,
+      ServiceKey.nzbget,
+    ])
+      service: _watchConnection(ref, service),
+  };
 
   Future<List<ServiceQueueItem>> from(
     ServiceKey service,
     Future<List<ServiceQueueItem>> Function() load,
   ) async {
-    if (!settings.isServiceConfigured(service)) return const [];
+    // The connection the loaders below actually read, not the service. Gated on
+    // `isServiceConfigured` — true as soon as *any* instance is set up — this
+    // asked the second Radarr for its queue on the first one's account, and the
+    // failure went into the `catch` as an empty list.
+    if (!(connections[service]?.configured ?? false)) return const [];
     try {
       return await load();
     } catch (_) {

@@ -25,7 +25,7 @@ import 'package:cupola/features/release_search/presentation/release_search_entry
 import 'package:cupola/features/release_search/presentation/widgets/release_search_status_card.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class MusicDetailScreen extends ConsumerStatefulWidget {
@@ -33,11 +33,17 @@ class MusicDetailScreen extends ConsumerStatefulWidget {
   final String heroTag;
   final LidarrArtist? initialArtist;
 
+  /// The connection this page belongs to, from the route's `?i=`. Null falls
+  /// through to the lens — see [MovieDetailScreen.instanceId] for why every
+  /// source on the page has to agree with it.
+  final String? instanceId;
+
   const MusicDetailScreen({
     super.key,
     required this.artistId,
     required this.heroTag,
     this.initialArtist,
+    this.instanceId,
   });
 
   @override
@@ -50,14 +56,33 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
         ArrDetailActionsMixin<MusicDetailScreen> {
   final Set<int> _searchingAlbums = {};
 
+  /// The connection resolved in the last build, for the callbacks to reuse —
+  /// see [_MovieDetailScreenState] for why it is held rather than re-resolved.
+  String _instanceId = '';
+
+  /// Lidarr, bound to the connection this page belongs to. Every read and
+  /// every write on this screen goes through it.
+  LidarrService get _lidarr => _instanceId.isEmpty
+      ? ref.read(lidarrServiceProvider)
+      : ref.read(lidarrServiceForProvider(_instanceId));
+
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(currentSettingsProvider);
+    final instanceId = effectiveInstanceId(
+      ref,
+      ServiceKey.lidarr,
+      widget.instanceId,
+    );
+    _instanceId = instanceId;
+    final connection = ref.watch(
+      currentSettingsProvider.select((s) => s.instanceById(instanceId)),
+    );
+    final detailRef = (instanceId: instanceId, id: widget.artistId);
     final artistAsync = widget.artistId > 0
-        ? ref.watch(musicDetailProvider(widget.artistId))
+        ? ref.watch(musicDetailForProvider(detailRef))
         : const AsyncData<LidarrArtist?>(null);
     final albumsAsync = widget.artistId > 0
-        ? ref.watch(musicAlbumsProvider(widget.artistId))
+        ? ref.watch(musicAlbumsForProvider(detailRef))
         : const AsyncData<List<LidarrAlbum>>(<LidarrAlbum>[]);
     final artist = artistAsync.asData?.value ?? widget.initialArtist;
 
@@ -78,8 +103,8 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
         // offered rather than one that does nothing.
         onRetry: widget.artistId > 0
             ? () {
-                ref.invalidate(musicDetailProvider(widget.artistId));
-                ref.invalidate(musicAlbumsProvider(widget.artistId));
+                ref.invalidate(musicDetailForProvider(detailRef));
+                ref.invalidate(musicAlbumsForProvider(detailRef));
               }
             : null,
       );
@@ -89,8 +114,9 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
 
     final viewModel = MusicDetailViewModel.fromArtist(
       artist,
-      baseUrl: settings.lidarrUrl,
-      apiKey: settings.lidarrApiKey,
+      // The page's own connection, never `lidarrUrl` — that is the first one.
+      baseUrl: connection?.url ?? '',
+      apiKey: connection?.credential ?? '',
     );
     final infoGroups = viewModel.buildInfoGroups(currentProfileName ?? '');
 
@@ -113,8 +139,8 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
       posterRow: _buildPosterRow(context, viewModel, status),
       onRefresh: widget.artistId > 0
           ? () async {
-              ref.invalidate(musicDetailProvider(widget.artistId));
-              ref.invalidate(musicAlbumsProvider(widget.artistId));
+              ref.invalidate(musicDetailForProvider(detailRef));
+              ref.invalidate(musicAlbumsForProvider(detailRef));
             }
           : null,
       body: _buildBody(
@@ -122,7 +148,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
         viewModel,
         status,
         infoGroups,
-        settings,
+        connection,
         albumsAsync,
         queues?.byAlbum ?? ArrQueueSnapshot.empty,
         artist.id > 0 ? artist.id : widget.artistId,
@@ -137,7 +163,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
 
     ensureQualityProfiles(
       profileId: artist.qualityProfileId,
-      fetchProfiles: () => ref.read(lidarrServiceProvider).getQualityProfiles(),
+      fetchProfiles: () => _lidarr.getQualityProfiles(),
     );
   }
 
@@ -185,7 +211,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     MusicDetailViewModel viewModel,
     MediaStatusInfo status,
     List<MediaInfoGroup> infoGroups,
-    SettingsModel settings,
+    ServiceInstance? connection,
     AsyncValue<List<LidarrAlbum>> albumsAsync,
     ArrQueueSnapshot albumQueue,
     int artistId,
@@ -263,8 +289,12 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
               child: AppErrorState.compact(
                 error: error,
                 serviceName: 'Lidarr',
-                onRetry: () =>
-                    ref.invalidate(musicAlbumsProvider(widget.artistId)),
+                onRetry: () => ref.invalidate(
+                  musicAlbumsForProvider((
+                    instanceId: _instanceId,
+                    id: widget.artistId,
+                  )),
+                ),
               ),
             ),
             data: (albums) => MediaDetailSlot.lazy(
@@ -273,17 +303,20 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
               leadingBox: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 child: ReleaseSearchStatusCard(
+                  // Stamped: target equality includes the connection, so an
+                  // unstamped one matches no running job and the card stays
+                  // blank for the whole search.
                   target: ReleaseSearchTarget.artist(
                     artistId: widget.artistId,
                     label: truncateTitle(viewModel.title),
-                  ),
+                  ).stampedWith(_instanceId),
                 ),
               ),
               sliver: MusicAlbumsList(
                 albums: albums,
-                lidarrService: ref.read(lidarrServiceProvider),
-                baseUrl: settings.lidarrUrl,
-                apiKey: settings.lidarrApiKey,
+                lidarrService: _lidarr,
+                baseUrl: connection?.url ?? '',
+                apiKey: connection?.credential ?? '',
                 onSearchAlbum: (albumId) => _searchAlbum(context, albumId),
                 onInteractiveSearchAlbum: (albumId) => _interactiveSearchAlbum(
                   context,
@@ -360,7 +393,10 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
       write: () => ref
           .read(lidarrServiceProvider)
           .updateArtistMonitored(artistId, monitored),
-      invalidate: [musicDetailProvider(artistId), musicProvider],
+      invalidate: [
+        musicDetailForProvider((instanceId: _instanceId, id: artistId)),
+        musicProvider,
+      ],
     );
   }
 
@@ -384,8 +420,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
       // "<Service> is searching <what>", naming the scope: this covers every
       // monitored album, not just the one the user was looking at.
       successMessage: 'Lidarr is searching for every monitored album',
-      search: () =>
-          ref.read(lidarrServiceProvider).searchArtist(widget.artistId),
+      search: () => _lidarr.searchArtist(widget.artistId),
     );
   }
 
@@ -401,7 +436,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
       ReleaseSearchTarget.artist(
         artistId: widget.artistId,
         label: truncateTitle(title),
-      ),
+      ).stampedWith(_instanceId),
     );
   }
 
@@ -409,7 +444,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     HapticFeedback.selectionClick();
     setState(() => _searchingAlbums.add(albumId));
     try {
-      final lidarrService = ref.read(lidarrServiceProvider);
+      final lidarrService = _lidarr;
       await lidarrService.searchAlbums([albumId]);
       if (!context.mounted) return;
       SnackBarHelper.success(context, 'Lidarr is searching this album');
@@ -442,7 +477,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
         albumId: albumId,
         artistId: widget.artistId,
         label: '${truncateTitle(title)} · one album',
-      ),
+      ).stampedWith(_instanceId),
     );
   }
 

@@ -12,6 +12,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import '../../../test_helpers/reel_finders.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 void main() {
   testWidgets('shows not-configured message when Bazarr is not configured', (
     tester,
@@ -121,7 +123,7 @@ void main() {
       ProviderScope(
         overrides: [
           currentSettingsProvider.overrideWith(
-            (ref) => const SettingsModel(
+            (ref) => settingsWith(
               bazarrUrl: 'http://bazarr.local',
               bazarrApiKey: 'key',
             ),
@@ -165,7 +167,7 @@ void main() {
       ProviderScope(
         overrides: [
           currentSettingsProvider.overrideWith(
-            (ref) => const SettingsModel(
+            (ref) => settingsWith(
               bazarrUrl: 'http://bazarr.local',
               bazarrApiKey: 'key',
             ),
@@ -226,7 +228,7 @@ void main() {
       ProviderScope(
         overrides: [
           currentSettingsProvider.overrideWith(
-            (ref) => const SettingsModel(
+            (ref) => settingsWith(
               bazarrUrl: 'http://bazarr.local',
               bazarrApiKey: 'key',
             ),
@@ -277,7 +279,7 @@ void main() {
         retry: (_, _) => null,
         overrides: [
           currentSettingsProvider.overrideWith(
-            (ref) => const SettingsModel(
+            (ref) => settingsWith(
               bazarrUrl: 'http://bazarr.local',
               bazarrApiKey: 'key',
             ),

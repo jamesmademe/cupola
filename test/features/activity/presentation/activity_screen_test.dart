@@ -22,12 +22,15 @@ import 'package:cupola/features/series/data/sonarr_service.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/settings_scope.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 void main() {
   testWidgets('renders requests screen for discover', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
           requestsProvider.overrideWith((ref) async => <SeerrRequest>[]),
         ],
         child: const MaterialApp(
@@ -49,6 +52,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
           radarrServiceProvider.overrideWith((ref) => FakeRadarrService()),
         ],
         child: const MaterialApp(
@@ -131,6 +135,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // No `currentSettingsProvider` override beside this one: it is a
+          // pure passthrough of `settingsProvider`, so overriding it to an
+          // empty model while the scope below supplies a configured one made
+          // the two disagree in a way production cannot — and the feed, which
+          // now resolves a connection per row, read the empty half.
           ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith(
             (ref) async => const [
@@ -206,6 +215,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // No `currentSettingsProvider` override beside this one: it is a
+          // pure passthrough of `settingsProvider`, so overriding it to an
+          // empty model while the scope below supplies a configured one made
+          // the two disagree in a way production cannot — and the feed, which
+          // now resolves a connection per row, read the empty half.
           ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
           seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
@@ -252,6 +266,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // No `currentSettingsProvider` override beside this one: it is a
+          // pure passthrough of `settingsProvider`, so overriding it to an
+          // empty model while the scope below supplies a configured one made
+          // the two disagree in a way production cannot — and the feed, which
+          // now resolves a connection per row, read the empty half.
           ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
           seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
@@ -303,6 +322,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // No `currentSettingsProvider` override beside this one: it is a
+          // pure passthrough of `settingsProvider`, so overriding it to an
+          // empty model while the scope below supplies a configured one made
+          // the two disagree in a way production cannot — and the feed, which
+          // now resolves a connection per row, read the empty half.
           ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
           seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
@@ -360,6 +384,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // No `currentSettingsProvider` override beside this one: it is a
+          // pure passthrough of `settingsProvider`, so overriding it to an
+          // empty model while the scope below supplies a configured one made
+          // the two disagree in a way production cannot — and the feed, which
+          // now resolves a connection per row, read the empty half.
           ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
           seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
@@ -427,6 +456,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // No `currentSettingsProvider` override beside this one: it is a
+          // pure passthrough of `settingsProvider`, so overriding it to an
+          // empty model while the scope below supplies a configured one made
+          // the two disagree in a way production cannot — and the feed, which
+          // now resolves a connection per row, read the empty half.
           ...await settingsScopeOverrides(configured: activityServiceKeys),
           requestsProvider.overrideWith(
             (ref) async => const [

@@ -22,6 +22,7 @@ import 'package:cupola/features/release_search/presentation/release_search_sheet
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 /// The platform reach is resolved for. Null means "ask the host", which is what
 /// production always wants.
@@ -33,26 +34,68 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// the host is read through `dart:io` rather than `defaultTargetPlatform`.
 final releaseSearchPlatformProvider = Provider<TargetPlatform?>((ref) => null);
 
-/// How far a search against [service] can travel — see [ReleaseSearchReach].
+/// How far a search against one **connection** can travel — see
+/// [ReleaseSearchReach].
 ///
 /// Both facts reach asks about — the saved URL's scheme and whether that origin
 /// is trusted only inside Cupola (ADR-6) — are read straight from settings
 /// rather than through `serviceDiagnosisProvider`: reach must stay correct even
 /// for an instance that has never been tested this session.
-final releaseSearchReachProvider =
-    Provider.family<ReleaseSearchReach, ServiceKey>((ref, service) {
+///
+/// **Keyed by connection, not by service, and that is a security fix rather
+/// than tidying.** It used to read `settings.urlFor(service)` — the FIRST
+/// instance — while the request itself was built and sent by the lens-aware
+/// service. So the scheme and the pin were read off one server and the API key
+/// was sent to another. With the first Radarr on https and the second on plain
+/// `http://`, reach answered `beyondTheApp` for the cleartext one and handed
+/// the search to the native background task, whose redirect following cannot be
+/// stopped — which is precisely the case this reach exists to refuse. The
+/// mirror image was merely broken rather than dangerous: a self-signed second
+/// instance looked untrusted-but-fine because the first one carried no pin, and
+/// every search against it failed on a certificate the app had been told to
+/// trust.
+final releaseSearchReachProvider = Provider.autoDispose
+    .family<ReleaseSearchReach, ReleaseSearchTarget>((ref, target) {
       final settings = ref.watch(currentSettingsProvider);
-      final baseUrl = settings.urlFor(service);
-      return reachFor(
+      return _reachOf(ref, target.service, _urlOf(settings, target), settings);
+    });
+
+/// The reach of the connection [service] is currently being READ through.
+///
+/// The sibling of [releaseSearchReachProvider], for the surfaces that describe
+/// a service rather than run a job: the headroom card explains what the path
+/// the user is looking at imposes, and it has no target to ask about. Kept
+/// apart rather than folded in, because the two answer genuinely different
+/// questions the moment a job outlives the lens that started it — which is the
+/// whole reason the job side is keyed on a target.
+final releaseSearchLensReachProvider =
+    Provider.family<ReleaseSearchReach, ServiceKey>((ref, service) {
+      final instance = ref.watch(activeInstanceProvider(service));
+      final settings = ref.watch(currentSettingsProvider);
+      return _reachOf(
+        ref,
         service,
-        baseUrl: baseUrl,
-        certTrustedInApp: settings.pinForUrl(baseUrl) != null,
-        backgroundEnabled: ref.watch(
-          releaseSearchSettingsProvider.select((s) => s.backgroundEnabled),
-        ),
-        platform: ref.watch(releaseSearchPlatformProvider),
+        instance?.url ?? settings.urlFor(service),
+        settings,
       );
     });
+
+ReleaseSearchReach _reachOf(
+  Ref ref,
+  ServiceKey service,
+  String baseUrl,
+  SettingsModel settings,
+) {
+  return reachFor(
+    service,
+    baseUrl: baseUrl,
+    certTrustedInApp: settings.pinForUrl(baseUrl) != null,
+    backgroundEnabled: ref.watch(
+      releaseSearchSettingsProvider.select((s) => s.backgroundEnabled),
+    ),
+    platform: ref.watch(releaseSearchPlatformProvider),
+  );
+}
 
 /// The transport for a search against [service].
 ///
@@ -71,19 +114,24 @@ final releaseSearchReachProvider =
 ///   following would let anyone on the path collect the API key — the one case
 ///   here that is a security boundary rather than a capability gap.
 ///
+/// `autoDispose`, unlike almost everything else here: the key is a
+/// [ReleaseSearchTarget] with value equality, so without it every episode ever
+/// searched would leave a permanent entry listening to `currentSettingsProvider`
+/// — a listener list that only grows for the life of the app.
+///
 /// **This is where the opt-in is enforced, and it is the only place it needs to
 /// be.** Nothing else in the app constructs a `DataTask`, so a reach that is
 /// not [ReleaseSearchReach.beyondTheApp] cannot enqueue one — which is why the
 /// switch is a reach and not an `if` scattered over the call sites.
-final releaseSearchTransportProvider =
-    Provider.family<ReleaseSearchTransport, ServiceKey>((ref, service) {
-      final reach = ref.watch(releaseSearchReachProvider(service));
+final releaseSearchTransportProvider = Provider.autoDispose
+    .family<ReleaseSearchTransport, ReleaseSearchTarget>((ref, target) {
+      final reach = ref.watch(releaseSearchReachProvider(target));
       if (reach == ReleaseSearchReach.beyondTheApp) {
         return const BackgroundReleaseSearchTransport();
       }
 
       final settings = ref.watch(currentSettingsProvider);
-      final pin = settings.pinForUrl(settings.urlFor(service));
+      final pin = settings.pinForUrl(_urlOf(settings, target));
       return ForegroundReleaseSearchTransport((
         url, {
         headers,
@@ -124,6 +172,16 @@ final releaseSearchTransportProvider =
         }
       });
     });
+
+/// The address of the connection [target] belongs to.
+///
+/// Falls back to the service's first instance only for an unstamped target,
+/// which is the shape a test can still build by hand. Everything the app itself
+/// produces has been through `showReleaseSearch` and carries an id.
+String _urlOf(SettingsModel settings, ReleaseSearchTarget target) {
+  if (target.instanceId.isEmpty) return settings.urlFor(target.service);
+  return settings.instanceById(target.instanceId)?.url ?? '';
+}
 
 /// Posts the "your search finished" notices, and gives their "Tap to pick one"
 /// somewhere to land.
@@ -168,7 +226,7 @@ final notificationPermissionProvider = FutureProvider<bool?>(
 /// "running" forever, since the classifier could no longer even run.
 final releaseSearchReachResolverProvider = Provider<ReleaseSearchReachResolver>(
   (ref) =>
-      (service) => ref.read(releaseSearchReachProvider(service)),
+      (target) => ref.read(releaseSearchReachProvider(target)),
 );
 
 /// Everything that happens when a search finishes, resolved from the container
@@ -187,7 +245,7 @@ final releaseSearchOnFinishedProvider =
 /// Radarr or Lidarr and a test can drive it with a plain function.
 final releaseSearchRunnerProvider = Provider<ReleaseSearchRunner>((ref) {
   return (target, cancelToken) async {
-    final transport = ref.read(releaseSearchTransportProvider(target.service));
+    final transport = ref.read(releaseSearchTransportProvider(target));
 
     // The foreground path goes through the arr service rather than round-tripping
     // through a URL: it keeps `ApiClient`'s redirect guard, and it keeps every
@@ -206,6 +264,28 @@ final releaseSearchRunnerProvider = Provider<ReleaseSearchRunner>((ref) {
   };
 });
 
+/// The three services, resolved for the connection the target belongs to.
+///
+/// A stamped target names its own server, so a job queued behind another one
+/// runs where it was started even if the lens has moved on in the meantime —
+/// which, with jobs that outlive the page, is a thing that happens rather than
+/// a thing that could. An unstamped target falls through to the lens, which is
+/// the old behaviour and what a hand-built test target still gets.
+RadarrService _radarrFor(Ref ref, ReleaseSearchTarget target) =>
+    target.instanceId.isEmpty
+    ? ref.read(radarrServiceProvider)
+    : ref.read(radarrServiceForProvider(target.instanceId));
+
+SonarrService _sonarrFor(Ref ref, ReleaseSearchTarget target) =>
+    target.instanceId.isEmpty
+    ? ref.read(sonarrServiceProvider)
+    : ref.read(sonarrServiceForProvider(target.instanceId));
+
+LidarrService _lidarrFor(Ref ref, ReleaseSearchTarget target) =>
+    target.instanceId.isEmpty
+    ? ref.read(lidarrServiceProvider)
+    : ref.read(lidarrServiceForProvider(target.instanceId));
+
 /// Runs the search through the service that owns the endpoint.
 ///
 /// Carries the user's own ceiling with it: the services default to the
@@ -221,7 +301,7 @@ Future<List<dynamic>> _searchViaService(
   final timeout = ref.read(releaseSearchSettingsProvider).timeout;
   switch (target.service) {
     case ServiceKey.sonarr:
-      final service = ref.read(sonarrServiceProvider);
+      final service = _sonarrFor(ref, target);
       return target.scope == ReleaseSearchScope.episode
           ? service.getReleases(
               episodeId: target.id,
@@ -235,15 +315,13 @@ Future<List<dynamic>> _searchViaService(
               receiveTimeout: timeout,
             );
     case ServiceKey.radarr:
-      return ref
-          .read(radarrServiceProvider)
-          .getReleases(
-            target.id,
-            cancelToken: cancelToken,
-            receiveTimeout: timeout,
-          );
+      return _radarrFor(ref, target).getReleases(
+        target.id,
+        cancelToken: cancelToken,
+        receiveTimeout: timeout,
+      );
     case ServiceKey.lidarr:
-      final service = ref.read(lidarrServiceProvider);
+      final service = _lidarrFor(ref, target);
       return target.scope == ReleaseSearchScope.album
           ? service.getReleases(
               albumId: target.id,
@@ -272,18 +350,19 @@ Future<List<dynamic>> _searchViaService(
 ) {
   switch (target.service) {
     case ServiceKey.sonarr:
-      final service = ref.read(sonarrServiceProvider);
+      final service = _sonarrFor(ref, target);
       return service.releaseSearchRequest(
         target.scope == ReleaseSearchScope.episode
             ? {'episodeId': target.id}
             : {'seriesId': target.id, 'seasonNumber': target.seasonNumber ?? 1},
       );
     case ServiceKey.radarr:
-      return ref.read(radarrServiceProvider).releaseSearchRequest({
-        'movieId': target.id,
-      });
+      return _radarrFor(
+        ref,
+        target,
+      ).releaseSearchRequest({'movieId': target.id});
     case ServiceKey.lidarr:
-      final service = ref.read(lidarrServiceProvider);
+      final service = _lidarrFor(ref, target);
       return service.releaseSearchRequest(
         target.scope == ReleaseSearchScope.album
             ? {'albumId': target.id}
@@ -297,24 +376,36 @@ Future<List<dynamic>> _searchViaService(
 }
 
 /// Grabs a release on the service that found it.
+/// Grabs a release on the connection that found it.
+///
+/// Takes the whole target rather than its [ServiceKey], because the service is
+/// not enough to say *where*: the grab used to resolve through the lens at the
+/// moment of the TAP, so a release found on the seedbox Radarr and tapped after
+/// the lens moved home was pushed to the wrong server — with a guid that server
+/// had never heard of.
 final releaseGrabberProvider =
-    Provider<Future<void> Function(ServiceKey, String, int)>((ref) {
-      return (service, guid, indexerId) async {
-        switch (service) {
+    Provider<Future<void> Function(ReleaseSearchTarget, String, int)>((ref) {
+      return (target, guid, indexerId) async {
+        switch (target.service) {
           case ServiceKey.sonarr:
-            await ref
-                .read(sonarrServiceProvider)
-                .grabRelease(guid: guid, indexerId: indexerId);
+            await _sonarrFor(
+              ref,
+              target,
+            ).grabRelease(guid: guid, indexerId: indexerId);
           case ServiceKey.radarr:
-            await ref
-                .read(radarrServiceProvider)
-                .grabRelease(guid: guid, indexerId: indexerId);
+            await _radarrFor(
+              ref,
+              target,
+            ).grabRelease(guid: guid, indexerId: indexerId);
           case ServiceKey.lidarr:
-            await ref
-                .read(lidarrServiceProvider)
-                .grabRelease(guid: guid, indexerId: indexerId);
+            await _lidarrFor(
+              ref,
+              target,
+            ).grabRelease(guid: guid, indexerId: indexerId);
           default:
-            throw UnsupportedError('${service.name} cannot grab releases');
+            throw UnsupportedError(
+              '${target.service.name} cannot grab releases',
+            );
         }
       };
     });
@@ -336,6 +427,20 @@ Future<void> showReleaseSearch(
   ReleaseSearchTarget target,
 ) async {
   HapticFeedback.selectionClick();
+  // Stamped here and nowhere else. Every screen in the app builds its target
+  // and hands it over, so this is the one place that has to ask which Radarr
+  // the user is looking at — and it has to ask BEFORE adoption and the results
+  // cache are consulted, since the connection is now part of what makes two
+  // targets the same target.
+  //
+  // Only when the caller left it blank: a detail page opened for a connection
+  // other than the lens already knows which server it belongs to, and stamping
+  // over that would send its search somewhere else.
+  if (target.instanceId.isEmpty) {
+    target = target.stampedWith(
+      ref.read(activeInstanceProvider(target.service))?.id ?? '',
+    );
+  }
   final notifier = ref.read(releaseSearchJobsProvider.notifier);
   final settings = ref.read(releaseSearchSettingsProvider);
   // Every callback below comes from the container, never from this widget's

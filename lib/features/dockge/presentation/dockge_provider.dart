@@ -7,28 +7,24 @@ import 'package:cupola/features/dockge/data/dockge_service.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Long-lived Socket.IO client for Dockge, rebuilt when its URL/credentials
 /// change. Closed automatically when disposed.
 final dockgeClientProvider = Provider<DockgeClient>((ref) {
-  final url = ref.watch(currentSettingsProvider.select((s) => s.dockgeUrl));
-  final username = ref.watch(
-    currentSettingsProvider.select((s) => s.dockgeUsername),
-  );
-  final password = ref.watch(
-    currentSettingsProvider.select((s) => s.dockgePassword),
-  );
-  final certFingerprint = ref.watch(
-    currentSettingsProvider.select((s) => s.pinForUrl(s.dockgeUrl)),
-  );
-  if (url.isEmpty) {
+  // One `watchTransport` in place of four hand-written selects, and it is the
+  // only one of the five that follows the lens: the four read `dockgeUrl` and
+  // friends, which are always the first connection, so a second Dockge could be
+  // named in the app bar and never reached.
+  final transport = watchTransport(ref, ServiceKey.dockge);
+  if (transport.url.isEmpty) {
     throw const DockgeException('Dockge not configured');
   }
   final client = DockgeClient(
-    baseUrl: url,
-    username: username.isEmpty ? null : username,
-    password: password.isEmpty ? null : password,
-    certFingerprint: certFingerprint,
+    baseUrl: transport.url,
+    username: transport.username.isEmpty ? null : transport.username,
+    password: transport.apiKey.isEmpty ? null : transport.apiKey,
+    certFingerprint: transport.pin,
   );
   ref.onDispose(client.close);
   return client;

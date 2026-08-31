@@ -20,7 +20,6 @@ import 'package:cupola/features/release_search/presentation/release_searches_bod
 import 'package:cupola/features/release_search/presentation/widgets/release_search_job_card.dart';
 import 'package:cupola/features/release_search/presentation/widgets/release_search_status_card.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 final _season = ReleaseSearchTarget.season(
@@ -415,9 +414,10 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
-          releaseSearchReachProvider(
-            ServiceKey.sonarr,
-          ).overrideWithValue(reach),
+          // The job's own target, because reach is now a property of the
+          // connection the search runs against and the card reads it off the
+          // job rather than off the service.
+          releaseSearchReachProvider(_season).overrideWithValue(reach),
         ],
       );
       final notifier = container.read(releaseSearchJobsProvider.notifier);

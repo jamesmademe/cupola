@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
@@ -104,3 +105,147 @@ const activityServiceKeys = [
   ServiceKey.lidarr,
   ServiceKey.seerr,
 ];
+
+/// A [SettingsModel] built from the flat per-service names the model used to
+/// store, for the eighty-odd fixtures that were written against them.
+///
+/// It lives here rather than on [SettingsModel] on purpose. Those names are the
+/// shape that could not hold a second Radarr, and production has no business
+/// with them any more — but a fixture saying `radarrUrl: 'http://nas:7878'` is
+/// still the clearest way to say what a test is about, and rewriting eighty of
+/// them into instance literals would be churn that serves no reader.
+///
+/// Values that stay empty write nothing, so the returned model carries an
+/// instance only for the services a test actually named.
+SettingsModel settingsWith({
+  List<ServiceInstance> instances = const [],
+  String seerrUrl = '',
+  String seerrApiKey = '',
+  String radarrUrl = '',
+  String radarrApiKey = '',
+  String sonarrUrl = '',
+  String sonarrApiKey = '',
+  String lidarrUrl = '',
+  String lidarrApiKey = '',
+  String bazarrUrl = '',
+  String bazarrApiKey = '',
+  String truenasUrl = '',
+  String truenasApiKey = '',
+  String prowlarrUrl = '',
+  String prowlarrApiKey = '',
+  String readarrUrl = '',
+  String readarrApiKey = '',
+  String sabnzbdUrl = '',
+  String sabnzbdApiKey = '',
+  String unraidUrl = '',
+  String unraidApiKey = '',
+  String jellyfinUrl = '',
+  String jellyfinApiKey = '',
+  String qbittorrentUrl = '',
+  String qbittorrentUsername = '',
+  String qbittorrentPassword = '',
+  String transmissionUrl = '',
+  String transmissionUsername = '',
+  String transmissionPassword = '',
+  String npmUrl = '',
+  String npmUsername = '',
+  String npmPassword = '',
+  String dockgeUrl = '',
+  String dockgeUsername = '',
+  String dockgePassword = '',
+  String nzbgetUrl = '',
+  String nzbgetUsername = '',
+  String nzbgetPassword = '',
+  String plexUrl = '',
+  String plexToken = '',
+  String jellyfinUserId = '',
+  String plexClientId = '',
+  Map<String, String> trustedCertificates = const {},
+  String region = 'US',
+  AppThemeMode themeMode = AppThemeMode.system,
+}) {
+  var settings = SettingsModel(
+    instances: instances,
+    plexClientId: plexClientId,
+    trustedCertificates: trustedCertificates,
+    region: region,
+    themeMode: themeMode,
+  );
+  settings = _api(settings, ServiceKey.seerr, seerrUrl, seerrApiKey);
+  settings = _api(settings, ServiceKey.radarr, radarrUrl, radarrApiKey);
+  settings = _api(settings, ServiceKey.sonarr, sonarrUrl, sonarrApiKey);
+  settings = _api(settings, ServiceKey.lidarr, lidarrUrl, lidarrApiKey);
+  settings = _api(settings, ServiceKey.bazarr, bazarrUrl, bazarrApiKey);
+  settings = _api(settings, ServiceKey.truenas, truenasUrl, truenasApiKey);
+  settings = _api(settings, ServiceKey.prowlarr, prowlarrUrl, prowlarrApiKey);
+  settings = _api(settings, ServiceKey.readarr, readarrUrl, readarrApiKey);
+  settings = _api(settings, ServiceKey.sabnzbd, sabnzbdUrl, sabnzbdApiKey);
+  settings = _api(settings, ServiceKey.unraid, unraidUrl, unraidApiKey);
+  settings = _api(settings, ServiceKey.jellyfin, jellyfinUrl, jellyfinApiKey);
+  settings = _cred(
+    settings,
+    ServiceKey.qbittorrent,
+    qbittorrentUrl,
+    qbittorrentUsername,
+    qbittorrentPassword,
+  );
+  settings = _cred(
+    settings,
+    ServiceKey.transmission,
+    transmissionUrl,
+    transmissionUsername,
+    transmissionPassword,
+  );
+  settings = _cred(
+    settings,
+    ServiceKey.nginxProxyManager,
+    npmUrl,
+    npmUsername,
+    npmPassword,
+  );
+  settings = _cred(
+    settings,
+    ServiceKey.dockge,
+    dockgeUrl,
+    dockgeUsername,
+    dockgePassword,
+  );
+  settings = _cred(
+    settings,
+    ServiceKey.nzbget,
+    nzbgetUrl,
+    nzbgetUsername,
+    nzbgetPassword,
+  );
+  settings = _api(settings, ServiceKey.plex, plexUrl, plexToken);
+  if (jellyfinUserId.isNotEmpty) {
+    settings = settings.copyWithViewer(ServiceKey.jellyfin, jellyfinUserId);
+  }
+  return settings;
+}
+
+SettingsModel _api(
+  SettingsModel settings,
+  ServiceKey service,
+  String url,
+  String apiKey,
+) {
+  if (url.isEmpty && apiKey.isEmpty) return settings;
+  return settings.copyWithService(service, url: url, apiKey: apiKey);
+}
+
+SettingsModel _cred(
+  SettingsModel settings,
+  ServiceKey service,
+  String url,
+  String username,
+  String password,
+) {
+  if (url.isEmpty && username.isEmpty && password.isEmpty) return settings;
+  return settings.copyWithCredentials(
+    service,
+    url: url,
+    username: username,
+    password: password,
+  );
+}

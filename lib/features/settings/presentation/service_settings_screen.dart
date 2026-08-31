@@ -26,6 +26,9 @@ import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/stream/presentation/widgets/jellyfin_viewer_picker.dart';
+import 'package:go_router/go_router.dart';
+import 'package:cupola/core/widgets/section_header.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
@@ -40,6 +43,18 @@ import 'package:cupola/features/settings/presentation/widgets/cert_trust_dialog.
 class ServiceSettingsScreen extends ConsumerStatefulWidget {
   final ServiceKey service;
 
+  /// Which connection this form edits. Null means the service's first one,
+  /// which is what every caller meant before there could be a second.
+  final String? instanceId;
+
+  /// Whether this form is adding a connection rather than editing one.
+  ///
+  /// Distinct from a null [instanceId] because a new instance has no id to name
+  /// until it is saved: minting one and passing it here would have the form
+  /// look for something that is not in settings yet and quietly fall back to
+  /// editing the first.
+  final bool isNew;
+
   /// Injectable so a widget test can stay off a real socket — see
   /// [CertificateProber].
   final CertificateProber certificateProber;
@@ -51,6 +66,8 @@ class ServiceSettingsScreen extends ConsumerStatefulWidget {
   const ServiceSettingsScreen({
     super.key,
     required this.service,
+    this.instanceId,
+    this.isNew = false,
     this.certificateProber = probeUntrustedCertificate,
     this.localNetworkProbe = probeLocalNetworkAccess,
   });
@@ -66,6 +83,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   late final TextEditingController _apiKeyController;
   late final TextEditingController _usernameController;
   late final TextEditingController _passwordController;
+  late final TextEditingController _labelController;
+
+  /// The connection being edited, as it stood when the form opened.
+  ///
+  /// Only [ServiceInstance.id] is relied on afterwards — every write re-reads
+  /// the live one by that id, so a value changed elsewhere while this form sat
+  /// open is not clobbered by a stale copy.
+  late final ServiceInstance _target;
 
   bool _saving = false;
   bool _testing = false;
@@ -95,16 +120,29 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   void initState() {
     super.initState();
     final settings = ref.read(currentSettingsProvider);
-    _urlController = TextEditingController(text: settings.urlFor(service));
+    final named = widget.instanceId == null
+        ? null
+        : settings.instanceById(widget.instanceId!);
+    _target = widget.isNew
+        ? settings.newInstanceFor(service)
+        // An id belonging to another service is ignored rather than trusted:
+        // writing this form's fields onto a Sonarr would be silent corruption.
+        : (named != null && named.service == service
+              ? named
+              : settings.primaryOf(service) ??
+                    settings.newInstanceFor(service));
+
+    _urlController = TextEditingController(text: _target.url);
     _apiKeyController = TextEditingController(
-      text: usesCredentials ? '' : settings.apiKeyFor(service),
+      text: usesCredentials ? '' : _target.credential,
     );
     _usernameController = TextEditingController(
-      text: usesCredentials ? settings.usernameFor(service) : '',
+      text: usesCredentials ? _target.username : '',
     );
     _passwordController = TextEditingController(
-      text: usesCredentials ? settings.passwordFor(service) : '',
+      text: usesCredentials ? _target.credential : '',
     );
+    _labelController = TextEditingController(text: _target.label);
 
     _initialValues = {
       for (final entry in _controllers.entries) entry.key: entry.value.text,
@@ -119,12 +157,44 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     'apiKey': _apiKeyController,
     'username': _usernameController,
     'password': _passwordController,
+    'label': _labelController,
   };
 
   /// Whether any field differs from what was loaded.
   bool get _isDirty => _controllers.entries.any(
     (entry) => entry.value.text != _initialValues[entry.key],
   );
+
+  /// Takes on a name this connection was given somewhere other than here.
+  ///
+  /// There is exactly one writer: the *sibling's* form. Saving a second
+  /// connection derives a name for the first one — see [_deriveSiblingLabels]
+  /// — and the first one's form is very often still on the stack underneath,
+  /// holding the empty string it loaded when that connection was the only one
+  /// there was. Coming back to it, [_needsLabel] is now true, so the field
+  /// appears empty and its validator refuses to save a connection the user
+  /// never touched and which *has* a name — one already on the badge, in the
+  /// lens sheet and above its section in search.
+  ///
+  /// Only when the field holds exactly what it loaded. An adoption that
+  /// overwrote a half-typed name would trade a stale field for a lost edit,
+  /// which is the worse of the two.
+  ///
+  /// The listener is detached across the write so the assignment does not read
+  /// as the user typing: that would clear a test result the values are still
+  /// good for, and mark a form dirty that nobody has edited. Moving
+  /// `_initialValues` along with it is the other half of the same point — the
+  /// adopted name is the new baseline, not an unsaved change to warn about on
+  /// the way out.
+  void _adoptPersistedLabel(String persisted) {
+    if (persisted == _labelController.text) return;
+    if (_labelController.text != _initialValues['label']) return;
+
+    _labelController.removeListener(_onFieldChanged);
+    _labelController.text = persisted;
+    _labelController.addListener(_onFieldChanged);
+    _initialValues['label'] = persisted;
+  }
 
   void _onFieldChanged() {
     // A test result describes the values that were tested; once they change it
@@ -143,6 +213,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     _apiKeyController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
+    _labelController.dispose();
     super.dispose();
   }
 
@@ -175,9 +246,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       // has not been allowed onto the network reports the permission, and one
       // the user allows while the alert is up is simply tested again — the
       // retest that used to be theirs to work out.
+      final candidateInstance = candidate.instanceById(_target.id) ?? _target;
       var result = await diagnoseThroughLocalNetworkGate(
-        () => diagnoseService(service, candidate),
-        url: candidate.urlFor(service),
+        () => diagnoseInstance(candidateInstance, candidate),
+        url: candidateInstance.url,
         probe: widget.localNetworkProbe,
       );
 
@@ -189,7 +261,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       if (mounted &&
           result.isDisconnected &&
           certProbeWorthwhile(result.reason)) {
-        final url = candidate.urlFor(service);
+        final url = candidateInstance.url;
         final previousPin = candidate.pinForUrl(url);
         final probe = await widget.certificateProber(
           url,
@@ -218,9 +290,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                       ),
                 );
             if (!mounted) return;
-            result = await diagnoseService(
-              service,
-              _updateServiceSettings(ref.read(currentSettingsProvider)),
+            // The retest goes to the same connection the first test did.
+            // `diagnoseService` folds every connection of the service, so it
+            // could answer about a sibling that was never part of this trust
+            // decision.
+            final retried = _updateServiceSettings(
+              ref.read(currentSettingsProvider),
+            );
+            result = await diagnoseInstance(
+              retried.instanceById(_target.id) ?? candidateInstance,
+              retried,
             );
           }
         }
@@ -263,7 +342,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // can only ever *add* a pin. Left behind, the entry outlives the address —
     // and because `pinForUrl` is keyed purely by origin, any service later
     // pointed back at it would silently reuse the stale trust with no prompt.
-    final priorUrl = current.urlFor(service);
+    final priorUrl = current.instanceById(_target.id)?.url ?? '';
     var updated = _updateServiceSettings(
       current,
     ).copyWithoutUnusedCertificate(priorUrl);
@@ -292,8 +371,13 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   ) async {
     setState(() => _saving = true);
     try {
-      final result = await diagnoseServiceWithCertProbe(
-        service,
+      // This connection, not the service: the origin whose certificate is about
+      // to be probed — and offered for trust — has to be the one whose address
+      // is in the field above.
+      final target = updated.instanceById(_target.id);
+      if (target == null) return null;
+      final result = await diagnoseInstanceWithCertProbe(
+        target,
         updated,
         probe: widget.certificateProber,
       );
@@ -301,7 +385,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       final probe = result.certificateProbe;
       if (probe == null) return null;
 
-      final url = updated.urlFor(service);
+      final url = target.url;
       final trust = await showCertTrustDialog(
         context,
         origin: UrlUtils.certOrigin(url) ?? url,
@@ -329,13 +413,25 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // Same normalisation onboarding applies, so a trailing slash or a scheme
     // typed in either screen ends up stored the one way the clients use.
     final url = UrlUtils.normalizeBaseUrl(_urlController.text);
-    return _writeService(
+    var next = _writeService(
       current,
       url: url,
       apiKey: _apiKeyController.text.trim(),
       username: _usernameController.text.trim(),
       password: _passwordController.text.trim(),
+      label: _labelController.text.trim(),
     );
+
+    // The sibling that was alone until a moment ago has no name, and it is
+    // about to need one: with two connections and one nameless, the badge and
+    // every badge-bearing row would fall back to showing its id. Derived from
+    // whatever actually tells the two apart — the port when they share a host,
+    // the host when they do not — and editable in its own form afterwards.
+    // Never the word "Default": that names a role, and the role moves.
+    if (_labelController.text.trim().isNotEmpty) {
+      next = _deriveSiblingLabels(next, url);
+    }
+    return next;
   }
 
   /// Writes this service's fields onto [current].
@@ -350,16 +446,20 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     required String apiKey,
     required String username,
     required String password,
+    String? label,
   }) {
-    if (usesCredentials) {
-      return current.copyWithCredentials(
-        service,
+    // Re-read by id rather than reusing the copy captured at initState: the
+    // chosen viewer, say, may have moved while this form was open and the
+    // captured copy would put it back.
+    final live = current.instanceById(_target.id) ?? _target;
+    return current.copyWithInstance(
+      live.copyWith(
         url: url,
-        username: username,
-        password: password,
-      );
-    }
-    return current.copyWithService(service, url: url, apiKey: apiKey);
+        credential: usesCredentials ? password : apiKey,
+        username: usesCredentials ? username : '',
+        label: label,
+      ),
+    );
   }
 
   Future<void> _removeConnection() async {
@@ -376,20 +476,35 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     if (!result.confirmed || !mounted) return;
 
     final before = ref.read(currentSettingsProvider);
-    final priorUrl = before.urlFor(service);
-    final cleared =
-        _writeService(before, url: '', apiKey: '', username: '', password: '')
-            // The `{url, apiKey}` pair is not all of what described that server:
-            // Jellyfin's chosen viewer sits outside it, and carrying it over to a
-            // *different* Jellyfin binds every per-viewer query to a user id that
-            // does not exist there.
-            .copyWithoutServiceExtras(service)
-            // Forget this origin's pin too, but only when nothing else configured
-            // still reaches it — removing Sonarr must never break Radarr's trust
-            // in the same reverse proxy.
-            .copyWithoutUnusedCertificate(priorUrl);
+    final priorUrl = before.instanceById(_target.id)?.url ?? '';
+    final cleared = before
+        // Drops the whole connection rather than blanking its fields, which
+        // takes the chosen viewer with it. `copyWithoutServiceExtras` used to
+        // do that job and is deliberately not called any more: it clears the
+        // viewer on *every* instance of the service, so removing one Jellyfin
+        // would have reset which person the other one reads through.
+        .copyWithoutInstance(_target.id)
+        // Forget this origin's pin too, but only when nothing else configured
+        // still reaches it — removing Sonarr must never break Radarr's trust
+        // in the same reverse proxy, and with instances that includes the
+        // service's own second connection behind it.
+        .copyWithoutUnusedCertificate(priorUrl);
 
     await ref.read(settingsProvider.notifier).updateSettings(cleared);
+
+    // The lens outlives the connection it names unless something says
+    // otherwise. Harmless while it is only ever *resolved* — `activeInstance`
+    // falls back to the first instance when the id matches nothing — but the id
+    // stays on disk for good, and the day a badge or a `?i=` NAMES it rather
+    // than resolving it, the app is carrying a pointer to a server that was
+    // deleted months ago.
+    //
+    // Only when it was this connection: clearing unconditionally would send a
+    // lens deliberately parked on the second connection back to the first
+    // because the user removed the third.
+    if (ref.read(activeInstancesProvider)[service] == _target.id) {
+      await ref.read(activeInstancesProvider.notifier).clear(service);
+    }
     if (!mounted) return;
 
     Navigator.of(context).pop();
@@ -413,8 +528,25 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   }
 
   Widget _buildScaffold(BuildContext context) {
+    // Written by the sibling's form while this one sat open — see
+    // [_adoptPersistedLabel]. Listened for rather than read: this form is not
+    // rebuilt by being returned to, so nothing else would notice.
+    ref.listen(
+      currentSettingsProvider.select(
+        (s) => s.instanceById(_target.id)?.label ?? '',
+      ),
+      (_, persisted) => _adoptPersistedLabel(persisted),
+    );
+
     final settings = ref.watch(currentSettingsProvider);
-    final isConfigured = settings.isServiceConfigured(service);
+    // **This connection's** state, not the service's. `isServiceConfigured` is
+    // true as soon as *any* instance is set up, which on the add-a-connection
+    // form meant an empty page announcing "Connected" (the first connection's
+    // status), offering a viewer picker bound to the first server, and showing
+    // a Remove row for a connection that does not exist yet — its confirm
+    // dialog removed nothing and simply popped the screen.
+    final isConfigured =
+        settings.instanceById(_target.id)?.isConfigured ?? false;
 
     return AmbientScaffold(
       // The room takes the colour of the service being worked on.
@@ -441,6 +573,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               _buildInfoNote(context, note),
             ],
             const SizedBox(height: AppSpacing.xl),
+            // Before the address on purpose: name the thing, then say where it
+            // lives. By the time someone is here for a second connection they
+            // are already thinking "these two are different" — that is the
+            // moment the name costs nothing to give.
+            if (_needsLabel(settings)) ...[
+              _buildLabelField(settings),
+              const SizedBox(height: AppSpacing.lg),
+            ],
             _buildUrlField(),
             _buildTrustedCertificateIndicator(settings),
             const SizedBox(height: AppSpacing.lg),
@@ -468,12 +608,20 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             // connection exists, because the viewer list comes from `/Users` on
             // the server — offering it before there is a server to ask would be
             // a control that can only fail.
+            // Bound to the connection this form edits. Read and written through
+            // the service's flat projection, it listed the users of *this*
+            // server and saved the chosen one onto the FIRST connection —
+            // leaving that server pointed at a user id from a different user
+            // table, which is the exact failure `ServiceInstance.viewerId`
+            // exists to prevent.
             if (service.needsViewerSelection && isConfigured) ...[
               const SizedBox(height: AppSpacing.xxl),
-              const JellyfinViewerPicker(),
+              JellyfinViewerPicker(instanceId: _target.id),
             ],
+            const SizedBox(height: AppSpacing.xxl),
+            _buildConnectionsSection(context, settings),
             if (isConfigured) ...[
-              const SizedBox(height: AppSpacing.xxl),
+              const SizedBox(height: AppSpacing.lg),
               _buildRemoveRow(context),
             ],
           ],
@@ -529,7 +677,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                     color: colorScheme.onSurfaceVariant,
                   )
                 else if (isConfigured)
-                  _SavedConnectionStatus(service: service)
+                  _SavedConnectionStatus(instanceId: _target.id)
                 else
                   _HeaderStatus(
                     icon: Icons.add_link_rounded,
@@ -717,6 +865,172 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     if (!opened && mounted) {
       SnackBarHelper.info(context, LocalNetworkPermission.remedy);
     }
+  }
+
+  /// A name for [instance], derived from what distinguishes it from [otherUrl].
+  ///
+  /// Three shapes, in the order they tell the two apart:
+  ///
+  /// * the **port**, when they share a host — two arrs on one box, the
+  ///   overwhelmingly common homelab;
+  /// * the **first path segment**, when they share a host *and* a port —
+  ///   `media.lan/radarr` beside `media.lan/radarr4k`, which is one reverse
+  ///   proxy fronting both. This branch is not an edge case worth skipping: it
+  ///   is the deployment ADR-6 exists to serve, those two instances necessarily
+  ///   share a single certificate pin, and it is precisely where the user has
+  ///   the least other signal to tell them apart. Without it both were labelled
+  ///   `media` — what they have in **common**;
+  /// * the **hostname**, when they are on different boxes.
+  ///
+  /// Falls back to the id only when nothing parses, which is better than empty.
+  /// Never the word "Default": that names a role, and the role moves the first
+  /// time the list is reordered.
+  ///
+  /// Uniqueness is the caller's job — see [_deriveSiblingLabels]. This answers
+  /// "what is different about it", which can legitimately come out the same for
+  /// two connections that really are near-identical.
+  String _derivedLabel(ServiceInstance instance, String otherUrl) {
+    final mine = Uri.tryParse(instance.url);
+    final other = Uri.tryParse(otherUrl);
+    if (mine == null || mine.host.isEmpty) return instance.id;
+
+    final sameHost = other != null && other.host == mine.host;
+    if (sameHost) {
+      if (mine.port != other.port) return '${mine.port}';
+      final segment = mine.pathSegments
+          .where((part) => part.isNotEmpty)
+          .firstOrNull;
+      if (segment != null) return segment;
+    }
+    return mine.host.split('.').first;
+  }
+
+  /// Names every sibling that has no name yet, and makes sure no two of them
+  /// come out the same.
+  ///
+  /// The uniqueness pass is the half that was missing, and its absence was
+  /// invisible from the field validator: that compares the typed name against
+  /// the siblings *as they stand in the model*, where the one being derived
+  /// still has an empty label. So a derivation that collided with what the user
+  /// had just typed — or with another derivation — was written anyway, and two
+  /// connections ended up sharing a name in the badge, the lens sheet and every
+  /// provenance chip, with nothing on screen able to tell them apart.
+  ///
+  /// A colliding name is suffixed with what is left to distinguish it: the
+  /// port, or failing that a counter. Ugly beats ambiguous — and it is editable
+  /// in the sibling's own form the moment the user disagrees.
+  SettingsModel _deriveSiblingLabels(SettingsModel next, String url) {
+    final taken = <String>{
+      for (final instance in _siblings(next))
+        if (instance.label.isNotEmpty) instance.label.toLowerCase(),
+      _labelController.text.trim().toLowerCase(),
+    };
+
+    var updated = next;
+    for (final sibling in _siblings(next)) {
+      if (sibling.label.isNotEmpty) continue;
+      final base = _derivedLabel(sibling, url);
+      var candidate = base;
+      if (taken.contains(candidate.toLowerCase())) {
+        final port = Uri.tryParse(sibling.url)?.port;
+        candidate = port == null || port == 0 ? base : '$base:$port';
+      }
+      var counter = 2;
+      while (taken.contains(candidate.toLowerCase())) {
+        candidate = '$base $counter';
+        counter++;
+      }
+      taken.add(candidate.toLowerCase());
+      updated = updated.copyWithInstance(sibling.copyWith(label: candidate));
+    }
+    return updated;
+  }
+
+  /// The connections of this service other than the one on screen.
+  List<ServiceInstance> _siblings(SettingsModel settings) => settings
+      .instancesOf(service)
+      .where((instance) => instance.id != _target.id)
+      .toList(growable: false);
+
+  /// Whether this form needs to ask for a name.
+  ///
+  /// Exactly when there is something to tell it apart from. One connection
+  /// needs no name — it is "Radarr" — and asking for one would be a field that
+  /// earns nothing on the install almost everyone has.
+  bool _needsLabel(SettingsModel settings) => _siblings(settings).isNotEmpty;
+
+  Widget _buildLabelField(SettingsModel settings) {
+    return TextFormField(
+      controller: _labelController,
+      textInputAction: TextInputAction.next,
+      decoration: InputDecoration(
+        labelText: 'Name',
+        hintText: '4K, HD, Anime…',
+        helperText:
+            'Short. This is what tells it apart in search, in the queue, and '
+            'before every add.',
+        helperMaxLines: 2,
+        prefixIcon: const Icon(Icons.sell_outlined),
+      ),
+      validator: (value) {
+        final name = (value ?? '').trim();
+        if (name.isEmpty) return 'Give this one a name';
+        final clash = _siblings(
+          settings,
+        ).any((other) => other.label.toLowerCase() == name.toLowerCase());
+        // Two rows both called "4K" is the state this whole field exists to
+        // prevent, so it is refused rather than allowed and disambiguated by
+        // host somewhere downstream.
+        if (clash) return 'Another ${service.title} already uses that name';
+        return null;
+      },
+    );
+  }
+
+  /// The other connections of this service, and the way to add one.
+  Widget _buildConnectionsSection(
+    BuildContext context,
+    SettingsModel settings,
+  ) {
+    final siblings = _siblings(settings);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionHeader(
+          title: 'Connections',
+          showChevron: false,
+          subtitle: siblings.isEmpty
+              ? 'One ${service.title}. Add another if you run a second.'
+              : null,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SettingsGroupCard(
+          children: [
+            for (final sibling in siblings)
+              SettingsCard.grouped(
+                leading: Icon(service.icon),
+                title: sibling.label.isEmpty ? sibling.id : sibling.label,
+                subtitle: service.extractHost(sibling.url) ?? 'No address yet',
+                accentColor: service.accent,
+                semanticHint: 'edits that ${service.title} connection',
+                onTap: () => context.push(
+                  '/settings/service/${service.routeParam}?i=${sibling.id}',
+                ),
+              ),
+            SettingsCard.grouped(
+              leading: const Icon(Icons.add_rounded),
+              title: 'Add another ${service.title}',
+              subtitle: 'A second server, with its own address and key',
+              accentColor: service.accent,
+              semanticHint: 'adds a second ${service.title} connection',
+              onTap: () =>
+                  context.push('/settings/service/${service.routeParam}?new=1'),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildRemoveRow(BuildContext context) {
@@ -1103,15 +1417,28 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
 /// The saved connection's state, watched live so trusting a certificate or
 /// saving a new key updates the header without a reload.
+///
+/// Keyed on the **connection**, not the service. `serviceDiagnosisProvider`
+/// folds every connection into its worst answer — the right shape for a row
+/// that says "Radarr", and the wrong one over a form whose address field
+/// belongs to exactly one server: it reported the first Radarr's state above
+/// the second Radarr's credentials.
 class _SavedConnectionStatus extends ConsumerWidget {
-  const _SavedConnectionStatus({required this.service});
+  const _SavedConnectionStatus({required this.instanceId});
 
-  final ServiceKey service;
+  final String instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final async = ref.watch(serviceDiagnosisProvider(service));
+    final service = ref
+        .watch(
+          currentSettingsProvider.select((s) => s.instanceById(instanceId)),
+        )
+        ?.service;
+    if (service == null) return const SizedBox.shrink();
+
+    final async = ref.watch(instanceDiagnosisProvider(instanceId));
     final diagnosis = async.when(
       loading: () => const ServiceDiagnosis.checking(),
       error: (_, __) =>

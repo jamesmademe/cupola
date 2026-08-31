@@ -16,7 +16,9 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
-const _configured = SettingsModel(
+import '../../../test_helpers/settings_scope.dart';
+
+final _configured = settingsWith(
   sabnzbdUrl: 'http://sab.local:8080',
   sabnzbdApiKey: 'key',
 );

@@ -13,7 +13,8 @@ import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 /// Counts every request the polls actually make, by path.
 ///
@@ -126,7 +127,7 @@ void main() {
         overrides: [
           pollClockProvider.overrideWithValue(clock),
           currentSettingsProvider.overrideWith(
-            (ref) => const SettingsModel(qbittorrentUrl: 'http://qb.test'),
+            (ref) => settingsWith(qbittorrentUrl: 'http://qb.test'),
           ),
           qbittorrentServiceProvider.overrideWith((ref) {
             final dio = Dio(BaseOptions(baseUrl: 'http://qb.test'))
@@ -218,7 +219,7 @@ void main() {
           overrides: [
             pollClockProvider.overrideWithValue(clock),
             currentSettingsProvider.overrideWith(
-              (ref) => const SettingsModel(qbittorrentUrl: 'http://qb.test'),
+              (ref) => settingsWith(qbittorrentUrl: 'http://qb.test'),
             ),
             qbittorrentServiceProvider.overrideWith((ref) {
               final dio = Dio(BaseOptions(baseUrl: 'http://qb.test'))

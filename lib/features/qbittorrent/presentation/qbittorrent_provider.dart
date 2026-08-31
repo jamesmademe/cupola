@@ -18,24 +18,14 @@ final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
   // over: the client holds the WebUI SID cookie, so rebuilding it throws away
   // an authenticated session. Only this service's own address and credentials
   // should do that.
-  final transport = ref.watch(
-    currentSettingsProvider.select(
-      (s) => (
-        configured: s.isServiceConfigured(ServiceKey.qbittorrent),
-        url: s.qbittorrentUrl,
-        username: s.qbittorrentUsername,
-        password: s.qbittorrentPassword,
-        pin: s.pinForUrl(s.qbittorrentUrl),
-      ),
-    ),
-  );
+  final transport = watchTransport(ref, ServiceKey.qbittorrent);
   if (!transport.configured) {
     throw Exception('qBittorrent not configured');
   }
   final client = QbittorrentClient(
     url: transport.url,
     username: transport.username.isNotEmpty ? transport.username : null,
-    password: transport.password.isNotEmpty ? transport.password : null,
+    password: transport.apiKey.isNotEmpty ? transport.apiKey : null,
     certFingerprint: transport.pin,
   );
   // The outgoing client owns a Dio and a cookie jar; close it so neither leaks.

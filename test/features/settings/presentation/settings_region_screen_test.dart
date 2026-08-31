@@ -12,6 +12,8 @@ import 'package:cupola/features/settings/presentation/widgets/settings_choice_ro
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 void main() {
   group('SettingsRegionScreen', () {
     testWidgets('renders the title, description, and all common regions', (
@@ -40,10 +42,7 @@ void main() {
     });
 
     testWidgets('normalizes configured regions to uppercase', (tester) async {
-      await _pumpRegionScreen(
-        tester,
-        settings: const SettingsModel(region: 'jp'),
-      );
+      await _pumpRegionScreen(tester, settings: settingsWith(region: 'jp'));
 
       expect(
         tester.getSemantics(_regionTile('JP')),

@@ -255,6 +255,85 @@ extension ServiceKeyExtension on ServiceKey {
   String get credentialLabel =>
       this == ServiceKey.plex ? 'Plex token' : 'API Key';
 
+  /// The word this service's secret is filed under in secure storage.
+  ///
+  /// The tail of `ServiceInstance.credentialStorageKey`, and the reason that
+  /// key comes out byte-identical to the one an existing install already wrote:
+  /// the suffix was never uniform. Three services' worth of vocabulary is
+  /// already on disk — an arr files an `api_key`, qBittorrent a `password`,
+  /// Plex a `token` — so this states it rather than flattening it and orphaning
+  /// every stored secret.
+  ///
+  /// Not [credentialLabel] lowercased: that string is UI copy and may be
+  /// reworded, while this one names bytes on disk and may not. They are allowed
+  /// to drift, and keeping them apart is what makes that safe.
+  ///
+  /// Exhaustive on purpose, for the same reason [usesApiKey] is: a `!=` chain
+  /// would silently file a newly added service under `api_key` and lose its
+  /// secret the first time someone noticed.
+  String get credentialStorageSuffix => switch (this) {
+    ServiceKey.qbittorrent ||
+    ServiceKey.transmission ||
+    ServiceKey.nginxProxyManager ||
+    ServiceKey.dockge ||
+    ServiceKey.nzbget => 'password',
+    ServiceKey.plex => 'token',
+    ServiceKey.seerr ||
+    ServiceKey.radarr ||
+    ServiceKey.sonarr ||
+    ServiceKey.lidarr ||
+    ServiceKey.bazarr ||
+    ServiceKey.truenas ||
+    ServiceKey.prowlarr ||
+    ServiceKey.readarr ||
+    ServiceKey.sabnzbd ||
+    ServiceKey.unraid ||
+    ServiceKey.jellyfin => 'api_key',
+  };
+
+  /// Whether this service may hold more than one instance.
+  ///
+  /// True for every service, and stated as a named capability rather than left
+  /// implicit because the question gets asked at a dozen call sites and the
+  /// answer deserves one home. Two NAS in two houses, two Jellyfin for two
+  /// households, a seedbox qBittorrent beside the one at home: none of these
+  /// are stranger than 4K-and-1080p Radarr, and carving out a "singleton"
+  /// class would mean defending an arbitrary line at every one of them.
+  ///
+  /// True means **reachable**, not merely storable. There was briefly a second
+  /// flag here — `readsThroughLens` — that said no for Jellyfin, Plex and
+  /// TrueNAS, whose clients were still built from the flat first-instance
+  /// projections; it hid their lens badge and folded their picker cells, so a
+  /// second connection of those three could be configured, probed and counted
+  /// and then never opened. Their three client providers now go through
+  /// `watchTransport` like everyone else, which is all that was ever missing,
+  /// and the flag is gone rather than left standing at a permanent `true`.
+  bool get supportsMultipleInstances => true;
+
+  /// Whether the global search runs a **leg per connection** for this service.
+  ///
+  /// Narrower than [supportsMultipleInstances], and the difference is the tap
+  /// rather than the query. Every service now reads through the lens, so moving
+  /// it changes what any screen shows; a *section per connection*, though, is
+  /// only honest if the row under it opens the server that listed it, which
+  /// needs two things: a way to build
+  /// a client for a named connection, and a detail route that carries and
+  /// honours one. The three arrs have both. Seerr's detail path is the Discover
+  /// feature, whose thirty-odd reads all resolve through the lens; Bazarr's ids
+  /// are a *third* server's (`radarrId` / `sonarrSeriesId`), so its row does not
+  /// even land on a Bazarr page. Both therefore search the lens and get one
+  /// section, unlabelled — which is what they did before, rather than two
+  /// sections with identical contents under two different names.
+  ///
+  /// Not contradicted by /activity fanning Seerr out over its connections: a
+  /// request row opens the *requests list*, which carries `?i=` and honours it,
+  /// not a Discover media page. The line here is drawn by the destination, and
+  /// Seerr's search destination is still the lens-bound one.
+  bool get searchesPerConnection => switch (this) {
+    ServiceKey.radarr || ServiceKey.sonarr || ServiceKey.lidarr => true,
+    _ => false,
+  };
+
   /// What the *non-secret* half of a credential pair is called.
   ///
   /// The sibling of [credentialLabel], and it exists for one service: Nginx

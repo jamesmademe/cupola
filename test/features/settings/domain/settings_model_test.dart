@@ -6,9 +6,11 @@ import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 void main() {
   group('SettingsModel.urlFor', () {
-    const settings = SettingsModel(
+    final settings = settingsWith(
       seerrUrl: 'https://jelly.example.com',
       radarrUrl: 'https://radarr.example.com',
       sonarrUrl: 'https://sonarr.example.com',
@@ -26,7 +28,7 @@ void main() {
   });
 
   group('SettingsModel.apiKeyFor', () {
-    const settings = SettingsModel(
+    final settings = settingsWith(
       seerrApiKey: 'jkey',
       radarrApiKey: 'rkey',
       sonarrApiKey: 'skey',
@@ -49,7 +51,7 @@ void main() {
   // form disagreeing about which fields the service even has. These lock the
   // answer to the registry capability instead.
   group('the credential model comes from the registry', () {
-    const credentials = SettingsModel(
+    final credentials = settingsWith(
       qbittorrentUsername: 'qb-user',
       qbittorrentPassword: 'qb-pass',
       dockgeUsername: 'dockge-user',
@@ -82,7 +84,7 @@ void main() {
     test('a credential service counts as configured on its URL alone', () {
       // Some can legitimately run with no auth behind a reverse proxy, so a
       // missing password is not a missing configuration.
-      const urlOnly = SettingsModel(
+      final urlOnly = settingsWith(
         qbittorrentUrl: 'https://qb.lan:8080',
         radarrUrl: 'https://radarr.lan:7878',
       );
@@ -99,7 +101,7 @@ void main() {
       // `copyWithService` cannot reach it. Left behind, re-adding a *different*
       // Jellyfin binds every per-viewer query to a user id that server has
       // never heard of, and the picker shows nothing selected.
-      const settings = SettingsModel(
+      final settings = settingsWith(
         jellyfinUrl: 'https://jelly.lan:8096',
         jellyfinApiKey: 'jf-key',
         jellyfinUserId: 'a1b2c3',
@@ -115,7 +117,7 @@ void main() {
     test('the Plex client id survives, because it is not per-server', () {
       // It identifies this install, is minted exactly once, and a new value
       // registers another device row on the user's server.
-      const settings = SettingsModel(
+      final settings = settingsWith(
         plexUrl: 'https://plex.lan:32400',
         plexToken: 'token',
         plexClientId: 'minted-once',
@@ -129,7 +131,7 @@ void main() {
     });
 
     test('a service with no extras is returned untouched', () {
-      const settings = SettingsModel(jellyfinUserId: 'a1b2c3');
+      final settings = settingsWith(jellyfinUserId: 'a1b2c3');
 
       expect(
         settings.copyWithoutServiceExtras(ServiceKey.radarr).jellyfinUserId,

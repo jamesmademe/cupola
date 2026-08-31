@@ -21,6 +21,8 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/model_builders.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 void main() {
   group('serviceSummaryProvider', () {
     test('returns offline summary when service is not configured', () async {
@@ -37,7 +39,7 @@ void main() {
 
     test('returns online summary with version', () async {
       final container = _container(
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'http://radarr.local:7878',
           radarrApiKey: 'key',
         ),
@@ -56,7 +58,7 @@ void main() {
 
     test('returns offline summary when status endpoint fails', () async {
       final container = _container(
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'http://radarr.local:7878',
           radarrApiKey: 'key',
         ),
@@ -74,7 +76,7 @@ void main() {
 
     test('stays online when the library call fails', () async {
       final container = _container(
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'http://radarr.local:7878',
           radarrApiKey: 'key',
         ),
@@ -159,7 +161,12 @@ void main() {
       await container.read(serviceSummaryProvider(ServiceKey.radarr).future);
       container
           .read(_settingsHolderProvider.notifier)
-          .set(_secureRadarr.copyWith(sonarrUrl: 'https://sonarr.local:8989'));
+          .set(
+            _secureRadarr.copyWithService(
+              ServiceKey.sonarr,
+              url: 'https://sonarr.local:8989',
+            ),
+          );
       await container.read(serviceSummaryProvider(ServiceKey.radarr).future);
 
       expect(status.calls, 1);
@@ -169,7 +176,7 @@ void main() {
   group('serviceSummaryProvider Bazarr', () {
     test('reads bazarr_version from the nested data envelope', () async {
       final container = _container(
-        settings: const SettingsModel(
+        settings: settingsWith(
           bazarrUrl: 'http://bazarr.local:6767',
           bazarrApiKey: 'key',
         ),
@@ -202,7 +209,7 @@ void main() {
     // Both arrs configured: the provider now skips any source the user has not
     // set up, so an unconfigured service contributes nothing rather than a
     // failed fetch.
-    const _bothArrs = SettingsModel(
+    final _bothArrs = settingsWith(
       radarrUrl: 'http://radarr.local:7878',
       radarrApiKey: 'key',
       sonarrUrl: 'http://sonarr.local:8989',
@@ -276,7 +283,7 @@ void main() {
 
     test('skips a source the user has not configured', () async {
       final container = _container(
-        settings: const SettingsModel(
+        settings: settingsWith(
           sonarrUrl: 'http://sonarr.local:8989',
           sonarrApiKey: 'key',
         ),
@@ -349,7 +356,12 @@ void main() {
       await container.read(servicesQueueProvider.future);
       container
           .read(_settingsHolderProvider.notifier)
-          .set(_bothArrs.copyWith(radarrUrl: 'http://moved.local:7878'));
+          .set(
+            _bothArrs.copyWithService(
+              ServiceKey.radarr,
+              url: 'http://moved.local:7878',
+            ),
+          );
       await container.read(servicesQueueProvider.future);
 
       expect(radarr.calls, 2);
@@ -436,7 +448,12 @@ void main() {
       final first = await container.read(servicesRecentlyAddedProvider.future);
       container
           .read(_settingsHolderProvider.notifier)
-          .set(_secureRadarr.copyWith(radarrUrl: 'https://moved.local:7878'));
+          .set(
+            _secureRadarr.copyWithService(
+              ServiceKey.radarr,
+              url: 'https://moved.local:7878',
+            ),
+          );
       final second = await container.read(servicesRecentlyAddedProvider.future);
 
       expect(identical(first, second), isFalse);
@@ -616,7 +633,7 @@ ProviderContainer _mutableSettingsContainer({
 /// One HTTPS-addressed Radarr, so `pinForUrl` has an origin to key a trusted
 /// certificate on — [UrlUtils.certOrigin] answers null for plain HTTP, and a
 /// test that pinned against an `http://` URL would silently assert nothing.
-const _secureRadarr = SettingsModel(
+final _secureRadarr = settingsWith(
   radarrUrl: 'https://radarr.local:7878',
   radarrApiKey: 'key',
 );

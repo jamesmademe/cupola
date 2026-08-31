@@ -4,16 +4,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
+import 'package:cupola/features/services/domain/service_summary.dart';
+import 'package:cupola/features/services/presentation/service_matrix.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/presentation/branch_transition.dart';
+import 'package:cupola/features/shell/presentation/service_portal.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
 
+import '../../../test_helpers/fake_secure_settings_store.dart';
 import '../../../test_helpers/semantics_announcements.dart';
 
 void main() {
@@ -417,6 +427,247 @@ void main() {
       );
     });
   });
+
+  // The Portal closes when what sits under its card moves. The route half of
+  // that has always worked; the lens half is what multi-instance added, and it
+  // is invisible to a path comparison — which is exactly how it would have
+  // shipped.
+  group('the Portal and the lens', () {
+    testWidgets('moving a lens closes the Portal over the stale page', (
+      tester,
+    ) async {
+      final harness = await _pumpShell(
+        tester,
+        overrides: await _lensOverrides(),
+        // Deliberately the phone: the rail has no vertical drag to open the
+        // Portal with, so the wide window cannot exercise this at all.
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+
+      await _openPortal(tester);
+      expect(
+        find.byType(ServiceMatrix),
+        findsOneWidget,
+        reason: 'the floor is only in the tree while the Portal is open',
+      );
+
+      // No navigation at all — the same thing the picker cell does after
+      // `go` resolves to the path it is already on.
+      await harness.container
+          .read(activeInstancesProvider.notifier)
+          .select(ServiceKey.radarr, 'radarr-hd11111');
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byType(ServiceMatrix),
+        findsNothing,
+        reason:
+            'the page under the card now reads a different Radarr, so the '
+            'snapshot the Portal is holding is of a library nobody is looking '
+            'at any more',
+      );
+    });
+
+    testWidgets('an unrelated settings write leaves the Portal alone', (
+      tester,
+    ) async {
+      // The counterweight. Closing on *any* rebuild would be a Portal that
+      // shuts itself the first time a poll lands.
+      final harness = await _pumpShell(
+        tester,
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+
+      await _openPortal(tester);
+      expect(find.byType(ServiceMatrix), findsOneWidget);
+
+      await harness.container
+          .read(settingsProvider.notifier)
+          .updateSettings(
+            const SettingsModel(instances: _lensInstances, region: 'IT'),
+          );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ServiceMatrix), findsOneWidget);
+    });
+
+    // The hook above is REACTIVE — it closes because the content under the card
+    // moved. A tap on the cell the lens already points at, from the page that
+    // cell leads to, moves neither the path nor the lens, so nothing reacted
+    // and the Portal sat there over a snapshot looking broken. Closing on the
+    // *act* is the fix, and it lives at the cell.
+    testWidgets('tapping the cell the lens is already on closes the Portal', (
+      tester,
+    ) async {
+      final harness = await _pumpShell(
+        tester,
+        initialLocation: '/services/radarr',
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+
+      // The lens is PARKED on the first connection, not merely defaulting to
+      // it. Without this the map has no entry for Radarr, `select` writes one,
+      // and the hook below closes the Portal on a lens that did move — which
+      // is how a green test would have covered a defect the device reproduces
+      // at will.
+      await harness.container
+          .read(activeInstancesProvider.notifier)
+          .select(ServiceKey.radarr, 'radarr');
+      await tester.pumpAndSettle();
+
+      await _openPortal(tester);
+      expect(find.byType(ServiceMatrix), findsOneWidget);
+      expect(
+        harness.container.read(activeInstanceProvider(ServiceKey.radarr))?.id,
+        'radarr',
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('service-matrix-cell-radarr-radarr')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byType(ServiceMatrix),
+        findsNothing,
+        reason:
+            'a tap on a picker cell is an act on the Portal and must close it '
+            'even when it moves nothing underneath',
+      );
+      // And it really was a no-op underneath: neither input the hook watches
+      // changed, which is why the hook could never have caught this.
+      expect(harness.router.state.uri.path, '/services/radarr');
+      expect(
+        harness.container.read(activeInstanceProvider(ServiceKey.radarr))?.id,
+        'radarr',
+      );
+    });
+
+    testWidgets('a cell that does move the lens still closes exactly once', (
+      tester,
+    ) async {
+      // The counterweight to the fix: with the cell closing on the act AND the
+      // hook closing on the lens moving, the same close must not be started
+      // twice — a second spring launched from the first one's current value
+      // with no velocity is a visible hitch.
+      final harness = await _pumpShell(
+        tester,
+        initialLocation: '/services/radarr',
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+
+      await _openPortal(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('service-matrix-cell-radarr-radarr-hd11111')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ServiceMatrix), findsNothing);
+      expect(
+        harness.container.read(activeInstanceProvider(ServiceKey.radarr))?.id,
+        'radarr-hd11111',
+      );
+    });
+  });
+
+  // The single-animation half of the story above, asked of the machine rather
+  // than of the tree: the tree only shows that it ended closed.
+  group('ServicePortalController', () {
+    testWidgets('a close already under way is not restarted', (tester) async {
+      // Two identical closes, one interrupted halfway by a second request. A
+      // restarted spring throws away the velocity it had built, so it is
+      // measurably further from home at the same instant — which on the device
+      // is the hitch the user sees.
+      Future<double> valueAfter({required bool closeTwice}) async {
+        final controller = ServicePortalController(vsync: const TestVSync());
+        addTearDown(controller.dispose);
+        controller.portal.value = 1;
+        controller.closeFromUi();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 60));
+        if (closeTwice) controller.closeFromUi();
+        await tester.pump(const Duration(milliseconds: 60));
+        final value = controller.portal.value;
+        // Read first, then let the spring finish: a ticker still running when
+        // the test ends is an error of its own, and it would mask this one.
+        await tester.pumpAndSettle();
+        return value;
+      }
+
+      final once = await valueAfter(closeTwice: false);
+      final twice = await valueAfter(closeTwice: true);
+
+      expect(once, lessThan(1));
+      expect(
+        twice,
+        closeTo(once, 1e-6),
+        reason: 'the second request must leave the first spring alone',
+      );
+    });
+  });
+}
+
+const _lensInstances = [
+  ServiceInstance(
+    id: 'radarr',
+    service: ServiceKey.radarr,
+    label: '4K',
+    url: 'https://four-k.lan:7878',
+    credential: 'k',
+  ),
+  ServiceInstance(
+    id: 'radarr-hd11111',
+    service: ServiceKey.radarr,
+    label: 'HD',
+    url: 'https://hd.lan:7879',
+    credential: 'k',
+  ),
+];
+
+/// Enough of a world for the Portal's floor to build: two connections, and a
+/// health answer for each so no cell reaches for a socket.
+Future<List<Override>> _lensOverrides() async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
+  return [
+    sharedPreferencesProvider.overrideWithValue(prefs),
+    secureSettingsStoreProvider.overrideWithValue(FakeSecureSettingsStore()),
+    initialSettingsProvider.overrideWithValue(
+      const SettingsModel(instances: _lensInstances),
+    ),
+    for (final instance in _lensInstances)
+      instanceSummaryProvider((
+        service: instance.service,
+        instanceId: instance.id,
+      )).overrideWith(
+        (ref) async => ServiceSummary(
+          service: instance.service,
+          status: ServiceSummaryStatus.online,
+          host: 'somewhere',
+          version: '5.0',
+        ),
+      ),
+  ];
+}
+
+/// Opens the Portal the way a finger does. A flick, not a slow drag: the
+/// release only completes past the safe zone or beyond the flick gate, and a
+/// velocity well over the gate is the one input that does not depend on how
+/// many pixels the viewport happens to give the gesture.
+Future<void> _openPortal(WidgetTester tester) async {
+  await tester.fling(
+    find.byType(FloatingBottomNavBar),
+    const Offset(0, -260),
+    2000,
+  );
+  await tester.pumpAndSettle();
 }
 
 /// Wide enough for the rail: the breakpoint is Material's 840pt expanded window.
@@ -476,6 +727,10 @@ Future<_ShellHarness> _pumpShell(
   // Phone width by default, so the shell renders the FloatingBottomNavBar rather
   // than the wide-window NavigationRail (the rail breakpoint is 840).
   Size viewport = const Size(400, 900),
+  // The matrix resolves its columns against a preferred cell width, so the one
+  // test that opens the Portal needs a viewport in real device pixels rather
+  // than the logical-pixel shorthand the rest of this file uses.
+  double devicePixelRatio = 1.0,
   List<Override> overrides = const [],
 }) async {
   _ProbePage.mounts.clear();
@@ -503,6 +758,12 @@ Future<_ShellHarness> _pumpShell(
                   GoRoute(
                     path: 'radarr/movie/:id',
                     builder: (_, __) => const _ProbePage('MovieDetailPage'),
+                  ),
+                  // Where a matrix cell lands. One segment, so it cannot
+                  // swallow the two-segment detail route above it.
+                  GoRoute(
+                    path: ':service',
+                    builder: (_, __) => const _ProbePage('ServiceDashboard'),
                   ),
                 ],
               ),
@@ -550,7 +811,7 @@ Future<_ShellHarness> _pumpShell(
   });
 
   tester.view.physicalSize = viewport;
-  tester.view.devicePixelRatio = 1.0;
+  tester.view.devicePixelRatio = devicePixelRatio;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 

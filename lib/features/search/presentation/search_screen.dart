@@ -19,9 +19,12 @@ import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/reel_line.dart';
 import 'package:cupola/core/widgets/search_bar_header.dart';
 import 'package:cupola/features/search/domain/global_search_result.dart';
+import 'package:cupola/features/search/presentation/arr_add_form_provider.dart';
+import 'package:cupola/features/search/presentation/arr_add_sheet.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
 import 'package:cupola/features/search/presentation/recent_searches_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -335,12 +338,37 @@ class _SearchSectionHeader extends StatelessWidget {
             child: Icon(service.icon, size: 14, color: service.accent),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text(
-            service.title,
-            style: Theme.of(
-              context,
-            ).textTheme.labelLarge?.weight(FontWeight.w700),
+          Flexible(
+            child: Text(
+              service.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.weight(FontWeight.w700),
+            ),
           ),
+          // Which connection answered. On the heading rather than on the rows:
+          // one leg queries one server, so every result below came from this
+          // one and a chip repeated down forty rows would say it forty times.
+          // Absent entirely while the service has a single connection.
+          if (group.instanceLabel.isNotEmpty) ...[
+            const SizedBox(width: AppSpacing.xs),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: service.accent.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: service.accent.withValues(alpha: 0.34),
+                ),
+              ),
+              child: Text(
+                group.instanceLabel.toUpperCase(),
+                style: AppTheme.eyebrow(service.accent),
+              ),
+            ),
+          ],
           const SizedBox(width: AppSpacing.xs),
           // A global search fans out to every configured service and they
           // answer at their own pace, so this count genuinely arrives — it
@@ -363,15 +391,27 @@ class _SearchSectionHeader extends StatelessWidget {
   }
 }
 
-class _SearchResultCard extends StatelessWidget {
+class _SearchResultCard extends ConsumerWidget {
   final GlobalSearchResult result;
 
   const _SearchResultCard({required this.result});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final service = result.service;
+    final addRequest = result.addRequest;
+    // Held by the server that listed it — either when the lookup said so, or
+    // because this session put it there. `select` so an add repaints the one
+    // row it concerns rather than every card on screen.
+    final owned =
+        result.inLibrary ||
+        (addRequest != null &&
+            ref.watch(
+              libraryAdditionsProvider.select(
+                (keys) => keys.contains(addRequest.libraryKey),
+              ),
+            ));
 
     return AppCard.outlined(
       onTap: () => context.push(result.route, extra: result.routeExtra),
@@ -418,33 +458,69 @@ class _SearchResultCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          SizedBox.square(
-            dimension: 32,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: _resultActionColor(),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(_resultActionIcon(), size: 15, color: Colors.white),
-            ),
+          _ResultAction(
+            result: result,
+            owned: owned,
+            // A plus only where there is a real add behind it. Every other row
+            // gets the glyph without the tap target: it is a state marker, and
+            // a marker that responds to a finger is a promise.
+            onAdd: owned || addRequest == null
+                ? null
+                : () => showArrAddSheet(context, ref, addRequest),
           ),
         ],
       ),
     );
   }
+}
 
-  Color _resultActionColor() {
-    if (result.tags.any((tag) => tag.toLowerCase().contains('available'))) {
-      return AppColors.success;
-    }
-    return result.service.accent;
-  }
+/// The row's trailing state glyph, and — where an add is genuinely possible —
+/// the control that starts one.
+///
+/// Green tick for a title the server already holds, the service's own accent
+/// and a plus for one it does not. It reads [owned] rather than sniffing the
+/// tags for the substring `available`: that tied the affordance to a label's
+/// wording, and to a field (`hasFile`) the lookup endpoints never populate — so
+/// the tick never appeared and every row invited an add, including the ones
+/// already sitting on the server.
+class _ResultAction extends StatelessWidget {
+  final GlobalSearchResult result;
+  final bool owned;
+  final VoidCallback? onAdd;
 
-  IconData _resultActionIcon() {
-    if (result.tags.any((tag) => tag.toLowerCase().contains('available'))) {
-      return Icons.check_rounded;
-    }
-    return Icons.add_rounded;
+  const _ResultAction({
+    required this.result,
+    required this.owned,
+    required this.onAdd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final glyph = SizedBox.square(
+      dimension: 32,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: owned ? AppColors.success : result.service.accent,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          owned ? Icons.check_rounded : Icons.add_rounded,
+          size: 15,
+          color: Colors.white,
+        ),
+      ),
+    );
+
+    if (onAdd == null) return glyph;
+
+    // 44 wide around a 32 circle: the glyph's own size is below the touch
+    // target floor, and this is now a control rather than a badge.
+    return PressableScale(
+      onTap: onAdd,
+      semanticLabel: 'Add ${result.title}',
+      excludeChildSemantics: true,
+      child: SizedBox(width: 44, height: 44, child: Center(child: glyph)),
+    );
   }
 }
 

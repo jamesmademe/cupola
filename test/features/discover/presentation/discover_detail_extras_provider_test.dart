@@ -16,6 +16,8 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import '../../../test_helpers/fake_services.dart' as shared;
 import '../../../test_helpers/model_builders.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 void main() {
   group('discoverDetailExtrasProvider', () {
     ProviderContainer createContainer({
@@ -38,7 +40,7 @@ void main() {
 
     test('returns movie library status when Radarr finds the media', () async {
       final container = createContainer(
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.example.com',
           radarrApiKey: 'radarr-key',
         ),
@@ -61,7 +63,7 @@ void main() {
 
     test('returns false when movie is missing from Radarr', () async {
       final container = createContainer(
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.example.com',
           radarrApiKey: 'radarr-key',
         ),
@@ -86,7 +88,7 @@ void main() {
       () async {
         final sonarrService = _FakeSonarr(seriesByTvdbId: buildSeries());
         final container = createContainer(
-          settings: const SettingsModel(
+          settings: settingsWith(
             sonarrUrl: 'https://sonarr.example.com',
             sonarrApiKey: 'sonarr-key',
           ),
@@ -112,7 +114,7 @@ void main() {
     test('gracefully handles tv media without a tvdb id', () async {
       final sonarrService = _FakeSonarr(seriesByTvdbId: buildSeries());
       final container = createContainer(
-        settings: const SettingsModel(
+        settings: settingsWith(
           sonarrUrl: 'https://sonarr.example.com',
           sonarrApiKey: 'sonarr-key',
         ),
@@ -170,7 +172,7 @@ void main() {
         ],
       );
       final container = createContainer(
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.example.com',
           radarrApiKey: 'radarr-key',
         ),
@@ -211,7 +213,7 @@ void main() {
         ],
       );
       final container = createContainer(
-        settings: const SettingsModel(
+        settings: settingsWith(
           sonarrUrl: 'https://sonarr.example.com',
           sonarrApiKey: 'sonarr-key',
         ),
@@ -238,7 +240,7 @@ void main() {
     test('returns false when series is not found in Sonarr', () async {
       final sonarrService = _FakeSonarr(seriesByTvdbId: null);
       final container = createContainer(
-        settings: const SettingsModel(
+        settings: settingsWith(
           sonarrUrl: 'https://sonarr.example.com',
           sonarrApiKey: 'sonarr-key',
         ),
@@ -299,7 +301,7 @@ void main() {
           ],
         );
         final container = createContainer(
-          settings: const SettingsModel(
+          settings: settingsWith(
             radarrUrl: 'https://radarr.example.com',
             radarrApiKey: 'radarr-key',
           ),
@@ -322,7 +324,7 @@ void main() {
 
     test('falls back cleanly when a service throws', () async {
       final container = createContainer(
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.example.com',
           radarrApiKey: 'radarr-key',
         ),
@@ -352,7 +354,7 @@ void main() {
         throwOnLookupSeries: true,
       );
       final container = createContainer(
-        settings: const SettingsModel(
+        settings: settingsWith(
           sonarrUrl: 'https://sonarr.example.com',
           sonarrApiKey: 'sonarr-key',
         ),
@@ -404,6 +406,7 @@ class _FakeRadarr extends shared.FakeRadarrService {
   Future<List<radarr.RadarrMovie>> lookupMovies(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     lookupMoviesCallCount += 1;
     if (throwOnLookupMovies) throw Exception('radarr ratings lookup failed');
@@ -438,6 +441,7 @@ class _FakeSonarr extends shared.FakeSonarrService {
   Future<List<sonarr.SonarrSeries>> lookupSeries(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     lookupSeriesCallCount += 1;
     if (throwOnLookupSeries) throw Exception('sonarr ratings lookup failed');

@@ -50,6 +50,18 @@ class ServiceConnectionRow extends ConsumerWidget {
       );
     }
 
+    // The screen this row lives on is called Connections, and until now it
+    // could only ever show one per service: a second Radarr was invisible
+    // here, of all places. The count is the whole fix — the row still opens
+    // the first connection's form, which is where the others are listed and
+    // edited. Said only when there is more than one, the same rule the badge
+    // and the lens sheet follow: a stack with a single Radarr must not grow a
+    // count of one.
+    final connections = settings.configuredInstancesOf(service).length;
+    final hostLine = settings.hasMultipleInstances(service)
+        ? '$host · $connections connections'
+        : host;
+
     final asyncDiagnosis = ref.watch(serviceDiagnosisProvider(service));
     final diagnosis = asyncDiagnosis.when(
       loading: () => const ServiceDiagnosis.checking(),
@@ -72,8 +84,8 @@ class ServiceConnectionRow extends ConsumerWidget {
       // Connected: the host is the useful line and the glyph says the rest.
       // Broken: the cause comes first, with the host still there to check.
       subtitle: presentation.needsAttention
-          ? '${presentation.label} · $host'
-          : host,
+          ? '${presentation.label} · $hostLine'
+          : hostLine,
       subtitleLeading: _StatusGlyph(
         presentation: presentation,
         color: toneColor,
@@ -81,7 +93,10 @@ class ServiceConnectionRow extends ConsumerWidget {
       ),
       subtitleColor: presentation.needsAttention ? toneColor : null,
       accentColor: service.accent,
-      semanticLabel: '${service.title}, ${presentation.label}, $host',
+      semanticLabel: settings.hasMultipleInstances(service)
+          ? '${service.title}, ${presentation.label}, $host, '
+                '$connections connections'
+          : '${service.title}, ${presentation.label}, $host',
       semanticHint: 'opens ${service.title} settings',
       onTap: onTap,
     );

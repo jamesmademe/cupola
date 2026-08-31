@@ -100,6 +100,9 @@ SonarrSeries buildSeries({
 LidarrArtist buildArtist({
   int id = 1,
   String artistName = 'Artist',
+  // Empty by default, which is what a lookup row without a MusicBrainz id
+  // looks like — the one shape Lidarr cannot be asked to add.
+  String foreignArtistId = '',
   String status = 'active',
   bool monitored = true,
   String? overview,
@@ -113,6 +116,7 @@ LidarrArtist buildArtist({
   return LidarrArtist(
     id: id,
     artistName: artistName,
+    foreignArtistId: foreignArtistId,
     status: status,
     overview: overview,
     monitored: monitored,

@@ -15,6 +15,8 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import '../../../test_helpers/fake_secure_settings_store.dart';
 import '../../../test_helpers/reel_finders.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 /// The flow is door → pick → one page per chosen service → close, so its length
 /// belongs to the user. Every case here was a real defect in the flow this
 /// replaced; the scenarios are preserved even though the screens are not.
@@ -268,7 +270,7 @@ void main() {
     testWidgets('a second run resumes the saved configuration', (tester) async {
       await _pumpOnboarding(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           sonarrUrl: 'https://sonarr.lan:8989',
           sonarrApiKey: 'abcdef1234567890',
         ),
@@ -382,7 +384,7 @@ void main() {
     ) async {
       final container = await _pumpOnboarding(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           sonarrUrl: 'https://sonarr.lan:8989',
           sonarrApiKey: 'abcdef1234567890',
         ),
@@ -403,7 +405,7 @@ void main() {
     ) async {
       final container = await _pumpOnboarding(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           sonarrUrl: 'https://sonarr.lan:8989',
           sonarrApiKey: 'abcdef1234567890',
         ),
@@ -427,7 +429,7 @@ void main() {
     ) async {
       final container = await _pumpOnboarding(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           sonarrUrl: 'https://sonarr.lan:8989',
           sonarrApiKey: 'abcdef1234567890',
           qbittorrentUrl: 'https://qb.lan:8080',
@@ -479,7 +481,7 @@ void main() {
     ) async {
       final container = await _pumpOnboarding(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.lan:7878',
           radarrApiKey: 'abcdef1234567890',
           sonarrUrl: 'https://nas.lan:8989',

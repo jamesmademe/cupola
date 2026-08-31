@@ -12,11 +12,12 @@ import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
 import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/model_builders.dart';
 import '../../../test_helpers/reel_finders.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 void main() {
   testWidgets('renders grouped global search result cards', (tester) async {
@@ -26,7 +27,12 @@ void main() {
     expect(findLine('1 result'), findsOneWidget);
     expect(find.text('Dune'), findsOneWidget);
     expect(find.text('Movie'), findsOneWidget);
-    expect(find.text('Available'), findsWidgets);
+    // The fixture arrives the way `movie/lookup` really answers — a library id
+    // and `hasFile: false` — so the marker and the trailing affordance have to
+    // come from the id. They used to come from `hasFile`, which meant a movie
+    // sitting on the server showed "Missing" and an "add it" plus.
+    expect(find.text('In library'), findsWidgets);
+    expect(find.text('Missing'), findsNothing);
     expect(_posterSizedContentCard(tester), findsOneWidget);
     expect(_solidActionIcon(Icons.check_rounded), findsOneWidget);
   });
@@ -88,7 +94,7 @@ void main() {
     // page's Hero has a matching destination.
     expect(
       router.state.uri.queryParameters['heroTag'],
-      'search_radarr_movie_10',
+      'search_radarr_movie_10_0',
     );
     expect(find.text('Movie detail 10 Dune'), findsOneWidget);
   });
@@ -101,7 +107,7 @@ void main() {
     final hero = tester.widget<Hero>(
       find.ancestor(of: find.byType(ContentCard), matching: find.byType(Hero)),
     );
-    expect(hero.tag, 'search_radarr_movie_10');
+    expect(hero.tag, 'search_radarr_movie_10_0');
     // Same toggle every other poster Hero uses, so the interactive swipe-back
     // carries this one home too.
     expect(hero.transitionOnUserGestures, MediaPosterCard.flightOnUserGestures);
@@ -214,9 +220,13 @@ Future<void> _pumpFrames(WidgetTester tester) async {
 _overrides({bool withPoster = false}) {
   return [
     currentSettingsProvider.overrideWith(
-      (ref) => const SettingsModel(
+      // Both configured: the fan-out only runs a leg per configured
+      // connection, so an unconfigured Seerr has no section to be empty.
+      (ref) => settingsWith(
         radarrUrl: 'http://radarr.local:7878',
         radarrApiKey: 'key',
+        seerrUrl: 'http://seerr.local:5055',
+        seerrApiKey: 'key',
       ),
     ),
     globalSearchQueryProvider.overrideWith((ref) => 'dune'),
@@ -228,6 +238,9 @@ _overrides({bool withPoster = false}) {
             id: 10,
             title: 'Dune',
             year: 2024,
+            // What the lookup endpoint actually sends for a movie the server
+            // already holds: the library id, and no file flag.
+            hasFile: false,
             images: withPoster
                 ? const [
                     {'coverType': 'poster', 'url': '/MediaCover/10/poster.jpg'},
@@ -249,5 +262,6 @@ class _SearchRadarrService extends FakeRadarrService {
   Future<List<RadarrMovie>> lookupMovies(
     String term, {
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async => results;
 }

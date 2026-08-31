@@ -12,10 +12,11 @@ import 'package:cupola/features/music/presentation/music_detail_provider.dart';
 import 'package:cupola/features/music/presentation/music_detail_screen.dart';
 import 'package:cupola/features/music/presentation/widgets/music_albums_list.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/model_builders.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 LidarrArtist _artist({
   int id = 1,
@@ -418,14 +419,20 @@ Future<void> _pumpMusicDetail(
       retry: (retryCount, error) => null,
       overrides: [
         currentSettingsProvider.overrideWith(
-          (ref) => const SettingsModel(
+          (ref) => settingsWith(
             lidarrUrl: 'http://localhost:8686',
             lidarrApiKey: 'key',
           ),
         ),
-        musicDetailProvider.overrideWith(detailBuilder),
-        musicAlbumsProvider.overrideWith(
-          albumsBuilder ?? (ref, artistId) async => _albums(),
+        // The page reads the connection-keyed families; an unstamped route
+        // resolves to the lens id, which is what these id shims ignore.
+        musicDetailForProvider.overrideWith(
+          (ref, item) => detailBuilder(ref, item.id),
+        ),
+        musicAlbumsForProvider.overrideWith(
+          (ref, item) => albumsBuilder == null
+              ? Future.value(_albums())
+              : albumsBuilder(ref, item.id),
         ),
         lidarrServiceProvider.overrideWith(
           (ref) => lidarrService ?? FakeLidarrService(),

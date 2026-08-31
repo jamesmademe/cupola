@@ -166,22 +166,52 @@ class ServiceRoutes {
   /// Compose editor for a stack, e.g. `/services/dockge/stack/immich/edit`.
   static String dockgeStackEdit(String name) => '$dockgeStackBase/$name/edit';
 
-  static String radarrMovie(int id, {String? heroTag}) {
-    return _withQuery('$radarrMovieBase/$id', {'heroTag': heroTag});
+  /// ## `i`: which connection a detail page belongs to
+  ///
+  /// Every detail route below takes an optional `?i=<instanceId>`. Absent — the
+  /// shape every link in the app had before there could be two of a service —
+  /// means "whichever one this service is being read through", so nothing that
+  /// does not care has to say anything.
+  ///
+  /// A **query** rather than a path segment, and the difference is a hundred
+  /// lines: `state.uri` is the whole URI at every level of nesting, so a nested
+  /// route reads it without being told, while `pathParameters` is a map
+  /// accumulated down the tree and a new segment would have to be declared on
+  /// every one of the descendants under it. It is also not `extra`: go_router
+  /// replaces a non-JSON-encodable extra with null, silently, when it
+  /// serialises the match list for state restoration — a vector that survives
+  /// normal use and evaporates when the OS kills the app is the worst of the
+  /// three options.
+  static String radarrMovie(int id, {String? heroTag, String? instanceId}) {
+    return _withQuery('$radarrMovieBase/$id', {
+      'heroTag': heroTag,
+      'i': instanceId,
+    });
   }
 
-  static String sonarrSeries(int id, {String? heroTag}) {
-    return _withQuery('$sonarrSeriesBase/$id', {'heroTag': heroTag});
+  static String sonarrSeries(int id, {String? heroTag, String? instanceId}) {
+    return _withQuery('$sonarrSeriesBase/$id', {
+      'heroTag': heroTag,
+      'i': instanceId,
+    });
   }
 
-  static String lidarrArtist(int id, {String? heroTag}) {
-    return _withQuery('$lidarrArtistBase/$id', {'heroTag': heroTag});
+  static String lidarrArtist(int id, {String? heroTag, String? instanceId}) {
+    return _withQuery('$lidarrArtistBase/$id', {
+      'heroTag': heroTag,
+      'i': instanceId,
+    });
   }
 
   static String qbittorrentTorrent(String hash) {
     return '$qbittorrentTorrentBase/$hash';
   }
 
+  /// No `i` on the two Bazarr routes, and that is the honest shape rather than
+  /// an omission: a Bazarr row's id is a **third** server's (`radarrId` /
+  /// `sonarrSeriesId`), so the connection that matters at the destination is an
+  /// arr's, which nothing on the row knows. They briefly took an `instanceId`
+  /// that no caller passed and no route read.
   static String bazarrSeries(int sonarrSeriesId, {String? heroTag}) {
     return _withQuery('$bazarrSeriesBase/$sonarrSeriesId', {
       'heroTag': heroTag,
@@ -192,6 +222,9 @@ class ServiceRoutes {
     return _withQuery('$bazarrMovieBase/$radarrId', {'heroTag': heroTag});
   }
 
+  /// Likewise no `i`: Discover resolves through the lens end to end, so a
+  /// connection in the URL would be a claim the page cannot honour. The day
+  /// `_discoverDetailPage` reads one, this is where it goes back.
   static String seerrDetail({
     required String mediaType,
     required int id,

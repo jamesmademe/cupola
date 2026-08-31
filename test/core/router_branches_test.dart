@@ -5,12 +5,25 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/features/activity/domain/service_type.dart';
+import 'package:cupola/features/activity/presentation/activity_screen.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
 
+import 'package:cupola/features/settings/domain/service_instance.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
+
 import '../test_helpers/settings_scope.dart';
+
+const _secondSeerr = ServiceInstance(
+  id: 'seerr-2222222',
+  service: ServiceKey.seerr,
+  label: 'Anime',
+  url: 'https://second.lan:5055',
+  credential: 'key-2',
+);
 
 /// The shape of the shell, asserted against the real router.
 ///
@@ -23,11 +36,15 @@ void main() {
     WidgetTester tester, {
     String? at,
     List<ServiceKey> configured = const [],
+    SettingsModel Function(SettingsModel settings)? customize,
   }) async {
     // `settingsScopeOverrides` already marks onboarding complete, which is what
     // keeps the router off the onboarding gate.
     final container = ProviderContainer(
-      overrides: await settingsScopeOverrides(configured: configured),
+      overrides: await settingsScopeOverrides(
+        configured: configured,
+        customize: customize,
+      ),
     );
     addTearDown(container.dispose);
 
@@ -246,6 +263,34 @@ void main() {
 
       expect(find.byType(FloatingBottomNavBar), findsNothing);
       expect(find.byType(ShellScreen), findsNothing);
+    });
+
+    // The requests drill-down is the one destination here that belongs to a
+    // *connection*: /activity aggregates every Seerr, so a row that came off
+    // the second one has to open the second one's list. The link carries the
+    // connection in `?i=` and this asserts the route reads it — a parameter
+    // nothing reads was removed from this route once already.
+    testWidgets('the requests drill-down carries its connection', (
+      tester,
+    ) async {
+      await pumpRouter(
+        tester,
+        at: '/activity/discover?i=${_secondSeerr.id}',
+        configured: const [ServiceKey.seerr],
+        // A real second connection, so the id in the link names something —
+        // otherwise the assertion would hold even if the screen took the lens.
+        customize: (settings) => settings.copyWithInstance(_secondSeerr),
+      );
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is ActivityScreen &&
+              widget.instanceId == _secondSeerr.id &&
+              widget.serviceType == ServiceType.discover,
+        ),
+        findsOneWidget,
+      );
     });
   });
 }

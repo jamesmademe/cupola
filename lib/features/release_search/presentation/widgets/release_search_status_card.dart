@@ -47,7 +47,7 @@ class ReleaseSearchStatusCard extends ConsumerWidget {
         // surface making the same promise, and the sentence is only true for the
         // reach the search is actually running under.
         ReleaseSearchHandoffCopy.runningConsequence(
-          ref.watch(releaseSearchReachProvider(job.target.service)),
+          ref.watch(releaseSearchReachProvider(job.target)),
         ),
       ),
       ReleaseSearchJobStatus.completed =>

@@ -12,10 +12,11 @@ import 'package:cupola/features/series/presentation/series_detail_provider.dart'
 import 'package:cupola/features/series/presentation/series_detail_screen.dart';
 import 'package:cupola/features/series/presentation/widgets/series_seasons_list.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/model_builders.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 SonarrSeries _series({
   int id = 1,
@@ -425,14 +426,20 @@ Future<void> _pumpSeriesDetail(
     ProviderScope(
       overrides: [
         currentSettingsProvider.overrideWith(
-          (ref) => const SettingsModel(
+          (ref) => settingsWith(
             sonarrUrl: 'http://localhost:8989',
             sonarrApiKey: 'key',
           ),
         ),
-        seriesDetailProvider.overrideWith(detailBuilder),
-        seriesEpisodesProvider.overrideWith(
-          episodesBuilder ?? (ref, seriesId) async => _episodes(),
+        // The page reads the connection-keyed families; an unstamped route
+        // resolves to the lens id, which is what these id shims ignore.
+        seriesDetailForProvider.overrideWith(
+          (ref, item) => detailBuilder(ref, item.id),
+        ),
+        seriesEpisodesForProvider.overrideWith(
+          (ref, item) => episodesBuilder == null
+              ? Future.value(_episodes())
+              : episodesBuilder(ref, item.id),
         ),
         sonarrServiceProvider.overrideWith(
           (ref) => sonarrService ?? FakeSonarrService(),

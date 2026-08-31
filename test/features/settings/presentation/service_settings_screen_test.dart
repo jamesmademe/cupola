@@ -15,6 +15,8 @@ import 'package:cupola/features/settings/presentation/service_settings_screen.da
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 void main() {
   String? clipboardText;
 
@@ -70,7 +72,7 @@ void main() {
       await _pumpServiceSettings(
         tester,
         service: ServiceKey.radarr,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local',
           radarrApiKey: 'radarr-key',
         ),
@@ -120,7 +122,7 @@ void main() {
       await _pumpServiceSettings(
         tester,
         service: ServiceKey.radarr,
-        settings: const SettingsModel(radarrApiKey: 'copy-me'),
+        settings: settingsWith(radarrApiKey: 'copy-me'),
       );
 
       await tester.tap(find.byTooltip('Copy API key'));
@@ -165,7 +167,7 @@ void main() {
       await _pumpServiceSettings(
         tester,
         service: ServiceKey.radarr,
-        settings: const SettingsModel(radarrApiKey: 'copy-me'),
+        settings: settingsWith(radarrApiKey: 'copy-me'),
       );
 
       var plainCopies = 0;
@@ -206,7 +208,7 @@ void main() {
       await _pumpServiceSettings(
         tester,
         service: ServiceKey.radarr,
-        settings: const SettingsModel(radarrApiKey: 'copy-me'),
+        settings: settingsWith(radarrApiKey: 'copy-me'),
       );
 
       await tester.tap(find.byTooltip('Copy API key'));
@@ -225,7 +227,7 @@ void main() {
       await _pumpServiceSettings(
         tester,
         service: ServiceKey.radarr,
-        settings: const SettingsModel(radarrApiKey: 'copy-me'),
+        settings: settingsWith(radarrApiKey: 'copy-me'),
       );
 
       await tester.tap(find.byTooltip('Copy API key'));
@@ -261,7 +263,7 @@ void main() {
       final harness = await _pumpServiceSettings(
         tester,
         service: ServiceKey.jellyfin,
-        settings: const SettingsModel(
+        settings: settingsWith(
           jellyfinUrl: 'https://jelly.local:8096',
           jellyfinApiKey: 'jf-key',
           jellyfinUserId: 'a1b2c3',
@@ -292,7 +294,7 @@ void main() {
       final harness = await _pumpServiceSettings(
         tester,
         service: ServiceKey.sonarr,
-        settings: const SettingsModel(
+        settings: settingsWith(
           sonarrUrl: 'https://old-nas.local:8989',
           sonarrApiKey: 'sonarr-key',
           trustedCertificates: {'https://old-nas.local:8989': fingerprint},
@@ -319,7 +321,7 @@ void main() {
       final harness = await _pumpServiceSettings(
         tester,
         service: ServiceKey.sonarr,
-        settings: const SettingsModel(
+        settings: settingsWith(
           sonarrUrl: 'https://nas.local:443',
           sonarrApiKey: 'sonarr-key',
           radarrUrl: 'https://nas.local:443',
@@ -345,7 +347,7 @@ void main() {
       final harness = await _pumpServiceSettings(
         tester,
         service: ServiceKey.sonarr,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local',
           radarrApiKey: 'radarr-key',
           sonarrUrl: 'https://old-sonarr.local',
@@ -380,7 +382,7 @@ void main() {
       await _pumpServiceSettings(
         tester,
         service: ServiceKey.radarr,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'key',
         ),
@@ -404,7 +406,7 @@ void main() {
       await _pumpServiceSettings(
         tester,
         service: ServiceKey.radarr,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'key',
         ),
@@ -429,7 +431,7 @@ void main() {
       final harness = await _pumpServiceSettings(
         tester,
         service: ServiceKey.radarr,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'old-key',
         ),
@@ -477,7 +479,7 @@ void main() {
       await _pumpServiceSettings(
         tester,
         service: ServiceKey.radarr,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.local:7878',
           radarrApiKey: 'key',
         ),

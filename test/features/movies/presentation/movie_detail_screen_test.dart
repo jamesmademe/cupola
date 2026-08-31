@@ -14,10 +14,11 @@ import 'package:cupola/features/movies/presentation/movie_detail_provider.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/model_builders.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 RadarrMovie _movie({
   int id = 1,
@@ -619,17 +620,23 @@ Future<void> _pumpMovieDetail(
       retry: (retryCount, error) => null,
       overrides: [
         currentSettingsProvider.overrideWith(
-          (ref) => const SettingsModel(
+          (ref) => settingsWith(
             radarrUrl: 'http://localhost:7878',
             radarrApiKey: 'key',
           ),
         ),
-        movieDetailProvider.overrideWith(detailBuilder),
+        // The page reads the connection-keyed family; an unstamped route
+        // resolves to the lens id, which is what the id shim below ignores.
+        movieDetailForProvider.overrideWith(
+          (ref, item) => detailBuilder(ref, item.id),
+        ),
         radarrServiceProvider.overrideWith(
           (ref) => radarrService ?? FakeRadarrService(),
         ),
         if (queueSnapshot != null)
-          radarrQueueSnapshotProvider.overrideWith((ref) => queueSnapshot),
+          radarrQueueSnapshotForProvider.overrideWith(
+            (ref, instanceId) => queueSnapshot,
+          ),
       ],
       child: MaterialApp(
         home: Scaffold(

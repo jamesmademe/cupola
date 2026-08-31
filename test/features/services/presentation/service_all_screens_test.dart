@@ -9,9 +9,10 @@ import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_services.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 void main() {
   testWidgets('all requests renders filter chips and compact request rows', (
@@ -215,7 +216,7 @@ Future<void> _pumpAllRequests(
 List<Override> _providerOverrides({SeerrService? seerr}) {
   return [
     currentSettingsProvider.overrideWith(
-      (ref) => const SettingsModel(
+      (ref) => settingsWith(
         seerrUrl: 'http://seerr.local:5055',
         seerrApiKey: 'key',
         radarrUrl: 'http://radarr.local:7878',

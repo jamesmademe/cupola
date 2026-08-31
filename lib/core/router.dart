@@ -167,7 +167,13 @@ Page<void> _discoverDetailPage(
 Page<void> _libraryDetailPage<T>(
   GoRouterState state, {
   required String heroPrefix,
-  required Widget Function(int id, String heroTag, T? initialItem) buildChild,
+  required Widget Function(
+    int id,
+    String heroTag,
+    T? initialItem,
+    String? instanceId,
+  )
+  buildChild,
 }) {
   final id = RouteUtils.safeIntParam(state, 'id');
   if (id == null) {
@@ -175,9 +181,12 @@ Page<void> _libraryDetailPage<T>(
   }
   final item = RouteUtils.safeExtra<T>(state);
   final heroTag = state.uri.queryParameters['heroTag'] ?? '${heroPrefix}_$id';
+  // Null when the link did not name one, which is every link that predates a
+  // service being able to have two — see `ServiceRoutes` for why this rides in
+  // the query rather than in a path segment or in `extra`.
   return RouteUtils.cupertinoPage(
     key: state.pageKey,
-    child: buildChild(id, heroTag, item),
+    child: buildChild(id, heroTag, item, state.uri.queryParameters['i']),
   );
 }
 
@@ -343,10 +352,11 @@ GoRoute _moviesRoutes({required String path, String? redirectLocation}) {
         pageBuilder: (context, state) => _libraryDetailPage<RadarrMovie>(
           state,
           heroPrefix: 'movie',
-          buildChild: (id, heroTag, movie) => MovieDetailScreen(
+          buildChild: (id, heroTag, movie, instanceId) => MovieDetailScreen(
             movieId: id,
             heroTag: heroTag,
             initialMovie: movie,
+            instanceId: instanceId,
           ),
         ),
       ),
@@ -392,10 +402,11 @@ GoRoute _seriesRoutes({required String path, String? redirectLocation}) {
         pageBuilder: (context, state) => _libraryDetailPage<SonarrSeries>(
           state,
           heroPrefix: 'series',
-          buildChild: (id, heroTag, series) => SeriesDetailScreen(
+          buildChild: (id, heroTag, series, instanceId) => SeriesDetailScreen(
             seriesId: id,
             heroTag: heroTag,
             initialSeries: series,
+            instanceId: instanceId,
           ),
         ),
       ),
@@ -441,10 +452,11 @@ GoRoute _musicRoutes({required String path, String? redirectLocation}) {
         pageBuilder: (context, state) => _libraryDetailPage<LidarrArtist>(
           state,
           heroPrefix: 'artist',
-          buildChild: (id, heroTag, artist) => MusicDetailScreen(
+          buildChild: (id, heroTag, artist, instanceId) => MusicDetailScreen(
             artistId: id,
             heroTag: heroTag,
             initialArtist: artist,
+            instanceId: instanceId,
           ),
         ),
       ),
@@ -938,7 +950,15 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
           (s) => s.routeParam == normalizedParam,
           orElse: () => ServiceKey.seerr,
         );
-        return ServiceSettingsScreen(service: service);
+        // Query rather than a path segment: a connection is a parameter of
+        // the form, not a level of the hierarchy, and threading a segment
+        // through would have every nested settings route grow one it never
+        // reads.
+        return ServiceSettingsScreen(
+          service: service,
+          instanceId: state.uri.queryParameters['i'],
+          isNew: state.uri.queryParameters['new'] == '1',
+        );
       }),
     ],
   ),
@@ -1054,7 +1074,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             (e) => e.name == typeStr,
             orElse: () => ServiceType.movies,
           );
-          return ActivityScreen(serviceType: type);
+          // `?i=` reaches the requests branch only, because that is the only
+          // branch that honours it: the \*arr tabs under here read their queue
+          // through the lens from top to bottom, and handing them a connection
+          // they ignore is how this route grew a parameter nothing read the
+          // first time. Giving those tabs one is that feature's work.
+          return ActivityScreen(
+            serviceType: type,
+            instanceId: type == ServiceType.discover
+                ? state.uri.queryParameters['i']
+                : null,
+          );
         },
       ),
     ],

@@ -9,6 +9,13 @@ class SonarrSeries {
   final int id;
   final String title;
   final String sortTitle;
+
+  /// Sonarr's own url-safe key for the series (`severance`).
+  ///
+  /// Read for exactly one reason: adding. See [RadarrMovie.titleSlug] for the
+  /// same note — a `series/lookup` row carries it, and an add posted without
+  /// it is rejected.
+  final String titleSlug;
   final String status;
   final String? overview;
   final String? path;
@@ -35,6 +42,7 @@ class SonarrSeries {
     required this.id,
     required this.title,
     required this.sortTitle,
+    this.titleSlug = '',
     required this.status,
     this.overview,
     this.path,
@@ -89,6 +97,7 @@ class SonarrSeries {
       id: json['id'] ?? 0,
       title: json['title'] ?? 'Unknown',
       sortTitle: json['sortTitle'] ?? '',
+      titleSlug: json['titleSlug'] ?? '',
       status: json['status'] ?? 'unknown',
       overview: json['overview'],
       path: json['path'],

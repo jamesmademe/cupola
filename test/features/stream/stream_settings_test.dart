@@ -11,6 +11,8 @@ import 'package:cupola/features/settings/presentation/service_settings_screen.da
 
 import '../../test_helpers/fake_secure_settings_store.dart';
 
+import '../../test_helpers/settings_scope.dart';
+
 void main() {
   group('the Stream services persist through the ordinary API-key path', () {
     late SettingsService service;
@@ -25,7 +27,7 @@ void main() {
 
     test('Jellyfin round-trips its URL, key and chosen viewer', () async {
       await service.saveSettings(
-        const SettingsModel(
+        settingsWith(
           jellyfinUrl: 'https://jelly.local:8096',
           jellyfinApiKey: 'jf-key',
           jellyfinUserId: 'a1b2c3',
@@ -44,7 +46,7 @@ void main() {
 
     test('Plex round-trips its token in the generic credential slot', () async {
       await service.saveSettings(
-        const SettingsModel(
+        settingsWith(
           plexUrl: 'https://plex.local:32400',
           plexToken: 'plex-device-token',
         ),
@@ -83,7 +85,7 @@ void main() {
       // an empty `plexClientId`, so a save that honoured an incoming empty value
       // would wipe it — and the next load would mint a new one, registering a
       // fresh "device" on the user's Plex server on every such save.
-      await service.saveSettings(const SettingsModel(radarrUrl: 'http://r'));
+      await service.saveSettings(settingsWith(radarrUrl: 'http://r'));
 
       expect((await service.loadSettings()).plexClientId, minted);
     });

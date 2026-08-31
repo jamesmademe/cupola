@@ -12,16 +12,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 final sabnzbdClientProvider = Provider<SabnzbdClient>((ref) {
   // Selected rather than watching the whole model: this provider closes a live
   // Dio on dispose, so an unrelated settings write must not rebuild it.
-  final transport = ref.watch(
-    currentSettingsProvider.select(
-      (s) => (
-        configured: s.isServiceConfigured(ServiceKey.sabnzbd),
-        url: s.sabnzbdUrl,
-        apiKey: s.sabnzbdApiKey,
-        pin: s.pinForUrl(s.sabnzbdUrl),
-      ),
-    ),
-  );
+  final transport = watchTransport(ref, ServiceKey.sabnzbd);
   if (!transport.configured) {
     throw Exception('SABnzbd not configured');
   }

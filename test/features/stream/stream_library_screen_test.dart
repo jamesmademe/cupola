@@ -20,6 +20,8 @@ import 'package:cupola/features/stream/presentation/widgets/stream_poster_tile.d
 
 import '../../test_helpers/fake_secure_settings_store.dart';
 
+import '../../test_helpers/settings_scope.dart';
+
 /// A media server that answers whatever the test scripted, page by page.
 ///
 /// Scripted by *start index* rather than by call order, because the thing under
@@ -404,7 +406,7 @@ void main() {
       final container = await _pumpLibraryWithSettings(
         tester,
         server,
-        settings: const SettingsModel(
+        settings: settingsWith(
           jellyfinUrl: 'https://jellyfin.lan:8096',
           jellyfinApiKey: 'abcdef1234567890',
         ),
@@ -420,7 +422,9 @@ void main() {
       await container
           .read(settingsProvider.notifier)
           .updateSettings(
-            container.read(settingsProvider).copyWith(jellyfinUserId: 'u-1'),
+            container
+                .read(settingsProvider)
+                .copyWithViewer(ServiceKey.jellyfin, 'u-1'),
           );
       await tester.pumpAndSettle();
 

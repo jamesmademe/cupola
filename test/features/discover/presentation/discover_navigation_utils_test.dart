@@ -14,6 +14,8 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import '../../../test_helpers/fake_services.dart' as shared;
 import '../../../test_helpers/model_builders.dart';
 
+import '../../../test_helpers/settings_scope.dart';
+
 void main() {
   group('openMediaInService', () {
     testWidgets('navigates to movie detail and calls dismissSheet', (
@@ -25,7 +27,7 @@ void main() {
 
       await _pumpHarness(
         tester,
-        settings: const SettingsModel(
+        settings: settingsWith(
           radarrUrl: 'https://radarr.example.com',
           radarrApiKey: 'key',
         ),

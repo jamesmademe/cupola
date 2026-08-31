@@ -86,7 +86,7 @@ class _ReleaseSearchSettingsScreenState
   List<ServiceKey> _servicesWithReach(ReleaseSearchReach reach) => ServiceKey
       .values
       .where(SearchHeadroomCard.appliesTo)
-      .where((s) => ref.watch(releaseSearchReachProvider(s)) == reach)
+      .where((s) => ref.watch(releaseSearchLensReachProvider(s)) == reach)
       .toList(growable: false);
 
   @override

@@ -12,7 +12,9 @@ import 'package:cupola/core/utils/a11y_announce.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/presentation/portal_coach_mark.dart';
@@ -55,6 +57,14 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   late final ServicePortalController _portal;
 
   String? _lastLocation;
+
+  /// The lens map as it was the last time this built.
+  ///
+  /// Held by identity rather than by value: [ActiveInstancesNotifier] hands out
+  /// a fresh `Map` on every `select`, and never otherwise, so `identical` is
+  /// exactly the question "did somebody move a lens since the last frame" — and
+  /// it costs no comparison of seventeen entries to ask it.
+  Map<ServiceKey, String>? _lastLenses;
   Timer? _demoTimer;
 
   @override
@@ -104,22 +114,45 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // its pure elastic and switching stays on the accessible paths.
     final accessibleNav = MediaQuery.accessibleNavigationOf(context);
 
-    // Any route change under an open Portal (a matrix cell navigating, a deep
-    // link) closes it and drops the stale snapshot. Post-frame: starting
-    // animations inside build is not allowed.
+    // Any change to what sits under the card closes an open Portal and drops
+    // the stale snapshot. Post-frame: starting animations inside build is not
+    // allowed.
     //
-    // The comparison is on the FULL path on purpose — never weaken it to the
-    // service's routeParam. With multi-instance, `/services/radarr/4K` →
-    // `/services/radarr/HD` is a content change under the same ServiceKey,
-    // and a param-keyed hook would reopen the Portal onto a frozen snapshot
-    // of the previous instance's library.
+    // TWO inputs, not one, and the second is the whole of this hook's
+    // multi-instance story. The path is the obvious one. The other is the
+    // LENS: a picker cell travelling from Radarr · 4K to Radarr · HD calls
+    // `go('/services/radarr')` both times, so `uri.path` is byte-identical
+    // across a travel that changes every pixel under the card. Watched here
+    // rather than solved at the cell, because this is already the one place
+    // that decides the Portal closes because its content moved, and the badge
+    // sheet can move a lens too.
+    //
+    // The path comparison stays on the FULL path — never weaken it to the
+    // service's routeParam. A hook keyed on the service alone would hold the
+    // Portal open across `/services/radarr` → `/services/radarr/movie/12`.
+    //
+    // And this hook is only half the story: it is REACTIVE, and closing on an
+    // ACTION lives elsewhere. A picker cell closes the Portal itself, through
+    // `PortalDismissScope`, because a tap that navigates to the path it is
+    // already on without moving the lens moves neither of the two inputs below
+    // and is invisible from here. Do not answer that case by widening these
+    // conditions — the question this hook asks ("has the content under the card
+    // moved, so is the snapshot dead?") is a different one, and it is right.
     final location = GoRouterState.of(context).uri.path;
-    if (_lastLocation != null && _lastLocation != location) {
+    final lenses = ref.watch(activeInstancesProvider);
+    final pathMoved = _lastLocation != null && _lastLocation != location;
+    final lensMoved = _lastLenses != null && !identical(_lastLenses, lenses);
+    _lastLenses = lenses;
+    if (pathMoved || lensMoved) {
       if (_portal.isOpenOrEngaged) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _portal.handleRouteChanged();
         });
-      } else if (_lastLocation == NavTab.services.routePath &&
+      } else if (pathMoved &&
+          // Spelled out rather than left to the arithmetic: a lens moving with
+          // the path unchanged cannot satisfy the two tests below, but the
+          // journey being counted is a *journey*, and it should say so.
+          _lastLocation == NavTab.services.routePath &&
           location.startsWith('${NavTab.services.routePath}/')) {
         // Dashboard → servizio senza passare dal Portale: esattamente il
         // tragitto che il Portale sostituisce. Il coach mark conta questi.
