@@ -16,8 +16,11 @@ configuration shows the unqualified resource, so dark-theme users on such a
 launcher get the light icon rather than a broken one.
 
 Apple switches through the Icon Composer bundle's own light and dark layer
-groups. The legacy `.appiconset` catalogues have no appearance channel, so they
-carry the dark appearance, which is the product's committed identity.
+groups. The legacy fallbacks have no appearance channel, so they carry the dark
+appearance, which is the product's committed identity. iOS falls back to its
+`.appiconset`; macOS falls back to `cupola_icon_legacy.icns`, because actool
+never reads an `.appiconset` when the target's app icon is an Icon Composer
+bundle — see the note on `write_icns`.
 
 Web follows `index.html`, which serves `favicon-light.png` under
 `prefers-color-scheme: light` and `favicon.png` otherwise.
@@ -61,7 +64,22 @@ IOS_APPICON = {
     "Icon-App-83.5x83.5@2x.png": 167,
 }
 
-MACOS_APPICON = {f"app_icon_{s}.png": s for s in (16, 32, 64, 128, 256, 512, 1024)}
+# The `.icns` element types macOS reads as PNG, paired with the pixel size each
+# one declares. Both the 1x and the @2x code for a point size are present: the
+# retina codes are what a modern Dock asks for, the 1x codes are what a stray
+# pre-retina context and some third-party icon readers ask for.
+MACOS_ICNS = {
+    "icp4": 16,
+    "ic11": 32,
+    "icp5": 32,
+    "ic12": 64,
+    "ic07": 128,
+    "ic13": 256,
+    "ic08": 256,
+    "ic14": 512,
+    "ic09": 512,
+    "ic10": 1024,
+}
 
 APPLE_LAYERS = {
     "cupola-core-light.png": "layer-core-light",
@@ -160,6 +178,38 @@ class Exporter:
         dest.write_bytes(struct.pack("<HHH", 0, 1, len(blobs)) + directory + payload)
         self.written.append(rel)
 
+    def write_icns(self, rel: str):
+        """The macOS fallback icon, for every system older than the Icon Composer era.
+
+        macOS 26 renders `cupola_icon.icon` out of the compiled asset catalogue.
+        Nothing older can read that asset, so it falls back to the `.icns` named by
+        CFBundleIconFile — and the one actool derives from a `.icon` carries four
+        elements only (16, 16@2x, 128, 128@2x), leaving a Dock on macOS 15 to
+        upscale a 256px image into a 512px slot. This is the full set, and the
+        target's `Complete the legacy .icns` build phase drops it over actool's.
+
+        An `.appiconset` cannot do this job: actool ignores one entirely once the
+        target's app icon is an Icon Composer bundle, which is why macOS has no
+        `.appiconset` while iOS still does.
+
+        Alpha is load-bearing here — the shape's corners are the transparency.
+        """
+        payload = b""
+        for code, size in MACOS_ICNS.items():
+            master = "icon-macos-simple" if size < SIMPLE_BELOW else "icon-macos"
+            image = self.master(master)
+            if size != 1024:
+                image = image.resize((size, size), Image.LANCZOS)
+            buffer = io.BytesIO()
+            image.save(buffer, "PNG", optimize=True)
+            blob = buffer.getvalue()
+            payload += code.encode("ascii") + struct.pack(">I", len(blob) + 8) + blob
+
+        dest = self.repo / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(b"icns" + struct.pack(">I", len(payload) + 8) + payload)
+        self.written.append(rel)
+
     def write_text(self, rel: str, text: str):
         dest = self.repo / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -182,8 +232,7 @@ class Exporter:
 
         for name, size in IOS_APPICON.items():
             self.emit(self.full(size), size, f"ios/Runner/Assets.xcassets/AppIcon.appiconset/{name}")
-        for name, size in MACOS_APPICON.items():
-            self.emit(self.full(size), size, f"macos/Runner/Assets.xcassets/AppIcon.appiconset/{name}")
+        self.write_icns("macos/Runner/cupola_icon_legacy.icns")
 
     def patch_icon_json(self, platform: str):
         """Point the light group's ground at the light appearance's body colour.

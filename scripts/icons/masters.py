@@ -118,6 +118,42 @@ PANE = rounded_poly(
 )
 
 
+# macOS puts no shape of its own around an app icon — the icon carries it, and one
+# that fills its canvas reads as a slab beside every other icon in the Dock. Apple's
+# shape is a continuous-corner superellipse, |x|^n + |y|^n = 1, inset so the Dock's
+# own shadow has somewhere to fall. Sampled as a dense polyline rather than fitted
+# with Béziers: at 1024 the chords land inside a pixel, and there is no control-point
+# arithmetic to get subtly wrong.
+#
+# Both constants were measured against Tahoe's own render of cupola_icon.icon rather
+# than guessed: the inset puts the edge on the same pixel, and 4.5 tracks the corner
+# to within 2px at 512, where 5.0 turned a visible fraction too late.
+MACOS_SHAPE_EXPONENT = 4.5
+MACOS_SHAPE_INSET = 100  # canvas units per side, matching Tahoe's own proportions
+MACOS_SHAPE_SAMPLES = 96  # per quadrant
+
+
+# Clipping alone would amputate the outer panes, which run almost to the canvas
+# edge. Pulling the assembly in by the same fraction as the inset keeps it sitting
+# inside the shape exactly as it sat inside the square.
+MACOS_SHAPE_SCALE = round((C - MACOS_SHAPE_INSET) / C, 4)
+
+
+def macos_shape(ident: str) -> str:
+    radius = C - MACOS_SHAPE_INSET
+    total = MACOS_SHAPE_SAMPLES * 4
+    power = 2 / MACOS_SHAPE_EXPONENT
+    points = []
+    for i in range(total):
+        theta = 2 * math.pi * i / total
+        ct, st = math.cos(theta), math.sin(theta)
+        x = math.copysign(abs(ct) ** power, ct)
+        y = math.copysign(abs(st) ** power, st)
+        points.append(f"{n(C + radius * x)} {n(C + radius * y)}")
+    d = "M " + points[0] + "".join(f" L {q}" for q in points[1:]) + " Z"
+    return f'<clipPath id="{ident}-shape"><path d="{d}"/></clipPath>'
+
+
 def scale_at(factor: float) -> str:
     if factor == 1:
         return ""
@@ -396,6 +432,7 @@ def icon(
     scale: float = 1,
     with_ground: bool = True,
     simple: bool = False,
+    shaped: bool = False,
 ) -> str:
     p = ident
     pal = PALETTES[appearance]
@@ -462,6 +499,16 @@ def icon(
 
   {collar(pal['collar'], pre)}
 {f'  <rect width="1024" height="1024" fill="url(#{p}-vignette)"/>' if appearance == 'dark' and with_ground else ''}"""
+
+    if shaped:
+        # The composition is built as one long f-string; rather than thread the
+        # shape through every branch of it, split the finished body at the defs
+        # boundary, add the clip path, and wrap everything that draws.
+        defs_block, drawn = body.split("  </defs>", 1)
+        body = (
+            f"{defs_block}    {macos_shape(p)}\n  </defs>\n"
+            f'  <g clip-path="url(#{p}-shape)">{drawn}\n  </g>'
+        )
 
     return svg(label, body)
 
@@ -643,6 +690,21 @@ def build() -> dict[str, str]:
         ),
         # The mark with no ground: the geometry source of record.
         "mark.svg": icon(ident="mk", label="Cupola mark", with_ground=False),
+        # The macOS legacy fallback: the dark identity, carrying macOS's own shape
+        # because nothing downstream of a `.icns` will apply one.
+        "icon-macos.svg": icon(
+            ident="im",
+            label="Cupola icon, macOS shape",
+            scale=MACOS_SHAPE_SCALE,
+            shaped=True,
+        ),
+        "icon-macos-simple.svg": icon(
+            ident="ims",
+            label="Cupola icon, macOS shape simplified for small sizes",
+            scale=MACOS_SHAPE_SCALE,
+            simple=True,
+            shaped=True,
+        ),
         # Web maskable: the assembly pulled inside the safe zone, ground included.
         "maskable.svg": icon(
             ident="mb", label="Cupola icon, maskable", scale=MASKABLE_SCALE

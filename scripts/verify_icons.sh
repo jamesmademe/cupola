@@ -232,7 +232,7 @@ else:
     skip("Android monochrome content inspection unavailable (dwebp not found)")
 ok("Android manifest, adaptive resources, density outputs, and palette")
 
-# Apple active Icon Composer bundles and synchronized fallback catalogs.
+# Apple active Icon Composer bundles, and the different fallback each platform needs.
 for platform in ("ios", "macos"):
     bundle = root / f"{platform}/Runner/cupola_icon.icon"
     data = check_json(bundle / "icon.json") if (bundle / "icon.json").is_file() else None
@@ -244,24 +244,75 @@ for platform in ("ios", "macos"):
             require(f"{platform}/Runner/cupola_icon.icon/Assets/{image}")
         if not {"Light", "Dark"}.issubset({group.get("name") for group in data.get("groups", [])}):
             fail(f"{platform} Icon Composer JSON lacks light/dark groups")
-    catalog = root / f"{platform}/Runner/Assets.xcassets/AppIcon.appiconset"
     project = root / f"{platform}/Runner.xcodeproj/project.pbxproj"
     if not project.is_file() or "cupola_icon.icon" not in project.read_text():
         fail(f"{platform} Xcode project does not include active Icon Composer bundle")
-    contents = check_json(catalog / "Contents.json") if (catalog / "Contents.json").is_file() else None
-    if contents:
-        for image in contents.get("images", []):
-            filename = image.get("filename")
-            path = catalog / filename if filename else None
-            if not path or not path.is_file():
-                fail(f"{platform} fallback catalog missing {filename or 'filename'}")
-            else:
-                size = image.get("size", "").split("x")
-                expected = (round(float(size[0]) * float(image.get("scale", "1x")[0])), round(float(size[1]) * float(image.get("scale", "1x")[0])))
-                check_png(path, expected)
+
+# iOS keeps an .appiconset, which actool still reads for systems before iOS 26.
+catalog = root / "ios/Runner/Assets.xcassets/AppIcon.appiconset"
+contents = check_json(catalog / "Contents.json") if (catalog / "Contents.json").is_file() else None
+if contents:
+    for image in contents.get("images", []):
+        filename = image.get("filename")
+        path = catalog / filename if filename else None
+        if not path or not path.is_file():
+            fail(f"iOS fallback catalog missing {filename or 'filename'}")
+        else:
+            size = image.get("size", "").split("x")
+            expected = (round(float(size[0]) * float(image.get("scale", "1x")[0])), round(float(size[1]) * float(image.get("scale", "1x")[0])))
+            check_png(path, expected)
+else:
+    require("ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json")
+
+# macOS must not carry one: actool ignores every .appiconset once the target's app
+# icon is a .icon bundle, so a catalogue there is dead weight that reads as live.
+if (root / "macos/Runner/Assets.xcassets/AppIcon.appiconset").exists():
+    fail("macOS carries an AppIcon.appiconset, which actool never reads")
+
+# macOS falls back to the .icns named by CFBundleIconFile, which has to be deeper
+# than the four elements actool derives from a .icon bundle.
+ICNS_ELEMENTS = {
+    b"icp4": 16, b"ic11": 32, b"icp5": 32, b"ic12": 64, b"ic07": 128,
+    b"ic13": 256, b"ic08": 256, b"ic14": 512, b"ic09": 512, b"ic10": 1024,
+}
+icns = require("macos/Runner/cupola_icon_legacy.icns", "macOS fallback .icns")
+if icns:
+    blob = icns.read_bytes()
+    if blob[:4] != b"icns":
+        fail("macOS fallback is not an .icns")
+    elif struct.unpack(">I", blob[4:8])[0] != len(blob):
+        fail("macOS .icns declares a length that does not match the file")
     else:
-        require(f"{platform}/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json")
-ok("Apple Icon Composer and fallback catalogs")
+        found = {}
+        offset = 8
+        while offset + 8 <= len(blob):
+            code = blob[offset:offset + 4]
+            length = struct.unpack(">I", blob[offset + 4:offset + 8])[0]
+            if length < 8 or offset + length > len(blob):
+                fail(f"macOS .icns element {code!r} has a bad length")
+                break
+            found[code] = blob[offset + 8:offset + length]
+            offset += length
+        missing = set(ICNS_ELEMENTS) - set(found)
+        if missing:
+            fail("macOS .icns lacks elements " + ", ".join(sorted(c.decode() for c in missing)))
+        for code, body in found.items():
+            expected = ICNS_ELEMENTS.get(code)
+            if expected is None:
+                fail(f"macOS .icns carries unexpected element {code.decode()}")
+            elif body[:8] != b"\x89PNG\r\n\x1a\n":
+                fail(f"macOS .icns element {code.decode()} is not a PNG")
+            elif struct.unpack(">II", body[16:24]) != (expected, expected):
+                got = struct.unpack(">II", body[16:24])
+                fail(f"macOS .icns element {code.decode()} is {got[0]}x{got[1]}, expected {expected}")
+            elif body[25] != 6:
+                # Colour type 6 is RGBA. The shape's corners are transparency, so an
+                # .icns flattened to RGB would put a square back in the Dock.
+                fail(f"macOS .icns element {code.decode()} has no alpha channel")
+project = root / "macos/Runner.xcodeproj/project.pbxproj"
+if project.is_file() and "cupola_icon_legacy.icns" not in project.read_text():
+    fail("macOS project does not install the fallback .icns over actool's")
+ok("Apple Icon Composer and platform fallbacks")
 
 # Web manifest/index references, purpose semantics, descriptions, and PNGs.
 web_manifest = check_json(root / "web/manifest.json")
@@ -361,18 +412,51 @@ if command -v xcrun >/dev/null 2>&1 && xcrun --find actool >/dev/null 2>&1; then
       ACTOOL_PLATFORM=macosx
       ACTOOL_MINIMUM=11.0
     fi
+    # Only iOS has an .appiconset left to compile: actool reads none once the app
+    # icon is a .icon bundle, which is why macOS ships a .icns fallback instead.
+    ACTOOL_INPUTS=("$ROOT_DIR/$platform/Runner/cupola_icon.icon")
+    if [[ $platform == ios ]]; then
+      ACTOOL_INPUTS+=("$ROOT_DIR/$platform/Runner/Assets.xcassets")
+    fi
     if ! xcrun actool --warnings --errors \
       --platform "$ACTOOL_PLATFORM" \
       --minimum-deployment-target "$ACTOOL_MINIMUM" \
       --app-icon cupola_icon \
       --output-partial-info-plist "$ACTOOL_DIR/$platform/partial-info.plist" \
       --compile "$ACTOOL_DIR/$platform/compiled" \
-      "$ROOT_DIR/$platform/Runner/cupola_icon.icon" \
-      "$ROOT_DIR/$platform/Runner/Assets.xcassets"; then
+      "${ACTOOL_INPUTS[@]}"; then
       printf 'FAIL: actool validation failed for %s catalogs\n' "$platform" >&2
       ACTOOL_STATUS=1
     fi
   done
+
+  # Report how deep actool's own .icns came out. The build phase exists because it
+  # stops at four elements; if a future Xcode emits the full set, this says so and
+  # the phase can go.
+  ACTOOL_ICNS="$ACTOOL_DIR/macos/compiled/cupola_icon.icns"
+  if [[ -f $ACTOOL_ICNS ]]; then
+    ACTOOL_DEPTH=$(ROOT_DIR="$ROOT_DIR" ACTOOL_ICNS="$ACTOOL_ICNS" python3 - <<'DEPTH'
+import os, struct
+from pathlib import Path
+
+def depth(path):
+    blob = Path(path).read_bytes()
+    offset, count = 8, 0
+    while offset + 8 <= len(blob):
+        length = struct.unpack(">I", blob[offset + 4:offset + 8])[0]
+        if length < 8:
+            break
+        count += 1
+        offset += length
+    return count
+
+theirs = depth(os.environ["ACTOOL_ICNS"])
+ours = depth(Path(os.environ["ROOT_DIR"]) / "macos/Runner/cupola_icon_legacy.icns")
+print(f"{theirs} {ours}")
+DEPTH
+)
+    printf 'NOTE: actool .icns carries %s elements, the shipped fallback %s\n' $ACTOOL_DEPTH
+  fi
   rm -rf "$ACTOOL_DIR"
   if [[ $ACTOOL_STATUS -eq 0 ]]; then
     printf 'PASS: actool compiled iOS and macOS Icon Composer and fallback catalogs\n'
