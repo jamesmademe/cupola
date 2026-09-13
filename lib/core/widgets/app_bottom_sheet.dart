@@ -88,9 +88,11 @@ class AppSheetHeader extends StatelessWidget {
                   // Capped structurally, not just by callers. The subtitle is
                   // where a service-supplied media title lands, and an
                   // unbounded one grows the header until it pushes the list it
-                  // is introducing out of a short viewport (a landscape phone,
-                  // a small macOS window). A caller-side `truncateTitle` is the
-                  // right first line of defence and cannot fix that on its own.
+                  // is introducing out of a short viewport (a small macOS
+                  // window, or a phone with the keyboard up — the phone cannot
+                  // be short by rotating any more, but it can be by typing). A
+                  // caller-side `truncateTitle` is the right first line of
+                  // defence and cannot fix that on its own.
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(

@@ -47,11 +47,13 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<!-- Portrait only, deliberately: the collapsing hero, the floating bar's
+	     clearance and the poster rails are vertical instruments, and Cupola has
+	     no landscape phone layout. See The Portrait Rule in DESIGN.md. The
+	     `~ipad` key below is left alone on purpose — an iPad is not a phone. -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
