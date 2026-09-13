@@ -29,12 +29,12 @@ void main() {
 
     // Bazarr's private "is not configured yet." card was the fifth copy of this
     // state and now renders the shared `NotConfiguredPlaceholder`, so the
-    // asserted strings are the shared widget's voice ("isn't set up" / "Open
+    // asserted strings are the shared widget's voice ("is not set up" / "Open
     // Settings"). The invariant the test is actually about — an unconfigured
     // Bazarr shows the placeholder and a way to go fix it — is unchanged, and
     // asserting the widget type as well pins it to the shared implementation.
     expect(find.byType(NotConfiguredPlaceholder), findsOneWidget);
-    expect(find.textContaining("isn't set up"), findsOneWidget);
+    expect(find.textContaining('is not set up'), findsOneWidget);
     expect(find.text('Open Settings'), findsOneWidget);
   });
 

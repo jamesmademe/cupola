@@ -82,7 +82,7 @@ void main() {
       expect(find.byType(AppErrorState), findsOneWidget);
       expect(loads, 1);
 
-      await tester.tap(find.text('Try again'));
+      await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
 
       // The page recovers where it stands instead of costing a trip back to the
@@ -251,7 +251,7 @@ void main() {
       expect(find.byType(FileInfoSection), findsOneWidget);
       expect(find.text('FILE'), findsOneWidget);
       expect(find.text('No file'), findsOneWidget);
-      // A suggestion, naming the route the promoted "Auto search" does not.
+      // A suggestion, naming the route the promoted "Automatic search" does not.
       expect(find.text('Import a file you already have'), findsOneWidget);
       expect(
         find.text('Manual import is in the actions menu.'),

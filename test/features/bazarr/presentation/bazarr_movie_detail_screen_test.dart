@@ -181,7 +181,7 @@ void main() {
     final callsBefore = fake.wantedMoviesCalls;
 
     fake.throwOnWanted = null;
-    await tester.tap(find.text('Try again'));
+    await tester.tap(find.text('Retry'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 

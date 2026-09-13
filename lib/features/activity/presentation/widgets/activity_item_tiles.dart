@@ -682,7 +682,7 @@ enum _RowAction {
     destructive: false,
   ),
   blocklistAndRetry(
-    'Blocklist and retry',
+    'Blocklist and search',
     Icons.refresh_rounded,
     destructive: false,
   ),

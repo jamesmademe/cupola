@@ -199,9 +199,9 @@ void main() {
 
     await tester.tap(find.text('On the second server'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Blocklist and retry'));
+    await tester.tap(find.text('Blocklist and search'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Blocklist and retry'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Blocklist and search'));
     await tester.pumpAndSettle();
 
     expect(other.removed, [7]);

@@ -386,9 +386,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Auto search is one of the two visible secondaries on an available
+      // Automatic search is one of the two visible secondaries on an available
       // series, so it is reached directly rather than through the sheet.
-      await tester.tap(find.text('Auto search'));
+      await tester.tap(find.text('Automatic search'));
       await tester.pumpAndSettle();
 
       expect(sonarrService.searchedSeriesId, 1);

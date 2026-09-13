@@ -64,8 +64,8 @@ String formatRelativeActivityDate(String? isoDate, {DateTime? now}) {
   }
 }
 
-/// Relative label for an already-parsed timestamp: `just now`, `20m ago`,
-/// `3h ago`, `2d ago`, then an absolute date beyond a week.
+/// Relative label for an already-parsed timestamp: `just now`, `20 min ago`,
+/// `3 h ago`, `2 days ago`, then an absolute date beyond a week.
 ///
 /// Split out from [formatRelativeActivityDate] so callers holding a `DateTime`
 /// — the global activity feed keeps one as `sortDate` — do not have to
@@ -78,19 +78,20 @@ String formatRelativeDateTime(DateTime date, {DateTime? now}) {
   final delta = isFuture ? local.difference(reference) : difference;
 
   if (delta < const Duration(minutes: 1)) {
-    return isFuture ? 'in <1m' : 'just now';
+    return isFuture ? 'in < 1 min' : 'just now';
   }
   if (delta < const Duration(hours: 1)) {
     final minutes = delta.inMinutes;
-    return isFuture ? 'in ${minutes}m' : '${minutes}m ago';
+    return isFuture ? 'in $minutes min' : '$minutes min ago';
   }
   if (delta < const Duration(days: 1)) {
     final hours = delta.inHours;
-    return isFuture ? 'in ${hours}h' : '${hours}h ago';
+    return isFuture ? 'in $hours h' : '$hours h ago';
   }
   if (delta < const Duration(days: 7)) {
     final days = delta.inDays;
-    return isFuture ? 'in ${days}d' : '${days}d ago';
+    final unit = days == 1 ? 'day' : 'days';
+    return isFuture ? 'in $days $unit' : '$days $unit ago';
   }
 
   return formatIsoDate(local.toIso8601String());

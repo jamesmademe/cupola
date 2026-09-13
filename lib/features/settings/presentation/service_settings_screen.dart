@@ -541,7 +541,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     final settings = ref.watch(currentSettingsProvider);
     // **This connection's** state, not the service's. `isServiceConfigured` is
     // true as soon as *any* instance is set up, which on the add-a-connection
-    // form meant an empty page announcing "Connected" (the first connection's
+    // form meant an empty page announcing "Answering" (the first connection's
     // status), offering a viewer picker bound to the first server, and showing
     // a Remove row for a connection that does not exist yet — its confirm
     // dialog removed nothing and simply popped the screen.
@@ -804,7 +804,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    result.isConnected ? 'Connected' : presentation.label,
+                    result.isConnected ? 'Answering' : presentation.label,
                     style: theme.textTheme.labelLarge?.copyWith(color: color),
                   ),
                   const SizedBox(height: 2),

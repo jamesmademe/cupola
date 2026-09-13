@@ -278,7 +278,7 @@ void main() {
       );
 
       expect(find.text("Couldn't load Sonarr"), findsOneWidget);
-      await tester.tap(find.text('Try again'));
+      await tester.tap(find.text('Retry'));
       expect(retries, 1);
     });
 

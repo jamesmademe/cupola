@@ -321,7 +321,7 @@ void main() {
       expect(find.textContaining('Connection refused'), findsOneWidget);
       expect(loads, 1);
 
-      await tester.tap(find.text('Try again'));
+      await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
       expect(find.byType(AppErrorState), findsOneWidget);
     });

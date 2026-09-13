@@ -48,7 +48,7 @@ void main() {
       expect(find.text("Couldn't load Seerr"), findsOneWidget);
       expect(loads, 1);
 
-      await tester.tap(find.text('Try again'));
+      await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
 
       expect(loads, 2);

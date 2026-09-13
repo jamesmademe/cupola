@@ -440,7 +440,7 @@ class LibraryDetailActions extends StatelessWidget {
         _SecondaryCandidate(
           visibleRank: 2,
           action: MediaOverflowAction(
-            label: 'Auto search',
+            label: 'Automatic search',
             icon: Icons.saved_search_rounded,
             onInvoke: onSearch,
           ),

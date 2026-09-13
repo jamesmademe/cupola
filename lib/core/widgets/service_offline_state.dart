@@ -42,7 +42,7 @@ class ServiceOfflineState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              '$serviceName is offline',
+              '$serviceName did not answer',
               style: theme.textTheme.titleMedium!.weight(FontWeight.w700),
               textAlign: TextAlign.center,
             ),
@@ -59,7 +59,7 @@ class ServiceOfflineState extends StatelessWidget {
             FilledButton.tonalIcon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Try again'),
+              label: const Text('Retry'),
             ),
           ],
         ),

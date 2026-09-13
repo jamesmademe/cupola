@@ -92,7 +92,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Try again'));
+      await tester.tap(find.text('Retry'));
       await tester.pump();
 
       expect(retries, 1);
@@ -101,7 +101,7 @@ void main() {
     testWidgets('a failure without a retry is not a dead end by accident', (
       tester,
     ) async {
-      // No callback means no button: a "Try again" that cannot try is worse
+      // No callback means no button: a "Retry" that cannot try is worse
       // than none. Callers withhold it only where a retry cannot help.
       await tester.pumpWidget(
         _wrap(
@@ -112,7 +112,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Try again'), findsNothing);
+      expect(find.text('Retry'), findsNothing);
     });
 
     testWidgets('a not-found item can retry in the empty-state voice', (
@@ -139,7 +139,7 @@ void main() {
         findsOneWidget,
       );
 
-      await tester.tap(find.text('Try again'));
+      await tester.tap(find.text('Retry'));
       await tester.pump();
 
       expect(retries, 1);
@@ -159,7 +159,7 @@ void main() {
       );
 
       expect(find.byType(NotConfiguredPlaceholder), findsOneWidget);
-      expect(find.text('Try again'), findsNothing);
+      expect(find.text('Retry'), findsNothing);
     });
 
     testWidgets('wears glass chrome over an accent-lit room, not a flat strip', (
@@ -315,7 +315,7 @@ void main() {
           isButton: true,
           isEnabled: true,
           hasTapAction: true,
-          label: 'Try again',
+          label: 'Retry',
         ),
       );
       handle.dispose();

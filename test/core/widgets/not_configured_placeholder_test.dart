@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// Where the "isn't set up" button lands.
+/// Where the "is not set up" button lands.
 ///
 /// This is the invariant that was silently lost when five dashboards' private
 /// not-configured cards were collapsed onto the shared widget: each private copy

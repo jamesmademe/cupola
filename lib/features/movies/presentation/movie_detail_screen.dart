@@ -278,7 +278,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
                   )
                 // One footprint in both states: the region does not jump when a
                 // file arrives, and the hint spends its two lines suggesting the
-                // route the promoted "Auto search" button does not cover.
+                // route the promoted "Automatic search" button does not cover.
                 : FileInfoSection.missing(accent: accent),
           ),
       ],

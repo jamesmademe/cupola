@@ -254,7 +254,7 @@ void main() {
       expect(find.text("Couldn't load Lidarr"), findsOneWidget);
       expect(albumLoads, 1);
 
-      await tester.tap(find.text('Try again'));
+      await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
 
       // The section recovers in place instead of being a dead end on the one
@@ -277,7 +277,7 @@ void main() {
       expect(find.byType(AppErrorState), findsOneWidget);
       expect(artistLoads, 1);
 
-      await tester.tap(find.text('Try again'));
+      await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
 
       expect(artistLoads, 2);

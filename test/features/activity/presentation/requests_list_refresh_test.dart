@@ -47,15 +47,15 @@ void main() {
     expect(find.text('Fetch 1'), findsNothing);
   });
 
-  testWidgets('and so does Try again after a failure', (tester) async {
+  testWidgets('and so does Retry after a failure', (tester) async {
     final seerr = _CountingSeerrService(failFirst: true);
     await tester.pumpWidget(await _app(seerr));
     await tester.pumpAndSettle();
 
     expect(seerr.calls, 1);
-    expect(find.text('Try again'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
 
-    await tester.tap(find.text('Try again'));
+    await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
 
     // An errored provider caches its error exactly as a loaded one caches its

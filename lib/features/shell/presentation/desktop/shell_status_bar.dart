@@ -117,10 +117,9 @@ class ShellStatusBar extends ConsumerWidget {
   static String _age(DateTime at) {
     final minutes = DateTime.now().difference(at).inMinutes;
     if (minutes < 1) return 'Refreshed just now';
-    if (minutes == 1) return 'Refreshed 1 minute ago';
-    if (minutes < 60) return 'Refreshed $minutes minutes ago';
+    if (minutes < 60) return 'Refreshed $minutes min ago';
     final hours = minutes ~/ 60;
-    return 'Refreshed $hours hour${hours == 1 ? '' : 's'} ago';
+    return 'Refreshed $hours h ago';
   }
 }
 

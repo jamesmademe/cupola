@@ -448,7 +448,7 @@ Future<ServiceDiagnosis> _diagnoseOverApiClient(
   // reaches here without one, the request below would be `GET ''` — a plain
   // fetch of the base URL — which most of these servers answer 200 for with
   // their own web UI, *whatever* credential was supplied. That is a green
-  // "Connected" tile for a wrong password: the exact bug that shipped once for
+  // "Answering" tile for a wrong password: the exact bug that shipped once for
   // Jellyfin and Plex. Reporting the service as unreachable is wrong too, but
   // it is wrong in the direction that gets noticed and cannot mislead anyone
   // into thinking a bad credential works.
@@ -514,7 +514,7 @@ Future<ServiceDiagnosis> _explainCredentialRefusal(
 /// Folded rather than answered off the first instance, and that is the whole of
 /// what this function had to learn: the surfaces that read it — the Connections
 /// row, the Settings home list — speak in services and now also print how many
-/// connections a service has. "Connected · radarr.lan · 2 connections" while the
+/// connections a service has. "Answering · radarr.lan · 2 connections" while the
 /// second Radarr is switched off is a green row for a stack with a dead server
 /// in it, and it is green on the one screen the user would go to in order to fix
 /// it. `ServiceMatrixCell` already folds its pip the same way, through
@@ -751,7 +751,7 @@ String connectionFailureMessage(
 /// What a form editing a named connection has to read. [serviceDiagnosisProvider]
 /// folds every connection of a service into its worst answer, which is right for
 /// a row that speaks in services and wrong under a form whose fields belong to
-/// exactly one server: it would report "Connected" over the second Radarr's
+/// exactly one server: it would report "Answering" over the second Radarr's
 /// address because the first one is up.
 ///
 /// Carries the same "no local-network gate" caveat as the per-service provider

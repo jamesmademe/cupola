@@ -36,7 +36,7 @@ void main() {
               message: _longMessage,
               action: FilledButton(
                 onPressed: () {},
-                child: const Text('Try again'),
+                child: const Text('Retry'),
               ),
             ),
           ),

@@ -99,12 +99,12 @@ class MediaPrimaryAction {
 ///
 /// **A button names its MECHANISM; the consequence sentence names the SITUATION.**
 /// There are exactly two search mechanisms and therefore exactly two labels:
-/// `Auto search` for [MediaActionKind.search], which hands the decision to the
+/// `Automatic search` for [MediaActionKind.search], which hands the decision to the
 /// service, and `Interactive search` for [MediaActionKind.interactiveSearch],
 /// which hands it to the user. Nothing else may name a search.
 ///
 /// This replaced four names for the automatic search (`Find releases`,
-/// `Find missing`, `Auto search`) and three for the interactive one
+/// `Find missing`, `Automatic search`) and three for the interactive one
 /// (`Find an upgrade`, `Find another release`, `Interactive search`) — seven
 /// labels for two behaviours. Worse, the state-shaped names pointed the wrong
 /// way: `Find releases` reads as *show me the releases*, which is the
@@ -286,7 +286,7 @@ MediaPrimaryAction resolveMediaAction(
       if (caps.canSearch) {
         return MediaPrimaryAction(
           kind: MediaActionKind.search,
-          label: 'Auto search',
+          label: 'Automatic search',
           icon: Icons.saved_search_rounded,
           consequence: consequence,
         );
@@ -300,7 +300,7 @@ MediaPrimaryAction resolveMediaAction(
       if (caps.canSearch) {
         return MediaPrimaryAction(
           kind: MediaActionKind.search,
-          label: 'Auto search',
+          label: 'Automatic search',
           icon: Icons.saved_search_rounded,
           consequence: consequence,
         );

@@ -58,7 +58,7 @@ void main() {
       expect(find.byType(GlassAppBar), findsOneWidget);
       expect(loads, 1);
 
-      await tester.tap(find.text('Try again'));
+      await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
 
       // The retry re-runs the very lookup that failed, in place.
@@ -80,7 +80,7 @@ void main() {
       expect(find.byType(AppErrorState), findsNothing);
       expect(find.text('No collection here'), findsOneWidget);
       expect(find.text("Couldn't load Seerr"), findsNothing);
-      expect(find.text('Try again'), findsNothing);
+      expect(find.text('Retry'), findsNothing);
     });
 
     testWidgets('a loaded collection renders its movies rail', (tester) async {

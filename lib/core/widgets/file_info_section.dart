@@ -33,7 +33,7 @@ class FileInfoSection extends StatelessWidget {
   /// footprint in both states is the whole point.
   ///
   /// The copy is a suggestion, and it names the route the promoted button does
-  /// not: on this rung the primary directly above already reads "Auto search",
+  /// not: on this rung the primary directly above already reads "Automatic search",
   /// so repeating it would spend the region on nothing.
   const FileInfoSection.missing({super.key, this.accent})
     : path = null,

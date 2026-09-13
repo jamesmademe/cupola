@@ -51,7 +51,7 @@ class SettingsConnectionsScreen extends ConsumerWidget {
           children: [
             if (configured.isNotEmpty) ...[
               SectionHeader(
-                // Not "Connected": this section is what has an address saved,
+                // Not "Answering": this section is what has an address saved,
                 // and one of them being unreachable is exactly why you are here.
                 title: 'Your services',
                 showChevron: false,

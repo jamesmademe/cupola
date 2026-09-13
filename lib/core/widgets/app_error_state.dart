@@ -6,7 +6,7 @@ import 'package:cupola/core/theme.dart';
 /// A premium error state with an optional retry affordance.
 ///
 /// Replaces the private, retry-less error widget inside [AsyncValueWidget].
-/// When [onRetry] is provided a "Try again" button is shown, wired by callers
+/// When [onRetry] is provided a "Retry" button is shown, wired by callers
 /// to their existing `ref.invalidate(...)` refresh path.
 ///
 /// ## What the user reads first
@@ -93,7 +93,7 @@ class AppErrorState extends StatelessWidget {
               FilledButton.tonalIcon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Try again'),
+                label: const Text('Retry'),
               ),
             ],
           ],

@@ -103,7 +103,7 @@ class MediaDetailPlaceholderView extends StatelessWidget {
             : FilledButton.tonalIcon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Try again'),
+                label: const Text('Retry'),
               ),
       );
     }

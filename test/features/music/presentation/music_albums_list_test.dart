@@ -140,7 +140,7 @@ void main() {
       await _openAlbum(tester);
 
       expect(find.text("Couldn't load Lidarr"), findsOneWidget);
-      expect(find.text('Try again'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
     });
 
     testWidgets('an album with no tracks gets an empty state', (tester) async {

@@ -47,8 +47,8 @@ class NotConfiguredPlaceholder extends StatelessWidget {
     return AppEmptyState(
       icon: Icons.settings_outlined,
       // The same voice as the rest of the app's connection states, which say a
-      // service "isn't answering" rather than reporting a config condition.
-      title: "$serviceName isn't set up",
+      // service "did not answer" rather than reporting a config condition.
+      title: '$serviceName is not set up',
       // "Credentials" rather than "the URL and API Key": four of the thirteen
       // services authenticate with a WebUI login and have no API key to paste, so
       // naming one told a third of the roster to look for a field that is not

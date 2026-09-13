@@ -110,12 +110,12 @@ class ActivityActions {
   }) async {
     final result = await showAppConfirmDialog(
       context: context,
-      title: 'Blocklist and search again?',
+      title: 'Blocklist and search?',
       message:
           '$title will be removed and blocklisted, then a new search runs for '
           'a different release.',
       icon: Icons.refresh_rounded,
-      confirmLabel: 'Blocklist and retry',
+      confirmLabel: 'Blocklist and search',
       destructive: true,
     );
 

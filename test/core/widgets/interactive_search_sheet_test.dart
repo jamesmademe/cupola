@@ -180,9 +180,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Try again'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
 
-      await tester.tap(find.text('Try again'));
+      await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
 
       expect(attempts, 2);

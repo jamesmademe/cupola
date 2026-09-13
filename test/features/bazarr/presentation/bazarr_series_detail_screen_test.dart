@@ -147,7 +147,7 @@ void main() {
     // Bazarr learns about a series on its next Sonarr sync, so the page offers
     // a way to look again instead of ending the road here.
     final callsBefore = fake.getSeriesCalls;
-    await tester.tap(find.text('Try again'));
+    await tester.tap(find.text('Retry'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -174,7 +174,7 @@ void main() {
         episodeCount: 10,
         profileId: 1,
       );
-    await tester.tap(find.text('Try again'));
+    await tester.tap(find.text('Retry'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -221,7 +221,7 @@ void main() {
     final callsBefore = fake.wantedEpisodesCalls;
 
     fake.throwOnWanted = null;
-    await tester.tap(find.text('Try again'));
+    await tester.tap(find.text('Retry'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 

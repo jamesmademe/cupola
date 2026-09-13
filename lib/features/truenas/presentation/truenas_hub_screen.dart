@@ -191,7 +191,7 @@ class _NotConfigured extends StatelessWidget {
       ),
       child: AppEmptyState(
         icon: Icons.storage_rounded,
-        title: 'TrueNAS not configured',
+        title: 'TrueNAS is not set up',
         message: 'Add your TrueNAS URL and API key to see system status.',
         accentColor: AppColors.truenas,
         action: FilledButton.icon(

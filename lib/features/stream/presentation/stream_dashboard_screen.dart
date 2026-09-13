@@ -416,8 +416,11 @@ class _LibraryRow extends StatelessWidget {
   static String? _scannedLabel(DateTime? at) {
     if (at == null) return null;
     final elapsed = DateTime.now().difference(at);
-    if (elapsed.inDays >= 1) return 'Scanned ${elapsed.inDays}d ago';
-    if (elapsed.inHours >= 1) return 'Scanned ${elapsed.inHours}h ago';
+    if (elapsed.inDays >= 1) {
+      final days = elapsed.inDays;
+      return 'Scanned $days ${days == 1 ? 'day' : 'days'} ago';
+    }
+    if (elapsed.inHours >= 1) return 'Scanned ${elapsed.inHours} h ago';
     return 'Scanned just now';
   }
 

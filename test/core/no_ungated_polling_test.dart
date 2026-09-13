@@ -26,7 +26,7 @@ void main() {
   /// them through the polling primitive would buy a tidier scan and a bug.
   ///
   /// The third is the desktop status bar's half-minute clock, which re-ages a
-  /// `Refreshed n minutes ago` label. Same shape of argument: no network, and
+  /// `Refreshed n min ago` label. Same shape of argument: no network, and
   /// the whole job of the label is to be right at the moment somebody reads it,
   /// which is exactly the moment a gate would have stopped it.
   const uiClocks = {

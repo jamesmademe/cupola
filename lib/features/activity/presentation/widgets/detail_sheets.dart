@@ -61,7 +61,7 @@ class DetailSheets {
     final title =
         arrPrimaryMediaTitle(item, includeMovieYear: true) ??
         arrReleaseTitle(item) ??
-        'Blocklist Item';
+        'Blocklist item';
     return _show(
       context: context,
       title: title,

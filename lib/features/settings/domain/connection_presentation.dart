@@ -64,7 +64,7 @@ ConnectionPresentation describeConnection(
       return const ConnectionPresentation(
         tone: StatusTone.success,
         icon: Icons.cloud_done_rounded,
-        label: 'Connected',
+        label: 'Answering',
         needsAttention: false,
       );
     case ServiceConnectionStatus.disconnected:

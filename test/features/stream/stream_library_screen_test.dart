@@ -354,7 +354,7 @@ void main() {
       expect(find.text('This library is empty'), findsNothing);
       expect(find.text('The server reports no items here'), findsNothing);
       expect(find.text('Nothing in progress'), findsNothing);
-      expect(find.text('Try again'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
     });
 
     testWidgets('a mid-list failure keeps the rows and offers a retry', (
@@ -440,7 +440,7 @@ void main() {
       await _pumpLibrary(tester, server);
 
       expect(find.text('Nothing in progress'), findsOneWidget);
-      expect(find.text('Try again'), findsNothing);
+      expect(find.text('Retry'), findsNothing);
     });
   });
 }

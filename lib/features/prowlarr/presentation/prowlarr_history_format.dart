@@ -59,7 +59,7 @@ String prowlarrHistoryTitle(ProwlarrHistoryItem item) {
   return item.eventType ?? 'Activity';
 }
 
-/// Formats an ISO-8601 timestamp as a coarse relative string (e.g. "5m ago").
+/// Formats an ISO-8601 timestamp as a coarse relative string (e.g. "5 min ago").
 ///
 /// Uses a UTC wall clock (`DateTime.now()`); precision beyond minutes is not
 /// needed for the activity feed.
@@ -68,7 +68,7 @@ String prowlarrRelativeTime(String iso) {
   if (parsed == null) return iso;
   final diff = DateTime.now().toUtc().difference(parsed.toUtc());
   if (diff.inSeconds < 60) return 'just now';
-  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-  if (diff.inHours < 24) return '${diff.inHours}h ago';
-  return '${diff.inDays}d ago';
+  if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+  if (diff.inHours < 24) return '${diff.inHours} h ago';
+  return '${diff.inDays} ${diff.inDays == 1 ? 'day' : 'days'} ago';
 }

@@ -160,7 +160,7 @@ void main() {
         const MediaStatusInfo(availability: MediaAvailability.missing),
       );
       expect(action.kind, MediaActionKind.search);
-      expect(action.label, 'Auto search');
+      expect(action.label, 'Automatic search');
     });
 
     test('a partial item promotes a search for the gap', () {
@@ -171,7 +171,7 @@ void main() {
         partialSummary: '41 of 48 episodes on disk.',
       );
       expect(action.kind, MediaActionKind.search);
-      expect(action.label, 'Auto search');
+      expect(action.label, 'Automatic search');
       expect(action.consequence, '41 of 48 episodes on disk.');
     });
 
@@ -260,7 +260,7 @@ void main() {
         status: const MediaStatusInfo(availability: MediaAvailability.missing),
       );
 
-      expect(find.text('Auto search'), findsOneWidget);
+      expect(find.text('Automatic search'), findsOneWidget);
       expect(
         find.text('Radarr is hunting a release for this title.'),
         findsOneWidget,
@@ -271,9 +271,9 @@ void main() {
       // never a visible caption to ellipsise.
       expect(find.bySemanticsLabel('Interactive search'), findsOneWidget);
       // Everything else stays in the sheet, unrendered until it is opened. The
-      // promoted primary's own label is 'Auto search', so that one is scoped to
+      // promoted primary's own label is 'Automatic search', so that one is scoped to
       // the button rather than counted globally.
-      expect(find.text('Auto search'), findsOneWidget);
+      expect(find.text('Automatic search'), findsOneWidget);
       expect(find.text('Interactive search'), findsNothing);
       expect(find.text('Manual import'), findsNothing);
       expect(find.text('Delete'), findsNothing);
@@ -294,7 +294,7 @@ void main() {
         find.text('The download client has it, 43% through.'),
         findsOneWidget,
       );
-      expect(find.text('Auto search'), findsNothing);
+      expect(find.text('Automatic search'), findsNothing);
     });
 
     testWidgets('an available item promotes nothing and explains itself', (
@@ -378,13 +378,13 @@ void main() {
       expect(find.text('Quality profile: HD-1080p'), findsOneWidget);
       expect(find.text('Manual import'), findsOneWidget);
       expect(find.text('Delete'), findsOneWidget);
-      // Auto search is promoted; Interactive search took the visible slot.
-      // Neither is a row in the sheet — the one 'Auto search' on screen is the
+      // Automatic search is promoted; Interactive search took the visible slot.
+      // Neither is a row in the sheet — the one 'Automatic search' on screen is the
       // primary button behind it.
       expect(
         find.descendant(
           of: find.byType(BottomSheet),
-          matching: find.text('Auto search'),
+          matching: find.text('Automatic search'),
         ),
         findsNothing,
       );
@@ -404,7 +404,7 @@ void main() {
 
       // Promoted, so it is not a candidate at all; the next-ranked one takes
       // the single visible slot instead.
-      expect(find.bySemanticsLabel('Auto search'), findsOneWidget);
+      expect(find.bySemanticsLabel('Automatic search'), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.more_horiz_rounded));
       await tester.pumpAndSettle();
@@ -419,7 +419,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(BottomSheet),
-          matching: find.text('Auto search'),
+          matching: find.text('Automatic search'),
         ),
         findsNothing,
       );
@@ -449,7 +449,7 @@ void main() {
       expect(dividerY, lessThan(deleteY));
       for (final label in const [
         'Interactive search',
-        'Auto search',
+        'Automatic search',
         'Manual import',
       ]) {
         expect(tester.getCenter(find.text(label)).dy, lessThan(deleteY));
@@ -663,7 +663,10 @@ void main() {
 
       expect(find.byIcon(Icons.check_rounded), findsOneWidget);
       expect(find.byIcon(Icons.saved_search_rounded), findsNothing);
-      expect(find.semantics.byLabel(RegExp('Auto search complete')), findsOne);
+      expect(
+        find.semantics.byLabel(RegExp('Automatic search complete')),
+        findsOne,
+      );
       handle.dispose();
     });
 

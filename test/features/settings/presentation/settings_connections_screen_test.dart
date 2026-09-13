@@ -115,7 +115,7 @@ void main() {
       );
 
       expect(
-        find.semantics.byLabel('Radarr, Connected, radarr.local:7878'),
+        find.semantics.byLabel('Radarr, Answering, radarr.local:7878'),
         containsSemantics(
           isButton: true,
           hasTapAction: true,
@@ -154,7 +154,7 @@ void main() {
       expect(find.text('radarr.local:7878 · 2 connections'), findsOneWidget);
       expect(
         find.semantics.byLabel(
-          'Radarr, Connected, radarr.local:7878, 2 connections',
+          'Radarr, Answering, radarr.local:7878, 2 connections',
         ),
         findsOneWidget,
       );

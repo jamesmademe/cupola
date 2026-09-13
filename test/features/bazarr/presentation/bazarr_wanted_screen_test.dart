@@ -31,7 +31,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(NotConfiguredPlaceholder), findsOneWidget);
-      expect(find.textContaining("isn't set up"), findsOneWidget);
+      expect(find.textContaining('is not set up'), findsOneWidget);
       expect(find.text('Open Settings'), findsOneWidget);
     });
 
