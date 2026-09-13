@@ -187,10 +187,13 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
           ? Scaffold(
               body: Row(
                 children: [
-                  // SafeArea on the rail side only: in landscape the notch and
-                  // the rounded corner sit on the leading edge, and the rail
-                  // was laid out underneath them. The content keeps its own
-                  // insets.
+                  // SafeArea on the rail side only: on a tablet held on its
+                  // side the camera housing and the rounded corner sit on the
+                  // leading edge, and the rail was laid out underneath them.
+                  // The content keeps its own insets. Only tablets reach this
+                  // branch on touch — the phone is portrait-only and never
+                  // 840pt wide — but tablets still rotate, so the inset is
+                  // real.
                   SafeArea(
                     right: false,
                     child: _ServicesNavRail(
