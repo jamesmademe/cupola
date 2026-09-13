@@ -222,6 +222,12 @@ class _MediaBrowseScaffoldState<T>
 
     return AmbientScaffold(
       accent: widget.accentColor,
+      // 1160 rather than the default well: eight 130pt posters and their gaps
+      // come to exactly that, and the grid is a column *floor* — see
+      // `MediaGrid`. A narrower well would drop a column of full-size posters;
+      // a wider one would add a ninth of smaller ones, which is the mistake the
+      // floor exists to prevent.
+      contentWellWidth: 1160,
       appBar: widget.showAppBar
           ? GlassAppBar(
               leading: isSearching
@@ -247,6 +253,10 @@ class _MediaBrowseScaffoldState<T>
       // The header (search + KPI + filters) lives in the NestedScrollView
       // header slivers as non-pinned adapters, so it scrolls away with the
       // content instead of staying fixed above the list.
+      // 1160 rather than the default well: eight 130pt posters and their gaps
+      // come to exactly that, and the grid is a column *floor* — see
+      // `MediaGrid`. A wider well would add a ninth column of smaller posters,
+      // which is the mistake the floor exists to prevent.
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           if (widget.topPadding > 0)

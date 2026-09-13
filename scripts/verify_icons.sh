@@ -248,26 +248,15 @@ for platform in ("ios", "macos"):
     if not project.is_file() or "cupola_icon.icon" not in project.read_text():
         fail(f"{platform} Xcode project does not include active Icon Composer bundle")
 
-# iOS keeps an .appiconset, which actool still reads for systems before iOS 26.
-catalog = root / "ios/Runner/Assets.xcassets/AppIcon.appiconset"
-contents = check_json(catalog / "Contents.json") if (catalog / "Contents.json").is_file() else None
-if contents:
-    for image in contents.get("images", []):
-        filename = image.get("filename")
-        path = catalog / filename if filename else None
-        if not path or not path.is_file():
-            fail(f"iOS fallback catalog missing {filename or 'filename'}")
-        else:
-            size = image.get("size", "").split("x")
-            expected = (round(float(size[0]) * float(image.get("scale", "1x")[0])), round(float(size[1]) * float(image.get("scale", "1x")[0])))
-            check_png(path, expected)
-else:
-    require("ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json")
+# Neither platform may carry an .appiconset: actool ignores every one of them once
+# the target's app icon is a .icon bundle, so a catalogue is dead weight that reads
+# as live — and a regenerated one invites the conclusion that the icon changed.
+for platform in ("ios", "macos"):
+    if (root / f"{platform}/Runner/Assets.xcassets/AppIcon.appiconset").exists():
+        fail(f"{platform} carries an AppIcon.appiconset, which actool never reads")
 
-# macOS must not carry one: actool ignores every .appiconset once the target's app
-# icon is a .icon bundle, so a catalogue there is dead weight that reads as live.
-if (root / "macos/Runner/Assets.xcassets/AppIcon.appiconset").exists():
-    fail("macOS carries an AppIcon.appiconset, which actool never reads")
+# iOS's own fallback is whatever actool derives from the .icon and names in the
+# Info.plist, so there is no file here to check — only the absence above.
 
 # macOS falls back to the .icns named by CFBundleIconFile, which has to be deeper
 # than the four elements actool derives from a .icon bundle.
@@ -412,10 +401,9 @@ if command -v xcrun >/dev/null 2>&1 && xcrun --find actool >/dev/null 2>&1; then
       ACTOOL_PLATFORM=macosx
       ACTOOL_MINIMUM=11.0
     fi
-    # Only iOS has an .appiconset left to compile: actool reads none once the app
-    # icon is a .icon bundle, which is why macOS ships a .icns fallback instead.
+    # iOS still has a catalogue, for LaunchImage; macOS has none left at all.
     ACTOOL_INPUTS=("$ROOT_DIR/$platform/Runner/cupola_icon.icon")
-    if [[ $platform == ios ]]; then
+    if [[ -d "$ROOT_DIR/$platform/Runner/Assets.xcassets" ]]; then
       ACTOOL_INPUTS+=("$ROOT_DIR/$platform/Runner/Assets.xcassets")
     fi
     if ! xcrun actool --warnings --errors \

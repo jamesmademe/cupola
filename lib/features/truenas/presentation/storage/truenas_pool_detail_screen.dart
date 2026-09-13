@@ -16,6 +16,7 @@ import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
 class TrueNasPoolDetailScreen extends ConsumerWidget {
   final String poolName;
@@ -55,31 +56,33 @@ class TrueNasPoolDetailScreen extends ConsumerWidget {
           onPressed: () => _runScrub(context, ref),
         ),
       ],
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(truenasPoolProvider(poolName)),
-        child: pool.when(
-          loading: () => ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            children: [AppSkeleton.detailBody()],
+      body: TrueNasConsoleShell(
+        child: RefreshIndicator(
+          onRefresh: () async => ref.invalidate(truenasPoolProvider(poolName)),
+          child: pool.when(
+            loading: () => ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: [AppSkeleton.detailBody()],
+            ),
+            error: (error, _) => ListView(
+              children: [
+                AppErrorState(
+                  error: error,
+                  onRetry: () => ref.invalidate(truenasPoolProvider(poolName)),
+                ),
+              ],
+            ),
+            data: (data) => data == null
+                ? ListView(
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.all(AppSpacing.xl),
+                        child: Text('Pool not found.'),
+                      ),
+                    ],
+                  )
+                : _PoolDetailBody(pool: data),
           ),
-          error: (error, _) => ListView(
-            children: [
-              AppErrorState(
-                error: error,
-                onRetry: () => ref.invalidate(truenasPoolProvider(poolName)),
-              ),
-            ],
-          ),
-          data: (data) => data == null
-              ? ListView(
-                  children: const [
-                    Padding(
-                      padding: EdgeInsets.all(AppSpacing.xl),
-                      child: Text('Pool not found.'),
-                    ),
-                  ],
-                )
-              : _PoolDetailBody(pool: data),
         ),
       ),
     );

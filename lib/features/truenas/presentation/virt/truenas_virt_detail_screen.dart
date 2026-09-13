@@ -17,6 +17,7 @@ import 'package:cupola/features/truenas/presentation/virt/truenas_virt_providers
 import 'package:cupola/features/truenas/presentation/virt/truenas_virt_screen.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
 class TrueNasVirtDetailScreen extends ConsumerWidget {
   final String id;
@@ -58,34 +59,37 @@ class TrueNasVirtDetailScreen extends ConsumerWidget {
           },
         ),
       ],
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(truenasVirtInstanceProvider(id));
-          ref.invalidate(truenasVirtDevicesProvider(id));
-        },
-        child: instance.when(
-          loading: () => ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            children: [AppSkeleton.detailBody()],
+      body: TrueNasConsoleShell(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(truenasVirtInstanceProvider(id));
+            ref.invalidate(truenasVirtDevicesProvider(id));
+          },
+          child: instance.when(
+            loading: () => ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: [AppSkeleton.detailBody()],
+            ),
+            error: (e, _) => ListView(
+              children: [
+                AppErrorState(
+                  error: e,
+                  onRetry: () =>
+                      ref.invalidate(truenasVirtInstanceProvider(id)),
+                ),
+              ],
+            ),
+            data: (data) => data == null
+                ? ListView(
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.all(AppSpacing.xl),
+                        child: Text('Instance not found.'),
+                      ),
+                    ],
+                  )
+                : _DetailBody(instance: data, type: type),
           ),
-          error: (e, _) => ListView(
-            children: [
-              AppErrorState(
-                error: e,
-                onRetry: () => ref.invalidate(truenasVirtInstanceProvider(id)),
-              ),
-            ],
-          ),
-          data: (data) => data == null
-              ? ListView(
-                  children: const [
-                    Padding(
-                      padding: EdgeInsets.all(AppSpacing.xl),
-                      child: Text('Instance not found.'),
-                    ),
-                  ],
-                )
-              : _DetailBody(instance: data, type: type),
         ),
       ),
     );

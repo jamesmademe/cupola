@@ -17,6 +17,7 @@ import 'package:cupola/features/truenas/domain/models/app.dart';
 import 'package:cupola/features/truenas/presentation/apps/truenas_app_actions.dart';
 import 'package:cupola/features/truenas/presentation/apps/truenas_apps_providers.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
 class TrueNasAppsScreen extends ConsumerWidget {
   const TrueNasAppsScreen({super.key});
@@ -40,44 +41,46 @@ class TrueNasAppsScreen extends ConsumerWidget {
             onPressed: () => updateAllApps(context, ref, apps: appList),
           ),
       ],
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(truenasAppsProvider),
-        child: apps.when(
-          loading: () => ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            children: [AppSkeleton.listRows()],
-          ),
-          error: (e, _) => ListView(
-            children: [
-              AppErrorState(
-                error: e,
-                onRetry: () => ref.invalidate(truenasAppsProvider),
-              ),
-            ],
-          ),
-          data: (list) => list.isEmpty
-              ? const AppEmptyState(
-                  icon: Icons.apps_rounded,
-                  title: 'No apps installed',
-                  message: 'Install apps from the TrueNAS catalog.',
-                  accentColor: AppColors.truenas,
-                )
-              : ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                    AppSpacing.lg,
-                    FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-                  ),
-                  children: [
-                    for (final app in list)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: _AppCard(app: app),
-                      ),
-                  ],
+      body: TrueNasConsoleShell(
+        child: RefreshIndicator(
+          onRefresh: () async => ref.invalidate(truenasAppsProvider),
+          child: apps.when(
+            loading: () => ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: [AppSkeleton.listRows()],
+            ),
+            error: (e, _) => ListView(
+              children: [
+                AppErrorState(
+                  error: e,
+                  onRetry: () => ref.invalidate(truenasAppsProvider),
                 ),
+              ],
+            ),
+            data: (list) => list.isEmpty
+                ? const AppEmptyState(
+                    icon: Icons.apps_rounded,
+                    title: 'No apps installed',
+                    message: 'Install apps from the TrueNAS catalog.',
+                    accentColor: AppColors.truenas,
+                  )
+                : ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+                    ),
+                    children: [
+                      for (final app in list)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: _AppCard(app: app),
+                        ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );

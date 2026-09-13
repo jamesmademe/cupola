@@ -26,7 +26,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
-  Win32Window::Size size(1280, 720);
+  // The size the desktop UI is drawn at. The app draws its own 44px top strip,
+  // so the window is created without a title bar from Dart side (window_manager)
+  // once the engine is up.
+  Win32Window::Size size(1440, 900);
   if (!window.Create(L"Cupola", origin, size)) {
     return EXIT_FAILURE;
   }

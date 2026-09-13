@@ -1,7 +1,11 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/features/shell/domain/screen_search.dart';
 
 /// A reusable, always-visible search bar widget for the top of screens.
 ///
@@ -47,6 +51,14 @@ class SearchBarHeader extends StatefulWidget {
 
 class _SearchBarHeaderState extends State<SearchBarHeader> {
   late final TextEditingController _controller;
+
+  /// Held by the field so the window's `⌘F` has something to focus.
+  ///
+  /// Owned here rather than passed in by every caller: "search this screen"
+  /// means this field, and there are twenty-odd screens whose only search field
+  /// is this widget. See [ScreenSearchTarget] for why the registry is explicit
+  /// rather than a walk of the tree.
+  late final FocusNode _focusNode;
   Timer? _debounceTimer;
   bool _hasText = false;
 
@@ -54,6 +66,7 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialQuery);
+    _focusNode = FocusNode(debugLabel: 'screen search');
     _hasText = _controller.text.isNotEmpty;
     _controller.addListener(_onTextChanged);
   }
@@ -63,6 +76,7 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
     _debounceTimer?.cancel();
     _controller.removeListener(_onTextChanged);
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -87,7 +101,7 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Padding(
+    final field = Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.sm,
@@ -96,6 +110,7 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
       ),
       child: SearchBar(
         controller: _controller,
+        focusNode: _focusNode,
         hintText: widget.hintText,
         autoFocus: widget.autofocus,
         leading: Padding(
@@ -130,5 +145,11 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
         ),
       ),
     );
+
+    // Only a desktop window has a `⌘F`, so only a desktop window pays for the
+    // registration — and a phone build keeps this widget free of any provider
+    // dependency at all.
+    if (!AppBreakpoints.isDesktopShell) return field;
+    return ScreenSearchTarget(focusNode: _focusNode, child: field);
   }
 }

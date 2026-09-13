@@ -1,0 +1,340 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_breakpoints.dart';
+import 'package:cupola/core/providers/navigation_refresh_provider.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/shell/domain/command_deck_entry.dart';
+import 'package:cupola/features/shell/domain/inspector_state.dart';
+import 'package:cupola/features/shell/domain/screen_search.dart';
+import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
+import 'package:cupola/features/shell/presentation/desktop/command_deck.dart';
+import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
+import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
+import 'package:cupola/features/shell/presentation/desktop/service_deck.dart';
+import 'package:cupola/features/shell/presentation/desktop/shell_status_bar.dart';
+import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
+
+/// The window: chrome, rail, deck, content, inspector, status.
+///
+/// The whole of the desktop layer's structure, and the only place that knows
+/// the assembly. Six regions in a fixed order, and the order is the argument:
+/// the chrome says which window this is, the rail which section, the deck which
+/// service — three questions answered before the content, each by a strip
+/// thinner than the one before it.
+///
+/// The content itself is the *unmodified* branch navigator. Nothing here wraps
+/// pages in a desktop-only container, because every screen also has to be a
+/// phone screen; the desktop layouts live in the screens' own shared widgets,
+/// where both form factors can see them.
+class DesktopShell extends ConsumerStatefulWidget {
+  const DesktopShell({
+    super.key,
+    required this.navigationShell,
+    required this.destinations,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
+
+  final Widget navigationShell;
+  final List<FloatingNavDestination> destinations;
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+
+  @override
+  ConsumerState<DesktopShell> createState() => _DesktopShellState();
+}
+
+class _DesktopShellState extends ConsumerState<DesktopShell>
+    with SingleTickerProviderStateMixin {
+  /// Created eagerly in [initState], not as a `late final` initialiser: on a
+  /// shell that is torn down before the deck is ever opened, the *first* access
+  /// would be the one in [dispose], and creating a ticker during unmount trips
+  /// the deactivated-ancestor assert. The Portal on the phone side carries the
+  /// same note for the same reason.
+  late final AnimationController _deck;
+  bool _deckOpen = false;
+  String? _lastLocation;
+
+  @override
+  void initState() {
+    super.initState();
+    _deck = AnimationController(vsync: this, duration: AppAnimation.durationSm);
+  }
+
+  @override
+  void dispose() {
+    _deck.dispose();
+    super.dispose();
+  }
+
+  void _openDeck() {
+    if (_deckOpen) {
+      _closeDeck();
+      return;
+    }
+    setState(() => _deckOpen = true);
+    _deck.forward();
+  }
+
+  void _closeDeck() {
+    if (!_deckOpen) return;
+    _deck.reverse().whenComplete(() {
+      if (mounted) setState(() => _deckOpen = false);
+    });
+  }
+
+  /// `⌘⌥→`: the next configured service, wrapping, skipping what is not set up.
+  void _cycleService(int delta) {
+    final settings = ref.read(currentSettingsProvider);
+    final configured = ServiceKey.values
+        .where(settings.isServiceConfigured)
+        .toList(growable: false);
+    if (configured.isEmpty) return;
+
+    final location = GoRouterState.of(context).uri.path;
+    final segments = Uri.parse(location).pathSegments;
+    final current = segments.length > 1
+        ? configured.indexWhere((s) => s.routeParam == segments[1])
+        : -1;
+    // From anywhere that is not a service, the gesture means "the first one" —
+    // forwards from the start, backwards from the end.
+    final next = current < 0
+        ? (delta > 0 ? 0 : configured.length - 1)
+        : (current + delta) % configured.length;
+    GoRouter.of(
+      context,
+    ).go('${NavTab.services.routePath}/${configured[next].routeParam}');
+  }
+
+  void _refreshAll() {
+    final tab =
+        NavTab.values[widget.selectedIndex.clamp(0, NavTab.values.length - 1)];
+    final section = switch (tab) {
+      NavTab.services => NavigationSection.services,
+      NavTab.activity => NavigationSection.activity,
+      NavTab.search => NavigationSection.search,
+      NavTab.settings => null,
+    };
+    if (section != null) ref.triggerNavigationRefresh(section);
+    ref.read(lastRefreshedAtProvider.notifier).state = DateTime.now();
+  }
+
+  void _searchThisScreen() {
+    final node = ref.read(screenSearchFocusProvider);
+    // No field on this screen means the shortcut does nothing, deliberately.
+    // Sending the user somewhere else would be a navigation they did not ask
+    // for, triggered by a key they pressed for a field they were looking at.
+    node?.requestFocus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final compact = AppBreakpoints.isCompactDesktop(context);
+    final inspector = ref.watch(inspectorStateProvider);
+
+    // Recents for the deck, recorded here because this is the one widget that
+    // sees every location change in the window.
+    final location = GoRouterState.of(context).uri.path;
+    if (_lastLocation != location) {
+      _lastLocation = location;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) noteVisit(ref, location);
+      });
+    }
+
+    return Shortcuts(
+      shortcuts: ShellShortcuts.map,
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          OpenCommandDeckIntent: CallbackAction<OpenCommandDeckIntent>(
+            onInvoke: (_) {
+              _openDeck();
+              return null;
+            },
+          ),
+          ToggleInspectorIntent: CallbackAction<ToggleInspectorIntent>(
+            onInvoke: (_) {
+              ref.read(inspectorStateProvider.notifier).toggle();
+              return null;
+            },
+          ),
+          GoToSectionIntent: CallbackAction<GoToSectionIntent>(
+            onInvoke: (intent) {
+              if (intent.index < widget.destinations.length) {
+                widget.onDestinationSelected(intent.index);
+              }
+              return null;
+            },
+          ),
+          CycleServiceIntent: CallbackAction<CycleServiceIntent>(
+            onInvoke: (intent) {
+              _cycleService(intent.delta);
+              return null;
+            },
+          ),
+          RefreshAllIntent: CallbackAction<RefreshAllIntent>(
+            onInvoke: (_) {
+              _refreshAll();
+              return null;
+            },
+          ),
+          SearchThisScreenIntent: CallbackAction<SearchThisScreenIntent>(
+            onInvoke: (_) {
+              _searchThisScreen();
+              return null;
+            },
+          ),
+          // Escape. Enabled only while the deck is up: with no enabled action
+          // for the intent the shortcut reports the key as unhandled, so escape
+          // goes on to clear a field or close a dialog exactly as before.
+          CloseOverlayIntent: _CloseOverlayAction(
+            enabled: _deckOpen,
+            onClose: _closeDeck,
+          ),
+          OpenInInspectorIntent: CallbackAction<OpenInInspectorIntent>(
+            onInvoke: (_) {
+              ref.read(inspectorStateProvider.notifier).setOpen(true);
+              return null;
+            },
+          ),
+        },
+        child: Scaffold(
+          body: Column(
+            children: [
+              WindowChrome(inspectorOpen: inspector.open),
+              Expanded(
+                child: Row(
+                  children: [
+                    DesktopNavRail(
+                      selectedIndex: widget.selectedIndex,
+                      destinations: widget.destinations,
+                      onDestinationSelected: widget.onDestinationSelected,
+                      onCommandDeck: _openDeck,
+                    ),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: Stack(
+                              children: [
+                                Column(
+                                  children: [
+                                    ServiceDeck(
+                                      compact: compact,
+                                      onCommandDeck: _openDeck,
+                                    ),
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: widget.navigationShell,
+                                          ),
+                                          if (inspector.open && !compact) ...[
+                                            const InspectorSplitHandle(),
+                                            SizedBox(
+                                              width: inspector.width,
+                                              child: const InspectorPane(),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (_deckOpen)
+                                  Positioned.fill(
+                                    child: _DeckOverlay(
+                                      animation: _deck,
+                                      onClose: _closeDeck,
+                                      scrim: colorScheme.surfaceContainerLowest,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const ShellStatusBar(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Escape while an overlay is up. Disabled otherwise, which is the whole point:
+/// a disabled action is skipped by the dispatcher instead of swallowing the key.
+class _CloseOverlayAction extends Action<CloseOverlayIntent> {
+  _CloseOverlayAction({required this.enabled, required this.onClose});
+
+  final bool enabled;
+  final VoidCallback onClose;
+
+  @override
+  bool get isActionEnabled => enabled;
+
+  @override
+  void invoke(CloseOverlayIntent intent) => onClose();
+}
+
+/// The deck's descent, plus the click-anywhere-else that closes it.
+///
+/// A scrim rather than a blur, at a low alpha: the room behind stays legible
+/// because the panel is a *switcher*, and half of choosing where to go is
+/// seeing what you are leaving.
+class _DeckOverlay extends StatelessWidget {
+  const _DeckOverlay({
+    required this.animation,
+    required this.onClose,
+    required this.scrim,
+  });
+
+  final Animation<double> animation;
+  final VoidCallback onClose;
+  final Color scrim;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: FadeTransition(
+            opacity: animation,
+            child: GestureDetector(
+              onTap: onClose,
+              child: ColoredBox(color: scrim.withValues(alpha: 0.62)),
+            ),
+          ),
+        ),
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760, maxHeight: 520),
+            // A scope of its own, autofocused: the page underneath already
+            // holds the focus of the shell's scope, so without a new scope the
+            // field's own `autofocus` is ignored and the deck opens untypable.
+            child: FocusScope(
+              autofocus: true,
+              child: CommandDeckTransition(
+                animation: animation,
+                child: CommandDeck(onClose: onClose),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

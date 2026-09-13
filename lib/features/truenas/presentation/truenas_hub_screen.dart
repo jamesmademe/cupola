@@ -6,7 +6,6 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
@@ -18,89 +17,10 @@ import 'package:cupola/core/widgets/staggered_entrance.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_version_banner.dart';
 
 /// A TrueNAS management section reachable from the hub grid.
-class _TrueNasSection {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final String route;
-  final bool experimental;
-
-  const _TrueNasSection({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.route,
-    this.experimental = false,
-  });
-}
-
-const _sections = <_TrueNasSection>[
-  _TrueNasSection(
-    title: 'Dashboard',
-    subtitle: 'CPU, memory & network',
-    icon: Icons.speed_rounded,
-    route: ServiceRoutes.truenasDashboard,
-  ),
-  _TrueNasSection(
-    title: 'Storage',
-    subtitle: 'Pools & topology',
-    icon: Icons.dns_rounded,
-    route: ServiceRoutes.truenasStorage,
-  ),
-  _TrueNasSection(
-    title: 'Datasets',
-    subtitle: 'ZFS datasets & snapshots',
-    icon: Icons.account_tree_rounded,
-    route: ServiceRoutes.truenasDatasets,
-  ),
-  _TrueNasSection(
-    title: 'Shares',
-    subtitle: 'SMB, NFS & iSCSI',
-    icon: Icons.folder_shared_rounded,
-    route: ServiceRoutes.truenasShares,
-  ),
-  _TrueNasSection(
-    title: 'Data Protection',
-    subtitle: 'Snapshots & replication',
-    icon: Icons.shield_rounded,
-    route: ServiceRoutes.truenasDataProtection,
-  ),
-  _TrueNasSection(
-    title: 'Containers',
-    subtitle: 'LXC instances',
-    icon: Icons.inventory_2_rounded,
-    route: ServiceRoutes.truenasContainers,
-    experimental: true,
-  ),
-  _TrueNasSection(
-    title: 'Virtual Machines',
-    subtitle: 'Incus VMs',
-    icon: Icons.desktop_windows_rounded,
-    route: ServiceRoutes.truenasVms,
-  ),
-  _TrueNasSection(
-    title: 'Apps',
-    subtitle: 'Installed applications',
-    icon: Icons.apps_rounded,
-    route: ServiceRoutes.truenasApps,
-  ),
-  _TrueNasSection(
-    title: 'Reporting',
-    subtitle: 'Historical graphs',
-    icon: Icons.insights_rounded,
-    route: ServiceRoutes.truenasReporting,
-  ),
-  _TrueNasSection(
-    title: 'System',
-    subtitle: 'Settings & services',
-    icon: Icons.settings_rounded,
-    route: ServiceRoutes.truenasSystem,
-  ),
-];
-
 /// TrueNAS root: a grid of management sections, each drilling into its own
 /// screen. Replaces the former single-dashboard layout.
 class TrueNasHubScreen extends ConsumerWidget {
@@ -124,9 +44,11 @@ class TrueNasHubScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.truenas.accent,
       appBar: showAppBar ? const GlassAppBar(title: Text('TrueNAS')) : null,
-      body: configured
-          ? _HubGrid(topPadding: topPadding)
-          : _NotConfigured(topPadding: topPadding),
+      body: TrueNasConsoleShell(
+        child: configured
+            ? _HubGrid(topPadding: topPadding)
+            : _NotConfigured(topPadding: topPadding),
+      ),
     );
   }
 }
@@ -170,10 +92,10 @@ class _HubGrid extends ConsumerWidget {
             // clipped the tile labels at accessibility text sizes.
             childAspectRatio: TextScaleMetrics.aspectRatio(context, base: 1.35),
             children: [
-              for (var i = 0; i < _sections.length; i++)
+              for (var i = 0; i < trueNasSections.length; i++)
                 StaggeredEntrance(
                   index: i,
-                  child: _SectionTile(section: _sections[i]),
+                  child: _SectionTile(section: trueNasSections[i]),
                 ),
             ],
           ),
@@ -185,7 +107,7 @@ class _HubGrid extends ConsumerWidget {
 }
 
 class _SectionTile extends StatelessWidget {
-  final _TrueNasSection section;
+  final TrueNasSection section;
   const _SectionTile({required this.section});
 
   @override

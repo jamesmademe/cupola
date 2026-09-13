@@ -13,6 +13,7 @@ import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 
 /// Every self-signed certificate trusted inside Cupola (ADR-6), independent
 /// of any one service's settings screen.
@@ -31,35 +32,37 @@ class TrustedCertificatesScreen extends ConsumerWidget {
 
     return AmbientScaffold(
       appBar: const GlassAppBar(title: Text('Trusted certificates')),
-      body: origins.isEmpty
-          ? const AppEmptyState(
-              icon: Icons.verified_user_outlined,
-              title: 'Nothing trusted yet',
-              message:
-                  'A self-signed certificate you choose to trust — for a '
-                  'service behind a home-made reverse proxy, say — shows up '
-                  'here, and can be revoked from here even after every '
-                  'service that used it is gone.',
-            )
-          : ListView.separated(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.sm,
-                AppSpacing.lg,
-                FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+      body: SettingsMasterDetail(
+        child: origins.isEmpty
+            ? const AppEmptyState(
+                icon: Icons.verified_user_outlined,
+                title: 'Nothing trusted yet',
+                message:
+                    'A self-signed certificate you choose to trust — for a '
+                    'service behind a home-made reverse proxy, say — shows up '
+                    'here, and can be revoked from here even after every '
+                    'service that used it is gone.',
+              )
+            : ListView.separated(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                  AppSpacing.lg,
+                  FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+                ),
+                itemCount: origins.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: AppSpacing.md),
+                itemBuilder: (context, index) {
+                  final origin = origins[index];
+                  return _TrustedOriginCard(
+                    origin: origin,
+                    fingerprint: settings.trustedCertificates[origin]!,
+                    services: settings.servicesSharingOriginOf(origin),
+                  );
+                },
               ),
-              itemCount: origins.length,
-              separatorBuilder: (context, index) =>
-                  const SizedBox(height: AppSpacing.md),
-              itemBuilder: (context, index) {
-                final origin = origins[index];
-                return _TrustedOriginCard(
-                  origin: origin,
-                  fingerprint: settings.trustedCertificates[origin]!,
-                  services: settings.servicesSharingOriginOf(origin),
-                );
-              },
-            ),
+      ),
     );
   }
 }

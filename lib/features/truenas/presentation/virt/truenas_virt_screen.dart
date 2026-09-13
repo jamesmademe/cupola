@@ -18,6 +18,7 @@ import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/virt/truenas_virt_actions.dart';
 import 'package:cupola/features/truenas/presentation/virt/truenas_virt_providers.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
 /// A list of Incus instances of a given [type] (`CONTAINER` or `VM`).
 class TrueNasVirtScreen extends ConsumerWidget {
@@ -44,47 +45,49 @@ class TrueNasVirtScreen extends ConsumerWidget {
         onPressed: () => createInstanceFlow(context, ref, type: type),
         child: const Icon(Icons.add_rounded),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(truenasVirtGlobalProvider);
-          ref.invalidate(truenasVirtInstancesProvider(type));
-        },
-        child: global.when(
-          loading: () => ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            children: [AppSkeleton.listRows()],
-          ),
-          error: (e, _) => ListView(
-            children: [
-              AppErrorState(
-                error: e,
-                onRetry: () => ref.invalidate(truenasVirtGlobalProvider),
-              ),
-            ],
-          ),
-          // Legacy KVM VMs don't need Incus to be configured, so only gate
-          // containers (and Incus VMs) on the virtualization pool being ready.
-          data: (cfg) => (type.toUpperCase() != 'VM' && !cfg.isReady)
-              ? ListView(
-                  children: const [
-                    Padding(
-                      padding: EdgeInsets.only(top: AppSpacing.xxl),
-                      child: AppEmptyState(
-                        icon: Icons.settings_suggest_rounded,
-                        title: 'Virtualization not configured',
-                        message:
-                            'Choose a storage pool for instances in the '
-                            'TrueNAS web UI (Virtualization) to get started.',
-                        accentColor: AppColors.truenas,
-                      ),
-                    ),
-                  ],
-                )
-              : _InstanceList(
-                  type: type,
-                  instances: instances,
-                  experimental: experimental,
+      body: TrueNasConsoleShell(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(truenasVirtGlobalProvider);
+            ref.invalidate(truenasVirtInstancesProvider(type));
+          },
+          child: global.when(
+            loading: () => ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: [AppSkeleton.listRows()],
+            ),
+            error: (e, _) => ListView(
+              children: [
+                AppErrorState(
+                  error: e,
+                  onRetry: () => ref.invalidate(truenasVirtGlobalProvider),
                 ),
+              ],
+            ),
+            // Legacy KVM VMs don't need Incus to be configured, so only gate
+            // containers (and Incus VMs) on the virtualization pool being ready.
+            data: (cfg) => (type.toUpperCase() != 'VM' && !cfg.isReady)
+                ? ListView(
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.only(top: AppSpacing.xxl),
+                        child: AppEmptyState(
+                          icon: Icons.settings_suggest_rounded,
+                          title: 'Virtualization not configured',
+                          message:
+                              'Choose a storage pool for instances in the '
+                              'TrueNAS web UI (Virtualization) to get started.',
+                          accentColor: AppColors.truenas,
+                        ),
+                      ),
+                    ],
+                  )
+                : _InstanceList(
+                    type: type,
+                    instances: instances,
+                    experimental: experimental,
+                  ),
+          ),
         ),
       ),
     );

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/reel_motion.dart';
@@ -233,79 +234,125 @@ class _SearchResultsList extends StatelessWidget {
       return const _NoResultsState();
     }
 
-    // Sections and their rows share one flat index so the sliver can build
-    // lazily. Nesting a section's cards in a single `Column` made the whole
-    // section one list child: a service answering with 50 results laid out and
-    // painted 50 cards — and fired 50 poster requests, each with its own
-    // repeating shimmer ticker — the moment any part of that section touched
-    // the cache extent.
-    final rows = <Object>[];
-    for (final group in visibleGroups) {
-      rows.add(group);
-      if (group.hasError) {
-        rows.add(_SectionOffline(group.service));
-      } else if (group.results.isEmpty) {
-        rows.add(_SectionNoResults(group.service));
-      } else {
-        rows.addAll(group.results);
-      }
-    }
+    // One scroll, and one sliver per section rather than one child per section.
+    // A service answering with 50 results used to lay out and paint all 50 the
+    // moment any part of its section touched the cache extent — 50 poster
+    // requests, each with its own repeating shimmer ticker. A
+    // `SliverList.builder` per section keeps the laziness *and* lets a section
+    // land mid-page.
+    final columns = _columnsFor(context, visibleGroups);
 
-    return ListView.builder(
-      padding: EdgeInsets.only(top: AppSpacing.sm, bottom: bottomPadding),
-      itemCount: rows.length,
-      itemBuilder: (context, index) => switch (rows[index]) {
-        final GlobalSearchServiceResults group => _SearchSectionHeader(
-          group: group,
-        ),
-        _SectionOffline(:final service) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: _SearchSectionMessage(
-            icon: Icons.cloud_off_rounded,
-            text: '${service.title} is offline',
-            color: Theme.of(context).colorScheme.error,
+    return CustomScrollView(
+      slivers: [
+        if (columns.length == 1)
+          ..._sectionSlivers(context, columns.single)
+        else
+          SliverCrossAxisGroup(
+            slivers: [
+              for (final column in columns)
+                SliverCrossAxisExpanded(
+                  flex: 1,
+                  sliver: SliverMainAxisGroup(
+                    slivers: _sectionSlivers(context, column),
+                  ),
+                ),
+            ],
           ),
-        ),
-        _SectionNoResults(:final service) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: _SearchSectionMessage(
-            icon: Icons.search_off_rounded,
-            text: 'No ${service.title} results',
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-        // The section's horizontal inset used to live on the wrapper around the
-        // cards' `Column`; folded together with the per-card bottom gap it is
-        // the same box.
-        final GlobalSearchResult result => Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            0,
-            AppSpacing.lg,
-            AppSpacing.sm,
-          ),
-          child: _SearchResultCard(result: result),
-        ),
-        _ => const SizedBox.shrink(),
-      },
+        SliverToBoxAdapter(child: SizedBox(height: bottomPadding)),
+      ],
     );
   }
-}
 
-/// A section body that is a message rather than a list of cards: the service
-/// did not answer.
-class _SectionOffline {
-  final ServiceKey service;
+  /// How the sections are spread across the width.
+  ///
+  /// Two columns at 1440 and one everywhere else — and the split is *by
+  /// section*, never within one. A section is a service's answer, arriving on
+  /// its own clock; cutting one down the middle would put half of Radarr's
+  /// results in a column that is still empty because Sonarr has not replied.
+  ///
+  /// Balanced greedily by result count rather than dealt alternately, so a
+  /// service with fifty hits does not leave the other column three rows long.
+  static List<List<GlobalSearchServiceResults>> _columnsFor(
+    BuildContext context,
+    List<GlobalSearchServiceResults> groups,
+  ) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (!AppBreakpoints.isDesktopShell ||
+        width < AppBreakpoints.desktopCompact ||
+        groups.length < 2) {
+      return [groups];
+    }
 
-  const _SectionOffline(this.service);
-}
+    final left = <GlobalSearchServiceResults>[];
+    final right = <GlobalSearchServiceResults>[];
+    var leftWeight = 0;
+    var rightWeight = 0;
+    for (final group in groups) {
+      // A section that answered nothing is still a row and a half of chrome, so
+      // it weighs something — otherwise every offline service piles into one
+      // column.
+      final weight = group.results.isEmpty ? 2 : group.results.length + 1;
+      if (leftWeight <= rightWeight) {
+        left.add(group);
+        leftWeight += weight;
+      } else {
+        right.add(group);
+        rightWeight += weight;
+      }
+    }
+    return [left, right];
+  }
 
-/// A section body that is a message rather than a list of cards: the service
-/// answered with nothing.
-class _SectionNoResults {
-  final ServiceKey service;
-
-  const _SectionNoResults(this.service);
+  /// One column's sections, as real slivers.
+  List<Widget> _sectionSlivers(
+    BuildContext context,
+    List<GlobalSearchServiceResults> groups,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return [
+      for (final group in groups) ...[
+        SliverToBoxAdapter(child: _SearchSectionHeader(group: group)),
+        if (group.hasError)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: _SearchSectionMessage(
+                icon: Icons.cloud_off_rounded,
+                text: '${group.service.title} is offline',
+                color: colorScheme.error,
+              ),
+            ),
+          )
+        else if (group.results.isEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: _SearchSectionMessage(
+                icon: Icons.search_off_rounded,
+                text: 'No ${group.service.title} results',
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          )
+        else
+          SliverList.builder(
+            itemCount: group.results.length,
+            itemBuilder: (context, index) => Padding(
+              // The section's horizontal inset used to live on the wrapper
+              // around the cards' `Column`; folded together with the per-card
+              // bottom gap it is the same box.
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                0,
+                AppSpacing.lg,
+                AppSpacing.sm,
+              ),
+              child: _SearchResultCard(result: group.results[index]),
+            ),
+          ),
+      ],
+    ];
+  }
 }
 
 class _SearchSectionHeader extends StatelessWidget {

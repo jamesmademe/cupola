@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
+import 'package:cupola/core/widgets/desktop_content_well.dart';
 
 /// A [Scaffold] pre-wired for the premium ambient look: an [AmbientBackground]
 /// paints the gradient full-bleed and the Scaffold itself is transparent, so the
@@ -22,6 +24,23 @@ class AmbientScaffold extends StatelessWidget {
   final bool extendBodyBehindAppBar;
   final bool extendBody;
 
+  /// Whether the body is centred in a reading-width well on a desktop window.
+  ///
+  /// True for every screen, because a dashboard stretched across a 27-inch
+  /// display is the same information with the reading line broken — see
+  /// [DesktopContentWell]. Pass false only for a body that genuinely owns the
+  /// whole window: a full-bleed console, a map, a video surface.
+  ///
+  /// The app bar and the ambient gradient are never welled: they are the room,
+  /// and a room with margins is a card.
+  final bool contentWell;
+
+  /// Widest the well may grow, when the archetype's own measure differs.
+  ///
+  /// The library passes 1160 because eight 130pt posters and their gaps come to
+  /// that; everything else takes the default.
+  final double contentWellWidth;
+
   const AmbientScaffold({
     super.key,
     required this.body,
@@ -32,6 +51,8 @@ class AmbientScaffold extends StatelessWidget {
     this.resizeToAvoidBottomInset = true,
     this.extendBodyBehindAppBar = false,
     this.extendBody = true,
+    this.contentWell = true,
+    this.contentWellWidth = AppBreakpoints.contentWell,
   });
 
   @override
@@ -43,7 +64,9 @@ class AmbientScaffold extends StatelessWidget {
         extendBody: extendBody,
         extendBodyBehindAppBar: extendBodyBehindAppBar,
         appBar: appBar,
-        body: body,
+        body: contentWell
+            ? DesktopContentWell(maxWidth: contentWellWidth, child: body)
+            : body,
         floatingActionButton: floatingActionButton,
         bottomNavigationBar: bottomNavigationBar,
         resizeToAvoidBottomInset: resizeToAvoidBottomInset,

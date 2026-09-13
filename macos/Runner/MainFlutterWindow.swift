@@ -7,16 +7,18 @@ class MainFlutterWindow: NSWindow {
     let flutterViewController = FlutterViewController()
     self.contentViewController = flutterViewController
 
-    // Enforce a phone-like minimum so the mobile-first UI stays usable.
-    self.minSize = NSSize(width: 360, height: 780)
+    // The compact artboard, which is the smallest window the desktop shell has
+    // anything left to collapse into: below it the deck has already given up
+    // its glyph bands and the inspector is already closed.
+    self.minSize = NSSize(width: 720, height: 450)
 
     let autosaveName = "CupolaMainWindow"
     let isFirstLaunch =
       UserDefaults.standard.object(forKey: "NSWindow Frame \(autosaveName)") == nil
 
     if isFirstLaunch {
-      // First launch: default to an iPhone 15 portrait content size, centered.
-      self.setContentSize(NSSize(width: 393, height: 852))
+      // First launch: the size the desktop UI is drawn at, centred.
+      self.setContentSize(NSSize(width: 1440, height: 900))
       if let screen = NSScreen.main {
         let visible = screen.visibleFrame
         let frame = self.frame

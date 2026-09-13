@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/service_theme.dart';
@@ -17,6 +18,7 @@ import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
+import 'package:cupola/features/shell/presentation/desktop/desktop_shell.dart';
 import 'package:cupola/features/shell/presentation/portal_coach_mark.dart';
 import 'package:cupola/features/shell/presentation/service_portal.dart';
 
@@ -34,14 +36,13 @@ class ShellScreen extends ConsumerStatefulWidget {
 
   const ShellScreen({super.key, required this.navigationShell});
 
-  /// Width at or above which navigation moves from a bottom bar to a side rail.
+  /// Width at or above which a *touch* shell moves its navigation from the
+  /// bottom bar to a side rail. See [AppBreakpoints.touchRail] for the number
+  /// and the reasoning.
   ///
-  /// 840 rather than 600: at 600 a phone in landscape (roughly 850pt wide on a
-  /// modern iPhone) also got the rail, replacing the thumb-reachable bottom bar
-  /// with a side rail on a device held in two hands. 840 is Material's
-  /// expanded-window breakpoint and keeps phones on the bar in both
-  /// orientations, while tablets and desktop windows still get the rail.
-  static const double _railBreakpoint = 840;
+  /// Only ever consulted on a touch build now: a desktop window gets the window
+  /// shell at every size, because what makes it a desktop is the window, not
+  /// the width.
 
   @override
   ConsumerState<ShellScreen> createState() => _ShellScreenState();
@@ -82,7 +83,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   /// A cancellable timer, not a bare delay: the shell may be torn down first.
   void _armDemoBounce() {
     if (!mounted) return;
-    if (MediaQuery.sizeOf(context).width >= ShellScreen._railBreakpoint) return;
+    if (MediaQuery.sizeOf(context).width >= AppBreakpoints.touchRail) return;
     if (MediaQuery.accessibleNavigationOf(context)) return;
     if (!ref.read(portalHintsProvider).demoBouncePending) return;
     // A breath after the first frame: the bounce has to read as a gesture of
@@ -109,7 +110,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // else's — and it is the branch that the bar must agree with.
     final selectedIndex = widget.navigationShell.currentIndex;
     final useRail =
-        MediaQuery.sizeOf(context).width >= ShellScreen._railBreakpoint;
+        MediaQuery.sizeOf(context).width >= AppBreakpoints.touchRail;
     // The Portal's drag is unusable under a screen reader; there the bar keeps
     // its pure elastic and switching stays on the accessible paths.
     final accessibleNav = MediaQuery.accessibleNavigationOf(context);
@@ -182,6 +183,22 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // killed was blamed on the network instead of on leaving the app) and
     // `refreshWindows()` never ran on resume — and dragging a window across
     // 840pt mounted or unmounted the observer mid-session.
+    // The window shell, whole, above the touch branches. It is not a third
+    // layout of the same shell: it has a chrome strip, a deck and an inspector
+    // that no touch build has, and it reaches the branch navigator unmodified —
+    // so every screen inside it is still the same screen the phone shows.
+    if (AppBreakpoints.isDesktopShell) {
+      return ReleaseSearchLifecycle(
+        child: DesktopShell(
+          navigationShell: widget.navigationShell,
+          destinations: destinations,
+          selectedIndex: selectedIndex,
+          onDestinationSelected: (int idx) =>
+              _onItemTapped(idx, context, selectedIndex),
+        ),
+      );
+    }
+
     return ReleaseSearchLifecycle(
       child: useRail
           ? Scaffold(

@@ -7,6 +7,7 @@ import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 
 /// Settings → Hints: one switch per feature that teaches itself.
 ///
@@ -24,40 +25,42 @@ class SettingsHintsScreen extends ConsumerWidget {
 
     return AmbientScaffold(
       appBar: const GlassAppBar(title: Text('Hints')),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.sm,
-          AppSpacing.lg,
-          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-            child: Text(
-              'Small nudges that introduce a gesture, then get out of the way. '
-              'The × on a tip turns its switch off here.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+      body: SettingsMasterDetail(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+          ),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+              child: Text(
+                'Small nudges that introduce a gesture, then get out of the way. '
+                'The × on a tip turns its switch off here.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
-          ),
-          SettingsGroupCard(
-            children: [
-              _HintRow(
-                icon: Icons.swipe_up_rounded,
-                title: 'Portal',
-                description:
-                    'The bar lifts once to hint at the swipe, and a tip '
-                    'appears if you keep switching services the long way. '
-                    'Turn back on to see both again.',
-                enabled: enabled,
-                onChanged: (value) =>
-                    ref.read(portalHintsProvider.notifier).setEnabled(value),
-              ),
-            ],
-          ),
-        ],
+            SettingsGroupCard(
+              children: [
+                _HintRow(
+                  icon: Icons.swipe_up_rounded,
+                  title: 'Portal',
+                  description:
+                      'The bar lifts once to hint at the swipe, and a tip '
+                      'appears if you keep switching services the long way. '
+                      'Turn back on to see both again.',
+                  enabled: enabled,
+                  onChanged: (value) =>
+                      ref.read(portalHintsProvider.notifier).setEnabled(value),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

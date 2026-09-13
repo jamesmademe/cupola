@@ -24,6 +24,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/donation_sheet.dart';
 import 'package:cupola/features/settings/presentation/widgets/service_connection_row.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 
 /// The settings index.
 ///
@@ -53,22 +54,24 @@ class SettingsHomeScreen extends ConsumerWidget {
 
     return AmbientScaffold(
       appBar: const GlassAppBar(title: Text('Settings')),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.lg,
-          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+      body: SettingsMasterDetail(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+          ),
+          children: [
+            const _ConnectionsBlock(),
+            const SizedBox(height: AppSpacing.xl),
+            ..._buildGeneralSection(context, ref, settings),
+            const SizedBox(height: AppSpacing.xl),
+            ..._buildAboutSection(context),
+            const SizedBox(height: AppSpacing.xl),
+            ..._buildDangerZoneSection(context, ref),
+          ],
         ),
-        children: [
-          const _ConnectionsBlock(),
-          const SizedBox(height: AppSpacing.xl),
-          ..._buildGeneralSection(context, ref, settings),
-          const SizedBox(height: AppSpacing.xl),
-          ..._buildAboutSection(context),
-          const SizedBox(height: AppSpacing.xl),
-          ..._buildDangerZoneSection(context, ref),
-        ],
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_elevation.dart';
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
@@ -107,6 +108,13 @@ class FloatingNavBarMetrics {
   ///
   /// Includes the nav bar height, margins, and device safe area.
   static double getScrollViewBottomPadding(BuildContext context) {
+    // No bar, no clearance. A desktop window navigates from the rail and the
+    // deck, so reserving 70pt at the foot of every scroll view would leave one
+    // dead strip along the bottom of all 73 screens — and this one helper is
+    // where all of them ask, which is why the answer belongs here rather than
+    // in 50 build methods.
+    if (AppBreakpoints.isDesktopShell) return 0;
+
     // `paddingOf`, not `of`: this helper is called from ~50 `build` methods, and
     // an unscoped `MediaQuery.of` subscribes every one of them to *any*
     // MediaQueryData change — including `viewInsets`, which animates every frame

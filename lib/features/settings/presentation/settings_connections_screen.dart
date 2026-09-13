@@ -13,6 +13,7 @@ import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/service_connection_row.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 
 /// Every service Cupola can talk to, and the state of each connection.
 ///
@@ -37,79 +38,83 @@ class SettingsConnectionsScreen extends ConsumerWidget {
 
     return AmbientScaffold(
       appBar: const GlassAppBar(title: Text('Connections')),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          0,
-          AppSpacing.lg,
-          // The nav bar floats over this content and grows with the reading
-          // size, so the last row is only reachable if the list reserves for it.
-          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
-        children: [
-          if (configured.isNotEmpty) ...[
-            SectionHeader(
-              // Not "Connected": this section is what has an address saved,
-              // and one of them being unreachable is exactly why you are here.
-              title: 'Your services',
-              showChevron: false,
-              trailing: _CountChip(count: configured.length),
-              semanticLabel:
-                  '${configured.length} of ${ServiceKey.values.length} '
-                  'services set up',
-            ),
-            for (final domain in ServiceDomain.values)
-              ..._domainGroup(context, domain, configured),
-            const SizedBox(height: AppSpacing.xl),
-          ],
-          SectionHeader(
-            title: available.isEmpty ? 'Everything is set up' : 'Add a service',
-            showChevron: false,
-            subtitle: available.isEmpty
-                ? 'All ${ServiceKey.values.length} services Cupola supports '
-                      'have an address saved.'
-                : 'Cupola talks straight to your instance. Nothing is stored '
-                      'anywhere but this device.',
+      body: SettingsMasterDetail(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            // The nav bar floats over this content and grows with the reading
+            // size, so the last row is only reachable if the list reserves for it.
+            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
-          if (available.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.sm),
-            SettingsGroupCard(
-              children: [
-                for (final service in available)
-                  ServiceConnectionRow(
-                    service: service,
-                    onTap: () => _open(context, service),
-                  ),
-              ],
-            ),
-          ] else
-            Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.sm),
-              child: Icon(
-                Icons.check_circle_outline_rounded,
-                color: colorScheme.onSurfaceVariant,
+          children: [
+            if (configured.isNotEmpty) ...[
+              SectionHeader(
+                // Not "Connected": this section is what has an address saved,
+                // and one of them being unreachable is exactly why you are here.
+                title: 'Your services',
+                showChevron: false,
+                trailing: _CountChip(count: configured.length),
+                semanticLabel:
+                    '${configured.length} of ${ServiceKey.values.length} '
+                    'services set up',
               ),
+              for (final domain in ServiceDomain.values)
+                ..._domainGroup(context, domain, configured),
+              const SizedBox(height: AppSpacing.xl),
+            ],
+            SectionHeader(
+              title: available.isEmpty
+                  ? 'Everything is set up'
+                  : 'Add a service',
+              showChevron: false,
+              subtitle: available.isEmpty
+                  ? 'All ${ServiceKey.values.length} services Cupola supports '
+                        'have an address saved.'
+                  : 'Cupola talks straight to your instance. Nothing is stored '
+                        'anywhere but this device.',
             ),
-          // Omitted rather than shown empty: trust is per origin, so an
-          // origin can outlive every service that once used it — but with
-          // nothing ever trusted there is nothing this row could find.
-          if (settings.trustedCertificates.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.xl),
-            SettingsGroupCard(
-              children: [
-                SettingsCard.grouped(
-                  leading: const Icon(Icons.verified_user_outlined),
-                  title: 'Trusted certificates',
-                  subtitle: settings.trustedCertificates.length == 1
-                      ? '1 self-signed certificate trusted'
-                      : '${settings.trustedCertificates.length} self-signed '
-                            'certificates trusted',
-                  onTap: () => context.push('/settings/certificates'),
+            if (available.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              SettingsGroupCard(
+                children: [
+                  for (final service in available)
+                    ServiceConnectionRow(
+                      service: service,
+                      onTap: () => _open(context, service),
+                    ),
+                ],
+              ),
+            ] else
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: Icon(
+                  Icons.check_circle_outline_rounded,
+                  color: colorScheme.onSurfaceVariant,
                 ),
-              ],
-            ),
+              ),
+            // Omitted rather than shown empty: trust is per origin, so an
+            // origin can outlive every service that once used it — but with
+            // nothing ever trusted there is nothing this row could find.
+            if (settings.trustedCertificates.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xl),
+              SettingsGroupCard(
+                children: [
+                  SettingsCard.grouped(
+                    leading: const Icon(Icons.verified_user_outlined),
+                    title: 'Trusted certificates',
+                    subtitle: settings.trustedCertificates.length == 1
+                        ? '1 self-signed certificate trusted'
+                        : '${settings.trustedCertificates.length} self-signed '
+                              'certificates trusted',
+                    onTap: () => context.push('/settings/certificates'),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

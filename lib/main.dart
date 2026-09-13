@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/platform/desktop_window.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
@@ -17,6 +18,10 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Before anything that can take time: the window is created hidden and shown
+  // by this call, so every await between the two would be a stretch of black
+  // rectangle on the user's screen. Inert on iOS and Android.
+  await DesktopWindow.ensureReady();
   _registerBundledFontLicense();
   final prefs = await SharedPreferences.getInstance();
   final secureSettingsStore = createSecureSettingsStore();

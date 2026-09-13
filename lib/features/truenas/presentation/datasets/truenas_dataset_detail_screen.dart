@@ -19,6 +19,7 @@ import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
 class TrueNasDatasetDetailScreen extends ConsumerWidget {
   final String datasetId;
@@ -62,35 +63,37 @@ class TrueNasDatasetDetailScreen extends ConsumerWidget {
           orElse: () => const SizedBox.shrink(),
         ),
       ],
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(truenasDatasetProvider(datasetId));
-          ref.invalidate(truenasSnapshotsProvider(datasetId));
-        },
-        child: dataset.when(
-          loading: () => ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            children: [AppSkeleton.detailBody()],
+      body: TrueNasConsoleShell(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(truenasDatasetProvider(datasetId));
+            ref.invalidate(truenasSnapshotsProvider(datasetId));
+          },
+          child: dataset.when(
+            loading: () => ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: [AppSkeleton.detailBody()],
+            ),
+            error: (error, _) => ListView(
+              children: [
+                AppErrorState(
+                  error: error,
+                  onRetry: () =>
+                      ref.invalidate(truenasDatasetProvider(datasetId)),
+                ),
+              ],
+            ),
+            data: (d) => d == null
+                ? ListView(
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.all(AppSpacing.xl),
+                        child: Text('Dataset not found.'),
+                      ),
+                    ],
+                  )
+                : _DetailBody(dataset: d),
           ),
-          error: (error, _) => ListView(
-            children: [
-              AppErrorState(
-                error: error,
-                onRetry: () =>
-                    ref.invalidate(truenasDatasetProvider(datasetId)),
-              ),
-            ],
-          ),
-          data: (d) => d == null
-              ? ListView(
-                  children: const [
-                    Padding(
-                      padding: EdgeInsets.all(AppSpacing.xl),
-                      child: Text('Dataset not found.'),
-                    ),
-                  ],
-                )
-              : _DetailBody(dataset: d),
         ),
       ),
     );

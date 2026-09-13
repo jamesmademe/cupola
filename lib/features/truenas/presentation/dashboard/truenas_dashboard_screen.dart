@@ -19,6 +19,7 @@ import 'package:cupola/features/truenas/presentation/widgets/charts/radial_gauge
 import 'package:cupola/features/truenas/presentation/widgets/charts/sparkline.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
 /// Live metrics for the dashboard: the CPU/memory gauges and the network
 /// sparkline, all derived from the newest reporting samples.
@@ -196,18 +197,22 @@ class _TrueNasDashboardScreenState
 
     return TrueNasSectionScaffold(
       title: 'Dashboard',
-      body: RefreshIndicator(
-        onRefresh: () async => _refresh(),
-        child: dashboard.when(
-          skipLoadingOnReload: true,
-          loading: () => ListView(
-            padding: const EdgeInsets.only(top: AppSpacing.md),
-            children: [AppSkeleton.listRows()],
+      body: TrueNasConsoleShell(
+        child: RefreshIndicator(
+          onRefresh: () async => _refresh(),
+          child: dashboard.when(
+            skipLoadingOnReload: true,
+            loading: () => ListView(
+              padding: const EdgeInsets.only(top: AppSpacing.md),
+              children: [AppSkeleton.listRows()],
+            ),
+            error: (error, _) => ListView(
+              children: [
+                AppErrorState(error: error, onRetry: () => _refresh()),
+              ],
+            ),
+            data: (data) => _DashboardBody(data: data),
           ),
-          error: (error, _) => ListView(
-            children: [AppErrorState(error: error, onRetry: () => _refresh())],
-          ),
-          data: (data) => _DashboardBody(data: data),
         ),
       ),
     );

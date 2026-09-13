@@ -16,11 +16,16 @@ configuration shows the unqualified resource, so dark-theme users on such a
 launcher get the light icon rather than a broken one.
 
 Apple switches through the Icon Composer bundle's own light and dark layer
-groups. The legacy fallbacks have no appearance channel, so they carry the dark
-appearance, which is the product's committed identity. iOS falls back to its
-`.appiconset`; macOS falls back to `cupola_icon_legacy.icns`, because actool
-never reads an `.appiconset` when the target's app icon is an Icon Composer
-bundle — see the note on `write_icns`.
+groups, and neither platform has an `.appiconset` any more: actool reads none once
+the target's app icon is an Icon Composer bundle, so both were dead weight that
+read as live. What each platform falls back to on a system too old to recompose a
+`.icon` differs. macOS reads `cupola_icon_legacy.icns`, which this file writes —
+see `write_icns`. iOS reads two PNGs actool derives from the `.icon` itself,
+naming them in the Info.plist; nothing here can add to that set, so iOS keeps a
+thinner fallback than macOS by Apple's choice rather than ours.
+
+Those fallbacks have no appearance channel, so they carry the dark appearance,
+which is the product's committed identity.
 
 Web follows `index.html`, which serves `favicon-light.png` under
 `prefers-color-scheme: light` and `favicon.png` otherwise.
@@ -45,24 +50,6 @@ RESVG = ["npx", "--yes", "@resvg/resvg-js-cli"]
 SIMPLE_BELOW = 64
 
 DENSITIES = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
-
-IOS_APPICON = {
-    "Icon-App-1024x1024@1x.png": 1024,
-    "Icon-App-20x20@1x.png": 20,
-    "Icon-App-20x20@2x.png": 40,
-    "Icon-App-20x20@3x.png": 60,
-    "Icon-App-29x29@1x.png": 29,
-    "Icon-App-29x29@2x.png": 58,
-    "Icon-App-29x29@3x.png": 87,
-    "Icon-App-40x40@1x.png": 40,
-    "Icon-App-40x40@2x.png": 80,
-    "Icon-App-40x40@3x.png": 120,
-    "Icon-App-60x60@2x.png": 120,
-    "Icon-App-60x60@3x.png": 180,
-    "Icon-App-76x76@1x.png": 76,
-    "Icon-App-76x76@2x.png": 152,
-    "Icon-App-83.5x83.5@2x.png": 167,
-}
 
 # The `.icns` element types macOS reads as PNG, paired with the pixel size each
 # one declares. Both the 1x and the @2x code for a point size are present: the
@@ -189,8 +176,7 @@ class Exporter:
         target's `Complete the legacy .icns` build phase drops it over actool's.
 
         An `.appiconset` cannot do this job: actool ignores one entirely once the
-        target's app icon is an Icon Composer bundle, which is why macOS has no
-        `.appiconset` while iOS still does.
+        target's app icon is an Icon Composer bundle.
 
         Alpha is load-bearing here — the shape's corners are the transparency.
         """
@@ -230,8 +216,6 @@ class Exporter:
                 self.emit(master, 1024, f"{platform}/Runner/cupola_icon.icon/Assets/{name}")
             self.patch_icon_json(platform)
 
-        for name, size in IOS_APPICON.items():
-            self.emit(self.full(size), size, f"ios/Runner/Assets.xcassets/AppIcon.appiconset/{name}")
         self.write_icns("macos/Runner/cupola_icon_legacy.icns")
 
     def patch_icon_json(self, platform: str):

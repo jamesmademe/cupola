@@ -15,6 +15,7 @@ import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/truenas/domain/models/pool.dart';
 import 'package:cupola/features/truenas/presentation/storage/truenas_storage_providers.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
 class TrueNasStorageScreen extends ConsumerWidget {
   const TrueNasStorageScreen({super.key});
@@ -25,44 +26,46 @@ class TrueNasStorageScreen extends ConsumerWidget {
 
     return TrueNasSectionScaffold(
       title: 'Storage',
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(truenasPoolsProvider),
-        child: pools.when(
-          loading: () => ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            children: [AppSkeleton.listRows()],
-          ),
-          error: (error, _) => ListView(
-            children: [
-              AppErrorState(
-                error: error,
-                onRetry: () => ref.invalidate(truenasPoolsProvider),
-              ),
-            ],
-          ),
-          data: (data) => data.isEmpty
-              ? const AppEmptyState(
-                  icon: Icons.dns_rounded,
-                  title: 'No pools',
-                  message: 'This system has no storage pools.',
-                  accentColor: AppColors.truenas,
-                )
-              : ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                    AppSpacing.lg,
-                    FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-                  ),
-                  children: [
-                    for (final pool in data)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: _PoolCard(pool: pool),
-                      ),
-                  ],
+      body: TrueNasConsoleShell(
+        child: RefreshIndicator(
+          onRefresh: () async => ref.invalidate(truenasPoolsProvider),
+          child: pools.when(
+            loading: () => ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: [AppSkeleton.listRows()],
+            ),
+            error: (error, _) => ListView(
+              children: [
+                AppErrorState(
+                  error: error,
+                  onRetry: () => ref.invalidate(truenasPoolsProvider),
                 ),
+              ],
+            ),
+            data: (data) => data.isEmpty
+                ? const AppEmptyState(
+                    icon: Icons.dns_rounded,
+                    title: 'No pools',
+                    message: 'This system has no storage pools.',
+                    accentColor: AppColors.truenas,
+                  )
+                : ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+                    ),
+                    children: [
+                      for (final pool in data)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: _PoolCard(pool: pool),
+                        ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );

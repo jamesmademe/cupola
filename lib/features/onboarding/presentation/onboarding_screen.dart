@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +19,7 @@ import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 
 /// First run, in four beats: the claim, the choice, one service at a time, and
 /// what it actually achieved.
@@ -703,176 +706,231 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: onboardingMaxWidth),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    // The register follows the space, not the keyboard. Where the
-                    // full one still fits, nothing changes; where it used to
-                    // collapse to nothing, the medallion takes over instead.
-                    var diameter = _fullRingDiameter(
-                      context,
-                      constraints.maxHeight,
-                    );
-                    var compact = false;
-                    if (diameter == 0) {
-                      diameter = _compactRingDiameter(
-                        context,
-                        constraints.maxHeight,
-                      );
-                      compact = diameter > 0;
-                    }
-                    return Column(
-                      children: [
-                        // The instrument, outside the pager on purpose. One ring for
-                        // the whole flow: it holds its place while the forms page
-                        // behind it, rotates the active service to noon, and grows a
-                        // spoke the moment one answers. Hoisting it out is what stops
-                        // the ring and the shell arriving from two different places on
-                        // every step.
-                        OnboardingInstrument(
-                          collapsed: diameter == 0,
-                          compact: compact,
-                          label: activeWalk == null
-                              ? null
-                              : OnboardingWalkSubject.eyebrow(
-                                  service: activeWalk,
-                                  position: _page - _firstWalkPage + 1,
-                                  total: walk.length,
-                                ),
-                          child: TweenAnimationBuilder<double>(
-                            tween: Tween(end: diameter),
-                            // The page slide's own timing, so the resize and the
-                            // shell's travel read as one movement.
-                            duration: AppAnimation.durationMd,
-                            curve: AppAnimation.standardCurve,
-                            builder: (context, animated, _) =>
-                                TweenAnimationBuilder<double>(
-                                  // On the same clock as the diameter, so the
-                                  // medallion contracts as one object rather than
-                                  // as a mark that catches up with its ring.
-                                  tween: Tween(
-                                    end: compact
-                                        ? _compactMarkFraction
-                                        : ServiceRing.defaultMarkFraction,
+            child: Column(
+              children: [
+                // Onboarding gates the shell, so on Windows and Linux this
+                // strip is the only thing standing between a frameless window
+                // and a window nobody can move or close. Nothing on a phone or
+                // a Mac, where AppKit still drags by the background.
+                const WindowDragStrip(),
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        // A desktop window finally gives the ring room to be the
+                        // subject rather than a hat on a form, so the well widens to
+                        // hold the two of them side by side. Unchanged on a phone.
+                        maxWidth: onboardingSideBySide(context)
+                            ? onboardingDesktopMaxWidth
+                            : onboardingMaxWidth,
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          // The register follows the space, not the keyboard. Where the
+                          // full one still fits, nothing changes; where it used to
+                          // collapse to nothing, the medallion takes over instead.
+                          var diameter = _fullRingDiameter(
+                            context,
+                            constraints.maxHeight,
+                          );
+                          var compact = false;
+                          if (diameter == 0) {
+                            diameter = _compactRingDiameter(
+                              context,
+                              constraints.maxHeight,
+                            );
+                            compact = diameter > 0;
+                          }
+                          // Side by side, the ring stops being a header and becomes
+                          // the thing the step is about: a 396pt instrument beside the
+                          // form, which is the size DESIGN.md protects it at. It also
+                          // removes the reason the ring ever had to collapse — there is
+                          // no competition for vertical space in a window this wide —
+                          // so the compact medallion is a phone answer to a phone
+                          // problem and stays there.
+                          final sideBySide = onboardingSideBySide(context);
+                          if (sideBySide) {
+                            diameter = math.min(
+                              onboardingDesktopRingDiameter,
+                              constraints.maxHeight - 120,
+                            );
+                            compact = false;
+                          }
+
+                          // The step itself: its subject and the pager. One list, two
+                          // arrangements — stacked under the ring on a phone, beside it in a
+                          // window — so neither layout can grow a step the other does not have.
+                          final steps = <Widget>[
+                            // The step's subject, hoisted for the same reason the ring is:
+                            // a `PageView` builds one element per page, so a headline held
+                            // inside the pager can only ever be replaced, never rolled.
+                            // Held here it is one widget across the whole walk and the
+                            // service name rolls inside a sentence that stays put.
+                            if (activeWalk case final service?)
+                              // Folds away as the instrument takes its eyebrow over,
+                              // on the same clock, so the label reads as moving into
+                              // the medallion's row rather than as two labels.
+                              OnboardingCollapsible(
+                                collapsed: compact,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: AppSpacing.md,
                                   ),
-                                  duration: AppAnimation.durationMd,
-                                  curve: AppAnimation.standardCurve,
-                                  builder: (context, mark, _) =>
-                                      AnimatedBuilder(
-                                        animation: _entrance,
-                                        builder: (context, _) => ServiceRing(
-                                          states: ringStates,
-                                          diameter: animated,
-                                          markFraction: mark,
-                                          entrance: AppAnimation.emphasizedCurve
-                                              .transform(_entrance.value),
-                                          activeService: activeWalk,
-                                          progress: activeWalk == null
-                                              ? (_page >= _closePage &&
-                                                        _silent.isEmpty &&
-                                                        _answering.isNotEmpty
-                                                    ? 1
-                                                    : 0)
-                                              : (_page - _firstWalkPage) /
-                                                    walk.length,
-                                          spin: true,
-                                        ),
-                                      ),
+                                  child: OnboardingWalkSubject(
+                                    service: service,
+                                    position: _page - _firstWalkPage + 1,
+                                    total: walk.length,
+                                  ),
                                 ),
-                          ),
-                        ),
-                        // The step's subject, hoisted for the same reason the ring is:
-                        // a `PageView` builds one element per page, so a headline held
-                        // inside the pager can only ever be replaced, never rolled.
-                        // Held here it is one widget across the whole walk and the
-                        // service name rolls inside a sentence that stays put.
-                        if (activeWalk case final service?)
-                          // Folds away as the instrument takes its eyebrow over,
-                          // on the same clock, so the label reads as moving into
-                          // the medallion's row rather than as two labels.
-                          OnboardingCollapsible(
-                            collapsed: compact,
-                            child: Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: AppSpacing.md,
                               ),
-                              child: OnboardingWalkSubject(
-                                service: service,
-                                position: _page - _firstWalkPage + 1,
-                                total: walk.length,
+                            Expanded(
+                              child: PageView(
+                                controller: _pageController,
+                                physics: const NeverScrollableScrollPhysics(),
+                                children: [
+                                  OnboardingDoor(
+                                    onStart: () => _goTo(_pickPage),
+                                    onSkip: _skipEverything,
+                                  ),
+                                  OnboardingPick(
+                                    picked: _picked,
+                                    onToggle: (service) => setState(() {
+                                      if (_picked.remove(service)) {
+                                        _status.remove(service);
+                                        _reason.remove(service);
+                                        _serverVersion.remove(service);
+                                        _pendingCert.remove(service);
+                                      } else {
+                                        _picked.add(service);
+                                        _skipped.remove(service);
+                                      }
+                                    }),
+                                    onContinue: _enterWalk,
+                                    onBack: () => _goTo(_doorPage),
+                                  ),
+                                  for (var i = 0; i < walk.length; i++)
+                                    OnboardingWalk(
+                                      service: walk[i],
+                                      urlController: _urlCtrl[walk[i]]!,
+                                      apiKeyController: _apiKeyCtrl[walk[i]]!,
+                                      usernameController:
+                                          _usernameCtrl[walk[i]]!,
+                                      passwordController:
+                                          _passwordCtrl[walk[i]]!,
+                                      status: _status[walk[i]],
+                                      reason: _reason[walk[i]],
+                                      failureDetail: _failureDetail[walk[i]],
+                                      serverVersion: _serverVersion[walk[i]],
+                                      verifying: _verifying[walk[i]] ?? false,
+                                      certificateProbe: _pendingCert[walk[i]],
+                                      trustedFingerprint: _pinFor(walk[i]),
+                                      affectedServices: _servicesSharingOrigin(
+                                        walk[i],
+                                      ),
+                                      next: i + 1 < walk.length
+                                          ? walk[i + 1]
+                                          : null,
+                                      onTest: () => _test(walk[i]),
+                                      onTrustCertificate: () =>
+                                          _trustCertificate(walk[i]),
+                                      onSuggestPort: () =>
+                                          _suggestPort(walk[i]),
+                                      onSkip: () => _skip(walk[i]),
+                                      onAdvance: () => _advanceFrom(walk[i]),
+                                      onBack: () => _backFrom(walk[i]),
+                                    ),
+                                  OnboardingClose(
+                                    connected: _answering,
+                                    silent: _silent,
+                                    onFix: _fix,
+                                    onFinish: _finish,
+                                    onReview: () => _goTo(_pickPage),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                        Expanded(
-                          child: PageView(
-                            controller: _pageController,
-                            physics: const NeverScrollableScrollPhysics(),
+                          ];
+
+                          return Flex(
+                            direction: sideBySide
+                                ? Axis.horizontal
+                                : Axis.vertical,
+                            crossAxisAlignment: sideBySide
+                                ? CrossAxisAlignment.center
+                                : CrossAxisAlignment.center,
                             children: [
-                              OnboardingDoor(
-                                onStart: () => _goTo(_pickPage),
-                                onSkip: _skipEverything,
-                              ),
-                              OnboardingPick(
-                                picked: _picked,
-                                onToggle: (service) => setState(() {
-                                  if (_picked.remove(service)) {
-                                    _status.remove(service);
-                                    _reason.remove(service);
-                                    _serverVersion.remove(service);
-                                    _pendingCert.remove(service);
-                                  } else {
-                                    _picked.add(service);
-                                    _skipped.remove(service);
-                                  }
-                                }),
-                                onContinue: _enterWalk,
-                                onBack: () => _goTo(_doorPage),
-                              ),
-                              for (var i = 0; i < walk.length; i++)
-                                OnboardingWalk(
-                                  service: walk[i],
-                                  urlController: _urlCtrl[walk[i]]!,
-                                  apiKeyController: _apiKeyCtrl[walk[i]]!,
-                                  usernameController: _usernameCtrl[walk[i]]!,
-                                  passwordController: _passwordCtrl[walk[i]]!,
-                                  status: _status[walk[i]],
-                                  reason: _reason[walk[i]],
-                                  failureDetail: _failureDetail[walk[i]],
-                                  serverVersion: _serverVersion[walk[i]],
-                                  verifying: _verifying[walk[i]] ?? false,
-                                  certificateProbe: _pendingCert[walk[i]],
-                                  trustedFingerprint: _pinFor(walk[i]),
-                                  affectedServices: _servicesSharingOrigin(
-                                    walk[i],
-                                  ),
-                                  next: i + 1 < walk.length
-                                      ? walk[i + 1]
-                                      : null,
-                                  onTest: () => _test(walk[i]),
-                                  onTrustCertificate: () =>
-                                      _trustCertificate(walk[i]),
-                                  onSuggestPort: () => _suggestPort(walk[i]),
-                                  onSkip: () => _skip(walk[i]),
-                                  onAdvance: () => _advanceFrom(walk[i]),
-                                  onBack: () => _backFrom(walk[i]),
+                              // The instrument, outside the pager on purpose. One ring for
+                              // the whole flow: it holds its place while the forms page
+                              // behind it, rotates the active service to noon, and grows a
+                              // spoke the moment one answers. Hoisting it out is what stops
+                              // the ring and the shell arriving from two different places on
+                              // every step.
+                              OnboardingInstrument(
+                                collapsed: diameter == 0,
+                                compact: compact,
+                                label: activeWalk == null
+                                    ? null
+                                    : OnboardingWalkSubject.eyebrow(
+                                        service: activeWalk,
+                                        position: _page - _firstWalkPage + 1,
+                                        total: walk.length,
+                                      ),
+                                child: TweenAnimationBuilder<double>(
+                                  tween: Tween(end: diameter),
+                                  // The page slide's own timing, so the resize and the
+                                  // shell's travel read as one movement.
+                                  duration: AppAnimation.durationMd,
+                                  curve: AppAnimation.standardCurve,
+                                  builder: (context, animated, _) =>
+                                      TweenAnimationBuilder<double>(
+                                        // On the same clock as the diameter, so the
+                                        // medallion contracts as one object rather than
+                                        // as a mark that catches up with its ring.
+                                        tween: Tween(
+                                          end: compact
+                                              ? _compactMarkFraction
+                                              : ServiceRing.defaultMarkFraction,
+                                        ),
+                                        duration: AppAnimation.durationMd,
+                                        curve: AppAnimation.standardCurve,
+                                        builder: (context, mark, _) =>
+                                            AnimatedBuilder(
+                                              animation: _entrance,
+                                              builder: (context, _) => ServiceRing(
+                                                states: ringStates,
+                                                diameter: animated,
+                                                markFraction: mark,
+                                                entrance: AppAnimation
+                                                    .emphasizedCurve
+                                                    .transform(_entrance.value),
+                                                activeService: activeWalk,
+                                                progress: activeWalk == null
+                                                    ? (_page >= _closePage &&
+                                                              _silent.isEmpty &&
+                                                              _answering
+                                                                  .isNotEmpty
+                                                          ? 1
+                                                          : 0)
+                                                    : (_page - _firstWalkPage) /
+                                                          walk.length,
+                                                spin: true,
+                                              ),
+                                            ),
+                                      ),
                                 ),
-                              OnboardingClose(
-                                connected: _answering,
-                                silent: _silent,
-                                onFix: _fix,
-                                onFinish: _finish,
-                                onReview: () => _goTo(_pickPage),
                               ),
+                              if (sideBySide)
+                                Expanded(child: Column(children: steps))
+                              else
+                                ...steps,
                             ],
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),

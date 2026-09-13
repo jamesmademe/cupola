@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
@@ -341,6 +342,45 @@ class GlobalActivityItemTile extends ConsumerWidget {
       GlobalActivityKind.missing => Icons.warning_amber_rounded,
       GlobalActivityKind.cutoff => Icons.trending_up_rounded,
     };
+
+    // Same row, two shapes. A phone gets a card, because a card is what a finger
+    // aims at; a window gets a table row, because a pointer is precise and a
+    // 1140pt column of 96pt cards wastes the one thing a window has. Everything
+    // else — the actions, the tap target, the badges, the tones — is computed
+    // above and shared, so the table can never drift into being a second,
+    // poorer row with its own bugs.
+    final onOpen = switch (item.kind) {
+      GlobalActivityKind.request => () => context.push(
+        _requestsLocation(item.instanceId),
+      ),
+      _ =>
+        item.raw == null
+            ? null
+            : () => _showDetails(context, ref, writeActions),
+    };
+    final trailing = raw != null && canSearch
+        ? MediaSearchPopupMenu(
+            onAutoSearch: () => _runAutoSearch(context, ref, raw),
+            onInteractiveSearch: () =>
+                _showInteractiveSearch(context, ref, raw),
+            iconSize: 18,
+          )
+        : (writeActions.isEmpty
+              ? null
+              : _RowActionsMenu(item: item, actions: writeActions));
+
+    if (AppBreakpoints.isDesktopShell &&
+        MediaQuery.sizeOf(context).width >= AppBreakpoints.desktopCompact) {
+      return _DesktopActivityRow(
+        item: item,
+        icon: icon,
+        accent: accent,
+        toneColor: toneColor,
+        onOpen: onOpen,
+        trailing: trailing,
+        actions: writeActions,
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -746,46 +786,61 @@ class _RowActionsMenu extends ConsumerWidget {
         color: colorScheme.onSurfaceVariant,
       ),
       onSelected: (action) => _runRowAction(context, ref, item, action),
-      itemBuilder: (context) => [
-        for (final action in actions)
-          PopupMenuItem<_RowAction>(
-            value: action,
-            child: Row(
-              children: [
-                Icon(
-                  action.icon,
-                  size: 18,
-                  color: action.destructive
-                      ? colorScheme.error
-                      : colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: AppSpacing.md),
-                // Flexible, because the longest label does not fit: a Material
-                // 3 popup is capped at 280pt and "Remove from blocklist" plus
-                // its glyph and gutter wants 326, so the row overflowed by 70
-                // and painted the debug stripe over the menu. Wrapping rather
-                // than ellipsising — a menu item that reads "Remove from
-                // blockli…" is worse than one that takes two lines.
-                Flexible(
-                  child: Text(
-                    action.label,
-                    // Recoloured from the ambient row style, not built from
-                    // scratch: a bare `TextStyle(color:)` only happened to keep
-                    // the family and size because `Text` merges an inheriting
-                    // style, which makes the base invisible at the call site.
-                    style: action.destructive
-                        ? DefaultTextStyle.of(
-                            context,
-                          ).style.copyWith(color: colorScheme.error)
-                        : null,
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
+      itemBuilder: (context) => _rowActionMenuItems(context, actions),
     );
   }
+}
+
+/// The row's actions as menu items, built once for both doors.
+///
+/// Two doors on a desktop window — the visible `⋮` button and a right-click on
+/// the row — and exactly one list behind them. That is the binding rule for the
+/// whole desktop layer: hover and right-click are accelerators, so every item
+/// here is also reachable from a control that is simply *there*, and a phone
+/// loses nothing by having no pointer.
+List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
+  BuildContext context,
+  List<_RowAction> actions,
+) {
+  final colorScheme = Theme.of(context).colorScheme;
+  return [
+    for (final action in actions)
+      PopupMenuItem<_RowAction>(
+        value: action,
+        child: Row(
+          children: [
+            Icon(
+              action.icon,
+              size: 18,
+              color: action.destructive
+                  ? colorScheme.error
+                  : colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: AppSpacing.md),
+            // Flexible, because the longest label does not fit: a Material
+            // 3 popup is capped at 280pt and "Remove from blocklist" plus
+            // its glyph and gutter wants 326, so the row overflowed by 70
+            // and painted the debug stripe over the menu. Wrapping rather
+            // than ellipsising — a menu item that reads "Remove from
+            // blockli…" is worse than one that takes two lines.
+            Flexible(
+              child: Text(
+                action.label,
+                // Recoloured from the ambient row style, not built from
+                // scratch: a bare `TextStyle(color:)` only happened to keep
+                // the family and size because `Text` merges an inheriting
+                // style, which makes the base invisible at the call site.
+                style: action.destructive
+                    ? DefaultTextStyle.of(
+                        context,
+                      ).style.copyWith(color: colorScheme.error)
+                    : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+  ];
 }
 
 /// Dispatches one [_RowAction] against [item].
@@ -1102,4 +1157,195 @@ List<Widget> _buildWantedChips(
     if (showDateChip && date != null)
       TagChip(text: formatIsoDate(date), color: AppColors.info),
   ];
+}
+
+/// One activity row as a table row: what it is, what it is doing, and the
+/// controls, on one line.
+///
+/// The columns are the ones the data actually has. The design sheet draws
+/// separate `size`, `done`, `speed` and `left` columns, and the app does not
+/// have those as fields — the service hands them over pre-formatted in one
+/// subtitle string, so splitting them into columns would mean parsing English
+/// back into numbers and being wrong the first time a service words it
+/// differently. The figures therefore stay in one tabular-mono cell, which is
+/// still a column that lines up down the page.
+class _DesktopActivityRow extends ConsumerStatefulWidget {
+  const _DesktopActivityRow({
+    required this.item,
+    required this.icon,
+    required this.accent,
+    required this.toneColor,
+    required this.onOpen,
+    required this.trailing,
+    required this.actions,
+  });
+
+  final GlobalActivityItem item;
+  final IconData icon;
+  final Color accent;
+  final Color toneColor;
+  final VoidCallback? onOpen;
+
+  /// The row's own actions. Always shown, never revealed only on hover: the
+  /// phone has no hover, so nothing may be reachable that way alone — hover
+  /// here brightens the row, and that is all it does.
+  final Widget? trailing;
+
+  /// Offered again on a right-click. The same list the `⋮` button shows, from
+  /// the same place — see [_rowActionMenuItems].
+  final List<_RowAction> actions;
+
+  @override
+  ConsumerState<_DesktopActivityRow> createState() =>
+      _DesktopActivityRowState();
+}
+
+class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
+  bool _hovered = false;
+
+  /// Right-click, at the pointer. Nothing new lives here: every item is also in
+  /// the row's own button, which is why a phone can go without.
+  Future<void> _showContextMenu(Offset globalPosition) async {
+    if (widget.actions.isEmpty) return;
+    final overlay = Overlay.of(context).context.findRenderObject();
+    if (overlay is! RenderBox) return;
+    final action = await showMenu<_RowAction>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromPoints(globalPosition, globalPosition),
+        Offset.zero & overlay.size,
+      ),
+      items: _rowActionMenuItems(context, widget.actions),
+    );
+    if (action == null || !mounted) return;
+    _runRowAction(context, ref, widget.item, action);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final item = widget.item;
+    final progress = item.progress;
+
+    return MouseRegion(
+      cursor: widget.onOpen == null
+          ? SystemMouseCursors.basic
+          : SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onOpen,
+        onSecondaryTapUp: (details) => _showContextMenu(details.globalPosition),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: _hovered
+                ? colorScheme.onSurface.withValues(alpha: 0.045)
+                : null,
+            border: Border(
+              bottom: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(widget.icon, size: 18, color: widget.accent),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    if (progress != null) ...[
+                      const SizedBox(height: 5),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 3,
+                          color: widget.toneColor,
+                          backgroundColor: colorScheme.outlineVariant,
+                        ),
+                      ),
+                    ],
+                    if (item.detail != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        item.detail!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11, color: widget.toneColor),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              // The figures, in one tabular column so they line up down the page
+              // even though the words in them differ per service.
+              SizedBox(
+                width: 210,
+                child: Text(
+                  item.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.onSurfaceDimDark,
+                  ).mono.tabular,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              StatusBadge(info: item.status),
+              if (item.instanceLabel.isNotEmpty) ...[
+                const SizedBox(width: AppSpacing.sm),
+                ConnectionBadge(
+                  label: item.instanceLabel,
+                  accent: widget.accent,
+                ),
+              ],
+              SizedBox(
+                width: 104,
+                child: Text(
+                  item.sortDate == null
+                      ? ''
+                      : formatRelativeDateTime(item.sortDate!),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.onSurfaceDimDark,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 40,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: widget.trailing ?? const SizedBox.shrink(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

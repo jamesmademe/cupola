@@ -11,6 +11,7 @@ import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
 /// A raw JSON-RPC probe: a human label plus the method + params to send.
 class _Probe {
@@ -117,37 +118,39 @@ class _TrueNasDiagnosticsScreenState
           onPressed: _refresh,
         ),
       ],
-      body: FutureBuilder<List<_ProbeResult>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final results = snapshot.data ?? const [];
-          return ListView(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-            ),
-            children: [
-              Text(
-                'Debug-only: raw JSON-RPC responses from the connected server. '
-                'Copy these to help finalise parsing.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+      body: TrueNasConsoleShell(
+        child: FutureBuilder<List<_ProbeResult>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final results = snapshot.data ?? const [];
+            return ListView(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                FloatingNavBarMetrics.getScrollViewBottomPadding(context),
               ),
-              const SizedBox(height: AppSpacing.md),
-              for (final result in results)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: _ProbeCard(result: result),
+              children: [
+                Text(
+                  'Debug-only: raw JSON-RPC responses from the connected server. '
+                  'Copy these to help finalise parsing.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
-            ],
-          );
-        },
+                const SizedBox(height: AppSpacing.md),
+                for (final result in results)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: _ProbeCard(result: result),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

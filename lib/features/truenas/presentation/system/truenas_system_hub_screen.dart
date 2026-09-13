@@ -13,6 +13,7 @@ import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/presentation/system/truenas_diagnostics_screen.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
 class _SystemEntry {
   final String title;
@@ -67,42 +68,49 @@ class TrueNasSystemHubScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return TrueNasSectionScaffold(
       title: 'System',
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.lg,
-          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
-        children: [
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: AppSpacing.md,
-            crossAxisSpacing: AppSpacing.md,
-            // Grows the cells taller with the reading size; a fixed ratio
-            // clipped the tile labels at accessibility text sizes.
-            childAspectRatio: TextScaleMetrics.aspectRatio(context, base: 1.4),
-            children: [for (final entry in _entries) _SystemTile(entry: entry)],
+      body: TrueNasConsoleShell(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
-          // Entry point for inspecting raw JSON-RPC responses. Debug builds
-          // only: the screen dumps server payloads verbatim with a copy button,
-          // which must never ship to release even while today's probes are
-          // limited to non-sensitive methods.
-          if (kDebugMode) ...[
-            const SizedBox(height: AppSpacing.md),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const TrueNasDiagnosticsScreen(),
-                ),
+          children: [
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: AppSpacing.md,
+              crossAxisSpacing: AppSpacing.md,
+              // Grows the cells taller with the reading size; a fixed ratio
+              // clipped the tile labels at accessibility text sizes.
+              childAspectRatio: TextScaleMetrics.aspectRatio(
+                context,
+                base: 1.4,
               ),
-              icon: const Icon(Icons.bug_report_rounded, size: 18),
-              label: const Text('Diagnostics (debug)'),
+              children: [
+                for (final entry in _entries) _SystemTile(entry: entry),
+              ],
             ),
+            // Entry point for inspecting raw JSON-RPC responses. Debug builds
+            // only: the screen dumps server payloads verbatim with a copy button,
+            // which must never ship to release even while today's probes are
+            // limited to non-sensitive methods.
+            if (kDebugMode) ...[
+              const SizedBox(height: AppSpacing.md),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const TrueNasDiagnosticsScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.bug_report_rounded, size: 18),
+                label: const Text('Diagnostics (debug)'),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

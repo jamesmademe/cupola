@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/reel_motion.dart';
@@ -25,6 +26,28 @@ const onboardingPadding = EdgeInsets.fromLTRB(
 /// Widest the column is allowed to get. Past this a field's label and its
 /// control drift too far apart to read as a pair.
 const onboardingMaxWidth = 560.0;
+
+/// Whether this window puts the ring beside the step instead of above it.
+///
+/// The same test the screen makes — platform first, then width — kept here so
+/// the beats can ask it without importing the screen.
+bool onboardingSideBySide(BuildContext context) =>
+    AppBreakpoints.isDesktopShell &&
+    MediaQuery.sizeOf(context).width >= AppBreakpoints.desktopCompact;
+
+/// The well on a desktop window, where the ring sits *beside* the step.
+///
+/// 1040 rather than the well every other screen uses: the ring is 396 and the
+/// form wants its own 560, and those two plus the air between them is what this
+/// number is. It is not a reading measure — nothing here is prose.
+const onboardingDesktopMaxWidth = 1040.0;
+
+/// The ring at the size DESIGN.md protects it at.
+///
+/// On a phone the diameter is negotiated against whatever height the keyboard
+/// leaves; in a wide window there is nothing to negotiate with, so it is a
+/// constant and the instrument stops resizing under the user mid-flow.
+const onboardingDesktopRingDiameter = 396.0;
 
 /// Whether the keyboard is currently taking screen height, published for the
 /// whole flow.
@@ -298,41 +321,70 @@ class OnboardingBeat extends StatelessWidget {
   final MainAxisAlignment alignment;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    // The generous top and bottom gutters are for a beat sitting against the
-    // screen edge. With the keyboard up there is no edge below — the key rows
-    // are the edge — and that spare 44pt is exactly what the pinned actions
-    // need in order not to overflow once the dismiss bar takes its place.
-    padding: OnboardingKeyboardScope.of(context)
-        ? onboardingPadding.copyWith(top: AppSpacing.md, bottom: AppSpacing.sm)
-        : onboardingPadding,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
-              // Dragging the form puts the keyboard away, the platform gesture
-              // for exactly that.
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: alignment,
-                  children: children,
+  Widget build(BuildContext context) {
+    // Whether the actions ride with the content instead of being pinned.
+    final followsContent = actions != null && onboardingSideBySide(context);
+    return Padding(
+      // The generous top and bottom gutters are for a beat sitting against the
+      // screen edge. With the keyboard up there is no edge below — the key rows
+      // are the edge — and that spare 44pt is exactly what the pinned actions
+      // need in order not to overflow once the dismiss bar takes its place.
+      padding: OnboardingKeyboardScope.of(context)
+          ? onboardingPadding.copyWith(
+              top: AppSpacing.md,
+              bottom: AppSpacing.sm,
+            )
+          : onboardingPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                // Dragging the form puts the keyboard away, the platform gesture
+                // for exactly that.
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    // `end` means "sit under the ring, close to the thumb" — a
+                    // phone answer to a phone layout. Beside the ring there is
+                    // nothing above to sit under and no thumb to be near, so the
+                    // step centres on the instrument it is paired with. Resolved
+                    // here rather than at each beat so no step can disagree.
+                    mainAxisAlignment:
+                        onboardingSideBySide(context) &&
+                            alignment == MainAxisAlignment.end
+                        ? MainAxisAlignment.center
+                        : alignment,
+                    children: [
+                      ...children,
+                      // Beside the ring the actions travel with the copy they
+                      // belong to. Pinned to the foot of the column they would
+                      // sit a hand's width below the sentence that argues for
+                      // them, with nothing in between — which is the right answer
+                      // on a phone, where the foot of the screen is where the
+                      // thumb already is, and the wrong one in a window.
+                      if (followsContent) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        actions!,
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        if (actions != null) ...[
-          const SizedBox(height: AppSpacing.lg),
-          actions!,
+          if (actions != null && !followsContent) ...[
+            const SizedBox(height: AppSpacing.lg),
+            actions!,
+          ],
         ],
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 /// Two actions side by side, stacking once the reading size stops letting them

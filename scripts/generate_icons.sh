@@ -20,11 +20,11 @@ set -euo pipefail
 #   assets/brand/cupola_mark.png  the in-app mark drawn by ServiceRing — a real
 #                           app asset declared in pubspec.yaml, not scratch
 #   ios|macos .icon/Assets  Icon Composer layers, light and dark groups
-#   ios .appiconset         the iOS fallback catalogue (dark appearance; those
-#                           slots have no appearance channel)
 #   macos cupola_icon_legacy.icns  the macOS fallback, for systems that predate
-#                           Icon Composer; macOS has no .appiconset, since actool
-#                           ignores one when the app icon is a .icon bundle
+#                           Icon Composer (dark appearance; it has no appearance
+#                           channel). Neither Apple platform has an .appiconset:
+#                           actool ignores one when the app icon is a .icon bundle,
+#                           and iOS's fallback is derived by actool itself
 #   android res/mipmap-*    light appearance, plus mipmap-night-* for dark and
 #                           an adaptive foreground for each
 #   android res/drawable*   the adaptive backgrounds, one per appearance
@@ -132,10 +132,8 @@ def output_paths():
         result.update(paths(f"{platform}/Runner/cupola_icon.icon/icon.json"))
         result.update(paths(f"{platform}/Runner/cupola_icon.icon/Assets/*.png"))
         result.update(paths(f"{platform}/Runner.xcodeproj/project.pbxproj"))
-    # The fallbacks differ by platform: iOS keeps a catalogue, macOS gets a .icns,
-    # because actool reads no .appiconset once the app icon is a .icon bundle.
-    result.update(paths("ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json"))
-    result.update(paths("ios/Runner/Assets.xcassets/AppIcon.appiconset/*.png"))
+    # Only macOS has a fallback of our own to write; actool derives iOS's from the
+    # .icon and names it in the Info.plist, so there is nothing here to track.
     result.update(paths("macos/Runner/cupola_icon_legacy.icns"))
     result.update(paths("web/icons/*.png"))
     result.update(paths("web/favicon*.png"))
@@ -164,8 +162,6 @@ def role(path):
         return "Android launcher output"
     if ".icon/" in path:
         return "Apple Icon Composer active input"
-    if "AppIcon.appiconset/" in path:
-        return "Apple fallback catalog output/config"
     if path.endswith("cupola_icon_legacy.icns"):
         return "macOS pre-Icon Composer fallback output"
     if path.startswith(("ios/", "macos/")):

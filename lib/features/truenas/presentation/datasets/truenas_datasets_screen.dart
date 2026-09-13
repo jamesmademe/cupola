@@ -15,6 +15,7 @@ import 'package:cupola/features/truenas/domain/models/dataset.dart';
 import 'package:cupola/features/truenas/presentation/datasets/truenas_dataset_actions.dart';
 import 'package:cupola/features/truenas/presentation/datasets/truenas_dataset_providers.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
 class TrueNasDatasetsScreen extends ConsumerWidget {
   const TrueNasDatasetsScreen({super.key});
@@ -26,49 +27,51 @@ class TrueNasDatasetsScreen extends ConsumerWidget {
     return TrueNasSectionScaffold(
       title: 'Datasets',
       floatingActionButton: const DatasetCreateButton(),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(truenasDatasetTreeProvider),
-        child: tree.when(
-          loading: () => ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            children: [AppSkeleton.listRows()],
-          ),
-          error: (error, _) => ListView(
-            children: [
-              AppErrorState(
-                error: error,
-                onRetry: () => ref.invalidate(truenasDatasetTreeProvider),
-              ),
-            ],
-          ),
-          data: (roots) => roots.isEmpty
-              ? const AppEmptyState(
-                  icon: Icons.account_tree_rounded,
-                  title: 'No datasets',
-                  accentColor: AppColors.truenas,
-                )
-              : ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                    AppSpacing.lg,
-                    FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-                  ),
-                  children: [
-                    for (final root in roots)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: AppCard.surfaceOutlined(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.xs,
-                          ),
-                          child: _DatasetNode(dataset: root, depth: 0),
-                        ),
-                      ),
-                  ],
+      body: TrueNasConsoleShell(
+        child: RefreshIndicator(
+          onRefresh: () async => ref.invalidate(truenasDatasetTreeProvider),
+          child: tree.when(
+            loading: () => ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: [AppSkeleton.listRows()],
+            ),
+            error: (error, _) => ListView(
+              children: [
+                AppErrorState(
+                  error: error,
+                  onRetry: () => ref.invalidate(truenasDatasetTreeProvider),
                 ),
+              ],
+            ),
+            data: (roots) => roots.isEmpty
+                ? const AppEmptyState(
+                    icon: Icons.account_tree_rounded,
+                    title: 'No datasets',
+                    accentColor: AppColors.truenas,
+                  )
+                : ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+                    ),
+                    children: [
+                      for (final root in roots)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: AppCard.surfaceOutlined(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.xs,
+                            ),
+                            child: _DatasetNode(dataset: root, depth: 0),
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );

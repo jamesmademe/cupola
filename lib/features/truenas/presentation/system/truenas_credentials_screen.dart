@@ -14,6 +14,7 @@ import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_form_sheet.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
 class TrueNasCredentialsScreen extends ConsumerStatefulWidget {
   const TrueNasCredentialsScreen({super.key});
@@ -45,9 +46,11 @@ class _TrueNasCredentialsScreenState
           Tab(text: 'Groups'),
         ],
       ),
-      body: TabBarView(
-        controller: _tab,
-        children: const [_UsersTab(), _GroupsTab()],
+      body: TrueNasConsoleShell(
+        child: TabBarView(
+          controller: _tab,
+          children: const [_UsersTab(), _GroupsTab()],
+        ),
       ),
     );
   }

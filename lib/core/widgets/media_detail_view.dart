@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart'
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_gradients.dart';
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
@@ -146,7 +147,10 @@ class MediaDetailView extends StatelessWidget {
                   accent: accent,
                   heroFallbackIcon: heroFallbackIcon,
                 ),
-                ..._emitBody(context, gutter, entranceDelay),
+                if (_twoTrack(constraints.maxWidth))
+                  ..._emitTwoTrack(context, constraints.maxWidth, entranceDelay)
+                else
+                  ..._emitBody(context, gutter, entranceDelay),
                 // The Nav Clearance Rule, unconditionally and in exactly one
                 // place: the floating bar overlaps this scroll view and grows
                 // with the reading size, so the last slot cannot end on a
@@ -180,6 +184,92 @@ class MediaDetailView extends StatelessWidget {
     );
   }
 
+  /// Whether this window is wide enough to put the spine and a side track
+  /// beside each other.
+  ///
+  /// The threshold is the sum of the two tracks and their gutters, not a round
+  /// number: below it the side track would be narrower than the 300 its content
+  /// is drawn for, and a 240pt column of poster tiles is the Column Floor
+  /// mistake one axis over. A touch build never takes this path at any width —
+  /// a tablet in landscape is still held in two hands, and the spine is what it
+  /// is holding.
+  static bool _twoTrack(double availableWidth) =>
+      AppBreakpoints.isDesktopShell && availableWidth >= 1000;
+
+  /// The spine and its side track, as one scroll.
+  ///
+  /// `SliverCrossAxisGroup` rather than a `Row` of two scroll views: the two
+  /// tracks scroll together as one page — which is what the design draws — and
+  /// each half keeps its own slivers, so a 250-episode season inside `operate`
+  /// still builds the eight rows on screen and not all 250. A `Row` would have
+  /// cost either the laziness or the shared scroll.
+  ///
+  /// Which regions go where: `operate` and `related` move, the rest stay. Both
+  /// are lists *about* the title rather than the reading of it, and a 1440pt
+  /// window that keeps them under the synopsis wastes half its glass on a
+  /// column of air.
+  ///
+  /// **Reading order is not visual order here.** A screen reader walks the main
+  /// track and then the side track, so it hears deck, readout, synopsis,
+  /// reference, operate, related — the spine's six regions, two of them later
+  /// than on the phone. Interleaving them back would need sort keys the sliver
+  /// semantics tree does not honour across cross-axis groups, and a broken sort
+  /// key is worse than an honest reordering: every region still carries its own
+  /// label, and none of them has moved out of the page.
+  List<Widget> _emitTwoTrack(
+    BuildContext context,
+    double availableWidth,
+    Duration entranceDelay,
+  ) {
+    const sideTrackWidth = 300.0;
+    final mainWidth = math.min(
+      MediaDetailMetrics.bodyMaxWidth,
+      availableWidth - sideTrackWidth - AppSpacing.xl,
+    );
+    final mainGutter = MediaDetailMetrics.gutterOf(mainWidth);
+
+    final main = MediaDetailBody(
+      deck: body.deck,
+      readout: body.readout,
+      synopsis: body.synopsis,
+      reference: body.reference,
+    );
+    final side = MediaDetailBody(operate: body.operate, related: body.related);
+
+    return [
+      SliverCrossAxisGroup(
+        slivers: [
+          SliverCrossAxisExpanded(
+            flex: 1,
+            sliver: SliverMainAxisGroup(
+              slivers: _emitBody(
+                context,
+                mainGutter,
+                entranceDelay,
+                only: main,
+              ),
+            ),
+          ),
+          SliverConstrainedCrossAxis(
+            maxExtent: sideTrackWidth,
+            sliver: SliverMainAxisGroup(
+              slivers: _emitBody(
+                context,
+                AppSpacing.lg,
+                entranceDelay,
+                only: side,
+                // Continues the main track's cascade rather than restarting it:
+                // two columns arriving in parallel read as a flicker, one
+                // sweep reads as a page.
+                firstStaggerIndex: 4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
   /// Flattens [body] into top-level slivers, in canonical region order.
   ///
   /// Every slot contributes real slivers rather than rows inside one
@@ -195,13 +285,22 @@ class MediaDetailView extends StatelessWidget {
   List<Widget> _emitBody(
     BuildContext context,
     double gutter,
-    Duration entranceDelay,
-  ) {
+    Duration entranceDelay, {
+
+    /// The regions to emit. Defaults to the whole body; the two-track desktop
+    /// layout passes one half at a time.
+    MediaDetailBody? only,
+
+    /// Where this track's entrance cascade starts, so two tracks do not both
+    /// count from zero and arrive as one flat wave.
+    int firstStaggerIndex = 0,
+  }) {
+    final body = only ?? this.body;
     final labelAccent = accent ?? Theme.of(context).colorScheme.primary;
     final horizontal = EdgeInsets.symmetric(horizontal: gutter);
     final slivers = <Widget>[];
 
-    var staggerIndex = 0;
+    var staggerIndex = firstStaggerIndex;
 
     /// One stagger unit. A label and its box share an index so they arrive as
     /// one object; a lazy list and a rail are never wrapped at all — a

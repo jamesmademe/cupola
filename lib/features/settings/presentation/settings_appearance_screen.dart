@@ -9,6 +9,7 @@ import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_choice_row.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 
 class SettingsAppearanceScreen extends ConsumerWidget {
   const SettingsAppearanceScreen({super.key});
@@ -20,36 +21,38 @@ class SettingsAppearanceScreen extends ConsumerWidget {
 
     return AmbientScaffold(
       appBar: const GlassAppBar(title: Text('Appearance')),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.sm,
-          AppSpacing.lg,
-          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-            child: Text(
-              'Both themes are first-class — light is not an inverted '
-              'afterthought. Each service keeps its own colour either way.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+      body: SettingsMasterDetail(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+          ),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+              child: Text(
+                'Both themes are first-class — light is not an inverted '
+                'afterthought. Each service keeps its own colour either way.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
-          ),
-          SettingsGroupCard(
-            children: [
-              for (final mode in AppThemeMode.values)
-                SettingsChoiceRow(
-                  label: mode.label,
-                  description: _describe(mode),
-                  selected: settings.themeMode == mode,
-                  onSelected: () => _updateThemeMode(ref, settings, mode),
-                ),
-            ],
-          ),
-        ],
+            SettingsGroupCard(
+              children: [
+                for (final mode in AppThemeMode.values)
+                  SettingsChoiceRow(
+                    label: mode.label,
+                    description: _describe(mode),
+                    selected: settings.themeMode == mode,
+                    onSelected: () => _updateThemeMode(ref, settings, mode),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

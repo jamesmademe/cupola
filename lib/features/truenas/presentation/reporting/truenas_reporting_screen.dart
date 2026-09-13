@@ -11,6 +11,7 @@ import 'package:cupola/features/truenas/domain/models/reporting.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/charts/line_area_chart.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
 /// Reporting graphs to show, in order.
 ///
@@ -65,50 +66,52 @@ class _TrueNasReportingScreenState
 
     return TrueNasSectionScaffold(
       title: 'Reporting',
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(_reportingProvider(query)),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.md,
-            AppSpacing.lg,
-            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-          ),
-          children: [
-            Center(
-              child: SegmentedButton<String>(
-                showSelectedIcon: false,
-                segments: [
-                  for (final entry in _units.entries)
-                    ButtonSegment(value: entry.key, label: Text(entry.value)),
-                ],
-                selected: {_unit},
-                onSelectionChanged: (value) =>
-                    setState(() => _unit = value.first),
-              ),
+      body: TrueNasConsoleShell(
+        child: RefreshIndicator(
+          onRefresh: () async => ref.invalidate(_reportingProvider(query)),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              FloatingNavBarMetrics.getScrollViewBottomPadding(context),
             ),
-            const SizedBox(height: AppSpacing.md),
-            graphs.when(
-              loading: () => AppSkeleton.listRows(count: 4),
-              error: (e, _) => AppErrorState(
-                error: e,
-                onRetry: () => ref.invalidate(_reportingProvider(query)),
+            children: [
+              Center(
+                child: SegmentedButton<String>(
+                  showSelectedIcon: false,
+                  segments: [
+                    for (final entry in _units.entries)
+                      ButtonSegment(value: entry.key, label: Text(entry.value)),
+                  ],
+                  selected: {_unit},
+                  onSelectionChanged: (value) =>
+                      setState(() => _unit = value.first),
+                ),
               ),
-              data: (list) => list.isEmpty
-                  ? AppCard.surfaceOutlined(
-                      child: Text(
-                        'No reporting data available.',
-                        style: Theme.of(context).textTheme.bodySmall,
+              const SizedBox(height: AppSpacing.md),
+              graphs.when(
+                loading: () => AppSkeleton.listRows(count: 4),
+                error: (e, _) => AppErrorState(
+                  error: e,
+                  onRetry: () => ref.invalidate(_reportingProvider(query)),
+                ),
+                data: (list) => list.isEmpty
+                    ? AppCard.surfaceOutlined(
+                        child: Text(
+                          'No reporting data available.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          for (final graph in list) _GraphCard(graph: graph),
+                        ],
                       ),
-                    )
-                  : Column(
-                      children: [
-                        for (final graph in list) _GraphCard(graph: graph),
-                      ],
-                    ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );

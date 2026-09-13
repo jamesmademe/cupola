@@ -88,6 +88,14 @@ dependencies:
   # would let a patch release change text layout across the app unreviewed.
   reel_text: 0.4.3
 
+  # Desktop window chrome. The app draws its own 44px top strip on macOS,
+  # Windows and Linux, so it needs the window itself to stop drawing one: this
+  # is the only package that can hide a title bar while keeping the macOS
+  # traffic lights, which the design requires inset over our strip rather than
+  # replaced by lookalikes. Desktop-only by construction — every call site is
+  # behind `DesktopWindow.isSupported`, so the mobile builds never touch it.
+  window_manager: ^0.5.0
+
 dependency_overrides:
   # path_provider_foundation 2.6.0 pulls in objective_c native assets,
   # which currently breaks iOS release install/signing on device.
