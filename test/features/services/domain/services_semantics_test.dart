@@ -89,7 +89,7 @@ void main() {
       // It used to carry the offline services too, because a folded band was a
       // strip of bare glyphs and an unlit tile says nothing to a screen reader.
       // The compact cards that replaced the strip are labelled nodes of their
-      // own, so repeating it here would say "Lidarr isn't answering" twice on
+      // own, so repeating it here would say "Lidarr did not answer." twice on
       // the way into the band.
       expect(serviceDomainBandValue(serviceCount: 6), '6 services');
     });
@@ -116,27 +116,27 @@ void main() {
       // scrolled past, not across the full width as the primary warning.
       expect(
         servicesSectionOfflineMessage(const ['Radarr', 'Sonarr', 'Lidarr']),
-        "Radarr, Sonarr and 1 other aren't answering",
+        "Radarr, Sonarr and 1 other did not answer.",
       );
     });
   });
 
   group('servicesAlertBandMessage', () {
-    test('a single offender gets a singular verb', () {
-      expect(servicesAlertBandMessage(['Dockge']), "Dockge isn't answering");
+    test('a single offender is named on its own', () {
+      expect(servicesAlertBandMessage(['Dockge']), "Dockge did not answer.");
     });
 
     test('two are joined with "and", not a trailing comma', () {
       expect(
         servicesAlertBandMessage(['Dockge', 'TrueNAS']),
-        "Dockge and TrueNAS aren't answering",
+        "Dockge and TrueNAS did not answer.",
       );
     });
 
     test('three are listed in full', () {
       expect(
         servicesAlertBandMessage(['Dockge', 'TrueNAS', 'Unraid']),
-        "Dockge, TrueNAS and Unraid aren't answering",
+        "Dockge, TrueNAS and Unraid did not answer.",
       );
     });
 
@@ -149,19 +149,19 @@ void main() {
           'Bazarr',
           'Prowlarr',
         ]),
-        "Dockge, TrueNAS, Unraid and 2 others aren't answering",
+        "Dockge, TrueNAS, Unraid and 2 others did not answer.",
       );
     });
 
     test('exactly one hidden offender is singular', () {
       expect(
         servicesAlertBandMessage(['Dockge', 'TrueNAS', 'Unraid', 'Bazarr']),
-        "Dockge, TrueNAS, Unraid and 1 other aren't answering",
+        "Dockge, TrueNAS, Unraid and 1 other did not answer.",
       );
     });
 
     test('an empty list produces no sentence at all', () {
-      // The band renders nothing in this state; a stray "aren't answering"
+      // The band renders nothing in this state; a stray "did not answer."
       // would be worse than silence.
       expect(servicesAlertBandMessage([]), isEmpty);
       expect(servicesAlertBandMessage(['', '   ']), isEmpty);

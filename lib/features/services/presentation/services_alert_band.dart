@@ -1,14 +1,15 @@
-/// The conditional outage notice above the stack matrix on `/services`.
+/// The conditional outage notice: region 2 of the Dashboard.
 ///
 /// Renders **nothing** while every configured service is answering, which is
 /// the whole design: its presence is the signal, so a healthy stack has no
-/// alert chrome to learn to ignore. A persistent "13 of 13 online" instrument
+/// alert chrome to learn to ignore. A persistent "16 of 16 online" instrument
 /// would be green on almost every open, and a badge that is always green is a
-/// badge nobody reads on the day it turns red.
+/// badge nobody reads on the day it turns red. The header above it already says
+/// the count in words, in neutral, which is where a number belongs.
 ///
 /// It replaces an 8pt dot in the app bar whose only affordance was a `Tooltip` —
 /// useless on the phone this app is mostly used on — and which counted against
-/// all thirteen `ServiceKey.values` rather than the configured ones, so a healthy
+/// every `ServiceKey.values` entry rather than the configured ones, so a healthy
 /// five-service stack reported "5 online, 8 offline".
 ///
 /// ## Why it is a line and not a card
@@ -44,6 +45,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -137,10 +139,12 @@ class ServicesAlertBand extends ConsumerWidget {
           ref.invalidate(serviceSummaryProvider(service));
           ref.invalidate(serviceKpiProvider(service));
           ref.invalidate(serviceSignalProvider(service));
+          ref.invalidate(serviceSignalPairProvider(service));
         }
       },
       onDismiss: () =>
           ref.read(dismissedOutagesProvider.notifier).dismiss(unacknowledged),
+      onOpenSettings: () => context.go('/settings/connections'),
     );
   }
 }
@@ -150,11 +154,13 @@ class _AlertBandBody extends StatelessWidget {
     required this.services,
     required this.onRetry,
     required this.onDismiss,
+    required this.onOpenSettings,
   });
 
   final List<ServiceKey> services;
   final VoidCallback onRetry;
   final VoidCallback onDismiss;
+  final VoidCallback onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -162,6 +168,12 @@ class _AlertBandBody extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final titles = services.map((s) => s.title).toList(growable: false);
     final message = servicesAlertBandMessage(titles);
+    // The second sentence is the consequence, and it is what a wide surface has
+    // room for: a dark SABnzbd does not merely fail to answer, it takes its
+    // share of every figure on this page with it. The phone prints the first
+    // sentence only — there is one line of room, and the name of the service is
+    // the half that cannot be dropped.
+    final wide = MediaQuery.sizeOf(context).width >= 600;
 
     // The one place the error tone is still spent. Through `onTint` with no
     // tint — the composite is the scaffold surface itself — because the raw
@@ -202,7 +214,7 @@ class _AlertBandBody extends StatelessWidget {
             Expanded(
               child: ExcludeSemantics(
                 child: Text(
-                  message,
+                  wide ? '$message $servicesAlertBandDetail' : message,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -223,7 +235,29 @@ class _AlertBandBody extends StatelessWidget {
                 visualDensity: VisualDensity.compact,
               ),
               child: Text(
-                'Retry',
+                servicesRetryLabel(services.length),
+                style: theme.textTheme.labelLarge
+                    ?.weight(FontWeight.w700)
+                    .copyWith(color: colorScheme.primary),
+              ),
+            ),
+            // The second half of "the action is the fix". Retry re-probes; when
+            // the address itself is what changed, no number of retries will help
+            // and the only thing that will is one tap away. It is a text action
+            // rather than a glyph because there is no icon for "the address is
+            // wrong", and it is brand indigo for the same reason Retry is:
+            // painting the recovery in the fault's own tone makes the cure look
+            // as alarming as the disease.
+            TextButton(
+              onPressed: onOpenSettings,
+              style: TextButton.styleFrom(
+                foregroundColor: colorScheme.primary,
+                minimumSize: const Size(56, 44),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                visualDensity: VisualDensity.compact,
+              ),
+              child: Text(
+                'Settings',
                 style: theme.textTheme.labelLarge
                     ?.weight(FontWeight.w700)
                     .copyWith(color: colorScheme.primary),

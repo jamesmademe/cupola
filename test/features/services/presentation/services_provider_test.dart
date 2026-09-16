@@ -258,23 +258,25 @@ void main() {
         // whose client reported no progress last and in source order.
         expect(items.map((item) => item.title), [
           'Furiosa',
-          'The Boys',
+          'The Boys · S04E07',
           'Shogun',
           'Slow Horses',
         ]);
         expect(items[0].service, ServiceKey.radarr);
-        // The source leads every row: seven possible clients feed this list and
-        // the leading glyph alone never said which detail screen a tap opens.
-        expect(items[0].subtitle, startsWith('Radarr · Movie · '));
-        expect(items[0].subtitle, contains('Furiosa.2024.2160p.WEB-DL-GROUP'));
+        // The row's four fields are the row's four fields, whatever the source:
+        // the quality the \*arr grabbed under, and the client actually moving
+        // the bytes — which is the one fact a merged queue cannot leave to a
+        // glyph. The pre-joined per-service subtitle is gone; see
+        // `domain/in_flight.dart`.
+        expect(items[0].quality, 'WEB-DL 1080p');
+        expect(items[0].clientLabel, isNotEmpty);
         expect(items[0].progress, 0.75);
         expect(items[1].service, ServiceKey.sonarr);
-        expect(items[1].title, 'The Boys');
-        expect(items[1].subtitle, startsWith('Sonarr · Series · S04E07'));
-        expect(
-          items[1].subtitle,
-          contains('The.Boys.S04E07.1080p.WEB-DL-GROUP'),
-        );
+        // An \*arr that flags a queue record has flagged a transfer that has
+        // stopped being one: it leaves the in-flight region and becomes a
+        // decision, carrying the arr's own words.
+        expect(items[1].stalled, isTrue);
+        expect(items[1].warning, isNotNull);
         expect(items[1].progress, 0.5);
         expect(items[2].progress, isNull);
         expect(items[3].progress, isNull);
@@ -314,11 +316,17 @@ void main() {
         ]),
       );
 
-      final items = await container.read(servicesQueueProvider.future);
+      // The cap belongs to the *region*, not to the fetch: the decisions region
+      // reads the same provider looking for stalls, and a list trimmed to five
+      // before it got there could hide the stuck one behind five healthy
+      // transfers.
+      final all = await container.read(servicesQueueProvider.future);
+      expect(all, hasLength(8));
 
-      expect(items, hasLength(servicesQueuePreviewLimit));
-      expect(items.first.title, 'Release 7');
-      expect(items.last.title, 'Release 3');
+      final inFlight = await container.read(servicesInFlightProvider.future);
+      expect(inFlight.active, hasLength(servicesQueuePreviewLimit));
+      expect(inFlight.active.first.title, 'Release 7');
+      expect(inFlight.active.last.title, 'Release 3');
     });
 
     // The provider fans out to seven services at once, so what it watches
@@ -418,7 +426,7 @@ void main() {
     test('an unrelated settings change does not rebuild the rail', () async {
       final container = _mutableSettingsContainer(
         initial: _secureRadarr,
-        radarrService: _MoviesRadarrService([buildMovie(title: 'Dune')]),
+        radarrService: _HistoryRadarrService([_importedRecord]),
       );
 
       final first = await container.read(servicesRecentlyAddedProvider.future);
@@ -442,7 +450,7 @@ void main() {
       // images at the old server.
       final container = _mutableSettingsContainer(
         initial: _secureRadarr,
-        radarrService: _MoviesRadarrService([buildMovie(title: 'Dune')]),
+        radarrService: _HistoryRadarrService([_importedRecord]),
       );
 
       final first = await container.read(servicesRecentlyAddedProvider.future);
@@ -457,6 +465,41 @@ void main() {
       final second = await container.read(servicesRecentlyAddedProvider.future);
 
       expect(identical(first, second), isFalse);
+    });
+
+    test('it reads history, and keeps only what landed or failed', () async {
+      // One page per arr, unfiltered, classified here — see
+      // `domain/arr_import.dart` for why the brief's `eventType` query cannot
+      // be sent. A page of history is mostly `grabbed`, and none of it is this
+      // region's business.
+      final container = _container(
+        settings: _secureRadarr,
+        radarrService: _HistoryRadarrService([
+          _importedRecord,
+          {
+            'id': 2,
+            'eventType': 'grabbed',
+            'date': '2024-05-05T09:00:00Z',
+            'sourceTitle': 'Something.Grabbed',
+          },
+          {
+            'id': 3,
+            'eventType': 'downloadFailed',
+            'date': '2024-05-05T07:00:00Z',
+            'sourceTitle': 'Nickel.Boys.2024',
+            'movieId': 77,
+          },
+        ]),
+      );
+
+      final items = await container.read(servicesRecentlyAddedProvider.future);
+
+      expect(items.map((item) => item.title), [
+        'Poor Things',
+        'Nickel.Boys.2024',
+      ]);
+      expect(items.first.failed, isFalse);
+      expect(items.last.failed, isTrue);
     });
   });
 
@@ -578,6 +621,29 @@ class _MoviesRadarrService extends FakeRadarrService {
   @override
   Future<List<RadarrMovie>> getMovies() async => movies;
 }
+
+/// One page of \*arr history, which is what Recently added and the failed-import
+/// decisions both read.
+class _HistoryRadarrService extends FakeRadarrService {
+  _HistoryRadarrService(this.records);
+
+  final List<Map<String, dynamic>> records;
+
+  @override
+  Future<List<dynamic>> getHistory({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => records;
+}
+
+const Map<String, dynamic> _importedRecord = {
+  'id': 1,
+  'eventType': 'downloadFolderImported',
+  'date': '2024-05-05T08:12:00Z',
+  'movieId': 10,
+  'movie': {'title': 'Poor Things', 'images': <dynamic>[]},
+};
 
 class _ThrowingMoviesRadarrService extends FakeRadarrService {
   @override

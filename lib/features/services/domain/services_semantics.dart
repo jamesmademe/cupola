@@ -34,11 +34,97 @@ String spokenFromDotted(String visual) => joinSpokenParts(visual.split('·'));
 /// happens to work in English for counts and collapses entirely for a rate
 /// ("2.4 MB/s Down"). It is null while the KPI is still resolving, and on an
 /// unreachable service that has no signal to report.
+/// [secondarySpoken] is the card's second figure, which exists for the same
+/// reason the first does and is spoken in the same breath — a screen-reader user
+/// who hears only "34 missing" has been told the fault and not the scale.
+///
+/// [instanceLabel] is the `×2` the card draws for a multi-connection service,
+/// spoken as words: "×2" is read as "times two" or skipped entirely depending on
+/// the reader's punctuation verbosity, and neither is "two connections".
 String serviceMatrixCellValue({
   required String statusLabel,
   required String? signalSpoken,
   required String host,
-}) => joinSpokenParts([statusLabel, signalSpoken, host]);
+  String? secondarySpoken,
+  String? instanceLabel,
+}) => joinSpokenParts([
+  statusLabel,
+  signalSpoken,
+  secondarySpoken,
+  instanceLabel,
+  host,
+]);
+
+/// `two connections` — the spoken form of the card's `×N` chip.
+String serviceInstanceCountLabel(int count) {
+  if (count <= 1) return '';
+  final word = switch (count) {
+    2 => 'two',
+    3 => 'three',
+    4 => 'four',
+    _ => '$count',
+  };
+  return '$word connections';
+}
+
+/// The cell for a service nobody has set up: `Readarr — Not set up · Add it`.
+///
+/// An unconfigured service is a **cell in the band**, not a footnote under the
+/// matrix. The footnote it replaces was dismissible, which meant the stack could
+/// permanently claim to be everything the user runs while hiding one of its own
+/// rows; and it was one line for all of them, so it could not say *which*. A
+/// dimmed cell in the domain it belongs to says both, and leads somewhere.
+const String servicesNotSetUpCellLabel = 'Not set up · Add it';
+
+/// The STACK region header: `Stack · 16 · 1 more to set up`.
+///
+/// The count is the whole registry, not the configured subset, which is the
+/// point: the region is the inventory of what this app can talk to, and the
+/// trailing clause is how many of them are still dark.
+String servicesStackHeaderValue({
+  required int registrySize,
+  required int notSetUp,
+}) => joinSpokenParts([
+  '$registrySize services',
+  if (notSetUp > 0)
+    notSetUp == 1 ? '1 more to set up' : '$notSetUp more to set up',
+]);
+
+/// A domain band's permanent health line: `4 of 5 clean · Bazarr degraded`.
+///
+/// Permanent, where the line it replaces appeared only while the band was folded
+/// — so retiring the fold would have deleted the one place a band said anything
+/// about itself. `clean` counts the services in the band that are answering and
+/// have nothing flagged; the qualifiers name the ones that do, at most two,
+/// because a band header is not a list.
+String serviceDomainHealthLine({
+  required int clean,
+  required int total,
+  List<String> qualifiers = const [],
+  int maxNamed = 2,
+}) {
+  final named = qualifiers.where((q) => q.trim().isNotEmpty).toList();
+  final shown = named.length <= maxNamed
+      ? named
+      : [
+          ...named.take(maxNamed),
+          named.length - maxNamed == 1
+              ? '1 other'
+              : '${named.length - maxNamed} others',
+        ];
+  return ['$clean of $total clean', ...shown].join(' · ');
+}
+
+/// What one decision row announces after its title.
+///
+/// Composed here, like every other string on this tab, so the row and the test
+/// read one source. The action verb is last because it is what the user does
+/// *after* deciding the row is the one they want.
+String decisionRowSpokenValue({
+  required String serviceTitle,
+  required String detail,
+  required String actionLabel,
+}) => joinSpokenParts([serviceTitle, spokenFromDotted(detail), actionLabel]);
 
 /// The trailing "set up n more services" cell in the stack matrix.
 ///
@@ -108,7 +194,12 @@ String servicesAlertBandMessage(
       .toList();
   if (titles.isEmpty) return '';
 
-  final verb = titles.length == 1 ? "isn't" : "aren't";
+  // Past tense, and the settled vocabulary: a probe is a thing that happened,
+  // and "isn't answering" claims a present-tense fact about a box nobody has
+  // asked in the last minute. `did not answer` is what the States sheet's
+  // unreachable leaf says, and this is the sentence the alert band, the section
+  // empty states and the screen reader all share.
+  const verb = 'did not answer';
 
   final String subject;
   if (titles.length <= maxNamed) {
@@ -121,8 +212,26 @@ String servicesAlertBandMessage(
     subject = '${titles.take(maxNamed).join(', ')} and $others';
   }
 
-  return '$subject $verb answering';
+  return '$subject $verb.';
 }
+
+/// The alert band's second sentence, on a surface wide enough to carry it.
+///
+/// It is the consequence, which is the part the first sentence leaves the reader
+/// to work out: a dark SABnzbd does not just fail to answer, it takes its share
+/// of every figure on this page with it. The phone prints the first sentence
+/// only — there is one line of room, and the name of the service is the half
+/// that cannot be dropped.
+const String servicesAlertBandDetail =
+    'Anything they hold is missing from this page.';
+
+/// The alert band's retry, which names how many services it re-probes.
+///
+/// `Retry both` when exactly two are dark, because that is what the button does
+/// and "Retry" beside two named services reads as an offer to retry one of them.
+/// Above two it goes back to the bare verb: "Retry all four" is a sentence, not
+/// a button.
+String servicesRetryLabel(int count) => count == 2 ? 'Retry both' : 'Retry';
 
 /// What a dashboard section says when its sources came back empty because they
 /// did not answer.

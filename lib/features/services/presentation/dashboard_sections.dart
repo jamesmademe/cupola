@@ -1,15 +1,35 @@
+/// The Dashboard's regions below the header: what needs you, what is moving,
+/// and what landed.
+///
+/// Three regions, in that order, and the order is the argument. The page asks
+/// three questions — *is everything all right* (the header and the alert band),
+/// *what needs me* (decisions), *what is happening* (in flight, then recently
+/// added) — and the stack itself sits fourth, because it is a launcher and not
+/// the headline.
+///
+/// The Requests region that used to live here is gone, absorbed rather than
+/// deleted: a pending request is one *kind* of thing waiting on a human, and it
+/// had a region of its own only because it was the one kind anybody had wired
+/// up. A stalled download, a failing indexer, a stopped stack, an expiring
+/// certificate and a failed import are the same question asked by five other
+/// services, and six regions that are empty most of the time is six headings to
+/// scroll past to learn that nothing is wrong. See
+/// `domain/dashboard_decision.dart`.
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
-import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
@@ -19,22 +39,82 @@ import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
-import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
-import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
+import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/import/presentation/manual_import_routes.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/services/domain/dashboard_decision.dart';
+import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
-import 'package:cupola/features/services/domain/request_ordering.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
 
-/// Everything currently transferring, across every configured source.
+/// Region 3 — everything waiting on a human, from every source, in one list.
 ///
-/// Second on the screen, directly under the matrix. It used to be last, below
-/// three browse rails, which put the only time-sensitive region on the page
-/// furthest from the first viewport.
+/// Absent when nothing is waiting, for the same reason the alert band is absent
+/// when everything answers: **presence is the signal**. A permanent "nothing
+/// needs you" heading is a region that is empty on almost every open, which is a
+/// heading nobody reads on the day it fills.
+class DashboardDecisionsSection extends ConsumerWidget {
+  const DashboardDecisionsSection({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final decisions = ref.watch(dashboardDecisionsProvider).asData?.value;
+    if (decisions == null || decisions.isEmpty) return const SizedBox.shrink();
+
+    // Three on the phone, four on the desktop, two when the window is narrow.
+    // The rule is `AppBreakpoints`', resolved here and passed pure — see
+    // `decisionCapFor`.
+    final cap = decisionCapFor(
+      desktopShell: AppBreakpoints.isDesktopShell,
+      compact: AppBreakpoints.isCompactDesktop(context),
+    );
+    final shown = rankDecisions(decisions, cap: cap);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader.action(
+          title: 'Needs a decision',
+          subtitle: decisionsEyebrow(decisions),
+          // The ~30pt header InkWell the code already has. Raising it is a new
+          // rule for code and canvas both, and not this region's to make.
+          trailing: _SectionAction(
+            label: 'See all ${decisions.length}',
+            color: Theme.of(context).colorScheme.primary,
+            onTap: () => context.go('/activity'),
+          ),
+          semanticLabel: joinSpokenParts([
+            'Needs a decision',
+            decisionsEyebrow(decisions),
+          ]),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Column(
+            children: [
+              for (final decision in shown)
+                _DecisionRow(key: ValueKey(decision.id), decision: decision),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+      ],
+    );
+  }
+}
+
+/// Region 5 — what is moving right now.
+///
+/// Active transfers only. A stalled one is not in flight, it is a decision, and
+/// it says so in the footnote rather than silently making this count disagree
+/// with the client's own queue depth.
 class ServicesInFlightSection extends ConsumerWidget {
   const ServicesInFlightSection({super.key});
 
@@ -58,100 +138,94 @@ class ServicesInFlightSection extends ConsumerWidget {
         .toList(growable: false);
     if (sources.isEmpty) return const SizedBox.shrink();
 
-    return _ListSection<ServiceQueueItem>(
-      // "In Flight" was an ops metaphor in a region whose own empty state said
-      // "Nothing downloading" and whose rows are announced against a section
-      // this code already assumed was headed "Downloading" — see
-      // `downloadRowValue`. One word for one thing, and it is the word the
-      // audience already uses.
-      title: 'Downloading',
-      // Brand primary, not a service accent: the region spans up to seven
-      // sources and no one of them owns it.
-      accent: Theme.of(context).colorScheme.primary,
-      sources: sources,
-      asyncValue: ref.watch(servicesQueueProvider),
-      serviceName: 'download queue',
-      actionLabel: 'Activity',
-      onAction: () => context.go('/activity'),
-      onRetry: () => ref.invalidate(servicesQueueProvider),
-      // Not "Nothing downloading", which the header now says. An empty transfer
-      // list is a fact about the queue, so name the queue.
-      emptyLabel: 'The queue is empty',
-      itemsBuilder: (items) => items.map(_DownloadRow.new).toList(),
+    final inFlight = ref.watch(servicesInFlightProvider);
+    final data = inFlight.asData?.value;
+    final eyebrow = data == null
+        ? null
+        : inFlightEyebrow(
+            active: data.active.length,
+            rateBytesPerSecond: data.rateBytesPerSecond,
+            clients: data.clients,
+          );
+    final footnote = data == null
+        ? null
+        : inFlightStalledFootnote(data.stalled.length);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader.action(
+          // "In flight", not "Downloading": the region also carries a usenet
+          // job being repaired and a torrent waiting on a slot, and neither is
+          // downloading. One name for one thing, settled on the canvas.
+          title: 'In flight',
+          subtitle: eyebrow,
+          trailing: _SectionAction(
+            label: 'Activity',
+            // Brand primary, not a service accent: the region spans up to seven
+            // sources and no one of them owns it.
+            color: Theme.of(context).colorScheme.primary,
+            onTap: () => context.go('/activity'),
+          ),
+          semanticLabel: joinSpokenParts(['In flight', eyebrow]),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: AsyncValueWidget<ServicesInFlight>(
+            value: inFlight,
+            serviceName: 'download queue',
+            onRetry: () => ref.invalidate(servicesQueueProvider),
+            data: (value) {
+              if (value.active.isEmpty) {
+                return _SectionEmptyState(
+                  // Not "Nothing downloading", which the header now says. An
+                  // empty transfer list is a fact about the queue, so name the
+                  // queue.
+                  label: 'The queue is empty',
+                  sources: sources,
+                  onRetry: () => ref.invalidate(servicesQueueProvider),
+                );
+              }
+              return Column(
+                children: [
+                  for (final item in value.active)
+                    _InFlightRow(
+                      key: ValueKey('${item.service}-${item.id}'),
+                      item: item,
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        if (footnote != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.xs,
+              AppSpacing.lg,
+              0,
+            ),
+            child: Text(
+              footnote,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        const SizedBox(height: AppSpacing.lg),
+      ],
     );
   }
 }
 
-/// The single Requests region: pending first with inline actions, then the rest.
+/// Region 6 — what the arrs actually imported, newest first.
 ///
-/// See `domain/request_ordering.dart` for why this is one region that sorts
-/// rather than two that filter.
-class ServicesRequestsSection extends ConsumerWidget {
-  const ServicesRequestsSection({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(currentSettingsProvider);
-    if (!settings.isServiceConfigured(ServiceKey.seerr)) {
-      return const SizedBox.shrink();
-    }
-
-    final requests = ref.watch(servicesRequestsProvider);
-    // Counted over the whole set, not the visible slice, so the header stays
-    // honest when there are more pending than fit.
-    final pendingCount = requests.asData == null
-        ? 0
-        : countAwaitingApproval(requests.asData!.value);
-
-    return _ListSection<SeerrRequest>(
-      title: 'Requests',
-      // One source, so it is named once under the title rather than on every
-      // row: a tap here opens a Seerr detail screen, and the accent alone never
-      // said so.
-      sourceLabel: ServiceKey.seerr.title,
-      accent: ServiceKey.seerr.accent,
-      sources: const [ServiceKey.seerr],
-      asyncValue: requests,
-      serviceName: 'Seerr',
-      actionLabel: 'See all',
-      onAction: () => context.push(ServiceRoutes.seerrRequests),
-      onRetry: () => ref.invalidate(servicesRequestsProvider),
-      emptyLabel: 'No requests yet',
-      titleBadge: pendingCount == 0
-          ? null
-          : _PendingCountBadge(count: pendingCount),
-      // Null when nothing is pending: the header then composes title plus
-      // subtitle on its own, which is exactly "Requests, Seerr". With a badge
-      // to fold in, the source is appended to the counted sentence instead.
-      semanticLabel: pendingCount == 0
-          ? null
-          : joinSpokenParts([
-              servicesRequestsHeaderLabel(pending: pendingCount),
-              ServiceKey.seerr.title,
-            ]),
-      itemsBuilder: (items) =>
-          sortRequestsPendingFirst(items, limit: servicesRequestsPreviewLimit)
-              .map(
-                (request) => isAwaitingApproval(request)
-                    ? _PendingRequestRow(request)
-                    : _RequestRow(request),
-              )
-              .toList(),
-      loadingWidget: const Column(
-        children: [
-          _RequestRowSkeleton(),
-          _RequestRowSkeleton(),
-          _RequestRowSkeleton(),
-        ],
-      ),
-    );
-  }
-}
-
-/// The newest library additions across Radarr, Sonarr and Lidarr, in one rail.
-///
-/// Replaces two rails that each claimed "Recently Added" while showing an
-/// unsorted slice of a full library fetch. See `domain/recently_added.dart`.
+/// One region and one channel: the old "Finished today" band folded into this
+/// one, so a failure is *named* here (in amber, in the eyebrow) and *acted on*
+/// in the decisions region, rather than sitting in a band of its own where a
+/// failure went to die.
 class ServicesRecentlyAddedSection extends ConsumerWidget {
   const ServicesRecentlyAddedSection({super.key});
 
@@ -169,35 +243,336 @@ class ServicesRecentlyAddedSection extends ConsumerWidget {
         .toList(growable: false);
     if (libraries.isEmpty) return const SizedBox.shrink();
 
-    return _PosterSection<RecentlyAddedItem>(
-      title: 'Recently Added',
-      // The rail spans three services, so its action colour cannot belong to one
-      // of them. The action goes to search, the one place all three libraries
-      // are reachable together.
-      accent: Theme.of(context).colorScheme.primary,
-      sources: libraries,
-      asyncValue: ref.watch(servicesRecentlyAddedProvider),
-      serviceName: 'your libraries',
-      actionLabel: 'Search',
-      onAction: () => context.go('/search'),
-      onRetry: () => ref.invalidate(servicesRecentlyAddedProvider),
-      itemTitle: (item) => item.title,
-      itemSubtitle: (item) => item.subtitle,
-      imageUrl: (item, _) => item.posterUrl,
-      heroTag: (item) => item.heroTag,
-      // Unlike the single-service rails this replaced, the source varies per
-      // tile — so it is both coloured and named, ahead of the item's own
-      // qualifier. A user tapping a poster here is choosing between a Radarr,
-      // a Sonarr and a Lidarr detail screen.
-      itemAccent: (item) => item.service.accent,
-      sourceLabel: (item) => item.service.title,
-      onTap: (item) => _openRecentlyAdded(context, item),
-      limit: servicesRecentlyAddedLimit,
+    final items = ref.watch(servicesRecentlyAddedProvider);
+    final counts = items.asData == null
+        ? null
+        : recentlyAddedEyebrow(items.asData!.value);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader.action(
+          title: 'Recently added',
+          trailing: _SectionAction(
+            // History, not Search: this rail is a record of what the arrs did,
+            // and the place that record continues is Activity's history — a
+            // search screen is where you go to look for something you do not
+            // have yet.
+            label: 'History',
+            color: colorScheme.primary,
+            onTap: () => context.go('/activity'),
+          ),
+          semanticLabel: joinSpokenParts([
+            'Recently added',
+            counts?.imported,
+            counts?.failed,
+          ]),
+        ),
+        if (counts != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: _ImportCounts(
+              imported: counts.imported,
+              failed: counts.failed,
+            ),
+          ),
+        const SizedBox(height: AppSpacing.sm),
+        AsyncValueWidget<List<RecentlyAddedItem>>(
+          value: items,
+          serviceName: 'your libraries',
+          onRetry: () => ref.invalidate(servicesArrHistoryProvider),
+          skeleton: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: AppSkeleton.posterRow(height: 90),
+          ),
+          data: (data) {
+            if (data.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: _SectionEmptyState(
+                  // Not "No items found", which is search vocabulary and implies
+                  // a query this rail never ran.
+                  label: 'Nothing imported yet',
+                  sources: libraries,
+                  onRetry: () => ref.invalidate(servicesArrHistoryProvider),
+                ),
+              );
+            }
+            // The phone gets the rail; anything with room gets rows, which can
+            // carry the title, the time and the service without truncating any
+            // of the three. The reduction rule is Reflow's — fewer items, never
+            // smaller ones — and a row is not a smaller tile.
+            return AppBreakpoints.isDesktopShell
+                ? _RecentlyAddedRows(items: data)
+                : _RecentlyAddedRail(items: data);
+          },
+        ),
+        const SizedBox(height: AppSpacing.lg),
+      ],
+    );
+  }
+}
+
+/// `5 imported · 1 failed`, with only the second half coloured.
+///
+/// A failed import is a **fault**, and faults are amber. The red the old band
+/// used is reserved for a connection that did not answer — a file the arr could
+/// not move is not a server that is gone.
+class _ImportCounts extends StatelessWidget {
+  const _ImportCounts({required this.imported, required this.failed});
+
+  final String imported;
+  final String? failed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final style = theme.textTheme.bodySmall;
+
+    return ExcludeSemantics(
+      child: Row(
+        children: [
+          Text(
+            imported,
+            style: style?.copyWith(color: colorScheme.onSurfaceVariant),
+          ),
+          if (failed != null) ...[
+            Text(
+              ' · ',
+              style: style?.copyWith(color: colorScheme.onSurfaceVariant),
+            ),
+            Text(
+              failed!,
+              style: style
+                  ?.weight(FontWeight.w600)
+                  .copyWith(
+                    color: statusToneColor(
+                      colorScheme,
+                      StatusTone.warning,
+                      surface: colorScheme.surface,
+                    ),
+                  ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The phone's rail: six 60×90 tiles with the title on the tile, clipped by a
+/// right-edge fade.
+///
+/// The fade is the affordance. A rail that simply ends at the screen edge looks
+/// like a list that fits; one whose last tile dissolves says there is more to
+/// the right without spending a row on a chevron.
+class _RecentlyAddedRail extends StatelessWidget {
+  const _RecentlyAddedRail({required this.items});
+
+  final List<RecentlyAddedItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: TextScaleMetrics.boxHeight(context, base: 90, textHeight: 26),
+      child: ShaderMask(
+        shaderCallback: (bounds) => const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          // Opaque until the last tenth, then out. Any softer and the fade
+          // reads as a rendering fault on the tile rather than as an edge.
+          colors: [Colors.white, Colors.white, Colors.transparent],
+          stops: [0, 0.9, 1],
+        ).createShader(bounds),
+        blendMode: BlendMode.dstIn,
+        child: MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaleMetrics.clampedScalerOf(context)),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            itemCount: items.length,
+            separatorBuilder: (_, _) =>
+                const SizedBox(width: AppSpacing.carouselGap),
+            itemBuilder: (context, index) => _RecentTile(item: items[index]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One 60×90 tile: the poster, the title over a scrim, and — when it failed —
+/// an amber marker.
+class _RecentTile extends StatelessWidget {
+  const _RecentTile({required this.item});
+
+  final RecentlyAddedItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final time = formatImportedAt(item.addedAt);
+
+    return SizedBox(
+      width: 60,
+      child: PressableScale(
+        onTap: () => _openRecentlyAdded(context, item),
+        // Every tile is a tap target, and its accessible name carries the three
+        // facts a 60×90 box can only show two of.
+        semanticLabel: recentlyAddedTileLabel(item, timeLabel: time),
+        excludeChildSemantics: true,
+        child: ClipRRect(
+          borderRadius: AppRadius.borderRadiusSm,
+          child: SizedBox(
+            width: 60,
+            height: 90,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _HeroContentCard(
+                  heroTag: item.heroTag,
+                  imageUrl: item.posterUrl,
+                ),
+                // The title sits ON the tile — there is no room for a caption
+                // under six tiles in one rail's height — so it needs a ground of
+                // its own to stay legible over any poster.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    height: 42,
+                    padding: const EdgeInsets.all(AppSpacing.xs),
+                    alignment: Alignment.bottomLeft,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0),
+                          Colors.black.withValues(alpha: 0.78),
+                        ],
+                      ),
+                    ),
+                    child: Text(
+                      item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall
+                          ?.weight(FontWeight.w600)
+                          .copyWith(color: Colors.white),
+                    ),
+                  ),
+                ),
+                if (item.failed)
+                  Positioned(
+                    left: 4,
+                    top: 4,
+                    child: _FailedChip(
+                      // Amber, through the token rather than through the raw
+                      // palette: a failed import is a fault, and the red the old
+                      // band used is reserved for a connection that did not
+                      // answer.
+                      tone: statusToneColor(colorScheme, StatusTone.warning),
+                    ),
+                  ),
+                if (item.posterUrl.isEmpty)
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.xs),
+                      child: Icon(
+                        item.service.icon,
+                        size: 14,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The marker on a tile whose import failed.
+///
+/// A solid chip rather than the 14% wash the in-page pills use: it sits on an
+/// arbitrary poster, and a wash over an unknown image is not a contrast anybody
+/// can promise. The ink is walked against the fill it actually lands on.
+class _FailedChip extends StatelessWidget {
+  const _FailedChip({required this.tone});
+
+  final Color tone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: tone,
+        borderRadius: AppRadius.borderRadiusSm,
+      ),
+      child: Text(
+        'failed',
+        style: Theme.of(context).textTheme.labelSmall
+            ?.weight(FontWeight.w700)
+            .copyWith(color: ServiceTheme.foregroundOn(tone)),
+      ),
+    );
+  }
+}
+
+/// The desktop's rows: title, time, service — it has room for all three.
+class _RecentlyAddedRows extends StatelessWidget {
+  const _RecentlyAddedRows({required this.items});
+
+  final List<RecentlyAddedItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Column(
+        children: [
+          for (final item in items)
+            _CompactListRow(
+              icon: item.service.icon,
+              title: item.title,
+              subtitle: joinDisplayParts([
+                item.failed ? 'failed import' : item.service.title,
+                formatImportedAt(item.addedAt),
+              ]),
+              imageUrl: item.posterUrl.isEmpty ? null : item.posterUrl,
+              heroTag: item.heroTag,
+              trailing: const SizedBox.shrink(),
+              semanticValue: recentlyAddedTileLabel(
+                item,
+                timeLabel: formatImportedAt(item.addedAt),
+              ),
+              onTap: () => _openRecentlyAdded(context, item),
+            ),
+        ],
+      ),
     );
   }
 }
 
 void _openRecentlyAdded(BuildContext context, RecentlyAddedItem item) {
+  if (item.id <= 0) {
+    // A history record that names no library item — a failed grab of something
+    // the arr never added. The service's own page is the honest destination; a
+    // detail route for id 0 is a dead end.
+    context.go(ServiceRoutes.forService(item.service));
+    return;
+  }
   final route = switch (item.service) {
     ServiceKey.radarr => ServiceRoutes.radarrMovie(
       item.id,
@@ -219,593 +594,48 @@ void _openRecentlyAdded(BuildContext context, RecentlyAddedItem item) {
   context.push(route);
 }
 
-class _PosterSection<T> extends StatelessWidget {
-  final String title;
-
-  /// Colour of the header action.
-  final Color accent;
-
-  /// The configured services this section's data comes from.
-  ///
-  /// Browse calls degrade to `[]` on remote failure by convention, so an
-  /// unreachable service and an empty library arrive here identically. This is
-  /// what lets the empty state tell them apart — see [_SectionEmptyState].
-  ///
-  /// Must be filtered to *configured* services by the caller: an unconfigured
-  /// one reports offline, and naming it would blame a user for not running
-  /// something they never installed.
-  final List<ServiceKey> sources;
-  final AsyncValue<List<T>> asyncValue;
-  final String serviceName;
-  final String actionLabel;
-  final VoidCallback onAction;
-  final String Function(T item) itemTitle;
-  final String Function(T item) itemSubtitle;
-  final String Function(T item, SettingsModel settings) imageUrl;
-  final String Function(T item)? heroTag;
-  final void Function(T item) onTap;
-  final VoidCallback? onRetry;
-  final int limit;
-
-  /// Per-item accent, for a rail whose items come from more than one service.
-  ///
-  /// Defaults to [service]'s accent, which is right for a single-service rail
-  /// and wrong for the merged one.
-  final Color Function(T item)? itemAccent;
-
-  /// The service an item came from, in words — printed on the tile and spoken.
-  ///
-  /// Required whenever [itemAccent] varies. The accent dot used to be the only
-  /// thing distinguishing a Radarr item from a Sonarr one, and a colour is not
-  /// information: nothing on the tile said which library a tap would open. Left
-  /// null on a single-service rail, where the accent is constant and the header
-  /// already named the service — repeating it on eight consecutive tiles would
-  /// be noise on screen and in speech alike.
-  final String Function(T item)? sourceLabel;
-
-  const _PosterSection({
-    required this.title,
-    required this.accent,
-    required this.sources,
-    required this.asyncValue,
-    required this.serviceName,
-    required this.actionLabel,
-    required this.onAction,
-    required this.itemTitle,
-    required this.itemSubtitle,
-    required this.imageUrl,
-    required this.onTap,
-    this.heroTag,
-    this.onRetry,
-    this.limit = 10,
-    this.itemAccent,
-    this.sourceLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(
-          title: title,
-          showChevron: false,
-          trailing: _SectionAction(label: actionLabel, color: accent),
-          // `_SectionAction` sits inside the region the header silences — its
-          // "\u2192" would otherwise be read out as "rightwards arrow" — so the
-          // visible action words come back as the hint.
-          semanticHint: actionLabel,
-          onTap: onAction,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        // The rail's height is fixed around a 138pt poster; the empty state's is
-        // a sentence and a button. Sizing the second by the first is what makes
-        // "Radarr and Sonarr aren't answering" plus a 44pt Retry overflow the
-        // box at accessibility reading sizes — the poster budget grows by the
-        // 34pt of label a *tile* has, not by the four wrapped lines the sentence
-        // gains. So the empty branch is hoisted out of the `SizedBox` and left
-        // free to be as tall as it needs.
-        if (_isEmpty(asyncValue))
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: _SectionEmptyState(
-              // Not "No items found", which is search vocabulary and implies a
-              // query this rail never ran.
-              label: 'Nothing added yet',
-              sources: sources,
-              onRetry: onRetry,
-            ),
-          )
-        else
-          SizedBox(
-            // 138pt poster + gap + title/subtitle: grows with the reading size
-            // so the labels are not clipped at accessibility text sizes.
-            //
-            // Untouched by the type ramp. Both tile lines are `labelSmall` and
-            // both are single lines, and the root's `DefaultTextHeightBehavior`
-            // keeps the leading off a block's first ascent and last descent — so
-            // a one-line `labelSmall` still measures the 13.0pt it always did.
-            height: TextScaleMetrics.boxHeight(
-              context,
-              base: 176,
-              textHeight: 34,
-            ),
-            // The box grew by the *clamped* scale, so the text has to be laid
-            // out at the same clamp or the two disagree: `boxHeight` stops at
-            // 1.6x by design, but a `Text` reads the ambient scaler, so at 2x
-            // the tile was sized for 1.6 and painted at 2 — nine pixels of
-            // overflow stripe. The matrix band has always done this; the rail
-            // originally got away without it only because its subtitle carried
-            // a hard-coded `fontSize: 10` — since removed — that made the
-            // labels small enough to fit by accident.
-            child: MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(textScaler: TextScaleMetrics.clampedScalerOf(context)),
-              child: AsyncValueWidget<List<T>>(
-                value: asyncValue,
-                serviceName: serviceName,
-                onRetry: onRetry,
-                skeleton: AppSkeleton.posterRow(height: 138),
-                data: (items) {
-                  final visibleItems = items
-                      .take(limit)
-                      .toList(growable: false);
-
-                  return Consumer(
-                    builder: (context, ref, _) {
-                      final settings = ref.watch(currentSettingsProvider);
-                      return ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                        ),
-                        itemCount: visibleItems.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(width: AppSpacing.carouselGap),
-                        itemBuilder: (context, index) {
-                          final item = visibleItems[index];
-                          return _ServicePosterTile(
-                            title: itemTitle(item),
-                            subtitle: itemSubtitle(item),
-                            imageUrl: imageUrl(item, settings),
-                            accent: itemAccent?.call(item) ?? accent,
-                            sourceLabel: sourceLabel?.call(item),
-                            heroTag: heroTag?.call(item),
-                            onTap: () => onTap(item),
-                          );
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ),
-        const SizedBox(height: AppSpacing.lg),
-      ],
-    );
-  }
-}
-
-class _ListSection<T> extends StatelessWidget {
-  final String title;
-
-  /// Colour of the header action.
-  final Color accent;
-
-  /// The configured services this section's data comes from. See
-  /// [_PosterSection.sources].
-  final List<ServiceKey> sources;
-  final AsyncValue<List<T>> asyncValue;
-  final String serviceName;
-  final String actionLabel;
-  final VoidCallback onAction;
-  final String emptyLabel;
-  final List<Widget> Function(List<T> items) itemsBuilder;
-
-  /// Optional widget shown while [asyncValue] is loading.
-  /// Defaults to a centered [CircularProgressIndicator].
-  final Widget? loadingWidget;
-  final VoidCallback? onRetry;
-
-  /// A count or state marker shown beside the action, e.g. "3 PENDING".
-  ///
-  /// Sits inside the region the header silences, so a caller passing one must
-  /// also pass [semanticLabel] with the count folded into the sentence.
-  final Widget? titleBadge;
-
-  /// Overrides the header's spoken name. See [titleBadge].
-  final String? semanticLabel;
-
-  /// The single service this section's rows come from, named under the title.
-  ///
-  /// For a region fed by exactly one service, where per-row labels would print
-  /// the same word on every line. A multi-source region leaves this null and
-  /// names the source on each row instead — there is no honest single answer to
-  /// put in a header that merges seven download clients.
-  final String? sourceLabel;
-
-  const _ListSection({
-    required this.title,
-    required this.accent,
-    required this.sources,
-    required this.asyncValue,
-    required this.serviceName,
-    required this.actionLabel,
-    required this.onAction,
-    required this.emptyLabel,
-    required this.itemsBuilder,
-    this.loadingWidget,
-    this.onRetry,
-    this.titleBadge,
-    this.semanticLabel,
-    this.sourceLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final badge = titleBadge;
-    final action = _SectionAction(label: actionLabel, color: accent);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(
-          title: title,
-          subtitle: sourceLabel,
-          showChevron: false,
-          semanticLabel: semanticLabel,
-          // A `Wrap`, not a `Row`: at an accessibility reading size "3 PENDING"
-          // and "See all →" together measure wider than a phone's content
-          // column, and a `Row` answers that with the overflow stripe. The
-          // header stacks its trailing under the title at those sizes, which
-          // gives this the full width it needs to break onto a second line.
-          trailing: badge == null
-              ? action
-              : Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.xs,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [badge, action],
-                ),
-          // `_SectionAction` sits inside the region the header silences — its
-          // "\u2192" would otherwise be read out as "rightwards arrow" — so the
-          // visible action words come back as the hint.
-          semanticHint: actionLabel,
-          onTap: onAction,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: AsyncValueWidget<List<T>>(
-            value: asyncValue,
-            serviceName: serviceName,
-            loadingWidget: loadingWidget,
-            onRetry: onRetry,
-            data: (items) {
-              final rows = itemsBuilder(items);
-              if (rows.isEmpty) {
-                return _SectionEmptyState(
-                  label: emptyLabel,
-                  sources: sources,
-                  onRetry: onRetry,
-                );
-              }
-
-              return Column(children: rows);
-            },
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-      ],
-    );
-  }
-}
-
-class _ServicePosterTile extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String imageUrl;
-  final Color accent;
-
-  /// The service this item came from, when the rail mixes services.
-  final String? sourceLabel;
-  final String? heroTag;
-  final VoidCallback onTap;
-
-  const _ServicePosterTile({
-    required this.title,
-    required this.subtitle,
-    required this.imageUrl,
-    required this.accent,
-    required this.onTap,
-    this.sourceLabel,
-    this.heroTag,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    // The source leads the caption line on a merged rail: the year or album
-    // count qualifies the title, but which library the item lives in is what
-    // decides where a tap lands. On a single-service rail `sourceLabel` is null
-    // and the line is the qualifier alone — see the note on it above.
-    final caption = joinDisplayParts([sourceLabel, subtitle]);
-    // Same two parts, re-separated for the ear: `·` is decoration.
-    final spoken = joinSpokenParts([sourceLabel, subtitle]);
-
-    return SizedBox(
-      width: 96,
-      child: PressableScale(
-        onTap: onTap,
-        // The tile is a poster plus a truncated title; announce the full title
-        // and its subtitle as one button rather than an unlabelled image.
-        semanticLabel: title,
-        semanticValue: spoken.isEmpty ? null : spoken,
-        excludeChildSemantics: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 96,
-              height: 138,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: _HeroContentCard(
-                      heroTag: heroTag,
-                      imageUrl: imageUrl,
-                    ),
-                  ),
-                  // The dot encodes which service the item came from, and on a
-                  // merged rail the caption below names it as well: the colour
-                  // is the fast read across a scrolling row, the word is the
-                  // one anybody can act on. Whether either is worth repeating
-                  // depends on the rail — on a single-service rail the accent
-                  // is constant and the header already named it, so
-                  // `sourceLabel` is null and the dot stays a silent, unnamed
-                  // flourish.
-                  Positioned(
-                    left: 6,
-                    bottom: 6,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: accent,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.35),
-                            spreadRadius: 1.5,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall
-                  ?.weight(FontWeight.w600)
-                  .copyWith(color: colorScheme.onSurface),
-            ),
-            if (caption.isNotEmpty)
-              Text(
-                caption,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                // No `fontSize` override. A hard-coded 10 sat under the
-                // ladder's smallest step and under the 11pt floor both
-                // platforms name, and the No Fixed Size Rule bans it outright:
-                // the separation from the title above is already weight and
-                // colour.
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeroContentCard extends StatelessWidget {
-  final String? heroTag;
-  final String imageUrl;
-
-  const _HeroContentCard({required this.heroTag, required this.imageUrl});
-
-  @override
-  Widget build(BuildContext context) {
-    final card = ContentCard(imageUrl: imageUrl);
-    // Only fly a Hero when there is both a tag AND an image on this end. An
-    // empty image would produce a blank/orphaned Hero whose destination has no
-    // matching poster (common for Seerr items without a posterPath), which
-    // shows up as a fade instead of a shared-element flight.
-    if (heroTag == null || heroTag!.isEmpty || imageUrl.isEmpty) {
-      return card;
-    }
-
-    return Hero(
-      tag: heroTag!,
-      transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
-      child: card,
-    );
-  }
-}
-
-class _RequestRow extends StatelessWidget {
-  final SeerrRequest request;
-
-  const _RequestRow(this.request);
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final media = request.media;
-    final title = media?.title ?? 'Unknown Media';
-    final requester = request.requestedBy?.displayName ?? 'Unknown';
-    final subtitle =
-        '$requester · ${request.type == 'tv' ? 'Series' : 'Movie'}';
-    final displayStatus = request.displayStatus;
-    final statusColor = statusToneColor(
-      colorScheme,
-      resolveRequestStatus(request).tone,
-    );
-    final posterUrl = ImageUtils.buildTmdbPosterUrl(media?.posterPath);
-    final heroTag = _requestHeroTag(request);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: _CompactListRow(
-        icon: request.type == 'tv' ? Icons.tv_rounded : Icons.movie_rounded,
-        title: title,
-        subtitle: subtitle,
-        imageUrl: posterUrl,
-        heroTag: heroTag,
-        trailing: _SmallStatusPill(
-          label: displayStatus.label,
-          color: statusColor,
-        ),
-        // Composed from the parts rather than from `subtitle`, which carries a
-        // raw '·', and picking up the status pill the row now silences.
-        semanticValue: seerrRequestRowValue(
-          mediaTypeLabel: request.type == 'tv' ? 'Series' : 'Movie',
-          requester: requester,
-          statusLabel: displayStatus.label,
-        ),
-        onTap: () => _openRequest(context, request, heroTag: heroTag),
-      ),
-    );
-  }
-}
-
-/// Opens a request's media detail.
+/// One thing waiting on a human.
 ///
-/// Top-level because both the read-only row and the pending row need it.
-void _openRequest(
-  BuildContext context,
-  SeerrRequest request, {
-  String? heroTag,
-}) {
-  final media = request.media;
-  final id = media?.tmdbId ?? media?.id;
-  if (id == null || id <= 0) {
-    context.go(ServiceRoutes.seerr);
-    return;
-  }
+/// The row body links to the item; the trailing control is the decision. They
+/// are never the same destination — a row where "open it" and "do it" are one
+/// gesture is a row you cannot inspect before acting.
+class _DecisionRow extends ConsumerWidget {
+  const _DecisionRow({super.key, required this.decision});
 
-  final mediaType = request.type == 'tv' ? 'tv' : 'movie';
-  final posterUrl = ImageUtils.buildTmdbPosterUrl(media?.posterPath);
-  final tag = heroTag ?? 'services_request_${request.id}';
-  context.push(
-    ServiceRoutes.seerrDetail(
-      mediaType: mediaType,
-      id: id,
-      heroTag: tag,
-      posterUrl: posterUrl,
-    ),
-  );
-}
-
-/// The pending count beside the Requests header.
-///
-/// A tinted pill rather than bare text: the count is the one thing on the header
-/// row that changes, and it is what makes the difference between a region worth
-/// stopping at and one worth scrolling past.
-class _PendingCountBadge extends StatelessWidget {
-  const _PendingCountBadge({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    // The badge fills with amber at 14%, and the label is measured against that
-    // composite. The saturated amber over its own tint lands near 1.8:1 in light
-    // theme; `onTint` walks its lightness until it clears AA while keeping the
-    // hue, so the pill stays recognisably amber.
-    const tintAlpha = 0.14;
-    final onTint = ServiceTheme.onTint(
-      AppColors.warning,
-      surface: colorScheme.surfaceContainer,
-      tintAlpha: tintAlpha,
-    );
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: tintAlpha),
-        borderRadius: AppRadius.borderRadiusSm,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      child: Text(
-        '$count PENDING',
-        // A badge, not an eyebrow: it is trailing chrome carrying a live figure,
-        // so it stays on the label ramp with the ramp's own tracking and takes
-        // `.tabular` because the count changes under the user.
-        style: theme.textTheme.labelSmall
-            ?.weight(FontWeight.w800)
-            .tabular
-            .copyWith(color: onTint),
-      ),
-    );
-  }
-}
-
-/// A request waiting on a decision, with the decision attached.
-///
-/// The read-only [_RequestRow] silences its whole subtree, which is correct for a
-/// row that is only a link. This one holds two real controls, so it labels itself
-/// and silences only the parts its own label already speaks — per the contract in
-/// `AppCard.semanticLabel`. Passing `excludeChildSemantics` here would drop both
-/// buttons out of the accessibility tree entirely.
-class _PendingRequestRow extends ConsumerWidget {
-  const _PendingRequestRow(this.request);
-
-  final SeerrRequest request;
+  final DashboardDecision decision;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final media = request.media;
-    final title = media?.title ?? 'Unknown Media';
-    final requester = request.requestedBy?.displayName ?? 'Unknown';
-    final mediaTypeLabel = request.type == 'tv' ? 'Series' : 'Movie';
-    final posterUrl = ImageUtils.buildTmdbPosterUrl(media?.posterPath);
-    final heroTag = _requestHeroTag(request);
-    // The word sits directly on the card, not on a tint, so the composite is the
-    // surface itself.
-    final onTint = ServiceTheme.onTint(
-      AppColors.warning,
+    // Faults are amber; a pending request is backlog and stays neutral. The tone
+    // decides the marker's colour and nothing else — the row is not filled or
+    // bordered in it, because six amber rows would be a wall.
+    final tone = decision.isFault ? StatusTone.warning : StatusTone.neutral;
+    final toneColor = statusToneColor(
+      colorScheme,
+      tone,
       surface: colorScheme.surfaceContainer,
-      tintAlpha: 0,
     );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: AppCard.surfaceOutlined(
-        key: ValueKey('services-pending-request-${request.id}'),
-        onTap: () => _openRequest(context, request, heroTag: heroTag),
-        semanticLabel: title,
-        // 'Pending' is stated rather than read off `displayStatus`, which would
-        // say "Available" for a still-unapproved request whose media already
-        // exists — see `isAwaitingApproval`.
-        semanticValue: seerrRequestRowValue(
-          mediaTypeLabel: mediaTypeLabel,
-          requester: requester,
-          statusLabel: 'Pending approval',
+        key: ValueKey('decision-${decision.id}'),
+        onTap: () {
+          final route = decision.route;
+          if (route == null) return;
+          context.push(route);
+        },
+        semanticLabel: decision.title,
+        semanticValue: decisionRowSpokenValue(
+          serviceTitle: decision.service.title,
+          detail: decision.detail,
+          actionLabel: decisionActionLabel(
+            decision.kind,
+            target: decision.requiresService,
+          ),
         ),
-        borderColor: AppColors.warning.withValues(alpha: 0.28),
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: [
@@ -817,10 +647,15 @@ class _PendingRequestRow extends ConsumerWidget {
                     SizedBox(
                       width: 38,
                       height: 54,
-                      child: _HeroContentCard(
-                        heroTag: heroTag,
-                        imageUrl: posterUrl,
-                      ),
+                      child: decision.posterUrl.isEmpty
+                          ? _GlyphPlate(
+                              icon: decision.service.icon,
+                              tone: toneColor,
+                            )
+                          : _HeroContentCard(
+                              heroTag: null,
+                              imageUrl: decision.posterUrl,
+                            ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
@@ -828,7 +663,7 @@ class _PendingRequestRow extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            title,
+                            decision.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodyMedium?.weight(
@@ -836,26 +671,14 @@ class _PendingRequestRow extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            '$requester · $mediaTypeLabel',
-                            maxLines: 1,
+                            decision.detail,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
+                              color: decision.isFault
+                                  ? toneColor
+                                  : colorScheme.onSurfaceVariant,
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            // The whole phrase, and the same one the row
-                            // announces. It was a bare uppercase "PENDING":
-                            // pending *what* was left to the two buttons beside
-                            // it, and the row's spoken value already had to say
-                            // "Pending approval" to make sense — a visible label
-                            // that needs its own audible translation is a label
-                            // that was too short.
-                            'Pending approval',
-                            style: theme.textTheme.labelSmall
-                                ?.weight(FontWeight.w700)
-                                .copyWith(color: onTint),
                           ),
                         ],
                       ),
@@ -865,30 +688,205 @@ class _PendingRequestRow extends ConsumerWidget {
               ),
             ),
             // Not excluded: these are the point of the row.
-            _RequestDecisionButton.approve(
-              title: title,
-              onPressed: () => ActivityActions.approveRequest(
-                context,
-                ref,
-                // The lens, and correctly: this section reads
-                // `servicesRequestsProvider`, which is the lens's Seerr. The
-                // aggregated list is /activity's, and its rows carry their own.
-                instanceId: '',
-                requestId: request.id,
-                title: title,
-              ),
-            ),
-            _RequestDecisionButton.decline(
-              title: title,
-              onPressed: () => ActivityActions.declineRequest(
-                context,
-                ref,
-                instanceId: '',
-                requestId: request.id,
-                title: title,
-              ),
-            ),
+            _DecisionControls(decision: decision),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The trailing control, or the two of them a request needs.
+class _DecisionControls extends ConsumerWidget {
+  const _DecisionControls({required this.decision});
+
+  final DashboardDecision decision;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (decision.kind == DecisionKind.pendingRequest) {
+      final id = decision.actionId;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _RequestDecisionButton.approve(
+            title: decision.title,
+            onPressed: id == null
+                ? null
+                : () => ActivityActions.approveRequest(
+                    context,
+                    ref,
+                    // The lens, and correctly: the decisions provider reads
+                    // `servicesRequestsProvider`, which is the lens's Seerr. The
+                    // aggregated list is /activity's, and its rows carry their
+                    // own.
+                    instanceId: '',
+                    requestId: id,
+                    title: decision.title,
+                  ),
+          ),
+          _RequestDecisionButton.decline(
+            title: decision.title,
+            onPressed: id == null
+                ? null
+                : () => ActivityActions.declineRequest(
+                    context,
+                    ref,
+                    instanceId: '',
+                    requestId: id,
+                    title: decision.title,
+                  ),
+          ),
+        ],
+      );
+    }
+
+    final required = decision.requiresService;
+    final settings = ref.watch(currentSettingsProvider);
+    final unavailable =
+        required != null && !settings.isServiceConfigured(required);
+
+    return _DecisionActionButton(
+      label: decisionActionLabel(decision.kind, target: required),
+      // Dimmed but tappable, never `Semantics(enabled: false)`. Hiding or
+      // disabling the control would hide the fact with it, and the fact — that
+      // this stall can only be touched in a client this stack has no connection
+      // to — is what the page is for.
+      dimmed: unavailable,
+      hint: unavailable ? decisionUnavailableHint(required) : null,
+      onPressed: () {
+        if (unavailable) {
+          SnackBarHelper.info(
+            context,
+            decisionUnavailableToast(decision.kind, required),
+          );
+          return;
+        }
+        _runDecision(context, ref, decision);
+      },
+    );
+  }
+}
+
+/// What the trailing control does, per kind.
+///
+/// Two of the six are real writes from here — approve and decline are handled by
+/// [_DecisionControls] above, and Start and Test are below — because both are a
+/// single confirmed call this app already owns. The other three *navigate to
+/// where the act happens*: a manual import is a three-station wizard, opening a
+/// stalled transfer is by design a jump into its client (decision 30: resume in
+/// place needs a downloadId-to-hash bridge no client has), and NPM's client has
+/// no renew call at all, so `Renew` opens the screen that owns renewal rather
+/// than pretending to fire one.
+Future<void> _runDecision(
+  BuildContext context,
+  WidgetRef ref,
+  DashboardDecision decision,
+) async {
+  switch (decision.kind) {
+    case DecisionKind.pendingRequest:
+      return;
+    case DecisionKind.stalledDownload:
+      context.go(
+        ServiceRoutes.forService(decision.requiresService ?? decision.service),
+      );
+    case DecisionKind.failedImport:
+      context.push(
+        manualImportLocation(
+          manualImportBrowsePath,
+          decision.service,
+          targetId: decision.actionId,
+        ),
+      );
+    case DecisionKind.failingIndexer:
+      final id = decision.actionId;
+      if (id == null) return;
+      final indexer = await ref.read(prowlarrIndexerByIdProvider(id).future);
+      if (!context.mounted || indexer == null) return;
+      await testIndexerFlow(context, ref, indexer);
+    case DecisionKind.stoppedStack:
+      await runDockgeStackAction(
+        context,
+        ref,
+        (client) => client.startStack(decision.title),
+        '${decision.title} started',
+        'Could not start ${decision.title}',
+        invalidate: [dockgeStackListProvider, dashboardDecisionsProvider],
+      );
+    case DecisionKind.expiringCertificate:
+      context.go(ServiceRoutes.forService(ServiceKey.nginxProxyManager));
+  }
+}
+
+/// A 38×54 plate carrying the source's glyph, for a decision with no artwork.
+class _GlyphPlate extends StatelessWidget {
+  const _GlyphPlate({required this.icon, required this.tone});
+
+  final IconData icon;
+  final Color tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHigh,
+        borderRadius: AppRadius.borderRadiusSm,
+      ),
+      child: Icon(icon, size: 18, color: tone),
+    );
+  }
+}
+
+/// The single trailing control on a decision row.
+class _DecisionActionButton extends StatelessWidget {
+  const _DecisionActionButton({
+    required this.label,
+    required this.onPressed,
+    this.dimmed = false,
+    this.hint,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  /// Drawn at the dimmed foreground because its target is not configured. It
+  /// keeps its 44pt target and stays in the accessibility tree.
+  final bool dimmed;
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        // Brand indigo, never the fault's amber: the cure must not be painted
+        // as alarming as the disease.
+        foregroundColor: dimmed
+            ? colorScheme.onSurfaceVariant
+            : colorScheme.primary,
+        // No `visualDensity: compact` here, unlike the alert band's pair: the
+        // density is applied *to* the minimum size, so compact turns a declared
+        // 44 into a measured 40 and quietly drops the control under both
+        // platforms' floors.
+        minimumSize: const Size(56, 44),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      ),
+      // The hint is annotated from INSIDE the button, not from a `Semantics`
+      // wrapped around it. A button is a semantic boundary, so an annotation
+      // above it either creates a second node the reader has to step through or
+      // is dropped entirely; an annotation on its child merges into the button's
+      // own node, which is where "requires qBittorrent" has to be heard.
+      child: Semantics(
+        hint: hint,
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.labelLarge?.weight(FontWeight.w700),
         ),
       ),
     );
@@ -911,7 +909,7 @@ class _RequestDecisionButton extends StatelessWidget {
 
   const _RequestDecisionButton.approve({
     required String title,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) : this._(
          icon: Icons.check_rounded,
          verb: 'Approve',
@@ -922,7 +920,7 @@ class _RequestDecisionButton extends StatelessWidget {
 
   const _RequestDecisionButton.decline({
     required String title,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) : this._(
          icon: Icons.close_rounded,
          verb: 'Decline',
@@ -935,7 +933,7 @@ class _RequestDecisionButton extends StatelessWidget {
   final String verb;
   final StatusTone tone;
   final String title;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -961,51 +959,15 @@ class _RequestDecisionButton extends StatelessWidget {
   }
 }
 
-/// Skeleton placeholder for a single [_RequestRow] while data is loading.
-class _RequestRowSkeleton extends StatelessWidget {
-  const _RequestRowSkeleton();
+/// One transfer, in the grammar every client shares.
+///
+/// `2160p · 14.0 of 15.2 GB · 3 min left · qBittorrent`, in mono tabular figures
+/// so a column of them lines up — see `domain/in_flight.dart` for why the four
+/// fields are the four fields.
+class _InFlightRow extends StatelessWidget {
+  const _InFlightRow({super.key, required this.item});
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: AppCard.surfaceOutlined(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Row(
-          children: [
-            ShimmerPlaceholder(
-              width: 38,
-              height: 54,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ShimmerPlaceholder.text(width: 140),
-                  const SizedBox(height: AppSpacing.xs),
-                  ShimmerPlaceholder.text(width: 90),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            ShimmerPlaceholder(
-              width: 110,
-              height: 26,
-              borderRadius: AppRadius.borderRadiusSm,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DownloadRow extends StatelessWidget {
   final ServiceQueueItem item;
-
-  const _DownloadRow(this.item);
 
   @override
   Widget build(BuildContext context) {
@@ -1014,59 +976,68 @@ class _DownloadRow extends StatelessWidget {
         ? null
         : (item.progress! * 100).round();
     // Brand primary, not the source service's accent, for both the figure and
-    // the bar. Two reasons and either one is sufficient. Contrast: SABnzbd's
-    // gold measures about 1.9:1 as `labelSmall` on the light card and NZBGet's
-    // green about 2.9:1, well under AA, and a 3pt progress bar in the same hue
-    // misses the 3:1 floor for a graphical object. Identity: DESIGN.md's Room
-    // Light Rule confines service accents on this screen to the matrix's
-    // identity tile, and seven download sources putting their own hue on a
-    // percentage is the rainbow that rule exists to prevent. The row already
-    // names its client in the leading glyph and in the subtitle.
+    // the bar. Contrast: SABnzbd's gold measures about 1.9:1 as `labelSmall` on
+    // the light card and NZBGet's green about 2.9:1, well under AA, and a 3pt
+    // progress bar in the same hue misses the 3:1 floor for a graphical object.
+    // Identity: the Room Light Rule confines service accents on this screen to
+    // the stack cards, and seven download sources putting their own hue on a
+    // percentage is the rainbow that rule exists to prevent.
     final accent = colorScheme.primary;
-    final trailing = Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        if (item.warning != null) ...[
-          // The label says Warning; the colour said error. One of the two was
-          // lying, and it was the colour.
-          _SmallStatusPill(
-            label: 'Warning',
-            color: statusToneColor(colorScheme, StatusTone.warning),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-        ],
-        // Nothing at all when the client reports no progress. It used to print
-        // "DL", an abbreviation that says nothing, in the slot where every other
-        // row shows a number — so it read as a value rather than as its absence.
-        // `downloadRowValue` already drops it from speech for the same reason.
-        if (percent != null)
-          Text(
-            '$percent%',
-            style: Theme.of(context).textTheme.labelSmall
-                ?.weight(FontWeight.w800)
-                .tabular
-                .copyWith(color: accent),
-          ),
-      ],
+    final line = formatInFlightLine(
+      quality: item.quality,
+      doneBytes: item.doneBytes,
+      totalBytes: item.totalBytes,
+      etaSeconds: item.etaSeconds,
+      client: item.clientLabel,
     );
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: _CompactListRow(
-        icon: item.service.icon,
-        title: item.title,
-        subtitle: item.subtitle,
-        trailing: trailing,
-        semanticValue: downloadRowValue(
-          subtitle: item.subtitle,
-          percent: percent,
-          warning: item.warning,
-        ),
-        progressValue: item.progress,
-        progressColor: item.progress == null ? null : accent,
-        onTap: () => context.go('/activity'),
-      ),
+    return _CompactListRow(
+      icon: item.service.icon,
+      title: item.title,
+      subtitle: line,
+      monoSubtitle: true,
+      trailing: percent == null
+          // Nothing at all when the client reports no progress. It used to print
+          // "DL", an abbreviation that says nothing, in the slot where every
+          // other row shows a number — so it read as a value rather than as its
+          // absence.
+          ? const SizedBox.shrink()
+          : Text(
+              '$percent%',
+              style: Theme.of(context).textTheme.labelSmall
+                  ?.weight(FontWeight.w800)
+                  .tabular
+                  .copyWith(color: accent),
+            ),
+      semanticValue: inFlightRowValue(line: line, percent: percent),
+      progressValue: item.progress,
+      progressColor: item.progress == null ? null : accent,
+      onTap: () => context.go('/activity'),
+    );
+  }
+}
+
+class _HeroContentCard extends StatelessWidget {
+  final String? heroTag;
+  final String imageUrl;
+
+  const _HeroContentCard({required this.heroTag, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final card = ContentCard(imageUrl: imageUrl);
+    // Only fly a Hero when there is both a tag AND an image on this end. An
+    // empty image would produce a blank/orphaned Hero whose destination has no
+    // matching poster, which shows up as a fade instead of a shared-element
+    // flight.
+    if (heroTag == null || heroTag!.isEmpty || imageUrl.isEmpty) {
+      return card;
+    }
+
+    return Hero(
+      tag: heroTag!,
+      transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
+      child: card,
     );
   }
 }
@@ -1075,6 +1046,13 @@ class _CompactListRow extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
+
+  /// Whether [subtitle] is a data line rather than prose.
+  ///
+  /// The in-flight row's four fields are figures, and figures in a column have
+  /// to line up: mono with tabular digits is the Tabular Rule applied to a whole
+  /// line rather than to one number in it.
+  final bool monoSubtitle;
   final String? imageUrl;
   final String? heroTag;
   final Widget trailing;
@@ -1085,9 +1063,9 @@ class _CompactListRow extends StatelessWidget {
   /// Everything announced after [title].
   ///
   /// Composed by the caller because [trailing] is an opaque widget and only the
-  /// caller knows what is in it — the status pill, the percentage. It also folds
-  /// in the progress bar, which publishes nothing of its own and whose "75%"
-  /// label lives in a sibling subtree on screen.
+  /// caller knows what is in it — the percentage, the status. It also folds in
+  /// the progress bar, which publishes nothing of its own and whose "75%" label
+  /// lives in a sibling subtree on screen.
   final String semanticValue;
 
   const _CompactListRow({
@@ -1097,6 +1075,7 @@ class _CompactListRow extends StatelessWidget {
     required this.trailing,
     required this.semanticValue,
     required this.onTap,
+    this.monoSubtitle = false,
     this.imageUrl,
     this.heroTag,
     this.progressValue,
@@ -1105,152 +1084,125 @@ class _CompactListRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final subtitleStyle = theme.textTheme.bodySmall?.copyWith(
+      color: colorScheme.onSurfaceVariant,
+    );
 
-    return AppCard.surfaceOutlined(
-      onTap: onTap,
-      semanticLabel: title,
-      semanticValue: semanticValue,
-      // Nothing in this row is interactive on its own. Note the deliberate
-      // absence of LinearProgressIndicator.semanticsLabel: it would add a second
-      // focus stop *inside* a button, which is worse than the bar being silent.
-      excludeChildSemantics: true,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 38,
-            height: 54,
-            child: imageUrl == null || imageUrl!.isEmpty
-                ? Container(
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Icon(
-                      icon,
-                      size: 18,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  )
-                : _HeroContentCard(heroTag: heroTag, imageUrl: imageUrl!),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.weight(FontWeight.w600),
-                ),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                if (progressColor != null) ...[
-                  const SizedBox(height: 5),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
-                    child: LinearProgressIndicator(
-                      value: progressValue,
-                      minHeight: 3,
-                      color: progressColor,
-                      backgroundColor: colorScheme.outlineVariant,
-                    ),
-                  ),
-                ],
-              ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: AppCard.surfaceOutlined(
+        onTap: onTap,
+        semanticLabel: title,
+        semanticValue: semanticValue,
+        // Nothing in this row is interactive on its own. Note the deliberate
+        // absence of LinearProgressIndicator.semanticsLabel: it would add a
+        // second focus stop *inside* a button, which is worse than the bar being
+        // silent.
+        excludeChildSemantics: true,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 38,
+              height: 54,
+              child: imageUrl == null || imageUrl!.isEmpty
+                  ? Container(
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHigh,
+                        borderRadius: AppRadius.borderRadiusSm,
+                      ),
+                      child: Icon(
+                        icon,
+                        size: 18,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    )
+                  : _HeroContentCard(heroTag: heroTag, imageUrl: imageUrl!),
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          trailing,
-        ],
-      ),
-    );
-  }
-}
-
-/// A tone-coloured pill. Deliberately carries no semantics of its own: both call
-/// sites sit inside a row that silences its children and folds this label into
-/// the row's spoken value, so a node here would be either dead or a duplicate
-/// stop.
-class _SmallStatusPill extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _SmallStatusPill({required this.label, required this.color});
-
-  /// Widest the pill may get before its label elides.
-  ///
-  /// [label] is service-derived — a Seerr `displayStatus` or an arr status
-  /// message — so its length is not this app's to promise. Unbounded, it sits in
-  /// a `Row` beside an `Expanded` title and a long value pushes the row into a
-  /// `RenderFlex` overflow rather than shortening itself.
-  static const double _maxWidth = 132;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    // The label *is* the tone colour, painted over a 14% wash of that same tone,
-    // and the raw accent is not legible there: measured over its own tint on the
-    // light card, the warning amber lands near 1.8:1 and the success green near
-    // 1.9:1, against a 4.5:1 floor. `onTint` walks the lightness until it clears
-    // AA while keeping the hue, so the pill still reads as amber or green. Dark
-    // theme passes untouched, which is exactly why the check has to be run on
-    // both — `_PendingCountBadge` a few classes up already does this.
-    final onTint = ServiceTheme.onTint(
-      color,
-      surface: colorScheme.surfaceContainer,
-      tintAlpha: 0.14,
-    );
-
-    return Container(
-      constraints: const BoxConstraints(maxWidth: _maxWidth),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: AppRadius.borderRadiusSm,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      child: Text(
-        label.toUpperCase(),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        // Uppercase, but one of these appears per row, so it is not an eyebrow —
-        // it is a status pill and keeps the label ramp's derived tracking.
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.weight(FontWeight.w800).copyWith(color: onTint),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.weight(FontWeight.w600),
+                  ),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: monoSubtitle
+                        ? subtitleStyle?.mono.tabular
+                        : subtitleStyle,
+                  ),
+                  if (progressColor != null) ...[
+                    const SizedBox(height: 5),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: LinearProgressIndicator(
+                        value: progressValue,
+                        minHeight: 3,
+                        color: progressColor,
+                        backgroundColor: colorScheme.outlineVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            trailing,
+          ],
+        ),
       ),
     );
   }
 }
 
 class _SectionAction extends StatelessWidget {
+  const _SectionAction({
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
   final String label;
   final Color color;
-
-  const _SectionAction({required this.label, required this.color});
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      '$label →',
-      // One line, always. The arrow belongs to the words before it, so a wrap
-      // that stranded it on its own line would read as a second control.
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: Theme.of(
-        context,
-      ).textTheme.labelMedium?.weight(FontWeight.w700).copyWith(color: color),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.borderRadiusSm,
+      child: ConstrainedBox(
+        // The ~30pt header control the code already had, kept at that height on
+        // purpose: raising it to 44 is a new rule for code and canvas both, and
+        // this region is not the place to make it.
+        constraints: const BoxConstraints(minHeight: 30),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          child: Center(
+            child: Text(
+              '$label →',
+              // One line, always. The arrow belongs to the words before it, so a
+              // wrap that stranded it on its own line would read as a second
+              // control.
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              semanticsLabel: label,
+              style: Theme.of(context).textTheme.labelMedium
+                  ?.weight(FontWeight.w700)
+                  .copyWith(color: color),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1263,14 +1215,8 @@ class _SectionAction extends StatelessWidget {
 /// empty copy, sending the user to look for missing media when the answer was a
 /// missing connection.
 ///
-/// The old shape allowed exactly one service to be blamed, which is why the
-/// cross-service regions declared none and stayed silent. Taking the *list* of
-/// sources removes that trade: the state names the ones that are actually dark,
-/// so a merged rail can be as specific as a single-service one without ever
-/// blaming a source that is fine.
-///
 /// The statuses come from [serviceSummaryProvider], already resolved for the
-/// matrix at the top of the same screen, so this costs no extra request.
+/// stack at the top of the same screen, so this costs no extra request.
 class _SectionEmptyState extends ConsumerWidget {
   final String label;
 
@@ -1332,9 +1278,9 @@ class _SectionEmptyState extends ConsumerWidget {
                 onRetry!();
               },
               style: TextButton.styleFrom(
-                // Brand primary, never a source's accent. `/services` confines
-                // service accents to the matrix's identity tiles, and this button
-                // sat outside that confinement painting Radarr amber — which on a
+                // Brand primary, never a source's accent. The Dashboard confines
+                // service accents to the stack cards, and this button sat
+                // outside that confinement painting Radarr amber — which on a
                 // "did not answer" state also made hue carry health.
                 foregroundColor: theme.colorScheme.primary,
                 minimumSize: const Size(44, 44),
@@ -1354,13 +1300,43 @@ class _SectionEmptyState extends ConsumerWidget {
   }
 }
 
-/// Whether a section has resolved to nothing to show.
-///
-/// Only for a settled [AsyncValue]: loading and error are the skeleton's and
-/// [AsyncValueWidget]'s to render, and treating either as empty would show
-/// "nothing added yet" over a request that has not come back.
-bool _isEmpty<T>(AsyncValue<List<T>> value) =>
-    value is AsyncData<List<T>> && value.value.isEmpty;
+/// Skeleton placeholder for one decision row while the merge resolves.
+class DecisionRowSkeleton extends StatelessWidget {
+  const DecisionRowSkeleton({super.key});
 
-String _requestHeroTag(SeerrRequest request) =>
-    'services_request_${request.id}';
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: AppCard.surfaceOutlined(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            ShimmerPlaceholder(
+              width: 38,
+              height: 54,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerPlaceholder.text(width: 140),
+                  const SizedBox(height: AppSpacing.xs),
+                  ShimmerPlaceholder.text(width: 90),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            ShimmerPlaceholder(
+              width: 110,
+              height: 26,
+              borderRadius: AppRadius.borderRadiusSm,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

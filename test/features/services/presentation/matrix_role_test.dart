@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/service_matrix.dart';
-import 'package:cupola/features/services/presentation/service_matrix_collapse_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -127,18 +126,6 @@ Finder _cell(String routeParam, [String? instanceId]) => find.byKey(
   ),
 );
 
-/// Opens a band, which is the only density that paints a subtitle at all.
-/// The matrix opens fully folded — see [expandedServiceDomainsProvider] — and
-/// a compact card is a glyph, a name and a dot.
-Future<void> _openBand(
-  WidgetTester tester,
-  ProviderContainer container,
-  ServiceDomain domain,
-) async {
-  container.read(expandedServiceDomainsProvider.notifier).toggle(domain);
-  await tester.pumpAndSettle();
-}
-
 void main() {
   group('readout', () {
     testWidgets('folds two connections into one cell', (tester) async {
@@ -167,54 +154,50 @@ void main() {
       expect(find.text('4K'), findsNothing);
     });
 
-    // The folded card carries ONE figure and it is the lens's. A subtitle that
-    // listed both connections therefore put a single number under two names —
-    // "Radarr · 4K · HD · 0 movies" while the other Radarr holds 83 of them,
-    // which is a false statement rather than a missing one.
-    testWidgets('subtitles the connection its figure belongs to', (
+    // The address is NOT on the readout — `home` §4 is explicit that it lives
+    // on the Portal's picker cells and on the service home. What the folded
+    // card owes instead is the fact that it stands for more than one
+    // connection, which is what `×2` says.
+    testWidgets('a folded cell says how many connections it stands for', (
       tester,
     ) async {
       final container = await _pump(tester, role: ServiceMatrixRole.readout);
-      await _openBand(tester, container, ServiceDomain.media);
 
       expect(
         container.read(activeInstanceProvider(ServiceKey.radarr))?.id,
         'radarr',
         reason: 'the lens starts on the first connection',
       );
-      expect(find.text('4K · 2 connections'), findsOneWidget);
+      expect(find.text('×2'), findsOneWidget);
       expect(
-        find.text('4K · HD'),
+        find.textContaining('4K'),
         findsNothing,
-        reason: 'naming both while showing one connection\'s figure is a lie',
+        reason: 'the readout names the service; the picker names connections',
       );
     });
 
-    testWidgets('the subtitle follows the lens', (tester) async {
+    testWidgets('the readout never prints an address', (tester) async {
       final container = await _pump(tester, role: ServiceMatrixRole.readout);
-      await _openBand(tester, container, ServiceDomain.media);
 
       await container
           .read(activeInstancesProvider.notifier)
           .select(ServiceKey.radarr, 'radarr-hd11111');
       await tester.pumpAndSettle();
 
-      expect(find.text('HD · 2 connections'), findsOneWidget);
-      expect(find.text('4K · 2 connections'), findsNothing);
+      // Moving the lens changes which connection the figures belong to, and
+      // changes nothing the cell prints about *where* — because it prints none.
+      expect(find.text('×2'), findsOneWidget);
+      expect(find.textContaining('somewhere'), findsNothing);
     });
 
-    testWidgets('a lone connection still says where it lives', (tester) async {
-      // The counterweight: the host is the useful line while there is only one
-      // of them, and a stack with a single Sonarr must not grow a count of one.
-      final container = await _pump(
+    testWidgets('a lone connection grows no count of one', (tester) async {
+      await _pump(
         tester,
         role: ServiceMatrixRole.readout,
         instances: const [_sonarr],
       );
-      await _openBand(tester, container, ServiceDomain.media);
 
-      expect(find.text('somewhere'), findsOneWidget);
-      expect(find.textContaining('connections'), findsNothing);
+      expect(find.textContaining('×'), findsNothing);
     });
   });
 

@@ -176,4 +176,88 @@ void main() {
       });
     });
   });
+
+  _twoFigures();
+}
+
+void _twoFigures() {
+  group('resolveServiceSignalPair', () {
+    test('the primary is exactly what the single-figure card showed', () {
+      final kpis = [
+        const ServiceKpi(
+          label: 'Movies',
+          value: '2038',
+          icon: Icons.movie_rounded,
+        ),
+        const ServiceKpi(
+          label: 'Missing',
+          value: '34',
+          icon: Icons.report_gmailerrorred_rounded,
+          tone: StatusTone.neutral,
+        ),
+      ];
+
+      // The flagged KPI wins, which is the ranking the deck and the status bar
+      // already use — so the card's primary and the deck's one figure cannot
+      // disagree about which metric matters.
+      expect(resolveServiceSignalPair(kpis)!.primary.value, '34');
+      expect(resolveServiceSignal(kpis)!.value, '34');
+    });
+
+    test('each figure keeps its own tone', () {
+      final kpis = [
+        const ServiceKpi(
+          label: 'Wanted',
+          value: '47',
+          icon: Icons.subtitles_rounded,
+          tone: StatusTone.neutral,
+        ),
+        const ServiceKpi(
+          label: 'Status',
+          value: 'API key rejected',
+          icon: Icons.error_outline_rounded,
+          tone: StatusTone.warning,
+        ),
+      ];
+
+      final pair = resolveServiceSignalPair(kpis)!;
+      // Painting both with the worse of the two is the "one card, one colour"
+      // reduction the tone rule exists to prevent.
+      expect(pair.primary.tone, StatusTone.neutral);
+      expect(pair.secondary!.tone, StatusTone.warning);
+    });
+
+    test('a one-KPI service has no secondary to draw', () {
+      final pair = resolveServiceSignalPair([
+        const ServiceKpi(
+          label: 'Down',
+          value: '12.4 MB/s',
+          icon: Icons.download_rounded,
+          tone: StatusTone.info,
+        ),
+      ])!;
+
+      expect(pair.secondary, isNull);
+      expect(pair.primary.label, 'incoming');
+    });
+
+    test('no KPIs at all is no pair, not an empty one', () {
+      expect(resolveServiceSignalPair(const []), isNull);
+    });
+
+    test('ranking is flagged first, then the builder\'s own order', () {
+      final ranked = rankServiceKpis([
+        const ServiceKpi(label: 'A', value: '1', icon: Icons.abc),
+        const ServiceKpi(
+          label: 'B',
+          value: '2',
+          icon: Icons.abc,
+          tone: StatusTone.warning,
+        ),
+        const ServiceKpi(label: 'C', value: '3', icon: Icons.abc),
+      ]);
+
+      expect(ranked.map((kpi) => kpi.label), ['B', 'A', 'C']);
+    });
+  });
 }

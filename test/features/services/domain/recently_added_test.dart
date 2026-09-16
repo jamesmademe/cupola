@@ -91,4 +91,82 @@ void main() {
       expect(radarr.heroTag, isNot(sonarr.heroTag));
     });
   });
+
+  _theRegionsOwnStrings();
 }
+
+void _theRegionsOwnStrings() {
+  group('the eyebrow', () {
+    test('counts what landed and what did not, separately', () {
+      final counts = recentlyAddedEyebrow([
+        _imported('Poor Things', failed: false),
+        _imported('Past Lives', failed: false),
+        _imported('Nickel Boys', failed: true),
+      ]);
+
+      expect(counts.imported, '2 imported');
+      expect(counts.failed, '1 failed');
+    });
+
+    test('says nothing about failures when there are none', () {
+      // A permanent "0 failed" is a counter nobody reads on the day it moves.
+      final counts = recentlyAddedEyebrow([
+        _imported('Poor Things', failed: false),
+      ]);
+      expect(counts.failed, isNull);
+    });
+  });
+
+  group('the tile', () {
+    test(
+      'is named title, service, time — the three a 60×90 box cannot show',
+      () {
+        expect(
+          recentlyAddedTileLabel(
+            _imported('Poor Things', failed: false),
+            timeLabel: '08:12',
+          ),
+          'Poor Things, Radarr, 08:12',
+        );
+      },
+    );
+
+    test('a failed import says so in its name', () {
+      expect(
+        recentlyAddedTileLabel(
+          _imported('Nickel Boys', failed: true),
+          timeLabel: '06:58',
+        ),
+        contains('failed import'),
+      );
+    });
+
+    test('an undated import has a name, not an empty slot', () {
+      expect(
+        recentlyAddedTileLabel(
+          _imported('Poor Things', failed: false),
+          timeLabel: '',
+        ),
+        'Poor Things, Radarr',
+      );
+    });
+  });
+
+  group('formatImportedAt', () {
+    test('is time only, zero-padded', () {
+      expect(formatImportedAt(DateTime(2024, 5, 5, 8, 12)), '08:12');
+      expect(formatImportedAt(null), isEmpty);
+    });
+  });
+}
+
+RecentlyAddedItem _imported(String title, {required bool failed}) =>
+    RecentlyAddedItem(
+      service: ServiceKey.radarr,
+      id: 1,
+      title: title,
+      subtitle: '',
+      posterUrl: '',
+      addedAt: DateTime.utc(2024, 5, 5),
+      failed: failed,
+    );

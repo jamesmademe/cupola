@@ -129,22 +129,76 @@ const Set<String> _invariantLabels = {'series'};
 ///
 /// Returns null only when a service reports no KPIs at all, in which case the
 /// cell shows its reachability and nothing else.
-ServiceSignal? resolveServiceSignal(List<ServiceKpi> kpis) {
-  if (kpis.isEmpty) return null;
+/// Kept as the head of [resolveServiceSignalPair] rather than as a second
+/// implementation of the same ranking: the deck, the status bar and the picker
+/// still ask for one figure, and two functions choosing "the most important KPI"
+/// by two rules is how the cell and the deck end up disagreeing about what a
+/// service is doing.
+ServiceSignal? resolveServiceSignal(List<ServiceKpi> kpis) =>
+    resolveServiceSignalPair(kpis)?.primary;
 
-  final flagged = kpis.where((kpi) => kpi.isNoteworthy).firstOrNull;
+/// The two figures one card carries, each keeping its own tone.
+///
+/// The card draws two because one was never the whole answer: `2 038 movies` and
+/// `34 missing` are a scale and a backlog, and a cell that can only show one has
+/// to choose between telling you how big your library is and telling you what is
+/// wrong with it. It chose the fault, so a healthy stack's cards all read as
+/// bare totals and a stack with a backlog stopped saying how large it was.
+///
+/// [secondary] is null for a service with one KPI to its name — qBittorrent at
+/// `12.4 MB/s incoming` has nothing to put on a second line, and the card keeps
+/// its height rather than reserving a slot for an absence.
+@immutable
+class ServiceSignalPair {
+  const ServiceSignalPair({required this.primary, this.secondary});
 
-  // Nothing is asking for attention, so the headline metric carries the cell:
-  // the service's scale, not its problems.
-  final source = flagged ?? kpis.first;
+  /// The headline: the first flagged KPI, or the service's own first metric.
+  final ServiceSignal primary;
 
-  return ServiceSignal(
-    label: _matrixLabel(source.label, source.value),
-    value: source.value,
-    icon: source.icon,
-    tone: flagged?.tone ?? StatusTone.neutral,
+  /// The next-ranked one, or null when there is no second metric.
+  final ServiceSignal? secondary;
+}
+
+/// Picks the two figures a stack card shows, in rank order.
+///
+/// The ranking is the same judgment [resolveServiceSignal] already makes, only
+/// written down rather than reduced to its first element: **flagged KPIs first,
+/// in the builder's own order, then the rest in the builder's own order.** The
+/// primary is therefore exactly what the single-figure card showed, which is
+/// what makes this an addition rather than a change — and the secondary is the
+/// next thing the builder thought worth computing.
+///
+/// Each figure keeps *its own* tone. A Radarr with a backlog shows a neutral
+/// `2 038 movies` beside a neutral `34 missing`; a Bazarr shows a neutral
+/// `47 wanted subs` beside an amber `API key rejected`. Painting both with the
+/// worse of the two would be the "one card, one colour" reduction the tone rule
+/// exists to prevent.
+ServiceSignalPair? resolveServiceSignalPair(List<ServiceKpi> kpis) {
+  final ranked = rankServiceKpis(kpis);
+  if (ranked.isEmpty) return null;
+  return ServiceSignalPair(
+    primary: _signalFrom(ranked.first),
+    secondary: ranked.length > 1 ? _signalFrom(ranked[1]) : null,
   );
 }
+
+/// Flagged first, each group in the builder's own order.
+///
+/// Exposed rather than inlined because it is the rule both figures are chosen
+/// by, and a rule that lives inside a reducer is a rule no test can name.
+List<ServiceKpi> rankServiceKpis(List<ServiceKpi> kpis) => [
+  ...kpis.where((kpi) => kpi.isNoteworthy),
+  ...kpis.where((kpi) => !kpi.isNoteworthy),
+];
+
+ServiceSignal _signalFrom(ServiceKpi kpi) => ServiceSignal(
+  label: _matrixLabel(kpi.label, kpi.value),
+  value: kpi.value,
+  icon: kpi.icon,
+  // An unflagged KPI is not a judgment, so it resolves to the resting tone
+  // rather than borrowing the flagged one's.
+  tone: kpi.tone ?? StatusTone.neutral,
+);
 
 /// A KPI label as the matrix says it: rewritten where needed, lower case, and
 /// agreeing in number with its own figure.

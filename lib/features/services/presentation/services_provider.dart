@@ -27,8 +27,22 @@ import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
+import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/npm/domain/models/npm_models.dart';
+import 'package:cupola/features/npm/presentation/npm_provider.dart';
+import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/services/domain/arr_import.dart';
+import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
+import 'package:cupola/features/services/domain/request_ordering.dart';
+import 'package:cupola/features/services/domain/stack_readout.dart';
+import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -637,159 +651,209 @@ final lidarrQueuedArtistIdsProvider = FutureProvider<Set<int>>((ref) async {
 });
 
 /// How many items the merged Recently Added rail shows.
-const int servicesRecentlyAddedLimit = 12;
+///
+/// Six, down from twelve, and the number is the region's anatomy speaking: the
+/// phone draws six 60×90 tiles clipped by a right-edge fade, and a rail that
+/// scrolls twice as far as it shows is a rail whose fade is a lie.
+const int servicesRecentlyAddedLimit = 6;
 
-/// Newest library additions across Radarr, Sonarr and Lidarr, actually sorted.
+/// How many history records each arr is asked for.
 ///
-/// One rail instead of the two it replaces, so Lidarr finally appears: the hub
-/// already fetched `servicesMusicProvider` on every pull-to-refresh and rendered
-/// it nowhere, paying for the whole artist library and discarding it.
+/// One page, unfiltered — see `domain/arr_import.dart` for why the brief's
+/// `eventType` filter cannot be sent. Twenty rather than ten because the page is
+/// unfiltered: a busy evening's history is mostly `grabbed`, and ten records can
+/// contain no imports at all on a stack that is downloading faster than it
+/// imports. Twenty is still one request and still one page.
+const int servicesHistoryPageSize = 20;
+
+/// One \*arr history record, reduced to what the two regions that read it need.
 ///
-/// Readarr is deliberately absent. `ReadarrAuthor` carries no `added` timestamp
-/// and there is no per-author detail route to open, so including it would mean
-/// either inventing an order or shipping a tile that goes nowhere. Both are worse
-/// than its absence; adding the field and the route is its own change.
-final servicesRecentlyAddedProvider = FutureProvider<List<RecentlyAddedItem>>((
+/// A projection rather than the raw map, for the reason `RecentlyAddedItem` is
+/// one: the map is heterogeneous per event type and every reader would have to
+/// re-learn which keys mean what.
+class ArrHistoryEntry {
+  const ArrHistoryEntry({
+    required this.service,
+    required this.id,
+    required this.mediaId,
+    required this.title,
+    required this.subtitle,
+    required this.posterUrl,
+    required this.outcome,
+    required this.at,
+    required this.reason,
+  });
+
+  final ServiceKey service;
+
+  /// The history record's own id. Unique per service, and what the decision row
+  /// is keyed on — a media id is not, since one film can fail twice.
+  final int id;
+
+  /// The library item this record is about, for the route. Zero when the record
+  /// does not name one, which is normal for a failed grab of something the arr
+  /// never added.
+  final int mediaId;
+
+  final String title;
+  final String subtitle;
+  final String posterUrl;
+  final ArrImportOutcome outcome;
+  final DateTime? at;
+
+  /// Why it failed, when the record says. Null on an import.
+  final String? reason;
+}
+
+/// One history page per arr, read once and shared by the two regions that need
+/// it.
+///
+/// Recently added asks it what landed; the decisions region asks it what did
+/// not. One provider so the answer is one request, and so the two regions cannot
+/// disagree about the same record.
+final servicesArrHistoryProvider = FutureProvider<List<ArrHistoryEntry>>((
   ref,
 ) async {
-  // One narrow watch per source rather than the whole `SettingsModel`: the rail
-  // depends on three URL/key pairs, and watching the object rebuilt — and
-  // refetched — the entire rail on any settings write, a theme toggle included.
-  final radarr = _watchConnection(ref, ServiceKey.radarr);
-  final sonarr = _watchConnection(ref, ServiceKey.sonarr);
-  final lidarr = _watchConnection(ref, ServiceKey.lidarr);
+  // One narrow watch per source rather than the whole `SettingsModel`: this
+  // depends on three URL/key pairs, and watching the object refetched every
+  // history page on any settings write, a theme toggle included.
+  final connections = {
+    for (final service in const [
+      ServiceKey.radarr,
+      ServiceKey.sonarr,
+      ServiceKey.lidarr,
+    ])
+      service: _watchConnection(ref, service),
+  };
 
-  Future<List<RecentlyAddedItem>> from(
-    _ServiceConnection connection,
-    Future<List<RecentlyAddedItem>> Function() load,
+  Future<List<ArrHistoryEntry>> from(
+    ServiceKey service,
+    Future<List<dynamic>> Function() load,
   ) async {
-    if (!connection.configured) return const [];
+    final connection = connections[service];
+    if (connection == null || !connection.configured) return const [];
     try {
-      return await load();
+      final records = await load();
+      return records
+          .whereType<Map>()
+          .map(stringKeyMap)
+          .map(
+            (record) => _historyEntryFrom(
+              service,
+              record,
+              baseUrl: connection.url,
+              apiKey: connection.apiKey,
+            ),
+          )
+          .toList(growable: false);
     } catch (_) {
+      // The convention: a browse degrades to `[]` rather than taking the region
+      // down. A dark Radarr is named by the section's own offline state, which
+      // reads the summaries — not by an exception thrown through this.
       return const [];
     }
   }
 
   final results = await Future.wait([
-    from(radarr, () async {
-      final movies = await ref.watch(moviesProvider.future);
-      return _newestFrom(
-        movies,
-        addedOf: (movie) => movie.added,
-        project: (movie, addedAt) => RecentlyAddedItem(
-          service: ServiceKey.radarr,
-          id: movie.id,
-          title: movie.title,
-          // `year` is an int defaulting to 0, so an item with no year
-          // printed "0" and announced "Zero".
-          subtitle: movie.year == 0 ? '' : movie.year.toString(),
-          posterUrl: ImageUtils.extractPosterUrl(
-            movie.images,
-            baseUrl: radarr.url,
-            apiKey: radarr.apiKey,
-          ).url,
-          addedAt: addedAt,
-        ),
-      );
-    }),
-    from(sonarr, () async {
-      final series = await ref.watch(seriesProvider.future);
-      return _newestFrom(
-        series,
-        addedOf: (show) => show.added,
-        project: (show, addedAt) => RecentlyAddedItem(
-          service: ServiceKey.sonarr,
-          id: show.id,
-          title: show.title,
-          subtitle: show.year == 0 ? '' : show.year.toString(),
-          posterUrl: ImageUtils.extractPosterUrl(
-            show.images,
-            baseUrl: sonarr.url,
-            apiKey: sonarr.apiKey,
-          ).url,
-          addedAt: addedAt,
-        ),
-      );
-    }),
-    from(lidarr, () async {
-      final artists = await ref.watch(musicProvider.future);
-      return _newestFrom(
-        artists,
-        addedOf: (artist) => artist.added,
-        project: (artist, addedAt) => RecentlyAddedItem(
-          service: ServiceKey.lidarr,
-          id: artist.id,
-          title: artist.artistName,
-          // An artist has no year, so the qualifier is its scale.
-          subtitle: artist.albumCount == 1
-              ? '1 album'
-              : '${artist.albumCount} albums',
-          posterUrl: ImageUtils.extractPosterUrl(
-            artist.images,
-            baseUrl: lidarr.url,
-            apiKey: lidarr.apiKey,
-          ).url,
-          addedAt: addedAt,
-        ),
-      );
-    }),
+    from(
+      ServiceKey.radarr,
+      () => ref
+          .watch(radarrServiceProvider)
+          .getHistory(pageSize: servicesHistoryPageSize),
+    ),
+    from(
+      ServiceKey.sonarr,
+      () => ref
+          .watch(sonarrServiceProvider)
+          .getHistory(pageSize: servicesHistoryPageSize),
+    ),
+    // Lidarr's records arrive without their artist: `LidarrService` has no
+    // `getHistory` override, so nothing injects `includeArtist`, and the base
+    // call cannot add it without deciding for every arr. The record still
+    // carries `sourceTitle`, so the row has a name and a time — it has no
+    // poster, and the tile draws its service glyph instead.
+    from(
+      ServiceKey.lidarr,
+      () => ref
+          .watch(lidarrServiceProvider)
+          .getHistory(pageSize: servicesHistoryPageSize),
+    ),
   ]);
 
-  return sortRecentlyAdded(
-    results.expand((items) => items).toList(),
-    limit: servicesRecentlyAddedLimit,
-  );
+  return results.expand((entries) => entries).toList(growable: false);
 });
 
-/// The newest [servicesRecentlyAddedLimit] rows of one library, projected into
-/// [RecentlyAddedItem] **after** the trim rather than before it.
-///
-/// The rail shows twelve tiles. This provider used to build a projection for
-/// every film, series and artist the user owns — an `ImageUtils.extractPosterUrl`
-/// walk over each item's image list, plus the title/subtitle strings — and then
-/// discard all but twelve, on the UI isolate. A three-thousand-film Radarr paid
-/// three thousand poster lookups for twelve tiles.
-///
-/// The timestamp still has to be read for every row: that is what "newest"
-/// means, and it is one `DateTime.tryParse`. Everything else now happens
-/// [servicesRecentlyAddedLimit] times.
-///
-/// The comparator is [sortRecentlyAdded]'s — newest first, undated last — plus a
-/// source-order tiebreak, so trimming per source cannot change what the merged
-/// rail shows: the merged result takes at most twelve from any one source
-/// anyway, and the tiebreak makes which twelve deterministic rather than
-/// whatever an unstable `List.sort` happened to leave.
-List<RecentlyAddedItem> _newestFrom<T>(
-  List<T> rows, {
-  required String? Function(T row) addedOf,
-  required RecentlyAddedItem Function(T row, DateTime? addedAt) project,
+ArrHistoryEntry _historyEntryFrom(
+  ServiceKey service,
+  Map<String, dynamic> record, {
+  required String baseUrl,
+  required String apiKey,
 }) {
-  final dated =
-      List.generate(
-        rows.length,
-        (index) =>
-            (index: index, addedAt: parseAddedTimestamp(addedOf(rows[index]))),
-        growable: false,
-      )..sort((a, b) {
-        final addedA = a.addedAt;
-        final addedB = b.addedAt;
-        if (addedA != null && addedB != null) {
-          final byDate = addedB.compareTo(addedA);
-          if (byDate != 0) return byDate;
-        } else if (addedA == null && addedB != null) {
-          return 1;
-        } else if (addedA != null && addedB == null) {
-          return -1;
-        }
-        return a.index.compareTo(b.index);
-      });
+  final media = mapOrNull(record['movie']) ?? mapOrNull(record['series']);
+  final data = mapOrNull(record['data']);
+  final title =
+      arrPrimaryMediaTitle(record) ?? arrReleaseTitle(record) ?? 'Unknown item';
 
-  return dated
-      .take(servicesRecentlyAddedLimit)
-      .map((entry) => project(rows[entry.index], entry.addedAt))
-      .toList(growable: false);
+  return ArrHistoryEntry(
+    service: service,
+    id: intOrNull(record['id']) ?? 0,
+    mediaId:
+        intOrNull(record['movieId']) ??
+        intOrNull(record['seriesId']) ??
+        intOrNull(record['artistId']) ??
+        0,
+    title: title,
+    subtitle: joinDisplayParts([
+      service.title,
+      if (service == ServiceKey.sonarr) arrEpisodeCode(record),
+    ]),
+    posterUrl: media == null
+        ? ''
+        : ImageUtils.extractPosterUrl(
+            media['images'] as List<dynamic>?,
+            baseUrl: baseUrl,
+            apiKey: apiKey,
+          ).url,
+    outcome: classifyHistoryEvent(stringOrNull(record['eventType'])),
+    at: parseAddedTimestamp(stringOrNull(record['date'])),
+    // `statusMessages` is where an \*arr puts the reason an import failed, and
+    // `message` is where a failed *grab* puts it. Neither is always present, and
+    // a decision row with no reason still says what it is.
+    reason:
+        stringOrNull(data?['statusMessages']) ?? stringOrNull(data?['message']),
+  );
 }
+
+/// What the arrs actually imported, newest first.
+///
+/// One region and one channel — the old "Finished today" band folded into it, so
+/// a failed import is named here (in amber, in the eyebrow) and *acted on* in
+/// the decisions region above, rather than sitting in a band of its own where a
+/// failure went to die.
+///
+/// The fetch is the history read, not the library browse it used to be: three
+/// full `fetchAllItems` walks for six tiles, on every pull-to-refresh.
+final servicesRecentlyAddedProvider = FutureProvider<List<RecentlyAddedItem>>((
+  ref,
+) async {
+  final entries = await ref.watch(servicesArrHistoryProvider.future);
+
+  final items = [
+    for (final entry in entries)
+      if (entry.outcome != ArrImportOutcome.other)
+        RecentlyAddedItem(
+          service: entry.service,
+          id: entry.mediaId,
+          title: entry.title,
+          subtitle: entry.subtitle,
+          posterUrl: entry.posterUrl,
+          addedAt: entry.at,
+          failed: entry.outcome == ArrImportOutcome.failed,
+        ),
+  ];
+
+  return sortRecentlyAdded(items, limit: servicesRecentlyAddedLimit);
+});
 
 /// How many in-flight items the hub shows before deferring to `/activity`.
 ///
@@ -798,6 +862,88 @@ List<RecentlyAddedItem> _newestFrom<T>(
 /// torrent on the screen.
 const int servicesQueuePreviewLimit = 5;
 
+/// Everything a transfer row prints, per source, in one shape.
+///
+/// The fields are the row's grammar rather than one service's vocabulary — see
+/// `domain/in_flight.dart`. It used to carry a pre-joined `subtitle` composed by
+/// each loader in its own words, which is why a Radarr row and a SABnzbd row
+/// could not be read down a column: they were two different sentences that
+/// happened to be the same length.
+class ServiceQueueItem {
+  const ServiceQueueItem({
+    required this.service,
+    required this.title,
+    required this.progress,
+    required this.clientLabel,
+    this.id = '',
+    this.quality,
+    this.doneBytes,
+    this.totalBytes,
+    this.etaSeconds,
+    this.stalled = false,
+    this.stalledSince,
+    this.warning,
+    this.clientRateBytesPerSecond,
+    this.route,
+    this.detail,
+  });
+
+  final ServiceKey service;
+
+  /// The client's own id for this transfer — a torrent hash, an nzo id, a queue
+  /// record id. Keys the row and the decision it can become.
+  final String id;
+
+  final String title;
+
+  /// Fraction complete, or null when the client did not say. Null is not zero:
+  /// a usenet item that has not started reports nothing, and sorting it as 0%
+  /// would bury the transfer about to finish.
+  final double? progress;
+
+  /// The release's quality, when the source has one. A download client knows the
+  /// file size, not the profile the \*arr grabbed it under.
+  final String? quality;
+
+  final int? doneBytes;
+  final int? totalBytes;
+  final int? etaSeconds;
+
+  /// Who is moving the bytes, in words. For an \*arr row this is the download
+  /// client named in the queue record — the arr is the one that asked, not the
+  /// one that is transferring.
+  final String clientLabel;
+
+  /// Stopped moving. Leaves this region entirely and becomes a decision.
+  final bool stalled;
+
+  /// When it stopped. Feeds the decision's "Stalled 42 min", and its ranking.
+  final DateTime? stalledSince;
+
+  /// The source's own message about this row, when there is one.
+  final String? warning;
+
+  /// The rate of the **client**, not of this row, carried on every row that
+  /// client contributes.
+  ///
+  /// A byte rate is a countable unit and sums, but only once per client: adding
+  /// it per row would multiply one client's throughput by its queue depth. The
+  /// eyebrow sums over distinct clients for exactly that reason, and an \*arr
+  /// carries none — the bytes it is waiting on are already being counted by the
+  /// client that is moving them.
+  final int? clientRateBytesPerSecond;
+
+  /// Where the row leads.
+  final String? route;
+
+  /// Extra facts a decision row prints that a transfer row does not — seeds, the
+  /// current rate, the arr's own warning.
+  final String? detail;
+
+  /// Whether this transfer is genuinely moving, or waiting to.
+  bool get isActive => !stalled;
+}
+
 /// Everything currently transferring, across every configured source.
 ///
 /// This is the region the old dashboard put *last*, below three browse rails,
@@ -805,6 +951,11 @@ const int servicesQueuePreviewLimit = 5;
 /// thing on a control-room screen was both buried and mostly blind. It now covers
 /// the two arr services it always did, plus Lidarr and Readarr, plus the three
 /// download clients that actually move the bytes.
+///
+/// Stalls are **not** filtered out here: they are in the list, flagged, because
+/// the decisions region reads the same provider and a second fetch to find the
+/// stuck ones would be the same queue asked twice. `servicesInFlightProvider` is
+/// the filtered view the region draws.
 ///
 /// Every source is gated on being configured and degrades to `[]` on failure, so
 /// one unreachable client cannot empty or block the region.
@@ -899,10 +1050,42 @@ final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
         return a.index.compareTo(b.index);
       });
 
-  return ordered
-      .take(servicesQueuePreviewLimit)
-      .map((entry) => entry.item)
-      .toList(growable: false);
+  return ordered.map((entry) => entry.item).toList(growable: false);
+});
+
+/// The transfers the IN FLIGHT region draws, and the numbers above them.
+///
+/// Active only: a stalled transfer is not in flight, it is a decision, and the
+/// region says so in a footnote rather than silently showing a different count
+/// from the client's own queue.
+typedef ServicesInFlight = ({
+  List<ServiceQueueItem> active,
+  List<ServiceQueueItem> stalled,
+  int? rateBytesPerSecond,
+  int clients,
+});
+
+final servicesInFlightProvider = FutureProvider<ServicesInFlight>((ref) async {
+  final items = await ref.watch(servicesQueueProvider.future);
+  final active = items.where((item) => item.isActive).toList(growable: false);
+  final stalled = items.where((item) => item.stalled).toList(growable: false);
+
+  // Summed once per client, never once per row — see
+  // [ServiceQueueItem.clientRateBytesPerSecond].
+  final rates = <ServiceKey, int>{};
+  for (final item in items) {
+    final rate = item.clientRateBytesPerSecond;
+    if (rate != null) rates[item.service] = rate;
+  }
+
+  return (
+    active: active.take(servicesQueuePreviewLimit).toList(growable: false),
+    stalled: stalled,
+    rateBytesPerSecond: rates.isEmpty
+        ? null
+        : rates.values.fold(0, (sum, rate) => sum + rate),
+    clients: rates.length,
+  );
 });
 
 /// Active torrents, as in-flight items.
@@ -912,12 +1095,13 @@ final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
 /// crowd out every other source.
 Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(Ref ref) async {
   final torrents = await ref.watch(allTorrentsProvider.future);
-  return torrents
+  final moving = torrents
       .where(
         (torrent) => switch (torrent.parsedState) {
           // `stalled` is only ever `stalledDL` — a stalled *upload* parses as
           // seeding — so it belongs here rather than being filtered out with the
-          // rest of the seeding library.
+          // rest of the seeding library. It arrives flagged and leaves this
+          // region for the decisions above it.
           TorrentState.downloading ||
           TorrentState.metaDownloading ||
           TorrentState.stalled ||
@@ -930,41 +1114,83 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(Ref ref) async {
           TorrentState.unknown => false,
         },
       )
+      .toList(growable: false);
+
+  // The client's rate, summed over what it is actually downloading, and carried
+  // on each of its rows.
+  final clientRate = moving.fold<int>(
+    0,
+    (sum, torrent) => sum + torrent.dlSpeed,
+  );
+
+  return moving
       .map(
         (torrent) => ServiceQueueItem(
           service: ServiceKey.qbittorrent,
+          id: torrent.hash,
           title: torrent.name,
-          subtitle: joinDisplayParts([
-            ServiceKey.qbittorrent.title,
-            torrent.category.isEmpty ? null : torrent.category,
-            formatSpeed(torrent.dlSpeed),
-          ]),
           progress: torrent.progress.clamp(0, 1).toDouble(),
+          // No quality: a torrent client sees a file name, not a profile.
+          doneBytes: torrent.downloaded > 0
+              ? torrent.downloaded
+              : (torrent.size * torrent.progress).round(),
+          totalBytes: torrent.size > 0 ? torrent.size : null,
+          etaSeconds: _qbEta(torrent.eta),
+          clientLabel: ServiceKey.qbittorrent.title,
+          clientRateBytesPerSecond: clientRate,
           // A stalled transfer is the one qBittorrent state worth surfacing on a
           // hub: it looks identical to a slow download until you notice it has
           // not moved.
-          warning: torrent.parsedState == TorrentState.stalled
-              ? 'Stalled'
+          stalled: torrent.parsedState == TorrentState.stalled,
+          stalledSince: torrent.parsedState == TorrentState.stalled
+              ? _epochSeconds(torrent.lastActivity)
               : null,
+          detail: joinDisplayParts([
+            formatSpeed(torrent.dlSpeed),
+            '${torrent.seeders} seeds',
+          ]),
+          route: ServiceRoutes.qbittorrentTorrent(torrent.hash),
         ),
       )
       .toList(growable: false);
 }
 
+/// qBittorrent's "no estimate" sentinel, in seconds (100 days).
+///
+/// Printed literally it reads `100 d left`, which is not an estimate — it is the
+/// client saying it has none. Mapped to null so the row prints `—`.
+const int _qbNoEta = 8640000;
+
+int? _qbEta(int eta) => eta <= 0 || eta >= _qbNoEta ? null : eta;
+
+DateTime? _epochSeconds(int seconds) =>
+    seconds <= 0 ? null : DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+
 Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(Ref ref) async {
   final queue = await ref.watch(sabnzbdQueueProvider.future);
+  final rate = (queue.kbPerSec * 1024).round();
+
   return queue.slots
       .map(
         (slot) => ServiceQueueItem(
           service: ServiceKey.sabnzbd,
+          id: slot.nzoId,
           title: slot.filename,
-          subtitle: joinDisplayParts([
-            ServiceKey.sabnzbd.title,
-            slot.category.isEmpty ? null : slot.category,
-            slot.sizeLeftLabel,
-          ]),
           progress: slot.progress,
+          // SABnzbd reports what is *left*, not what the job weighs:
+          // `SabnzbdQueueSlot` parses `mbleft` and the response's `mb` is not
+          // modelled at all. So the pair is unknown rather than inferred from
+          // the percentage — a computed total is a number the server never
+          // said, and this row would be the only place in the app printing one.
+          doneBytes: null,
+          totalBytes: null,
+          etaSeconds: parseClockDuration(slot.timeLeft),
+          clientLabel: ServiceKey.sabnzbd.title,
+          clientRateBytesPerSecond: rate,
+          // A paused queue is stopped *on purpose*, which the tone rule files
+          // under neutral — not a fault, and not a decision.
           warning: queue.paused ? 'Paused' : null,
+          route: ServiceRoutes.forService(ServiceKey.sabnzbd),
         ),
       )
       .toList(growable: false);
@@ -972,37 +1198,41 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(Ref ref) async {
 
 Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(Ref ref) async {
   final groups = await ref.watch(nzbgetQueueProvider.future);
+  const megabyte = 1024 * 1024;
+
   return groups
       .map(
         (group) => ServiceQueueItem(
           service: ServiceKey.nzbget,
+          id: '${group.nzbId}',
           title: group.name,
-          subtitle: joinDisplayParts([
-            ServiceKey.nzbget.title,
-            group.category.isEmpty ? null : group.category,
-            group.remainingLabel,
-          ]),
           progress: group.progress,
-          warning: null,
+          doneBytes: (group.fileSizeMb - group.remainingSizeMb) * megabyte,
+          totalBytes: group.fileSizeMb * megabyte,
+          // NZBGet reports a rate for the whole client and none per group, so
+          // there is nothing to divide into an estimate. `—`, not a guess.
+          etaSeconds: null,
+          clientLabel: ServiceKey.nzbget.title,
+          route: ServiceRoutes.forService(ServiceKey.nzbget),
         ),
       )
       .toList(growable: false);
 }
 
-class ServiceQueueItem {
-  final ServiceKey service;
-  final String title;
-  final String subtitle;
-  final double? progress;
-  final String? warning;
-
-  const ServiceQueueItem({
-    required this.service,
-    required this.title,
-    required this.subtitle,
-    required this.progress,
-    required this.warning,
-  });
+/// `0:03:21` / `00:03:21.5` → seconds. Null when the source said nothing.
+///
+/// Shared by the \*arr `timeleft` field and SABnzbd's, which are the same shape
+/// for the same reason: both are a .NET/Python duration printed for a human.
+int? parseClockDuration(String? value) {
+  final raw = value?.trim();
+  if (raw == null || raw.isEmpty) return null;
+  final parts = raw.split(':');
+  if (parts.length != 3) return null;
+  final hours = int.tryParse(parts[0]);
+  final minutes = int.tryParse(parts[1]);
+  final seconds = int.tryParse(parts[2].split('.').first);
+  if (hours == null || minutes == null || seconds == null) return null;
+  return hours * 3600 + minutes * 60 + seconds;
 }
 
 /// Fetches a `/queue` and indexes it, degrading to an empty snapshot on failure
@@ -1067,25 +1297,55 @@ ServiceQueueItem _queueItemFromMap(ServiceKey service, Map item) {
       arrPrimaryMediaTitle(typedItem) ??
       arrReleaseTitle(typedItem) ??
       'Unknown release';
-  final quality = _queueQualityLabel(typedItem['quality']);
-  final subtitle = joinDisplayParts([
-    // The source, always and first. The row's leading glyph already encoded it,
-    // but a glyph is not a name: a merged queue that mixes four arrs and three
-    // download clients was asking the user to recognise seven icons to know
-    // which screen a tap would open.
-    service.title,
-    _queueTypeLabel(service),
-    if (service == ServiceKey.sonarr) arrEpisodeCode(typedItem),
-    quality,
-    arrReleaseTitle(typedItem),
-  ]);
+  final size = intOrNull(typedItem['size']);
+  final left = intOrNull(typedItem['sizeleft']);
+  final warning = arrQueueWarningMessage(typedItem);
 
   return ServiceQueueItem(
     service: service,
-    title: title,
-    subtitle: subtitle,
+    id: '${intOrNull(typedItem['id']) ?? 0}',
+    title: joinDisplayParts([
+      title,
+      if (service == ServiceKey.sonarr) arrEpisodeCode(typedItem),
+    ]),
     progress: queueProgress(typedItem),
-    warning: arrQueueWarningMessage(typedItem),
+    quality: _queueQualityLabel(typedItem['quality']),
+    // Derived from the two figures the record actually carries, and only when
+    // both are there: `size - sizeleft` is what has landed. An arr that reports
+    // neither prints `—`, never `0` — a transfer nobody could measure has not
+    // downloaded nothing.
+    doneBytes: size == null || left == null ? null : size - left,
+    totalBytes: size,
+    etaSeconds: parseClockDuration(stringOrNull(typedItem['timeleft'])),
+    // The client moving the bytes, which is the answer the row owes. The arr is
+    // the one that asked for them — it is already the row's glyph and accent.
+    clientLabel:
+        stringOrNull(typedItem['downloadClient']) ??
+        _queueTypeLabel(service) ??
+        service.title,
+    // An \*arr flags a queue record it cannot make progress on — a stalled
+    // download, a file it could not import, a release it will not upgrade to.
+    // That is a transfer which has stopped being a transfer, so it leaves the
+    // in-flight region and becomes a decision, carrying the arr's own words.
+    stalled: warning != null,
+    stalledSince: parseAddedTimestamp(stringOrNull(typedItem['added'])),
+    warning: warning,
+    detail: warning,
+    route: switch (service) {
+      ServiceKey.radarr =>
+        intOrNull(typedItem['movieId']) == null
+            ? null
+            : ServiceRoutes.radarrMovie(intOrNull(typedItem['movieId'])!),
+      ServiceKey.sonarr =>
+        intOrNull(typedItem['seriesId']) == null
+            ? null
+            : ServiceRoutes.sonarrSeries(intOrNull(typedItem['seriesId'])!),
+      ServiceKey.lidarr =>
+        intOrNull(typedItem['artistId']) == null
+            ? null
+            : ServiceRoutes.lidarrArtist(intOrNull(typedItem['artistId'])!),
+      _ => ServiceRoutes.forService(service),
+    },
   );
 }
 
@@ -1124,3 +1384,337 @@ String? _queueQualityLabel(dynamic value) {
 
   return stringOrNull(value);
 }
+
+/// The Dashboard's header line: `14 of 16 answering · 1 degraded · 2 unreachable`.
+///
+/// A `Notifier` rather than a plain `Provider` for one reason: the timestamp.
+/// The counts are derived from the summaries and would recompute happily in a
+/// `Provider`, but the *age* of the reading is a fact about when the probes
+/// settled, and a `Provider` that called `DateTime.now()` in its body would
+/// restamp itself every time any unrelated dependency moved — a readout that
+/// claims to have been refreshed "just now" because a theme toggle rebuilt it.
+/// A notifier instance survives its own `build`, so it can remember when the
+/// last probe actually landed.
+///
+/// See `domain/stack_readout.dart` for the counting rule, which lives there
+/// precisely so it can be argued about without a container.
+final stackReadoutProvider =
+    NotifierProvider<StackReadoutNotifier, StackReadout>(
+      StackReadoutNotifier.new,
+    );
+
+class StackReadoutNotifier extends Notifier<StackReadout> {
+  DateTime? _checkedAt;
+
+  /// Whether a probe was outstanding the last time this rebuilt. The stamp is
+  /// taken on the *transition* to settled, not on every settled build, so a
+  /// rebuild caused by something else does not restate the age.
+  bool _wasChecking = true;
+
+  @override
+  StackReadout build() {
+    final settings = ref.watch(currentSettingsProvider);
+    final configured = ServiceKey.values
+        .where(settings.isServiceConfigured)
+        .toList(growable: false);
+
+    final states = <StackServiceState>[];
+    for (final service in configured) {
+      // Connections folded per service, never the lensed summary: with two
+      // Radarr and one dark, the lens answers about whichever one it happens to
+      // point at and the header inherits that coin flip.
+      final folded = ref.watch(foldedServiceHealthProvider(service));
+      states.add(
+        foldServiceState(
+          total: folded.total,
+          offline: folded.offline,
+          checking: folded.checking,
+        ),
+      );
+    }
+
+    final checking = states
+        .where((state) => state == StackServiceState.checking)
+        .length;
+    if (checking > 0) {
+      _wasChecking = true;
+    } else if (_wasChecking || _checkedAt == null) {
+      _wasChecking = false;
+      _checkedAt = configured.isEmpty ? null : DateTime.now();
+    }
+
+    return stackReadoutFrom(
+      states: states,
+      registrySize: ServiceKey.values.length,
+      checkedAt: _checkedAt,
+    );
+  }
+}
+
+/// Everything waiting on a human, from every source, merged and ranked.
+///
+/// Reads what the page has already loaded — the requests it was going to show,
+/// the queue the in-flight region reads, the history the recently-added rail
+/// reads, and the three infrastructure providers the stack cards' KPIs already
+/// watch. Nothing here is a new request; the region is a **view** of the page's
+/// own data, which is why it can afford to be first on the screen.
+///
+/// Each source is gated on its service being configured and degrades to nothing
+/// on failure: a region that answers "what needs me" must not itself become the
+/// thing that needs you.
+final dashboardDecisionsProvider = FutureProvider<List<DashboardDecision>>((
+  ref,
+) async {
+  final settings = ref.watch(currentSettingsProvider);
+  final decisions = <DashboardDecision>[];
+
+  Future<void> collect(
+    ServiceKey service,
+    Future<List<DashboardDecision>> Function() load,
+  ) async {
+    if (!settings.isServiceConfigured(service)) return;
+    try {
+      decisions.addAll(await load());
+    } catch (_) {
+      // Degrades to nothing. See the doc above.
+    }
+  }
+
+  await Future.wait([
+    collect(ServiceKey.seerr, () => _pendingRequestDecisions(ref)),
+    collect(ServiceKey.prowlarr, () => _failingIndexerDecisions(ref)),
+    collect(ServiceKey.dockge, () => _stoppedStackDecisions(ref)),
+    collect(
+      ServiceKey.nginxProxyManager,
+      () => _expiringCertificateDecisions(ref),
+    ),
+  ]);
+
+  // Not gated on one service: the stalls come from whichever of seven sources
+  // reported one, and the queue provider has already gated each of those.
+  try {
+    final inFlight = await ref.watch(servicesInFlightProvider.future);
+    decisions.addAll(inFlight.stalled.map(_stallDecision));
+  } catch (_) {}
+
+  try {
+    final history = await ref.watch(servicesArrHistoryProvider.future);
+    decisions.addAll(
+      history
+          .where((entry) => entry.outcome == ArrImportOutcome.failed)
+          .map(_failedImportDecision),
+    );
+  } catch (_) {}
+
+  return rankDecisions(decisions);
+});
+
+Future<List<DashboardDecision>> _pendingRequestDecisions(Ref ref) async {
+  final requests = await ref.watch(servicesRequestsProvider.future);
+  return [
+    for (final request in requests)
+      // `isAwaitingApproval` keys off the request's own status, never
+      // `displayStatus` — a request for media that already exists reports
+      // "Available" while nobody has approved it. See `request_ordering.dart`.
+      if (isAwaitingApproval(request))
+        DashboardDecision(
+          kind: DecisionKind.pendingRequest,
+          id: 'seerr-${request.id}',
+          service: ServiceKey.seerr,
+          title: request.media?.title ?? 'Unknown media',
+          detail: joinDisplayParts([
+            'Request',
+            request.requestedBy?.displayName,
+            request.type == 'tv' ? 'Series' : 'Movie',
+          ]),
+          occurredAt: parseAddedTimestamp(request.createdAt),
+          actionId: request.id,
+          posterUrl: ImageUtils.buildTmdbPosterUrl(request.media?.posterPath),
+          route: _seerrRequestRoute(request),
+        ),
+  ];
+}
+
+String _seerrRequestRoute(SeerrRequest request) {
+  final media = request.media;
+  final id = media?.tmdbId ?? media?.id;
+  if (id == null || id <= 0) return ServiceRoutes.seerr;
+  return ServiceRoutes.seerrDetail(
+    mediaType: request.type == 'tv' ? 'tv' : 'movie',
+    id: id,
+  );
+}
+
+Future<List<DashboardDecision>> _failingIndexerDecisions(Ref ref) async {
+  // `/indexerstatus` returns only the indexers with an active problem, so this
+  // list *is* the fault list — no filtering, and no counting against the total.
+  final results = await Future.wait([
+    ref.watch(prowlarrIndexerStatusProvider.future),
+    ref.watch(prowlarrIndexersProvider.future),
+  ]);
+  final statuses = results[0] as List<ProwlarrIndexerStatus>;
+  final indexers = results[1] as List<ProwlarrIndexer>;
+  final names = {for (final indexer in indexers) indexer.id: indexer.name};
+
+  return [
+    for (final status in statuses)
+      DashboardDecision(
+        kind: DecisionKind.failingIndexer,
+        id: 'prowlarr-${status.indexerId}',
+        service: ServiceKey.prowlarr,
+        title: names[status.indexerId] ?? 'Indexer ${status.indexerId}',
+        detail: joinDisplayParts([
+          'Failing',
+          ServiceKey.prowlarr.title,
+          status.disabledTill == null ? null : 'disabled for now',
+        ]),
+        // The *first* failure, not the most recent one: an indexer that has been
+        // failing since breakfast outranks one that failed a minute ago, and the
+        // most recent failure of a long outage is always a minute ago.
+        occurredAt:
+            parseAddedTimestamp(status.initialFailure) ??
+            parseAddedTimestamp(status.mostRecentFailure),
+        actionId: status.indexerId,
+        route: ServiceRoutes.prowlarrIndexer(status.indexerId),
+      ),
+  ];
+}
+
+Future<List<DashboardDecision>> _stoppedStackDecisions(Ref ref) async {
+  final stacks = await ref.watch(dockgeStackListProvider.future);
+  return [
+    for (final stack in stacks)
+      // `exited` only. A stack that is `inactive` was never started and a stack
+      // the user stopped on purpose is not a fault — decision 15's "stopped on
+      // purpose is neutral". An *exited* container is one that was running and
+      // is not any more.
+      if (stack.status == DockgeStackStatus.exited)
+        DashboardDecision(
+          kind: DecisionKind.stoppedStack,
+          id: 'dockge-${stack.endpoint}-${stack.name}',
+          service: ServiceKey.dockge,
+          title: stack.name,
+          detail: joinDisplayParts(['Stack stopped', ServiceKey.dockge.title]),
+          // Dockge dates nothing: its stack list carries a status and a name and
+          // no timestamp at all. Undated sorts last inside its kind rather than
+          // inheriting "just now", which would put every stopped stack above
+          // every dated fault.
+          occurredAt: null,
+          route: ServiceRoutes.dockgeStack(stack.name),
+        ),
+  ];
+}
+
+Future<List<DashboardDecision>> _expiringCertificateDecisions(Ref ref) async {
+  final certificates = await ref.watch(npmCertificatesProvider.future);
+  final now = DateTime.now();
+  return [
+    for (final certificate in certificates)
+      if (certificate.isExpiringSoon(now))
+        DashboardDecision(
+          kind: DecisionKind.expiringCertificate,
+          id: 'npm-cert-${certificate.id}',
+          service: ServiceKey.nginxProxyManager,
+          title: certificate.domainNames.isEmpty
+              ? certificate.niceName
+              : certificate.domainNames.first,
+          detail: joinDisplayParts([
+            _certificateExpiry(certificate, now),
+            ServiceKey.nginxProxyManager.title,
+          ]),
+          // The expiry date, standing in for "when did this start needing me".
+          // Ordering by it puts the certificate closest to lapsing first, which
+          // is what "oldest first" means for a deadline.
+          occurredAt: certificate.expiresOn,
+          route: ServiceRoutes.forService(ServiceKey.nginxProxyManager),
+        ),
+  ];
+}
+
+String _certificateExpiry(NpmCertificate certificate, DateTime now) {
+  final expiresOn = certificate.expiresOn;
+  if (expiresOn == null) return 'Certificate expiring';
+  final days = expiresOn.difference(now).inDays;
+  if (days < 0) return 'Certificate expired';
+  if (days == 0) return 'Certificate expires today';
+  if (days == 1) return 'Certificate expires tomorrow';
+  return 'Certificate expires in $days days';
+}
+
+DashboardDecision _stallDecision(ServiceQueueItem item) => DashboardDecision(
+  kind: DecisionKind.stalledDownload,
+  id: 'stall-${item.service.routeParam}-${item.id}',
+  service: item.service,
+  title: item.title,
+  detail: joinDisplayParts([
+    item.warning ?? 'Stalled',
+    item.detail == item.warning ? null : item.detail,
+    item.clientLabel,
+  ]),
+  occurredAt: item.stalledSince,
+  route: item.route,
+  // The decision acts on the client, which may not be a service this user has
+  // set up at all — an \*arr can name a download client Cupola has no connection
+  // to. The control stays drawn and tappable either way; see the row.
+  requiresService: _clientServiceFor(item),
+);
+
+/// Which service the "open this transfer" control would jump to.
+///
+/// Null when the row already *is* the client: qBittorrent's own stalled torrent
+/// opens in qBittorrent, which is not a cross-service jump and owes no hint.
+ServiceKey? _clientServiceFor(ServiceQueueItem item) {
+  if (item.service == ServiceKey.qbittorrent) return null;
+  return switch (item.clientLabel.toLowerCase()) {
+    final label when label.contains('qbittorrent') => ServiceKey.qbittorrent,
+    final label when label.contains('sab') => ServiceKey.sabnzbd,
+    final label when label.contains('nzbget') => ServiceKey.nzbget,
+    final label when label.contains('transmission') => ServiceKey.transmission,
+    _ => null,
+  };
+}
+
+DashboardDecision _failedImportDecision(ArrHistoryEntry entry) =>
+    DashboardDecision(
+      kind: DecisionKind.failedImport,
+      id: 'import-${entry.service.routeParam}-${entry.id}',
+      service: entry.service,
+      title: entry.title,
+      detail: joinDisplayParts([
+        'Import failed',
+        entry.service.title,
+        entry.reason,
+      ]),
+      occurredAt: entry.at,
+      // The library item a manual import would be filed under. Zero — a failed
+      // grab of something the \*arr never added — leaves the wizard to ask.
+      actionId: entry.mediaId <= 0 ? null : entry.mediaId,
+      posterUrl: entry.posterUrl,
+      route: entry.mediaId <= 0
+          ? ServiceRoutes.forService(entry.service)
+          : switch (entry.service) {
+              ServiceKey.radarr => ServiceRoutes.radarrMovie(entry.mediaId),
+              ServiceKey.sonarr => ServiceRoutes.sonarrSeries(entry.mediaId),
+              ServiceKey.lidarr => ServiceRoutes.lidarrArtist(entry.mediaId),
+              _ => ServiceRoutes.forService(entry.service),
+            },
+    );
+
+/// The two live figures one stack card shows.
+///
+/// Lives here rather than beside `serviceSignalProvider` because it is a
+/// Dashboard concern: the deck, the status bar and the Portal's picker all want
+/// exactly one figure and are right to. The card wants two, and reduces the same
+/// KPI list through the same ranking — see `resolveServiceSignalPair` — so the
+/// card's primary and the deck's single figure can never disagree about which
+/// metric matters.
+///
+/// Note the deliberate lack of error handling: an unreachable service leaves
+/// this in `AsyncError`, and the cell renders its reachability instead. Swallowing
+/// the error into a null pair here would make "no metric to report" and "this
+/// service is down" the same value.
+final serviceSignalPairProvider = FutureProvider.autoDispose
+    .family<ServiceSignalPair?, ServiceKey>((ref, service) async {
+      final kpis = await ref.watch(serviceKpiProvider(service).future);
+      return resolveServiceSignalPair(kpis);
+    });

@@ -31,9 +31,18 @@ class RecentlyAddedItem {
   final String subtitle;
   final String posterUrl;
 
-  /// When the service says it was added. Null when the service did not say,
+  /// When the service says it was imported. Null when the service did not say,
   /// which sorts last — see [sortRecentlyAdded].
   final DateTime? addedAt;
+
+  /// Whether the import failed.
+  ///
+  /// A failed import is a **fault**, which is amber, and it is also a *decision*
+  /// — its actionable row lives in the decisions region, where the fix is. It is
+  /// still named here because this region is now the record of what the arrs did
+  /// today, and a record that silently drops the failures is a record that says
+  /// the day went better than it did.
+  final bool failed;
 
   const RecentlyAddedItem({
     required this.service,
@@ -42,10 +51,54 @@ class RecentlyAddedItem {
     required this.subtitle,
     required this.posterUrl,
     required this.addedAt,
+    this.failed = false,
   });
 
   /// Hero tag shared with the destination screen.
   String get heroTag => 'services_recent_${service.routeParam}_$id';
+}
+
+/// The region's eyebrow: `5 imported · 1 failed`.
+///
+/// The failed half is drawn in amber by the caller and is simply absent at zero
+/// — a permanent "0 failed" is a counter nobody reads on the day it moves. The
+/// two halves are returned separately because only one of them is coloured.
+({String imported, String? failed}) recentlyAddedEyebrow(
+  List<RecentlyAddedItem> items,
+) {
+  final failed = items.where((item) => item.failed).length;
+  final imported = items.length - failed;
+  return (
+    imported: '$imported imported',
+    failed: failed == 0 ? null : '$failed failed',
+  );
+}
+
+/// What one poster tile announces: `title · service · time`.
+///
+/// The rail is six tiles wide and each one is a tap target, so the accessible
+/// name has to carry the three facts the tile's own 60×90 box can only show two
+/// of. Time is spoken as a clock reading rather than "4 hours ago": these are
+/// today's imports, and the hour is what tells two grabs of the same show apart.
+String recentlyAddedTileLabel(
+  RecentlyAddedItem item, {
+  required String timeLabel,
+}) => [
+  item.title,
+  item.service.title,
+  if (item.failed) 'failed import',
+  if (timeLabel.isNotEmpty) timeLabel,
+].join(', ');
+
+/// `08:12` — the import's own clock time, or empty when it has none.
+///
+/// Time-only on purpose: every row in this region landed within the last day or
+/// so, and a date on all six is a column of the same string.
+String formatImportedAt(DateTime? at) {
+  if (at == null) return '';
+  final local = at.toLocal();
+  String two(int value) => value.toString().padLeft(2, '0');
+  return '${two(local.hour)}:${two(local.minute)}';
 }
 
 /// Parses an arr `added` field, which is an ISO 8601 string or absent.

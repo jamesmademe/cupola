@@ -10,6 +10,7 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/service_matrix.dart';
 import 'package:cupola/features/services/presentation/services_alert_band.dart';
@@ -56,14 +57,15 @@ class DashboardScreen extends ConsumerWidget {
       onStale: () => ref.triggerNavigationRefresh(NavigationSection.dashboard),
       child: AmbientScaffold(
         // No accent passed: the room on this screen is lit by the brand primary.
-        // Thirteen service accents cannot light one room, so identity is confined
-        // to each matrix cell's icon tile — see the Room Light Rule's one
-        // documented exception in DESIGN.md.
-        // "Your stack", not "Dashboard" (decision 2). The tab and the crumb
-        // already say Dashboard twice over; the h1 is the one line on the
-        // screen that can say what is being looked at instead of where you
-        // are, and the fleet *is* the subject here.
-        appBar: const GlassAppBar(title: Text('Your stack')),
+        // Seventeen service accents cannot light one room, so identity is
+        // confined to each stack card's glyph and its wash — see the Room Light
+        // Rule's one documented exception in DESIGN.md.
+        // "Dashboard", because the crumb and the tab both say Dashboard and
+        // the app bar is *where you are*. The h1 below is what you are looking
+        // at — the fleet — and the two are different sentences. The desktop
+        // shell's window strip already carries the crumb, which is why the
+        // canvas draws nothing between it and the h1.
+        appBar: const GlassAppBar(title: Text('Dashboard')),
         body: allUnconfigured
             // The page owns the viewport, not the empty state — see the contract
             // on `AppEmptyState`. Its height is entirely text, and at an
@@ -99,26 +101,89 @@ class DashboardScreen extends ConsumerWidget {
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.only(bottom: bottomPadding),
-                  // Static in every state. What needs your hand comes before what
-                  // is happening on its own, which comes before browsing:
+                  // Three questions, in this order: *is everything all right* →
+                  // *what needs me* → *what is happening*. The stack itself is
+                  // fourth — it is a launcher, not the headline.
                   //
+                  //  * the header is one line of StackReadout under the h1, and
+                  //    it is neutral when clear: no permanent green
                   //  * the band is absent unless something stopped answering
-                  //  * the matrix is the instrument — health, launcher and live
-                  //    metrics in one object
-                  //  * In Flight is time-sensitive, so it is second rather than
-                  //    last, where it used to sit under three browse rails
-                  //  * Requests never filters and never renders empty by design;
-                  //    pending sorts to the top with its actions attached
-                  //  * Recently Added is the only browsing region left
+                  //  * decisions is the centre of the screen and is absent when
+                  //    nothing is waiting — presence is the signal
+                  //  * the stack is the instrument and the launcher
+                  //  * In flight is what is moving without you
+                  //  * Recently added is what landed, and the only thing here
+                  //    that leads into a library
                   children: const [
+                    _StackHeadline(),
                     ServicesAlertBand(),
+                    DashboardDecisionsSection(),
                     ServiceMatrix(),
                     ServicesInFlightSection(),
-                    ServicesRequestsSection(),
                     ServicesRecentlyAddedSection(),
                   ],
                 ),
               ),
+      ),
+    );
+  }
+}
+
+/// The h1 and the one line under it.
+///
+/// `Your stack`, not `Dashboard` (decision 2). The tab and the crumb already say
+/// Dashboard twice over; the h1 is the one line on the screen that can say what
+/// is being looked at instead of where you are, and the fleet *is* the subject
+/// here.
+///
+/// The sentence under it is [StackReadout]'s, counting **connections folded per
+/// service** rather than the lensed summary — so a Radarr with one of its two
+/// connections dark reads as *degraded* rather than inheriting whichever answer
+/// the lens happened to be pointing at.
+class _StackHeadline extends ConsumerWidget {
+  const _StackHeadline();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final readout = ref.watch(stackReadoutProvider);
+    final sentence = readout.sentenceAt(DateTime.now());
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Semantics(
+        container: true,
+        header: true,
+        label: 'Your stack',
+        value: spokenFromDotted(sentence),
+        excludeSemantics: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your stack',
+              style: theme.textTheme.headlineSmall
+                  ?.weight(FontWeight.w700)
+                  .copyWith(color: colorScheme.onSurface),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              sentence,
+              // Neutral, always — no permanent green. A stack that is entirely
+              // healthy says so in words and spends no colour on it; the tone
+              // this page has to spare belongs to the one card that is not.
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -207,7 +272,7 @@ Future<void> _refreshServicesDashboard(WidgetRef ref) async {
     for (final service in ServiceKey.values)
       settle(ref.read(serviceSummaryProvider(service).future)),
     settle(ref.read(servicesQueueProvider.future)),
-    settle(ref.read(servicesRequestsProvider.future)),
+    settle(ref.read(dashboardDecisionsProvider.future)),
     settle(ref.read(servicesRecentlyAddedProvider.future)),
   ]);
 }
@@ -220,13 +285,24 @@ void _invalidateServicesDashboard(WidgetRef ref) {
     // ever invalidated from the individual service pages.
     ref.invalidate(serviceKpiProvider(service));
     ref.invalidate(serviceSignalProvider(service));
+    // The stack card's two figures. Reduced from the same KPI list, but its own
+    // `autoDispose` family entry — invalidating only the single-figure provider
+    // left the cards showing the figures from before the pull.
+    ref.invalidate(serviceSignalPairProvider(service));
   }
   ref.invalidate(servicesRequestsProvider);
-  ref.invalidate(servicesRecentlyAddedProvider);
   ref.invalidate(servicesQueueProvider);
-  // The library providers the merged rail and the KPIs read through. Invalidated
-  // by name rather than relying on the aliases above, which no longer have a
-  // section of their own since the two per-service rails merged.
+  // One history read per arr, feeding both Recently added and the failed-import
+  // decisions. Invalidated at the source rather than through either of its two
+  // readers, so the two cannot end up disagreeing about the same page.
+  ref.invalidate(servicesArrHistoryProvider);
+  ref.invalidate(servicesRecentlyAddedProvider);
+  ref.invalidate(dashboardDecisionsProvider);
+  // The library providers the KPI builders read through — and therefore the two
+  // figures on every stack card. Invalidating `serviceKpiProvider` alone would
+  // recompute the same numbers from the same cached libraries, which is a pull
+  // that looks like it worked and changes nothing. The recently-added rail no
+  // longer reads these: it rides one history page per arr.
   ref.invalidate(servicesMoviesProvider);
   ref.invalidate(servicesSeriesProvider);
   ref.invalidate(servicesMusicProvider);
