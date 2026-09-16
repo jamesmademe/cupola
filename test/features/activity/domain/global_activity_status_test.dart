@@ -6,19 +6,22 @@ import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
 void main() {
   group('resolveHistoryStatus', () {
-    test('a failed download is an error, not a success', () {
+    test('a failed download is a fault, not a success', () {
       // The regression this whole layer exists for: the tile switched on the
       // row's *kind*, so `history` was unconditionally the success green and a
       // `downloadFailed` event rendered the word "Failed" inside a green pill.
+      //
+      // Amber rather than red: the service answered and told us the grab
+      // failed. Red is kept for a service that did not answer at all.
       final status = resolveHistoryStatus(const {
         'eventType': 'downloadFailed',
       });
 
       expect(status.label, 'Failed');
-      expect(status.tone, StatusTone.error);
+      expect(status.tone, StatusTone.warning);
     });
 
-    test('an import is a success and a grab is in-flight', () {
+    test('an import is a success and a grab is unremarkable', () {
       expect(
         resolveHistoryStatus(const {'eventType': 'downloadImported'}).tone,
         StatusTone.success,
@@ -29,16 +32,19 @@ void main() {
         }).tone,
         StatusTone.success,
       );
+      // A grab is the system doing its job, on a page that is mostly grabs:
+      // toning it blue spent a colour on the baseline.
       expect(
         resolveHistoryStatus(const {'eventType': 'grabbed'}).tone,
-        StatusTone.info,
+        StatusTone.neutral,
       );
     });
 
-    test('a deleted file warns and a rename is neutral', () {
+    test('a deletion and a rename are both unremarkable', () {
+      // A file somebody removed, or an upgrade replaced. Backlog, not damage.
       expect(
         resolveHistoryStatus(const {'eventType': 'movieFileDeleted'}).tone,
-        StatusTone.warning,
+        StatusTone.neutral,
       );
       expect(
         resolveHistoryStatus(const {'eventType': 'episodeFileRenamed'}).tone,
@@ -61,7 +67,7 @@ void main() {
   });
 
   group('resolveQueueDisplayStatus', () {
-    test('a failed queue record resolves to the error tone', () {
+    test('a failed queue record resolves to the fault tone', () {
       // The other half of the same bug: the queue row was painted in the service
       // accent, so a stalled download was chromatically identical to a healthy
       // one and nothing on the row was red.
@@ -70,7 +76,7 @@ void main() {
         'title': 'Some.Release',
       });
 
-      expect(status.tone, StatusTone.error);
+      expect(status.tone, StatusTone.warning);
     });
 
     test('a downloading record carries progress and the info tone', () {
@@ -114,22 +120,24 @@ void main() {
   });
 
   group('resolveWantedStatus', () {
-    test('missing warns rather than erroring', () {
-      // Every row in the Wanted bucket is missing by definition, so red on all
-      // of them leaves nothing for a real problem to stand out against.
-      final status = resolveWantedStatus(const {}, isCutoff: false);
-
-      expect(status.label, 'Missing');
-      expect(status.tone, StatusTone.warning);
-    });
-
-    test('an unmet cutoff is an opportunity, not a problem', () {
-      final status = resolveWantedStatus(const {}, isCutoff: true);
+    test('every row in the bucket is untoned backlog', () {
+      // Being missing is the *definition* of membership in this bucket, not
+      // news about it. Colouring the rows at all — red once, then amber and
+      // blue — made the page shout its own title back in colour and left
+      // nothing for the one row that is genuinely stuck.
+      final missing = resolveWantedStatus(const {}, isCutoff: false);
+      expect(missing.label, 'Missing');
+      expect(missing.tone, StatusTone.neutral);
 
       // Matches the "Cutoff Unmet" sub-segment label; the old string was
       // 'Cutoff', which is not the term the *arr services use.
-      expect(status.label, 'Cutoff Unmet');
-      expect(status.tone, StatusTone.info);
+      final cutoff = resolveWantedStatus(const {}, isCutoff: true);
+      expect(cutoff.label, 'Cutoff Unmet');
+      expect(cutoff.tone, StatusTone.neutral);
+
+      // The distinctions the tones used to carry are still on the row, in the
+      // words.
+      expect(missing.label, isNot(cutoff.label));
     });
 
     test('an unmonitored item is neutral in both buckets', () {
@@ -145,13 +153,15 @@ void main() {
   });
 
   group('resolveBlocklistStatus', () {
-    test('is always an error and carries the reason', () {
+    test('is untoned and carries the reason', () {
+      // The one list on which every row went exactly right: the user rejected
+      // this release and the blocklist obeyed.
       final status = resolveBlocklistStatus(const {
         'message': 'Release rejected by the indexer',
       });
 
       expect(status.label, 'Blocked');
-      expect(status.tone, StatusTone.error);
+      expect(status.tone, StatusTone.neutral);
       expect(status.detail, 'Release rejected by the indexer');
     });
 
@@ -174,13 +184,19 @@ void main() {
       type: 'movie',
     );
 
-    test('a declined request reads as a problem, not as the Seerr accent', () {
+    test('a declined request is a closed decision, not a fault', () {
+      // Seerr answered; it just answered no. Nothing is broken and nothing is
+      // waiting — the word carries the whole fact.
       final status = resolveRequestStatus(requestWith(RequestStatus.declined));
 
-      expect(status.tone, StatusTone.error);
+      expect(status.tone, StatusTone.neutral);
       expect(status.label, 'Declined');
     });
 
+    // `pending` is the one row the tone rule does not settle, and it is amber
+    // on purpose: not backlog (no server is working on it) and not a fault
+    // (nothing is broken) — it is waiting on a *human*, which is the only thing
+    // this screen can act on.
     test('a pending request warns and an approved one is in-flight', () {
       expect(
         resolveRequestStatus(requestWith(RequestStatus.pendingApproval)).tone,
@@ -207,11 +223,11 @@ void main() {
         resolveActivityStatus(GlobalActivityKind.history, const {
           'eventType': 'downloadFailed',
         }).tone,
-        StatusTone.error,
+        StatusTone.warning,
       );
       expect(
         resolveActivityStatus(GlobalActivityKind.blocklist, const {}).tone,
-        StatusTone.error,
+        StatusTone.neutral,
       );
       expect(
         resolveActivityStatus(GlobalActivityKind.missing, const {}).label,

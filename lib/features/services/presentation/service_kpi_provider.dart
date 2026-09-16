@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/models/service_kpi.dart';
-import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
@@ -105,15 +105,22 @@ final serviceSignalProvider = FutureProvider.autoDispose
 int _statInt(Map<String, dynamic>? stats, String key) =>
     (stats?[key] as num?)?.toInt() ?? 0;
 
-Color? _warnIf(bool condition) => condition ? AppColors.warning : null;
+/// Flags a metric as a **fault** — something that was meant to be working and
+/// is not, and the only one of the three that earns amber.
+StatusTone? _faultIf(bool condition) => condition ? StatusTone.warning : null;
 
-/// Flags a metric as *activity* rather than as a problem.
+/// Flags a metric as **backlog** — work that has not happened yet.
 ///
-/// The tone a flagged KPI resolves to is decided by `resolveServiceSignal` from
-/// the KPI's **label**, not from this colour — `_activityLabels` is what makes
-/// `Streams` read as `StatusTone.info`. This exists so the peek's own icon agrees
-/// with the matrix cell instead of painting an amber glyph beside a blue phrase.
-Color? _infoIf(bool condition) => condition ? AppColors.info : null;
+/// Noteworthy, because a pile of missing films is why you opened the service;
+/// untoned, because it is the resting state of a media manager and not a
+/// problem with one. This is the distinction the old single `_warnIf` could not
+/// express, and the reason every \*arr shipped with its baseline painted in the
+/// alarm colour.
+StatusTone? _backlogIf(bool condition) => condition ? StatusTone.neutral : null;
+
+/// Flags a metric as **activity** rather than as a problem: bytes are moving,
+/// or somebody is watching, because the stack is doing its job.
+StatusTone? _activityIf(bool condition) => condition ? StatusTone.info : null;
 
 /// The shared KPI set for a media server, identical for Jellyfin and Plex.
 ///
@@ -151,13 +158,13 @@ Future<List<ServiceKpi>> _streamKpis(
       label: 'Streams',
       value: '${sessions.length}',
       icon: Icons.play_circle_outline_rounded,
-      accent: _infoIf(sessions.isNotEmpty && transcodes == 0),
+      tone: _activityIf(sessions.isNotEmpty && transcodes == 0),
     ),
     ServiceKpi(
       label: 'Transcodes',
       value: '$transcodes',
       icon: Icons.memory_rounded,
-      accent: _warnIf(transcodes > 0),
+      tone: _faultIf(transcodes > 0),
     ),
     ServiceKpi(
       label: 'Libraries',
@@ -187,7 +194,7 @@ Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
       label: 'Missing',
       value: '$missing',
       icon: Icons.report_gmailerrorred_rounded,
-      accent: _warnIf(missing > 0),
+      tone: _backlogIf(missing > 0),
     ),
     ServiceKpi(
       label: 'Queue',
@@ -223,7 +230,7 @@ Future<List<ServiceKpi>> _sonarrKpis(Ref ref) async {
       label: 'Missing',
       value: '$missing',
       icon: Icons.report_gmailerrorred_rounded,
-      accent: _warnIf(missing > 0),
+      tone: _backlogIf(missing > 0),
     ),
     ServiceKpi(
       label: 'Monitored',
@@ -260,7 +267,7 @@ Future<List<ServiceKpi>> _lidarrKpis(Ref ref) async {
       label: 'Missing',
       value: '$missing',
       icon: Icons.report_gmailerrorred_rounded,
-      accent: _warnIf(missing > 0),
+      tone: _backlogIf(missing > 0),
     ),
   ];
 }
@@ -289,7 +296,7 @@ Future<List<ServiceKpi>> _qbittorrentKpis(Ref ref) async {
       label: 'Down',
       value: formatSpeed(dl),
       icon: Icons.south_rounded,
-      accent: _warnIf(dl > 0),
+      tone: _activityIf(dl > 0),
     ),
     ServiceKpi(label: 'Up', value: formatSpeed(up), icon: Icons.north_rounded),
     ServiceKpi(label: 'Seeding', value: '$seeding', icon: Icons.upload_rounded),
@@ -345,7 +352,7 @@ Future<List<ServiceKpi>> _seerrKpis(Ref ref) async {
       label: 'Pending',
       value: '$pending',
       icon: Icons.hourglass_top_rounded,
-      accent: _warnIf(pending > 0),
+      tone: _backlogIf(pending > 0),
     ),
     ServiceKpi(
       label: 'Processing',
@@ -378,13 +385,13 @@ Future<List<ServiceKpi>> _truenasKpis(Ref ref) async {
       label: 'Used',
       value: '${(maxUsed * 100).round()}%',
       icon: Icons.pie_chart_rounded,
-      accent: _warnIf(maxUsed >= 0.8),
+      tone: _faultIf(maxUsed >= 0.8),
     ),
     ServiceKpi(
       label: 'Alerts',
       value: '$activeAlerts',
       icon: Icons.warning_amber_rounded,
-      accent: _warnIf(activeAlerts > 0),
+      tone: _faultIf(activeAlerts > 0),
     ),
     ServiceKpi(label: 'Services', value: '$running', icon: Icons.bolt_rounded),
   ];
@@ -414,7 +421,7 @@ Future<List<ServiceKpi>> _dockgeKpis(Ref ref) async {
       label: 'Exited',
       value: '$exited',
       icon: Icons.stop_circle_rounded,
-      accent: _warnIf(exited > 0),
+      tone: _faultIf(exited > 0),
     ),
     ServiceKpi(
       label: 'Inactive',
@@ -431,7 +438,7 @@ Future<List<ServiceKpi>> _bazarrKpis(Ref ref) async {
       label: 'Wanted',
       value: '${b.totalWanted}',
       icon: Icons.subtitles_off_rounded,
-      accent: _warnIf(b.totalWanted > 0),
+      tone: _backlogIf(b.totalWanted > 0),
     ),
     ServiceKpi(
       label: 'Episodes',
@@ -480,7 +487,7 @@ Future<List<ServiceKpi>> _prowlarrKpis(Ref ref) async {
       label: 'Fails',
       value: '${stats.totalFailures}',
       icon: Icons.error_outline_rounded,
-      accent: _warnIf(stats.totalFailures > 0),
+      tone: _faultIf(stats.totalFailures > 0),
     ),
   ];
 }
@@ -506,7 +513,7 @@ Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
       label: 'Missing',
       value: '$missing',
       icon: Icons.report_gmailerrorred_rounded,
-      accent: _warnIf(missing > 0),
+      tone: _backlogIf(missing > 0),
     ),
     ServiceKpi(
       label: 'Queue',
@@ -523,7 +530,7 @@ Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
       label: 'Down',
       value: queue.speedLabel,
       icon: Icons.south_rounded,
-      accent: _warnIf(queue.kbPerSec > 0),
+      tone: _activityIf(queue.kbPerSec > 0),
     ),
     ServiceKpi(
       label: 'Queue',
@@ -541,7 +548,10 @@ Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
       icon: queue.paused
           ? Icons.pause_circle_rounded
           : Icons.play_circle_rounded,
-      accent: _warnIf(queue.paused),
+      // Pausing the queue is something the user did on purpose, so it is
+      // neither a fault nor a backlog — it is the client obeying. It used to be
+      // flagged amber, which put "you pressed pause" in the same colour as
+      // "your disk is full" (decision 15).
     ),
   ];
   // Lifetime total is a nice-to-have; a stats failure must not drop the whole
@@ -573,7 +583,7 @@ Future<List<ServiceKpi>> _nzbgetKpis(Ref ref) async {
       label: 'Down',
       value: status.rateLabel,
       icon: Icons.south_rounded,
-      accent: _warnIf(status.downloadRateBytes > 0),
+      tone: _activityIf(status.downloadRateBytes > 0),
     ),
     ServiceKpi(
       label: 'Queue',
@@ -591,7 +601,7 @@ Future<List<ServiceKpi>> _nzbgetKpis(Ref ref) async {
       icon: status.paused
           ? Icons.pause_circle_rounded
           : Icons.play_circle_rounded,
-      accent: _warnIf(status.paused),
+      // Deliberate: see the SABnzbd twin above.
     ),
   ];
 }
@@ -615,7 +625,7 @@ Future<List<ServiceKpi>> _transmissionKpis(Ref ref) async {
       label: 'Down',
       value: stats.downloadSpeedLabel,
       icon: Icons.south_rounded,
-      accent: _warnIf(stats.downloadSpeed > 0),
+      tone: _activityIf(stats.downloadSpeed > 0),
     ),
     ServiceKpi(
       label: 'Up',
@@ -636,7 +646,7 @@ Future<List<ServiceKpi>> _transmissionKpis(Ref ref) async {
       label: 'Stalled',
       value: '$stalled',
       icon: Icons.report_gmailerrorred_rounded,
-      accent: _warnIf(stalled > 0),
+      tone: _faultIf(stalled > 0),
     ),
   ];
 }
@@ -665,7 +675,7 @@ Future<List<ServiceKpi>> _npmKpis(Ref ref) async {
       label: 'Offline',
       value: '$broken',
       icon: Icons.error_outline_rounded,
-      accent: _warnIf(broken > 0),
+      tone: _faultIf(broken > 0),
     ),
     ServiceKpi(
       label: 'Hosts',
@@ -676,7 +686,7 @@ Future<List<ServiceKpi>> _npmKpis(Ref ref) async {
       label: 'Expiring',
       value: '$expiring',
       icon: Icons.lock_clock_rounded,
-      accent: _warnIf(expiring > 0),
+      tone: _faultIf(expiring > 0),
     ),
     ServiceKpi(
       label: 'Certificates',
@@ -705,7 +715,7 @@ Future<List<ServiceKpi>> _unraidKpis(Ref ref) async {
       label: 'Used',
       value: '${array.usedPercent}%',
       icon: Icons.pie_chart_rounded,
-      accent: _warnIf(array.usedPercent >= 80),
+      tone: _faultIf(array.usedPercent >= 80),
     ),
     ServiceKpi(
       label: 'Containers',

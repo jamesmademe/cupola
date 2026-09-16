@@ -1709,20 +1709,16 @@ class _CellLiveLine extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: figureStyle?.copyWith(
-          // Through `onTint` even though there is no tint here: `tintAlpha: 0`
-          // makes the composite the surface itself, and the same lightness walk
-          // that saves a label over a tint is what keeps the saturated amber
-          // legible on a light card. Painting `AppColors.warning` raw would
-          // measure about 2:1 against `surface-light`.
-          color: ServiceTheme.onTint(
-            statusToneColor(
-              colorScheme,
-              reachability == ServiceReachability.checking
-                  ? StatusTone.warning
-                  : StatusTone.error,
-            ),
+          // `surface` is the card's own ground, not the scaffold's: the walk
+          // that keeps a saturated amber legible has to measure against what
+          // the label actually sits on. `statusToneColor` owns the walk itself
+          // now — this call site is where the idiom was first written down.
+          color: statusToneColor(
+            colorScheme,
+            reachability == ServiceReachability.checking
+                ? StatusTone.warning
+                : StatusTone.error,
             surface: surface,
-            tintAlpha: 0,
           ),
         ),
       );
@@ -1737,11 +1733,7 @@ class _CellLiveLine extends StatelessWidget {
 
     final needsAttention = current.needsAttention;
     final toneColor = needsAttention
-        ? ServiceTheme.onTint(
-            statusToneColor(colorScheme, current.tone),
-            surface: surface,
-            tintAlpha: 0,
-          )
+        ? statusToneColor(colorScheme, current.tone, surface: surface)
         : colorScheme.onSurface;
 
     return Row(

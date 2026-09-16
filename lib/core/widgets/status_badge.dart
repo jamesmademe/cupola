@@ -268,13 +268,50 @@ class StatusBadge extends StatelessWidget {
 /// how a `downloadFailed` event ended up rendering in the success green.
 ///
 /// Anything that colours by status calls this. Nothing re-derives it.
-Color statusToneColor(ColorScheme colorScheme, StatusTone tone) {
+///
+/// The four semantic tones are *walked* against [surface] the same way a
+/// service accent is, because they have the same problem: the palette is one
+/// set of constants and the ground is not. Measured on `surface-light`, raw
+/// success is 2.07:1, warning 1.39:1, error 3.42:1 and info 3.34:1 — every one
+/// of them below AA, and the first two far enough below to be effectively
+/// invisible in daylight. The walk keeps the hue and moves only the lightness,
+/// so a failed transfer is still red, just a red that can be read.
+///
+/// Callers used to do this themselves where someone had noticed — the expanded
+/// service card carried the idiom and a comment explaining it. Sixteen other
+/// files did not, which is the whole argument for resolving it here: a contrast
+/// rule applied at some of the call sites is a rule that is wrong at the rest.
+///
+/// **The dark theme does not move.** Against `colorScheme.surface` in dark
+/// (#0A0B11) the four tones measure 8.62, 12.83, 5.22 and 5.34:1, so the walk
+/// returns them untouched and every dark artboard still matches. Only paper
+/// changes, which is exactly what the canvas commissions.
+///
+/// [surface] is the ground the tone will be drawn on, defaulting to
+/// [ColorScheme.surface]. Pass the real one when the tone lands on an elevated
+/// container: in dark theme a raw error on `surfaceContainerHighest` measures
+/// 3.52:1, and only the caller knows it is there.
+///
+/// Two tones are deliberately not walked. [StatusTone.neutral] resolves to
+/// `onSurfaceVariant`, which is already a measured text token of the scheme, and
+/// [StatusTone.primary] is the brand indigo at 4.47:1 on paper — close enough to
+/// AA that the canvas accepts it as a bold label rather than moving it, and
+/// walking it would quietly repaint the brand.
+Color statusToneColor(
+  ColorScheme colorScheme,
+  StatusTone tone, {
+  Color? surface,
+}) {
+  final ground = surface ?? colorScheme.surface;
+  Color walked(Color tone) =>
+      ServiceTheme.onTint(tone, surface: ground, tintAlpha: 0);
+
   return switch (tone) {
     StatusTone.primary => colorScheme.primary,
-    StatusTone.success => AppColors.success,
-    StatusTone.warning => AppColors.warning,
-    StatusTone.info => AppColors.info,
-    StatusTone.error => colorScheme.error,
+    StatusTone.success => walked(AppColors.success),
+    StatusTone.warning => walked(AppColors.warning),
+    StatusTone.info => walked(AppColors.info),
+    StatusTone.error => walked(colorScheme.error),
     StatusTone.neutral => colorScheme.onSurfaceVariant,
   };
 }
@@ -309,10 +346,29 @@ IconData statusIconFor(MediaStatusInfo info) {
   }
 
   // A status can describe an *event* rather than a thing on disk — a history
-  // record, a blocked release — in which case it carries a tone override and no
-  // availability. Falling through to the availability switch gave all of those
-  // the `unknown` question mark, which is the one glyph that tells the user
-  // nothing. Read the severity instead.
+  // record, a blocked release — in which case it carries no availability and no
+  // pipeline. Falling through to the availability switch gave all of those the
+  // `unknown` question mark, which is the one glyph that tells the user
+  // nothing.
+  //
+  // The resolver says what happened, and that is read first. It used to be
+  // derived from the tone instead, which held only while every event that
+  // needed its own picture also had its own colour — and stopped holding the
+  // moment `Grabbed`, `Deleted` and `Blocked` became correctly neutral, because
+  // one tone cannot answer for five different events.
+  final glyph = info.glyph;
+  if (glyph != null) {
+    return switch (glyph) {
+      StatusGlyph.grabbed => Icons.download_rounded,
+      StatusGlyph.imported => Icons.check_circle_rounded,
+      StatusGlyph.failed => Icons.warning_amber_rounded,
+      StatusGlyph.ignored => Icons.do_not_disturb_on_rounded,
+      StatusGlyph.deleted => Icons.delete_rounded,
+      StatusGlyph.renamed => Icons.drive_file_rename_outline_rounded,
+      StatusGlyph.blocked => Icons.block_rounded,
+    };
+  }
+
   if (info.availability == MediaAvailability.unknown && info.pipeline == null) {
     return switch (info.tone) {
       StatusTone.error => Icons.error_rounded,

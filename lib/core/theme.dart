@@ -142,9 +142,11 @@ class AppColors {
   /// Plex bronze — deliberately **not** Plex's brand gold `#E5A00D`.
   ///
   /// The brand value is unusable here, and measurably so. In CIE Lab it sits
-  /// ΔE 5 from [sabnzbd] and ΔE 8 from [warning] — and [warning] and [radarr]
-  /// are already the same byte value — so brand gold would have been the fourth
-  /// amber in a five-way tie that includes the alarm tone. Two consequences,
+  /// ΔE 5 from [sabnzbd] and ΔE 8 from the amber-500 [warning] used to be — and
+  /// that value was the same byte as [radarr] — so brand gold would have been
+  /// the fourth amber in a five-way tie that included the alarm tone. The tie
+  /// is two narrower now that [warning] has moved to yellow-400, but brand gold
+  /// would still collide with [sabnzbd]. Two consequences,
   /// both fatal: the 8pt source dot on the merged Recently Added rail could not
   /// distinguish a Plex item from a Radarr or SABnzbd one, and the Stream
   /// dashboard's whole focal moment — a transcoding session lighting its reason
@@ -236,7 +238,19 @@ class AppColors {
   // === SEMANTIC COLORS ===
   static const Color success = Color(0xFF22C55E); // green-500
   static const Color successContainer = Color(0xFF166534); // green-800
-  static const Color warning = Color(0xFFF59E0B); // amber-500
+  /// The fault tone — yellow-400, and deliberately not amber-500.
+  ///
+  /// It used to be `#F59E0B`, which is the **same byte** as [radarr]. A fault
+  /// chip and a service accent that cannot be told apart is not a near miss:
+  /// the whole tone rule rests on amber meaning "something is wrong", and on a
+  /// Radarr surface every accent-coloured thing on the page was already wearing
+  /// the alarm colour. Moving it is the cheapest way to make the rule true.
+  ///
+  /// Measured in CIE Lab the new value clears ΔE 18.1 from [sabnzbd] gold — the
+  /// nearest accent in the palette — and 25.7 from [radarr]; nothing else is
+  /// under 40. It stays a warmer yellow than any of them, so the *word* amber
+  /// in the tone vocabulary still describes what the eye sees.
+  static const Color warning = Color(0xFFFACC15); // yellow-400
   static const Color error = Color(0xFFEF4444); // red-500
   static const Color errorContainer = Color(0xFF991B1B); // red-800
   static const Color info = Color(0xFF3B82F6); // blue-500

@@ -79,12 +79,16 @@ MediaStatusInfo resolveQueueDisplayStatus(Map<String, dynamic> item) {
 /// History describes something that already happened, so there is no live
 /// availability or pipeline to derive a tone from — hence [
 /// MediaStatusInfo.toneOverride]. The severity mapping is the point of this
-/// function: an import is a success, a failed download is an error, a deleted
-/// file is a warning, and a rename is neither.
+/// function: an import is a success, a failed download is a *fault*, and a
+/// grab, a deletion or a rename is a record of something that worked.
 MediaStatusInfo resolveHistoryStatus(Map<String, dynamic> item) {
   final eventType = stringOrNull(item['eventType']) ?? 'unknown';
   final (label, tone) = historyEventDisplay(eventType);
-  return MediaStatusInfo(labelOverride: label, toneOverride: tone);
+  return MediaStatusInfo(
+    labelOverride: label,
+    toneOverride: tone,
+    glyph: historyEventGlyph(eventType),
+  );
 }
 
 /// The label and severity for an \*arr history `eventType`.
@@ -92,20 +96,55 @@ MediaStatusInfo resolveHistoryStatus(Map<String, dynamic> item) {
 /// Shared by the global feed and the per-service history tile so both spell and
 /// colour the same event identically.
 (String, StatusTone) historyEventDisplay(String eventType) {
+  return (historyEventLabel(eventType), historyEventTone(eventType));
+}
+
+/// The glyph an \*arr history `eventType` depicts.
+///
+/// Separate from the tone because the two answer different questions: five of
+/// these events are correctly neutral and none of them is the same picture.
+StatusGlyph? historyEventGlyph(String eventType) {
   return switch (eventType) {
-    'grabbed' => ('Grabbed', StatusTone.info),
+    'grabbed' => StatusGlyph.grabbed,
+    'downloadFolderImported' || 'downloadImported' => StatusGlyph.imported,
+    'downloadFailed' || 'importFailed' => StatusGlyph.failed,
+    'downloadIgnored' => StatusGlyph.ignored,
+    'episodeFileDeleted' ||
+    'movieFileDeleted' ||
+    'trackFileDeleted' => StatusGlyph.deleted,
+    'episodeFileRenamed' ||
+    'movieFileRenamed' ||
+    'trackFileRenamed' => StatusGlyph.renamed,
+    _ => null,
+  };
+}
+
+String historyEventLabel(String eventType) => _historyEvent(eventType).$1;
+
+StatusTone historyEventTone(String eventType) => _historyEvent(eventType).$2;
+
+(String, StatusTone) _historyEvent(String eventType) {
+  return switch (eventType) {
+    // A grab is the system doing its job, not news: the release was found
+    // and handed to a client. Blue used to say "in flight", which the queue
+    // already says, and said it on every row of a page that is mostly grabs.
+    'grabbed' => ('Grabbed', StatusTone.neutral),
     'downloadFolderImported' ||
     'downloadImported' => ('Imported', StatusTone.success),
-    'downloadFailed' => ('Failed', StatusTone.error),
-    'importFailed' => ('Import Failed', StatusTone.error),
+    // Faults, and therefore amber. Red is reserved for a connection that did
+    // not answer — a failed grab means the service answered and told us so.
+    'downloadFailed' => ('Failed', StatusTone.warning),
+    'importFailed' => ('Import Failed', StatusTone.warning),
     // Deliberately not an error, and no longer sharing `importFailed`'s wording.
     // `downloadIgnored` is a choice somebody made — the \*arr was told to leave
     // this release alone. Rendering it as a red "Import Failed" sent the user
     // looking for a fault that never happened.
     'downloadIgnored' => ('Ignored', StatusTone.neutral),
+    // A file the user or an upgrade removed. Amber would claim a fault that
+    // nobody experienced; this is backlog, and backlog is neutral.
     'episodeFileDeleted' ||
     'movieFileDeleted' ||
-    'trackFileDeleted' => ('Deleted', StatusTone.warning),
+    'trackFileDeleted' => ('Deleted', StatusTone.neutral),
     'episodeFileRenamed' ||
     'movieFileRenamed' ||
     'trackFileRenamed' => ('Renamed', StatusTone.neutral),
@@ -113,22 +152,30 @@ MediaStatusInfo resolveHistoryStatus(Map<String, dynamic> item) {
   };
 }
 
-/// A blocked release. Always an error: the user actively rejected it.
+/// A blocked release — and deliberately not toned.
+///
+/// The user actively rejected this release, so the blocklist working is the
+/// system obeying an instruction. Red said "a thing went wrong" about the one
+/// list on which every row went exactly right.
 MediaStatusInfo resolveBlocklistStatus(Map<String, dynamic> item) {
   return MediaStatusInfo(
     labelOverride: 'Blocked',
-    toneOverride: StatusTone.error,
+    toneOverride: StatusTone.neutral,
+    glyph: StatusGlyph.blocked,
     detail: _blocklistReason(item),
   );
 }
 
 /// Resolves a Wanted row — a missing item or one below the quality cutoff.
 ///
-/// Deliberately *not* error-toned. In the Wanted bucket every row is missing by
-/// definition, so painting them all red is the "everything is an emergency"
-/// failure that leaves nothing for a genuine problem to stand out against.
-/// Missing needs attention (warning); an unmet cutoff is merely an opportunity
-/// (info); an unmonitored item is neither (neutral).
+/// Every row here is backlog, so every row here is neutral. In the Wanted
+/// bucket being missing is the *definition* of membership, not news about it:
+/// toning the rows at all — red once, then amber and blue — meant the page
+/// shouted its own title back at the reader in colour, and left nothing for the
+/// one row that is genuinely stuck.
+///
+/// The distinctions the tones used to carry are still on the row, in the words:
+/// Missing, Cutoff Unmet, Unmonitored.
 MediaStatusInfo resolveWantedStatus(
   Map<String, dynamic> item, {
   required bool isCutoff,
@@ -148,14 +195,14 @@ MediaStatusInfo resolveWantedStatus(
       // Matches the "Cutoff Unmet" sub-segment label. The old string was
       // 'Cutoff', which is not even the term the \*arr services use.
       labelOverride: 'Cutoff Unmet',
-      toneOverride: StatusTone.info,
+      toneOverride: StatusTone.neutral,
     );
   }
 
   return const MediaStatusInfo(
     availability: MediaAvailability.missing,
     labelOverride: 'Missing',
-    toneOverride: StatusTone.warning,
+    toneOverride: StatusTone.neutral,
   );
 }
 
@@ -163,8 +210,14 @@ MediaStatusInfo resolveWantedStatus(
 ///
 /// Seerr's own wording is preserved via [MediaStatusInfo.labelOverride] — it is
 /// the language the user sees in Seerr itself — while the tone comes from the
-/// request's display kind so a declined or failed request reads as a problem
-/// rather than as the Seerr accent.
+/// request's display kind.
+///
+/// `pending` is the one row in the app the tone rule does not settle, and it is
+/// warning on purpose: it is not backlog (nothing is waiting on a server) and
+/// it is not a fault (nothing is broken) — it is waiting on a *human*, which is
+/// the only thing this screen can act on. The Dashboard draws the same request
+/// neutral inside its decisions list, where the presence of the row is already
+/// the signal and the colour would be noise.
 MediaStatusInfo resolveRequestStatus(SeerrRequest request) {
   final display = request.displayStatus;
   final tone = switch (display.kind) {
@@ -174,9 +227,12 @@ MediaStatusInfo resolveRequestStatus(SeerrRequest request) {
     SeerrRequestDisplayKind.partiallyAvailable ||
     SeerrRequestDisplayKind.approved => StatusTone.info,
     SeerrRequestDisplayKind.pending => StatusTone.warning,
+    // Seerr answered; it just answered no. A declined or deleted request is a
+    // closed decision, and a failed one is a fault the service reported —
+    // neither is a connection that did not answer.
+    SeerrRequestDisplayKind.failed => StatusTone.warning,
     SeerrRequestDisplayKind.declined ||
-    SeerrRequestDisplayKind.failed ||
-    SeerrRequestDisplayKind.deleted => StatusTone.error,
+    SeerrRequestDisplayKind.deleted => StatusTone.neutral,
     SeerrRequestDisplayKind.unknown => StatusTone.neutral,
   };
 

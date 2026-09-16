@@ -76,13 +76,14 @@ void main() {
         pipeline: MediaPipeline.downloading,
         hasWarning: true,
       );
-      const failedWarning = MediaStatusInfo(
-        pipeline: MediaPipeline.failed,
+      // The only pipeline that still reaches red: the client did not answer.
+      const unreachableWarning = MediaStatusInfo(
+        pipeline: MediaPipeline.clientUnavailable,
         hasWarning: true,
       );
 
       expect(queuedWarning.tone, StatusTone.warning);
-      expect(failedWarning.tone, StatusTone.error);
+      expect(unreachableWarning.tone, StatusTone.error);
     });
 
     test('notTracked carries the accent tone as a call to action', () {
@@ -97,9 +98,57 @@ void main() {
         const MediaStatusInfo(availability: MediaAvailability.unavailable).tone,
         StatusTone.neutral,
       );
+    });
+
+    // The rule, in one test, so that drifting any arm of it back costs a red
+    // build rather than a screenshot somebody happens to look at. Backlog is
+    // the arm this codebase got wrong for a year: `missing` was `error`, which
+    // meant the resting state of every \*arr was painted in the alarm colour.
+    test('backlog is neutral — missing is not an emergency', () {
+      for (final availability in [
+        MediaAvailability.missing,
+        MediaAvailability.upgradable,
+        MediaAvailability.deleted,
+      ]) {
+        expect(
+          MediaStatusInfo(availability: availability).tone,
+          StatusTone.neutral,
+          reason: '$availability is backlog, not damage',
+        );
+      }
+    });
+
+    test('a fault is amber and red belongs to reachability alone', () {
+      for (final pipeline in [
+        MediaPipeline.failed,
+        MediaPipeline.stalled,
+        MediaPipeline.importBlocked,
+      ]) {
+        expect(
+          MediaStatusInfo(pipeline: pipeline).tone,
+          StatusTone.warning,
+          reason: '$pipeline is a fault the service reported, not silence',
+        );
+      }
+
       expect(
-        const MediaStatusInfo(availability: MediaAvailability.missing).tone,
+        const MediaStatusInfo(pipeline: MediaPipeline.clientUnavailable).tone,
         StatusTone.error,
+      );
+    });
+
+    test('waiting is informational and a deliberate pause is neutral', () {
+      for (final pipeline in [
+        MediaPipeline.queued,
+        MediaPipeline.importPending,
+        MediaPipeline.downloading,
+      ]) {
+        expect(MediaStatusInfo(pipeline: pipeline).tone, StatusTone.info);
+      }
+
+      expect(
+        const MediaStatusInfo(pipeline: MediaPipeline.paused).tone,
+        StatusTone.neutral,
       );
     });
   });

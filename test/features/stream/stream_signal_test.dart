@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/status/media_status.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
@@ -22,13 +21,13 @@ List<ServiceKpi> streamKpis({required int streams, required int transcodes}) =>
         label: 'Streams',
         value: '$streams',
         icon: Icons.play_circle_outline_rounded,
-        accent: streams > 0 && transcodes == 0 ? AppColors.info : null,
+        tone: streams > 0 && transcodes == 0 ? StatusTone.info : null,
       ),
       ServiceKpi(
         label: 'Transcodes',
         value: '$transcodes',
         icon: Icons.memory_rounded,
-        accent: transcodes > 0 ? AppColors.warning : null,
+        tone: transcodes > 0 ? StatusTone.warning : null,
       ),
       const ServiceKpi(
         label: 'Libraries',

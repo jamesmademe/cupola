@@ -103,6 +103,29 @@ enum MediaPipeline {
 /// layer so no widget hardcodes hex values.
 enum StatusTone { primary, success, warning, info, error, neutral }
 
+/// What an *event* row depicts, for rows the availability/pipeline pair cannot
+/// describe: a history record, a blocked release.
+///
+/// The glyph for those rows used to be derived from the tone, which worked only
+/// while every event that needed its own picture also had its own colour. It
+/// does not survive the tone rule: `Grabbed`, `Deleted`, `Ignored`, `Renamed`
+/// and `Blocked` are all correctly *neutral* — none of them is damage — and a
+/// tone-keyed switch can only answer one glyph for the five of them, which is
+/// why the neutral arm was a question mark on the most common row in Activity.
+///
+/// Kept an enum rather than an `IconData` so the status vocabulary stays pure
+/// Dart and the icon table stays with the badge, which is the same split
+/// [StatusTone] already makes for colour.
+enum StatusGlyph {
+  grabbed,
+  imported,
+  failed,
+  ignored,
+  deleted,
+  renamed,
+  blocked,
+}
+
 /// A fully resolved media status, ready to render.
 ///
 /// Built by the per-service resolvers in each feature's `domain/` layer — never
@@ -145,6 +168,13 @@ class MediaStatusInfo {
   /// [StatusTone.error] is never downgraded.
   final StatusTone? toneOverride;
 
+  /// What this row depicts, when it is an event rather than a thing on disk.
+  ///
+  /// Set by the same resolvers that set [toneOverride], and for the same
+  /// reason: a history record has no availability and no pipeline, so nothing
+  /// else on this object can say whether it was a grab or a deletion.
+  final StatusGlyph? glyph;
+
   const MediaStatusInfo({
     this.availability = MediaAvailability.unknown,
     this.pipeline,
@@ -154,6 +184,7 @@ class MediaStatusInfo {
     this.detail,
     this.labelOverride,
     this.toneOverride,
+    this.glyph,
   });
 
   const MediaStatusInfo.unknown() : this();
@@ -236,24 +267,45 @@ class MediaStatusInfo {
     return base;
   }
 
+  /// The tone rule, in one place, in the five arms the design settles on:
+  ///
+  /// - **green** — available or complete;
+  /// - **amber** — a *fault*: failing, stalled, errored, stopped unexpectedly,
+  ///   expiring. Something that should be moving and is not;
+  /// - **red** — unreachable, and nothing else. A connection that did not
+  ///   answer;
+  /// - **blue** — queued or informational. Work that is waiting its turn, or a
+  ///   fact about the item;
+  /// - **neutral** — *backlog*. Missing, wanted, cutoff unmet, not aired,
+  ///   deliberately paused, deleted.
+  ///
+  /// The last arm is the one the code used to get backwards, and it is the one
+  /// that matters most. A library with 34 missing films is not 34 emergencies:
+  /// it is a list of things to fetch, which is the normal resting state of an
+  /// \*arr and the reason the user installed one. Painting it red spends the
+  /// alarm colour on the baseline, and once the baseline is red there is no ink
+  /// left for the disk that filled up. Amber has the symmetrical job: it marks
+  /// what the *system* did wrong, never what the user has not got round to.
   StatusTone get _baseTone {
     if (pipeline != null) {
       return switch (pipeline!) {
         MediaPipeline.downloading || MediaPipeline.importing => StatusTone.info,
-        MediaPipeline.queued ||
-        MediaPipeline.importPending ||
-        MediaPipeline.paused => StatusTone.warning,
-        // Stuck, and waiting on the user rather than on the network. Not
-        // `error`: nothing is lost yet, and reserving red for definite loss is
-        // what keeps red meaning something (the same reasoning that keeps the
-        // Wanted bucket off red — if everything is an emergency, nothing is).
+        // Waiting its turn is information, not a fault: the queue is working
+        // exactly as intended and the row is reporting its position in it.
+        MediaPipeline.queued || MediaPipeline.importPending => StatusTone.info,
+        // The user pressed pause. Nothing is wrong, so nothing is toned — the
+        // same reading that keeps a deliberately stopped container neutral.
+        MediaPipeline.paused => StatusTone.neutral,
+        // Stuck, and waiting on the user rather than on the network.
         MediaPipeline.stalled ||
         MediaPipeline.importBlocked => StatusTone.warning,
+        // A grab or an import the service itself reports as failed — the
+        // canonical amber fault.
+        MediaPipeline.failed => StatusTone.warning,
         // The download client is unreachable, so nothing in the queue can
-        // progress at all. That is infrastructure being down, not an item
-        // waiting its turn.
-        MediaPipeline.clientUnavailable ||
-        MediaPipeline.failed => StatusTone.error,
+        // progress at all. That is a connection that did not answer, which is
+        // the one thing red is still for.
+        MediaPipeline.clientUnavailable => StatusTone.error,
       };
     }
 
@@ -262,10 +314,13 @@ class MediaStatusInfo {
     return switch (availability) {
       MediaAvailability.notTracked => StatusTone.primary,
       MediaAvailability.available => StatusTone.success,
-      MediaAvailability.upgradable => StatusTone.info,
       MediaAvailability.partial => StatusTone.info,
-      MediaAvailability.missing => StatusTone.error,
-      MediaAvailability.deleted => StatusTone.error,
+      // Backlog, all three of them: an upgrade the cutoff has not reached, a
+      // film nobody has fetched yet, a file that was removed. Work to do, not
+      // damage.
+      MediaAvailability.upgradable ||
+      MediaAvailability.missing ||
+      MediaAvailability.deleted => StatusTone.neutral,
       MediaAvailability.unavailable => StatusTone.neutral,
       MediaAvailability.unknown => StatusTone.neutral,
     };
@@ -280,6 +335,7 @@ class MediaStatusInfo {
     String? detail,
     String? labelOverride,
     StatusTone? toneOverride,
+    StatusGlyph? glyph,
   }) {
     return MediaStatusInfo(
       availability: availability ?? this.availability,
@@ -290,6 +346,7 @@ class MediaStatusInfo {
       detail: detail ?? this.detail,
       labelOverride: labelOverride ?? this.labelOverride,
       toneOverride: toneOverride ?? this.toneOverride,
+      glyph: glyph ?? this.glyph,
     );
   }
 
@@ -303,7 +360,8 @@ class MediaStatusInfo {
         other.hasWarning == hasWarning &&
         other.detail == detail &&
         other.labelOverride == labelOverride &&
-        other.toneOverride == toneOverride;
+        other.toneOverride == toneOverride &&
+        other.glyph == glyph;
   }
 
   @override
@@ -316,6 +374,7 @@ class MediaStatusInfo {
     detail,
     labelOverride,
     toneOverride,
+    glyph,
   );
 
   @override

@@ -10,6 +10,7 @@ import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/reel_line.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 
 /// A premium horizontal rail of KPI "stat cards" shown at the top of a service
 /// page. Replaces the ad-hoc per-service stat rows with one shared component.
@@ -114,7 +115,17 @@ class _KpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final accent = kpi.accent ?? fallbackAccent;
+    // A toned KPI paints in its tone; everything else wears the service accent.
+    // The tone is resolved against the card's own container, not the scaffold:
+    // these cards sit on `surfaceContainer`, and on paper that is the ground
+    // the walk has to clear.
+    final accent = kpi.tone == null
+        ? fallbackAccent
+        : statusToneColor(
+            colorScheme,
+            kpi.tone!,
+            surface: colorScheme.surfaceContainer,
+          );
 
     final card = Container(
       constraints: const BoxConstraints(minWidth: 92),

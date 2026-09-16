@@ -191,8 +191,10 @@ void main() {
       expect(find.text('Rejected'), findsOneWidget);
       // A bare red block glyph became a labelled StatusBadge, so the state is
       // words as well as colour and it reads identically to every other row.
+      // The colour is gone now — a release the user rejected is the blocklist
+      // obeying, not a fault — so the glyph carries what happened on its own.
       expect(find.text('Blocked'), findsOneWidget);
-      expect(find.byIcon(Icons.error_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.block_rounded), findsOneWidget);
     });
 
     testWidgets('renders fallback title when sourceTitle missing', (

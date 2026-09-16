@@ -67,28 +67,6 @@ class ServiceSignal {
   }
 }
 
-/// Labels whose flagged state means bytes are moving, not that something is
-/// wrong.
-///
-/// An active download is the system working, so it reads as activity rather than
-/// as a warning. Everything else a service flags is something you may need to
-/// act on.
-/// An active playback session joins `Down` here for the same reason: bytes are
-/// moving because the stack is doing its job. Without membership there is no
-/// "active and fine" register at all — [_toneFor] reaches [StatusTone.info]
-/// *only* through this set, so an unflagged KPI is [StatusTone.neutral]
-/// (chromatically identical to an idle server) and anything else flagged falls
-/// through to [StatusTone.warning], which would paint "three people are
-/// watching" the same amber as "Prowlarr has failing indexers".
-const Set<String> _activityLabels = {'Down', 'Streams'};
-
-/// Labels whose flagged state is an outright fault rather than a backlog.
-///
-/// A failing indexer and an exited stack are both things that were meant to be
-/// running and are not — distinct from a queue of work that simply has not
-/// happened yet.
-const Set<String> _faultLabels = {'Fails', 'Exited'};
-
 /// The matrix's word for a metric, where the KPI's own label is wrong *here*.
 ///
 /// A KPI label is written for the per-service peek, where four of them sit in a
@@ -98,8 +76,8 @@ const Set<String> _faultLabels = {'Fails', 'Exited'};
 ///
 ///  * **`Down`** is the download *rate*. Beside `Up` on a peek it cannot be
 ///    misread; on a reachability instrument `2.4 MB/s down` says the service is
-///    down. It is the one word this screen cannot borrow, and the code already
-///    knew as much — `_activityLabels` exists to stop it reading as a fault.
+///    down. It is the one word this screen cannot borrow, and the KPI builder
+///    already knew as much — it flags the rate as *activity*, never as a fault.
 ///    `incoming` rather than `downloading` because the cell has to fit a rate,
 ///    an icon and a word into 168pt: measured, `2.4 MB/s downloading` ellipsises
 ///    to "downloa…" at the *default* reading size, and a truncated word is a
@@ -132,10 +110,18 @@ const Set<String> _invariantLabels = {'series'};
 ///
 /// The choice is not a table in this file, and deliberately so. Every KPI
 /// builder in `service_kpi_provider.dart` already marks its own noteworthy
-/// metric by giving it a non-null [ServiceKpi.accent] — `_warnIf(missing > 0)`,
-/// `_warnIf(activeAlerts > 0)`, `_warnIf(exited > 0)`, and so on. That flag is
+/// metric by giving it a non-null [ServiceKpi.tone] — `_backlogIf(missing > 0)`,
+/// `_faultIf(activeAlerts > 0)`, `_faultIf(exited > 0)`, and so on. That flag is
 /// the domain's own judgment about its own data, written next to the code that
-/// computes it.
+/// computes it — and since it is a [StatusTone] rather than a colour, it also
+/// says *what kind* of judgment.
+///
+/// This file used to re-derive that second half by matching the KPI's label
+/// against two sets of strings, with everything unmatched falling through to
+/// amber. It was wrong in both directions at once — `Exited` resolved to red
+/// and `Missing` to amber — and it was wrong in a way no type could catch,
+/// because a service whose builder was added later simply inherited the
+/// fallthrough. Reading the tone the builder set is the whole fix.
 ///
 /// So: **the first flagged KPI wins, and the first KPI is the fallback.** A
 /// service added to the registry gets a correct live line for free, and the
@@ -146,7 +132,7 @@ const Set<String> _invariantLabels = {'series'};
 ServiceSignal? resolveServiceSignal(List<ServiceKpi> kpis) {
   if (kpis.isEmpty) return null;
 
-  final flagged = kpis.where((kpi) => kpi.accent != null).firstOrNull;
+  final flagged = kpis.where((kpi) => kpi.isNoteworthy).firstOrNull;
 
   // Nothing is asking for attention, so the headline metric carries the cell:
   // the service's scale, not its problems.
@@ -156,10 +142,7 @@ ServiceSignal? resolveServiceSignal(List<ServiceKpi> kpis) {
     label: _matrixLabel(source.label, source.value),
     value: source.value,
     icon: source.icon,
-    // The tone reads the *KPI's* label, not the rewritten one: the vocabulary
-    // above is presentation, and keying the closed tone set off it would mean a
-    // renamed word silently changed a service's health colour.
-    tone: flagged == null ? StatusTone.neutral : _toneFor(flagged.label),
+    tone: flagged?.tone ?? StatusTone.neutral,
   );
 }
 
@@ -178,10 +161,4 @@ String _matrixLabel(String kpiLabel, String value) {
   if (int.tryParse(value) != 1) return label;
   if (_invariantLabels.contains(label) || !label.endsWith('s')) return label;
   return label.substring(0, label.length - 1);
-}
-
-StatusTone _toneFor(String label) {
-  if (_activityLabels.contains(label)) return StatusTone.info;
-  if (_faultLabels.contains(label)) return StatusTone.error;
-  return StatusTone.warning;
 }
