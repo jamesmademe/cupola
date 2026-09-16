@@ -31,4 +31,68 @@ void main() {
       expect(formatImportBytes(2199023255552), '2.00 TB');
     });
   });
+
+  group('manualImportSelectionSummary', () {
+    String summary({
+      int selected = 3,
+      int selectable = 5,
+      int reimports = 0,
+      int needingIdentity = 0,
+      int selectedBytes = 0,
+    }) {
+      return manualImportSelectionSummary(
+        selected: selected,
+        selectable: selectable,
+        reimports: reimports,
+        needingIdentity: needingIdentity,
+        selectedBytes: selectedBytes,
+      );
+    }
+
+    test('names the whole selection against what could be selected', () {
+      expect(
+        summary(selected: 3, selectable: 5, needingIdentity: 1),
+        startsWith('3 of 5 selected'),
+      );
+    });
+
+    test('a figure of zero is dropped, never printed as a zero', () {
+      // "0 re-imports · 0 need an identity" is three facts about nothing, and
+      // it is the line the user reads on every ordinary scan.
+      final line = summary(selected: 0, selectable: 5);
+      expect(line, '0 of 5 selected');
+    });
+
+    test('each optional segment appears exactly when its figure is real', () {
+      final line = summary(
+        selected: 4,
+        selectable: 7,
+        reimports: 1,
+        needingIdentity: 1,
+        selectedBytes: 1024,
+      );
+      expect(line.split(' \u00b7 '), [
+        '4 of 7 selected',
+        '1 re-import',
+        '1 needs an identity',
+        '1.00 KB',
+      ]);
+    });
+
+    test('the plural follows the figure on both counts', () {
+      final line = summary(reimports: 2, needingIdentity: 2);
+      expect(line, contains('2 re-imports'));
+      expect(line, contains('2 need an identity'));
+    });
+
+    test('a selection whose sizes nobody reported is not zero bytes', () {
+      // The sentinel rather than "0 B": a count the service never answered is
+      // not an empty one, and "0 B" would say the import moves nothing.
+      expect(summary(selected: 2, selectedBytes: 0), contains('Unknown size'));
+    });
+
+    test('nothing selected carries no size at all', () {
+      expect(summary(selected: 0, selectedBytes: 0), isNot(contains('size')));
+    });
+  });
 }

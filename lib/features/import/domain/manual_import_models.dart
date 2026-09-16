@@ -231,6 +231,17 @@ class ManualImportItem {
   bool get hasBlockingMetadataRejection =>
       rejections.any((item) => item.isPermanent && !_isIdentityRejection(item));
 
+  /// The service says this file is a sample.
+  ///
+  /// A sample is fully matched — the \*arrs identify it exactly like the real
+  /// rip it sits next to — so it satisfies every requirement the import payload
+  /// has and arrived preselected. "Import 4 files" was really five, and the
+  /// fifth was a 42 MB trailer the service would have moved into the library
+  /// under the feature's name. It stays visible, keeps its match and stays
+  /// tickable: this is a default, not a prohibition.
+  bool get isSample =>
+      rejections.any((item) => _sampleReason.hasMatch(item.reason));
+
   bool get hasMatch => movie != null || series != null || artist != null;
 
   bool hasMatchFor(ServiceKey service) {
@@ -855,6 +866,11 @@ List<ManualImportRejection> _removeIdentityRejections(
       })
       .toList(growable: false);
 }
+
+/// The word on its own, not a substring: `resampled` and `oversampling` are
+/// audio facts a Lidarr rejection can legitimately state, and neither of them
+/// makes the file a sample.
+final _sampleReason = RegExp(r'\bsamples?\b', caseSensitive: false);
 
 bool _isIdentityRejection(ManualImportRejection rejection) {
   if (!rejection.isPermanent) return false;

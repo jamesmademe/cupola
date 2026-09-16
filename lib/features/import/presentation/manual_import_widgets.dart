@@ -115,7 +115,20 @@ class ManualImportFrame extends StatelessWidget {
   }
 }
 
+/// The one title all three stations carry.
+///
+/// Sentence case, and the same string on Locate, Review and Track: the flow has
+/// one name, and the station bar underneath says which part of it you are in.
+/// Three separate Title Case titles made a single task read as three
+/// destinations — in the app bar, and in a browser's back list.
+const manualImportTitle = 'Manual import';
+
 /// The names of the three import stations, in order.
+///
+/// Station 3 is **Track**, not Import: the button beside it already says
+/// "Import N files", so a station called Import would name the same act twice
+/// and leave the page where the files are already moving without a name of its
+/// own.
 const manualImportStations = ['Locate', 'Review', 'Track'];
 
 /// A compact "where am I" strip for a multi-step flow.
@@ -205,8 +218,26 @@ class ImportStationBar extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // A check once the station is behind you, its number
+                        // until then. Without the number the bar said where you
+                        // were but not how far in — three equal words, and no
+                        // way to tell "Review" the second of three from
+                        // "Review" the last thing left to do.
                         if (index < activeIndex) ...[
                           Icon(Icons.check_rounded, size: 14, color: accent),
+                          const SizedBox(width: AppSpacing.xs),
+                        ] else ...[
+                          Text(
+                            '${index + 1}',
+                            style: theme.textTheme.labelMedium!
+                                .weight(FontWeight.w700)
+                                .tabular
+                                .copyWith(
+                                  color: index == activeIndex
+                                      ? activeLabelColor
+                                      : colorScheme.onSurfaceVariant,
+                                ),
+                          ),
                           const SizedBox(width: AppSpacing.xs),
                         ],
                         // Ellipsises past the clamp rather than clipping.
@@ -369,6 +400,120 @@ class ImportPrimaryButton extends StatelessWidget {
   }
 }
 
+/// The station's way out, beside the primary action.
+///
+/// Outlined and neutral on purpose: the accent belongs to the one control that
+/// commits, and a second filled button next to it would make leaving look like
+/// a decision of the same weight. The app-bar chevron does the same job, but it
+/// is at the far end of a page whose only other control is pinned to the
+/// bottom — on a phone that is the whole screen away from the thumb.
+class ImportSecondaryButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+
+  const ImportSecondaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: colorScheme.onSurface,
+        side: BorderSide(color: colorScheme.outlineVariant),
+        minimumSize: const Size(0, 48),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      ),
+      child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+    );
+  }
+}
+
+/// A dim line above a station's primary action.
+///
+/// For the sentence that would change the decision the button is about to make
+/// — never for a status, which belongs on the row it describes.
+class ImportFooterNote extends StatelessWidget {
+  final String text;
+  final IconData icon;
+
+  const ImportFooterNote({
+    super.key,
+    required this.text,
+    this.icon = Icons.info_outline_rounded,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xs,
+        AppSpacing.lg,
+        0,
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.labelSmall!.tabular.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// What the import button is about to spend, in words, above the button.
+///
+/// `3 of 5 selected · 1 re-import · 1 needs an identity · 39.9 GB`. The button
+/// itself can only carry the count; this line carries the shape of the scan —
+/// how much of it is ticked, how much of it is a replacement rather than a new
+/// file, how much of it is still waiting for an identity, and how many bytes
+/// are about to move on the user's own disk.
+///
+/// The denominator is the files this service could take: ready, unmatched, and
+/// the ones it already holds. The unimportable remainder of a real downloads
+/// folder — artwork, playlists, NFOs, dozens of them — is deliberately outside
+/// it, because a line reading "3 of 61 selected" describes a problem the user
+/// does not have.
+///
+/// Every segment is dropped when its figure is zero rather than printed as a
+/// zero: "0 re-imports" is a fact about nothing.
+String manualImportSelectionSummary({
+  required int selected,
+  required int selectable,
+  required int reimports,
+  required int needingIdentity,
+  required int selectedBytes,
+}) {
+  return [
+    '$selected of $selectable selected',
+    if (reimports > 0) reimports == 1 ? '1 re-import' : '$reimports re-imports',
+    if (needingIdentity > 0)
+      needingIdentity == 1
+          ? '1 needs an identity'
+          : '$needingIdentity need an identity',
+    // The sentinel, not a zero: a selection whose sizes the service did not
+    // report is not a zero-byte import.
+    if (selected > 0) formatImportBytes(selectedBytes),
+  ].join(' · ');
+}
+
 /// Review's pinned bottom bar: the import-mode menu plus the primary action.
 class ManualImportReviewFooter extends ConsumerWidget {
   final ServiceKey service;
@@ -411,11 +556,41 @@ class ManualImportReviewFooter extends ConsumerWidget {
               : 'None of these $count files are in view')
         : '$offScreen of them are not in view';
 
+    final summary = manualImportSelectionSummary(
+      selected: count,
+      selectable: state.importableCount,
+      reimports: state.selectedReimportItems.length,
+      needingIdentity: state.attentionItems.length,
+      selectedBytes: state.selectedBytes,
+    );
+
     return Padding(
       padding: const EdgeInsets.only(left: AppSpacing.lg),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Above the button, and spoken as one node: the button can only carry
+          // a count, and the count alone never said what was left unticked.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xs,
+              0,
+              AppSpacing.lg,
+              AppSpacing.xs,
+            ),
+            child: Semantics(
+              container: true,
+              liveRegion: true,
+              child: Text(
+                summary,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall!.tabular.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
           if (scopeNote != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -470,6 +645,9 @@ class ManualImportReviewFooter extends ConsumerWidget {
                               manualImportProgressPath,
                               service,
                               targetId: targetId,
+                              // Track polls the command on the server that is
+                              // running it; the link has to say which one.
+                              instanceId: state.instanceId,
                             ),
                           );
                           if (!context.mounted) return;

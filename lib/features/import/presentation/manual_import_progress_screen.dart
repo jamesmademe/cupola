@@ -51,13 +51,20 @@ class _ManualImportProgressScreenState
       onTick: () => ref.read(manualImportFlowProvider.notifier).pollCommand(),
       child: ManualImportFrame(
         service: widget.service,
-        title: 'Import Progress',
+        // Station 3 is Track, and the page's title is the flow's, not the
+        // station's: "Import Progress" named the same act as the button that
+        // got here, and left this page — where the files are already moving —
+        // without a name of its own.
+        title: manualImportTitle,
         subtitle:
             '${widget.service.title} · ${state.submittedItems.length} '
             '${state.submittedItems.length == 1 ? 'file' : 'files'} submitted',
         bottomBar: _TrackButtons(
           service: widget.service,
           command: command,
+          submitting: state.isSubmitting,
+          onRetry: () =>
+              ref.read(manualImportFlowProvider.notifier).retryImport(),
           onDone: () => context.go('/activity'),
         ),
         child: ListView(
@@ -378,21 +385,32 @@ class _SubmittedFileRow extends StatelessWidget {
   }
 }
 
+/// The failed leaf is the only one with two decisions in it.
+///
+/// A completed command leaves one thing to do — go and look at what it did — so
+/// it gets `Done` alone. A failed one leaves two, and they are not the same: the
+/// files are still where they were, so the batch can be sent again as-is, or the
+/// user can walk back to Review because it was the batch that was wrong. Both
+/// are offered, and the accent goes to the one that acts on the failure.
 class _TrackButtons extends StatelessWidget {
   final ServiceKey service;
   final ManualImportCommandStatus? command;
+  final bool submitting;
+  final VoidCallback onRetry;
   final VoidCallback onDone;
 
   const _TrackButtons({
     required this.service,
     required this.command,
+    required this.submitting,
+    required this.onRetry,
     required this.onDone,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final showRetry = command?.isFailure == true;
+    final failed = command?.isFailure == true;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -403,17 +421,15 @@ class _TrackButtons extends StatelessWidget {
       ),
       child: Row(
         children: [
-          if (showRetry) ...[
+          if (failed) ...[
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => context.pop(),
-                icon: const Icon(Icons.refresh_rounded, size: 18),
+                onPressed: submitting ? null : () => context.pop(),
+                icon: const Icon(Icons.chevron_left_rounded, size: 18),
                 label: const Text('Back to review'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: colorScheme.error,
-                  side: BorderSide(
-                    color: colorScheme.error.withValues(alpha: 0.5),
-                  ),
+                  foregroundColor: colorScheme.onSurface,
+                  side: BorderSide(color: colorScheme.outlineVariant),
                   minimumSize: const Size.fromHeight(48),
                 ),
               ),
@@ -422,12 +438,25 @@ class _TrackButtons extends StatelessWidget {
           ],
           Expanded(
             child: FilledButton.icon(
-              onPressed: onDone,
-              icon: const Icon(Icons.done_rounded, size: 18),
-              label: const Text('Done'),
+              onPressed: submitting ? null : (failed ? onRetry : onDone),
+              icon: submitting
+                  ? SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    )
+                  : Icon(
+                      failed ? Icons.refresh_rounded : Icons.done_rounded,
+                      size: 18,
+                    ),
+              label: Text(failed ? 'Retry' : 'Done'),
               style: FilledButton.styleFrom(
                 backgroundColor: service.accent,
                 foregroundColor: ServiceTheme.foregroundOn(service.accent),
+                disabledBackgroundColor: colorScheme.surfaceContainerHighest,
+                disabledForegroundColor: colorScheme.onSurfaceVariant,
                 minimumSize: const Size.fromHeight(48),
               ),
             ),

@@ -855,4 +855,238 @@ void main() {
       );
     });
   });
+
+  group('the sample file', () {
+    test('is listed and matched, and is never preselected', () async {
+      final client = FakeApiClient();
+      client.getResponseQueue.addAll([
+        [
+          {'id': 1, 'path': '/downloads', 'accessible': true},
+        ],
+        {'parent': null, 'directories': <dynamic>[], 'files': <dynamic>[]},
+        [
+          {
+            'path': '/downloads/Past.Lives.2023.1080p.BluRay.mkv',
+            'movie': {'id': 42, 'title': 'Past Lives'},
+          },
+          {
+            'path': '/downloads/sample-do-not-import.mkv',
+            // Matched exactly like the rip above it: the rejection is the only
+            // thing that tells them apart.
+            'movie': {'id': 42, 'title': 'Past Lives'},
+            'rejections': [
+              {'reason': 'Sample', 'type': 'permanent'},
+            ],
+          },
+        ],
+      ]);
+      final container = _container(client: client, service: ServiceKey.radarr);
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      await notifier.start(ServiceKey.radarr, force: true);
+      await notifier.loadSelectedFolderItems();
+
+      final state = container.read(manualImportFlowProvider);
+      // Visible and still ready — the row keeps its checkbox and its match.
+      expect(state.items.length, 2);
+      expect(state.readyItems.length, 2);
+      // But the button promises one file, not two. It used to promise both,
+      // and the second was a trailer about to be moved into the library.
+      expect(state.selectedPaths, {
+        '/downloads/Past.Lives.2023.1080p.BluRay.mkv',
+      });
+    });
+
+    test('can still be ticked deliberately', () async {
+      final container = _container(
+        client: FakeApiClient(),
+        service: ServiceKey.radarr,
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      final sample = ManualImportItem.fromJson({
+        'path': '/downloads/sample.mkv',
+        'movie': {'id': 42, 'title': 'Past Lives'},
+        'rejections': [
+          {'reason': 'Sample', 'type': 'permanent'},
+        ],
+      });
+      notifier.state = container
+          .read(manualImportFlowProvider)
+          .copyWith(service: ServiceKey.radarr, items: [sample]);
+
+      notifier.toggleItem(sample, true);
+      expect(container.read(manualImportFlowProvider).selectedPaths, {
+        '/downloads/sample.mkv',
+      });
+    });
+  });
+
+  group('the flow is bound to one connection', () {
+    test('every call goes to the connection the route named', () async {
+      // The bug this prevents moves a user's files into the wrong library: the
+      // plain provider resolves through the lens, so a wizard opened on the HD
+      // Radarr scanned the HD box only until the lens moved.
+      final lensClient = FakeApiClient();
+      final namedClient = FakeApiClient();
+      namedClient.getResponseQueue.addAll([
+        [
+          {'id': 1, 'path': '/mnt/hd', 'accessible': true},
+        ],
+        {'parent': null, 'directories': <dynamic>[], 'files': <dynamic>[]},
+      ]);
+
+      final container = ProviderContainer(
+        overrides: [
+          manualImportServiceProvider(ServiceKey.radarr).overrideWith(
+            (ref) => _FakeManualImportService(lensClient, ServiceKey.radarr),
+          ),
+          manualImportServiceForProvider((
+            ServiceKey.radarr,
+            'radarr-hd',
+          )).overrideWith(
+            (ref) => _FakeManualImportService(namedClient, ServiceKey.radarr),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      await notifier.start(ServiceKey.radarr, instanceId: 'radarr-hd');
+
+      expect(container.read(manualImportFlowProvider).instanceId, 'radarr-hd');
+      expect(namedClient.getCallCount, greaterThan(0));
+      expect(lensClient.getCallCount, 0);
+    });
+
+    test('an unnamed connection still means the lens', () async {
+      final client = FakeApiClient();
+      client.getResponseQueue.addAll([
+        [
+          {'id': 1, 'path': '/downloads', 'accessible': true},
+        ],
+        {'parent': null, 'directories': <dynamic>[], 'files': <dynamic>[]},
+      ]);
+      final container = _container(client: client, service: ServiceKey.radarr);
+      addTearDown(container.dispose);
+
+      await container
+          .read(manualImportFlowProvider.notifier)
+          .start(ServiceKey.radarr);
+
+      expect(container.read(manualImportFlowProvider).instanceId, '');
+      expect(client.getCallCount, greaterThan(0));
+    });
+
+    test('starting on another connection restarts the flow', () async {
+      // Same service, same target: the guard that skips a redundant start must
+      // not skip this one, because every path already on screen belongs to a
+      // different server's disk.
+      final container = _container(
+        client: FakeApiClient(),
+        service: ServiceKey.radarr,
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      notifier.state = container
+          .read(manualImportFlowProvider)
+          .copyWith(
+            service: ServiceKey.radarr,
+            instanceId: 'radarr-4k',
+            rootFolders: [const ManualImportRootFolder(id: 1, path: '/mnt/4k')],
+            selectedFolder: '/mnt/4k/downloads',
+          );
+
+      await notifier.start(ServiceKey.radarr, instanceId: 'radarr-4k');
+      expect(
+        container.read(manualImportFlowProvider).selectedFolder,
+        '/mnt/4k/downloads',
+        reason: 'the same connection is not a restart',
+      );
+    });
+
+    test('the last-scanned shortcut is keyed per connection', () {
+      // Two Radarrs are two filesystems. Keyed on the service alone, the 4K
+      // box's completed-downloads path was offered to the HD box's wizard.
+      expect(
+        manualImportLastFolderKey(ServiceKey.radarr, 'radarr-4k'),
+        isNot(manualImportLastFolderKey(ServiceKey.radarr, 'radarr-hd')),
+      );
+      // The single-connection setup keeps the key it already wrote.
+      expect(
+        manualImportLastFolderKey(ServiceKey.radarr),
+        manualImportLastFolderKey(ServiceKey.radarr, ''),
+      );
+    });
+  });
+
+  group('ManualImportFlowNotifier.retryImport', () {
+    ProviderContainer failed(FakeApiClient client) {
+      final container = _container(client: client, service: ServiceKey.radarr);
+      final items = [
+        _radarrItem(movieId: 101, path: '/downloads/a.mkv'),
+        _radarrItem(movieId: 102, path: '/downloads/b.mkv'),
+      ];
+      container.read(manualImportFlowProvider.notifier).state = container
+          .read(manualImportFlowProvider)
+          .copyWith(
+            service: ServiceKey.radarr,
+            items: items,
+            submittedItems: items,
+            submittedPaths: items.map((item) => item.path).toSet(),
+            command: ManualImportCommandStatus.fromJson({
+              'id': 77,
+              'status': 'failed',
+            }),
+          );
+      return container;
+    }
+
+    test('re-posts the batch the failed command left behind', () async {
+      final client = FakeApiClient();
+      client.postResponseData = {'id': 78, 'status': 'started'};
+      final container = failed(client);
+      addTearDown(container.dispose);
+
+      final command = await container
+          .read(manualImportFlowProvider.notifier)
+          .retryImport();
+
+      expect(command?.id, 78);
+      // Confirming spent the selection, so the retry has to re-post what was
+      // submitted — not what is ticked, which is nothing.
+      final body = client.lastPostData as Map<String, dynamic>;
+      expect((body['files'] as List).length, 2);
+      expect(
+        container.read(manualImportFlowProvider).command?.status,
+        'started',
+      );
+    });
+
+    test('is refused while the command is still alive', () async {
+      // A running or completed command has the files; re-posting them queues a
+      // duplicate import or asks the service for a path it already consumed.
+      for (final status in const ['queued', 'started', 'completed']) {
+        final client = FakeApiClient();
+        client.postResponseData = {'id': 79, 'status': 'started'};
+        final container = failed(client);
+        addTearDown(container.dispose);
+        final notifier = container.read(manualImportFlowProvider.notifier);
+        notifier.state = container
+            .read(manualImportFlowProvider)
+            .copyWith(
+              command: ManualImportCommandStatus.fromJson({
+                'id': 77,
+                'status': status,
+              }),
+            );
+
+        expect(await notifier.retryImport(), isNull, reason: status);
+        expect(client.postCallCount, 0, reason: status);
+      }
+    });
+  });
 }

@@ -70,7 +70,9 @@ String manualImportFacetSpokenLabel(ManualImportFacet facet, int count) {
 /// - **Ready** (success): fully matched, will be included in the import. When
 ///   the service also reported a metadata rejection the tone escalates to
 ///   warning via [MediaStatusInfo.hasWarning] while the label stays honest.
-/// - **No match** (error): the service permanently rejected the file's
+/// - **Sample** (neutral): matched, and the service says it is a sample. Shown,
+///   tickable, and never preselected — see [ManualImportItem.isSample].
+/// - **No match** (warning): the service permanently rejected the file's
 ///   identity; it cannot import until the user assigns one.
 /// - **Needs match** (warning): unmatched, but nothing permanent — assigning
 ///   an identity clears it.
@@ -97,6 +99,17 @@ MediaStatusInfo manualImportItemStatus(
   }
 
   if (item.isReadyForImportFor(service)) {
+    // Checked before Ready, because a sample is fully matched and would
+    // otherwise read "Ready" next to an unticked box — a row that contradicts
+    // itself. Neutral: the file is backlog the user may still choose to take,
+    // not a fault the service is reporting.
+    if (item.isSample) {
+      return MediaStatusInfo(
+        labelOverride: 'Sample',
+        toneOverride: StatusTone.neutral,
+        detail: item.firstRejectionReason,
+      );
+    }
     return MediaStatusInfo(
       labelOverride: 'Ready',
       toneOverride: StatusTone.success,
@@ -110,7 +123,13 @@ MediaStatusInfo manualImportItemStatus(
   if (item.hasBlockingIdentityRejection) {
     return MediaStatusInfo(
       labelOverride: 'No match',
-      toneOverride: StatusTone.error,
+      // Amber, not red. Red is reserved for a connection that did not answer;
+      // this one answered, and what it said is that it cannot name the file —
+      // a fault the user can clear by assigning an identity. It used to paint
+      // red while the *same* affordance, one row below, painted amber for an
+      // unmatched file with no rejection attached: two tones, one fix sheet,
+      // and the facet chip above them already called the whole group warning.
+      toneOverride: StatusTone.warning,
       detail: item.firstRejectionReason,
     );
   }
@@ -128,7 +147,10 @@ MediaStatusInfo manualImportItemStatus(
 /// this is deliberately the only status the Track screen renders as truth.
 MediaStatusInfo manualImportCommandStatus(ManualImportCommandStatus command) {
   final (label, tone) = switch (command.status) {
-    'queued' => ('Queued', StatusTone.warning),
+    // Blue, not amber. A command waiting its turn is the service working as
+    // designed; amber here put a fault tone on every import that arrived while
+    // another one was still running.
+    'queued' => ('Queued', StatusTone.info),
     'started' => ('Running', StatusTone.info),
     'completed' => ('Completed', StatusTone.success),
     'failed' => ('Failed', StatusTone.error),

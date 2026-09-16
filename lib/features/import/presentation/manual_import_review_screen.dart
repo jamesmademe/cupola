@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/import/domain/manual_import_display.dart';
@@ -108,10 +109,18 @@ class ManualImportReviewScreen extends ConsumerStatefulWidget {
   final ServiceKey service;
   final int? targetId;
 
+  /// The connection the route named (`?i=`), or null when it named none.
+  ///
+  /// Only load-bearing on a deep link straight to Review: the flow is normally
+  /// already bound by Locate, and [ManualImportFlowNotifier.start] leaves a
+  /// matching binding alone.
+  final String? instanceId;
+
   const ManualImportReviewScreen({
     super.key,
     required this.service,
     this.targetId,
+    this.instanceId,
   });
 
   @override
@@ -146,8 +155,16 @@ class _ManualImportReviewScreenState
     Future.microtask(() async {
       final notifier = ref.read(manualImportFlowProvider.notifier);
       final state = ref.read(manualImportFlowProvider);
-      if (state.service != widget.service || state.selectedFolder == null) {
-        await notifier.start(widget.service, targetId: widget.targetId);
+      if (state.service != widget.service ||
+          // A flow bound to another connection is a scan of another server's
+          // disk: it has to be restarted, not continued.
+          state.instanceId != (widget.instanceId ?? '') ||
+          state.selectedFolder == null) {
+        await notifier.start(
+          widget.service,
+          instanceId: widget.instanceId,
+          targetId: widget.targetId,
+        );
       }
       await notifier.loadSelectedFolderItems();
     });
@@ -207,10 +224,24 @@ class _ManualImportReviewScreenState
     final folderName = folder == null ? '…' : manualImportPathName(folder);
     final view = _visibleFiles(state);
 
+    final scanned = state.items.length;
+
     return ManualImportFrame(
       service: widget.service,
-      title: 'Review Files',
-      subtitle: '${widget.service.title} · $folderName',
+      // The same title as Locate and Track; the station bar is what says this
+      // is station 2.
+      title: manualImportTitle,
+      // The canvas prints the size of the scan here and the folder on its own
+      // line in the body. The desktop board spells it out — "5 files parsed and
+      // probed on the server" — and the phone board prints "5 files"; this is
+      // one string at every width, so it is the short form, which is the only
+      // one that survives a 375pt app bar with two actions in it. The long
+      // sentence's real content, that the server parses and probes every file,
+      // is on Locate above the button that starts the scan.
+      subtitle: scanned == 0
+          ? '${widget.service.title} · $folderName'
+          : '${widget.service.title} · $scanned '
+                '${scanned == 1 ? 'file' : 'files'}',
       actions: [
         IconButton(
           tooltip: state.allReadySelected
@@ -349,6 +380,15 @@ class _ManualImportReviewScreenState
 
     final rows = <Widget>[
       ImportStationBar(service: service, activeIndex: 1),
+      // The folder is the one fact the whole screen is about and it used to
+      // live only in the app-bar subtitle, where the file count now is — so a
+      // scan of the wrong folder looked exactly like a scan of the right one
+      // until you read a two-line title.
+      _ScannedFolderLine(
+        service: service,
+        folder: state.selectedFolder,
+        onChange: () => context.pop(),
+      ),
       ManualImportFacetBar(
         counts: {
           ManualImportFacet.ready: state.readyItems.length,
@@ -1056,6 +1096,75 @@ class _ScanningState extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The folder this scan came from, and the way back to choosing another.
+class _ScannedFolderLine extends StatelessWidget {
+  final ServiceKey service;
+  final String? folder;
+  final VoidCallback onChange;
+
+  const _ScannedFolderLine({
+    required this.service,
+    required this.folder,
+    required this.onChange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final path = folder;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.sm,
+        AppSpacing.sm,
+      ),
+      // The same clamp, and the same reason, as the station bar directly above
+      // it: a path and the action that changes it are one line of chrome that
+      // cannot reflow, and at 2× the button alone was 70pt wider than the row.
+      // The two strips now grow together instead of one shearing off the other.
+      child: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: TextScaleMetrics.singleLineChromeMaxScaleFactor,
+        child: Row(
+          children: [
+            ExcludeSemantics(
+              child: Icon(
+                Icons.folder_rounded,
+                size: 16,
+                color: service.accent,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                // The scan cannot exist without a folder, but the screen can be
+                // built for a moment before `start` has resolved one.
+                path ?? '—',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelMedium!
+                    .weight(FontWeight.w600)
+                    .copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+            ),
+            TextButton(
+              onPressed: onChange,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(44, 44),
+                foregroundColor: service.accent,
+                textStyle: theme.textTheme.labelMedium!.weight(FontWeight.w700),
+              ),
+              child: const Text('Choose another folder'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -8,6 +8,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
 import 'package:cupola/features/import/presentation/manual_import_provider.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
@@ -20,6 +21,13 @@ class ManualImportLocateScreen extends ConsumerStatefulWidget {
   final ServiceKey service;
   final int? targetId;
 
+  /// The connection the route named (`?i=`), or null when it named none.
+  ///
+  /// Station 1 is where the binding is made: every later station reads it back
+  /// off the flow state. Null falls through to the lens, which is how every link
+  /// written before the parameter existed still works.
+  final String? instanceId;
+
   /// Pre-seeded folder, e.g. a failed download's output path from Activity.
   final String? initialPath;
 
@@ -27,6 +35,7 @@ class ManualImportLocateScreen extends ConsumerStatefulWidget {
     super.key,
     required this.service,
     this.targetId,
+    this.instanceId,
     this.initialPath,
   });
 
@@ -48,6 +57,7 @@ class _ManualImportLocateScreenState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.service != widget.service ||
         oldWidget.targetId != widget.targetId ||
+        oldWidget.instanceId != widget.instanceId ||
         oldWidget.initialPath != widget.initialPath) {
       Future.microtask(() => _start(force: true));
     }
@@ -58,6 +68,7 @@ class _ManualImportLocateScreenState
         .read(manualImportFlowProvider.notifier)
         .start(
           widget.service,
+          instanceId: widget.instanceId,
           targetId: widget.targetId,
           force: force,
           initialPath: widget.initialPath,
@@ -71,23 +82,57 @@ class _ManualImportLocateScreenState
 
     return ManualImportFrame(
       service: widget.service,
-      title: 'Manual Import',
-      subtitle: '${widget.service.title} · Choose a folder to scan',
-      bottomBar: ImportPrimaryButton(
-        service: widget.service,
-        icon: Icons.radar_rounded,
-        label: selectedFolder == null
-            ? 'Choose a folder'
-            : 'Scan "${manualImportPathName(selectedFolder)}"',
-        onPressed: selectedFolder == null
-            ? null
-            : () => context.push(
-                manualImportLocation(
-                  manualImportReviewPath,
-                  widget.service,
-                  targetId: widget.targetId,
+      // One title on all three stations; the station bar says which one this
+      // is. Three Title Case titles used to do that job badly — the page name
+      // changed under a flow that had not changed, and the browser back button
+      // read as three unrelated destinations.
+      title: manualImportTitle,
+      subtitle: '${widget.service.title} · choose a folder to scan',
+      bottomBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Before the commitment, not during it: the server parses and probes
+          // every file it finds, and the only moment that warning can change a
+          // decision is while the user is still choosing the folder.
+          const ImportFooterNote(
+            text:
+                'Scanning parses and probes every file on the server — '
+                'large folders take minutes.',
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: AppSpacing.lg),
+            child: Row(
+              children: [
+                ImportSecondaryButton(
+                  label: 'Cancel',
+                  onPressed: () => context.pop(),
                 ),
-              ),
+                Expanded(
+                  child: ImportPrimaryButton(
+                    service: widget.service,
+                    icon: Icons.radar_rounded,
+                    label: selectedFolder == null
+                        ? 'Choose a folder'
+                        : 'Scan "${manualImportPathName(selectedFolder)}"',
+                    onPressed: selectedFolder == null
+                        ? null
+                        : () => context.push(
+                            manualImportLocation(
+                              manualImportReviewPath,
+                              widget.service,
+                              targetId: widget.targetId,
+                              // The binding travels with the link: Review is a
+                              // separate route, and without this it would
+                              // re-resolve the connection through the lens.
+                              instanceId: state.instanceId,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
       child: _LocateBody(
         service: widget.service,
@@ -130,11 +175,11 @@ class _LocateBody extends ConsumerWidget {
       );
     }
 
-    final lastFolder = ref.watch(manualImportLastFolderProvider(service));
+    final lastFolder = ref.watch(
+      manualImportLastFolderProvider((service, state.instanceId)),
+    );
     final showLastFolder =
-        lastFolder != null &&
-        lastFolder.isNotEmpty &&
-        lastFolder != state.selectedFolder;
+        lastFolder != null && lastFolder.path != state.selectedFolder;
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -143,7 +188,8 @@ class _LocateBody extends ConsumerWidget {
         if (state.rootFolders.isNotEmpty)
           _RootFolderRail(service: service, state: state),
         if (showLastFolder)
-          _LastFolderShortcut(service: service, path: lastFolder),
+          _LastFolderShortcut(service: service, folder: lastFolder),
+        _PathField(service: service),
         ImportBreadcrumb(
           service: service,
           path: state.currentPath,
@@ -299,14 +345,22 @@ class _RootFolderChip extends StatelessWidget {
 /// almost always comes back to the same completed-downloads folder.
 class _LastFolderShortcut extends ConsumerWidget {
   final ServiceKey service;
-  final String path;
+  final ManualImportLastFolder folder;
 
-  const _LastFolderShortcut({required this.service, required this.path});
+  const _LastFolderShortcut({required this.service, required this.folder});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final path = folder.path;
+    // "Last scanned" alone cannot say whether it is still the right folder —
+    // this morning's rescue and last month's are the same card. The stamp is
+    // only written from the version that records it, so a shortcut saved before
+    // that says nothing rather than guessing.
+    final eyebrow = folder.scannedAt == null
+        ? 'Last scanned'
+        : 'Last scanned · ${formatRelativeDateTime(folder.scannedAt!)}';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -323,7 +377,9 @@ class _LastFolderShortcut extends ConsumerWidget {
         onTap: () =>
             ref.read(manualImportFlowProvider.notifier).selectFolder(path),
         semanticLabel: 'Return to last scanned folder',
-        semanticValue: path,
+        semanticValue: folder.scannedAt == null
+            ? path
+            : '$path, scanned ${formatRelativeDateTime(folder.scannedAt!)}',
         semanticHint: 'selects the folder',
         excludeChildSemantics: true,
         child: Row(
@@ -335,8 +391,9 @@ class _LastFolderShortcut extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Last scanned',
-                    style: theme.textTheme.labelSmall?.copyWith(
+                    eyebrow,
+                    // Carries a relative figure that ticks over.
+                    style: theme.textTheme.labelSmall!.tabular.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
@@ -356,6 +413,81 @@ class _LastFolderShortcut extends ConsumerWidget {
               color: colorScheme.onSurfaceVariant,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Type the path instead of walking to it.
+///
+/// A completed-downloads folder is five or six taps down a tree the user
+/// already knows the address of, and on a server with a deep mount the walk is
+/// the slowest part of the rescue — every level is a round trip the service
+/// answers by stat-ing a volume that may be spun down. Submitting jumps
+/// straight there; a path that does not exist comes back as the service's own
+/// error, which is the honest answer.
+class _PathField extends ConsumerStatefulWidget {
+  final ServiceKey service;
+
+  const _PathField({required this.service});
+
+  @override
+  ConsumerState<_PathField> createState() => _PathFieldState();
+}
+
+class _PathFieldState extends ConsumerState<_PathField> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final path = _controller.text.trim();
+    if (path.isEmpty) return;
+    ref.read(manualImportFlowProvider.notifier).selectFolder(path);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      child: TextField(
+        controller: _controller,
+        onSubmitted: (_) => _submit(),
+        textInputAction: TextInputAction.go,
+        autocorrect: false,
+        enableSuggestions: false,
+        decoration: InputDecoration(
+          isDense: true,
+          // Doubles as the field's accessible name: it is what a screen reader
+          // announces for an empty text field, and the field has no room for a
+          // label above it.
+          hintText: 'Type a path…',
+          prefixIcon: Icon(
+            Icons.folder_open_rounded,
+            size: 18,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          suffixIcon: IconButton(
+            tooltip: 'Go to this folder',
+            onPressed: _submit,
+            icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: AppRadius.borderRadiusMd,
+            borderSide: BorderSide(color: colorScheme.outlineVariant),
+          ),
         ),
       ),
     );
@@ -445,6 +577,18 @@ class _DirectoryRow extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final accent = service.accent;
+    // The only per-folder figure the service actually answers. The canvas also
+    // draws "5 files · 46.1 GB", and there is no endpoint behind either: the
+    // \*arr filesystem call lists one level and does not recurse, and this
+    // client asks it with `includeFiles: false` on purpose because the call
+    // already outlives its timeout on a spun-down volume.
+    //
+    // Absent rather than an em dash when the service omits the field: it omits
+    // it for every row or for none, so the dash would be a column of dashes
+    // saying the same nothing on each line.
+    final modified = entry.lastModified == null
+        ? null
+        : formatRelativeActivityDate(entry.lastModified);
 
     return Semantics(
       container: true,
@@ -452,6 +596,7 @@ class _DirectoryRow extends StatelessWidget {
       button: true,
       selected: selected,
       label: entry.name,
+      value: modified == null ? null : 'modified $modified',
       hint: 'opens the folder',
       onTap: onTap,
       child: Material(
@@ -501,6 +646,18 @@ class _DirectoryRow extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (modified != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    // Its own column rather than a third fact appended to the
+                    // path line: the path elides, and an elided line would eat
+                    // exactly the figure that was added.
+                    Text(
+                      modified,
+                      style: theme.textTheme.labelSmall!.tabular.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                   if (selected) ...[
                     const SizedBox(width: AppSpacing.sm),
                     Icon(Icons.check_rounded, size: 18, color: accent),

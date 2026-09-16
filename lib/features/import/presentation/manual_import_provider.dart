@@ -7,29 +7,63 @@ import 'package:cupola/features/import/domain/manual_import_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// Preferences key for the folder a service last scanned.
+/// Preferences key for the folder a **connection** last scanned.
 ///
 /// The rescue scene almost always returns to the same completed-downloads
 /// folder, so Locate offers it back as a one-tap shortcut.
-String manualImportLastFolderKey(ServiceKey service) =>
-    'manual_import.last_folder.${service.name}';
+///
+/// Keyed on the connection, not only on the service: two Radarrs are two
+/// servers with two filesystems, and the shortcut keyed on `radarr` alone
+/// offered the 4K box's completed-downloads path to a wizard bound to the HD
+/// box — a path that may not exist there, and if it does is the wrong one.
+/// An empty id keeps the historical key, so the single-connection setup that
+/// wrote it keeps its shortcut.
+String manualImportLastFolderKey(ServiceKey service, [String instanceId = '']) {
+  final base = 'manual_import.last_folder.${service.name}';
+  return instanceId.isEmpty ? base : '$base.$instanceId';
+}
 
-/// The folder this service last scanned, or null when there is none yet.
-final manualImportLastFolderProvider = Provider.family<String?, ServiceKey>((
-  ref,
-  service,
-) {
-  // Startup overrides the prefs provider; tests that don't override it get the
-  // unimplemented throw, which for a convenience shortcut should mean "no
-  // shortcut", not a crash.
-  try {
-    return ref
-        .watch(sharedPreferencesProvider)
-        .getString(manualImportLastFolderKey(service));
-  } catch (_) {
-    return null;
-  }
-});
+/// The folder a connection last scanned, and when — or null when there is none.
+class ManualImportLastFolder {
+  final String path;
+
+  /// Null when the shortcut predates this field being written; the card then
+  /// prints the path without a time rather than inventing one.
+  final DateTime? scannedAt;
+
+  const ManualImportLastFolder({required this.path, this.scannedAt});
+}
+
+/// The folder this connection last scanned, or null when there is none yet.
+final manualImportLastFolderProvider =
+    Provider.family<ManualImportLastFolder?, (ServiceKey, String)>((ref, key) {
+      final (service, instanceId) = key;
+      // Startup overrides the prefs provider; tests that don't override it get
+      // the unimplemented throw, which for a convenience shortcut should mean
+      // "no shortcut", not a crash.
+      try {
+        final prefs = ref.watch(sharedPreferencesProvider);
+        final path = prefs.getString(
+          manualImportLastFolderKey(service, instanceId),
+        );
+        if (path == null || path.isEmpty) return null;
+        final stamp = prefs.getString(
+          manualImportLastScanKey(service, instanceId),
+        );
+        return ManualImportLastFolder(
+          path: path,
+          scannedAt: stamp == null ? null : DateTime.tryParse(stamp),
+        );
+      } catch (_) {
+        return null;
+      }
+    });
+
+/// Preferences key for when that folder was last scanned.
+String manualImportLastScanKey(ServiceKey service, [String instanceId = '']) {
+  final base = 'manual_import.last_scan_at.${service.name}';
+  return instanceId.isEmpty ? base : '$base.$instanceId';
+}
 
 const Object _noValue = Object();
 
@@ -40,6 +74,16 @@ final manualImportFlowProvider =
 
 class ManualImportFlowState {
   final ServiceKey? service;
+
+  /// The connection this flow is bound to, from the route's `?i=`.
+  ///
+  /// Empty means "whatever the lens was on when the flow started", which is
+  /// what every link that predates the parameter carries. It is read once, at
+  /// [ManualImportFlowNotifier.start], and never re-resolved: the wizard browses
+  /// one server's filesystem and moves files into one server's library, so a
+  /// lens that moves mid-scan must not take the files with it.
+  final String instanceId;
+
   final int? targetId;
   final List<ManualImportRootFolder> rootFolders;
   final ManualImportFileSystemResult? fileSystem;
@@ -80,6 +124,7 @@ class ManualImportFlowState {
 
   const ManualImportFlowState({
     this.service,
+    this.instanceId = '',
     this.targetId,
     this.rootFolders = const [],
     this.fileSystem,
@@ -196,6 +241,23 @@ class ManualImportFlowState {
         .toList(growable: false);
   }
 
+  /// Everything in the scan this service could actually take: matched files,
+  /// files still waiting for an identity, and files it already holds.
+  ///
+  /// The denominator the footer summary prints against. [otherItems] is
+  /// deliberately outside it — a real downloads folder carries dozens of
+  /// playlists, NFOs and artwork, and counting them would turn "3 of 5
+  /// selected" into "3 of 61 selected", a fraction about a problem the user
+  /// does not have.
+  int get importableCount =>
+      readyItems.length + attentionItems.length + importedItems.length;
+
+  /// Bytes the current selection would move.
+  int get selectedBytes => selectedItems.fold(
+    0,
+    (total, item) => total + (item.size > 0 ? item.size : 0),
+  );
+
   /// Already-imported files the user has ticked to send over again.
   List<ManualImportItem> get selectedReimportItems => selectedItems
       .where((item) => item.isAlreadyImported)
@@ -217,6 +279,7 @@ class ManualImportFlowState {
 
   ManualImportFlowState copyWith({
     Object? service = _noValue,
+    String? instanceId,
     Object? targetId = _noValue,
     List<ManualImportRootFolder>? rootFolders,
     Object? fileSystem = _noValue,
@@ -240,6 +303,7 @@ class ManualImportFlowState {
       service: identical(service, _noValue)
           ? this.service
           : service as ServiceKey?,
+      instanceId: instanceId ?? this.instanceId,
       targetId: identical(targetId, _noValue)
           ? this.targetId
           : targetId as int?,
@@ -276,15 +340,29 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   @override
   ManualImportFlowState build() => const ManualImportFlowState();
 
+  /// The client for the connection this flow is bound to.
+  ///
+  /// Every call in this notifier goes through here rather than through the
+  /// plain per-service provider, which reads the lens. With two Radarrs that
+  /// meant a wizard opened on the HD box browsed the HD filesystem only until
+  /// the lens moved, and then posted the import to the 4K one.
+  ManualImportService _api(ServiceKey service) =>
+      ref.read(manualImportServiceForProvider((service, state.instanceId)));
+
   Future<void> start(
     ServiceKey service, {
+    String? instanceId,
     int? targetId,
     bool force = false,
     String? initialPath,
   }) async {
+    final connection = instanceId ?? '';
     if (!force &&
         initialPath == null &&
         state.service == service &&
+        // A different connection is a different server: same service, same
+        // target, and every path already on screen belongs to someone else.
+        state.instanceId == connection &&
         state.targetId == targetId &&
         state.rootFolders.isNotEmpty) {
       return;
@@ -292,12 +370,13 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
 
     state = ManualImportFlowState(
       service: service,
+      instanceId: connection,
       targetId: targetId,
       isLoadingBrowse: true,
     );
 
     try {
-      final api = ref.read(manualImportServiceProvider(service));
+      final api = _api(service);
       final rootFolders = await api.getRootFolders();
       final defaultPath = initialPath ?? '/';
       state = state.copyWith(
@@ -329,7 +408,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     );
 
     try {
-      final api = ref.read(manualImportServiceProvider(service));
+      final api = _api(service);
       final fileSystem = await api.getFileSystem(path);
       state = state.copyWith(fileSystem: fileSystem, isLoadingBrowse: false);
     } catch (error) {
@@ -346,20 +425,25 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     await _applyTargetPreselection();
   }
 
-  /// Remembers the scanned folder so Locate can offer it back next time.
+  /// Remembers the scanned folder, and when, so Locate can offer it back next
+  /// time with a "2 h ago" that says whether it is still the right one.
   void _persistLastFolder() {
     final service = state.service;
     final folder = state.selectedFolder;
     if (service == null || folder == null || folder.isEmpty || folder == '/') {
       return;
     }
+    final connection = state.instanceId;
     // Best-effort convenience: tests run without a prefs override, and a
     // missing shortcut must never fail a scan that succeeded.
     try {
-      ref
-          .read(sharedPreferencesProvider)
-          .setString(manualImportLastFolderKey(service), folder);
-      ref.invalidate(manualImportLastFolderProvider(service));
+      final prefs = ref.read(sharedPreferencesProvider);
+      prefs.setString(manualImportLastFolderKey(service, connection), folder);
+      prefs.setString(
+        manualImportLastScanKey(service, connection),
+        DateTime.now().toUtc().toIso8601String(),
+      );
+      ref.invalidate(manualImportLastFolderProvider((service, connection)));
     } catch (_) {}
   }
 
@@ -476,7 +560,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     );
 
     try {
-      final api = ref.read(manualImportServiceProvider(service));
+      final api = _api(service);
       final items = await api.getManualImportItems(
         folder: folder,
         // Always: the files the service already holds are part of the review,
@@ -491,10 +575,17 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       // that one bad file could hold hostage — and an already-imported file is
       // never preselected either, because sending one again is a decision the
       // user makes, not a default.
+      //
+      // Nor is a sample. It is matched as precisely as the rip beside it, so it
+      // passed every readiness test and arrived ticked: "Import 4 files" was
+      // five, and the fifth was a 42 MB trailer about to be moved into the
+      // library under the feature's name. The row stays visible and tickable —
+      // this removes a default, not a capability.
       final readyPaths = items
           .where(
             (item) =>
                 item.isReadyForImportFor(service) &&
+                !item.isSample &&
                 !blocked.contains(item.path),
           )
           .map((item) => item.path)
@@ -616,13 +707,13 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   Future<List<ManualImportLookupResult>> lookup(String term) async {
     final service = state.service;
     if (service == null) return const [];
-    return ref.read(manualImportServiceProvider(service)).lookup(term);
+    return _api(service).lookup(term);
   }
 
   Future<List<ManualImportLookupResult>> getLibraryMatches() async {
     final service = state.service;
     if (service == null) return const [];
-    return ref.read(manualImportServiceProvider(service)).getLibraryMatches();
+    return _api(service).getLibraryMatches();
   }
 
   Future<List<ManualImportQualityOption>> getQualityOptions() async {
@@ -631,9 +722,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     if (state.qualityOptions.isNotEmpty) return state.qualityOptions;
 
     try {
-      final options = await ref
-          .read(manualImportServiceProvider(service))
-          .getQualityOptions();
+      final options = await _api(service).getQualityOptions();
       state = state.copyWith(qualityOptions: options);
       return options;
     } catch (error) {
@@ -648,9 +737,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     if (state.languageOptions.isNotEmpty) return state.languageOptions;
 
     try {
-      final options = await ref
-          .read(manualImportServiceProvider(service))
-          .getLanguageOptions();
+      final options = await _api(service).getLanguageOptions();
       state = state.copyWith(languageOptions: options);
       return options;
     } catch (error) {
@@ -784,23 +871,21 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   }) async {
     final service = state.service;
     if (service != ServiceKey.sonarr) return const [];
-    return ref
-        .read(manualImportServiceProvider(service!))
-        .getEpisodes(seriesId: seriesId, seasonNumber: seasonNumber);
+    return _api(
+      service!,
+    ).getEpisodes(seriesId: seriesId, seasonNumber: seasonNumber);
   }
 
   Future<List<ManualImportAlbum>> getAlbums(int artistId) async {
     final service = state.service;
     if (service != ServiceKey.lidarr) return const [];
-    return ref.read(manualImportServiceProvider(service!)).getAlbums(artistId);
+    return _api(service!).getAlbums(artistId);
   }
 
   Future<List<ManualImportTrack>> getTracks(int albumId) async {
     final service = state.service;
     if (service != ServiceKey.lidarr) return const [];
-    return ref
-        .read(manualImportServiceProvider(service!))
-        .getTracks(albumId: albumId);
+    return _api(service!).getTracks(albumId: albumId);
   }
 
   /// Posts the selected files as one `ManualImport` command.
@@ -821,15 +906,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
 
     state = state.copyWith(isSubmitting: true, error: null);
     try {
-      final api = ref.read(manualImportServiceProvider(service));
-      final command = await api.startManualImport(
-        files,
-        importMode: state.importMode,
-        // Only when the batch genuinely contains a file the service already
-        // holds: this flag lets Lidarr overwrite what is in the library, and it
-        // has no business being on for an ordinary import.
-        replaceExistingFiles: files.any((item) => item.isAlreadyImported),
-      );
+      final command = await _startCommand(service, files);
       final submitted = files.map((item) => item.path).toSet();
       state = state.copyWith(
         command: command,
@@ -841,6 +918,53 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
         isSubmitting: false,
       );
       return command;
+    } catch (error) {
+      state = state.copyWith(
+        isSubmitting: false,
+        error: mapImportError(error, service),
+      );
+      return null;
+    }
+  }
+
+  Future<ManualImportCommandStatus> _startCommand(
+    ServiceKey service,
+    List<ManualImportItem> files,
+  ) {
+    return _api(service).startManualImport(
+      files,
+      importMode: state.importMode,
+      // Only when the batch genuinely contains a file the service already
+      // holds: this flag lets Lidarr overwrite what is in the library, and it
+      // has no business being on for an ordinary import.
+      replaceExistingFiles: files.any((item) => item.isAlreadyImported),
+    );
+  }
+
+  /// Re-posts the batch a failed command left behind.
+  ///
+  /// The failed leaf of Track is the one place this is reachable, and it is
+  /// also the only command state in which [ManualImportFlowState.blockedPaths]
+  /// releases those paths: a failed import leaves the files where they were, so
+  /// retrying after fixing the cause — a full disk, a permission, a service
+  /// restart — is exactly what should happen next.
+  ///
+  /// It re-posts [ManualImportFlowState.submittedItems] rather than the
+  /// selection, because confirming spent the selection; making the user walk
+  /// back to Review and re-tick the same files would be asking them to re-decide
+  /// something they already decided.
+  Future<ManualImportCommandStatus?> retryImport() async {
+    final service = state.service;
+    final command = state.command;
+    final files = state.submittedItems;
+    if (service == null || command == null || !command.isFailure) return null;
+    if (files.isEmpty || state.isSubmitting) return null;
+
+    state = state.copyWith(isSubmitting: true, error: null);
+    try {
+      final next = await _startCommand(service, files);
+      state = state.copyWith(command: next, isSubmitting: false);
+      return next;
     } catch (error) {
       state = state.copyWith(
         isSubmitting: false,
@@ -870,7 +994,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     if (service == null || command == null || !command.isActive) return;
 
     try {
-      final api = ref.read(manualImportServiceProvider(service));
+      final api = _api(service);
       final next = await api.getCommand(command.id);
       state = state.copyWith(command: next);
     } catch (error) {

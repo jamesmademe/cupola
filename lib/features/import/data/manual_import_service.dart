@@ -25,6 +25,46 @@ final manualImportServiceProvider =
       );
     });
 
+/// Manual import bound to one named connection, whatever the lens is pointing
+/// at.
+///
+/// The whole wizard belongs to a *connection*, not to a screen: it browses one
+/// server's filesystem, matches against one server's library and moves files
+/// into it — and the lens can move while a scan is in flight. Modelled on
+/// [radarrServiceForProvider], including the two parts of it that are
+/// load-bearing.
+///
+/// An empty id resolves to [manualImportServiceProvider] rather than to a second
+/// client for the same server: that is one live `Dio` instead of two, and it is
+/// also what keeps a test's override of the plain provider from being silently
+/// bypassed by the path that names a connection.
+///
+/// `read` of the lens, deliberately. Watching it would rebuild every entry of
+/// this family whenever the lens moved — entries for connections that did not
+/// change — and `watchApiClient` closes the outgoing client on dispose, so a
+/// scan of the seedbox would have its `Dio` shut under it because the user
+/// tapped a badge on another screen.
+final manualImportServiceForProvider =
+    Provider.family<ManualImportService, (ServiceKey, String)>((ref, key) {
+      final (service, instanceId) = key;
+      if (instanceId.isEmpty) {
+        return ref.watch(manualImportServiceProvider(service));
+      }
+
+      final lens = ref.read(activeInstanceProvider(service))?.id ?? '';
+      if (instanceId == lens) {
+        return ref.watch(manualImportServiceProvider(service));
+      }
+
+      if (!service.supportsManualImport) {
+        throw Exception('${service.title} does not support manual import');
+      }
+      return ManualImportService(
+        client: watchApiClient(ref, service, instanceId: instanceId),
+        service: service,
+      );
+    });
+
 class ManualImportService {
   final ApiClient client;
   final ServiceKey service;

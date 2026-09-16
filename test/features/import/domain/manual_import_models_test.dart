@@ -22,6 +22,47 @@ void main() {
       expect(radarrItem.isSelectable, isTrue);
     });
 
+    group('isSample', () {
+      ManualImportItem itemWith(String reason) => ManualImportItem.fromJson({
+        'path': '/downloads/sample-do-not-import.mkv',
+        'movie': {'id': 42, 'title': 'Some Movie'},
+        'rejections': [
+          {'reason': reason, 'type': 'permanent'},
+        ],
+      });
+
+      test('reads the service\u2019s own word for it', () {
+        // A sample is matched exactly like the rip beside it, so nothing else
+        // in the payload tells them apart — only the rejection does.
+        expect(itemWith('Sample').isSample, isTrue);
+        expect(itemWith('File is a sample').isSample, isTrue);
+        expect(itemWith('Sample file').isSample, isTrue);
+      });
+
+      test('is a whole word, not a substring', () {
+        // Lidarr states real audio facts about resampling, and a file the
+        // service resampled is not a trailer.
+        expect(itemWith('Audio was resampled to 48 kHz').isSample, isFalse);
+        expect(itemWith('Oversampling detected').isSample, isFalse);
+      });
+
+      test('an ordinary rejection is not one', () {
+        expect(itemWith('Not a preferred word upgrade').isSample, isFalse);
+        expect(
+          ManualImportItem.fromJson({'path': '/downloads/x.mkv'}).isSample,
+          isFalse,
+        );
+      });
+
+      test('stays importable: the badge removes a default, not a choice', () {
+        // The row keeps its match and its checkbox — a user who wants the
+        // sample taken can still take it. Only the preselect changed.
+        final sample = itemWith('Sample');
+        expect(sample.isReadyForImportFor(ServiceKey.radarr), isTrue);
+        expect(sample.isSubmittableFor(ServiceKey.radarr), isTrue);
+      });
+    });
+
     test('treats positive file ids as already imported', () {
       final sonarrItem = ManualImportItem.fromJson({
         'path': '/downloads/Frieren.S02E01.mkv',
