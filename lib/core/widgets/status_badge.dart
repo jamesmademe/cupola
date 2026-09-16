@@ -292,26 +292,69 @@ class StatusBadge extends StatelessWidget {
 /// container: in dark theme a raw error on `surfaceContainerHighest` measures
 /// 3.52:1, and only the caller knows it is there.
 ///
-/// Two tones are deliberately not walked. [StatusTone.neutral] resolves to
-/// `onSurfaceVariant`, which is already a measured text token of the scheme, and
-/// [StatusTone.primary] is the brand indigo at 4.47:1 on paper — close enough to
-/// AA that the canvas accepts it as a bold label rather than moving it, and
-/// walking it would quietly repaint the brand.
+/// [tintAlpha] is for the common badge shape where the tone is *both* the wash
+/// behind the label and the label itself — a score pill on its own colour at
+/// 16%, a filter chip on its own colour at 13%. The real ground there is the
+/// composite, not the surface, and measuring against the surface alone passes
+/// combinations that fail on screen: a positive score on paper measures about
+/// 1.95:1 against its own tint. Pair it with [statusToneFill], which keeps the
+/// raw byte for the wash.
+///
+/// One tone is deliberately not walked: [StatusTone.neutral] resolves to
+/// `onSurfaceVariant`, which is already a measured text token of the scheme and
+/// is spaced against the worst surface the theme paints text on.
+///
+/// [StatusTone.primary] **is** walked, and used not to be. The argument for
+/// exempting it was that walking the brand would quietly repaint it — true of
+/// brand *chrome*, and not true here. This function does not colour buttons or
+/// marks; it colours a status word, and a status word owes the same legibility
+/// as every other status word beside it. Left raw the brand measured 4.40:1 on
+/// the dark scaffold and 3.96:1 on a light chip at 16% tint, so the one tone
+/// the rule exempted was failing in both themes. The walk holds the hue and
+/// moves only the lightness, so "Not Requested" is still indigo — it is an
+/// indigo that can be read. Brand chrome keeps `colorScheme.primary` directly
+/// and is untouched by this.
 Color statusToneColor(
   ColorScheme colorScheme,
   StatusTone tone, {
   Color? surface,
+  double tintAlpha = 0,
 }) {
   final ground = surface ?? colorScheme.surface;
   Color walked(Color tone) =>
-      ServiceTheme.onTint(tone, surface: ground, tintAlpha: 0);
+      ServiceTheme.onTint(tone, surface: ground, tintAlpha: tintAlpha);
 
   return switch (tone) {
-    StatusTone.primary => colorScheme.primary,
+    StatusTone.primary => walked(colorScheme.primary),
     StatusTone.success => walked(AppColors.success),
     StatusTone.warning => walked(AppColors.warning),
     StatusTone.info => walked(AppColors.info),
     StatusTone.error => walked(colorScheme.error),
+    StatusTone.neutral => colorScheme.onSurfaceVariant,
+  };
+}
+
+/// The tone's **fill** byte, unwalked.
+///
+/// The other half of [statusToneColor], and the distinction is the whole reason
+/// the walk is safe to apply everywhere else: a fill is a surface, not a
+/// foreground, and it carries no contrast obligation of its own — what it owes
+/// is measured *by whatever is drawn on top of it*. Walking a fill would drag
+/// every tinted wash in the app toward the ink and drain the colour out of the
+/// one thing that is supposed to be coloured.
+///
+/// So: `statusToneFill` for the 10–16% wash behind a badge or a row, and
+/// [statusToneColor] with the matching `tintAlpha` for the label on it.
+///
+/// [StatusTone.neutral] and [StatusTone.primary] are scheme roles in both
+/// directions, so they answer the same here as they do there.
+Color statusToneFill(ColorScheme colorScheme, StatusTone tone) {
+  return switch (tone) {
+    StatusTone.primary => colorScheme.primary,
+    StatusTone.success => AppColors.success,
+    StatusTone.warning => AppColors.warning,
+    StatusTone.info => AppColors.info,
+    StatusTone.error => colorScheme.error,
     StatusTone.neutral => colorScheme.onSurfaceVariant,
   };
 }

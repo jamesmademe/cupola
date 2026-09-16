@@ -1,16 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 
 /// A widget that handles AsyncValue states with premium, consistent styling.
 ///
 /// Shows loading, error, empty, or data states based on the [AsyncValue].
 /// - loading  → [skeleton] (or a centred spinner if none given)
+/// - error, with a retained previous value → the data it had, at full ink,
+///              under a [FaultBand.unreachable] (see below)
 /// - error    → [AppErrorState] with a retry button when [onRetry] is set
 ///              (the "not configured" case still routes to [NotConfiguredPlaceholder])
 /// - data     → [emptyBuilder]/[AppEmptyState] when [isEmpty] returns true,
 ///              otherwise [data]
+///
+/// ## Why the error branch consults `hasValue` first
+///
+/// This widget used to call `value.when(...)`, which is the one shape of the
+/// Riverpod API that cannot see a retained value: an `AsyncError` that Riverpod
+/// is still carrying the previous data on routed straight to a red leaf, and
+/// the readout the user opened the app to look at was discarded **at the widget
+/// boundary**, after the state layer had gone to the trouble of keeping it.
+///
+/// A self-hosted box that stops answering is a daily condition, and the last
+/// thing it said before it went quiet is the most useful thing on the screen —
+/// a pool that was already degraded, a queue that was already stuck. So an
+/// error over retained data draws that data, unchanged and undimmed, with a
+/// band above it saying what happened. Nothing is dimmed for being
+/// unreachable: dimming means *not configured* everywhere else on this canvas,
+/// and the two states need opposite responses.
+///
+/// The full-page [AppErrorState] survives for the case it is actually for —
+/// the cold open, where the service has never answered in this session and
+/// there is no readout behind the band to keep.
 class AsyncValueWidget<T> extends StatelessWidget {
   final AsyncValue<T> value;
   final Widget Function(T data) data;
@@ -80,6 +103,32 @@ class AsyncValueWidget<T> extends StatelessWidget {
         if (e.toString().contains('not configured')) {
           return NotConfiguredPlaceholder(serviceName: serviceName);
         }
+
+        // The retained readout, if Riverpod kept one. `hasValue` is true on an
+        // `AsyncError` that carries a previous value, which is exactly the "it
+        // was answering a minute ago" case. Read through `hasValue` rather than
+        // a null check on the value itself, because `T` may legitimately be
+        // nullable and a retained `null` is still a retained answer.
+        if (value.hasValue &&
+            (isEmpty == null || !isEmpty!(value.requireValue))) {
+          final lastKnown = value.requireValue;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FaultBand.unreachable(
+                serviceName: serviceName,
+                // No `since`: nothing in the tree records a first-failure time
+                // yet, and the band drops the span rather than inventing one.
+                // When that notifier lands this is where it is plumbed in.
+                onRetry: onRetry ?? () {},
+              ),
+              // Full ink, unchanged. This is the whole point of the branch.
+              Flexible(child: data(lastKnown)),
+            ],
+          );
+        }
+
         // The same name the loading and not-configured states use, so a region
         // says which service it is talking about in every state.
         return AppErrorState(

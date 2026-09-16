@@ -422,4 +422,36 @@ void main() {
       expect(merged?.progress, 0.25);
     });
   });
+
+  group('a snapshot knows when it was taken', () {
+    test('a live fetch stamps itself without the caller remembering', () {
+      // The whole point of a snapshot is that it stops being true, and nothing
+      // in the app could previously say when it had: the rows kept their
+      // progress bars and kept looking live long after the poll stopped coming
+      // back. Defaulted rather than required so no fetch can forget it.
+      final snapshot = ArrQueueSnapshot.fromQueueItems(const [
+        {'status': 'downloading', 'movieId': 1},
+      ], idsFor: (item) => [item['movieId'] as int]);
+
+      expect(snapshot.sampledAt, isNotNull);
+    });
+
+    test('the age is measured against an injectable clock', () {
+      final now = DateTime(2026, 9, 16, 14, 6);
+      final snapshot = ArrQueueSnapshot.fromQueueItems(
+        const [
+          {'status': 'downloading', 'movieId': 1},
+        ],
+        idsFor: (item) => [item['movieId'] as int],
+        sampledAt: DateTime(2026, 9, 16, 14, 2),
+      );
+
+      expect(snapshot.ageAt(now), const Duration(minutes: 4));
+    });
+
+    test('the empty constant has no age, because it has nothing to be old', () {
+      expect(ArrQueueSnapshot.empty.sampledAt, isNull);
+      expect(ArrQueueSnapshot.empty.ageAt(DateTime(2026)), isNull);
+    });
+  });
 }

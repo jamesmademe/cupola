@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/theme.dart';
 
 /// A reusable poster card for media detail screens.
 ///
@@ -60,13 +61,19 @@ class MediaPosterCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
     final effectiveBorderRadius = borderRadius ?? AppRadius.borderRadiusMd;
+    // The plate, not the theme. This rectangle stands in for artwork, and
+    // artwork is not palette — a missing poster painted `surfaceContainer`
+    // renders as a white hole in a light-theme grid, and then flips to a dark
+    // photograph the moment the real image lands. Pinned to the plate tokens it
+    // is the same well in both themes and the arriving image replaces like with
+    // like. See `AppColors.plateSurface`.
     Widget fallback() => Container(
-      color: colorScheme.surfaceContainer,
+      color: AppColors.plateSurface,
       child: Center(
         child: Icon(
           fallbackIcon,
           size: _fallbackIconSize,
-          color: colorScheme.onSurfaceVariant,
+          color: AppColors.plateDimInk,
         ),
       ),
     );

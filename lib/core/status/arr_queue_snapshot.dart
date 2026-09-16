@@ -227,18 +227,39 @@ MediaStatusInfo mediaStatusFromQueue({
   );
 }
 
-/// An \*arr download queue indexed by media id.
+/// An \*arr download queue indexed by media id, and when it was taken.
 class ArrQueueSnapshot {
   static const ArrQueueSnapshot empty = ArrQueueSnapshot._(
     <int, ArrQueueEntry>{},
+    null,
   );
 
   final Map<int, ArrQueueEntry> entriesById;
 
-  const ArrQueueSnapshot._(this.entriesById);
+  /// When the records in this snapshot were read from the service.
+  ///
+  /// The whole point of a *snapshot* is that it stops being true, and nothing
+  /// in the app could previously say when it had. A queue polls on a timer, and
+  /// when the poll stops coming back — the service is answering but its queue
+  /// endpoint is not, or the timer was suspended with the app in the
+  /// background — the rows keep their progress bars and keep looking live.
+  /// A bar that is not advancing must not look like one that is, so surfaces
+  /// trade the time-left for this age and the page raises
+  /// `FaultBand.stale` once it is older than its own poll interval.
+  ///
+  /// `null` only on [empty], which is a constant with nothing to be old.
+  final DateTime? sampledAt;
+
+  const ArrQueueSnapshot._(this.entriesById, this.sampledAt);
 
   bool get isEmpty => entriesById.isEmpty;
   bool get isNotEmpty => entriesById.isNotEmpty;
+
+  /// How old this snapshot is as of [now], or `null` when it has no sample time.
+  Duration? ageAt(DateTime now) {
+    final at = sampledAt;
+    return at == null ? null : now.difference(at);
+  }
 
   ArrQueueEntry? entryFor(int? mediaId) {
     if (mediaId == null) return null;
@@ -250,9 +271,12 @@ class ArrQueueSnapshot {
   /// [idsFor] returns every media id a record belongs to; a Sonarr record maps
   /// to one series, but callers that pre-resolve album → artist may return
   /// several. Records whose ids cannot be resolved are dropped.
+  /// [sampledAt] defaults to now, which is true for every live fetch and is why
+  /// no caller has to remember it. A test that wants to state an age passes one.
   factory ArrQueueSnapshot.fromQueueItems(
     Iterable<dynamic> items, {
     required Iterable<int> Function(Map<String, dynamic> item) idsFor,
+    DateTime? sampledAt,
   }) {
     final accumulators = <int, _EntryAccumulator>{};
 
@@ -271,7 +295,7 @@ class ArrQueueSnapshot {
 
     return ArrQueueSnapshot._({
       for (final acc in accumulators.entries) acc.key: acc.value.freeze(),
-    });
+    }, sampledAt ?? DateTime.now());
   }
 }
 

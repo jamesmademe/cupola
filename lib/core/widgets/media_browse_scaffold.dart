@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
@@ -222,12 +223,15 @@ class _MediaBrowseScaffoldState<T>
 
     return AmbientScaffold(
       accent: widget.accentColor,
-      // 1160 rather than the default well: eight 130pt posters and their gaps
-      // come to exactly that, and the grid is a column *floor* — see
-      // `MediaGrid`. A narrower well would drop a column of full-size posters;
-      // a wider one would add a ninth of smaller ones, which is the mistake the
-      // floor exists to prevent.
-      contentWellWidth: 1160,
+      // The token, not a number tuned against it. This used to be 1160, argued
+      // as "eight 130pt posters and their gaps" — an off-token well chosen to
+      // make a gap-blind column calculation come out right. Both halves of that
+      // are gone: `MediaGrid.columnsFor` now resolves the count from the
+      // constraints it is actually handed and accounts for the gaps, so the
+      // well is free to be the same width as every other main well in the app.
+      // `AppBreakpoints.contentWell` is the widest the main well is allowed to
+      // grow on any shell, and a browse grid is not an exception to it.
+      contentWellWidth: AppBreakpoints.contentWell,
       appBar: widget.showAppBar
           ? GlassAppBar(
               leading: isSearching

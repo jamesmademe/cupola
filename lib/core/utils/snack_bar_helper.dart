@@ -57,6 +57,51 @@ class SnackBarHelper {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Shows a message whose one action is the fix for what it just said.
+  ///
+  /// The shape the design settles on for every "you cannot do that here yet"
+  /// answer: four seconds, one sentence, **one** action, and the action
+  /// resolves the sentence rather than acknowledging it. A cross-service jump
+  /// whose target is not configured prints *"Connect qBittorrent to open this
+  /// transfer"* with **Settings**; a write blocked by a read-only credential
+  /// prints what the key cannot do with **Update the key**.
+  ///
+  /// It is a toast and not a dialog because nothing was destroyed and nothing
+  /// needs confirming — the user tapped a control that cannot act, and the
+  /// answer is an explanation plus a door. A dialog would make them dismiss it.
+  ///
+  /// Nothing in the app could express this before: every `SnackBar` raised here
+  /// was content-only, so a control that refused to act could say *what*
+  /// happened and never *what to do about it*, which is the half that matters.
+  ///
+  /// Default styling on purpose — this is not an error, and the error variant's
+  /// red-backgrounded plate would make a configuration fact look like a fault.
+  static void withAction(
+    BuildContext context,
+    String message, {
+    required String actionLabel,
+    required VoidCallback onAction,
+    Duration duration = const Duration(seconds: 4),
+  }) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      SnackBar(
+        duration: duration,
+        content: Text(message),
+        action: SnackBarAction(
+          label: actionLabel,
+          onPressed: () {
+            // The bar is dismissed first so the destination is not pushed under
+            // a floating toast that then hangs over it for the rest of its four
+            // seconds.
+            messenger.hideCurrentSnackBar();
+            onAction();
+          },
+        ),
+      ),
+    );
+  }
+
   /// Shows an error snackbar with the theme error background color.
   ///
   /// Pass the caught object as [detail] rather than interpolating it into

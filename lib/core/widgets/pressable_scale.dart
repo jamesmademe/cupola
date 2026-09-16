@@ -99,7 +99,14 @@ class _PressableScaleState extends State<PressableScale> {
       child: scaled,
     );
 
-    if (!enabled && widget.semanticLabel == null) return detector;
+    // A hint counts as something to publish: the dimmed-but-tappable cell is
+    // named by its own child text and carries only a hint, so bailing out on a
+    // missing label alone would drop it.
+    if (!enabled &&
+        widget.semanticLabel == null &&
+        widget.semanticHint == null) {
+      return detector;
+    }
 
     return Semantics(
       button: enabled,
@@ -107,7 +114,14 @@ class _PressableScaleState extends State<PressableScale> {
       enabled: enabled,
       label: widget.semanticLabel,
       value: widget.semanticValue,
-      hint: enabled ? widget.semanticHint : null,
+      // The hint survives a control that cannot act, and that is the point of
+      // it. It used to be gated on `enabled`, which meant the one state where a
+      // hint is load-bearing — a control the user can see and cannot use — was
+      // the one state that published nothing, and a screen reader landed on a
+      // named button with no explanation of why it would not respond. "requires
+      // qBittorrent" is exactly that sentence. A sighted user reads the dimming
+      // for free; dropping the hint charged a screen-reader user for it.
+      hint: widget.semanticHint,
       excludeSemantics: widget.excludeChildSemantics,
       onTap: enabled ? _handleTap : null,
       onLongPress: widget.onLongPress,

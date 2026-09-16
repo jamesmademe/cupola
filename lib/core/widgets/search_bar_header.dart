@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/features/shell/domain/screen_search.dart';
 
 /// A reusable, always-visible search bar widget for the top of screens.
@@ -101,6 +102,20 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
+    // The magnifier is the accent carrying ink, so it is measured, not painted.
+    // Six callers hand this a raw service accent and the field it sits in is
+    // `surfaceContainer` — white on the light theme — where seven of the
+    // seventeen accents are under 3:1 and Lidarr's pink is under 2:1. `onTint`
+    // with no tint measures the glyph against that exact ground and walks the
+    // hue until it clears, so a Radarr page still gets an amber magnifier, just
+    // one that survives daylight. `tintAlpha: 0` because the field has an
+    // opaque fill, not a wash of its own accent.
+    final glyph = ServiceTheme.onTint(
+      widget.accent ?? colorScheme.primary,
+      surface: colorScheme.surfaceContainer,
+      tintAlpha: 0,
+    );
+
     final field = Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -115,10 +130,7 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
         autoFocus: widget.autofocus,
         leading: Padding(
           padding: const EdgeInsets.only(left: AppSpacing.sm),
-          child: Icon(
-            Icons.search_rounded,
-            color: widget.accent ?? colorScheme.primary,
-          ),
+          child: Icon(Icons.search_rounded, color: glyph),
         ),
         trailing: [
           if (_hasText)

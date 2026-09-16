@@ -25,6 +25,9 @@ export 'app_empty_state.dart';
 export 'app_error_state.dart';
 export 'inline_error_retry.dart';
 export 'service_offline_state.dart';
+export 'fault_band.dart';
+export 'capability_banner.dart';
+export 'cross_service_action.dart';
 
 // Layout
 export 'ambient_background.dart';

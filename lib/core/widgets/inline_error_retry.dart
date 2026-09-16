@@ -1,18 +1,43 @@
 import 'package:flutter/material.dart';
 
-import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 
-/// Inline error placeholder with a retry action, so a failed section reads as a
+/// Inline failure notice with a retry action, so a failed section reads as a
 /// failure rather than as an endless loading shimmer.
 ///
 /// Every service dashboard grows sections that load independently, and a
-/// section that fails must not take the whole page down: this card sits in the
+/// section that fails must not take the whole page down: this line sits in the
 /// slot the content would have occupied and offers the retry right there.
 ///
 /// The default constructor sizes itself to its message. Use
-/// [InlineErrorRetry.fixedHeight] where the card replaces a fixed-height slot
-/// (a carousel row) and a self-sizing card would make the page jump.
+/// [InlineErrorRetry.fixedHeight] where the notice replaces a fixed-height slot
+/// (a carousel row) and a self-sizing one would make the page jump.
+///
+/// ## Why it is a line and not a card
+///
+/// It used to be a filled, bordered card: `errorContainer` at 40% behind an
+/// `error` stroke at 50%, with the sentence in `onErrorContainer`. That is the
+/// chrome of an alarm, and in a self-hosted stack a section that did not load
+/// is a Tuesday — the download client is rebuilding, the indexer is rate
+/// limited, the box is off. A page that shouts on every open is a page whose
+/// shouting stops being read.
+///
+/// So the notice keeps its **presence** as the signal and gives up its volume:
+/// no fill, no border, the sentence in `onSurfaceVariant`, and the error tone
+/// spent on exactly one 16pt glyph. Three rules govern every failure surface in
+/// the app and this widget is the smallest of them:
+///
+///  1. presence is the signal — no fill, no border, the error tone on the glyph
+///     and nowhere else;
+///  2. the recovery verb is never painted in the error tone — a red Retry makes
+///     the cure look like the disease, so it is brand primary;
+///  3. nothing is dimmed for being unreachable, because dimming means *not
+///     configured* everywhere else on this canvas.
+///
+/// [CapabilityBanner] is deliberately the same shape in a different tone: a
+/// credential that may only read is configuration, not a fault. It could not
+/// have copied this widget while this widget still carried error chrome.
 class InlineErrorRetry extends StatelessWidget {
   const InlineErrorRetry({
     super.key,
@@ -20,7 +45,7 @@ class InlineErrorRetry extends StatelessWidget {
     required this.onRetry,
   }) : _height = null;
 
-  /// A card locked to [_fixedHeight], for slots whose height must not change
+  /// A notice locked to [_fixedHeight], for slots whose height must not change
   /// between the loading, loaded and failed states.
   const InlineErrorRetry.fixedHeight({
     super.key,
@@ -39,7 +64,19 @@ class InlineErrorRetry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    // Through `onTint` with no tint — the composite is the surface itself —
+    // because the raw error red measures around 3.4:1 on the light scaffold,
+    // and with the fill gone this glyph is the only thing carrying the tone. A
+    // graphical object owes 3:1 and has no coloured text beside it to lean on.
+    final alarm = ServiceTheme.onTint(
+      colorScheme.error,
+      surface: colorScheme.surface,
+      tintAlpha: 0,
+    );
+
     return Container(
       width: double.infinity,
       height: _height,
@@ -47,27 +84,47 @@ class InlineErrorRetry extends StatelessWidget {
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.sm,
       ),
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer.withValues(alpha: 0.4),
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(color: colorScheme.error.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline_rounded, color: colorScheme.error),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onErrorContainer,
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Semantics(
+        container: true,
+        // Retry stays its own control; this node owns the sentence only.
+        explicitChildNodes: true,
+        // Announced when it appears, which is the moment it matters. Not routed
+        // through `announce()` as well: that double-reads on iOS.
+        liveRegion: true,
+        label: message,
+        child: Row(
+          children: [
+            ExcludeSemantics(
+              child: Icon(Icons.error_outline_rounded, size: 16, color: alarm),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: ExcludeSemantics(
+                child: Text(
+                  message,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
-        ],
+            const SizedBox(width: AppSpacing.sm),
+            TextButton(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(
+                // Rule 2. Brand primary, never the error tone.
+                foregroundColor: colorScheme.primary,
+                // 44pt on iOS / 48dp on Android is the floor, and this button
+                // shares its row with body text that would otherwise size it.
+                minimumSize: const Size(56, 44),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                visualDensity: VisualDensity.compact,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -120,7 +120,12 @@ class _KpiCard extends StatelessWidget {
     // The tone is resolved against the card's own container, not the scaffold:
     // these cards sit on `surfaceContainer`, and on paper that is the ground
     // the walk has to clear.
-    final accent = kpi.tone == null
+    final accent = kpi.isUnavailable
+        // A figure that has no value wears no colour. Painting the em dash in
+        // the service accent would make an absence look like a reading, and
+        // the absence is not this service's doing in the first place.
+        ? colorScheme.onSurfaceVariant
+        : kpi.tone == null
         // The service accent is walked too: seven of the seventeen are under
         // 3:1 on paper, and this glyph appears on every service home.
         ? ServiceTheme.onTint(
@@ -168,22 +173,47 @@ class _KpiCard extends StatelessWidget {
                 style: theme.textTheme.titleMedium!
                     .weight(FontWeight.w800)
                     .tabular
-                    .copyWith(color: colorScheme.onSurface, height: 1.1),
+                    .copyWith(
+                      // The em dash demotes to the secondary ink: it is a
+                      // placeholder for a figure, not a figure, and full
+                      // `onSurface` would give it the weight of one.
+                      color: kpi.isUnavailable
+                          ? colorScheme.onSurfaceVariant
+                          : colorScheme.onSurface,
+                      height: 1.1,
+                    ),
                 fallbackMaxLines: 1,
               ),
             ],
           ),
           const SizedBox(height: 3),
           Text(
-            kpi.label.toUpperCase(),
+            // The note replaces the label rather than joining it: the rail is
+            // two lines tall by construction, and a card that grew a third
+            // would overflow every sibling at an accessibility reading size.
+            // When the source did not answer, *why* is the more useful of the
+            // two — the glyph and the surrounding cards already say which
+            // figure this is.
+            (kpi.note ?? kpi.label).toUpperCase(),
             maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: AppTheme.eyebrow(colorScheme.onSurfaceVariant),
           ),
         ],
       ),
     );
 
-    return card;
+    // One node for the card, not three fragments. Left to itself the rail reads
+    // as "3", "QUEUE", "—", "CLIENT NOT ANSWERING" — four announcements in
+    // reading order that a listener has to reassemble, and an em dash that most
+    // screen readers either say as "dash" or skip entirely. See
+    // [ServiceKpi.semanticLabel].
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      label: kpi.semanticLabel,
+      child: card,
+    );
   }
 }
 

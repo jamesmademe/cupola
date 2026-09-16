@@ -249,4 +249,56 @@ void main() {
       expect(ticks, hasLength(1));
     });
   });
+
+  group('GatedPollTimer knows when it last got an answer', () {
+    GatedPollTimer build() => GatedPollTimer(
+      id: 'test.stale',
+      interval: const Duration(seconds: 10),
+      onTick: () {},
+      clock: PollClock(),
+    );
+
+    test('a fresh timer is loading, not stale', () {
+      // Nothing has answered yet, and a page that has not loaded is loading.
+      // Reporting stale here would put a warning band on every cold open.
+      final timer = build();
+      addTearDown(timer.dispose);
+
+      expect(timer.lastSuccessAt, isNull);
+      expect(timer.isStaleAt(DateTime(2026)), isFalse);
+    });
+
+    test('a tick is not a success — only an answer is', () {
+      // The distinction the whole field exists for. A timer firing means a
+      // request went out, which is exactly what stays true when the endpoint
+      // has stopped answering: a timer ticking into a dead socket would report
+      // itself healthy forever. Only the owner knows the answer arrived.
+      final timer = build();
+      addTearDown(timer.dispose);
+
+      final at = DateTime(2026, 9, 16, 14, 2);
+      timer.noteSuccess(at);
+      expect(timer.lastSuccessAt, at);
+      expect(
+        timer.sinceLastSuccessAt(DateTime(2026, 9, 16, 14, 6)),
+        const Duration(minutes: 4),
+      );
+    });
+
+    test('staleness is relative to the interval, not to a constant', () {
+      // "Old" only means something against how often the page expected an
+      // answer: a two-second import poll is in trouble after six seconds, a
+      // sixty-second dashboard poll is not.
+      final timer = build();
+      addTearDown(timer.dispose);
+
+      final at = DateTime(2026, 9, 16, 14);
+      timer.noteSuccess(at);
+
+      // One missed answer is a slow network.
+      expect(timer.isStaleAt(at.add(const Duration(seconds: 20))), isFalse);
+      // Three is a pattern.
+      expect(timer.isStaleAt(at.add(const Duration(seconds: 45))), isTrue);
+    });
+  });
 }

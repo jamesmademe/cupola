@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cupola/core/app_breakpoints.dart';
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/widgets/media_grid.dart';
 
@@ -127,6 +129,94 @@ void main() {
 
       // Should render without throwing
       expect(find.byType(GridView), findsOneWidget);
+    });
+
+    group('the column floor rule', () {
+      /// The widest a tile can be at [columns] in [width], gaps included.
+      double tileWidth(double width, int columns) =>
+          (width - (columns - 1) * AppSpacing.gridGap) / columns;
+
+      test('a narrower frame drops a column, it does not shrink the tiles', () {
+        // The measured failure this rule exists to forbid: a 640pt well drawn
+        // with five columns gives 118pt posters, under the 130pt floor the
+        // tile's own layout is built on. Four is the answer, at 151.
+        final columns = MediaGrid.columnsFor(640, 3);
+        expect(columns, 4);
+        expect(
+          tileWidth(640, columns),
+          greaterThanOrEqualTo(MediaGrid.tileWidthFloor),
+        );
+        // And the rejected arrangement really is the one that breaks the floor,
+        // so the assertion above is not passing by coincidence.
+        expect(tileWidth(640, 5), lessThan(MediaGrid.tileWidthFloor));
+      });
+
+      test('the count never produces a tile under the floor, at any width', () {
+        // The old form divided by the tile width alone and ignored the gaps
+        // entirely, so it could answer with a count whose tiles could not
+        // actually be that wide. Swept rather than spot-checked, because the
+        // arithmetic was wrong in a band of widths rather than at one.
+        for (var width = 320.0; width <= 2000.0; width += 1) {
+          final columns = MediaGrid.columnsFor(width, 1);
+          expect(
+            tileWidth(width, columns),
+            greaterThanOrEqualTo(MediaGrid.tileWidthFloor),
+            reason: '$columns columns in ${width}pt',
+          );
+        }
+      });
+
+      test('a full content well fills with eight full-size posters', () {
+        expect(MediaGrid.columnsFor(AppBreakpoints.contentWell, 3), 8);
+      });
+
+      test('minColumns is a floor on the count, for the phone', () {
+        // Two enormous posters would be a worse answer than three correct ones,
+        // so a narrow frame keeps its three even though the arithmetic would
+        // give fewer.
+        expect(MediaGrid.columnsFor(360, 3), 3);
+      });
+    });
+
+    testWidgets('columns come from the grid\'s constraints, not the window', (
+      tester,
+    ) async {
+      // The defect: `MediaQuery.sizeOf` is the whole window, and on a desktop
+      // shell the grid is nothing like the whole window — a 1920pt frame with a
+      // rail and an open inspector leaves this widget about 500pt, and
+      // measuring the window answered fourteen columns of 24pt posters.
+      tester.view.physicalSize = const Size(1920, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Row(
+              children: [
+                // Everything the shell puts beside the grid.
+                const SizedBox(width: 1420),
+                Expanded(
+                  child: MediaGrid<String>(
+                    items: const ['a', 'b', 'c'],
+                    imagesExtractor: (_) => null,
+                    idExtractor: (_) => 0,
+                    baseUrl: 'http://localhost',
+                    apiKey: 'test',
+                    heroTagPrefix: 'test',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final delegate =
+          tester.widget<GridView>(find.byType(GridView)).gridDelegate
+              as SliverGridDelegateWithFixedCrossAxisCount;
+      // 500pt of grid, minus its own 16pt gutters: three columns, not fourteen.
+      expect(delegate.crossAxisCount, 3);
     });
 
     testWidgets('generates unique heroTags with index', (tester) async {

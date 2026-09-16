@@ -277,6 +277,20 @@ class ServiceRoutes {
     });
   }
 
+  /// App settings, and the per-service page under it.
+  ///
+  /// Three widgets were interpolating the per-service settings path by hand —
+  /// the not-configured leaf, the cross-service toast and the capability
+  /// toast — which is exactly the kind of string that survives a route rename
+  /// by silently 404ing in the one state nobody screenshots.
+  static const settings = '/settings';
+  static const settingsConnections = '$settings/connections';
+
+  /// Where the fix lives for a service that is not set up, or whose credential
+  /// is too narrow: its own settings page, where its setup note is printed.
+  static String settingsFor(ServiceKey service) =>
+      '$settings/service/${service.routeParam}';
+
   static String _withQuery(String path, Map<String, String?> queryParameters) {
     final values = {
       for (final entry in queryParameters.entries)

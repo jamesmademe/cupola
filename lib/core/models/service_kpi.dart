@@ -39,6 +39,13 @@ class ServiceKpi {
   /// label against a set of strings. Now the judgement travels with the number.
   final StatusTone? tone;
 
+  /// A second line under the figure, in the figure's own words.
+  ///
+  /// Only ever the *reason* a number is not what you expect — `client not
+  /// answering` under an unavailable queue. Not a trend, not a unit, not a
+  /// restatement of the label.
+  final String? note;
+
   /// Whether this figure is the reason you would look at the service.
   bool get isNoteworthy => tone != null;
 
@@ -47,5 +54,48 @@ class ServiceKpi {
     required this.value,
     required this.icon,
     this.tone,
+    this.note,
   });
+
+  /// A figure whose source did not answer.
+  ///
+  /// Reads **`—`**, and this is the rule the whole constructor exists to
+  /// enforce: a number that could not be fetched is not zero. The builders used
+  /// to write `_statInt(map) ?? 0`, so a download client that was down drew
+  /// `Queue 0` — indistinguishable from a queue that had just drained, and the
+  /// reading the user would act on is the opposite one. The other outcome was
+  /// worse: letting the sub-fetch throw took the entire rail into `AsyncError`
+  /// and lost the eight figures the service *could* still answer.
+  ///
+  /// [note] names what did not answer, because "—" on its own is a shrug.
+  /// Pair it with `FaultBand.section`, which carries the same fact in a
+  /// sentence for the page as a whole.
+  ///
+  /// Deliberately untoned. The absence is not this service's fault and not a
+  /// backlog either; colouring it would make a neighbour's outage look like a
+  /// condition of the service you are looking at.
+  const ServiceKpi.unavailable({
+    required this.label,
+    required this.icon,
+    this.note,
+  }) : value = unavailableValue,
+       tone = null;
+
+  /// What an unanswered figure prints. An em dash, never `0` and never blank —
+  /// a blank cell reads as a layout bug.
+  static const String unavailableValue = '—';
+
+  /// Whether this figure's source did not answer.
+  bool get isUnavailable => value == unavailableValue;
+
+  /// What a screen reader hears for the whole card.
+  ///
+  /// The em dash is the one character on the rail that assistive technology
+  /// cannot render usefully — VoiceOver reads it as "dash" or skips it — so the
+  /// figure that matters most is the figure that announced worst. Spelled out,
+  /// with the reason attached.
+  String get semanticLabel {
+    final spoken = isUnavailable ? 'unavailable' : value;
+    return note == null ? '$label: $spoken' : '$label: $spoken, $note';
+  }
 }

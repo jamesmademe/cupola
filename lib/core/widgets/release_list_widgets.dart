@@ -359,6 +359,10 @@ class _ReleaseDetails extends StatelessWidget {
     final customFormats =
         release['customFormats'] as List<dynamic>? ?? const [];
     final rejections = releaseRejectionReasons(release);
+    // Walked, not raw. This is a *sentence* in the error tone, and raw red
+    // measures 3.42:1 on the light scaffold — it fails AA as body text in
+    // exactly the panel whose whole job is explaining why a grab was refused.
+    final rejectionInk = statusToneColor(colorScheme, StatusTone.error);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -424,12 +428,12 @@ class _ReleaseDetails extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 2),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
                     child: Icon(
                       Icons.error_outline_rounded,
                       size: 14,
-                      color: AppColors.error,
+                      color: rejectionInk,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -437,7 +441,7 @@ class _ReleaseDetails extends StatelessWidget {
                     child: Text(
                       reason,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.error,
+                        color: rejectionInk,
                       ),
                     ),
                   ),
@@ -558,10 +562,27 @@ class ScoreBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final neutral = score == 0;
-    final color = neutral
-        ? theme.colorScheme.onSurfaceVariant
-        : (score > 0 ? AppColors.success : AppColors.error);
+    final tone = neutral
+        ? StatusTone.neutral
+        : (score > 0 ? StatusTone.success : StatusTone.error);
+    final tintAlpha = neutral ? 0.10 : 0.16;
+
+    // Fill and ink are different tokens, and this badge is the clearest case
+    // for why: the wash keeps the tone's own byte so a positive score still
+    // reads green, while the number on top of it is measured against the
+    // composite it actually lands on. Painting both raw is what put a `+120` at
+    // about 1.95:1 on paper — a green number on a green wash, legible at night
+    // and effectively invisible in daylight.
+    final fill = statusToneFill(colorScheme, tone);
+    final ink = statusToneColor(
+      colorScheme,
+      tone,
+      // These badges ride in release rows on a card, not on the scaffold.
+      surface: colorScheme.surfaceContainer,
+      tintAlpha: tintAlpha,
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -569,7 +590,7 @@ class ScoreBadge extends StatelessWidget {
         vertical: 2,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: neutral ? 0.10 : 0.16),
+        color: fill.withValues(alpha: tintAlpha),
         borderRadius: AppRadius.borderRadiusFull,
       ),
       child: Row(
@@ -581,15 +602,17 @@ class ScoreBadge extends StatelessWidget {
             style: theme.textTheme.labelSmall!
                 .weight(FontWeight.w700)
                 .tabular
-                .copyWith(color: color),
+                .copyWith(color: ink),
           ),
           const SizedBox(width: AppSpacing.xs),
           Text(
             // Was fontSize 9; the unit keeps its dimmer tone to stay quieter
-            // than the number it annotates.
+            // than the number it annotates. The 0.8 rides on an ink that has
+            // already cleared AA, so the annotation lands just under the line
+            // the way a caption is allowed to.
             'CF',
             style: theme.textTheme.labelSmall?.copyWith(
-              color: color.withValues(alpha: 0.8),
+              color: ink.withValues(alpha: 0.8),
             ),
           ),
         ],

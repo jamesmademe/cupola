@@ -96,8 +96,51 @@ class GatedPollTimer {
   Timer? _timer;
   bool _live = false;
   bool _disposed = false;
+  DateTime? _lastSuccessAt;
 
   bool get isLive => _live;
+
+  /// When a tick last came back with data.
+  ///
+  /// Deliberately **not** recorded by [_tick]. A tick firing means a request
+  /// went out, which is the one thing that is still true when the queue
+  /// endpoint has stopped answering — a timer that fires every ten seconds into
+  /// a dead socket would report itself perfectly healthy forever. Only the
+  /// owner knows whether the answer arrived, so the owner reports it.
+  ///
+  /// `null` until the first success, which is the cold-open state: nothing has
+  /// answered yet, and that is loading, not stale.
+  DateTime? get lastSuccessAt => _lastSuccessAt;
+
+  /// How long since a tick last came back, or `null` before the first one.
+  Duration? sinceLastSuccessAt(DateTime now) {
+    final at = _lastSuccessAt;
+    return at == null ? null : now.difference(at);
+  }
+
+  /// Records that the work this timer drives has answered.
+  ///
+  /// Call it where the data lands, not where the request leaves. See
+  /// [lastSuccessAt].
+  void noteSuccess([DateTime? at]) {
+    if (_disposed) return;
+    _lastSuccessAt = at ?? DateTime.now();
+  }
+
+  /// Whether the figures this timer feeds should be read as stale.
+  ///
+  /// [tolerance] is a multiple of [interval] rather than a constant, because
+  /// "old" is only meaningful relative to how often the page expected an
+  /// answer: a two-second import poll is in trouble after six seconds, a
+  /// sixty-second dashboard poll is not. Three intervals is the default — one
+  /// missed answer is a slow network, three is a pattern.
+  ///
+  /// False before the first success: a page that has not loaded yet is loading.
+  bool isStaleAt(DateTime now, {double tolerance = 3}) {
+    final elapsed = sinceLastSuccessAt(now);
+    if (elapsed == null) return false;
+    return elapsed > interval * tolerance;
+  }
 
   /// Idempotent: call it from `build` with `activity.isLive && <own condition>`.
   ///

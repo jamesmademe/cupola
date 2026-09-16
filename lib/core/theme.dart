@@ -204,6 +204,34 @@ class AppColors {
   static const Color surfaceContainerHighLight = Color(0xFFF0F1F5);
   static const Color surfaceContainerHighestLight = Color(0xFFE2E4EA);
 
+  // === PLATE (artwork stand-ins) ===
+  //
+  // The one region of the app that does **not** follow the theme. A plate
+  // stands in for artwork — a poster that has not loaded, an album with no
+  // cover, the letterboxed well a backdrop sits in — and artwork is not
+  // palette. A missing poster rendered as a white rectangle on the light theme
+  // does not read as "art that is not here yet", it reads as a hole in the
+  // layout; and the instant the real image arrives the well flips from white to
+  // a dark photograph, which is the flash the plate exists to prevent.
+  //
+  // So these are the dark ladder's own bytes, painted in both brightnesses.
+  // They were discovered independently once already — the Dockge log panel
+  // pinned itself to a near-black literal with the same reasoning written out
+  // beside it — which is the argument for naming them here instead of letting
+  // each surface rediscover them.
+  static const Color plateSurface = surfaceContainerHighDark;
+  static const Color plateWell = surfaceContainerLowestDark;
+  static const Color plateOutline = outlineDark;
+  static const Color plateInk = onSurfaceDark;
+
+  /// The plate's secondary ink.
+  ///
+  /// Not [onSurfaceDimDark]: that tone is spaced against the dark *scaffold*
+  /// and measures 4.20:1 on [plateSurface], which is below AA on the very
+  /// surface a plate's caption sits on. This is one step brighter and clears it
+  /// at 5.49:1 on [plateSurface] and 7.02:1 on [plateWell].
+  static const Color plateDimInk = Color(0xFF909AAD);
+
   /// Fill behind a selected segment/chip in light mode.
   ///
   /// Deliberately further from `surfaceLight` than the container tokens: a
@@ -219,15 +247,23 @@ class AppColors {
 
   // === TEXT COLORS - LIGHT ===
   //
-  // Both secondary tones are darkened from their Tailwind equivalents to clear
-  // WCAG AA (4.5:1) on `surfaceLight`. gray-500 measured 4.39:1 and gray-400 a
-  // failing 2.36:1, so secondary and tertiary text was below the line in every
-  // light-mode screen. The hierarchy between them is preserved — 5.6:1 vs
-  // 4.8:1 reads as two distinct weights — and reinforced by size and weight
-  // rather than by contrast alone.
+  // Spaced against the **worst paper surface the theme actually paints text
+  // on**, not against the scaffold. That distinction is the whole correction
+  // here: the previous pair (`#5A6273` / `#656C7B`) was measured on
+  // `surfaceLight` alone, where they read 5.56:1 and 4.79:1 and looked safe —
+  // but `surfaceContainerHighest` (#E2E4EA) is the chip fill and the input
+  // fill, both of which carry `onSurfaceVariant` as their label, and there the
+  // dim tone measured **4.15:1**, below AA, on every chip and every text field
+  // placeholder in light mode. A contrast token verified on one ground is a
+  // token that is wrong on the others.
+  //
+  // The replacements clear AA on all four light surfaces — paper, white, high
+  // and highest — with room to spare: onVariant 6.87 / 7.56 / 6.70 / 5.94, and
+  // dim 5.49 / 6.04 / 5.35 / 4.75. The two-step hierarchy between them is
+  // preserved, and both stay neutral grays so nothing reads as tinted.
   static const Color onSurfaceLight = Color(0xFF111827); // gray-900
-  static const Color onSurfaceVariantLight = Color(0xFF5A6273); // 5.56:1
-  static const Color onSurfaceDimLight = Color(0xFF656C7B); // 4.79:1
+  static const Color onSurfaceVariantLight = Color(0xFF4B5563); // 5.94:1 worst
+  static const Color onSurfaceDimLight = Color(0xFF5C6371); // 4.75:1 worst
 
   // === OUTLINE / BORDER ===
   static const Color outlineDark = Color(0xFF2D3748);
@@ -862,7 +898,27 @@ class AppTheme {
   static final ColorScheme _lightColorScheme = ColorScheme(
     brightness: Brightness.light,
     // Primary
-    primary: AppColors.primary,
+    //
+    // Indigo-600 on paper, not the indigo-500 the dark scheme uses, and this is
+    // the one place the brand shifts a byte between themes. The reason is that
+    // `primary` is overwhelmingly an **ink** here — every `TextButton` and
+    // `OutlinedButton` label, the selected navigation glyph, the recovery verb
+    // on a fault band, `StatusTone.primary`, and thirty-odd `color:
+    // colorScheme.primary` sites — and indigo-500 measures **4.06:1** on the
+    // `#F3F4F6` scaffold and 4.47:1 on white. Below AA on the ground it is most
+    // often drawn on, on the most-painted ink in the app after `onSurface`.
+    //
+    // Indigo-600 clears it everywhere on paper: 5.71:1 on the scaffold, 6.29:1
+    // on white, 4.95:1 on `surfaceContainerHighest`. As a *fill* it improves
+    // too — reversed-out white goes from 4.47:1 to 6.29:1 — so the filled
+    // controls follow without a second token. Dark keeps indigo-500, where it
+    // already measures comfortably.
+    //
+    // This is not the tone walk: `statusToneColor` deliberately refuses to walk
+    // the brand, because a walked indigo is a repainted brand. Choosing the
+    // adjacent step of the brand's own ramp per theme is the design's own
+    // answer instead.
+    primary: AppColors.primaryDark,
     onPrimary: Colors.white,
     primaryContainer: AppColors.primaryLighter,
     onPrimaryContainer: AppColors.primaryDark,
@@ -874,7 +930,7 @@ class AppTheme {
     // fill at all, and with onSurfaceVariant as its foreground it read as
     // *less* prominent than the unselected ones. A distinctly tinted container
     // plus full-strength text makes the selected state unmistakable.
-    secondary: AppColors.primary,
+    secondary: AppColors.primaryDark,
     onSecondary: Colors.white,
     secondaryContainer: AppColors.selectedContainerLight,
     onSecondaryContainer: AppColors.onSurfaceLight,
@@ -901,7 +957,13 @@ class AppTheme {
     outline: AppColors.outlineLight,
     outlineVariant: AppColors.outlineVariantLight,
     // Other
-    shadow: Colors.black,
+    //
+    // Ink, not black. Every `AppElevation` level paints `scheme.shadow`, and on
+    // paper a pure-black drop shadow reads as grime under a card rather than as
+    // depth — the light ladder is drawn as `rgba(17,24,39, …)` at all three
+    // levels. `AppElevation.glass()` is the deliberate exception and hardcodes
+    // its own black, so it is unaffected by this line.
+    shadow: AppColors.onSurfaceLight,
     scrim: Colors.black,
     inverseSurface: AppColors.surfaceDark,
     onInverseSurface: AppColors.onSurfaceDark,

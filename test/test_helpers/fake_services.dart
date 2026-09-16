@@ -247,6 +247,7 @@ class FakeSeerrService extends SeerrService {
     String query, {
     int page = 1,
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async => const [];
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -43,6 +44,7 @@ class DownloadQueueTile extends StatelessWidget {
     this.statusTone = StatusTone.neutral,
     this.metrics = const [],
     this.selected = false,
+    this.sampleAge,
     this.onTap,
     this.onLongPress,
   });
@@ -87,6 +89,25 @@ class DownloadQueueTile extends StatelessWidget {
   /// measures. Empty on the Usenet pair, which says everything it has in
   /// [subtitle].
   final List<DownloadQueueMetric> metrics;
+
+  /// How old this row's figures are, when the poll has stopped coming back.
+  ///
+  /// `null` is the normal case: the figures are current and the row prints its
+  /// counting-down line as usual.
+  ///
+  /// When it is set, the row **trades its time-left for the age of the sample**,
+  /// and that trade is the whole point. A progress bar that is not advancing
+  /// must not look like one that is: left alone, a stalled poll leaves a row
+  /// claiming "12 min left, 1.2 GB remaining" in the service accent, counting
+  /// down nothing, and the user reads a healthy transfer where there is a dead
+  /// connection. So the ETA — the one figure that is definitely false — is
+  /// replaced by the one fact that is definitely true, and the bar drains to a
+  /// neutral so it stops reading as live.
+  ///
+  /// The bar itself stays, at its last position. It is still what the service
+  /// last said, and dropping it would throw away the readout the operator came
+  /// for. See `FaultBand.stale`, which carries the same condition for the page.
+  final Duration? sampleAge;
 
   /// Whether this row is part of a multi-select.
   ///
@@ -233,7 +254,14 @@ class DownloadQueueTile extends StatelessWidget {
                           value: progress!.clamp(0, 1),
                           minHeight: 4,
                           backgroundColor: colorScheme.surfaceContainerHighest,
-                          valueColor: AlwaysStoppedAnimation(accent),
+                          // A stale bar keeps its position and loses its
+                          // colour. The accent is what makes a bar read as
+                          // moving.
+                          valueColor: AlwaysStoppedAnimation(
+                            sampleAge == null
+                                ? accent
+                                : colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
                     ),
@@ -241,7 +269,7 @@ class DownloadQueueTile extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xs),
                   ExcludeSemantics(
                     child: Text(
-                      subtitle,
+                      _subtitleLine,
                       // Carries the ETA and the remaining size, both counting
                       // down, so the figures are tabular and do not jitter as
                       // they tick.
@@ -281,6 +309,13 @@ class DownloadQueueTile extends StatelessWidget {
     );
   }
 
+  /// What the second line actually prints: the counting-down figures, or the
+  /// age that replaces them once they have stopped counting.
+  String get _subtitleLine {
+    final age = sampleAge;
+    return age == null ? subtitle : 'as of ${formatDurationAge(age)}';
+  }
+
   /// The row as one sentence, in the order a person would say it.
   ///
   /// The state comes before the percentage because "paused, 63 per cent" and
@@ -293,7 +328,7 @@ class DownloadQueueTile extends StatelessWidget {
     title,
     ?statusLabel,
     '$percentage per cent',
-    subtitle,
+    _subtitleLine,
     for (final metric in metrics) metric.spoken ?? metric.label,
   ].join(', ');
 }

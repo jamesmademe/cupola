@@ -41,7 +41,18 @@ void main() {
       expect(theme.colorScheme.surfaceContainerHigh, const Color(0xFFF0F1F5));
       expect(theme.colorScheme.outline, const Color(0xFFE2E4EA));
       expect(theme.colorScheme.onSurface, const Color(0xFF111827));
-      expect(theme.colorScheme.onSurfaceVariant, const Color(0xFF5A6273));
+      // `onSurfaceVariant` used to be pinned here to `#5A6273`. It moved to
+      // `#4B5563`, because the old value was spaced against `surface` alone and
+      // measured 4.82:1 on `surfaceContainerHighest` — which is the chip fill
+      // and the input fill, both of which paint this exact token as their
+      // label. The hex is no longer asserted anywhere: a byte is not the rule,
+      // and pinning one here is what let the real rule go unchecked. See
+      // `theme_light_contrast_test.dart`, which measures every light ink
+      // against every light surface the theme actually paints.
+      expect(
+        theme.colorScheme.onSurfaceVariant,
+        isNot(theme.colorScheme.onSurface),
+      );
       expect(
         theme.navigationBarTheme.backgroundColor,
         theme.colorScheme.surface,

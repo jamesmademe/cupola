@@ -141,8 +141,16 @@ class ServiceTheme {
     return foregroundOn(background);
   }
 
-  /// WCAG AA for body-sized text.
-  static const double _minBodyContrast = 4.5;
+  /// WCAG AA for body-sized text, with a tenth of a point of headroom.
+  ///
+  /// 4.6 rather than 4.5 on purpose. The walk steps in 24 increments and stops
+  /// at the first candidate that clears the bar, so a hair over the line is the
+  /// *expected* result, not the rare one — and every consumer then composites
+  /// that answer over something the walk was not told about (a hairline, a
+  /// hover wash, a shadow bleeding under a chip). A run that lands at 4.52 is a
+  /// run that ships believing it passed and measures 4.4 on the device. The
+  /// extra tenth costs at most one more step on the ramp.
+  static const double _minBodyContrast = 4.6;
 
   /// Granularity of the lightness walk. Fine enough to keep the result close to
   /// the original accent, coarse enough to stay cheap in a build method.

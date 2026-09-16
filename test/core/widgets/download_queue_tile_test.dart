@@ -216,4 +216,65 @@ void main() {
       expect(find.text('Resume'), findsNothing);
     });
   });
+
+  group('a stale row trades its ETA for the age of the sample', () {
+    Future<void> pump(WidgetTester tester, {Duration? sampleAge}) {
+      return tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DownloadQueueTile(
+              title: 'Dune.2021.2160p',
+              subtitle: '12 min left · 1.2 GB remaining',
+              progress: 0.63,
+              percentage: 63,
+              accent: AppColors.sabnzbd,
+              sampleAge: sampleAge,
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('the false figure is replaced by the true one', (tester) async {
+      // Left alone, a stalled poll leaves the row claiming "12 min left",
+      // counting down nothing, and the user reads a healthy transfer where
+      // there is a dead connection.
+      await pump(tester, sampleAge: const Duration(minutes: 4));
+
+      expect(find.textContaining('12 min left'), findsNothing);
+      expect(find.text('as of 4 min ago'), findsOneWidget);
+    });
+
+    testWidgets('the bar keeps its position and loses its colour', (
+      tester,
+    ) async {
+      // It is still what the service last said, so it stays — but the accent
+      // is what makes a bar read as moving, and this one is not.
+      await pump(tester, sampleAge: const Duration(minutes: 4));
+
+      final bar = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      expect(bar.value, closeTo(0.63, 0.001));
+      expect(bar.valueColor!.value, isNot(AppColors.sabnzbd));
+    });
+
+    testWidgets('a current row is untouched', (tester) async {
+      await pump(tester);
+
+      expect(find.text('12 min left · 1.2 GB remaining'), findsOneWidget);
+      final bar = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      expect(bar.valueColor!.value, AppColors.sabnzbd);
+    });
+
+    testWidgets('the age reaches the screen reader too', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pump(tester, sampleAge: const Duration(minutes: 4));
+
+      expect(find.bySemanticsLabel(RegExp('as of 4 min ago')), findsOneWidget);
+      handle.dispose();
+    });
+  });
 }

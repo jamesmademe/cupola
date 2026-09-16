@@ -83,13 +83,37 @@ class MediaGrid<T> extends StatelessWidget {
     this.crossAxisCount = 3,
   });
 
-  /// Width a poster wants before another column is worth adding. Chosen so a
+  /// The floor a poster is built on: below this width the artwork stops being
+  /// readable as artwork and the title under it stops fitting. Chosen so a
   /// 390pt-wide phone keeps exactly three columns.
-  static const double _preferredTileWidth = 130.0;
+  static const double tileWidthFloor = 130.0;
 
-  /// Columns that fit [availableWidth], never fewer than [minColumns].
-  static int columnsFor(double availableWidth, int minColumns) {
-    final fits = (availableWidth / _preferredTileWidth).floor();
+  /// Columns that fit [availableWidth] at or above [tileWidthFloor], never
+  /// fewer than [minColumns].
+  ///
+  /// ## The column floor rule: fewer tiles, never smaller ones
+  ///
+  /// A narrower frame drops a column. It does **not** shrink the tiles to keep
+  /// the count, which is the failure this arithmetic exists to prevent — a
+  /// 640pt well drawn with five columns gives 118pt posters, under a floor the
+  /// tile's own layout is built on, where the same well at four gives 151.
+  ///
+  /// [gap] is why the old form was wrong twice over. It divided by the tile
+  /// width alone and ignored the spacing between columns entirely, so it
+  /// answered with a count whose tiles could not actually be that wide: `n`
+  /// columns carry `n - 1` gaps, and the real tile width is
+  /// `(available - (n - 1) * gap) / n`. Solving that for the floor gives the
+  /// expression below, which is the *only* arrangement where every tile clears
+  /// [tileWidthFloor].
+  ///
+  /// [minColumns] stays a floor on the count for the phone, where two enormous
+  /// posters would be a worse answer than three correct ones.
+  static int columnsFor(
+    double availableWidth,
+    int minColumns, {
+    double gap = AppSpacing.gridGap,
+  }) {
+    final fits = ((availableWidth + gap) / (tileWidthFloor + gap)).floor();
     return fits > minColumns ? fits : minColumns;
   }
 
@@ -102,11 +126,24 @@ class MediaGrid<T> extends StatelessWidget {
       );
     }
 
-    final columns = columnsFor(
-      MediaQuery.sizeOf(context).width - (AppSpacing.lg * 2),
-      crossAxisCount,
+    // The grid's own constraints, not the window's. `MediaQuery.sizeOf` is the
+    // whole window, and on a desktop shell the grid is nothing like the whole
+    // window: a 1920pt frame with the 232pt rail and a 400pt inspector open
+    // leaves this widget about 500pt, and measuring the window answered
+    // fourteen columns of 24pt posters. The same thing happens, less
+    // spectacularly, inside the content well on every wide layout.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = columnsFor(
+          constraints.maxWidth - (AppSpacing.lg * 2),
+          crossAxisCount,
+        );
+        return _grid(context, columns);
+      },
     );
+  }
 
+  Widget _grid(BuildContext context, int columns) {
     return GridView.builder(
       physics: physics ?? const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.only(
