@@ -1,26 +1,39 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
-import 'package:cupola/core/app_radius.dart';
+
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
+
 import 'package:cupola/core/text_scale.dart';
+
 import 'package:cupola/core/theme.dart';
+
 import 'package:cupola/core/utils/arr_activity_display.dart';
+
 import 'package:cupola/core/utils/image_utils.dart';
+
 import 'package:cupola/core/utils/service_routes.dart';
+
 import 'package:cupola/core/widgets/widgets.dart';
+
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+
 import 'package:cupola/features/movies/presentation/radarr_overview_provider.dart';
+
 import 'package:cupola/features/services/domain/service_tab.dart';
+
 import 'package:cupola/features/services/domain/services_semantics.dart';
+
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+
 import 'package:cupola/features/services/presentation/services_provider.dart';
-import 'package:cupola/features/settings/data/service_connection_provider.dart';
+
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/connection_presentation.dart';
+
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Radarr's service home.
@@ -106,7 +119,7 @@ class _OverviewBody extends ConsumerWidget {
         ),
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
-          const _IdentityBlock(),
+          const ServiceOverviewIdentity(service: ServiceKey.radarr),
           ServiceKpiPeek(
             kpis: ref.watch(serviceKpiProvider(ServiceKey.radarr)),
             accent: ServiceKey.radarr.accent,
@@ -116,168 +129,6 @@ class _OverviewBody extends ConsumerWidget {
           const _RecentlyAddedSection(),
           const _HistoryTodaySection(),
         ],
-      ),
-    );
-  }
-}
-
-// ─── 0. Identity ────────────────────────────────────────────────────────────
-
-/// Host, version, whether it is answering, and which connection you are
-/// reading.
-///
-/// The status word comes from [describeConnection] and not from
-/// `ServiceSummary.statusLabel`: that one says "Online"/"Offline", which is off
-/// the app's lexicon — everything else in Cupola says *Answering*, *Not set
-/// up*, *Unreachable* — and has no other call site.
-class _IdentityBlock extends ConsumerWidget {
-  const _IdentityBlock();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    final summary = ref.watch(serviceSummaryProvider(ServiceKey.radarr));
-    final instance = ref.watch(activeInstanceProvider(ServiceKey.radarr));
-    final hasLens = ref.watch(hasMultipleInstancesProvider(ServiceKey.radarr));
-
-    // The probe reduced to the connection vocabulary. A summary still in flight
-    // is `checking` rather than a guess, and one that threw is the same fact a
-    // failed probe reports: we could not confirm it, and we cannot say why.
-    final status = summary.when(
-      loading: () => ServiceConnectionStatus.checking,
-      error: (_, _) => ServiceConnectionStatus.disconnected,
-      data: (value) => value.isOnline
-          ? ServiceConnectionStatus.connected
-          : ServiceConnectionStatus.disconnected,
-    );
-    final presentation = describeConnection(ServiceKey.radarr, status: status);
-    final toneColor = statusToneColor(colorScheme, presentation.tone);
-
-    final host = ServiceKey.radarr.extractHost(instance?.url);
-    // A figure whose source did not answer reads "—", never a fallback dressed
-    // up as an answer: `ServiceSummary.versionLabel` degrades to "v3 API" when
-    // the service named no version, which is honest for a server that replied
-    // and a fabrication for one that never did.
-    final summaryData = summary.asData?.value;
-    final version = summaryData != null && summaryData.isOnline
-        ? summaryData.versionLabel
-        : null;
-    final lens = hasLens ? instance?.label.trim() : null;
-
-    final facts = <String>[
-      host == null || host.isEmpty ? '—' : host,
-      version == null || version.isEmpty ? '—' : version,
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        AppSpacing.md,
-      ),
-      child: Semantics(
-        container: true,
-        // One sentence rather than four stops: the host alone, read out on its
-        // own, does not say what it is the host of.
-        label: joinSpokenParts([
-          ServiceKey.radarr.title,
-          ...facts,
-          presentation.label,
-          if (lens != null && lens.isNotEmpty) lens,
-        ]),
-        excludeSemantics: true,
-        child: Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.xs,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(
-              facts.join(' · '),
-              style: AppTheme.chrome(
-                context,
-                size: 12,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            // Tone and glyph both, because colour is not information: the word
-            // is the channel that always works.
-            _StatusWord(
-              icon: presentation.icon,
-              label: presentation.label,
-              color: toneColor,
-            ),
-            if (lens != null && lens.isNotEmpty) _LensChip(label: lens),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusWord extends StatelessWidget {
-  const _StatusWord({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 13, color: color),
-        const SizedBox(width: AppSpacing.xs),
-        Text(
-          label,
-          style: AppTheme.chrome(
-            context,
-            size: 12,
-            weight: FontWeight.w700,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Which connection the page is reading, when there is more than one.
-class _LensChip extends StatelessWidget {
-  const _LensChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final ink = _radarrInk(colorScheme);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer,
-        borderRadius: AppRadius.borderRadiusSm,
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
-      child: Text(
-        label,
-        style: AppTheme.chrome(
-          context,
-          size: 11,
-          weight: FontWeight.w700,
-          color: ink,
-        ),
       ),
     );
   }
@@ -293,7 +144,8 @@ class _ComingUpSection extends ConsumerWidget {
     final releases = ref.watch(radarrComingUpProvider);
     final count = releases.asData?.value.length;
 
-    return _OverviewSection(
+    return ServiceOverviewSection(
+      service: ServiceKey.radarr,
       title: 'Coming up',
       // "—" while the library is loading or after it failed: a "0 releases"
       // printed over an unanswered question is a claim nobody made.
@@ -306,9 +158,9 @@ class _ComingUpSection extends ConsumerWidget {
         serviceName: 'Radarr',
         loadingLabel: 'Loading what is coming up',
         onRetry: () => ref.invalidate(radarrComingUpProvider),
-        skeleton: const _RowsSkeleton(rows: 2),
+        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (items) => items.isEmpty,
-        emptyBuilder: const _SectionEmpty(
+        emptyBuilder: const ServiceOverviewEmpty(
           icon: Icons.event_available_rounded,
           label: 'Nothing releasing this week',
         ),
@@ -340,7 +192,7 @@ class _ComingUpRow extends StatelessWidget {
       movie.monitored ? 'monitored' : 'unmonitored',
     ]);
 
-    return _OverviewRow(
+    return ServiceOverviewRow(
       spoken: joinSpokenParts([day, movie.title, spokenFromDotted(qualifier)]),
       leading: SizedBox(
         width: 58,
@@ -371,7 +223,8 @@ class _NeedsAttentionSection extends ConsumerWidget {
     final items = ref.watch(radarrNeedsAttentionProvider);
     final count = items.asData?.value.length;
 
-    return _OverviewSection(
+    return ServiceOverviewSection(
+      service: ServiceKey.radarr,
       title: 'Needs attention',
       subtitle: count == null ? '—' : '$count',
       // No link: every row here belongs to a different tab, and a single
@@ -381,11 +234,11 @@ class _NeedsAttentionSection extends ConsumerWidget {
         serviceName: 'Radarr',
         loadingLabel: 'Loading what needs attention',
         onRetry: () => ref.invalidate(radarrNeedsAttentionProvider),
-        skeleton: const _RowsSkeleton(rows: 2),
+        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (data) => data.isEmpty,
         // A resting state wears no alarm chrome: nothing is wrong, and saying
         // so is not an error state.
-        emptyBuilder: const _SectionEmpty(
+        emptyBuilder: const ServiceOverviewEmpty(
           icon: Icons.check_circle_outline_rounded,
           label: 'Nothing needs you',
         ),
@@ -413,7 +266,7 @@ class _AttentionRow extends StatelessWidget {
       surface: colorScheme.surfaceContainerLow,
     );
 
-    return _OverviewRow(
+    return ServiceOverviewRow(
       spoken: item.spoken,
       leading: Icon(item.icon, size: 18, color: tone),
       title: item.headline,
@@ -432,10 +285,10 @@ class _RecentlyAddedSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final movies = ref.watch(radarrRecentlyAddedProvider);
 
-    return _OverviewSection(
+    return ServiceOverviewSection.bleed(
+      service: ServiceKey.radarr,
       title: 'Recently added',
       destination: ServiceTab.library,
-      padBody: false,
       child: AsyncValueWidget<List<RadarrMovie>>(
         value: movies,
         serviceName: 'Radarr',
@@ -445,7 +298,7 @@ class _RecentlyAddedSection extends ConsumerWidget {
         isEmpty: (items) => items.isEmpty,
         emptyBuilder: const Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: _SectionEmpty(
+          child: ServiceOverviewEmpty(
             icon: Icons.movie_outlined,
             label: 'Nothing added yet',
           ),
@@ -576,7 +429,8 @@ class _HistoryTodaySection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final entries = ref.watch(radarrHistoryTodayProvider);
 
-    return _OverviewSection(
+    return ServiceOverviewSection(
+      service: ServiceKey.radarr,
       title: 'History',
       subtitle: 'today',
       destination: ServiceTab.history,
@@ -585,9 +439,9 @@ class _HistoryTodaySection extends ConsumerWidget {
         serviceName: 'Radarr',
         loadingLabel: "Loading today's history",
         onRetry: () => ref.invalidate(radarrHistoryTodayProvider),
-        skeleton: const _RowsSkeleton(rows: 2),
+        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (items) => items.isEmpty,
-        emptyBuilder: const _SectionEmpty(
+        emptyBuilder: const ServiceOverviewEmpty(
           icon: Icons.history_rounded,
           label: 'Nothing yet today',
         ),
@@ -613,7 +467,7 @@ class _HistoryRow extends StatelessWidget {
       surface: colorScheme.surfaceContainerLow,
     );
 
-    return _OverviewRow(
+    return ServiceOverviewRow(
       spoken: entry.spoken,
       leading: Container(
         width: 8,
@@ -625,234 +479,6 @@ class _HistoryRow extends StatelessWidget {
       detail: entry.detail,
     );
   }
-}
-
-// ─── The shared shell ───────────────────────────────────────────────────────
-
-/// One region of the Overview: a heading, an optional link to the tab that owns
-/// the full list, and the body.
-///
-/// The link is named exactly like its tab — the design's rule, and the reason
-/// it takes a [ServiceTab] and not a string: a label and a destination that can
-/// drift apart eventually do.
-class _OverviewSection extends StatelessWidget {
-  const _OverviewSection({
-    required this.title,
-    required this.child,
-    this.subtitle,
-    this.destination,
-    this.padBody = true,
-  });
-
-  final String title;
-  final String? subtitle;
-
-  /// The tab this region's "see the rest" link opens, or null for a region
-  /// whose rows belong to several tabs at once.
-  final ServiceTab? destination;
-
-  final Widget child;
-
-  /// False for a body that bleeds to the window edge — a poster rail, whose
-  /// first tile aligns to the column while the row itself runs off it.
-  final bool padBody;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final tab = destination;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(
-          title: title,
-          subtitle: subtitle,
-          showChevron: false,
-          trailing: tab == null
-              ? null
-              : _TabLink(label: tab.label, color: _radarrInk(colorScheme)),
-          // The link's "→" sits inside the region the header silences — read
-          // out it is "rightwards arrow" — so the destination comes back as a
-          // hint instead.
-          semanticHint: tab == null
-              ? null
-              : 'opens the Radarr ${tab.label} tab',
-          onTap: tab == null ? null : () => _goToTab(context, tab),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (padBody)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: child,
-          )
-        else
-          child,
-        const SizedBox(height: AppSpacing.lg),
-      ],
-    );
-  }
-}
-
-class _TabLink extends StatelessWidget {
-  const _TabLink({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      '$label →',
-      // One line, always: the arrow belongs to the word before it, and stranded
-      // on a line of its own it reads as a second control.
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: Theme.of(
-        context,
-      ).textTheme.labelMedium?.weight(FontWeight.w700).copyWith(color: color),
-    );
-  }
-}
-
-/// Two lines and a leading mark: the one row shape every section here uses.
-class _OverviewRow extends StatelessWidget {
-  const _OverviewRow({
-    required this.spoken,
-    required this.leading,
-    required this.title,
-    required this.detail,
-    this.titleColor,
-  });
-
-  /// The whole row as one sentence, with the layout's `·` turned back into
-  /// commas.
-  final String spoken;
-
-  final Widget leading;
-  final String title;
-  final String detail;
-  final Color? titleColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final brightness = Theme.of(context).brightness;
-
-    return Semantics(
-      container: true,
-      label: spoken,
-      // Nothing in this row is interactive, so the parts are safe to silence —
-      // read separately they are three fragments of one fact.
-      excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.md),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            leading,
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTheme.data(
-                      brightness,
-                    ).copyWith(color: titleColor ?? colorScheme.onSurface),
-                  ),
-                  if (detail.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      detail,
-                      style: AppTheme.chrome(
-                        context,
-                        size: 11,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// The "nothing here" note for a region at rest.
-///
-/// [AppEmptyState.inline] and not the 72dp well: nothing failed and nothing is
-/// missing, so the absence costs a row rather than a screenful of ceremony.
-class _SectionEmpty extends StatelessWidget {
-  const _SectionEmpty({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppEmptyState.inline(icon: icon, title: label);
-  }
-}
-
-class _RowsSkeleton extends StatelessWidget {
-  const _RowsSkeleton({required this.rows});
-
-  final int rows;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < rows; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ShimmerPlaceholder.text(width: 180, height: 14),
-                const SizedBox(height: AppSpacing.xs),
-                ShimmerPlaceholder.text(width: 120, height: 10),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-// ─── Shared bits ────────────────────────────────────────────────────────────
-
-/// Radarr's accent, walked until it can carry ink.
-///
-/// Radarr is one of the seven service accents under 3:1 on paper, so every
-/// place the accent becomes *text* rather than a dot goes through
-/// [ServiceTheme.onTint] — on a light theme it resolves to a darker hue than
-/// the dark artboards draw.
-Color _radarrInk(ColorScheme colorScheme) => ServiceTheme.onTint(
-  ServiceKey.radarr.accent,
-  surface: colorScheme.surface,
-  tintAlpha: 0,
-);
-
-/// Switches to another of Radarr's tabs.
-///
-/// `goBranch`, not `context.go`: it restores that branch's own stack, which is
-/// what makes "back returns to the tab you left" true. `maybeOf` rather than
-/// `of` because this screen is also legitimately built outside a shell — a
-/// widget test, a preview — where there is no branch to switch and the link
-/// simply does nothing rather than throwing.
-void _goToTab(BuildContext context, ServiceTab tab) {
-  final tabs = tabsFor(ServiceKey.radarr);
-  if (tabs == null) return;
-  final index = tabs.indexOf(tab);
-  if (index < 0) return;
-  StatefulNavigationShell.maybeOf(context)?.goBranch(index);
 }
 
 const List<String> _weekdayNames = [
