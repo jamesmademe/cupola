@@ -11,9 +11,11 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/service_connection_row.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
+import 'package:cupola/features/settings/presentation/widgets/test_all_connections_button.dart';
 
 /// Every service Cupola can talk to, and the state of each connection.
 ///
@@ -37,6 +39,10 @@ class SettingsConnectionsScreen extends ConsumerWidget {
         .toList(growable: false);
 
     return AmbientScaffold(
+      // The room belongs to the tab, and the tab's accent is teal. Left unset,
+      // `AmbientBackground` falls back to `colorScheme.primary` — the brand
+      // indigo — so every settings pane glowed in Seerr's colour.
+      accent: NavTab.settings.accentColor,
       appBar: const GlassAppBar(title: Text('Connections')),
       body: SettingsMasterDetail(
         child: ListView(
@@ -50,12 +56,23 @@ class SettingsConnectionsScreen extends ConsumerWidget {
           ),
           children: [
             if (configured.isNotEmpty) ...[
-              SectionHeader(
+              SectionHeader.action(
                 // Not "Answering": this section is what has an address saved,
                 // and one of them being unreachable is exactly why you are here.
                 title: 'Your services',
-                showChevron: false,
-                trailing: _CountChip(count: configured.length),
+                // The count and the command share the trailing slot: the chip
+                // says how much "all" is, and the button is the only way to
+                // re-ask without opening seventeen forms. `.action` is what
+                // keeps the button reachable — the plain header silences its
+                // own subtree, which would have left a nested control unnamed.
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _CountChip(count: configured.length),
+                    const SizedBox(width: AppSpacing.sm),
+                    const TestAllConnectionsButton(),
+                  ],
+                ),
                 semanticLabel:
                     '${configured.length} of ${ServiceKey.values.length} '
                     'services set up',

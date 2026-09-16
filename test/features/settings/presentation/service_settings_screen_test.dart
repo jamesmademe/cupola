@@ -61,7 +61,13 @@ void main() {
     ) async {
       await _pumpServiceSettings(tester, service: ServiceKey.radarr);
 
-      expect(find.text('Radarr Settings'), findsOneWidget);
+      // The pane is titled with the service's name alone. It used to read
+      // "Radarr Settings", which is the name of the *other* page — a service's
+      // own configuration, written through its API — and this one is the form
+      // for reaching it. Two "Radarr"s on screen now: the app bar and the
+      // header card under it.
+      expect(find.text('Radarr Settings'), findsNothing);
+      expect(find.text('Radarr'), findsNWidgets(2));
       expect(find.text('Save'), findsOneWidget);
       expect(find.text('Server URL'), findsOneWidget);
       expect(find.text('API Key'), findsOneWidget);

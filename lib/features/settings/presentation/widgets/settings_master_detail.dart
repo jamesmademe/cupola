@@ -5,6 +5,7 @@ import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
 
 /// One entry in the settings section list.
 typedef SettingsSection = ({String label, String location, IconData icon});
@@ -31,16 +32,35 @@ class SettingsMasterDetail extends StatelessWidget {
 
   /// Wide enough for the list to be free rather than paid for out of the page.
   ///
-  /// 232 for the list and the rest for the page: below this the page would be
+  /// 300 for the list and the rest for the page: below this the page would be
   /// narrower than the forms it holds, which is the point at which a
-  /// master-detail stops being a convenience and starts being a squeeze.
-  static const double _listWidth = 232;
+  /// master-detail stops being a convenience and starts being a squeeze. It was
+  /// 232, which is what a label-only row needs — the rows are readouts now
+  /// ("16 of 17 set up · 14 answering"), and 232 truncated every one of them.
+  static const double _listWidth = 300;
+
+  /// Whether this build and this window are showing the rail.
+  ///
+  /// Public because the root pane has to ask: below the threshold `/settings`
+  /// *is* the index list, and above it the same route is the summary beside the
+  /// rail. Two screens reading one predicate, so they cannot disagree about
+  /// which of the two the user is looking at.
+  static bool showsRail(BuildContext context) =>
+      AppBreakpoints.isDesktopShell &&
+      MediaQuery.sizeOf(context).width >= AppBreakpoints.desktopCompact;
 
   static const List<SettingsSection> sections = [
-    (label: 'Settings', location: '/settings', icon: Icons.tune_rounded),
+    // Overview, not "Settings": the rail already sits under a Settings eyebrow,
+    // and a first row repeating it reads as the parent of the nine under it
+    // rather than as the one row that is a readout instead of a form.
+    (label: 'Overview', location: '/settings', icon: Icons.tune_rounded),
     (
       label: 'Connections',
-      location: '/settings/services',
+      // `/settings/services` is a legacy path that only ever redirects here, so
+      // pointing the row at it meant the location never matched, the longest
+      // match fell back to the root, and Connections could not be lit even
+      // while you were standing on it.
+      location: '/settings/connections',
       icon: Icons.dns_outlined,
     ),
     (
@@ -72,10 +92,7 @@ class SettingsMasterDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!AppBreakpoints.isDesktopShell ||
-        MediaQuery.sizeOf(context).width < AppBreakpoints.desktopCompact) {
-      return child;
-    }
+    if (!showsRail(context)) return child;
 
     final colorScheme = Theme.of(context).colorScheme;
     final location = GoRouterState.of(context).uri.path;
@@ -145,6 +162,9 @@ class _SectionRow extends StatefulWidget {
 class _SectionRowState extends State<_SectionRow> {
   bool _hovered = false;
 
+  /// Settings' own accent, the one the tab and the ambient room already carry.
+  static final Color _accent = NavTab.settings.accentColor;
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -161,20 +181,22 @@ class _SectionRowState extends State<_SectionRow> {
         child: GestureDetector(
           onTap: () => GoRouter.of(context).go(widget.section.location),
           child: Container(
-            height: 40,
+            height: 46,
             margin: const EdgeInsets.only(bottom: 2),
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md - 1),
             decoration: BoxDecoration(
+              // The tab's own accent, not `colorScheme.primary`. Primary is the
+              // brand indigo (it is Seerr's accent), so the selected row was
+              // painted in the colour of one of the services listed two rows
+              // below it — on the one surface where indigo means "Seerr".
               color: selected
-                  ? colorScheme.primary.withValues(alpha: 0.14)
+                  ? _accent.withValues(alpha: 0.14)
                   : (_hovered
                         ? colorScheme.onSurface.withValues(alpha: 0.05)
                         : null),
               borderRadius: BorderRadius.circular(AppRadius.md),
               border: selected
-                  ? Border.all(
-                      color: colorScheme.primary.withValues(alpha: 0.4),
-                    )
+                  ? Border.all(color: _accent.withValues(alpha: 0.36))
                   : null,
             ),
             child: Row(
@@ -194,7 +216,7 @@ class _SectionRowState extends State<_SectionRow> {
                     overflow: TextOverflow.ellipsis,
                     style: AppTheme.chrome(
                       context,
-                      size: 12,
+                      size: 13,
                       weight: selected ? FontWeight.w700 : FontWeight.w500,
                       color: selected
                           ? colorScheme.onSurface

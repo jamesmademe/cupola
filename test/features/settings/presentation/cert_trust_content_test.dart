@@ -38,7 +38,11 @@ void main() {
         ),
       );
 
-      expect(find.text('Untrusted certificate'), findsOneWidget);
+      // Was 'Untrusted certificate'. The card names what the *server* did
+      // rather than what this device concluded: a self-signed certificate is
+      // the normal condition on a home install, and it is the phrase the user
+      // recognises from having generated one.
+      expect(find.text('Self-signed certificate'), findsOneWidget);
       expect(find.text('This certificate has changed'), findsNothing);
       expect(find.textContaining('nas.local:8443'), findsOneWidget);
       expect(find.text('Subject'), findsOneWidget);
@@ -70,6 +74,76 @@ void main() {
       // visible for the user to actually compare them.
       expect(find.textContaining('11:AA:22:BB'), findsOneWidget);
       expect(find.textContaining('AB:12:CD:34'), findsOneWidget);
+    });
+
+    // ── The escalation belongs to the rotation, and to nothing else ───────
+    //
+    // The shield was painted `scheme.error` in both states, so a routine first
+    // trust looked exactly as dangerous as a changed fingerprint — and when
+    // both look alarming, the one that matters stops standing out.
+    testWidgets('the shield is neutral on a first trust and red on a change', (
+      tester,
+    ) async {
+      final scheme = AppTheme.darkTheme().colorScheme;
+
+      await tester.pumpWidget(
+        _host(
+          const CertTrustContent(
+            origin: 'https://nas.local:8443',
+            probe: (certificate: _cert, rotated: false),
+          ),
+        ),
+      );
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.gpp_maybe_outlined)).color,
+        scheme.onSurfaceVariant,
+      );
+
+      await tester.pumpWidget(
+        _host(
+          const CertTrustContent(
+            origin: 'https://nas.local:8443',
+            probe: (certificate: _cert, rotated: true),
+          ),
+        ),
+      );
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.gpp_bad_outlined)).color,
+        scheme.error,
+      );
+    });
+
+    // ── ADR-6, said out loud ──────────────────────────────────────────────
+    //
+    // Trust is keyed by TLS origin, never by service, so the decision covers
+    // services this walk has not reached yet. The onboarding card said so and
+    // this content did not, which left the Settings dialog describing a
+    // narrower promise than the walk for the same decision. Unconditional on
+    // purpose: the shared clause below only lists what already shares the
+    // origin *today*, so on a first service it said nothing at all.
+    testWidgets('the body names host-pinning whether or not anything shares '
+        'the origin', (tester) async {
+      for (final shared in [
+        <ServiceKey>[],
+        [ServiceKey.sonarr],
+      ]) {
+        for (final rotated in [false, true]) {
+          await tester.pumpWidget(
+            _host(
+              CertTrustContent(
+                origin: 'https://nas.local:8443',
+                probe: (certificate: _cert, rotated: rotated),
+                sharedWith: shared,
+              ),
+            ),
+          );
+          expect(
+            find.textContaining('pinned to the host'),
+            findsOneWidget,
+            reason: 'rotated: $rotated, shared with: $shared',
+          );
+        }
+      }
     });
 
     testWidgets('names every other service the trust decision covers', (

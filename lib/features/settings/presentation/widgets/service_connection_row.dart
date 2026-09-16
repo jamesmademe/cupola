@@ -44,7 +44,7 @@ class ServiceConnectionRow extends ConsumerWidget {
         subtitle: presentation.label,
         accentColor: service.accent,
         semanticLabel: '${service.title}, ${presentation.label}',
-        semanticHint: 'sets up ${service.title}',
+        semanticHint: 'sets up the ${service.title} connection',
         onTap: onTap,
         trailing: Icon(Icons.add_rounded, color: colorScheme.onSurfaceVariant),
       );
@@ -97,7 +97,10 @@ class ServiceConnectionRow extends ConsumerWidget {
           ? '${service.title}, ${presentation.label}, $host, '
                 '$connections connections'
           : '${service.title}, ${presentation.label}, $host',
-      semanticHint: 'opens ${service.title} settings',
+      // "Connection settings", not "settings": the service's own settings are
+      // a different page, and the hint is the only thing a screen reader has
+      // to tell the two apart.
+      semanticHint: 'opens the ${service.title} connection settings',
       onTap: onTap,
     );
   }

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -12,33 +11,33 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
-import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/settings/data/donation_service.dart';
-import 'package:cupola/features/settings/data/service_connection_provider.dart';
-import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/regions.dart';
-import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/donation_sheet.dart';
-import 'package:cupola/features/settings/presentation/widgets/service_connection_row.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_summary_cards.dart';
 
-/// The settings index.
+export 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart'
+    show SettingsSectionLabel;
+
+/// `/settings`, which is two things at one address.
 ///
-/// Connections lead, and they lead *by exception*: with this many services, a
-/// list of the healthy ones is an inventory nobody reads, so the summary states
-/// the count and only failing services get a row of their own. Everything else
-/// on this screen is a preference.
+/// On a window wide enough for the rail it is the **summary pane**: six cards,
+/// one per area, each the door to its own page and each printing only what is
+/// wrong there. It is the only row on that rail that is a readout rather than a
+/// form, which is why it is called Overview.
+///
+/// Below that width there is no rail to be the index, so this route *is* the
+/// index: the same connections card at the top — the one thing that can be
+/// wrong rather than merely set — and under it the doors, grouped. One route,
+/// one URL, a deep link that resolves the same on both.
 class SettingsHomeScreen extends ConsumerWidget {
   const SettingsHomeScreen({super.key});
-
-  /// The most failing services to name on this screen before deferring to the
-  /// connections list. Past a handful the cause is usually one thing — the VPN
-  /// is down, the host is asleep — and a wall of red rows says it no better.
-  static const int _maxPromotedFailures = 3;
 
   static final Uri _githubUri = Uri.parse(
     'https://github.com/matthw-labs/seekarr',
@@ -51,27 +50,38 @@ class SettingsHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
+    final padding = EdgeInsets.fromLTRB(
+      AppSpacing.lg,
+      AppSpacing.md,
+      AppSpacing.lg,
+      FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+    );
 
     return AmbientScaffold(
+      // The room belongs to the tab, and the tab's accent is teal. Left unset,
+      // `AmbientBackground` falls back to `colorScheme.primary` — the brand
+      // indigo — so every settings pane glowed in Seerr's colour.
+      accent: NavTab.settings.accentColor,
       appBar: const GlassAppBar(title: Text('Settings')),
       body: SettingsMasterDetail(
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.md,
-            AppSpacing.lg,
-            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-          ),
-          children: [
-            const _ConnectionsBlock(),
-            const SizedBox(height: AppSpacing.xl),
-            ..._buildGeneralSection(context, ref, settings),
-            const SizedBox(height: AppSpacing.xl),
-            ..._buildAboutSection(context),
-            const SizedBox(height: AppSpacing.xl),
-            ..._buildDangerZoneSection(context, ref),
-          ],
-        ),
+        // Asked of the layout itself rather than re-derived here, so the pane
+        // and the rail can never disagree about which of the two is on screen.
+        child: SettingsMasterDetail.showsRail(context)
+            ? SettingsSummaryPane(padding: padding)
+            : ListView(
+                padding: padding,
+                children: [
+                  const ConnectionsSummaryCard(),
+                  const SizedBox(height: AppSpacing.xl),
+                  ..._buildGeneralSection(context, ref, settings),
+                  const SizedBox(height: AppSpacing.xl),
+                  ..._buildSecuritySection(context),
+                  const SizedBox(height: AppSpacing.xl),
+                  ..._buildAboutSection(context),
+                  const SizedBox(height: AppSpacing.xl),
+                  ..._buildDangerZoneSection(context, ref),
+                ],
+              ),
       ),
     );
   }
@@ -86,11 +96,15 @@ class SettingsHomeScreen extends ConsumerWidget {
       const SizedBox(height: AppSpacing.sm),
       SettingsGroupCard(
         children: [
+          // None of these five carries an accent. The accent slot on a settings
+          // row is the status slot — it is where the connections card puts the
+          // verdict — and Region wore `AppColors.success` while Send feedback
+          // wore the amber this system reserves for a fault. A preference has
+          // no state to report.
           SettingsCard.grouped(
             leading: const Icon(Icons.language_rounded),
             title: 'Region',
             subtitle: _formatRegionLabel(settings.region),
-            accentColor: AppColors.success,
             semanticHint: 'opens the region picker',
             onTap: () => context.push('/settings/region'),
           ),
@@ -127,6 +141,32 @@ class SettingsHomeScreen extends ConsumerWidget {
     ];
   }
 
+  /// Trusted certificates, always — not only when something is pinned.
+  ///
+  /// It used to be reachable from exactly one place: a row on the Connections
+  /// screen that appears only when the map is non-empty. The rail carries it on
+  /// a window, and the phone has no rail, so on a phone with nothing pinned yet
+  /// the pane did not exist at all. Trust is per origin and outlives the
+  /// services that created it (ADR-6), which is precisely why the door has to
+  /// stand even when the room is empty.
+  List<Widget> _buildSecuritySection(BuildContext context) {
+    return [
+      const SettingsSectionLabel('Security'),
+      const SizedBox(height: AppSpacing.sm),
+      SettingsGroupCard(
+        children: [
+          SettingsCard.grouped(
+            leading: const Icon(Icons.verified_user_outlined),
+            title: 'Trusted certificates',
+            subtitle: 'Pinned by address, not by service',
+            semanticHint: 'opens the trusted certificates list',
+            onTap: () => context.push('/settings/certificates'),
+          ),
+        ],
+      ),
+    ];
+  }
+
   List<Widget> _buildAboutSection(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -147,7 +187,6 @@ class SettingsHomeScreen extends ConsumerWidget {
             leading: const Icon(Icons.feedback_rounded),
             title: 'Send Feedback',
             subtitle: 'Email the developer',
-            accentColor: AppColors.warning,
             semanticHint: 'opens your email composer',
             onTap: () => _sendFeedback(context),
           ),
@@ -155,7 +194,6 @@ class SettingsHomeScreen extends ConsumerWidget {
             leading: const Icon(Icons.favorite_rounded),
             title: 'Support Development',
             subtitle: 'Buy me a coffee',
-            accentColor: AppColors.lidarr,
             onTap: () => _openDonation(context),
           ),
         ],
@@ -281,126 +319,5 @@ class SettingsHomeScreen extends ConsumerWidget {
     if (!launched && context.mounted) {
       SnackBarHelper.info(context, failureMessage);
     }
-  }
-}
-
-/// The connections summary and, under it, the services that need attention.
-class _ConnectionsBlock extends ConsumerWidget {
-  const _ConnectionsBlock();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final settings = ref.watch(currentSettingsProvider);
-    final configured = ServiceKey.values
-        .where(settings.isServiceConfigured)
-        .toList(growable: false);
-
-    var checking = 0;
-    final failing = <ServiceKey>[];
-    for (final service in configured) {
-      final async = ref.watch(serviceDiagnosisProvider(service));
-      if (async.isLoading) {
-        checking++;
-        continue;
-      }
-      final diagnosis = async.asData?.value;
-      final presentation = describeConnection(
-        service,
-        status: diagnosis?.status ?? ServiceConnectionStatus.disconnected,
-        reason: diagnosis?.reason,
-      );
-      if (presentation.needsAttention) failing.add(service);
-    }
-
-    final summary = _summarize(
-      total: configured.length,
-      checking: checking,
-      failing: failing.length,
-    );
-    final tone = failing.isNotEmpty
-        ? StatusTone.error
-        : (configured.isEmpty ? StatusTone.neutral : StatusTone.success);
-    final promoted = failing.take(SettingsHomeScreen._maxPromotedFailures);
-    final remaining = failing.length - promoted.length;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SettingsSectionLabel('Connections'),
-        const SizedBox(height: AppSpacing.sm),
-        SettingsGroupCard(
-          children: [
-            SettingsCard.grouped(
-              leading: const Icon(Icons.hub_rounded),
-              // Not "Services": that is the name of another tab, and the two
-              // being confusable is the thing this screen is untangling.
-              title: 'All connections',
-              subtitle: summary,
-              // The tile carries the verdict: green when the stack is whole,
-              // red when it is not. It is the one thing worth seeing before
-              // reading anything.
-              accentColor: statusToneColor(colorScheme, tone),
-              semanticHint: 'opens the connections list',
-              onTap: () => context.push('/settings/connections'),
-            ),
-            for (final service in promoted)
-              ServiceConnectionRow(
-                service: service,
-                onTap: () =>
-                    context.push('/settings/service/${service.routeParam}'),
-              ),
-            if (remaining > 0)
-              SettingsCard.grouped(
-                leading: const Icon(Icons.more_horiz_rounded),
-                title: remaining == 1
-                    ? '1 more service needs attention'
-                    : '$remaining more services need attention',
-                accentColor: colorScheme.error,
-                semanticHint: 'opens the connections list',
-                onTap: () => context.push('/settings/connections'),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  String _summarize({
-    required int total,
-    required int checking,
-    required int failing,
-  }) {
-    if (total == 0) return 'No services set up yet';
-    if (failing > 0) return '$failing of $total need attention';
-    if (checking > 0) return 'Checking $checking of $total…';
-    return total == 1 ? '1 service connected' : 'All $total connected';
-  }
-}
-
-/// The overline above a group of settings rows.
-class SettingsSectionLabel extends StatelessWidget {
-  const SettingsSectionLabel(this.title, {super.key});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Semantics(
-      container: true,
-      header: true,
-      // The un-uppercased title: '.toUpperCase()' is typography, and VoiceOver
-      // spells out all-caps tokens it does not recognise.
-      label: title,
-      excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-        child: Text(
-          title.toUpperCase(),
-          style: AppTheme.eyebrow(colorScheme.onSurfaceVariant),
-        ),
-      ),
-    );
   }
 }

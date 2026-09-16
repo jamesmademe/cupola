@@ -6,6 +6,7 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 
@@ -24,6 +25,10 @@ class SettingsHintsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return AmbientScaffold(
+      // The room belongs to the tab, and the tab's accent is teal. Left unset,
+      // `AmbientBackground` falls back to `colorScheme.primary` — the brand
+      // indigo — so every settings pane glowed in Seerr's colour.
+      accent: NavTab.settings.accentColor,
       appBar: const GlassAppBar(title: Text('Hints')),
       body: SettingsMasterDetail(
         child: ListView(

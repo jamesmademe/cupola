@@ -552,7 +552,13 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       // The room takes the colour of the service being worked on.
       accent: service.accent,
       appBar: GlassAppBar(
-        title: Text('${service.title} Settings'),
+        // The service's name alone. It read "Radarr Settings", which is the
+        // name of a different page: *Service settings* is Radarr's own
+        // configuration, read and written through Radarr's API, while this form
+        // is how Cupola reaches it — address, key, certificate, connection
+        // name. Two pages one word apart is how a user ends up on the wrong
+        // one; the breadcrumb above already says Settings › Connections.
+        title: Text(service.title),
         actions: [_buildSaveAction()],
       ),
       body: Form(

@@ -8,14 +8,29 @@ import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/regions.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_choice_row.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 
-const _regionScreenDescription =
+/// What the region **reaches**.
+const _regionReachesDescription =
     'Release dates, content ratings and watch providers are all reported for '
     'the region you pick here.';
+
+/// What it does **not** reach — the half that was missing, and the half that
+/// matters.
+///
+/// Only one of the two looks like a filter and neither is: a region that
+/// changes the dates on a title looks exactly like a region that changes which
+/// titles are listed, so a user who sets this and then sees the same Discover
+/// rows concludes the setting is broken. It is not — region is not a parameter
+/// on those calls at all.
+const _regionDoesNotReachDescription =
+    'It does not reach which titles Discover returns: region is not a '
+    'parameter on those calls, so the chip on Discover is a label with a '
+    'destination, never a filter.';
 
 class SettingsRegionScreen extends ConsumerStatefulWidget {
   const SettingsRegionScreen({super.key});
@@ -48,6 +63,10 @@ class _SettingsRegionScreenState extends ConsumerState<SettingsRegionScreen> {
         .toList(growable: false);
 
     return AmbientScaffold(
+      // The room belongs to the tab, and the tab's accent is teal. Left unset,
+      // `AmbientBackground` falls back to `colorScheme.primary` — the brand
+      // indigo — so every settings pane glowed in Seerr's colour.
+      accent: NavTab.settings.accentColor,
       appBar: const GlassAppBar(title: Text('Region')),
       body: SettingsMasterDetail(
         child: ListView(
@@ -59,7 +78,14 @@ class _SettingsRegionScreenState extends ConsumerState<SettingsRegionScreen> {
           ),
           children: [
             Text(
-              _regionScreenDescription,
+              _regionReachesDescription,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              _regionDoesNotReachDescription,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

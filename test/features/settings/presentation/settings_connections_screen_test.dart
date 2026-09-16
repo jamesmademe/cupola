@@ -99,7 +99,9 @@ void main() {
         containsSemantics(
           isButton: true,
           hasTapAction: true,
-          hint: 'sets up Lidarr',
+          // "the Lidarr connection", not "Lidarr": what this row sets up is
+          // how Cupola reaches Lidarr, not Lidarr's own configuration.
+          hint: 'sets up the Lidarr connection',
         ),
       );
     });
@@ -119,7 +121,10 @@ void main() {
         containsSemantics(
           isButton: true,
           hasTapAction: true,
-          hint: 'opens Radarr settings',
+          // Renamed with the pane: "Radarr settings" is now the name of the
+          // service's own configuration page, so the row that opens the form
+          // has to say which of the two it opens.
+          hint: 'opens the Radarr connection settings',
         ),
       );
     });

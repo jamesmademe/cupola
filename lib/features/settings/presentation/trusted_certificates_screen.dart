@@ -11,6 +11,7 @@ import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
@@ -31,6 +32,10 @@ class TrustedCertificatesScreen extends ConsumerWidget {
     final origins = settings.trustedCertificates.keys.toList()..sort();
 
     return AmbientScaffold(
+      // The room belongs to the tab, and the tab's accent is teal. Left unset,
+      // `AmbientBackground` falls back to `colorScheme.primary` — the brand
+      // indigo — so every settings pane glowed in Seerr's colour.
+      accent: NavTab.settings.accentColor,
       appBar: const GlassAppBar(title: Text('Trusted certificates')),
       body: SettingsMasterDetail(
         child: origins.isEmpty
@@ -43,25 +48,69 @@ class TrustedCertificatesScreen extends ConsumerWidget {
                     'here, and can be revoked from here even after every '
                     'service that used it is gone.',
               )
-            : ListView.separated(
+            : ListView(
                 padding: EdgeInsets.fromLTRB(
                   AppSpacing.lg,
                   AppSpacing.sm,
                   AppSpacing.lg,
                   FloatingNavBarMetrics.getScrollViewBottomPadding(context),
                 ),
-                itemCount: origins.length,
-                separatorBuilder: (context, index) =>
+                children: [
+                  // The doctrine was written down only on the empty state,
+                  // which is the one screen where nobody needs it. A user
+                  // arrives here with three pins and one question — why is this
+                  // list of *addresses* rather than of services — and the
+                  // answer is ADR-6.
+                  _PinnedOriginsHeader(count: origins.length),
+                  const SizedBox(height: AppSpacing.lg),
+                  for (final origin in origins) ...[
+                    _TrustedOriginCard(
+                      origin: origin,
+                      fingerprint: settings.trustedCertificates[origin]!,
+                      services: settings.servicesSharingOriginOf(origin),
+                    ),
                     const SizedBox(height: AppSpacing.md),
-                itemBuilder: (context, index) {
-                  final origin = origins[index];
-                  return _TrustedOriginCard(
-                    origin: origin,
-                    fingerprint: settings.trustedCertificates[origin]!,
-                    services: settings.servicesSharingOriginOf(origin),
-                  );
-                },
+                  ],
+                ],
               ),
+      ),
+    );
+  }
+}
+
+/// The count, and why the list counts origins rather than services.
+class _PinnedOriginsHeader extends StatelessWidget {
+  const _PinnedOriginsHeader({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      container: true,
+      header: true,
+      label: count == 1 ? '1 pinned origin' : '$count pinned origins',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ExcludeSemantics(
+            child: Text(
+              count == 1 ? '1 pinned origin' : '$count pinned origins',
+              style: AppTheme.panelHeader(theme.brightness),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'A self-signed certificate you choose to trust — for a host, not '
+            'for one service. It is pinned by TLS origin (ADR-6), so every '
+            'service reached through that origin shares it, and it can be '
+            'revoked from here even after every service that used it is gone.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }

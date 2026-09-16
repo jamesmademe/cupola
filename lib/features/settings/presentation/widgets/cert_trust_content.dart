@@ -67,14 +67,22 @@ class CertTrustContent extends StatelessWidget {
           children: [
             Icon(
               rotated ? Icons.gpp_bad_outlined : Icons.gpp_maybe_outlined,
-              color: scheme.error,
+              // The shield was red in both states, which spent the alarm on the
+              // routine case: a server presenting its own certificate is the
+              // normal condition on a home install, and if the first trust
+              // looks as dangerous as a *changed* fingerprint then the one that
+              // matters stops standing out. Red is the rotation's alone.
+              color: rotated ? scheme.error : scheme.onSurfaceVariant,
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
+                // "Self-signed", not "Untrusted": untrusted names the device's
+                // verdict, self-signed names what the server actually did — and
+                // it is the word the user recognises from having set it up.
                 rotated
                     ? 'This certificate has changed'
-                    : 'Untrusted certificate',
+                    : 'Self-signed certificate',
                 style: theme.textTheme.titleMedium!
                     .weight(FontWeight.w700)
                     .copyWith(color: rotated ? scheme.error : null),
@@ -122,6 +130,18 @@ class CertTrustContent extends StatelessWidget {
   }
 
   String _body() {
+    // What ADR-6 actually stores, said in words. The trust map is keyed by TLS
+    // origin, never by service, so the decision made here reaches every service
+    // typed at that host — including ones this walk has not got to yet. It is
+    // unconditional and comes *before* the shared clause: the clause only lists
+    // the services that already share the origin today, so without this
+    // sentence the scope of the decision was invisible whenever the user was
+    // configuring their first service on that box. The onboarding card said it
+    // and this content did not, which is how the dialog in Settings ended up
+    // describing a narrower promise than the walk.
+    const hostClause =
+        ' The fingerprint is pinned to the host, so every service you reach on '
+        'that origin will trust the same one.';
     final sharedClause = sharedWith.isEmpty
         ? ''
         : ' This address is shared with ${sharedWith.map((s) => s.title).join(', ')} — trusting or forgetting it applies to all of them.';
@@ -131,12 +151,12 @@ class CertTrustContent extends StatelessWidget {
           'trusted before. That can happen after a legitimate renewal — or it '
           'can mean something between you and the server is intercepting the '
           'connection. Only continue if you can confirm this exact '
-          'fingerprint with the server directly.$sharedClause';
+          'fingerprint with the server directly.$hostClause$sharedClause';
     }
     return 'This address presented a certificate that is not trusted by your '
         'device. That is normal for a self-signed certificate on a home '
         'install, but it also means the connection cannot be authenticated — '
-        'only trust it if you recognise this server.$sharedClause';
+        'only trust it if you recognise this server.$hostClause$sharedClause';
   }
 
   /// Uppercased, colon-grouped hex, matching [ServerCertificate.displayFingerprint]

@@ -11,6 +11,7 @@ import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/settings_home_screen.dart';
 
@@ -26,16 +27,27 @@ void main() {
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('CONNECTIONS'), findsOneWidget);
       expect(find.text('GENERAL'), findsOneWidget);
+      // Security is new, and it is always there: trusted certificates used to
+      // be reachable only from a Connections row that appears when something
+      // is already pinned, which on a phone made the pane unreachable until it
+      // had content.
+      expect(find.text('SECURITY'), findsOneWidget);
       expect(find.text('ABOUT'), findsOneWidget);
-      expect(find.text('Cupola v1.0.0'), findsNothing);
     });
 
-    testWidgets('the connections summary says when nothing is set up', (
+    testWidgets('the connections summary counts against the registry', (
       tester,
     ) async {
+      // It used to say "No services set up yet", which answers "is anything
+      // set up" and not "how much of the stack is". The denominator is every
+      // service Cupola can talk to — the same number the count chip on the
+      // connections list prints, read from the registry rather than typed.
       await _pumpSettingsHome(tester);
 
-      expect(find.text('No services set up yet'), findsOneWidget);
+      expect(
+        find.text('0 of ${ServiceKey.values.length} set up'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('the connections summary counts what is set up', (
@@ -50,7 +62,13 @@ void main() {
         diagnosis: const ServiceDiagnosis.connected(),
       );
 
-      expect(find.text('1 service connected'), findsOneWidget);
+      // "answering" is `describeConnection`'s own word for a healthy
+      // connection; the summary must not coin a second one ("connected",
+      // "online") for the same state.
+      expect(
+        find.text('1 of ${ServiceKey.values.length} set up · 1 answering'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('healthy services stay off this screen', (tester) async {
@@ -67,7 +85,10 @@ void main() {
         diagnosis: const ServiceDiagnosis.connected(),
       );
 
-      expect(find.text('All 2 connected'), findsOneWidget);
+      expect(
+        find.text('2 of ${ServiceKey.values.length} set up · 2 answering'),
+        findsOneWidget,
+      );
       expect(find.text('Radarr'), findsNothing);
       expect(find.text('Sonarr'), findsNothing);
     });
@@ -82,8 +103,14 @@ void main() {
         diagnosis: ServiceDiagnosis.failed(_UnauthorizedFailure()),
       );
 
-      expect(find.text('1 of 1 need attention'), findsOneWidget);
-      expect(find.text('API key rejected · radarr.local:7878'), findsOneWidget);
+      expect(
+        find.text('1 of ${ServiceKey.values.length} set up · 0 answering'),
+        findsOneWidget,
+      );
+      // The failing services are grouped by the state they are in and named,
+      // and the state is spelled exactly as `describeConnection` spells it.
+      expect(find.text('Radarr'), findsOneWidget);
+      expect(find.text('API key rejected'), findsOneWidget);
     });
 
     testWidgets('tapping a promoted failure opens that service', (
@@ -113,7 +140,7 @@ void main() {
     testWidgets('the summary row opens the connections list', (tester) async {
       await _pumpSettingsHome(tester);
 
-      await tester.tap(find.text('All connections'));
+      await tester.tap(find.text('0 of ${ServiceKey.values.length} set up'));
       await tester.pumpAndSettle();
 
       expect(find.text('ConnectionsPage'), findsOneWidget);
@@ -138,15 +165,18 @@ void main() {
           ),
         );
 
+        // The summary groups by state, so the row names the services and the
+        // state and leaves the host to the connections list — but the state
+        // itself is still spoken, because on screen it is carried by a glyph
+        // and a tint and nothing else.
         expect(
-          find.semantics.byLabel('Radarr, Unreachable, radarr.local:7878'),
+          find.semantics.byLabel('Radarr, Unreachable'),
           containsSemantics(
             isButton: true,
             hasTapAction: true,
-            hint: 'opens Radarr settings',
+            hint: 'opens the Radarr connection settings',
           ),
         );
-        // The host used to be its own focus stop.
         expect(find.semantics.byLabel('radarr.local:7878'), findsNothing);
       });
 
@@ -184,8 +214,8 @@ void main() {
       await _pumpSettingsHome(tester);
 
       expect(find.byType(SettingsCard), findsAtLeastNWidgets(6));
-      // Connections, General, About, Danger Zone.
-      expect(find.byType(SettingsGroupCard), findsNWidgets(4));
+      // Connections, General, Security, About, Danger Zone.
+      expect(find.byType(SettingsGroupCard), findsNWidgets(5));
 
       await tester.scrollUntilVisible(find.text('Send Feedback'), 300);
       await tester.pumpAndSettle();
