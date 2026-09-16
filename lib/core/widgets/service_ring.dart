@@ -614,7 +614,15 @@ class _ServiceRingPainter extends CustomPainter {
 }
 
 /// The punchline, and the reason it is here rather than inlined in onboarding:
-/// `/services`' empty state shows the same claim under the same ring.
+/// the claim is meant to be *shared* — the same two lines in the same two inks
+/// carry the dashboard's empty state, so the door prints a claim rather than
+/// owning one.
+///
+/// It used to assert that the empty state already did; it does not. That screen
+/// still prints a headline of its own, and swapping it belongs to the dashboard
+/// rather than here — a doc that describes an intention as a fact is worse than
+/// no doc, because it is the one place a reader would check before changing
+/// either side.
 ///
 /// Two accents, and they are the mark's own two — the ribbon "S" runs cyan to
 /// blue, so the sentence takes the blue end for the product's own name and the

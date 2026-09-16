@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/platform/local_network_access.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
@@ -30,11 +31,12 @@ void main() {
 
       expect(_semantics('A Cupola over your lab.'), findsOneWidget);
       await _tap(tester, 'Set up my stack');
-      // The headline carries an accented word now (`Bring` in the brand
-      // indigo), so it is a `Text.rich`/`TextSpan` tree rather than a single
-      // `Text` — matched by its rendered content, not by `find.text`.
-      expect(find.textContaining('Bring'), findsOneWidget);
-      expect(find.textContaining('your stack into view.'), findsOneWidget);
+      // Was the accented "Bring your stack into view.". The pick beat's
+      // headline is plain type now: this beat already carries seventeen
+      // accents, one per chip and one per lit node, and a headline in an
+      // eighteenth taught the eye to read colour as decoration. The accented
+      // headline stays where it means something — the door and the close.
+      expect(find.text('Pick your services'), findsOneWidget);
 
       await _tap(tester, 'Continue');
 
@@ -61,16 +63,24 @@ void main() {
 
       await _tap(tester, 'Continue with ${ServiceKey.values.length}');
 
-      // The walk starts at the first service in ring order, and the eyebrow is
-      // the flow's landmark now that there is no fixed "step N of 3".
+      // The walk starts at the first service in ring order. The eyebrow used to
+      // read "RADARR · 1 OF 17" and now reads the compound form decision 47
+      // leaves as the flow's only counter: the beat *and* the service, because
+      // the ring already says how far in and cannot say which one. The service
+      // name moved to the glyph tile beside it — and to the spoken label, since
+      // in the compact register neither the tile nor the headline is on screen.
       final first = ServiceRing.order.first;
       expect(
-        find.text(
-          '${first.title} · 1 of ${ServiceKey.values.length}'.toUpperCase(),
+        findLine('STEP 3 OF 4 · SERVICE 1 OF ${ServiceKey.values.length}'),
+        findsOneWidget,
+      );
+      expect(
+        _spokenLine(
+          '${first.title}, step 3 of 4, service 1 of ${ServiceKey.values.length}',
         ),
         findsOneWidget,
       );
-      expect(find.text('Where does ${first.title} live?'), findsOneWidget);
+      expect(findLine('Where does ${first.title} live?'), findsOneWidget);
     });
 
     testWidgets('one service: fill it in, test, and finish', (tester) async {
@@ -79,7 +89,7 @@ void main() {
       await _pick(tester, 'Sonarr');
       await _tap(tester, 'Continue with 1');
 
-      expect(findLine('SONARR · 1 OF 1'), findsOneWidget);
+      expect(findLine('STEP 3 OF 4 · SERVICE 1 OF 1'), findsOneWidget);
       await _fill(tester, url: 'sonarr.lan:8989', key: 'abcdef1234567890');
 
       // Test, not Next: the primary action only becomes an advance once the
@@ -101,10 +111,15 @@ void main() {
       await _pick(tester, 'Radarr');
       await _tap(tester, 'Continue with 2');
 
-      // Radarr comes first in ring order, so it is the one on screen.
-      expect(find.text('RADARR · 1 OF 2'), findsOneWidget);
+      // Radarr comes first in ring order, so it is the one on screen. Asserted
+      // through the step's own question rather than the eyebrow: since decision
+      // 47 the eyebrow counts beats and services and names neither, so it can
+      // no longer tell these two steps apart.
+      expect(findLine('Where does Radarr live?'), findsOneWidget);
+      expect(findLine('STEP 3 OF 4 · SERVICE 1 OF 2'), findsOneWidget);
       await _tap(tester, 'Skip Radarr');
-      expect(find.text('SONARR · 2 OF 2'), findsOneWidget);
+      expect(findLine('Where does Sonarr live?'), findsOneWidget);
+      expect(findLine('STEP 3 OF 4 · SERVICE 2 OF 2'), findsOneWidget);
 
       await _tap(tester, 'Skip Sonarr');
       // Both skipped, so the close has nothing to report.
@@ -314,7 +329,7 @@ void main() {
 
       // Sonarr inherits the host and gets its own default port, so the second
       // service is a tap plus a pasted key rather than a retyped address.
-      expect(find.text('SONARR · 2 OF 2'), findsOneWidget);
+      expect(findLine('Where does Sonarr live?'), findsOneWidget);
       final field = tester.widget<TextField>(find.byType(TextField).first);
       expect(field.controller!.text, 'https://nas.local:8989');
     });
@@ -363,7 +378,7 @@ void main() {
         same(ringElement),
         reason: 'the same element, so its animation state is continuous',
       );
-      expect(findLine('SONARR · 1 OF 1'), findsOneWidget);
+      expect(findLine('STEP 3 OF 4 · SERVICE 1 OF 1'), findsOneWidget);
 
       // Bounded pumps only: the sweep repeats forever by design, so settling is
       // not something this screen ever does with motion on.
@@ -517,6 +532,73 @@ void main() {
       expect(saved.trustedCertificates, isEmpty);
     });
 
+    // ── Reduce Motion: the animator is removed, not shortened ─────────────
+    //
+    // onb5's rule for this flow is that the whole of it must be completable
+    // without one tween. The page slide was the biggest hole in it: every
+    // Continue, Skip, Back and Next went through `animateToPage`.
+    testWidgets('a beat arrives rather than sliding in', (tester) async {
+      await _pumpOnboarding(tester);
+
+      await tester.tap(find.text('Set up my stack'));
+      // One frame, deliberately not a settle: with the animator gone the pager
+      // is already on the next beat by the time the frame is built.
+      await tester.pump();
+
+      final pager = tester.widget<PageView>(find.byType(PageView));
+      expect(pager.controller!.page, 1);
+      expect(find.text('Pick your services'), findsOneWidget);
+    });
+
+    // ── The room is the third instrument ──────────────────────────────────
+    //
+    // `AmbientBackground` was built with no accent at all, so the glow stayed
+    // brand indigo for the whole flow while the artboards tint it per service.
+    // The tween that carries it between two services is removed under Reduce
+    // Motion, which is why this case can read the settled value.
+    testWidgets('the room takes the accent of the service being set up', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester);
+      // The theme's own primary, read from the tree rather than named: the rule
+      // is "the brand's glow where no service owns the beat", not one colour.
+      final brand = Theme.of(
+        tester.element(find.byType(OnboardingScreen)),
+      ).colorScheme.primary;
+
+      Color? roomAccent() => tester
+          .widget<AmbientBackground>(find.byType(AmbientBackground))
+          .accent;
+
+      // The beats either side of the walk are the brand's own glow.
+      expect(roomAccent(), brand);
+
+      await _tap(tester, 'Set up my stack');
+      await _pick(tester, 'Sonarr');
+      await _tap(tester, 'Continue with 1');
+      expect(roomAccent(), ServiceKey.sonarr.accent);
+
+      await _tap(tester, 'Skip Sonarr');
+      expect(roomAccent(), brand);
+    });
+
+    testWidgets('the step says what it wants before anything is pressed', (
+      tester,
+    ) async {
+      // The instruction used to exist only as the *outcome* of pressing Test on
+      // an empty form — the answer to a question the user had already had to
+      // guess. It is the step's standing subtitle now.
+      await _pumpOnboarding(tester);
+      await _tap(tester, 'Set up my stack');
+      await _pick(tester, 'Sonarr');
+      await _tap(tester, 'Continue with 1');
+
+      expect(
+        find.text('Enter the address and the api key, then test.'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('the ring speaks its state rather than only drawing it', (
       tester,
     ) async {
@@ -626,9 +708,16 @@ void main() {
 
       // The orientation survives the register change — which service, how far in
       // — and says it exactly once, because a duplicated eyebrow is two steps to
-      // a screen reader.
-      expect(findLine('SONARR · 1 OF 1'), findsOneWidget);
-      final label = tester.getRect(findLine('SONARR · 1 OF 1'));
+      // a screen reader. It is the compound counter now (decision 47), so the
+      // *spoken* form is what still carries the service: in this register the
+      // glyph tile and the headline are both gone, and a counter alone would
+      // leave a screen-reader user without the subject.
+      expect(findLine('STEP 3 OF 4 · SERVICE 1 OF 1'), findsOneWidget);
+      expect(
+        _spokenLine('Sonarr, step 3 of 4, service 1 of 1'),
+        findsOneWidget,
+      );
+      final label = tester.getRect(findLine('STEP 3 OF 4 · SERVICE 1 OF 1'));
       final ring = tester.getRect(find.byType(ServiceRing));
       expect(
         label.left,
@@ -761,7 +850,7 @@ void main() {
       // Radarr comes first in ring order.
       await _tap(tester, 'Skip Radarr');
 
-      expect(findLine('SONARR · 2 OF 2'), findsOneWidget);
+      expect(findLine('STEP 3 OF 4 · SERVICE 2 OF 2'), findsOneWidget);
       expect(tester.testTextInput.isVisible, isFalse);
     });
 
@@ -784,6 +873,18 @@ void main() {
 }
 
 Finder _button(String label) => find.widgetWithText(FilledButton, label);
+
+/// Matches a line by its *spoken* value rather than its painted one.
+///
+/// A rolled line carries the two separately — an eyebrow is uppercased for the
+/// eye and expanded for the ear — and where it settles depends on the renderer:
+/// `ReelText.semanticsLabel` while it rolls, `Text.semanticsLabel` once Reduce
+/// Motion has replaced the roll with plain text. `findLine` reads the first and
+/// this reads the second, which is the one every test in this file that pumps
+/// with motion off actually gets.
+Finder _spokenLine(String label) => find.byWidgetPredicate(
+  (widget) => widget is Text && widget.semanticsLabel == label,
+);
 
 /// Matches a [Semantics] widget by its declared label.
 ///

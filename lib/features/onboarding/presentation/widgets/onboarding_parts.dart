@@ -12,6 +12,8 @@ import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/reel_command_button.dart';
 import 'package:cupola/core/widgets/reel_line.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/onboarding/presentation/widgets/onboarding_glyph_row.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Screen padding for every beat. Wider than the app's 16dp because a beat is a
@@ -27,13 +29,39 @@ const onboardingPadding = EdgeInsets.fromLTRB(
 /// control drift too far apart to read as a pair.
 const onboardingMaxWidth = 560.0;
 
+/// The shape at which a frame stops stacking and starts putting two things
+/// side by side.
+///
+/// Decision 46, in one number: **the compact frame is not a narrow one**. The
+/// gate is the window's aspect, not its width. 720x450 is 1.6:1 and gets the
+/// two-column arrangement exactly as 1440x900 does — the drawn compact frame
+/// puts the certificate beside the form at 308pt columns — while the phone, at
+/// 390x844, is the only portrait frame in the flow and the only one that stacks
+/// and scrolls.
+///
+/// 1.2 rather than a bare `width > height`: the three drawn frames measure 1.6,
+/// 1.6 and 0.46, so anything between them separates the flow's two arrangements,
+/// and a window dragged to nearly square has no room for a second column
+/// whatever its orientation says.
+///
+/// It is a constant rather than an inline number for the reason the Reflow sheet
+/// gives — every threshold in this app is named — and it belongs beside
+/// `AppBreakpoints.touchRail` and friends rather than here; it is in this file
+/// only because `app_breakpoints.dart` is not this unit's to edit.
+const onboardingLandscapeAspect = 1.2;
+
 /// Whether this window puts the ring beside the step instead of above it.
 ///
-/// The same test the screen makes — platform first, then width — kept here so
-/// the beats can ask it without importing the screen.
-bool onboardingSideBySide(BuildContext context) =>
-    AppBreakpoints.isDesktopShell &&
-    MediaQuery.sizeOf(context).width >= AppBreakpoints.desktopCompact;
+/// Platform first, then shape. The width test this replaced asked for
+/// `AppBreakpoints.desktopCompact` (1100), which is why the four drawn compact
+/// onboarding frames were code the app could not reach: at 720 the flow kept
+/// the phone's stacked arrangement in a window shaped nothing like a phone.
+bool onboardingSideBySide(BuildContext context) {
+  if (!AppBreakpoints.isDesktopShell) return false;
+  final size = MediaQuery.sizeOf(context);
+  if (size.height <= 0) return false;
+  return size.width / size.height >= onboardingLandscapeAspect;
+}
 
 /// The well on a desktop window, where the ring sits *beside* the step.
 ///
@@ -48,6 +76,14 @@ const onboardingDesktopMaxWidth = 1040.0;
 /// leaves; in a wide window there is nothing to negotiate with, so it is a
 /// constant and the instrument stops resizing under the user mid-flow.
 const onboardingDesktopRingDiameter = 396.0;
+
+/// The same instrument in a compact window, where the whole frame is 450pt tall.
+///
+/// 230, which is what the compact board draws, rather than the 286 the full
+/// constant resolves to once the column's own reservation is taken off: a ring
+/// that fills nine tenths of a short window is not the subject of the beat, it
+/// is the beat.
+const onboardingCompactRingDiameter = 230.0;
 
 /// Whether the keyboard is currently taking screen height, published for the
 /// whole flow.
@@ -136,92 +172,113 @@ class OnboardingInstrument extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Reduce Motion removes the animator rather than shortening it, which for
+    // this slot is the difference between a ring that jumps register and one
+    // that visibly scales and cross-fades every time the keyboard opens — the
+    // most-repeated tween in the whole flow and the one a motion-sensitive user
+    // meets on every step.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return _slot(context, collapsed ? 0 : 1);
+    }
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(end: collapsed ? 0 : 1),
       duration: AppAnimation.durationMd,
       curve: AppAnimation.standardCurve,
-      // Gone means gone: at zero the slot contributes no height, no semantics
-      // and no paint, so the form's Expanded gets the full remainder.
-      builder: (context, t, _) => t == 0
-          ? const SizedBox.shrink()
-          : ClipRect(
-              child: Align(
-                alignment: Alignment.topCenter,
-                heightFactor: t,
-                child: Opacity(
-                  // Fades out ahead of the collapse so the ring reads as
-                  // withdrawing rather than as being cropped by the fold.
-                  opacity: Curves.easeOut.transform(t),
-                  child: Transform.scale(
-                    // Contracts toward its own centre while the slot closes;
-                    // scale alone would leave the gap behind, heightFactor alone
-                    // would guillotine it.
-                    scale: 0.72 + 0.28 * t,
-                    child: _register(context),
-                  ),
-                ),
-              ),
-            ),
+      builder: (context, t, _) => _slot(context, t),
     );
   }
 
-  Widget _register(BuildContext context) => TweenAnimationBuilder<double>(
-    tween: Tween<double>(end: compact ? 1 : 0),
-    duration: AppAnimation.durationMd,
-    curve: AppAnimation.standardCurve,
-    builder: (context, c, _) => Padding(
-      // The full register's gutters are for a hero with a beat under it. The
-      // compact one is a header strip, and every point it keeps is a point the
-      // focused field does not get.
-      padding: EdgeInsets.only(
-        top: _lerp(AppSpacing.lg, AppSpacing.sm, c),
-        bottom: _lerp(AppSpacing.md, AppSpacing.sm, c),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          child,
-          // Built only while it contributes something. A zero-width, fully
-          // transparent slot still occupies the tree, and this label is the same
-          // sentence [OnboardingWalkSubject] is showing in the full register —
-          // so leaving it mounted put the step's eyebrow in the semantics tree
-          // twice, which a screen reader reads out as two steps.
-          if (label case final label? when c > 0)
-            // Loose by default, so the moment it goes the ring is centred by the
-            // row exactly as it was before the label existed.
-            Flexible(
-              child: ClipRect(
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  // Widens out from behind the ring rather than fading in
-                  // place — the label is arriving from where it used to be.
-                  widthFactor: c,
-                  child: Opacity(
-                    // Trails the width so the two eyebrows — this one and the
-                    // subject line's, which is collapsing on the same clock —
-                    // are never both legible at once.
-                    opacity: Curves.easeIn.transform(
-                      ((c - 0.4) / 0.6).clamp(0.0, 1.0),
-                    ),
-                    child: ExcludeSemantics(
-                      // Mid-flight the subject line is still on its way out, so
-                      // for those few frames neither speaks. One of the two is
-                      // always the settled answer.
-                      excluding: c < 1,
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.only(
-                          start: AppSpacing.lg,
-                          end: AppSpacing.md,
-                        ),
-                        child: label,
+  /// The slot at [t], where 0 is fully given back and 1 is fully open.
+  Widget _slot(BuildContext context, double t) {
+    // Gone means gone: at zero the slot contributes no height, no semantics
+    // and no paint, so the form's Expanded gets the full remainder.
+    return t == 0
+        ? const SizedBox.shrink()
+        : ClipRect(
+            child: Align(
+              alignment: Alignment.topCenter,
+              heightFactor: t,
+              child: Opacity(
+                // Fades out ahead of the collapse so the ring reads as
+                // withdrawing rather than as being cropped by the fold.
+                opacity: Curves.easeOut.transform(t),
+                child: Transform.scale(
+                  // Contracts toward its own centre while the slot closes;
+                  // scale alone would leave the gap behind, heightFactor alone
+                  // would guillotine it.
+                  scale: 0.72 + 0.28 * t,
+                  child: _register(context),
+                ),
+              ),
+            ),
+          );
+  }
+
+  Widget _register(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return _row(context, compact ? 1 : 0);
+    }
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: compact ? 1 : 0),
+      duration: AppAnimation.durationMd,
+      curve: AppAnimation.standardCurve,
+      builder: (context, c, _) => _row(context, c),
+    );
+  }
+
+  /// The header row at [c], where 0 is the full register and 1 the compact one.
+  Widget _row(BuildContext context, double c) => Padding(
+    // The full register's gutters are for a hero with a beat under it. The
+    // compact one is a header strip, and every point it keeps is a point the
+    // focused field does not get.
+    padding: EdgeInsets.only(
+      top: _lerp(AppSpacing.lg, AppSpacing.sm, c),
+      bottom: _lerp(AppSpacing.md, AppSpacing.sm, c),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        child,
+        // Built only while it contributes something. A zero-width, fully
+        // transparent slot still occupies the tree, and this label is the same
+        // sentence [OnboardingWalkSubject] is showing in the full register —
+        // so leaving it mounted put the step's eyebrow in the semantics tree
+        // twice, which a screen reader reads out as two steps.
+        if (label case final label? when c > 0)
+          // Loose by default, so the moment it goes the ring is centred by the
+          // row exactly as it was before the label existed.
+          Flexible(
+            child: ClipRect(
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                // Widens out from behind the ring rather than fading in
+                // place — the label is arriving from where it used to be.
+                widthFactor: c,
+                child: Opacity(
+                  // Trails the width so the two eyebrows — this one and the
+                  // subject line's, which is collapsing on the same clock —
+                  // are never both legible at once.
+                  opacity: Curves.easeIn.transform(
+                    ((c - 0.4) / 0.6).clamp(0.0, 1.0),
+                  ),
+                  child: ExcludeSemantics(
+                    // Mid-flight the subject line is still on its way out, so
+                    // for those few frames neither speaks. One of the two is
+                    // always the settled answer.
+                    excluding: c < 1,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: AppSpacing.lg,
+                        end: AppSpacing.md,
                       ),
+                      child: label,
                     ),
                   ),
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     ),
   );
 
@@ -245,28 +302,38 @@ class OnboardingCollapsible extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-    tween: Tween<double>(end: collapsed ? 0 : 1),
-    duration: AppAnimation.durationMd,
-    curve: AppAnimation.standardCurve,
-    builder: (context, t, content) => t == 0
-        ? const SizedBox.shrink()
-        : ClipRect(
-            child: Align(
-              alignment: Alignment.topCenter,
-              heightFactor: t,
-              // Leaves ahead of the fold, for the same reason the ring does.
-              child: Opacity(
-                opacity: Curves.easeOut.transform(t),
-                // Hands the spoken label over cleanly: on its way out this is no
-                // longer the step's voice, and the instrument's own label has not
-                // finished arriving. See [OnboardingInstrument].
-                child: ExcludeSemantics(excluding: t < 1, child: content),
-              ),
+  Widget build(BuildContext context) {
+    // The instrument's own gate, on the same clock and for the same reason: the
+    // two halves of this handover have to agree about whether there is a
+    // handover to watch.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return _fold(collapsed ? 0 : 1, child);
+    }
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: collapsed ? 0 : 1),
+      duration: AppAnimation.durationMd,
+      curve: AppAnimation.standardCurve,
+      builder: (context, t, content) => _fold(t, content!),
+      child: child,
+    );
+  }
+
+  Widget _fold(double t, Widget content) => t == 0
+      ? const SizedBox.shrink()
+      : ClipRect(
+          child: Align(
+            alignment: Alignment.topCenter,
+            heightFactor: t,
+            // Leaves ahead of the fold, for the same reason the ring does.
+            child: Opacity(
+              opacity: Curves.easeOut.transform(t),
+              // Hands the spoken label over cleanly: on its way out this is no
+              // longer the step's voice, and the instrument's own label has not
+              // finished arriving. See [OnboardingInstrument].
+              child: ExcludeSemantics(excluding: t < 1, child: content),
             ),
           ),
-    child: child,
-  );
+        );
 }
 
 /// The control the keyboard itself does not offer here: a way to put it away.
@@ -438,18 +505,20 @@ class OnboardingDoor extends StatelessWidget {
     final theme = Theme.of(context);
     return OnboardingBeat(
       alignment: MainAxisAlignment.end,
-      actions: Column(
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: onStart,
-              child: const Text('Set up my stack'),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextButton(onPressed: onSkip, child: const Text('Skip for now')),
-        ],
+      // Through the footer, not a hand-rolled Column. The door was the one beat
+      // that stacked its pair unconditionally — a full-width primary over a
+      // text button — so it kept a composition the other three give up as soon
+      // as the reading size allows a row, and it would not have inherited the
+      // footer's stacking rule if that rule ever changed.
+      actions: OnboardingFooter(
+        secondary: TextButton(
+          onPressed: onSkip,
+          child: const Text('Skip for now'),
+        ),
+        primary: FilledButton(
+          onPressed: onStart,
+          child: const Text('Set up my stack'),
+        ),
       ),
       children: [
         const OnePunchline(),
@@ -545,11 +614,14 @@ class OnboardingPick extends StatelessWidget {
         ),
       ),
       children: [
-        _AccentedHeadline(
-          before: '',
-          accent: 'Bring',
-          after: ' your stack into view.',
-          accentColor: AppColors.primary,
+        // Plain, and deliberately so. The accented headline is the door's and
+        // the close's device — a claim coloured in the mark's own two inks —
+        // and this beat already has a colour system of its own: seventeen
+        // accents, one per chip and one per lit node. A third one on top of
+        // them read as decoration rather than as meaning, which is why every
+        // drawn Pick frame carries this line unaccented.
+        Text(
+          'Pick your services',
           style: theme.textTheme.headlineMedium!
               .weight(FontWeight.w800)
               .copyWith(color: theme.colorScheme.onSurface),
@@ -612,6 +684,26 @@ class _PickChip extends StatelessWidget {
             tintAlpha: 0.14,
           )
         : scheme.onSurfaceVariant;
+    // 44pt is the iOS minimum target; the label grows the box past it.
+    const constraints = BoxConstraints(minHeight: 44);
+    const padding = EdgeInsets.symmetric(horizontal: AppSpacing.md);
+    final decoration = BoxDecoration(
+      color: selected
+          ? service.accent.withValues(alpha: 0.14)
+          : scheme.surfaceContainer,
+      borderRadius: AppRadius.borderRadiusMd,
+      border: Border.all(
+        color: selected
+            ? service.accent.withValues(alpha: 0.40)
+            : scheme.outlineVariant,
+      ),
+    );
+    // Seventeen of these, and picking a stack means tapping most of them — so
+    // under Reduce Motion the animator goes entirely rather than running short:
+    // this is the beat's most-repeated movement, and the chip's state is
+    // already legible from its fill and its lit node.
+    final still = MediaQuery.disableAnimationsOf(context);
+
     return Semantics(
       button: true,
       selected: selected,
@@ -623,54 +715,55 @@ class _PickChip extends StatelessWidget {
           onTap();
         },
         borderRadius: AppRadius.borderRadiusMd,
-        child: AnimatedContainer(
-          duration: AppAnimation.durationSm,
-          curve: AppAnimation.emphasizedCurve,
-          // 44pt is the iOS minimum target; the label grows the box past it.
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        child: still
+            ? Container(
+                constraints: constraints,
+                padding: padding,
+                decoration: decoration,
+                child: _label(theme, labelColor),
+              )
+            : AnimatedContainer(
+                duration: AppAnimation.durationSm,
+                curve: AppAnimation.emphasizedCurve,
+                constraints: constraints,
+                padding: padding,
+                decoration: decoration,
+                child: _label(theme, labelColor),
+              ),
+      ),
+    );
+  }
+
+  Widget _label(ThemeData theme, Color labelColor) {
+    final scheme = theme.colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
           decoration: BoxDecoration(
+            shape: BoxShape.circle,
             color: selected
-                ? service.accent.withValues(alpha: 0.14)
-                : scheme.surfaceContainer,
-            borderRadius: AppRadius.borderRadiusMd,
-            border: Border.all(
-              color: selected
-                  ? service.accent.withValues(alpha: 0.40)
-                  : scheme.outlineVariant,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: selected
-                      ? service.accent
-                      : scheme.onSurfaceVariant.withValues(alpha: 0.40),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              // Flexible, so a long name at an accessibility reading size wraps
-              // onto a second line and the chip grows taller. Unflexed, the
-              // Row overflowed the wrap's available width by exactly its own
-              // padding — and eliding "qBittor…" is not an option: the name is
-              // the only thing the chip says.
-              Flexible(
-                child: Text(
-                  service.title,
-                  style: theme.textTheme.titleSmall!
-                      .weight(FontWeight.w600)
-                      .copyWith(color: labelColor),
-                ),
-              ),
-            ],
+                ? service.accent
+                : scheme.onSurfaceVariant.withValues(alpha: 0.40),
           ),
         ),
-      ),
+        const SizedBox(width: AppSpacing.sm),
+        // Flexible, so a long name at an accessibility reading size wraps
+        // onto a second line and the chip grows taller. Unflexed, the
+        // Row overflowed the wrap's available width by exactly its own
+        // padding — and eliding "qBittor…" is not an option: the name is
+        // the only thing the chip says.
+        Flexible(
+          child: Text(
+            service.title,
+            style: theme.textTheme.titleSmall!
+                .weight(FontWeight.w600)
+                .copyWith(color: labelColor),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -714,14 +807,51 @@ class OnboardingClose extends StatelessWidget {
     return ['${connected.length} answer.', many];
   }
 
+  /// The service the close offers as the example of what can still be added.
+  ///
+  /// Lidarr by preference, and explicitly **not** Readarr: Readarr is retired
+  /// upstream, so naming it as the thing to add later is advice with a dead end.
+  /// When Lidarr is itself already in the stack the example falls to the first
+  /// registry service that is not — offering to add something the user set up
+  /// two minutes ago is the same defect wearing different clothes. Null when
+  /// there is genuinely nothing left, which is the one case the sentence has to
+  /// drop the name rather than pick a wrong one.
+  ServiceKey? get _exampleToAdd {
+    final missing = ServiceKey.values
+        .where(
+          (s) =>
+              s != ServiceKey.readarr &&
+              !connected.contains(s) &&
+              !silent.contains(s),
+        )
+        .toList(growable: false);
+    if (missing.isEmpty) return null;
+    return missing.contains(ServiceKey.lidarr)
+        ? ServiceKey.lidarr
+        : missing.first;
+  }
+
   String get _body {
     if (connected.isEmpty && silent.isEmpty) {
+      // Dashboard, not Services: the home is `/dashboard` and the cards the
+      // sentence points at are the ones on it.
       return 'Cupola will stay empty until you add a service — you can do '
-          'that any time in Settings, or from any dark card on Services.';
+          'that any time in Settings, or from any dark card on the Dashboard.';
     }
     if (silent.isEmpty) {
-      return 'Your whole stack is in one place. Everything you connected is '
-          'ready to use.';
+      // The count first, then the reassurance, then the honest sentence. The
+      // reassurance used to sit in the headline's neighbourhood with nothing
+      // behind it: a user who connected three of seventeen was told their
+      // whole stack was in one place, which is the sort of claim that teaches
+      // someone not to read the next one.
+      final example = _exampleToAdd;
+      final rest = example == null
+          ? 'Anything you add later goes in Settings, or on any dark card on '
+                'the Dashboard.'
+          : '${example.title} and the rest can be added any time in Settings, '
+                'or from any dark card on the Dashboard.';
+      return '${connected.length}/${ServiceKey.values.length} services '
+          'answered. Everything you connected is ready to use. $rest';
     }
     final names = silent.map((s) => s.title).join(', ');
     final verb = silent.length == 1 ? 'is' : 'are';
@@ -776,6 +906,14 @@ class OnboardingClose extends StatelessWidget {
             color: scheme.onSurfaceVariant,
           ),
         ),
+        // The ring resolved into a result. It is the services that *answered*
+        // and not the ones that were picked: a lit tile for a service that
+        // never replied would be the close contradicting its own headline, and
+        // the mixed-outcome arm already names those in the body.
+        if (connected.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.xl),
+          OnboardingGlyphRow(services: connected),
+        ],
       ],
     );
   }
@@ -805,6 +943,7 @@ class OnboardingField extends StatefulWidget {
     this.isUrl = false,
     this.isSecret = false,
     this.hint,
+    this.breadcrumb,
     this.help,
     this.trailing,
     this.warningFor,
@@ -834,8 +973,20 @@ class OnboardingField extends StatefulWidget {
   /// inside the same field, not the field below it.
   final ValueChanged<String>? onSubmitted;
 
-  /// A steady line under the field — where the credential lives, what the
-  /// default port is. Not a validation result.
+  /// Where the value is to be found in the service's own UI — `Radarr →
+  /// Settings → General → API Key`.
+  ///
+  /// It sits on the **label row**, beside the label, rather than under the
+  /// field, and that is the whole point of it being a separate parameter from
+  /// [help]: the slot under a field belongs to what the field has to say about
+  /// what was typed. Sharing one slot meant a Plex token warning erased the
+  /// path to the token, and a mistyped address erased the port hint — the two
+  /// pieces of guidance a user needs *while* they fix it.
+  final String? breadcrumb;
+
+  /// A steady line under the field — what the default port is, what happens if
+  /// both credentials are left blank. Not a validation result, and no longer
+  /// replaced by one: a validation message renders in addition to it.
   final String? help;
 
   final Widget? trailing;
@@ -912,11 +1063,33 @@ class _OnboardingFieldState extends State<OnboardingField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          widget.label,
-          style: theme.textTheme.labelMedium!
-              .weight(FontWeight.w600)
-              .copyWith(color: scheme.onSurfaceVariant),
+        Row(
+          // Baselines, not boxes: the breadcrumb is smaller than the label and
+          // the two have to sit on one line of type rather than on one box.
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              widget.label,
+              style: theme.textTheme.labelMedium!
+                  .weight(FontWeight.w600)
+                  .copyWith(color: scheme.onSurfaceVariant),
+            ),
+            if (widget.breadcrumb case final breadcrumb?) ...[
+              const SizedBox(width: AppSpacing.md),
+              // Flexible and wrapping rather than elided: the path is the whole
+              // value of the line, and `Settings → General → API…` sends the
+              // user looking for a menu that does not exist.
+              Flexible(
+                child: Text(
+                  breadcrumb,
+                  style: theme.textTheme.bodySmall!.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: AppSpacing.sm),
         Container(
@@ -1008,21 +1181,34 @@ class _OnboardingFieldState extends State<OnboardingField> {
             ],
           ),
         ),
+        // Both, never one instead of the other. The validation message comes
+        // first because it is about what is in the field right now; the steady
+        // note keeps its place under it, so fixing an address does not cost the
+        // user the sentence that says which port to put there.
         if (note != null)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: Text(
               note,
               style: theme.textTheme.bodySmall!.copyWith(
-                color: _error != null ? scheme.error : AppColors.warning,
+                // Error and warning are the two tones a field can carry: red
+                // is "this cannot be sent", amber is "this will work and is
+                // worth knowing about". Through `statusToneColor` rather than
+                // the raw token, which measures 1.39:1 on paper — the note it
+                // paints is the one the user is meant to read before typing
+                // anything else.
+                color: statusToneColor(
+                  scheme,
+                  _error != null ? StatusTone.error : StatusTone.warning,
+                ),
               ),
             ),
-          )
-        else if (widget.help != null)
+          ),
+        if (widget.help case final help?)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: Text(
-              widget.help!,
+              help,
               style: theme.textTheme.bodySmall!.copyWith(
                 color: scheme.onSurfaceVariant,
               ),

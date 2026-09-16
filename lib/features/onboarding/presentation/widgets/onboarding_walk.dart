@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
@@ -34,9 +35,11 @@ import 'package:cupola/features/settings/presentation/widgets/cert_trust_content
 /// as the ring rotating that service to noon. Two instruments, one clock,
 /// answering the same question.
 ///
-/// The service's accent travels with it: the eyebrow's ink is resolved per
-/// service through `onTint`, so the line changes colour as it changes subject and
-/// the room's own accent is what the change hands off to.
+/// The service's accent travels with it, but no longer as the eyebrow's ink:
+/// the counter is neutral type and the identity moves into the glyph tile
+/// beside it — see [_ServiceGlyph]. A counter is a counter in every service's
+/// step, and seventeen differently-coloured ones taught the eye to read the
+/// colour rather than the number.
 class OnboardingWalkSubject extends StatelessWidget {
   const OnboardingWalkSubject({
     super.key,
@@ -68,34 +71,50 @@ class OnboardingWalkSubject extends StatelessWidget {
 
   final bool _eyebrowOnly;
 
+  /// Which beat of the four the walk is. Fixed: the walk is always the third,
+  /// however many services it turns out to hold.
+  static const _beat = 'Step 3 of 4';
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    // The flow's spoken landmark: which service, and how far in.
+    // The flow's spoken landmark, and the only counter left in it (decision
+    // 47). Compound because that is what earns it a place: the ring already
+    // says how far in, so a bare "2 of 8" was the instrument's own answer in
+    // words, while "step 3 of 4 · service 2 of 8" says the thing the ring
+    // cannot — which service, out of how many, inside which beat.
     final eyebrow = ReelLine(
-      '${service.title} · $position of $total'.toUpperCase(),
-      style: AppTheme.eyebrow(
-        ServiceTheme.onTint(
-          service.accent,
-          surface: scheme.surface,
-          tintAlpha: 0,
-        ),
-      ),
-      options: ReelMotion.word,
-      // Uppercase belongs in the eye, not the ear — and the spoken form
-      // also spells out the separator the eye reads as a dot.
-      semanticsLabel: '${service.title}, step $position of $total',
+      '$_beat · service $position of $total'.toUpperCase(),
+      style: AppTheme.eyebrow(scheme.onSurfaceVariant),
+      // The word holds still and the digit moves, which is precisely what
+      // `figure` is for — `word` rolled the whole line when only a numeral
+      // changed.
+      options: ReelMotion.figure,
+      // Uppercase belongs in the eye, not the ear. The service is named here
+      // rather than drawn, because in the compact register the glyph tile and
+      // the headline are both gone and this line is the only orientation left.
+      semanticsLabel:
+          '${service.title}, step 3 of 4, service $position of $total',
     );
     // Beside the ring the row supplies the gutters, and there is no second line
-    // to align to.
+    // to align to. The glyph stays behind as well: the medallion it would sit
+    // next to is already showing this service with a collar on it, and a second
+    // accent tile in a 44pt row is the row competing with the form it exists to
+    // make space for.
     if (_eyebrowOnly) return eyebrow;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          eyebrow,
+          Row(
+            children: [
+              _ServiceGlyph(service: service),
+              const SizedBox(width: AppSpacing.md),
+              Flexible(child: eyebrow),
+            ],
+          ),
           const SizedBox(height: AppSpacing.sm),
           ReelLine(
             'Where does ${service.title} live?',
@@ -108,7 +127,71 @@ class OnboardingWalkSubject extends StatelessWidget {
             // reading sizes this app supports.
             fallbackMaxLines: null,
           ),
+          // What the step wants, before it has been given anything to react to.
+          // It used to exist only as the outcome of pressing Test on an empty
+          // form, i.e. as the answer to a question the user had already had to
+          // guess. Dropped on the compact frame, where the two 308pt columns
+          // spend their height on the form and the certificate instead.
+          if (!AppBreakpoints.isCompactDesktop(context)) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              walkInstruction(service),
+              style: theme.textTheme.bodyMedium!.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// What this step is asking for, in one line — the walk's subtitle.
+///
+/// Shared rather than inlined because the step says it twice in two registers:
+/// under the headline as a standing instruction, and, when a test runs against
+/// an empty form, as the reason nothing was sent.
+String walkInstruction(ServiceKey service) => service.usesApiKey
+    ? 'Enter the address and the ${service.credentialLabel.toLowerCase()}, '
+          'then test.'
+    : 'Enter the address, then test.';
+
+/// The service's identity, now that the eyebrow's is neutral.
+///
+/// A tile rather than a bare icon: at 34pt the accent needs a ground to be read
+/// as an accent, and the wash is what lets the glyph itself be an ink that
+/// measures — seven of the seventeen accents fall under 3:1 on paper, so the
+/// raw colour is never what gets stroked.
+class _ServiceGlyph extends StatelessWidget {
+  const _ServiceGlyph({required this.service});
+
+  final ServiceKey service;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      // The eyebrow beside it already names the service for a screen reader;
+      // this is the same fact drawn, so it is excluded rather than repeated.
+      excludeSemantics: true,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: service.accent.withValues(alpha: 0.16),
+          borderRadius: AppRadius.borderRadiusMd,
+          border: Border.all(color: service.accent.withValues(alpha: 0.5)),
+        ),
+        child: Icon(
+          service.icon,
+          size: 18,
+          color: ServiceTheme.onTint(
+            service.accent,
+            surface: scheme.surface,
+            tintAlpha: 0.16,
+          ),
+        ),
       ),
     );
   }
@@ -315,7 +398,11 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           action: TextInputAction.done,
           onSubmitted: (_) => _submit(),
           hint: 'Paste the ${service.credentialLabel.toLowerCase()}',
-          help: service.credentialPath == null
+          // On the label row, not under the field. Under it, a Plex token
+          // warning replaced the very breadcrumb that says where a better
+          // token lives — the note slot is validation's, and this is not a
+          // validation.
+          breadcrumb: service.credentialPath == null
               ? null
               : '${service.title} → ${service.credentialPath}',
           warningFor: service == ServiceKey.plex ? _plexTokenWarning : null,
@@ -506,10 +593,12 @@ class _Outcome extends StatelessWidget {
     final tone = statusToneColor(scheme, presentation.tone);
     final sentence = switch (status) {
       ServiceConnectionStatus.connected => '${service.title} answered.',
+      // The instruction itself is the step's subtitle now, standing above the
+      // form before anything is pressed, so repeating it here would answer a
+      // press with the sentence the user is already looking at. What the press
+      // actually found is that there is nothing to send.
       ServiceConnectionStatus.notConfigured =>
-        service.usesApiKey
-            ? 'Enter the address and the ${service.credentialLabel.toLowerCase()}, then test.'
-            : 'Enter the address, then test.',
+        'Nothing to send yet — ${walkInstruction(service).toLowerCase()}',
       // The detail when the failure carried one, the reason-derived sentence
       // otherwise — the same rule `ServiceDiagnosis.messageFor` applies on the
       // settings screen, so the two surfaces cannot describe one test
@@ -555,8 +644,16 @@ class _Outcome extends StatelessWidget {
                   Text(
                     note.message,
                     style: theme.textTheme.bodySmall!.copyWith(
+                      // Through the tone walk, and told which ground it lands
+                      // on: the raw amber measures 1.39:1 on paper, and this
+                      // sentence sits on the outcome card's own
+                      // `surfaceContainer` rather than on the beat's surface.
                       color: note.isWarning
-                          ? AppColors.warning
+                          ? statusToneColor(
+                              scheme,
+                              StatusTone.warning,
+                              surface: scheme.surfaceContainer,
+                            )
                           : scheme.onSurfaceVariant,
                     ),
                   ),
