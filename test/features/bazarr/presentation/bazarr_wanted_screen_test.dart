@@ -40,10 +40,10 @@ void main() {
       // deep link is the only thing that separates them, and the dead end this
       // replaced is precisely the absence of one.
       final router = GoRouter(
-        initialLocation: '/services/bazarr/wanted',
+        initialLocation: '/dashboard/bazarr/wanted',
         routes: [
           GoRoute(
-            path: '/services/bazarr/wanted',
+            path: '/dashboard/bazarr/wanted',
             builder: (context, state) => const BazarrWantedScreen(),
           ),
           GoRoute(

@@ -44,14 +44,14 @@ void main() {
       await _pumpShell(tester);
 
       expect(find.byType(FloatingBottomNavBar), findsOneWidget);
-      expect(_navItem('Services'), findsOneWidget);
+      expect(_navItem('Dashboard'), findsOneWidget);
       expect(_navItem('Activity'), findsOneWidget);
       expect(_navItem('Search'), findsOneWidget);
       expect(_navItem('Settings'), findsOneWidget);
     });
 
     testWidgets('selects Services for the /services route', (tester) async {
-      await _pumpShell(tester, initialLocation: '/services');
+      await _pumpShell(tester, initialLocation: '/dashboard');
 
       expect(find.text('ServicesPage'), findsOneWidget);
       expect(find.byIcon(Icons.view_list_rounded), findsOneWidget);
@@ -59,7 +59,7 @@ void main() {
     });
 
     testWidgets('selects Services for legacy detail routes', (tester) async {
-      await _pumpShell(tester, initialLocation: '/services/radarr/movie/42');
+      await _pumpShell(tester, initialLocation: '/dashboard/radarr/movie/42');
 
       expect(find.text('MovieDetailPage'), findsOneWidget);
       expect(find.byIcon(Icons.view_list_rounded), findsOneWidget);
@@ -102,7 +102,7 @@ void main() {
     testWidgets('tapping the current Services tab triggers a refresh', (
       tester,
     ) async {
-      final harness = await _pumpShell(tester, initialLocation: '/services');
+      final harness = await _pumpShell(tester, initialLocation: '/dashboard');
 
       expect(
         harness.container.read(
@@ -111,10 +111,10 @@ void main() {
         0,
       );
 
-      await tester.tap(_navItem('Services'));
+      await tester.tap(_navItem('Dashboard'));
       await tester.pumpAndSettle();
 
-      expect(harness.router.state.uri.path, '/services');
+      expect(harness.router.state.uri.path, '/dashboard');
       expect(
         harness.container.read(
           navigationRefreshProvider(NavigationSection.services),
@@ -128,13 +128,13 @@ void main() {
       (tester) async {
         final harness = await _pumpShell(
           tester,
-          initialLocation: '/services/radarr/movie/42',
+          initialLocation: '/dashboard/radarr/movie/42',
         );
 
-        await tester.tap(_navItem('Services'));
+        await tester.tap(_navItem('Dashboard'));
         await tester.pumpAndSettle();
 
-        expect(harness.router.state.uri.path, '/services');
+        expect(harness.router.state.uri.path, '/dashboard');
         expect(find.text('ServicesPage'), findsOneWidget);
         expect(
           harness.container.read(
@@ -152,18 +152,18 @@ void main() {
     ) async {
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/services/radarr/movie/42',
+        initialLocation: '/dashboard/radarr/movie/42',
       );
 
       await tester.tap(_navItem('Search'));
       await tester.pumpAndSettle();
       expect(find.text('SearchPage'), findsOneWidget);
 
-      await tester.tap(_navItem('Services'));
+      await tester.tap(_navItem('Dashboard'));
       await tester.pumpAndSettle();
 
       // Not the tab's root: the page that was open when it was left.
-      expect(harness.router.state.uri.path, '/services/radarr/movie/42');
+      expect(harness.router.state.uri.path, '/dashboard/radarr/movie/42');
       expect(find.text('MovieDetailPage'), findsOneWidget);
     });
 
@@ -175,7 +175,7 @@ void main() {
 
       await tester.tap(_navItem('Search'));
       await tester.pumpAndSettle();
-      await tester.tap(_navItem('Services'));
+      await tester.tap(_navItem('Dashboard'));
       await tester.pumpAndSettle();
 
       // Still one: this is the whole performance claim. A return costs no
@@ -193,13 +193,13 @@ void main() {
       // `initialLocation: true` must be a navigation, never a refresh.
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/services/radarr/movie/42',
+        initialLocation: '/dashboard/radarr/movie/42',
       );
 
-      await tester.tap(_navItem('Services'));
+      await tester.tap(_navItem('Dashboard'));
       await tester.pumpAndSettle();
 
-      expect(harness.router.state.uri.path, '/services');
+      expect(harness.router.state.uri.path, '/dashboard');
       for (final section in NavigationSection.values) {
         expect(
           harness.container.read(navigationRefreshProvider(section)),
@@ -218,19 +218,19 @@ void main() {
       // land on its own root.
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/services/radarr/movie/42',
+        initialLocation: '/dashboard/radarr/movie/42',
       );
       await tester.tap(_navItem('Search'));
       await tester.pumpAndSettle();
 
-      await tester.tap(_navItem('Services'));
+      await tester.tap(_navItem('Dashboard'));
       await tester.pumpAndSettle();
       expect(find.text('MovieDetailPage'), findsOneWidget);
 
-      await tester.tap(_navItem('Services'));
+      await tester.tap(_navItem('Dashboard'));
       await tester.pumpAndSettle();
 
-      expect(harness.router.state.uri.path, '/services');
+      expect(harness.router.state.uri.path, '/dashboard');
       expect(find.text('ServicesPage'), findsOneWidget);
     });
 
@@ -239,7 +239,7 @@ void main() {
     ) async {
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/services/radarr/movie/42',
+        initialLocation: '/dashboard/radarr/movie/42',
       );
 
       // Widen past 840 so the bar becomes the rail, then narrow back. The shell
@@ -252,23 +252,23 @@ void main() {
       tester.view.physicalSize = const Size(400, 900);
       await tester.pumpAndSettle();
 
-      expect(harness.router.state.uri.path, '/services/radarr/movie/42');
+      expect(harness.router.state.uri.path, '/dashboard/radarr/movie/42');
       expect(find.text('MovieDetailPage'), findsOneWidget);
     });
 
-    testWidgets('re-tapping the active Services tab announces the refresh', (
+    testWidgets('re-tapping the active Dashboard tab announces the refresh', (
       tester,
     ) async {
       // A re-tap refresh changes nothing on screen — no spinner, no route
       // change — so without this the tap is indistinguishable from a no-op for a
       // screen-reader user.
       final announcements = SemanticsAnnouncementRecorder.install(tester);
-      final harness = await _pumpShell(tester, initialLocation: '/services');
+      final harness = await _pumpShell(tester, initialLocation: '/dashboard');
 
-      await tester.tap(_navItem('Services'));
+      await tester.tap(_navItem('Dashboard'));
       await tester.pumpAndSettle();
 
-      expect(announcements.messages, ['Refreshing Services']);
+      expect(announcements.messages, ['Refreshing Dashboard']);
       expect(
         harness.container.read(
           navigationRefreshProvider(NavigationSection.services),
@@ -282,7 +282,7 @@ void main() {
       // interrupts the reader's speech queue. This guards an over-eager
       // announce() in the navigate branch.
       final announcements = SemanticsAnnouncementRecorder.install(tester);
-      await _pumpShell(tester, initialLocation: '/services');
+      await _pumpShell(tester, initialLocation: '/dashboard');
 
       await tester.tap(_navItem('Search'));
       await tester.pumpAndSettle();
@@ -304,7 +304,7 @@ void main() {
             return null;
           });
 
-      await _pumpShell(tester, initialLocation: '/services');
+      await _pumpShell(tester, initialLocation: '/dashboard');
       haptics.clear();
 
       await tester.tap(_navItem('Search'));
@@ -504,7 +504,7 @@ void main() {
     ) async {
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/services/radarr',
+        initialLocation: '/dashboard/radarr',
         overrides: await _lensOverrides(),
         viewport: const Size(390 * 3, 844 * 3),
         devicePixelRatio: 3,
@@ -541,7 +541,7 @@ void main() {
       );
       // And it really was a no-op underneath: neither input the hook watches
       // changed, which is why the hook could never have caught this.
-      expect(harness.router.state.uri.path, '/services/radarr');
+      expect(harness.router.state.uri.path, '/dashboard/radarr');
       expect(
         harness.container.read(activeInstanceProvider(ServiceKey.radarr))?.id,
         'radarr',
@@ -557,7 +557,7 @@ void main() {
       // with no velocity is a visible hitch.
       final harness = await _pumpShell(
         tester,
-        initialLocation: '/services/radarr',
+        initialLocation: '/dashboard/radarr',
         overrides: await _lensOverrides(),
         viewport: const Size(390 * 3, 844 * 3),
         devicePixelRatio: 3,
@@ -723,7 +723,7 @@ class _ProbePageState extends State<_ProbePage> {
 
 Future<_ShellHarness> _pumpShell(
   WidgetTester tester, {
-  String initialLocation = '/services',
+  String initialLocation = '/dashboard',
   // Phone width by default, so the shell renders the FloatingBottomNavBar rather
   // than the wide-window NavigationRail (the rail breakpoint is 840).
   Size viewport = const Size(400, 900),
@@ -752,7 +752,7 @@ Future<_ShellHarness> _pumpShell(
             navigatorKey: branchNavigatorKeyFor(NavTab.services),
             routes: [
               GoRoute(
-                path: '/services',
+                path: '/dashboard',
                 builder: (_, _) => const _ProbePage('ServicesPage'),
                 routes: [
                   GoRoute(

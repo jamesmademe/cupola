@@ -64,7 +64,7 @@ void main() {
           builder: (context, state) => const SearchScreen(),
         ),
         GoRoute(
-          path: '/services/radarr/movie/:id',
+          path: '/dashboard/radarr/movie/:id',
           builder: (context, state) {
             final movie = state.extra as RadarrMovie?;
             return Scaffold(
@@ -89,7 +89,7 @@ void main() {
     await tester.tap(find.text('Dune'));
     await tester.pumpAndSettle();
 
-    expect(router.state.uri.path, '/services/radarr/movie/10');
+    expect(router.state.uri.path, '/dashboard/radarr/movie/10');
     // The poster's shared-element tag travels with the route so the detail
     // page's Hero has a matching destination.
     expect(
@@ -138,7 +138,7 @@ void main() {
           builder: (context, state) => const SearchScreen(),
         ),
         GoRoute(
-          path: '/services/radarr/movie/:id',
+          path: '/dashboard/radarr/movie/:id',
           builder: (context, state) => Scaffold(
             body: SizedBox(
               width: 82,

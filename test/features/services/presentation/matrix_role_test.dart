@@ -85,7 +85,7 @@ Future<ProviderContainer> _pump(
         ),
         routes: [
           GoRoute(
-            path: 'services/:service',
+            path: 'dashboard/:service',
             builder: (context, state) =>
                 const Scaffold(body: Text('elsewhere')),
           ),

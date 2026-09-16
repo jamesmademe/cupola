@@ -1,9 +1,21 @@
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 class ServiceRoutes {
   ServiceRoutes._();
 
-  static const services = '/services';
+  /// The app home, and the prefix every service home hangs off.
+  ///
+  /// `/dashboard` since the rename (decision 1): the tab, the crumb and the
+  /// route all say Dashboard, one service is a *service home* at
+  /// `/dashboard/{key}`, and TrueNAS keeps the word for its own console
+  /// section because the app does not rename another product's furniture.
+  static const services = '/dashboard';
+
+  /// Where the app used to live. Every path under it still resolves — see the
+  /// rewrite in `router.dart`'s top-level redirect — because a bookmark, a
+  /// deep link or a restored session from before the rename must not 404.
+  static const legacyServices = '/services';
   static const seerr = '$services/seerr';
   static const radarr = '$services/radarr';
   static const sonarr = '$services/sonarr';
@@ -19,6 +31,23 @@ class ServiceRoutes {
   static const unraid = '$services/unraid';
   static const jellyfin = '$services/jellyfin';
   static const plex = '$services/plex';
+
+  /// The two the file was missing. Both services shipped with their callers
+  /// building `'/services/transmission'` and `'/services/npm'` by hand, which
+  /// is how a single source of truth stops being one — and `npm` is precisely
+  /// the segment that is *not* derivable from the enum name, so a hand-built
+  /// path is a spelling nobody checks.
+  static const transmission = '$services/transmission';
+  static const nginxProxyManager = '$services/npm';
+
+  /// The home of any service, by key.
+  ///
+  /// Every call site that wanted this built the path by hand instead, because
+  /// there was nothing to call. Going through [ServiceKey.routeParam] keeps the
+  /// one irregular segment — Nginx Proxy Manager's `npm` — spelled in exactly
+  /// one place.
+  static String forService(ServiceKey service) =>
+      '$services/${service.routeParam}';
 
   // ── Stream sections ───────────────────────────────────────────────────────
   //

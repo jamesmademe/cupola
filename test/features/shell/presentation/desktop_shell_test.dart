@@ -79,13 +79,14 @@ void main() {
     await onPlatform(TargetPlatform.macOS, () async {
       await _pumpShell(
         tester,
-        initialLocation: '/services/radarr',
+        initialLocation: '/dashboard/radarr',
         overrides: await _world(),
       );
 
       final chrome = find.byType(WindowChrome);
       expect(
-        find.descendant(of: chrome, matching: find.text('Services')),
+        // The breadcrumb IS the URL, and the root crumb is the tab's label.
+        find.descendant(of: chrome, matching: find.text('Dashboard')),
         findsOneWidget,
       );
       expect(
@@ -241,7 +242,7 @@ class _Harness {
 
 Future<_Harness> _pumpShell(
   WidgetTester tester, {
-  String initialLocation = '/services',
+  String initialLocation = '/dashboard',
   Size viewport = const Size(1440, 900),
   List<Override> overrides = const [],
 }) async {
@@ -258,7 +259,7 @@ Future<_Harness> _pumpShell(
             navigatorKey: branchNavigatorKeyFor(NavTab.services),
             routes: [
               GoRoute(
-                path: '/services',
+                path: '/dashboard',
                 builder: (_, _) => const Placeholder(),
                 routes: [
                   GoRoute(

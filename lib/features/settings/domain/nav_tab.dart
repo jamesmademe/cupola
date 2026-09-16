@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show Color, IconData, Icons;
 
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 
 /// The four canonical tabs.
 ///
@@ -10,11 +11,17 @@ import 'package:cupola/core/theme.dart';
 /// selected pill as washed-out grey in light mode and read as disabled. The
 /// per-service accents belong to service surfaces; the app shell is one colour.
 enum NavTab {
+  /// The app home.
+  ///
+  /// The enum *name* stays `services` on purpose: it is what the selected tab
+  /// is persisted as, so renaming the identifier would silently drop every
+  /// existing install back to the first tab on upgrade. The label, the route
+  /// and the crumb are what the user sees, and those are the rename.
   services(
-    label: 'Services',
+    label: 'Dashboard',
     icon: Icons.view_list_outlined,
     selectedIcon: Icons.view_list_rounded,
-    routePath: '/services',
+    routePath: ServiceRoutes.services,
     accentColor: AppColors.navServices,
   ),
   activity(

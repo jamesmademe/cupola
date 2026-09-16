@@ -163,12 +163,12 @@ Future<void> _pumpHarness(
         ),
       ),
       GoRoute(
-        path: '/services/radarr/movie/:id',
+        path: '/dashboard/radarr/movie/:id',
         builder: (context, state) =>
             Text('movie:${state.pathParameters['id']}'),
       ),
       GoRoute(
-        path: '/services/sonarr/series/:id',
+        path: '/dashboard/sonarr/series/:id',
         builder: (context, state) =>
             Text('series:${state.pathParameters['id']}'),
       ),

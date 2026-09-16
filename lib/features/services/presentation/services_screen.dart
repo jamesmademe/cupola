@@ -59,7 +59,11 @@ class ServicesScreen extends ConsumerWidget {
         // Thirteen service accents cannot light one room, so identity is confined
         // to each matrix cell's icon tile — see the Room Light Rule's one
         // documented exception in DESIGN.md.
-        appBar: const GlassAppBar(title: Text('Services')),
+        // "Your stack", not "Dashboard" (decision 2). The tab and the crumb
+        // already say Dashboard twice over; the h1 is the one line on the
+        // screen that can say what is being looked at instead of where you
+        // are, and the fleet *is* the subject here.
+        appBar: const GlassAppBar(title: Text('Your stack')),
         body: allUnconfigured
             // The page owns the viewport, not the empty state — see the contract
             // on `AppEmptyState`. Its height is entirely text, and at an

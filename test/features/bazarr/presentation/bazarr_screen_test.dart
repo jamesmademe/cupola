@@ -48,10 +48,10 @@ void main() {
     // card this replaced went straight to Bazarr's own form; that is the part
     // worth pinning.
     final router = GoRouter(
-      initialLocation: '/services/bazarr',
+      initialLocation: '/dashboard/bazarr',
       routes: [
         GoRoute(
-          path: '/services/bazarr',
+          path: '/dashboard/bazarr',
           builder: (context, state) => const BazarrScreen(),
         ),
         GoRoute(

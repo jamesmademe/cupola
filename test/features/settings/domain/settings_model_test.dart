@@ -279,7 +279,9 @@ void main() {
         NavTab.settings,
       ]);
       expect(NavTab.values.map((tab) => tab.label), [
-        'Services',
+        // The label moved to Dashboard; the enum *name* deliberately did not,
+        // because the selected tab is persisted by name.
+        'Dashboard',
         'Activity',
         'Search',
         'Settings',

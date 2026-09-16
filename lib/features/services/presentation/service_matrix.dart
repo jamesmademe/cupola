@@ -118,6 +118,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/reel_motion.dart';
@@ -1483,7 +1484,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
           await ref.read(activeInstancesProvider.notifier).select(service, id);
         }
         if (!context.mounted) return;
-        context.go('/services/${service.routeParam}');
+        context.go(ServiceRoutes.forService(service));
       },
       // The card dips under the thumb instead of rippling. A ripple flooding a
       // 32pt box is how a chip signals selection, not how a surface signals a

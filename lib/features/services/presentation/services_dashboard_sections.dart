@@ -214,7 +214,7 @@ void _openRecentlyAdded(BuildContext context, RecentlyAddedItem item) {
     // Unreachable: the provider only emits these three. Falling back to the
     // service hub rather than throwing keeps a future fourth source from
     // crashing a tap before its route exists.
-    _ => '/services/${item.service.routeParam}',
+    _ => ServiceRoutes.forService(item.service),
   };
   context.push(route);
 }

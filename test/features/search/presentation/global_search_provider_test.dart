@@ -90,10 +90,10 @@ void main() {
         .map((item) => Uri.parse(item.route))
         .toList(growable: false);
     expect(routes.map((uri) => uri.path), [
-      '/services/seerr/movie/101',
-      '/services/radarr/movie/10',
-      '/services/sonarr/series/20',
-      '/services/lidarr/artist/30',
+      '/dashboard/seerr/movie/101',
+      '/dashboard/radarr/movie/10',
+      '/dashboard/sonarr/series/20',
+      '/dashboard/lidarr/artist/30',
     ]);
     // Keyed on the CONNECTION and on the row's position, not on the service:
     // the same id names different things on two servers, and a lookup result

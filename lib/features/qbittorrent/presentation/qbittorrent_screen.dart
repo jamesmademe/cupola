@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/lifecycle/page_activity.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
@@ -121,7 +122,7 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
                     _toggleSelection(ref, torrent.hash);
                   } else {
                     context.push(
-                      '/services/qbittorrent/torrent/${torrent.hash}',
+                      ServiceRoutes.qbittorrentTorrent(torrent.hash),
                     );
                   }
                 },

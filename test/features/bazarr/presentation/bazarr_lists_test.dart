@@ -157,20 +157,20 @@ void main() {
         ..seriesByIdOverride = series;
 
       final router = GoRouter(
-        initialLocation: '/services/bazarr/library',
+        initialLocation: '/dashboard/bazarr/library',
         routes: [
           GoRoute(
-            path: '/services/bazarr/library',
+            path: '/dashboard/bazarr/library',
             builder: (context, state) => const BazarrLibraryScreen(),
           ),
           GoRoute(
-            path: '/services/bazarr/series/:id',
+            path: '/dashboard/bazarr/series/:id',
             builder: (context, state) => BazarrSeriesDetailScreen(
               sonarrSeriesId: int.parse(state.pathParameters['id']!),
             ),
           ),
           GoRoute(
-            path: '/services/bazarr/movie/:id',
+            path: '/dashboard/bazarr/movie/:id',
             builder: (context, state) => BazarrMovieDetailScreen(
               radarrId: int.parse(state.pathParameters['id']!),
             ),
@@ -196,7 +196,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(BazarrSeriesDetailScreen), findsOneWidget);
-      expect(router.state.uri.path, '/services/bazarr/series/7');
+      expect(router.state.uri.path, '/dashboard/bazarr/series/7');
     },
   );
 
@@ -214,20 +214,20 @@ void main() {
         ..movieByIdOverride = movie;
 
       final router = GoRouter(
-        initialLocation: '/services/bazarr/library',
+        initialLocation: '/dashboard/bazarr/library',
         routes: [
           GoRoute(
-            path: '/services/bazarr/library',
+            path: '/dashboard/bazarr/library',
             builder: (context, state) => const BazarrLibraryScreen(),
           ),
           GoRoute(
-            path: '/services/bazarr/series/:id',
+            path: '/dashboard/bazarr/series/:id',
             builder: (context, state) => BazarrSeriesDetailScreen(
               sonarrSeriesId: int.parse(state.pathParameters['id']!),
             ),
           ),
           GoRoute(
-            path: '/services/bazarr/movie/:id',
+            path: '/dashboard/bazarr/movie/:id',
             builder: (context, state) => BazarrMovieDetailScreen(
               radarrId: int.parse(state.pathParameters['id']!),
             ),
@@ -257,7 +257,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(BazarrMovieDetailScreen), findsOneWidget);
-      expect(router.state.uri.path, '/services/bazarr/movie/12');
+      expect(router.state.uri.path, '/dashboard/bazarr/movie/12');
     },
   );
 }

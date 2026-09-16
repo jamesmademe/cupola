@@ -146,7 +146,10 @@ Page<void> _discoverDetailPage(
 }) {
   final id = RouteUtils.safeIntParam(state, 'id');
   if (id == null) {
-    return RouteUtils.redirectPage(key: state.pageKey, location: '/services');
+    return RouteUtils.redirectPage(
+      key: state.pageKey,
+      location: ServiceRoutes.services,
+    );
   }
   final heroTag =
       state.uri.queryParameters['heroTag'] ?? 'discover_${mediaType}_$id';
@@ -177,7 +180,10 @@ Page<void> _libraryDetailPage<T>(
 }) {
   final id = RouteUtils.safeIntParam(state, 'id');
   if (id == null) {
-    return RouteUtils.redirectPage(key: state.pageKey, location: '/services');
+    return RouteUtils.redirectPage(
+      key: state.pageKey,
+      location: ServiceRoutes.services,
+    );
   }
   final item = RouteUtils.safeExtra<T>(state);
   final heroTag = state.uri.queryParameters['heroTag'] ?? '${heroPrefix}_$id';
@@ -262,7 +268,7 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
         path: 'genre/:mediaType/:genreId',
         redirect: (context, state) {
           final genreId = RouteUtils.safeIntParam(state, 'genreId');
-          return genreId == null ? '/services/seerr' : null;
+          return genreId == null ? ServiceRoutes.seerr : null;
         },
         builder: (context, state) {
           final mediaType = state.pathParameters['mediaType'] == 'tv'
@@ -280,14 +286,18 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
       GoRoute(
         path: 'movie/:id',
         redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.services
+            : null,
         pageBuilder: (context, state) =>
             _discoverDetailPage(state, mediaType: 'movie'),
       ),
       GoRoute(
         path: 'tv/:id',
         redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.services
+            : null,
         pageBuilder: (context, state) =>
             _discoverDetailPage(state, mediaType: 'tv'),
       ),
@@ -299,7 +309,9 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
           initialProfileUrl: state.uri.queryParameters['posterUrl'],
         ),
         redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.services
+            : null,
       ),
       _page(
         'collection/:id',
@@ -308,7 +320,9 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
           heroTag: state.uri.queryParameters['heroTag'],
         ),
         redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.services
+            : null,
       ),
     ],
   );
@@ -322,7 +336,7 @@ GoRoute _moviesRoutes({required String path, String? redirectLocation}) {
         : (context, state) => _redirectLegacyLibrary(
             state,
             legacyBase: '/movies',
-            serviceBase: '/services/radarr/movie',
+            serviceBase: ServiceRoutes.radarrMovieBase,
           ),
     builder: path.startsWith('/')
         ? (context, state) => const MoviesScreen()
@@ -343,12 +357,14 @@ GoRoute _moviesRoutes({required String path, String? redirectLocation}) {
       GoRoute(
         path: 'media',
         redirect: (context, state) =>
-            _preserveQuery(state.uri, '/services/radarr'),
+            _preserveQuery(state.uri, ServiceRoutes.radarr),
       ),
       GoRoute(
         path: path.startsWith('/') ? ':id' : 'movie/:id',
         redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.services
+            : null,
         pageBuilder: (context, state) => _libraryDetailPage<RadarrMovie>(
           state,
           heroPrefix: 'movie',
@@ -372,7 +388,7 @@ GoRoute _seriesRoutes({required String path, String? redirectLocation}) {
         : (context, state) => _redirectLegacyLibrary(
             state,
             legacyBase: '/series',
-            serviceBase: '/services/sonarr/series',
+            serviceBase: ServiceRoutes.sonarrSeriesBase,
           ),
     builder: path.startsWith('/')
         ? (context, state) => const SeriesScreen()
@@ -393,12 +409,14 @@ GoRoute _seriesRoutes({required String path, String? redirectLocation}) {
       GoRoute(
         path: 'media',
         redirect: (context, state) =>
-            _preserveQuery(state.uri, '/services/sonarr'),
+            _preserveQuery(state.uri, ServiceRoutes.sonarr),
       ),
       GoRoute(
         path: path.startsWith('/') ? ':id' : 'series/:id',
         redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.services
+            : null,
         pageBuilder: (context, state) => _libraryDetailPage<SonarrSeries>(
           state,
           heroPrefix: 'series',
@@ -422,7 +440,7 @@ GoRoute _musicRoutes({required String path, String? redirectLocation}) {
         : (context, state) => _redirectLegacyLibrary(
             state,
             legacyBase: '/music',
-            serviceBase: '/services/lidarr/artist',
+            serviceBase: ServiceRoutes.lidarrArtistBase,
           ),
     builder: path.startsWith('/')
         ? (context, state) => const MusicScreen()
@@ -443,12 +461,14 @@ GoRoute _musicRoutes({required String path, String? redirectLocation}) {
       GoRoute(
         path: 'media',
         redirect: (context, state) =>
-            _preserveQuery(state.uri, '/services/lidarr'),
+            _preserveQuery(state.uri, ServiceRoutes.lidarr),
       ),
       GoRoute(
         path: path.startsWith('/') ? ':id' : 'artist/:id',
         redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.services
+            : null,
         pageBuilder: (context, state) => _libraryDetailPage<LidarrArtist>(
           state,
           heroPrefix: 'artist',
@@ -507,7 +527,9 @@ GoRoute _bazarrRoutes({required String path}) {
           initialWanted: RouteUtils.safeExtra<BazarrWantedItem>(state),
         ),
         redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.services
+            : null,
       ),
       // See the series route above: no Hero source, so no `heroTag`.
       _page(
@@ -517,7 +539,9 @@ GoRoute _bazarrRoutes({required String path}) {
           initialWanted: RouteUtils.safeExtra<BazarrWantedItem>(state),
         ),
         redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.services
+            : null,
       ),
     ],
   );
@@ -569,7 +593,9 @@ GoRoute _prowlarrRoutes({required String path}) {
           indexerId: RouteUtils.safeIntParam(state, 'id')!,
         ),
         redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null ? '/services' : null,
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.services
+            : null,
       ),
       _page(
         'settings',
@@ -715,7 +741,7 @@ GoRoute _streamRoutes({required ServiceKey service, required String path}) {
         ),
         redirect: (context, state) =>
             (state.pathParameters['id']?.trim().isEmpty ?? true)
-            ? '/services/${service.routeParam}'
+            ? ServiceRoutes.forService(service)
             : null,
       ),
       _page(
@@ -726,7 +752,7 @@ GoRoute _streamRoutes({required ServiceKey service, required String path}) {
         ),
         redirect: (context, state) =>
             (state.pathParameters['id']?.trim().isEmpty ?? true)
-            ? '/services/${service.routeParam}'
+            ? ServiceRoutes.forService(service)
             : null,
       ),
     ],
@@ -772,7 +798,7 @@ List<GoRoute> _truenasSectionRoutes() => <GoRoute>[
         ),
         redirect: (context, state) =>
             (state.uri.queryParameters['id'] ?? '').isEmpty
-            ? '/services/truenas/datasets'
+            ? ServiceRoutes.truenasDatasets
             : null,
       ),
     ],
@@ -840,7 +866,7 @@ List<GoRoute> _truenasSectionRoutes() => <GoRoute>[
 
 String? _redirectLegacyDiscover(GoRouterState state) {
   final path = state.uri.path;
-  if (path == '/discover') return '/services';
+  if (path == '/discover') return ServiceRoutes.services;
 
   const legacyBase = '/discover/';
   if (!path.startsWith(legacyBase)) return null;
@@ -851,10 +877,10 @@ String? _redirectLegacyDiscover(GoRouterState state) {
       suffix == 'trending/all' ||
       suffix.startsWith('movie/') ||
       suffix.startsWith('tv/')) {
-    return _preserveQuery(state.uri, '/services/seerr/$suffix');
+    return _preserveQuery(state.uri, '${ServiceRoutes.seerr}/$suffix');
   }
 
-  return '/services';
+  return ServiceRoutes.services;
 }
 
 String? _redirectLegacyLibrary(
@@ -863,13 +889,13 @@ String? _redirectLegacyLibrary(
   required String serviceBase,
 }) {
   final path = state.uri.path;
-  if (path == legacyBase) return '/services';
+  if (path == legacyBase) return ServiceRoutes.services;
 
   final prefix = '$legacyBase/';
   if (!path.startsWith(prefix)) return null;
 
   final id = path.substring(prefix.length);
-  if (id.isEmpty || id.contains('/')) return '/services';
+  if (id.isEmpty || id.contains('/')) return ServiceRoutes.services;
   return _preserveQuery(state.uri, '$serviceBase/$id');
 }
 
@@ -888,27 +914,34 @@ String _preserveQuery(Uri source, String path) {
 /// its branch opens on.
 RouteBase _branchRootFor(NavTab tab) => switch (tab) {
   NavTab.services => GoRoute(
-    path: '/services',
+    path: ServiceRoutes.services,
     pageBuilder: (context, state) => _tabPage(state, const ServicesScreen()),
     routes: [
-      _discoverRoutes(path: 'seerr'),
-      _moviesRoutes(path: 'radarr'),
-      _seriesRoutes(path: 'sonarr'),
-      _musicRoutes(path: 'lidarr'),
-      _qbittorrentRoutes(path: 'qbittorrent'),
-      _bazarrRoutes(path: 'bazarr'),
-      _truenasRoutes(path: 'truenas'),
-      _dockgeRoutes(path: 'dockge'),
-      _prowlarrRoutes(path: 'prowlarr'),
-      _readarrRoutes(path: 'readarr'),
-      _sabnzbdRoutes(path: 'sabnzbd'),
-      _nzbgetRoutes(path: 'nzbget'),
-      _unraidRoutes(path: 'unraid'),
-      _transmissionRoutes(path: 'transmission'),
-      // `npm`, not `nginxProxyManager` — see `ServiceKey.routeParam`.
+      // Every mount takes its segment from `ServiceKey.routeParam` rather than
+      // repeating the literal. Sixteen of these were spelled out by hand and
+      // one — `npm`, the single segment that is *not* the enum name — was not,
+      // which is exactly the asymmetry that makes a hand-spelled table worth
+      // deleting: the one path a typo would break was the only one guarded.
+      _discoverRoutes(path: ServiceKey.seerr.routeParam),
+      _moviesRoutes(path: ServiceKey.radarr.routeParam),
+      _seriesRoutes(path: ServiceKey.sonarr.routeParam),
+      _musicRoutes(path: ServiceKey.lidarr.routeParam),
+      _qbittorrentRoutes(path: ServiceKey.qbittorrent.routeParam),
+      _bazarrRoutes(path: ServiceKey.bazarr.routeParam),
+      _truenasRoutes(path: ServiceKey.truenas.routeParam),
+      _dockgeRoutes(path: ServiceKey.dockge.routeParam),
+      _prowlarrRoutes(path: ServiceKey.prowlarr.routeParam),
+      _readarrRoutes(path: ServiceKey.readarr.routeParam),
+      _sabnzbdRoutes(path: ServiceKey.sabnzbd.routeParam),
+      _nzbgetRoutes(path: ServiceKey.nzbget.routeParam),
+      _unraidRoutes(path: ServiceKey.unraid.routeParam),
+      _transmissionRoutes(path: ServiceKey.transmission.routeParam),
       _npmRoutes(path: ServiceKey.nginxProxyManager.routeParam),
-      _streamRoutes(service: ServiceKey.jellyfin, path: 'jellyfin'),
-      _streamRoutes(service: ServiceKey.plex, path: 'plex'),
+      _streamRoutes(
+        service: ServiceKey.jellyfin,
+        path: ServiceKey.jellyfin.routeParam,
+      ),
+      _streamRoutes(service: ServiceKey.plex, path: ServiceKey.plex.routeParam),
     ],
   ),
   NavTab.activity => GoRoute(
@@ -964,6 +997,20 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
   ),
 };
 
+/// Rewrites a pre-rename `/services…` location onto `/dashboard…`.
+///
+/// Returns null for anything else, so the redirect callback can fall through.
+/// Matching is on the path *segment* rather than a bare `startsWith`, or a
+/// future `/services-of-mine` would be rewritten to something that does not
+/// exist.
+String? _rewriteLegacyServicesPath(Uri uri) {
+  const legacy = ServiceRoutes.legacyServices;
+  final path = uri.path;
+  if (path != legacy && !path.startsWith('$legacy/')) return null;
+  final rewritten = '${ServiceRoutes.services}${path.substring(legacy.length)}';
+  return uri.hasQuery ? '$rewritten?${uri.query}' : rewritten;
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerRefreshNotifierProvider);
   final onboardingDone = ref.read(onboardingCompletedProvider);
@@ -971,12 +1018,25 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     refreshListenable: notifier,
-    initialLocation: onboardingDone ? '/services' : '/onboarding',
+    initialLocation: onboardingDone ? ServiceRoutes.services : '/onboarding',
     redirect: (context, state) {
       final done = ref.read(onboardingCompletedProvider);
       final isOnboarding = state.matchedLocation == '/onboarding';
       if (!done && !isOnboarding) return '/onboarding';
-      if (done && isOnboarding) return '/services';
+      if (done && isOnboarding) return ServiceRoutes.services;
+
+      // Everything that used to live under `/services` still resolves.
+      //
+      // One rewrite here rather than a shadow copy of the tree: the rename
+      // moved thirty-four routes and every detail tail under them, and
+      // re-declaring each one as a legacy twin would double the surface that
+      // has to stay in sync for the rest of the app's life. A prefix swap
+      // keeps the whole subtree — `/services/radarr/movie/42?heroTag=…`
+      // included — and preserves the query, which is where the instance lens
+      // travels.
+      final legacy = _rewriteLegacyServicesPath(state.uri);
+      if (legacy != null) return legacy;
+
       return null;
     },
     routes: [
@@ -1060,10 +1120,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       // be a sibling of any more: the route list is derived from the branches.
       // Putting four dead trees inside the services branch would read as part of
       // that tab's subtree and invite someone to give them a real builder.
-      _discoverRoutes(path: '/discover', redirectLocation: '/services'),
-      _moviesRoutes(path: '/movies', redirectLocation: '/services'),
-      _seriesRoutes(path: '/series', redirectLocation: '/services'),
-      _musicRoutes(path: '/music', redirectLocation: '/services'),
+      _discoverRoutes(
+        path: '/discover',
+        redirectLocation: ServiceRoutes.services,
+      ),
+      _moviesRoutes(path: '/movies', redirectLocation: ServiceRoutes.services),
+      _seriesRoutes(path: '/series', redirectLocation: ServiceRoutes.services),
+      _musicRoutes(path: '/music', redirectLocation: ServiceRoutes.services),
       // The per-service activity drill-down: already full-screen above the
       // shell, and unchanged by the migration.
       GoRoute(

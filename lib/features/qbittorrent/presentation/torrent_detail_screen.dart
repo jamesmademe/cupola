@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/theme.dart';
@@ -85,7 +86,8 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
                 Icons.chevron_left_rounded,
                 color: colorScheme.onSurfaceVariant,
               ),
-              onPressed: () => RouteUtils.popOrGo(context, '/services'),
+              onPressed: () =>
+                  RouteUtils.popOrGo(context, ServiceRoutes.services),
             ),
             title: Row(
               children: [

@@ -53,7 +53,8 @@ void main() {
     await _pumpServices(tester);
     await _pumpDashboard(tester);
 
-    expect(find.text('Services'), findsOneWidget);
+    // The h1 names the subject, not the destination (decision 2).
+    expect(find.text('Your stack'), findsOneWidget);
 
     // Domain bands, not a sideways scroller.
     expect(find.text('MEDIA'), findsOneWidget);
@@ -1118,14 +1119,14 @@ void main() {
 
   testWidgets('a matrix cell opens its service dashboard', (tester) async {
     final router = GoRouter(
-      initialLocation: '/services',
+      initialLocation: '/dashboard',
       routes: [
         GoRoute(
-          path: '/services',
+          path: '/dashboard',
           builder: (context, state) => const ServicesScreen(),
         ),
         GoRoute(
-          path: '/services/radarr',
+          path: '/dashboard/radarr',
           builder: (context, state) =>
               const Scaffold(body: Text('Radarr Home')),
         ),
@@ -1144,7 +1145,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('service-matrix-cell-radarr')));
     await tester.pumpAndSettle();
 
-    expect(router.state.uri.toString(), '/services/radarr');
+    expect(router.state.uri.toString(), '/dashboard/radarr');
     expect(find.text('Radarr Home'), findsOneWidget);
   });
 }

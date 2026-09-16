@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/features/services/presentation/widgets/instance_lens_badge.dart';
@@ -79,8 +80,9 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
                 Icons.chevron_left_rounded,
                 color: colorScheme.onSurfaceVariant,
               ),
-              onPressed: () => RouteUtils.popOrGo(context, '/services'),
-              tooltip: 'Back to Services',
+              onPressed: () =>
+                  RouteUtils.popOrGo(context, ServiceRoutes.services),
+              tooltip: 'Back to Dashboard',
               padding: const EdgeInsets.only(right: AppSpacing.xs),
               constraints: const BoxConstraints(minWidth: 36, minHeight: 40),
             ),

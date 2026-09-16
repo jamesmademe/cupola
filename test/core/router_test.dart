@@ -32,7 +32,7 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      expect(router.state.uri.toString(), '/services');
+      expect(router.state.uri.toString(), '/dashboard');
       expect(find.byType(ServicesScreen), findsOneWidget);
     });
 
@@ -70,7 +70,7 @@ void main() {
       container.read(onboardingCompletedProvider.notifier).state = true;
       await tester.pumpAndSettle();
 
-      expect(router.state.uri.toString(), '/services');
+      expect(router.state.uri.toString(), '/dashboard');
       expect(find.byType(ServicesScreen), findsOneWidget);
       expect(find.byType(OnboardingScreen), findsNothing);
     });
@@ -81,10 +81,10 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      router.go('/services/seerr/movie/not-a-number');
+      router.go('/dashboard/seerr/movie/not-a-number');
       await tester.pumpAndSettle();
 
-      expect(router.state.uri.toString(), '/services');
+      expect(router.state.uri.toString(), '/dashboard');
       expect(find.byType(ServicesScreen), findsOneWidget);
       expect(find.byType(DiscoverDetailScreen), findsNothing);
     });
@@ -97,7 +97,7 @@ void main() {
         const encodedPosterUrl =
             'https%3A%2F%2Fcdn.example.com%2Fposter%20image.jpg';
 
-        router.go('/services/seerr/movie/123?posterUrl=$encodedPosterUrl');
+        router.go('/dashboard/seerr/movie/123?posterUrl=$encodedPosterUrl');
         await tester.pumpAndSettle();
 
         final screen = tester.widget<DiscoverDetailScreen>(
@@ -106,7 +106,7 @@ void main() {
 
         expect(
           router.state.uri.toString(),
-          '/services/seerr/movie/123?posterUrl=$encodedPosterUrl',
+          '/dashboard/seerr/movie/123?posterUrl=$encodedPosterUrl',
         );
         expect(screen.mediaId, 123);
         expect(screen.mediaType, 'movie');
@@ -124,7 +124,7 @@ void main() {
         final container = await _pumpRouter(tester);
         final router = container.read(routerProvider);
 
-        router.go('/services/radarr/movie/42');
+        router.go('/dashboard/radarr/movie/42');
         await tester.pumpAndSettle();
 
         final movieScreen = tester.widget<MovieDetailScreen>(
@@ -134,7 +134,7 @@ void main() {
         expect(movieScreen.movieId, 42);
         expect(movieScreen.initialMovie, isNull);
 
-        router.go('/services/sonarr/series/55');
+        router.go('/dashboard/sonarr/series/55');
         await tester.pumpAndSettle();
 
         final seriesScreen = tester.widget<SeriesDetailScreen>(
@@ -144,7 +144,7 @@ void main() {
         expect(seriesScreen.seriesId, 55);
         expect(seriesScreen.initialSeries, isNull);
 
-        router.go('/services/lidarr/artist/9');
+        router.go('/dashboard/lidarr/artist/9');
         await tester.pumpAndSettle();
 
         final musicScreen = tester.widget<MusicDetailScreen>(
@@ -163,12 +163,12 @@ void main() {
       final router = container.read(routerProvider);
 
       router.go(
-        '/services/radarr/movie/not-a-number',
+        '/dashboard/radarr/movie/not-a-number',
         extra: buildMovie(id: 42),
       );
       await tester.pumpAndSettle();
 
-      expect(router.state.uri.toString(), '/services');
+      expect(router.state.uri.toString(), '/dashboard');
       expect(find.byType(ServicesScreen), findsOneWidget);
       expect(find.byType(MovieDetailScreen), findsNothing);
     });
@@ -179,20 +179,20 @@ void main() {
         final container = await _pumpRouter(tester);
         final router = container.read(routerProvider);
 
-        router.go('/services/radarr/movie/42', extra: buildArtist(id: 9));
+        router.go('/dashboard/radarr/movie/42', extra: buildArtist(id: 9));
         await tester.pumpAndSettle();
 
-        expect(router.state.uri.toString(), '/services/radarr/movie/42');
+        expect(router.state.uri.toString(), '/dashboard/radarr/movie/42');
         var movieScreen = tester.widget<MovieDetailScreen>(
           find.byType(MovieDetailScreen),
         );
         expect(movieScreen.movieId, 42);
         expect(movieScreen.initialMovie, isNull);
 
-        router.go('/services/radarr/movie/42', extra: buildMovie(id: 7));
+        router.go('/dashboard/radarr/movie/42', extra: buildMovie(id: 7));
         await tester.pumpAndSettle();
 
-        expect(router.state.uri.toString(), '/services/radarr/movie/42');
+        expect(router.state.uri.toString(), '/dashboard/radarr/movie/42');
         movieScreen = tester.widget<MovieDetailScreen>(
           find.byType(MovieDetailScreen),
         );
@@ -267,10 +267,10 @@ void main() {
       final router = container.read(routerProvider);
 
       for (final route in [
-        '/services/seerr',
-        '/services/radarr',
-        '/services/sonarr',
-        '/services/lidarr',
+        '/dashboard/seerr',
+        '/dashboard/radarr',
+        '/dashboard/sonarr',
+        '/dashboard/lidarr',
       ]) {
         router.go(route);
         await tester.pumpAndSettle();
@@ -283,26 +283,95 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      router.go('/services/seerr/requests');
+      router.go('/dashboard/seerr/requests');
       await tester.pumpAndSettle();
 
-      expect(router.state.uri.toString(), '/services/seerr/requests');
+      expect(router.state.uri.toString(), '/dashboard/seerr/requests');
       expect(find.byType(ServiceAllRequestsScreen), findsOneWidget);
 
       for (final entry in {
-        '/services/radarr/media': ServiceKey.radarr,
-        '/services/sonarr/media': ServiceKey.sonarr,
-        '/services/lidarr/media': ServiceKey.lidarr,
+        '/dashboard/radarr/media': ServiceKey.radarr,
+        '/dashboard/sonarr/media': ServiceKey.sonarr,
+        '/dashboard/lidarr/media': ServiceKey.lidarr,
       }.entries) {
         router.go(entry.key);
         await tester.pumpAndSettle();
 
         expect(
           router.state.uri.toString(),
-          '/services/${entry.value.routeParam}',
+          '/dashboard/${entry.value.routeParam}',
         );
         expect(find.byType(ServiceAllRequestsScreen), findsNothing);
       }
+    });
+
+    testWidgets('every pre-rename /services path still resolves', (
+      tester,
+    ) async {
+      // The rename moved thirty-four routes and every detail tail under them.
+      // A bookmark, a restored session or a shared deep link from before it
+      // must not 404, and the rewrite is a prefix swap rather than a shadow
+      // copy of the tree — so what this asserts is that the swap reaches the
+      // *descendants*, not just the root.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      // Only services this harness fakes: an unfaked one leaves a provider
+      // retry timer pending and the failure would be about the fixture rather
+      // than about the rewrite.
+      const cases = {
+        '/services': '/dashboard',
+        '/services/radarr': '/dashboard/radarr',
+        '/services/seerr/requests': '/dashboard/seerr/requests',
+      };
+
+      for (final entry in cases.entries) {
+        router.go(entry.key);
+        await tester.pumpAndSettle();
+        expect(router.state.uri.toString(), entry.value, reason: entry.key);
+      }
+    });
+
+    testWidgets('the legacy rewrite keeps the query, lens included', (
+      tester,
+    ) async {
+      // The instance lens travels as `?i=`, so a rewrite that dropped the
+      // query would silently retarget a deep link at whichever connection the
+      // lens happens to point at — the one failure mode of this change that
+      // moves a user's files rather than just their view.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      // `heroTag` stands in for the lens here only because pointing `i=` at a
+      // connection this harness does not define leaves a provider retrying;
+      // the property under test is the whole query surviving the swap, and
+      // that is what `i=` rides on in production.
+      router.go('/services/radarr/movie/42?heroTag=legacy_movie');
+      await tester.pumpAndSettle();
+
+      expect(
+        router.state.uri.toString(),
+        '/dashboard/radarr/movie/42?heroTag=legacy_movie',
+      );
+      expect(find.byType(MovieDetailScreen), findsOneWidget);
+    });
+
+    testWidgets('a path that merely starts with the old prefix is not moved', (
+      tester,
+    ) async {
+      // `startsWith('/services')` would rewrite `/services-of-mine` too. The
+      // rewrite matches on the segment boundary, so an unknown path stays
+      // unknown and falls through to the router's own handling.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      router.go('/servicesfoo');
+      await tester.pumpAndSettle();
+
+      // Asserted on what rendered rather than on `router.state`: an unmatched
+      // location leaves the match list empty and reading `state` throws, which
+      // would pass this test for entirely the wrong reason.
+      expect(find.byType(ServicesScreen), findsNothing);
     });
 
     testWidgets('legacy top-level routes redirect to services', (tester) async {
@@ -313,7 +382,7 @@ void main() {
         router.go(route);
         await tester.pumpAndSettle();
 
-        expect(router.state.uri.toString(), '/services');
+        expect(router.state.uri.toString(), '/dashboard');
         expect(find.byType(ServicesScreen), findsOneWidget);
       }
     });
@@ -331,7 +400,7 @@ void main() {
 
       expect(
         router.state.uri.toString(),
-        '/services/seerr/movie/123?posterUrl=$encodedPosterUrl',
+        '/dashboard/seerr/movie/123?posterUrl=$encodedPosterUrl',
       );
       expect(find.byType(DiscoverDetailScreen), findsOneWidget);
 
@@ -340,7 +409,7 @@ void main() {
 
       expect(
         router.state.uri.toString(),
-        '/services/radarr/movie/42?heroTag=legacy_movie',
+        '/dashboard/radarr/movie/42?heroTag=legacy_movie',
       );
       expect(find.byType(MovieDetailScreen), findsOneWidget);
 
@@ -349,7 +418,7 @@ void main() {
 
       expect(
         router.state.uri.toString(),
-        '/services/sonarr/series/55?heroTag=legacy_series',
+        '/dashboard/sonarr/series/55?heroTag=legacy_series',
       );
       expect(find.byType(SeriesDetailScreen), findsOneWidget);
 
@@ -358,7 +427,7 @@ void main() {
 
       expect(
         router.state.uri.toString(),
-        '/services/lidarr/artist/9?heroTag=legacy_artist',
+        '/dashboard/lidarr/artist/9?heroTag=legacy_artist',
       );
       expect(find.byType(MusicDetailScreen), findsOneWidget);
     });

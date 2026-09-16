@@ -9,10 +9,10 @@ import 'package:cupola/features/services/presentation/service_dashboard_screen.d
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
-  testWidgets('pushes service dashboard from services home and pops back', (
+  testWidgets('pushes a service home from the dashboard and pops back', (
     tester,
   ) async {
-    final router = _buildRouter('/services');
+    final router = _buildRouter('/dashboard');
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
@@ -43,17 +43,17 @@ void main() {
       findsNothing,
     );
 
-    await tester.tap(find.byTooltip('Back to Services'));
+    await tester.tap(find.byTooltip('Back to Dashboard'));
     await tester.pumpAndSettle();
 
-    expect(router.state.uri.toString(), '/services');
-    expect(find.text('Services home'), findsOneWidget);
+    expect(router.state.uri.toString(), '/dashboard');
+    expect(find.text('Dashboard home'), findsOneWidget);
   });
 
   testWidgets('back and activity actions navigate to parent routes', (
     tester,
   ) async {
-    final router = _buildRouter('/services');
+    final router = _buildRouter('/dashboard');
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
@@ -77,14 +77,14 @@ void main() {
     expect(router.state.uri.toString(), '/activity');
     expect(find.text('Activity page'), findsOneWidget);
 
-    router.go('/services/lidarr');
+    router.go('/dashboard/lidarr');
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Back to Services'));
+    await tester.tap(find.byTooltip('Back to Dashboard'));
     await tester.pumpAndSettle();
 
-    expect(router.state.uri.toString(), '/services');
-    expect(find.text('Services home'), findsOneWidget);
+    expect(router.state.uri.toString(), '/dashboard');
+    expect(find.text('Dashboard home'), findsOneWidget);
   });
 }
 
@@ -93,17 +93,17 @@ GoRouter _buildRouter(String initialLocation) {
     initialLocation: initialLocation,
     routes: [
       GoRoute(
-        path: '/services',
+        path: '/dashboard',
         builder: (context, state) => Scaffold(
           body: SingleChildScrollView(
             child: Column(
               children: [
-                const Text('Services home'),
+                const Text('Dashboard home'),
                 for (final service in ServiceKey.values)
                   TextButton(
                     key: ValueKey('open-service-${service.routeParam}'),
                     onPressed: () =>
-                        context.push('/services/${service.routeParam}'),
+                        context.push('/dashboard/${service.routeParam}'),
                     child: Text('Open ${service.title}'),
                   ),
               ],
