@@ -103,9 +103,10 @@ class _InspectorHeader extends ConsumerWidget {
           Expanded(
             child: Text(
               'Activity',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
+              style: AppTheme.chrome(
+                context,
+                size: 13,
+                weight: FontWeight.w700,
                 color: colorScheme.onSurface,
               ),
             ),
@@ -171,11 +172,12 @@ class _QueueRow extends StatelessWidget {
                   item.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    height: 1.22,
+                  style: AppTheme.chrome(
+                    context,
+                    size: 12,
+                    weight: FontWeight.w500,
                     color: colorScheme.onSurface,
+                    height: 1.22,
                   ),
                 ),
                 if (progress != null) ...[
@@ -197,8 +199,9 @@ class _QueueRow extends StatelessWidget {
                   item.subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10,
+                  style: AppTheme.chrome(
+                    context,
+                    size: 11,
                     color: CupolaThemeColors.of(context).dimText,
                   ).mono.tabular,
                 ),
@@ -256,9 +259,10 @@ class _UnreachableCard extends ConsumerWidget {
                         services.map((s) => s.title).join(' · '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                        style: AppTheme.chrome(
+                          context,
+                          size: 12,
+                          weight: FontWeight.w600,
                           color: colorScheme.onSurface,
                         ),
                       ),
@@ -268,11 +272,12 @@ class _UnreachableCard extends ConsumerWidget {
                 const SizedBox(height: 7),
                 Text(
                   'No response. Anything they hold is missing from this list.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    height: 1.3,
+                  style: AppTheme.chrome(
+                    context,
+                    size: 11,
+                    weight: FontWeight.w500,
                     color: CupolaThemeColors.of(context).dimText,
+                    height: 1.3,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -365,11 +370,12 @@ class _FinishedToday extends ConsumerWidget {
                       item.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        height: 1.22,
+                      style: AppTheme.chrome(
+                        context,
+                        size: 11,
+                        weight: FontWeight.w500,
                         color: CupolaThemeColors.of(context).dimText,
+                        height: 1.22,
                       ),
                     ),
                   ),
@@ -392,12 +398,13 @@ class _SectionLabel extends StatelessWidget {
     padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
     child: Text(
       text.toUpperCase(),
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.4,
-        height: 1.2,
+      style: AppTheme.chrome(
+        context,
+        size: 11,
+        weight: FontWeight.w700,
         color: CupolaThemeColors.of(context).dimText,
+        height: 1.2,
+        letterSpacing: 1.4,
       ),
     ),
   );
@@ -413,10 +420,11 @@ class _InspectorNote extends StatelessWidget {
     padding: const EdgeInsets.all(AppSpacing.lg),
     child: Text(
       text,
-      style: TextStyle(
-        fontSize: 12,
-        height: 1.4,
+      style: AppTheme.chrome(
+        context,
+        size: 12,
         color: CupolaThemeColors.of(context).dimText,
+        height: 1.4,
       ),
     ),
   );

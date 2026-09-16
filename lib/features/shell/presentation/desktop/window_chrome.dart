@@ -195,9 +195,10 @@ class _Breadcrumb extends StatelessWidget {
         crumb.label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: isLast ? FontWeight.w700 : FontWeight.w500,
+        style: AppTheme.chrome(
+          context,
+          size: 12,
+          weight: isLast ? FontWeight.w700 : FontWeight.w500,
           color: isLast
               ? colorScheme.onSurface
               : CupolaThemeColors.of(context).dimText,
@@ -330,9 +331,10 @@ class _ChromeChipState extends State<_ChromeChip> {
           if (labelled)
             Text(
               widget.label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+              style: AppTheme.chrome(
+                context,
+                size: 11,
+                weight: FontWeight.w600,
                 color: accent != null
                     ? colorScheme.onSurface
                     : colorScheme.onSurfaceVariant,
@@ -342,8 +344,9 @@ class _ChromeChipState extends State<_ChromeChip> {
             SizedBox(width: labelled ? 6 : 4),
             Text(
               widget.shortcut!,
-              style: TextStyle(
-                fontSize: 11,
+              style: AppTheme.chrome(
+                context,
+                size: 11,
                 color: CupolaThemeColors.of(context).dimText,
               ).mono.tabular,
             ),

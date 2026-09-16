@@ -1265,9 +1265,10 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
                       item.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                      style: AppTheme.chrome(
+                        context,
+                        size: 13,
+                        weight: FontWeight.w600,
                         color: colorScheme.onSurface,
                       ),
                     ),
@@ -1289,7 +1290,11 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
                         item.detail!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 11, color: widget.toneColor),
+                        style: AppTheme.chrome(
+                          context,
+                          size: 11,
+                          color: widget.toneColor,
+                        ),
                       ),
                     ],
                   ],
@@ -1305,8 +1310,9 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 11,
+                  style: AppTheme.chrome(
+                    context,
+                    size: 11,
                     color: CupolaThemeColors.of(context).dimText,
                   ).mono.tabular,
                 ),
@@ -1329,8 +1335,9 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 11,
+                  style: AppTheme.chrome(
+                    context,
+                    size: 11,
                     color: CupolaThemeColors.of(context).dimText,
                   ),
                 ),

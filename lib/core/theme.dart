@@ -505,6 +505,91 @@ class AppTheme {
     brightness: Brightness.dark,
   );
 
+  /// The four roles DESIGN.md's Hierarchy names that the Material ramp has no
+  /// slot for.
+  ///
+  /// They exist because the alternative is what the codebase actually had:
+  /// thirty-nine bare `TextStyle(fontSize: …)` literals, mostly across the
+  /// desktop shell. A bare `TextStyle` is not a smaller version of a ramp role,
+  /// it is a *different* style — it never reaches Inter's `wght` axis, so every
+  /// one of those weights rendered as Regular, and it never reaches
+  /// [interTracking], so its letter spacing is whatever the face ships with.
+  ///
+  /// Each takes a [brightness] because Inter's tracking is walked per theme:
+  /// the dark delta is why a dark surface traced from light tracking is wrong.
+  ///
+  /// **Subtitle** (700, 20, -0.3 tracking) — a service's own name in its app
+  /// bar. One step under Title because it names the surface the app bar already
+  /// put you on, not the surface itself.
+  static TextStyle subtitle(Brightness brightness) => _inter(
+    fontSize: 20,
+    fontWeight: FontWeight.w700,
+    height: 1.26,
+    letterSpacing: -0.3,
+    brightness: brightness,
+  );
+
+  /// **Panel header** (700, 18) — an `h2` inside a page: a Dockge stack, an NPM
+  /// host, a TrueNAS console section. It heads a region, not the whole screen.
+  static TextStyle panelHeader(Brightness brightness) => _inter(
+    fontSize: 18,
+    fontWeight: FontWeight.w700,
+    height: 1.28,
+    brightness: brightness,
+  );
+
+  /// **Row title** (700, 15) — the primary line of a list row that is a *name*
+  /// rather than a sentence: a device, a now-playing session, a proxy host.
+  static TextStyle rowTitle(Brightness brightness) => _inter(
+    fontSize: 15,
+    fontWeight: FontWeight.w700,
+    height: 1.30,
+    brightness: brightness,
+  );
+
+  /// **Data** (600, 13, 1.30) — the answer in a row: the title of an attention
+  /// item, a queue entry, a table cell.
+  ///
+  /// It sits *above* Label on purpose. The thing that needs a human must never
+  /// be smaller than the word describing it.
+  static TextStyle data(Brightness brightness) => _inter(
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+    height: 1.30,
+    brightness: brightness,
+  );
+
+  /// The dense chrome styles the desktop shell needs, off the ramp and through
+  /// Inter's axes.
+  ///
+  /// Every one of these used to be a bare `TextStyle(fontSize: …)`, which is a
+  /// different thing from a smaller ramp role in two ways that both show. It
+  /// never reaches `fontVariations`, so the bundled variable Inter resolves the
+  /// requested weight against its single registered face and renders Regular —
+  /// the whole shell was asking for w500 and w700 and getting neither. And it
+  /// never reaches [interTracking], so its letter spacing is the face default
+  /// rather than the walked per-theme value.
+  ///
+  /// [size] is clamped to 11, which is how DESIGN.md's floor stays *enforced*
+  /// rather than asserted: ten runs in the shell were at 9 and 10, including a
+  /// nav badge numeral on a badge that had already been grown from 15 to 18dp
+  /// specifically so it would not need one.
+  static TextStyle chrome(
+    BuildContext context, {
+    double size = 11,
+    FontWeight weight = FontWeight.w500,
+    Color? color,
+    double? height,
+    double? letterSpacing,
+  }) => _inter(
+    color: color,
+    fontSize: size < 11 ? 11 : size,
+    fontWeight: weight,
+    height: height ?? 1.22,
+    letterSpacing: letterSpacing,
+    brightness: Theme.of(context).brightness,
+  );
+
   // === DARK THEME (Primary) ===
   //
   // Both themes are deliberately fixed. Cupola's palette is part of its

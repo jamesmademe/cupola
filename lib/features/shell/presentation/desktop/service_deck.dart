@@ -147,8 +147,9 @@ class _ActiveChip extends ConsumerWidget {
               const SizedBox(width: 2),
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 10,
+                style: AppTheme.chrome(
+                  context,
+                  size: 11,
                   color: ServiceTheme.onTint(
                     accent,
                     surface: colorScheme.surface,
@@ -359,17 +360,19 @@ class _HealthReadout extends ConsumerWidget {
             const SizedBox(width: AppSpacing.sm),
             Text(
               '${health.answering}',
-              style: TextStyle(
-                fontSize: 12,
+              style: AppTheme.chrome(
+                context,
+                size: 12,
                 color: colorScheme.onSurface,
               ).mono.tabular,
             ),
             const SizedBox(width: 3),
             Text(
               '/ ${health.configured}',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
+              style: AppTheme.chrome(
+                context,
+                size: 11,
+                weight: FontWeight.w500,
                 color: CupolaThemeColors.of(context).dimText,
               ),
             ),
@@ -377,9 +380,10 @@ class _HealthReadout extends ConsumerWidget {
               const SizedBox(width: 5),
               Text(
                 '· ${health.unreachable} down',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
+                style: AppTheme.chrome(
+                  context,
+                  size: 11,
+                  weight: FontWeight.w500,
                   color: colorScheme.error,
                 ),
               ),
@@ -457,17 +461,19 @@ class _JumpPillState extends State<_JumpPill> {
                 const SizedBox(width: 9),
                 Text(
                   widget.compact ? 'Jump' : 'Jump to anything',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                  style: AppTheme.chrome(
+                    context,
+                    size: 11,
+                    weight: FontWeight.w500,
                     color: CupolaThemeColors.of(context).dimText,
                   ),
                 ),
                 const SizedBox(width: 9),
                 Text(
                   ShellShortcuts.commandDeck,
-                  style: TextStyle(
-                    fontSize: 10,
+                  style: AppTheme.chrome(
+                    context,
+                    size: 11,
                     color: CupolaThemeColors.of(context).dimText,
                   ).mono.tabular,
                 ),

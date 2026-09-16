@@ -176,8 +176,12 @@ class _RailBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      constraints: const BoxConstraints(minWidth: 15),
-      height: 15,
+      // 18, not the 15 this was. DESIGN.md's type floor is enforced rather than
+      // asserted, and it records that this badge grew precisely so it would not
+      // need a 9px numeral — the phone's did, and the rail's was left behind.
+      // Where the geometry cannot take 11px, the geometry yields.
+      constraints: const BoxConstraints(minWidth: 18),
+      height: 18,
       padding: const EdgeInsets.symmetric(horizontal: 3),
       decoration: BoxDecoration(
         color: destination.accentColor,
@@ -189,11 +193,12 @@ class _RailBadge extends StatelessWidget {
       child: Center(
         child: Text(
           '${destination.badgeCount}',
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w700,
-            height: 1,
+          style: AppTheme.chrome(
+            context,
+            size: 11,
+            weight: FontWeight.w700,
             color: ServiceTheme.foregroundOn(destination.accentColor),
+            height: 1,
           ).mono.tabular,
         ),
       ),
@@ -241,8 +246,9 @@ class _DeckKeyHintState extends State<_DeckKeyHint> {
               ),
               child: Text(
                 ShellShortcuts.commandDeck,
-                style: TextStyle(
-                  fontSize: 10,
+                style: AppTheme.chrome(
+                  context,
+                  size: 11,
                   color: _hovered
                       ? colorScheme.onSurface
                       : CupolaThemeColors.of(context).dimText,

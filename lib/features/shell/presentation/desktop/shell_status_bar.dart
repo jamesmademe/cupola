@@ -133,11 +133,12 @@ class _Figure extends StatelessWidget {
     text,
     maxLines: 1,
     overflow: TextOverflow.ellipsis,
-    style: TextStyle(
-      fontSize: 11,
-      fontWeight: FontWeight.w500,
-      height: 1.22,
+    style: AppTheme.chrome(
+      context,
+      size: 11,
+      weight: FontWeight.w500,
       color: CupolaThemeColors.of(context).dimText,
+      height: 1.22,
     ),
   );
 }

@@ -258,9 +258,10 @@ class _AreaChip extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   section.title,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                  style: AppTheme.chrome(
+                    context,
+                    size: 11,
+                    weight: FontWeight.w600,
                     color: selected
                         ? colorScheme.onSurface
                         : colorScheme.onSurfaceVariant,
@@ -337,11 +338,10 @@ class _AreaRowState extends State<_AreaRow> {
                         widget.section.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
+                        style: AppTheme.chrome(
+                          context,
+                          size: 12,
+                          weight: selected ? FontWeight.w700 : FontWeight.w500,
                           color: selected
                               ? colorScheme.onSurface
                               : CupolaThemeColors.of(context).dimText,
@@ -355,8 +355,9 @@ class _AreaRowState extends State<_AreaRow> {
                         widget.section.subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 10,
+                        style: AppTheme.chrome(
+                          context,
+                          size: 11,
                           color: CupolaThemeColors.of(context).dimText,
                         ),
                       ),

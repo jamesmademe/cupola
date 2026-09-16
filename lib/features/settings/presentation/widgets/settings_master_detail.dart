@@ -192,9 +192,10 @@ class _SectionRowState extends State<_SectionRow> {
                     widget.section.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    style: AppTheme.chrome(
+                      context,
+                      size: 12,
+                      weight: selected ? FontWeight.w700 : FontWeight.w500,
                       color: selected
                           ? colorScheme.onSurface
                           : CupolaThemeColors.of(context).dimText,
