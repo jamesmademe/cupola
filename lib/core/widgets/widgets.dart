@@ -17,6 +17,7 @@ export 'reel_command_button.dart';
 export 'app_card.dart';
 export 'content_card.dart';
 export 'service_kpi_peek.dart';
+export 'service_tab_bar.dart';
 export 'service_ring.dart';
 
 // States
