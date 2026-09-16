@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:isolate';
 
+import 'package:cupola/core/app_identity.dart';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
@@ -20,9 +22,17 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 /// theirs.
 const String kPlexProduct = 'Cupola';
 
-/// Sent as `X-Plex-Version`. Tracks `pubspec.yaml`'s `version:` by hand — the
+/// Sent as `X-Plex-Version`.
+///
+/// It used to track `pubspec.yaml`'s `version:` *by hand*, and by the time
+/// anyone looked it said 0.8.0 against a pubspec at 1.0.0 — so every Plex
+/// server in the world had Cupola filed under a version it stopped being two
+/// releases ago. It now reads [kAppVersion], which is the one const the app
+/// prints for itself and which a test measures against the pubspec.
+///
+/// The reasoning that made this a const in the first place still holds: the
 /// project takes no new dependencies, and `package_info_plus` would be one.
-const String kPlexProductVersion = '0.8.0';
+const String kPlexProductVersion = kAppVersion;
 
 /// Sent as `X-Plex-Device-Name`, i.e. the row label in Authorized Devices.
 const String kPlexDeviceName = 'Cupola';

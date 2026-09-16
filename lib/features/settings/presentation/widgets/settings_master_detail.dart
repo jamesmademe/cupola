@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -110,19 +111,49 @@ class SettingsMasterDetail extends StatelessWidget {
                 ),
               ),
             ),
-            child: ListView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.md,
-              ),
+            // A Column over the scroller rather than a last child inside it:
+            // the footer belongs to the rail, not to the list, so it stays put
+            // while the sections scroll past it.
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final section in sections)
-                  _SectionRow(
-                    section: section,
-                    // Longest match wins, so `/settings/services/radarr` still
-                    // lights Connections rather than falling back to the root.
-                    selected: _isSelected(section, location),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.md,
+                    ),
+                    children: [
+                      for (final section in sections)
+                        _SectionRow(
+                          section: section,
+                          // Longest match wins, so `/settings/services/radarr`
+                          // still lights Connections rather than falling back
+                          // to the root.
+                          selected: _isSelected(section, location),
+                        ),
+                    ],
                   ),
+                ),
+                // What the app is, at the foot of the one rail that is about
+                // the app rather than about the stack. It reads a const in
+                // `lib/core`: the project refuses `package_info_plus` by name,
+                // and a test measures the const against the pubspec so the
+                // number cannot drift the way Plex's hand-tracked copy did.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                  ),
+                  child: Text(
+                    kAppIdentityLine,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: CupolaThemeColors.of(context).dimText,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
