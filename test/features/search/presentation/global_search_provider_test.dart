@@ -31,13 +31,11 @@ import '../../../test_helpers/model_builders.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 void main() {
-  test('returns no grouped results for an empty query', () async {
+  test('returns no lanes for an empty query', () async {
     final container = _container();
     addTearDown(container.dispose);
 
-    final results = await container.read(globalSearchResultsProvider.future);
-
-    expect(results, isEmpty);
+    expect(container.read(globalSearchLanesProvider), isEmpty);
   });
 
   test('normalizes mixed service results into grouped search rows', () async {
@@ -71,13 +69,10 @@ void main() {
     addTearDown(container.dispose);
     container.read(globalSearchQueryProvider.notifier).state = 'dune';
 
-    final groups = await container.read(globalSearchResultsProvider.future);
+    final lanes = await _settledLanes(container);
 
-    expect(
-      groups.map((group) => group.service),
-      ServiceKey.values.where((s) => s.isSearchable),
-    );
-    expect(groups.expand((group) => group.results).map((item) => item.title), [
+    expect(lanes.map((lane) => lane.service), globalSearchServices);
+    expect(lanes.expand((lane) => lane.results).map((item) => item.title), [
       'Dune: Part Two',
       'Dune',
       'The Boys',
@@ -85,8 +80,8 @@ void main() {
     ]);
     // Each route carries its poster's shared-element tag, so the detail page it
     // opens has a matching Hero destination to fly into.
-    final routes = groups
-        .expand((group) => group.results)
+    final routes = lanes
+        .expand((lane) => lane.results)
         .map((item) => Uri.parse(item.route))
         .toList(growable: false);
     // Radarr's row points inside the Library tab's branch: on the tab model
@@ -121,7 +116,7 @@ void main() {
     ]);
     // The tag on the model and the tag in its route are the same string —
     // a mismatch would silently produce a flightless navigation.
-    for (final result in groups.expand((group) => group.results)) {
+    for (final result in lanes.expand((lane) => lane.results)) {
       expect(
         Uri.parse(result.route).queryParameters['heroTag'],
         result.heroTag,
@@ -159,20 +154,20 @@ void main() {
         );
     container.read(globalSearchQueryProvider.notifier).state = 'dune';
 
-    final groups = await container.read(globalSearchResultsProvider.future);
-    final radarrGroups = groups
-        .where((group) => group.service == ServiceKey.radarr)
+    final lanes = await _settledLanes(container);
+    final radarrLanes = lanes
+        .where((lane) => lane.service == ServiceKey.radarr)
         .toList();
 
     // One section per connection, so nothing has to be reconciled between them
     // — which is what makes the missing external id on Lidarr and Bazarr stop
     // mattering.
-    expect(radarrGroups, hasLength(2));
-    expect(radarrGroups.map((g) => g.instanceLabel), ['radarr', 'Away']);
+    expect(radarrLanes, hasLength(2));
+    expect(radarrLanes.map((lane) => lane.instanceLabel), ['radarr', 'Away']);
     // And the row's route names the server that listed it.
     expect(
-      radarrGroups
-          .expand((g) => g.results)
+      radarrLanes
+          .expand((lane) => lane.results)
           .map((r) => Uri.parse(r.route).queryParameters['i']),
       ['radarr', 'radarr-away111'],
     );
@@ -218,11 +213,11 @@ void main() {
     addTearDown(container.dispose);
     container.read(globalSearchQueryProvider.notifier).state = 'aladdin';
 
-    final groups = await container.read(globalSearchResultsProvider.future);
-    GlobalSearchServiceResults group(ServiceKey service) =>
-        groups.singleWhere((g) => g.service == service);
+    final lanes = await _settledLanes(container);
+    GlobalSearchServiceResults lane(ServiceKey service) =>
+        lanes.singleWhere((l) => l.service == service);
 
-    final movies = group(ServiceKey.radarr).results;
+    final movies = lane(ServiceKey.radarr).results;
     expect(movies.first.tags, ['Movie', 'In library']);
     expect(movies.first.subtitle, '2019 · In library');
     expect(movies.map((r) => r.inLibrary), [true, false]);
@@ -231,12 +226,12 @@ void main() {
     expect(movies.last.tags, ['Movie']);
     expect(movies.last.subtitle, '1992');
 
-    final series = group(ServiceKey.sonarr).results;
+    final series = lane(ServiceKey.sonarr).results;
     expect(series.map((r) => r.inLibrary), [true, false]);
     expect(series.first.tags, ['Series', 'continuing', 'In library']);
     expect(series.last.tags, ['Series', 'continuing']);
 
-    final artists = group(ServiceKey.lidarr).results;
+    final artists = lane(ServiceKey.lidarr).results;
     expect(artists.map((r) => r.inLibrary), [true, false, true]);
     expect(artists.first.tags, ['Artist', 'In library']);
     expect(artists[1].tags, ['Artist']);
@@ -267,24 +262,24 @@ void main() {
     addTearDown(container.dispose);
     container.read(globalSearchQueryProvider.notifier).state = 'aladdin';
 
-    final groups = await container.read(globalSearchResultsProvider.future);
-    GlobalSearchServiceResults group(ServiceKey service) =>
-        groups.singleWhere((g) => g.service == service);
+    final lanes = await _settledLanes(container);
+    GlobalSearchServiceResults lane(ServiceKey service) =>
+        lanes.singleWhere((l) => l.service == service);
 
-    final movies = group(ServiceKey.radarr).results;
+    final movies = lane(ServiceKey.radarr).results;
     // Nothing to add on a row the server already holds.
     expect(movies.first.addRequest, isNull);
     expect(movies.last.addRequest, isA<RadarrAddRequest>());
     // Bound to the CONNECTION that listed it, which is what the sheet posts to.
     expect(movies.last.addRequest!.instanceId, 'radarr');
 
-    final artists = group(ServiceKey.lidarr).results;
+    final artists = lane(ServiceKey.lidarr).results;
     expect(artists.first.addRequest, isNull);
     expect(artists.last.addRequest, isA<LidarrAddRequest>());
     expect(artists.last.addRequest!.externalId, 'mbid-9');
 
     // Seerr's rows are untouched: its request flow lives on its detail page.
-    for (final row in group(ServiceKey.seerr).results) {
+    for (final row in lane(ServiceKey.seerr).results) {
       expect(row.addRequest, isNull);
     }
   });
@@ -314,9 +309,9 @@ void main() {
     addTearDown(container.dispose);
     container.read(globalSearchQueryProvider.notifier).state = 'aladdin';
 
-    final groups = await container.read(globalSearchResultsProvider.future);
+    final lanes = await _settledLanes(container);
     List<GlobalSearchResult> rows(ServiceKey service) =>
-        groups.singleWhere((g) => g.service == service).results;
+        lanes.singleWhere((l) => l.service == service).results;
 
     final movies = rows(ServiceKey.radarr);
     expect(movies, hasLength(2));
@@ -346,20 +341,22 @@ void main() {
     addTearDown(container.dispose);
     container.read(globalSearchQueryProvider.notifier).state = 'dune';
 
-    final groups = await container.read(globalSearchResultsProvider.future);
+    final lanes = await _settledLanes(container);
 
+    // The lane state, not a bare `hasError`: the screen draws four different
+    // things in this slot and three of them are not the same fault.
     expect(
-      groups.singleWhere((g) => g.service == ServiceKey.radarr).hasError,
+      lanes.singleWhere((l) => l.service == ServiceKey.radarr).hasFault,
       isTrue,
       reason: 'the lookup used to swallow this and return an empty list',
     );
     expect(
-      groups.singleWhere((g) => g.service == ServiceKey.sonarr).hasError,
-      isFalse,
+      lanes.singleWhere((l) => l.service == ServiceKey.sonarr).state,
+      SearchLaneState.answered,
     );
   });
 
-  test('preserves partial service failures', () async {
+  test('one lane failing leaves every other lane answered', () async {
     final container = _container(
       radarr: _SearchRadarrService(throwOnLookup: true),
       sonarr: _SearchSonarrService(
@@ -369,49 +366,129 @@ void main() {
     addTearDown(container.dispose);
     container.read(globalSearchQueryProvider.notifier).state = 'foundation';
 
-    final groups = await container.read(globalSearchResultsProvider.future);
-    final radarr = groups.singleWhere(
-      (group) => group.service == ServiceKey.radarr,
-    );
-    final sonarr = groups.singleWhere(
-      (group) => group.service == ServiceKey.sonarr,
-    );
+    final lanes = await _settledLanes(container);
+    final radarr = lanes.singleWhere((l) => l.service == ServiceKey.radarr);
+    final sonarr = lanes.singleWhere((l) => l.service == ServiceKey.sonarr);
 
-    expect(radarr.hasError, isTrue);
+    expect(radarr.hasFault, isTrue);
     expect(radarr.results, isEmpty);
-    expect(sonarr.hasError, isFalse);
+    expect(sonarr.state, SearchLaneState.answered);
     expect(sonarr.results.single.title, 'Foundation');
   });
 
-  test('hands every service leg of one round the same cancel token', () async {
+  test('a lane still in flight does not hold the lanes that answered', () async {
+    // The promise the whole per-leg model exists to keep. This used to be one
+    // `Future.wait`, so a single configured-but-switched-off server held every
+    // other section behind its timeout and the page could not be drawn at all.
+    final gate = Completer<void>();
+    addTearDown(() {
+      if (!gate.isCompleted) gate.complete();
+    });
+    final container = _container(
+      radarr: _SearchRadarrService(
+        results: [buildMovie(id: 10, title: 'Dune', year: 2024)],
+      ),
+      bazarr: _SearchBazarrService(gate: gate),
+    );
+    addTearDown(container.dispose);
+
+    final sub = container.listen(globalSearchLanesProvider, (_, _) {});
+    addTearDown(sub.close);
+    container.read(globalSearchQueryProvider.notifier).state = 'dune';
+
+    // Everything except the parked Bazarr leg.
+    for (final leg in container.read(globalSearchLegsProvider)) {
+      if (leg.instance.service == ServiceKey.bazarr) continue;
+      await container.read(globalSearchLegProvider(leg).future);
+    }
+    await _settle();
+
+    final lanes = container.read(globalSearchLanesProvider);
+    expect(
+      lanes
+          .where((lane) => lane.service != ServiceKey.bazarr)
+          .map((lane) => lane.state),
+      everyElement(SearchLaneState.answered),
+    );
+    expect(
+      lanes.singleWhere((l) => l.service == ServiceKey.bazarr).state,
+      SearchLaneState.searching,
+    );
+    // And the answered lane really carries its rows while the other is out.
+    expect(
+      lanes
+          .singleWhere((l) => l.service == ServiceKey.radarr)
+          .results
+          .single
+          .title,
+      'Dune',
+    );
+  });
+
+  test('Retry re-runs one lane and leaves the rest alone', () async {
+    final radarr = _SearchRadarrService(throwOnLookup: true);
+    final sonarr = _SearchSonarrService(
+      results: [buildSeries(id: 20, title: 'Foundation')],
+    );
+    final container = _container(radarr: radarr, sonarr: sonarr);
+    addTearDown(container.dispose);
+
+    final sub = container.listen(globalSearchLanesProvider, (_, _) {});
+    addTearDown(sub.close);
+    container.read(globalSearchQueryProvider.notifier).state = 'foundation';
+    await _settledLanes(container);
+
+    expect(radarr.leg.tokens, hasLength(1));
+    expect(sonarr.leg.tokens, hasLength(1));
+
+    final radarrLeg = container
+        .read(globalSearchLegsProvider)
+        .singleWhere((leg) => leg.instance.service == ServiceKey.radarr);
+    container.invalidate(globalSearchLegProvider(radarrLeg));
+    await _settle();
+
+    // Retry is a per-leg invalidate and never a whole-screen one: the lane the
+    // user pressed asked again, and nothing else on the page did.
+    expect(radarr.leg.tokens, hasLength(2));
+    expect(sonarr.leg.tokens, hasLength(1));
+  });
+
+  test('each leg carries a cancel token of its own', () async {
+    // CHANGED from "hands every service leg of one round the same cancel
+    // token". One token per round belonged to the round: there was one provider
+    // and it owned the whole fan-out. A leg is its own provider now, so the
+    // token's life is the leg's — which is precisely what makes a per-lane
+    // Retry able to abort one request without touching the other six.
     final seerr = _SearchSeerrService();
     final radarr = _SearchRadarrService();
     final sonarr = _SearchSonarrService();
     final lidarr = _SearchLidarrService();
-    final bazarr = _SearchBazarrService();
     final container = _container(
       seerr: seerr,
       radarr: radarr,
       sonarr: sonarr,
       lidarr: lidarr,
-      bazarr: bazarr,
     );
     addTearDown(container.dispose);
     container.read(globalSearchQueryProvider.notifier).state = 'dune';
 
-    await container.read(globalSearchResultsProvider.future);
+    await _settledLanes(container);
 
-    final token = radarr.leg.tokens.single;
-    expect(token, isNotNull);
-    for (final leg in [seerr.leg, sonarr.leg, lidarr.leg, bazarr.leg]) {
-      expect(leg.tokens.single, same(token));
-    }
+    final tokens = [
+      seerr.leg.tokens.single,
+      radarr.leg.tokens.single,
+      sonarr.leg.tokens.single,
+      lidarr.leg.tokens.single,
+    ];
+    expect(tokens, everyElement(isNotNull));
+    expect(tokens.toSet(), hasLength(tokens.length));
   });
 
-  test('cancels the superseded round when the query moves on', () async {
-    // Every leg parks here, so the first round is genuinely still in flight
-    // when the second query arrives — which is the only state in which
-    // cancelling means anything.
+  test('a fifth leg waits for a slot rather than opening a fifth socket', () async {
+    // The bound used to be a worker loop inside the one provider that owned the
+    // fan-out. With a leg per provider every member fires at once, so the bound
+    // has to be a gate the legs share — and this is the test that it still is
+    // one.
     final gate = Completer<void>();
     addTearDown(() {
       if (!gate.isCompleted) gate.complete();
@@ -430,27 +507,13 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    // A live listener is what keeps the autoDispose provider alive between the
-    // two rounds; without it the first build would be torn down on its own and
-    // the cancellation would prove nothing.
-    final sub = container.listen(globalSearchResultsProvider, (_, _) {});
+    final sub = container.listen(globalSearchLanesProvider, (_, _) {});
     addTearDown(sub.close);
-
-    container.read(globalSearchQueryProvider.notifier).state = 'du';
-    container.read(globalSearchResultsProvider);
-    await Future<void>.delayed(Duration.zero);
-
     container.read(globalSearchQueryProvider.notifier).state = 'dune';
-    container.read(globalSearchResultsProvider);
-    await Future<void>.delayed(Duration.zero);
+    await _settle();
 
-    // The first four legs only, because the pool is four wide and every one of
-    // them is parked at the gate — which is the semaphore doing its job rather
-    // than a gap in the test.
     for (final leg in [seerr.leg, radarr.leg, sonarr.leg, lidarr.leg]) {
-      expect(leg.tokens, hasLength(2));
-      expect(leg.tokens.first!.isCancelled, isTrue);
-      expect(leg.tokens.last!.isCancelled, isFalse);
+      expect(leg.tokens, hasLength(1));
     }
     expect(
       bazarr.leg.tokens,
@@ -459,6 +522,39 @@ void main() {
           'the fifth leg waits for a slot rather than opening a fifth '
           'connection to somebody\'s home server',
     );
+  });
+
+  test('a superseded query cancels the leg that was in flight', () async {
+    // Every leg parks here, so the first round is genuinely still in flight
+    // when the second query arrives — which is the only state in which
+    // cancelling means anything.
+    final gate = Completer<void>();
+    addTearDown(() {
+      if (!gate.isCompleted) gate.complete();
+    });
+    final radarr = _SearchRadarrService(gate: gate);
+    final sonarr = _SearchSonarrService(gate: gate);
+    final container = _container(radarr: radarr, sonarr: sonarr);
+    addTearDown(container.dispose);
+
+    // A live listener is what keeps the autoDispose providers alive between the
+    // two rounds; without it the first build would be torn down on its own and
+    // the cancellation would prove nothing.
+    final sub = container.listen(globalSearchLanesProvider, (_, _) {});
+    addTearDown(sub.close);
+
+    container.read(globalSearchQueryProvider.notifier).state = 'du';
+    await _settle();
+    expect(radarr.leg.tokens, hasLength(1));
+
+    container.read(globalSearchQueryProvider.notifier).state = 'dune';
+    await _settle();
+
+    for (final leg in [radarr.leg, sonarr.leg]) {
+      expect(leg.tokens, hasLength(2));
+      expect(leg.tokens.first!.isCancelled, isTrue);
+      expect(leg.tokens.last!.isCancelled, isFalse);
+    }
   });
 
   test(
@@ -471,17 +567,17 @@ void main() {
       final container = _container(radarr: radarr);
       addTearDown(container.dispose);
 
-      final sub = container.listen(globalSearchResultsProvider, (_, _) {});
+      final sub = container.listen(globalSearchLanesProvider, (_, _) {});
       addTearDown(sub.close);
 
       container.read(globalSearchQueryProvider.notifier).state = 'dune';
-      await container.read(globalSearchResultsProvider.future);
+      await _settledLanes(container);
       expect(radarr.leg.tokens, hasLength(1));
 
       container.read(_testSettings.notifier).state = container
           .read(_testSettings)
           .copyWith(themeMode: AppThemeMode.dark);
-      await Future<void>.delayed(Duration.zero);
+      await _settle();
 
       expect(radarr.leg.tokens, hasLength(1));
       expect(radarr.leg.tokens.single!.isCancelled, isFalse);
@@ -490,11 +586,37 @@ void main() {
       container.read(_testSettings.notifier).state = container
           .read(_testSettings)
           .copyWithService(ServiceKey.radarr, apiKey: 'rotated');
-      await container.read(globalSearchResultsProvider.future);
+      await _settledLanes(container);
 
       expect(radarr.leg.tokens, hasLength(2));
     },
   );
+}
+
+/// Drives every leg to completion and returns the lanes as they then stand.
+///
+/// There is no page-wide future to await any more — that is the point of the
+/// change — so a test that wants the settled page asks each leg for its own.
+Future<List<GlobalSearchServiceResults>> _settledLanes(
+  ProviderContainer container,
+) async {
+  final sub = container.listen(globalSearchLanesProvider, (_, _) {});
+  try {
+    for (final leg in container.read(globalSearchLegsProvider)) {
+      await container.read(globalSearchLegProvider(leg).future);
+    }
+    await _settle();
+    return container.read(globalSearchLanesProvider);
+  } finally {
+    sub.close();
+  }
+}
+
+/// Lets the queued microtasks and the pool hand-offs unwind.
+Future<void> _settle() async {
+  for (var i = 0; i < 8; i++) {
+    await Future<void>.delayed(Duration.zero);
+  }
 }
 
 /// The settings the fan-out reads, mutable so a test can write to a field the
@@ -556,7 +678,20 @@ class _LegRecorder {
 
   Future<void> record(CancelToken? cancelToken) async {
     tokens.add(cancelToken);
-    if (gate != null) await gate!.future;
+    final parked = gate;
+    if (parked == null) return;
+    // A real request completes the moment its token is cancelled, and that is
+    // what hands the leg's slot back to the pool. A fake that parked straight
+    // through cancellation would hold the bound closed, so the next round would
+    // queue behind a request nobody is waiting for and the test would be
+    // measuring the fake rather than the code.
+    await Future.any([
+      parked.future,
+      if (cancelToken != null) cancelToken.whenCancel,
+    ]);
+    if (cancelToken != null && cancelToken.isCancelled) {
+      throw cancelToken.cancelError ?? Exception('cancelled');
+    }
   }
 }
 

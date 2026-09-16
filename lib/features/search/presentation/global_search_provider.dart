@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:collection';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
@@ -23,8 +26,15 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 final globalSearchQueryProvider = StateProvider<String>((ref) => '');
 
-/// One leg of the fan-out: one service, one of its connections.
-typedef _SearchLeg = ({ServiceInstance instance, bool named});
+/// Bumped to run the query already in the field again, without touching it.
+///
+/// ⌘R and re-tapping the Search tab are opposite commands — one re-runs, the
+/// other clears — and they used to share one channel,
+/// `navigationRefreshProvider(NavigationSection.search)`, whose only listener
+/// cleared the query. So ⌘R silently erased what the user had typed. This is
+/// the other half of that split: the window's Refresh command bumps this, the
+/// tab re-tap keeps the clear, and neither can be mistaken for the other.
+final globalSearchRerunProvider = StateProvider<int>((ref) => 0);
 
 /// How many legs may be in the air at once.
 ///
@@ -35,17 +45,36 @@ typedef _SearchLeg = ({ServiceInstance instance, bool named});
 /// not rate-limited against its owner the way an indexer is.
 const _maxLegsInFlight = 4;
 
+/// How long one lane may take before it is reported as not having answered.
+///
+/// It needs a deadline of its own because "still searching" is only an honest
+/// word against a bounded promise. Without one a lane inherits the transport's
+/// 15 s receive timeout (`redirect_guard._receiveTimeout`), which means the
+/// lane's verdict and the socket's arrive together and the screen can never say
+/// *the query* timed out — only that something, somewhere, gave up.
+///
+/// Ten seconds: above the slowest cold `movie/lookup` through a metadata proxy,
+/// and under the transport's so this verdict always lands first and always
+/// lands the same way. The lane cancels its own token on the way out, so the
+/// pool slot and the socket are both released rather than held to 15 s.
+const _laneDeadline = Duration(seconds: 10);
+
 /// The services the global search fans out to, in the order their sections
 /// appear.
-const _searchableServices = [
-  ServiceKey.seerr,
-  ServiceKey.radarr,
-  ServiceKey.sonarr,
-  ServiceKey.lidarr,
-  ServiceKey.bazarr,
-];
+///
+/// Read off the registry rather than repeated here. It used to be a private
+/// const beside a `ServiceKey.isSearchable` the chip strip and the empty-state
+/// copy read instead — two lists that agreed only by coincidence, so adding a
+/// service to one promised a lane the other never ran (or hid one it did).
+///
+/// **Prowlarr is deliberately not in it**, and that is the registry's answer
+/// too: an indexer search is a release search against trackers, not a title
+/// lookup, and it belongs on Prowlarr's own page.
+final globalSearchServices = ServiceKey.values
+    .where((service) => service.isSearchable)
+    .toList(growable: false);
 
-/// The global search, one section per **connection**.
+/// The connections the global search asks, in section order.
 ///
 /// One leg per configured connection rather than per service, so two Radarr
 /// answer as two sections. That is what makes the fan-out cheap to read: a
@@ -55,105 +84,215 @@ const _searchableServices = [
 /// — two instances never meet in one list, so Lidarr and Bazarr having no
 /// external id stops mattering.
 ///
-/// Still a `Future` and still all-or-nothing, which is a stated cost rather
-/// than an oversight: one configured-but-switched-off server holds every other
-/// section behind its timeout, and fanning out multiplies how many servers can
-/// be in that state. The bounded pool caps the concurrency, not the wait.
-/// Rendering each leg as it lands is the fix, and it is deliberately not folded
-/// in here — it turns this into a stream, which changes what `.future` means
-/// for every consumer, and that belongs in a change of its own.
-final globalSearchResultsProvider =
-    FutureProvider.autoDispose<List<GlobalSearchServiceResults>>((ref) async {
+/// The query is deliberately *not* watched here: the list of servers to ask
+/// does not change because a letter was typed, and rebuilding it on every
+/// keystroke would mint a new key for every lane and throw away the lane states
+/// the screen is drawing.
+final globalSearchLegsProvider = Provider.autoDispose<List<SearchLeg>>((ref) {
+  // The connections this fans out to, as one comparable scalar. Not the whole
+  // model — a theme toggle would abort the user's in-flight search and start it
+  // again — and not a `List`, which compares by identity and would never
+  // settle. Every field that decides which server is reached is in here, so a
+  // connection edited mid-search re-runs and nothing else does.
+  ref.watch(
+    currentSettingsProvider.select((s) {
+      final parts = <String>[];
+      for (final service in globalSearchServices) {
+        for (final instance in s.configuredInstancesOf(service)) {
+          parts.add(
+            '${instance.id}|${instance.url}|${instance.credential}'
+            '|${s.pinForUrl(instance.url)}',
+          );
+        }
+      }
+      return parts.join(';');
+    }),
+  );
+
+  final settings = ref.read(currentSettingsProvider);
+  return <SearchLeg>[
+    for (final service in globalSearchServices)
+      if (service.searchesPerConnection)
+        for (final instance in settings.configuredInstancesOf(service))
+          (
+            instance: instance,
+            // Named only when there is something to tell apart: a stack with
+            // one Radarr must not grow a label naming the only Radarr there is.
+            named: settings.configuredInstancesOf(service).length > 1,
+          )
+      else
+        // One leg, on the lens, unlabelled. Seerr and Bazarr have no way to
+        // open a named connection from a row — see
+        // `ServiceKeyExtension.searchesPerConnection` — and two sections with
+        // identical contents under two different names is a worse answer than
+        // the one section they had before.
+        for (final instance in [ref.watch(activeInstanceProvider(service))])
+          if (instance != null && instance.isConfigured)
+            (instance: instance, named: false),
+  ];
+});
+
+/// One leg of the fan-out, keyed on the connection it asks.
+///
+/// This family is the whole of the design's core promise. The search used to be
+/// a single `FutureProvider` awaiting a `Future.wait`, which meant there was no
+/// such thing as a half-answered screen: one configured-but-switched-off server
+/// held every other section behind its timeout, a lane could not shimmer while
+/// its neighbour showed rows, and Retry had nothing to invalidate that was not
+/// the entire page. A family gives all three away for free — a lane's state is
+/// its own provider's state, and Retry is
+/// `ref.invalidate(globalSearchLegProvider(leg))`.
+///
+/// It never completes with an error. A leg that fails resolves to a lane in the
+/// matching [SearchLaneState], because a failure here is a thing the page draws
+/// rather than a thing that stops it.
+final globalSearchLegProvider = FutureProvider.autoDispose
+    .family<GlobalSearchServiceResults, SearchLeg>((ref, leg) {
       final query = ref.watch(globalSearchQueryProvider).trim();
+      if (query.isEmpty) {
+        return Future.value(GlobalSearchServiceResults(leg: leg));
+      }
 
-      // The connections this fans out to, as one comparable scalar. Not the
-      // whole model — a theme toggle would abort the user's in-flight search
-      // and start it again — and not a `List`, which compares by identity and
-      // would never settle. Every field that decides which server is reached is
-      // in here, so a connection edited mid-search re-runs and nothing else
-      // does.
-      ref.watch(
-        currentSettingsProvider.select((s) {
-          final parts = <String>[];
-          for (final service in _searchableServices) {
-            for (final instance in s.configuredInstancesOf(service)) {
-              parts.add(
-                '${instance.id}|${instance.url}|${instance.credential}'
-                '|${s.pinForUrl(instance.url)}',
-              );
-            }
-          }
-          return parts.join(';');
-        }),
-      );
-
-      final settings = ref.read(currentSettingsProvider);
-      if (query.isEmpty) return const <GlobalSearchServiceResults>[];
-
-      final legs = <_SearchLeg>[
-        for (final service in _searchableServices)
-          if (service.searchesPerConnection)
-            for (final instance in settings.configuredInstancesOf(service))
-              (
-                instance: instance,
-                // Named only when there is something to tell apart: a stack
-                // with one Radarr must not grow a label naming the only Radarr
-                // there is.
-                named: settings.configuredInstancesOf(service).length > 1,
-              )
-          else
-            // One leg, on the lens, unlabelled. Seerr and Bazarr have no way to
-            // open a named connection from a row — see
-            // `ServiceKeyExtension.searchesPerConnection` — and two sections
-            // with identical contents under two different names is a worse
-            // answer than the one section they had before.
-            for (final instance in [ref.watch(activeInstanceProvider(service))])
-              if (instance != null && instance.isConfigured)
-                (instance: instance, named: false),
-      ];
-      if (legs.isEmpty) return const <GlobalSearchServiceResults>[];
-
-      // One token for the whole fan-out. Riverpod disposes this build before it
-      // starts the next one, so the moment a keystroke supersedes the query
-      // every request still in flight for the old one is aborted rather than
-      // run to completion — a dozen servers answering a question nobody is
-      // asking.
+      // One token per leg per round. Riverpod disposes this build before it
+      // starts the next one, so the moment a keystroke supersedes the query the
+      // request still in flight for the old one is aborted rather than run to
+      // completion — a dozen servers answering a question nobody is asking.
       final cancelToken = CancelToken();
       ref.onDispose(cancelToken.cancel);
 
-      // Slots, not an append list: the sections appear in the legs' own order,
-      // never in the order the servers happened to answer.
-      final done = List<GlobalSearchServiceResults?>.filled(legs.length, null);
-
-      // A hand-rolled bounded pool: four workers pulling from one cursor is the
-      // whole of it, and the alternative is a dependency for eight lines.
-      var cursor = 0;
-      Future<void> worker() async {
-        while (true) {
-          final index = cursor++;
-          if (index >= legs.length) return;
-          done[index] = await _runLeg(ref, legs[index], query, cancelToken);
+      return ref.read(_legPoolProvider).run(() {
+        // Superseded while queued behind the pool. Skipping the request is the
+        // point of the check: a slot spent on a question nobody is asking is a
+        // slot the *current* query waits for. Riverpod discards whatever a
+        // disposed build returns, so this lane is never drawn.
+        if (cancelToken.isCancelled) {
+          return Future.value(
+            GlobalSearchServiceResults(
+              leg: leg,
+              state: SearchLaneState.searching,
+            ),
+          );
         }
-      }
-
-      await Future.wait([for (var w = 0; w < _maxLegsInFlight; w++) worker()]);
-      return [for (final group in done) ?group];
+        return _runLeg(ref, leg, query, cancelToken);
+      });
     });
+
+/// Every lane as it stands right now, in section order.
+///
+/// Emitted synchronously and re-emitted the moment any single lane moves, which
+/// is what lets the page draw a Radarr that has answered next to a Bazarr that
+/// is still shimmering. Nothing here waits for anything.
+final globalSearchLanesProvider =
+    Provider.autoDispose<List<GlobalSearchServiceResults>>((ref) {
+      final query = ref.watch(globalSearchQueryProvider).trim();
+      if (query.isEmpty) return const <GlobalSearchServiceResults>[];
+
+      // Slots in the legs' own order, never in the order the servers happened
+      // to answer: a section that jumps up the page as its server replies is a
+      // page nobody can read while it is loading.
+      return [
+        for (final leg in ref.watch(globalSearchLegsProvider))
+          _laneOf(leg, ref.watch(globalSearchLegProvider(leg))),
+      ];
+    });
+
+/// Re-runs every lane against the query already in the field.
+///
+/// A loop over per-leg invalidations rather than one invalidate of a page-wide
+/// provider, because there is no page-wide provider any more — and because the
+/// lanes that have already answered redraw from their own new round rather than
+/// all collapsing to one shimmer.
+void rerunGlobalSearch(WidgetRef ref) {
+  for (final leg in ref.read(globalSearchLegsProvider)) {
+    ref.invalidate(globalSearchLegProvider(leg));
+  }
+}
+
+/// The lane a leg's provider state stands for.
+///
+/// [AsyncValue.isLoading] is asked *before* the value, and that order is the
+/// rule rather than a style choice: Riverpod carries the previous answer across
+/// an invalidate, so reading the value first would redraw the failure the user
+/// just pressed Retry on and make the button look inert.
+GlobalSearchServiceResults _laneOf(
+  SearchLeg leg,
+  AsyncValue<GlobalSearchServiceResults> value,
+) {
+  if (value.isLoading) {
+    return GlobalSearchServiceResults(
+      leg: leg,
+      state: SearchLaneState.searching,
+    );
+  }
+  final lane = value.asData?.value;
+  if (lane != null) return lane;
+  // The leg swallows its own failures, so this is only reachable if one escapes
+  // — and a lane that cannot say why it stopped still has to say that it did.
+  return GlobalSearchServiceResults.fault(leg, value.error);
+}
+
+/// Caps how many legs are on the wire at once.
+///
+/// Alive for the app rather than per round on purpose. An `autoDispose` pool is
+/// torn down and rebuilt in the gap between two rounds, which resets the
+/// counter while the previous round's four requests are still on the wire — so
+/// the bound the fan-out advertises would quietly double exactly when the user
+/// is typing fastest. It holds two integers and a queue of completers; nothing
+/// in it is worth disposing.
+final _legPoolProvider = Provider<_LegPool>(
+  (ref) => _LegPool(_maxLegsInFlight),
+);
+
+/// A small async semaphore: [limit] bodies run, the rest queue in arrival
+/// order.
+///
+/// It replaced a hand-rolled worker loop, which only worked while one provider
+/// owned the whole fan-out and pulled legs off a cursor. With a leg per
+/// provider every member fires at once, so the bound has to live somewhere both
+/// of them can see.
+class _LegPool {
+  _LegPool(this.limit);
+
+  final int limit;
+  var _inFlight = 0;
+  final Queue<Completer<void>> _waiting = Queue<Completer<void>>();
+
+  Future<T> run<T>(FutureOr<T> Function() body) async {
+    if (_inFlight >= limit) {
+      final slot = Completer<void>();
+      _waiting.add(slot);
+      // The releaser hands its slot straight over, so `_inFlight` is already
+      // accounted for when this resumes.
+      await slot.future;
+    } else {
+      _inFlight++;
+    }
+    try {
+      return await body();
+    } finally {
+      // Hand the slot to the next waiter instead of decrementing and letting it
+      // race: a caller arriving between the decrement and the waiter waking up
+      // would take the slot too, and the pool would run limit + 1.
+      if (_waiting.isNotEmpty) {
+        _waiting.removeFirst().complete();
+      } else {
+        _inFlight--;
+      }
+    }
+  }
+}
 
 Future<GlobalSearchServiceResults> _runLeg(
   Ref ref,
-  _SearchLeg leg,
+  SearchLeg leg,
   String query,
   CancelToken cancelToken,
 ) {
   final instance = leg.instance;
-  final label = leg.named
-      ? (instance.label.isEmpty ? instance.id : instance.label)
-      : '';
   return switch (instance.service) {
     ServiceKey.seerr => _loadLeg(
       leg: leg,
-      instanceLabel: label,
+      cancelToken: cancelToken,
       loadItems: () => ref
           .read(seerrServiceProvider)
           .search(query, cancelToken: cancelToken),
@@ -161,7 +300,7 @@ Future<GlobalSearchServiceResults> _runLeg(
     ),
     ServiceKey.radarr => _loadLeg(
       leg: leg,
-      instanceLabel: label,
+      cancelToken: cancelToken,
       loadItems: () => ref
           .read(radarrServiceForProvider(instance.id))
           .lookupMovies(query, cancelToken: cancelToken, reportFailure: true),
@@ -169,7 +308,7 @@ Future<GlobalSearchServiceResults> _runLeg(
     ),
     ServiceKey.sonarr => _loadLeg(
       leg: leg,
-      instanceLabel: label,
+      cancelToken: cancelToken,
       loadItems: () => ref
           .read(sonarrServiceForProvider(instance.id))
           .lookupSeries(query, cancelToken: cancelToken, reportFailure: true),
@@ -177,7 +316,7 @@ Future<GlobalSearchServiceResults> _runLeg(
     ),
     ServiceKey.lidarr => _loadLeg(
       leg: leg,
-      instanceLabel: label,
+      cancelToken: cancelToken,
       loadItems: () => ref
           .read(lidarrServiceForProvider(instance.id))
           .lookupArtists(query, cancelToken: cancelToken, reportFailure: true),
@@ -191,7 +330,7 @@ Future<GlobalSearchServiceResults> _runLeg(
     // still stops the match once the round is superseded.
     _ => _loadLeg(
       leg: leg,
-      instanceLabel: label,
+      cancelToken: cancelToken,
       loadItems: () => ref
           .read(bazarrServiceProvider)
           .searchLibrary(query, cancelToken: cancelToken),
@@ -201,27 +340,33 @@ Future<GlobalSearchServiceResults> _runLeg(
 }
 
 Future<GlobalSearchServiceResults> _loadLeg<T>({
-  required _SearchLeg leg,
+  required SearchLeg leg,
+  required CancelToken cancelToken,
   required Future<List<T>> Function() loadItems,
   required GlobalSearchResult Function(T item, int index) toResult,
-  String instanceLabel = '',
 }) async {
   try {
-    final items = await loadItems();
+    final items = await loadItems().timeout(
+      _laneDeadline,
+      onTimeout: () {
+        // Let go of the socket as well as of the wait. Without this the request
+        // runs on to the transport's own 15 s deadline holding a pool slot the
+        // lanes behind it are queued for — the lane would say "did not answer
+        // in time" while still being the reason nothing else could ask.
+        cancelToken.cancel();
+        throw TimeoutException('$_laneDeadline search deadline', _laneDeadline);
+      },
+    );
     return GlobalSearchServiceResults(
-      service: leg.instance.service,
+      leg: leg,
       results: [for (var i = 0; i < items.length; i++) toResult(items[i], i)],
-      instanceLabel: instanceLabel,
     );
   } catch (error) {
-    return GlobalSearchServiceResults(
-      service: leg.instance.service,
-      results: const [],
-      error: error,
-      // Named on the failure too: "Radarr did not answer" is a worse sentence
-      // than "Radarr · 4K did not answer" when the other one did.
-      instanceLabel: instanceLabel,
-    );
+    // Classified rather than stored raw: the lane's tone, its word and whether
+    // it offers a Retry all come from the reason, and `classifyConnectionFailure`
+    // is the app's single answer to "why did that fail" — see the tone argument
+    // on `GlobalSearchServiceResults.fault`.
+    return GlobalSearchServiceResults.fault(leg, error);
   }
 }
 

@@ -1,6 +1,12 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/search/domain/global_search_result.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -28,38 +34,158 @@ const _sonarr = ServiceInstance(
   credential: 'k',
 );
 
+GlobalSearchServiceResults _lane(
+  ServiceInstance instance, {
+  bool named = false,
+  SearchLaneState state = SearchLaneState.answered,
+  List<GlobalSearchResult> results = const [],
+}) => GlobalSearchServiceResults(
+  leg: (instance: instance, named: named),
+  state: state,
+  results: results,
+);
+
 void main() {
   group('the section says which connection answered', () {
     test('nothing to say while a service has one connection', () {
-      const group = GlobalSearchServiceResults(
-        service: ServiceKey.sonarr,
-        results: [],
-      );
       // The default, and the one that matters: a stack with one Sonarr must
       // not grow a chip naming the only Sonarr there is.
-      expect(group.instanceLabel, isEmpty);
+      expect(_lane(_sonarr).instanceLabel, isEmpty);
+      expect(_lane(_sonarr).laneTitle, 'Sonarr');
     });
 
     test('carries the label when there is one to carry', () {
-      const group = GlobalSearchServiceResults(
-        service: ServiceKey.radarr,
-        results: [],
-        instanceLabel: '4K',
-      );
-      expect(group.instanceLabel, '4K');
+      final lane = _lane(_fourK, named: true);
+      expect(lane.instanceLabel, '4K');
+      expect(lane.laneTitle, 'Radarr · 4K');
     });
 
-    test('an offline section is named too', () {
+    test('a named connection with no label falls back to its id', () {
+      // A second connection is required to have a label, but nothing in the
+      // model enforces it — and a nameless chip is worse than an opaque one.
+      const nameless = ServiceInstance(
+        id: 'radarr-hd11111',
+        service: ServiceKey.radarr,
+        url: 'https://hd.lan:7879',
+        credential: 'k',
+      );
+      expect(_lane(nameless, named: true).instanceLabel, 'radarr-hd11111');
+    });
+
+    test('a lane that stopped is named too', () {
       // "Radarr did not answer" is a worse sentence than "Radarr · 4K did not
       // answer" when the other connection did.
-      const group = GlobalSearchServiceResults(
-        service: ServiceKey.radarr,
-        results: [],
-        error: 'boom',
-        instanceLabel: 'Anime',
+      final lane = _lane(_hd, named: true, state: SearchLaneState.unreachable);
+      expect(lane.hasFault, isTrue);
+      expect(lane.instanceLabel, 'HD');
+      expect(lane.faultSentence, contains('Radarr · HD'));
+    });
+  });
+
+  group('the lane tone grammar', () {
+    // The rule the whole screen is drawn against, and the one the code it
+    // replaced got wrong: every failure painted `colorScheme.error` with the
+    // word "offline", so a Bazarr taking nine seconds and a Bazarr that was
+    // unplugged were the same red sentence.
+    test('a lane that ran out of time is AMBER, and says so', () {
+      final lane = GlobalSearchServiceResults.fault((
+        instance: _fourK,
+        named: false,
+      ), TimeoutException('too slow'));
+      expect(lane.state, SearchLaneState.timedOut);
+      expect(lane.state.tone, StatusTone.warning);
+      expect(lane.stateWord, 'Did not answer in time');
+      expect(lane.faultSentence, contains('timed out'));
+    });
+
+    test('red is a connection nothing answered at, and nothing else', () {
+      final lane = GlobalSearchServiceResults.fault((
+        instance: _fourK,
+        named: false,
+      ), const SocketException('no route to host'));
+      expect(lane.state, SearchLaneState.unreachable);
+      expect(lane.state.tone, StatusTone.error);
+      expect(lane.stateWord, 'Unreachable');
+    });
+
+    test('a refusal is a fault, not an outage', () {
+      // The server answered — it just said no. Red here would send the user
+      // auditing an address that is correct.
+      final lane = GlobalSearchServiceResults.fault(
+        (instance: _fourK, named: false),
+        DioException(
+          requestOptions: RequestOptions(path: '/api/v3/movie/lookup'),
+          response: Response<void>(
+            requestOptions: RequestOptions(path: '/api/v3/movie/lookup'),
+            statusCode: 401,
+          ),
+          type: DioExceptionType.badResponse,
+        ),
       );
-      expect(group.hasError, isTrue);
-      expect(group.instanceLabel, 'Anime');
+      expect(lane.state, SearchLaneState.failed);
+      expect(lane.state.tone, StatusTone.warning);
+      expect(lane.reason, ServiceFailureReason.unauthorized);
+      expect(lane.stateWord, 'API key rejected');
+    });
+
+    test('an answered lane counts, wears no pip and offers no Retry', () {
+      final empty = _lane(_sonarr);
+      expect(empty.state.tone, StatusTone.neutral);
+      expect(empty.state.showsPip, isFalse);
+      expect(empty.state.canRetry, isFalse);
+      expect(empty.hasFault, isFalse);
+      expect(empty.stateWord, '0 results');
+    });
+
+    test('a lane still in flight is informational, not a fault', () {
+      final lane = _lane(_sonarr, state: SearchLaneState.searching);
+      expect(lane.state.tone, StatusTone.info);
+      expect(lane.state.showsPip, isTrue);
+      // Retrying a lane still in flight would cancel the request the user is
+      // waiting on and start it again a keystroke behind.
+      expect(lane.state.canRetry, isFalse);
+      expect(lane.hasFault, isFalse);
+      expect(lane.stateWord, 'Searching…');
+    });
+
+    test('every stopped lane offers the Retry that concerns only it', () {
+      for (final state in [
+        SearchLaneState.timedOut,
+        SearchLaneState.unreachable,
+        SearchLaneState.failed,
+      ]) {
+        expect(_lane(_sonarr, state: state).state.canRetry, isTrue);
+        expect(_lane(_sonarr, state: state).state.showsPip, isTrue);
+      }
+    });
+  });
+
+  group('the census beside the heading', () {
+    // A fold over the lane states and nothing else, so the line can never
+    // disagree with the sections under it.
+    test('nothing to census before a query', () {
+      expect(searchLaneCensus(const []), isNull);
+    });
+
+    test('names every state that is actually happening', () {
+      expect(
+        searchLaneCensus([
+          _lane(_fourK, named: true),
+          _lane(_hd, named: true),
+          _lane(_sonarr, state: SearchLaneState.searching),
+          _lane(_sonarr, state: SearchLaneState.timedOut),
+        ]),
+        '4 connections asked · 2 answered · 1 still searching · 1 timed out',
+      );
+    });
+
+    test('a count of zero is a word about nothing, except "answered"', () {
+      // "0 timed out" is noise; "0 answered" is the entire story while a stack
+      // is down.
+      expect(
+        searchLaneCensus([_lane(_fourK, state: SearchLaneState.unreachable)]),
+        '1 connection asked · 0 answered · 1 unreachable',
+      );
     });
   });
 
