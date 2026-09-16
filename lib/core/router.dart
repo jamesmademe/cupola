@@ -18,6 +18,7 @@ import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/presentation/branch_transition.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_screen.dart';
+import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_screen.dart';
 import 'package:cupola/features/activity/presentation/global_activity_screen.dart';
@@ -55,8 +56,8 @@ import 'package:cupola/features/qbittorrent/presentation/widgets/qbittorrent_act
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_library_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_movie_detail_screen.dart';
-import 'package:cupola/features/bazarr/presentation/bazarr_screen.dart';
-import 'package:cupola/features/prowlarr/presentation/prowlarr_screen.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_overview_screen.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_overview_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_library_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_detail_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_settings_screen.dart';
@@ -244,32 +245,179 @@ Page<void> _manualImportPage(
   );
 }
 
-GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
+/// The pre-rename `/discover` tree, which now exists only to redirect.
+///
+/// Seerr itself lives in [_seerrRoutes]. Every node here is redirect-only, and
+/// the children exist for one reason: a redirect cannot run until something
+/// matches, so a shape with no route to match would 404 instead of being
+/// rewritten. Nothing in this tree ever builds.
+///
+/// `tv/all` is declared before `tv/:id` for the reason it is in [_seerrRoutes]:
+/// routes are matched in declaration order, and the other way round
+/// `/discover/tv/all` is a media detail whose id is the word `all`.
+GoRoute _legacyDiscoverRoutes({required String path}) {
+  String? rewrite(BuildContext context, GoRouterState state) =>
+      _redirectLegacyDiscover(state);
+
   return GoRoute(
     path: path,
-    redirect: redirectLocation == null
-        ? null
-        : (context, state) => _redirectLegacyDiscover(state),
-    builder: path.startsWith('/')
-        ? (context, state) => const DiscoverScreen()
+    redirect: rewrite,
+    routes: [
+      for (final tail in const [
+        'requests',
+        'movies/all',
+        'tv/all',
+        'trending/all',
+        'genre/:mediaType/:genreId',
+        'movie/:id',
+        'tv/:id',
+        'person/:id',
+        'collection/:id',
+      ])
+        GoRoute(path: tail, redirect: rewrite),
+    ],
+  );
+}
+
+/// One Seerr compatibility tail whose target is a fixed location.
+///
+/// Childless on purpose, like every other tail in this file: the matcher treats
+/// a prefix hit with no complete match as no match at all, which is what stops
+/// these from shadowing the real routes inside the shell.
+GoRoute _seerrTail(String path, String target) => GoRoute(
+  path: path,
+  redirect: (context, state) => _preserveQuery(state.uri, target),
+);
+
+/// One Seerr compatibility tail for a `<segment>/:id` detail.
+///
+/// The four detail shapes Seerr shipped — `movie`, `tv`, `person`,
+/// `collection` — differ only in the segment, and each lands on the same
+/// segment under `discover/`. No id validation: the canonical route inside the
+/// branch owns it, and doing it twice is two places to get it wrong.
+GoRoute _seerrIdTail(String segment) => GoRoute(
+  path: '$segment/:id',
+  redirect: (context, state) => _preserveQuery(
+    state.uri,
+    '${ServiceRoutes.seerrDiscover}/$segment/${state.pathParameters['id']}',
+  ),
+);
+
+/// Seerr: one shell, one branch per tab.
+///
+/// [_radarrRoutes] carries the reasoning for every structural choice and none
+/// of it is Radarr's — the nesting inside the Dashboard branch, the
+/// redirect-only node whose guard is on the full location, the childless
+/// compatibility tails, the wildcard that throws.
+///
+/// What is Seerr's own is the *number* of those tails. It shipped more link
+/// shapes than any other service — three see-alls, a genre tree, two media
+/// details, a person and a collection — and every one of them hung off the
+/// service root, because the service root **was** the Discover page. They now
+/// hang off the Discover tab's branch, exactly as Radarr's film moved inside
+/// Library and for the same two reasons: leaving Seerr and coming back returns
+/// to the page rather than to the top of the carousel, and the poster's Hero
+/// still flies because the row it left and the page it lands on share one
+/// Navigator. Each old spelling keeps a tail that rewrites to the new one in a
+/// single hop, query intact.
+RouteBase _seerrRoutes() {
+  const service = ServiceKey.seerr;
+  final tabs = tabsFor(service)!;
+
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == ServiceRoutes.seerr
+        ? _preserveQuery(state.uri, ServiceRoutes.seerrOverview)
         : null,
-    pageBuilder: path.startsWith('/')
-        ? null
-        : (context, state) => RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            child: ServiceHomeScreen(
-              service: ServiceKey.seerr,
-              child: const DiscoverScreen(
-                showAppBar: false,
-                topPadding: _serviceHomeTopPadding,
+    routes: [
+      // `requests` needs no tail: the all-requests list was already a page at
+      // `/dashboard/seerr/requests`, which is exactly where its tab mounts.
+      //
+      // Order is load-bearing here. Routes match in declaration order, so the
+      // three `.../all` literals come before `movie/:id` and `tv/:id` — the
+      // other way round, `/dashboard/seerr/tv/all` rewrites as a media detail
+      // whose id is the word `all`.
+      _seerrTail('movies/all', ServiceRoutes.seerrMoviesAll),
+      _seerrTail('tv/all', ServiceRoutes.seerrTvAll),
+      _seerrTail('trending/all', ServiceRoutes.seerrTrendingAll),
+      GoRoute(
+        path: 'genre/:mediaType/:genreId',
+        redirect: (context, state) => _preserveQuery(
+          state.uri,
+          '${ServiceRoutes.seerrGenreBase}/${state.pathParameters['mediaType']}'
+          '/${state.pathParameters['genreId']}',
+        ),
+      ),
+      _seerrIdTail('movie'),
+      _seerrIdTail('tv'),
+      _seerrIdTail('person'),
+      _seerrIdTail('collection'),
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        // `pageBuilder`, not `builder`: without it the shell's page takes the
+        // platform default transition, and the push from the Dashboard into a
+        // service would stop matching every other service in the app.
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
               ),
             ),
-          ),
-    routes: [
-      GoRoute(
-        path: 'requests',
-        builder: (context, state) => const ServiceAllRequestsScreen(),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_seerrBranchRoot(tab)],
+            ),
+        ],
       ),
+    ],
+  );
+}
+
+/// The route at the root of one Seerr tab.
+///
+/// Branch order is `tabsFor(ServiceKey.seerr)` and nothing else, because the
+/// bar is generated from the same list and taps it by index. The wildcard
+/// throws rather than quietly rendering a placeholder: a sixth tab added to
+/// that table with no case here is a bar and a router disagreeing.
+GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.seerr,
+      tab: ServiceTab.overview,
+      child: SeerrOverviewScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
+  ServiceTab.requests => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.seerr,
+      tab: ServiceTab.requests,
+      child: ServiceAllRequestsScreen(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  // Discover, and the whole tree that used to hang off the service root with
+  // it. Every one of these is reached by tapping a row of the Discover page,
+  // which is what makes this the tab that owns them.
+  ServiceTab.discover => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.seerr,
+      tab: ServiceTab.discover,
+      child: DiscoverScreen(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+    routes: [
       GoRoute(
         path: 'movies/all',
         builder: (context, state) =>
@@ -289,7 +437,7 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
         path: 'genre/:mediaType/:genreId',
         redirect: (context, state) {
           final genreId = RouteUtils.safeIntParam(state, 'genreId');
-          return genreId == null ? ServiceRoutes.seerr : null;
+          return genreId == null ? ServiceRoutes.seerrDiscover : null;
         },
         builder: (context, state) {
           final mediaType = state.pathParameters['mediaType'] == 'tv'
@@ -304,11 +452,14 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
           );
         },
       ),
+      // A bad id falls back to the tab this page was pushed from, not to the
+      // app home: the branch is where the user still is, and sending them out
+      // of the service would be a bigger move than the mistake.
       GoRoute(
         path: 'movie/:id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.dashboard
+            ? ServiceRoutes.seerrDiscover
             : null,
         pageBuilder: (context, state) =>
             _discoverDetailPage(state, mediaType: 'movie'),
@@ -317,7 +468,7 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
         path: 'tv/:id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.dashboard
+            ? ServiceRoutes.seerrDiscover
             : null,
         pageBuilder: (context, state) =>
             _discoverDetailPage(state, mediaType: 'tv'),
@@ -331,7 +482,7 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
         ),
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.dashboard
+            ? ServiceRoutes.seerrDiscover
             : null,
       ),
       _page(
@@ -342,12 +493,28 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
         ),
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.dashboard
+            ? ServiceRoutes.seerrDiscover
             : null,
       ),
     ],
-  );
-}
+  ),
+  // Both blocked, and on endpoints rather than on work. `SeerrService` calls
+  // `/api/v1/discover/*`, `/api/v1/request`, `/api/v1/search` and
+  // `/api/v1/service/{radarr,sonarr}` and nothing else: there is no
+  // `/api/v1/issue` behind Issues and no `/api/v1/user` behind Users, so
+  // neither tab has a client to ask.
+  ServiceTab.issues || ServiceTab.users => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.seerr,
+      tab: tab,
+      child: ServiceTabPlaceholder(service: ServiceKey.seerr, tab: tab),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on seerr\'s bar with no branch root',
+  ),
+};
 
 /// The pre-tab-model `/movies` tree, which now exists only to redirect.
 ///
@@ -940,50 +1107,180 @@ GoRoute _qbittorrentBranchRoot(ServiceTab tab) => switch (tab) {
   ),
 };
 
-GoRoute _bazarrRoutes({required String path}) {
-  return _page(
-    path,
-    (state) => ServiceHomeScreen(
+/// Bazarr: one shell, one branch per tab.
+///
+/// [_radarrRoutes] carries the reasoning for every structural choice and none
+/// of it is Radarr's — the nesting inside the Dashboard branch, the
+/// redirect-only node whose guard is on the full location, the childless
+/// compatibility tails, the wildcard that throws.
+///
+/// Two things are Bazarr's own. Its bar names the **record types** rather than
+/// a Library — Series and Movies are two destinations (decision 22) — so the
+/// two-tab `BazarrLibraryScreen` split in half and the detail spelling is
+/// `<tab>/:id`, which is why the series detail did not have to move at all.
+/// And what was the service home, `BazarrScreen`, is superseded by
+/// `BazarrOverviewScreen`: the Overview tab is the one that carries the
+/// identity block and the readouts.
+RouteBase _bazarrRoutes() {
+  const service = ServiceKey.bazarr;
+  final tabs = tabsFor(service)!;
+
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == ServiceRoutes.bazarr
+        ? _preserveQuery(state.uri, ServiceRoutes.bazarrOverview)
+        : null,
+    routes: [
+      // The tab-less tails, childless on purpose: the matcher treats a prefix
+      // hit with no complete match as no match at all, so `movie/:id` here
+      // cannot shadow `movies/:id` inside the shell below.
+      //
+      // `library` was the combined Series/Movies page. It lands on Series
+      // rather than on the service root: the list the link was asking for is
+      // still there, one bar tap from the other half.
+      GoRoute(
+        path: 'library',
+        redirect: (context, state) =>
+            _preserveQuery(state.uri, ServiceRoutes.bazarrSeriesBase),
+      ),
+      // Singular `movie`, the pre-tab spelling. No id validation: the canonical
+      // route inside the branch owns it, and doing it twice is two places to
+      // get it wrong.
+      GoRoute(
+        path: 'movie/:id',
+        redirect: (context, state) => _preserveQuery(
+          state.uri,
+          '${ServiceRoutes.bazarrMovieBase}/${state.pathParameters['id']}',
+        ),
+      ),
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_bazarrBranchRoot(tab)],
+            ),
+        ],
+      ),
+    ],
+  );
+}
+
+/// The route at the root of one Bazarr tab.
+///
+/// Branch order is `tabsFor(ServiceKey.bazarr)` and nothing else, because the
+/// bar is generated from the same list and taps it by index. The wildcard
+/// throws rather than quietly rendering a placeholder: a seventh tab added to
+/// that table with no case here is a bar and a router disagreeing.
+GoRoute _bazarrBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.bazarr,
-      child: const BazarrScreen(
+      tab: ServiceTab.overview,
+      child: BazarrOverviewScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
+  ServiceTab.wanted => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.bazarr,
+      tab: ServiceTab.wanted,
+      child: BazarrWantedScreen(
         showAppBar: false,
-        topPadding: _serviceHomeTopPadding,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  // The two halves of what was one screen, each with its own detail inside it.
+  // Pushing the detail keeps the branch, so leaving Bazarr for another app tab
+  // and coming back returns to the item rather than to the top of the list.
+  //
+  // No `heroTag` on either: the Bazarr lead is a figure plate, not a poster, so
+  // there is no source counterpart on a Bazarr row to fly from and an orphan
+  // flight would fade in from nothing. Both routes still accept the query
+  // param — global search builds one for every service uniformly — and nothing
+  // reads it.
+  ServiceTab.series => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.bazarr,
+      tab: ServiceTab.series,
+      child: BazarrLibraryScreen.series(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
       ),
     ),
     routes: [
-      _page('wanted', (state) => const BazarrWantedScreen()),
-      _page('library', (state) => const BazarrLibraryScreen()),
-      // No `heroTag`: the Bazarr lead is a figure plate, not a poster, so
-      // there is no source counterpart on a Bazarr row to fly from and an
-      // orphan flight would fade in from nothing. The route still accepts the
-      // query param (global search builds one for every service uniformly);
-      // nothing reads it.
       _page(
-        'series/:id',
+        ':id',
         (state) => BazarrSeriesDetailScreen(
           sonarrSeriesId: RouteUtils.safeIntParam(state, 'id')!,
           initialWanted: RouteUtils.safeExtra<BazarrWantedItem>(state),
         ),
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.dashboard
+            ? ServiceRoutes.bazarrSeriesBase
             : null,
       ),
-      // See the series route above: no Hero source, so no `heroTag`.
+    ],
+  ),
+  ServiceTab.movies => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.bazarr,
+      tab: ServiceTab.movies,
+      child: BazarrLibraryScreen.movies(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+    routes: [
       _page(
-        'movie/:id',
+        ':id',
         (state) => BazarrMovieDetailScreen(
           radarrId: RouteUtils.safeIntParam(state, 'id')!,
           initialWanted: RouteUtils.safeExtra<BazarrWantedItem>(state),
         ),
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.dashboard
+            ? ServiceRoutes.bazarrMovieBase
             : null,
       ),
     ],
-  );
-}
+  ),
+  // History is a placeholder but **not blocked**: `BazarrService` already calls
+  // `/api/episodes/history` and `/api/movies/history`, and the Overview reads
+  // both. The tab is a screen away, and the Blacklist pill it is drawn with
+  // (decision 22) is the part that still needs a client.
+  //
+  // **Providers is blocked**, and on an endpoint rather than on work: Bazarr's
+  // `/api/providers` — the configured provider list, their status and the
+  // reset action — is called nowhere in `BazarrService`, which speaks only
+  // `badges`, `series`, `movies`, the two `wanted` lists and the two `history`
+  // lists. There is nothing to draw.
+  ServiceTab.history || ServiceTab.providers => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.bazarr,
+      tab: tab,
+      child: ServiceTabPlaceholder(service: ServiceKey.bazarr, tab: tab),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on bazarr\'s bar with no branch root',
+  ),
+};
 
 GoRoute _dockgeRoutes({required String path}) {
   return _page(
@@ -1013,27 +1310,47 @@ GoRoute _dockgeRoutes({required String path}) {
   );
 }
 
-GoRoute _prowlarrRoutes({required String path}) {
-  return _page(
-    path,
-    (state) => ServiceHomeScreen(
-      service: ServiceKey.prowlarr,
-      child: const ProwlarrScreen(
-        showAppBar: false,
-        topPadding: _serviceHomeTopPadding,
-      ),
-    ),
+/// Prowlarr: one shell, one branch per tab.
+///
+/// [_radarrRoutes] carries the reasoning for every structural choice and none
+/// of it is Radarr's — the nesting inside the Dashboard branch, the
+/// redirect-only node whose guard is on the full location, the childless
+/// compatibility tails, the wildcard that throws.
+///
+/// What is Prowlarr's own is **Settings**, which is not a tab (decision 26) and
+/// therefore not in the shell. It hangs off the service node beside the
+/// `StatefulShellRoute`, exactly where it hung off the service page before:
+/// four field-driven sections, an app-profiles page and a tags page that no one
+/// tab owns, pushed on the Dashboard branch's navigator as they always were. It
+/// keeps its children where a compatibility tail may not, and safely: `settings`
+/// is not a tab segment, so there is nothing inside the shell for it to shadow.
+RouteBase _prowlarrRoutes() {
+  const service = ServiceKey.prowlarr;
+  final tabs = tabsFor(service)!;
+
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == ServiceRoutes.prowlarr
+        ? _preserveQuery(state.uri, ServiceRoutes.prowlarrOverview)
+        : null,
     routes: [
-      _page('library', (state) => const ProwlarrLibraryScreen()),
-      _page(
-        'indexer/:id',
-        (state) => ProwlarrIndexerDetailScreen(
-          indexerId: RouteUtils.safeIntParam(state, 'id')!,
-        ),
+      // The tab-less tails, childless on purpose: the matcher treats a prefix
+      // hit with no complete match as no match at all, so `indexer/:id` here
+      // cannot shadow `indexers/indexer/:id` inside the shell below.
+      GoRoute(
+        path: 'library',
         redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.dashboard
-            : null,
+            _preserveQuery(state.uri, ServiceRoutes.prowlarrIndexers),
+      ),
+      // No id validation: the canonical route inside the branch owns it, and
+      // doing it twice is two places to get it wrong.
+      GoRoute(
+        path: 'indexer/:id',
+        redirect: (context, state) => _preserveQuery(
+          state.uri,
+          '${ServiceRoutes.prowlarrIndexerBase}/'
+          '${state.pathParameters['id']}',
+        ),
       ),
       _page(
         'settings',
@@ -1060,9 +1377,96 @@ GoRoute _prowlarrRoutes({required String path}) {
           ),
         ],
       ),
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_prowlarrBranchRoot(tab)],
+            ),
+        ],
+      ),
     ],
   );
 }
+
+/// The route at the root of one Prowlarr tab.
+///
+/// Branch order is `tabsFor(ServiceKey.prowlarr)` and nothing else, because the
+/// bar is generated from the same list and taps it by index. The wildcard
+/// throws rather than quietly rendering a placeholder: a fifth tab added to
+/// that table with no case here is a bar and a router disagreeing.
+GoRoute _prowlarrBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.prowlarr,
+      tab: ServiceTab.overview,
+      child: ProwlarrOverviewScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
+  ServiceTab.indexers => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.prowlarr,
+      tab: ServiceTab.indexers,
+      child: ProwlarrLibraryScreen(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+    routes: [
+      // The indexer, now INSIDE the Indexers branch. Pushing it keeps the
+      // branch, so leaving Prowlarr for another app tab and coming back returns
+      // to the indexer rather than to the top of the list.
+      _page(
+        'indexer/:id',
+        (state) => ProwlarrIndexerDetailScreen(
+          indexerId: RouteUtils.safeIntParam(state, 'id')!,
+        ),
+        redirect: (context, state) =>
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.prowlarrIndexers
+            : null,
+      ),
+    ],
+  ),
+  // Neither is blocked, and saying so matters: both tabs are a screen away, not
+  // an endpoint away.
+  //
+  // History has `GET /api/v1/history` behind it — paged, sortable, filterable
+  // by event type — and `prowlarrRecentHistoryProvider` already reads page one
+  // for the Overview. A full tab needs paging and the event filter on top of
+  // it, and nothing else.
+  //
+  // Stats has `GET /api/v1/indexerstats`, which `prowlarrIndexerStatsProvider`
+  // already calls over a fixed 24-hour window: per-indexer queries, grabs and
+  // failures, with the totals derived in `ProwlarrIndexerStats`. What the tab
+  // adds over the Overview's three KPIs is the per-indexer table and a window
+  // the user can choose — the client has accepted `startDate`/`endDate` all
+  // along.
+  ServiceTab.history || ServiceTab.stats => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.prowlarr,
+      tab: tab,
+      child: ServiceTabPlaceholder(service: ServiceKey.prowlarr, tab: tab),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on prowlarr\'s bar with no branch root',
+  ),
+};
 
 /// Readarr: the last of the four \*arr on one shell and one bar.
 ///
@@ -1654,15 +2058,15 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       // one — `npm`, the single segment that is *not* the enum name — was not,
       // which is exactly the asymmetry that makes a hand-spelled table worth
       // deleting: the one path a typo would break was the only one guarded.
-      _discoverRoutes(path: ServiceKey.seerr.routeParam),
+      _seerrRoutes(),
       _radarrRoutes(),
       _sonarrRoutes(),
       _lidarrRoutes(),
       _qbittorrentRoutes(),
-      _bazarrRoutes(path: ServiceKey.bazarr.routeParam),
+      _bazarrRoutes(),
       _truenasRoutes(path: ServiceKey.truenas.routeParam),
       _dockgeRoutes(path: ServiceKey.dockge.routeParam),
-      _prowlarrRoutes(path: ServiceKey.prowlarr.routeParam),
+      _prowlarrRoutes(),
       _readarrRoutes(),
       _sabnzbdRoutes(),
       _nzbgetRoutes(),
@@ -1867,10 +2271,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // be a sibling of any more: the route list is derived from the branches.
       // Putting four dead trees inside the services branch would read as part of
       // that tab's subtree and invite someone to give them a real builder.
-      _discoverRoutes(
-        path: '/discover',
-        redirectLocation: ServiceRoutes.dashboard,
-      ),
+      _legacyDiscoverRoutes(path: '/discover'),
       _moviesRoutes(path: '/movies'),
       _seriesRoutes(path: '/series'),
       _musicRoutes(path: '/music'),

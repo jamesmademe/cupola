@@ -14,70 +14,87 @@ import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-enum _BazarrLibraryTabKind { series, movies }
+/// Which half of Bazarr's library a page lists.
+///
+/// Public since the tab model: Series and Movies are two entries on Bazarr's
+/// own bar now, so the choice is made by the router rather than by a
+/// `TabController` inside this file.
+enum BazarrLibraryKind {
+  series('Series'),
+  movies('Movies');
 
-class BazarrLibraryScreen extends ConsumerStatefulWidget {
-  const BazarrLibraryScreen({super.key});
+  const BazarrLibraryKind(this.label);
 
-  @override
-  ConsumerState<BazarrLibraryScreen> createState() =>
-      _BazarrLibraryScreenState();
+  /// The word the app bar prints when this page draws one of its own.
+  final String label;
 }
 
-class _BazarrLibraryScreenState extends ConsumerState<BazarrLibraryScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+/// One half of the Bazarr library — every series, or every film.
+///
+/// **It used to be both**, under a two-tab `TabBar` of its own at
+/// `/dashboard/bazarr/library`. Bazarr's bar draws Series and Movies as
+/// separate destinations (decision 22), so that inner bar became a second
+/// row of tabs directly under the service's own — two bars answering the same
+/// question. The split is what removes it; `library` still resolves, as a
+/// redirect onto Series.
+///
+/// Named constructors rather than a `kind:` argument or a boolean, following
+/// `lib/core/widgets/AGENTS.md`: a call site says which half it wants in the
+/// constructor name, and there is no third value to handle.
+class BazarrLibraryScreen extends ConsumerWidget {
+  /// The series half — Bazarr's Series tab.
+  const BazarrLibraryScreen.series({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  }) : kind = BazarrLibraryKind.series;
+
+  /// The film half — Bazarr's Movies tab.
+  const BazarrLibraryScreen.movies({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  }) : kind = BazarrLibraryKind.movies;
+
+  final BazarrLibraryKind kind;
+
+  /// Whether to draw this screen's own app bar.
+  ///
+  /// False inside the tab shell, where `ServiceHomeScreen` draws the service
+  /// band and `ServiceTabScaffold` the tab bar above it: a third bar of its own
+  /// would put two titles and two back chevrons in one corner.
+  final bool showAppBar;
+
+  /// Room those two glass bands take above this page, since they float over it
+  /// rather than pushing it down.
+  final double topPadding;
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
     final isConfigured = settings.isServiceConfigured(ServiceKey.bazarr);
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.bazarr.withValues(alpha: 0.12),
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left_rounded),
-          onPressed: () => RouteUtils.popOrGo(context, ServiceRoutes.bazarr),
-          tooltip: 'Back',
-        ),
-        title: const Text('Library'),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.bazarr,
-          labelColor: AppColors.bazarr,
-          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
-          labelStyle: Theme.of(
-            context,
-          ).textTheme.titleSmall!.weight(FontWeight.w800),
-          tabs: const [
-            Tab(text: 'Series'),
-            Tab(text: 'Movies'),
-          ],
-        ),
-      ),
+      appBar: showAppBar
+          ? AppBar(
+              backgroundColor: AppColors.bazarr.withValues(alpha: 0.12),
+              leading: IconButton(
+                icon: const Icon(Icons.chevron_left_rounded),
+                onPressed: () =>
+                    RouteUtils.popOrGo(context, ServiceRoutes.bazarr),
+                tooltip: 'Back',
+              ),
+              title: Text(kind.label),
+            )
+          : null,
       body: isConfigured
-          ? TabBarView(
-              controller: _tabController,
-              children: const [
-                _BazarrLibraryTab(kind: _BazarrLibraryTabKind.series),
-                _BazarrLibraryTab(kind: _BazarrLibraryTabKind.movies),
-              ],
+          // Keyed by kind so the two halves cannot share one list state: they
+          // are separate branches of the service shell and each keeps its own
+          // scroll offset and its own page cursor.
+          ? _BazarrLibraryTab(
+              key: ValueKey(kind),
+              kind: kind,
+              topPadding: topPadding,
             )
           : NotConfiguredPlaceholder.forService(ServiceKey.bazarr),
     );
@@ -85,9 +102,14 @@ class _BazarrLibraryScreenState extends ConsumerState<BazarrLibraryScreen>
 }
 
 class _BazarrLibraryTab extends ConsumerStatefulWidget {
-  const _BazarrLibraryTab({required this.kind});
+  const _BazarrLibraryTab({super.key, required this.kind, this.topPadding = 0});
 
-  final _BazarrLibraryTabKind kind;
+  final BazarrLibraryKind kind;
+
+  /// Folded into the list's own padding rather than wrapped around it: the
+  /// host's bands float over this page, so the list has to scroll *under* them
+  /// and only its first row needs the clearance.
+  final double topPadding;
 
   @override
   ConsumerState<_BazarrLibraryTab> createState() => _BazarrLibraryTabState();
@@ -119,7 +141,7 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
   }
 
   String get _providerKey =>
-      widget.kind == _BazarrLibraryTabKind.series ? 'series' : 'movies';
+      widget.kind == BazarrLibraryKind.series ? 'series' : 'movies';
 
   Future<void> _loadInitial() async {
     setState(() {
@@ -128,7 +150,7 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
     });
     try {
       final service = ref.read(bazarrServiceProvider);
-      final page = widget.kind == _BazarrLibraryTabKind.series
+      final page = widget.kind == BazarrLibraryKind.series
           ? await service.getSeries(start: 0, length: _pageSize)
           : await service.getMovies(start: 0, length: _pageSize);
       if (!mounted) return;
@@ -156,7 +178,7 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
     setState(() => _loadingMore = true);
     try {
       final service = ref.read(bazarrServiceProvider);
-      final page = widget.kind == _BazarrLibraryTabKind.series
+      final page = widget.kind == BazarrLibraryKind.series
           ? await service.getSeries(start: _start, length: _pageSize)
           : await service.getMovies(start: _start, length: _pageSize);
       if (!mounted) return;
@@ -189,9 +211,11 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
   Widget build(BuildContext context) {
     if (_initialLoading) {
       return ListView.separated(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md + widget.topPadding,
+          AppSpacing.lg,
+          AppSpacing.md,
         ),
         itemCount: 8,
         separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
@@ -228,9 +252,11 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
       child: ListView.separated(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md + widget.topPadding,
+          AppSpacing.lg,
+          AppSpacing.md,
         ),
         itemCount: _items.length + (hasMore ? 1 : 0),
         separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
@@ -271,7 +297,7 @@ class _BazarrLibraryEntry {
   factory _BazarrLibraryEntry.from(dynamic item) {
     if (item is BazarrSeries) {
       return _BazarrLibraryEntry(
-        kind: _BazarrLibraryTabKind.series,
+        kind: BazarrLibraryKind.series,
         id: item.sonarrSeriesId,
         title: item.title ?? 'Untitled series',
         subtitle: item.path ?? item.sortTitle ?? '',
@@ -280,21 +306,21 @@ class _BazarrLibraryEntry {
     if (item is BazarrMovie) {
       final year = item.year != null ? ' (${item.year})' : '';
       return _BazarrLibraryEntry(
-        kind: _BazarrLibraryTabKind.movies,
+        kind: BazarrLibraryKind.movies,
         id: item.radarrId,
         title: '${item.title ?? 'Untitled movie'}$year',
         subtitle: item.path ?? item.sortTitle ?? '',
       );
     }
     return _BazarrLibraryEntry(
-      kind: _BazarrLibraryTabKind.series,
+      kind: BazarrLibraryKind.series,
       id: 0,
       title: 'Unknown',
       subtitle: '',
     );
   }
 
-  final _BazarrLibraryTabKind kind;
+  final BazarrLibraryKind kind;
   final int id;
   final String title;
   final String subtitle;
@@ -331,7 +357,7 @@ class _BazarrLibraryRow extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  entry.kind == _BazarrLibraryTabKind.series ? '📺' : '🎬',
+                  entry.kind == BazarrLibraryKind.series ? '📺' : '🎬',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
@@ -372,7 +398,7 @@ class _BazarrLibraryRow extends StatelessWidget {
   }
 
   void _openEntry(BuildContext context) {
-    if (entry.kind == _BazarrLibraryTabKind.series) {
+    if (entry.kind == BazarrLibraryKind.series) {
       context.push(ServiceRoutes.bazarrSeries(entry.id));
     } else {
       context.push(ServiceRoutes.bazarrMovie(entry.id));

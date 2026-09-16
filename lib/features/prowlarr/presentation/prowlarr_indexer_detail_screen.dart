@@ -28,7 +28,7 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded),
           onPressed: () =>
-              RouteUtils.popOrGo(context, ServiceRoutes.prowlarrLibrary),
+              RouteUtils.popOrGo(context, ServiceRoutes.prowlarrIndexers),
           tooltip: 'Back',
         ),
         title: Text(
@@ -120,7 +120,7 @@ Future<void> _edit(
 ) async {
   final deleted = await editIndexerFlow(context, ref, indexer);
   if (deleted && context.mounted) {
-    RouteUtils.popOrGo(context, ServiceRoutes.prowlarrLibrary);
+    RouteUtils.popOrGo(context, ServiceRoutes.prowlarrIndexers);
   }
 }
 
@@ -167,7 +167,7 @@ class _ActionRow extends ConsumerWidget {
             onPressed: () async {
               final deleted = await deleteIndexerFlow(context, ref, indexer);
               if (deleted && context.mounted) {
-                RouteUtils.popOrGo(context, ServiceRoutes.prowlarrLibrary);
+                RouteUtils.popOrGo(context, ServiceRoutes.prowlarrIndexers);
               }
             },
             icon: const Icon(Icons.delete_outline_rounded, size: 18),

@@ -125,15 +125,40 @@ class ServiceRoutes {
   static String truenasSystemSection(String section) =>
       '$truenasSystem/$section';
 
-  static const seerrRequests = '$seerr/requests';
-  static const seerrMoviesAll = '$seerr/movies/all';
-  static const seerrTvAll = '$seerr/tv/all';
-  static const seerrTrendingAll = '$seerr/trending/all';
-  static const seerrGenreBase = '$seerr/genre';
-  static const seerrPersonBase = '$seerr/person';
-  static const seerrCollectionBase = '$seerr/collection';
+  // ── Seerr, under the tab model ────────────────────────────────────────────
+  //
+  // Literals for the reason the \*arr block gives below: an enum instance's
+  // field is not a compile-time constant in Dart and these have to stay
+  // `const`, so nothing the analyzer sees ties a spelling to its tab. A test
+  // does.
+  //
+  // Seerr carried more pre-tab link shapes than any other service — three
+  // see-alls, a genre tree, two media details, a person and a collection — and
+  // **every one of them moved under `discover/`**, because Discover is the tab
+  // that owns them: each is reached by tapping a row of the Discover page, and
+  // a page pushed inside its own tab's branch survives a switch away from Seerr
+  // and keeps its Hero flight. The old spellings still resolve; `router.dart`
+  // keeps one childless redirect tail per shape.
+  static const seerrOverview = '$seerr/overview';
 
-  /// Person (cast member) detail page, e.g. `/services/seerr/person/287`.
+  /// Unchanged by the migration, and that is the point: the all-requests list
+  /// was already a page at `/dashboard/seerr/requests`, which is exactly where
+  /// the Requests tab's root mounts — so every link that ever pointed at it
+  /// still points at it, this time at a tab rather than at a pushed page.
+  static const seerrRequests = '$seerr/requests';
+  static const seerrIssues = '$seerr/issues';
+  static const seerrDiscover = '$seerr/discover';
+  static const seerrUsers = '$seerr/users';
+
+  static const seerrMoviesAll = '$seerrDiscover/movies/all';
+  static const seerrTvAll = '$seerrDiscover/tv/all';
+  static const seerrTrendingAll = '$seerrDiscover/trending/all';
+  static const seerrGenreBase = '$seerrDiscover/genre';
+  static const seerrPersonBase = '$seerrDiscover/person';
+  static const seerrCollectionBase = '$seerrDiscover/collection';
+
+  /// Person (cast member) detail page, e.g.
+  /// `/dashboard/seerr/discover/person/287`.
   static String seerrPerson(int id, {String? heroTag, String? posterUrl}) {
     return _withQuery('$seerrPersonBase/$id', {
       'heroTag': heroTag,
@@ -141,12 +166,14 @@ class ServiceRoutes {
     });
   }
 
-  /// Movie collection detail page, e.g. `/services/seerr/collection/10`.
+  /// Movie collection detail page, e.g.
+  /// `/dashboard/seerr/discover/collection/10`.
   static String seerrCollection(int id, {String? heroTag}) {
     return _withQuery('$seerrCollectionBase/$id', {'heroTag': heroTag});
   }
 
-  /// See-all for a single genre row, e.g. `/services/seerr/genre/movie/28?title=Action`.
+  /// See-all for a single genre row, e.g.
+  /// `/dashboard/seerr/discover/genre/movie/28?title=Action`.
   static String seerrGenre({
     required String mediaType,
     required int genreId,
@@ -241,23 +268,72 @@ class ServiceRoutes {
   static const nzbgetFeeds = '$nzbget/feeds';
   static const nzbgetMessages = '$nzbget/messages';
 
+  // ── Bazarr, under the tab model ───────────────────────────────────────────
+  //
+  // Literals, like every other service's, and tied to their tabs by a test.
+  //
+  // Bazarr is the one service whose bar names the record types themselves —
+  // Series and Movies, where the \*arr say Library — so the detail spelling is
+  // `<tab>/:id` and not `<tab>/<record>/:id`: `series/series/42` would be a
+  // stutter nobody would type. `bazarrSeriesBase` therefore needed no change at
+  // all, which is the happiest case of the migration: every link that ever
+  // pointed at a Bazarr series still points at it, now at a page inside the
+  // Series tab's branch rather than at a sibling of the tabs.
+  static const bazarrOverview = '$bazarr/overview';
   static const bazarrWanted = '$bazarr/wanted';
-  static const bazarrLibrary = '$bazarr/library';
-  static const bazarrSeriesBase = '$bazarr/series';
-  static const bazarrMovieBase = '$bazarr/movie';
+  static const bazarrHistory = '$bazarr/history';
+  static const bazarrProviders = '$bazarr/providers';
 
-  // ── Prowlarr ──────────────────────────────────────────────────────────────
-  static const prowlarrLibrary = '$prowlarr/library';
-  static const prowlarrIndexerBase = '$prowlarr/indexer';
+  /// The Series tab's root, **and** the base of the series detail under it —
+  /// one constant because they are one address. Unchanged by the migration,
+  /// which is the happiest case it had: every link that ever pointed at a
+  /// Bazarr series still points at it, now at a page inside the Series tab's
+  /// branch rather than at a sibling of the tabs.
+  ///
+  /// There is no `bazarrSeries` constant beside it because [bazarrSeries] is
+  /// already the function that builds one.
+  static const bazarrSeriesBase = '$bazarr/series';
+
+  /// The Movies tab's root, and the base of the film detail under it. This one
+  /// **did** move: it was `/dashboard/bazarr/movie/:id`, singular, a sibling of
+  /// nothing. The old spelling still resolves; `router.dart` keeps a childless
+  /// tail for it.
+  static const bazarrMovieBase = '$bazarr/movies';
+
+  // ── Prowlarr, under the tab model ─────────────────────────────────────────
+  //
+  // Literals, like every other service's, and tied to their tabs by a test.
+  //
+  // `library` became `indexers`, which is what the bar calls it and what the
+  // page always was: a list of indexers under a heading that said Library
+  // because every other service's list did. The old spelling still resolves;
+  // `router.dart` keeps a childless tail for it.
+  static const prowlarrOverview = '$prowlarr/overview';
+  static const prowlarrIndexers = '$prowlarr/indexers';
+  static const prowlarrHistory = '$prowlarr/history';
+  static const prowlarrStats = '$prowlarr/stats';
+
+  /// The indexer, inside the Indexers tab's branch — the same move the film
+  /// made into Radarr's Library, and for the same reasons: a detail pushed
+  /// *inside* its tab survives a switch away from Prowlarr, and the row it was
+  /// pushed from is still under it on one Navigator.
+  static const prowlarrIndexerBase = '$prowlarrIndexers/indexer';
+
+  /// Prowlarr's own Settings, which is **not** a tab (decision 26): Apps,
+  /// download clients, notifications and indexer proxies are sections of one
+  /// field-driven page, and a fifth bar entry for a configuration screen is a
+  /// bar entry nobody opens twice. It stays a page pushed from the service, so
+  /// it hangs off the service node beside the shell rather than inside a
+  /// branch — no one tab owns it.
   static const prowlarrSettings = '$prowlarr/settings';
   static const prowlarrSyncProfiles = '$prowlarrSettings/sync-profiles';
   static const prowlarrTags = '$prowlarrSettings/tags';
 
-  /// Indexer detail, e.g. `/services/prowlarr/indexer/3`.
+  /// Indexer detail, e.g. `/dashboard/prowlarr/indexers/indexer/3`.
   static String prowlarrIndexer(int id) => '$prowlarrIndexerBase/$id';
 
   /// One of the field-driven settings sections, e.g.
-  /// `/services/prowlarr/settings/apps`.
+  /// `/dashboard/prowlarr/settings/apps`.
   static String prowlarrSettingsSection(ProwlarrProviderKind kind) =>
       '$prowlarrSettings/${kind.routeSegment}';
 
@@ -347,7 +423,7 @@ class ServiceRoutes {
     String? posterUrl,
   }) {
     final normalizedMediaType = mediaType == 'tv' ? 'tv' : 'movie';
-    return _withQuery('$seerr/$normalizedMediaType/$id', {
+    return _withQuery('$seerrDiscover/$normalizedMediaType/$id', {
       'heroTag': heroTag,
       'posterUrl': posterUrl,
     });

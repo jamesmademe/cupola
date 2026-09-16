@@ -16,7 +16,22 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 enum _BazarrWantedTabKind { episodes, movies }
 
 class BazarrWantedScreen extends ConsumerStatefulWidget {
-  const BazarrWantedScreen({super.key});
+  /// Whether to draw this screen's own app bar.
+  ///
+  /// False inside the tab shell, where `ServiceHomeScreen` draws the service
+  /// band and `ServiceTabScaffold` the tab bar above it: a third bar of its own
+  /// would put two titles and two back chevrons in one corner.
+  final bool showAppBar;
+
+  /// Room those two glass bands take above this page, since they float over it
+  /// rather than pushing it down.
+  final double topPadding;
+
+  const BazarrWantedScreen({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  });
 
   @override
   ConsumerState<BazarrWantedScreen> createState() => _BazarrWantedScreenState();
@@ -46,31 +61,53 @@ class _BazarrWantedScreenState extends ConsumerState<BazarrWantedScreen>
     final settings = ref.watch(currentSettingsProvider);
     final isConfigured = settings.isServiceConfigured(ServiceKey.bazarr);
 
+    // Built once and placed in one of two positions. Episodes and Movies are
+    // two halves of ONE entry on Bazarr's bar — Wanted — so unlike the library
+    // this inner bar survives the tab model; what changes is where it hangs.
+    final tabBar = TabBar(
+      controller: _tabController,
+      indicatorColor: AppColors.bazarr,
+      labelColor: AppColors.bazarr,
+      unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+      labelStyle: Theme.of(
+        context,
+      ).textTheme.titleSmall!.weight(FontWeight.w800),
+      tabs: const [
+        Tab(text: 'Episodes'),
+        Tab(text: 'Movies'),
+      ],
+    );
+
     return Scaffold(
-      appBar: _BazarrDetailAppBar(
-        title: 'Wanted Subtitles',
-        backRoute: ServiceRoutes.bazarr,
-        accent: AppColors.bazarr,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.bazarr,
-          labelColor: AppColors.bazarr,
-          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
-          labelStyle: Theme.of(
-            context,
-          ).textTheme.titleSmall!.weight(FontWeight.w800),
-          tabs: const [
-            Tab(text: 'Episodes'),
-            Tab(text: 'Movies'),
-          ],
-        ),
-      ),
+      appBar: widget.showAppBar
+          ? _BazarrDetailAppBar(
+              title: 'Wanted Subtitles',
+              backRoute: ServiceRoutes.bazarr,
+              accent: AppColors.bazarr,
+              bottom: tabBar,
+            )
+          : null,
       body: isConfigured
-          ? TabBarView(
-              controller: _tabController,
-              children: const [
-                _BazarrWantedTab(kind: _BazarrWantedTabKind.episodes),
-                _BazarrWantedTab(kind: _BazarrWantedTabKind.movies),
+          ? Column(
+              children: [
+                // Hosted, the app bar is gone but the inner bar must not go
+                // with it: it moves into the body and clears the host's two
+                // floating bands itself. Left in the app bar it would simply
+                // disappear; left at the top of the body it would sit frosted
+                // under the service tab bar.
+                if (!widget.showAppBar) ...[
+                  SizedBox(height: widget.topPadding),
+                  tabBar,
+                ],
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: const [
+                      _BazarrWantedTab(kind: _BazarrWantedTabKind.episodes),
+                      _BazarrWantedTab(kind: _BazarrWantedTabKind.movies),
+                    ],
+                  ),
+                ),
               ],
             )
           // The shared placeholder, not a private copy. A deep link into Wanted

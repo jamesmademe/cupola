@@ -5,6 +5,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_library_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+
+import '../../../test_helpers/settings_scope.dart';
+
+/// A configured connection, because the screen now asks before it reads.
+///
+/// It is a tab on Prowlarr's bar, so the bar draws it whether or not the
+/// service is set up, and an unconfigured arrival gets the shared
+/// `NotConfiguredPlaceholder` instead of a Retry that retries forever. Every
+/// case below is about what the list does with indexers it *has*.
+final _settings = settingsWith(
+  prowlarrUrl: 'http://prowlarr.local',
+  prowlarrApiKey: 'key',
+);
 
 ProwlarrIndexer _indexer({
   required int id,
@@ -31,6 +45,7 @@ Future<void> _pumpLibrary(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        currentSettingsProvider.overrideWith((ref) => _settings),
         prowlarrIndexersProvider.overrideWith((ref) async => indexers),
         prowlarrIndexerStatusProvider.overrideWith(
           (ref) async => const <ProwlarrIndexerStatus>[],

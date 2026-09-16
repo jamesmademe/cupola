@@ -230,6 +230,70 @@ void main() {
       );
     });
 
+    test('the Seerr tab roots are spelled by the tabs they mount', () {
+      // The same tie the four \*arr and the four download clients carry, and it
+      // has to be its own case for the same reason: these are `const` literals
+      // precisely because an enum instance's field is not a compile-time
+      // constant, so there is nothing to iterate that would not defeat the
+      // point.
+      expect(
+        ServiceRoutes.seerrOverview,
+        '${ServiceRoutes.seerr}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.seerrRequests,
+        '${ServiceRoutes.seerr}/${ServiceTab.requests.segment}',
+      );
+      expect(
+        ServiceRoutes.seerrIssues,
+        '${ServiceRoutes.seerr}/${ServiceTab.issues.segment}',
+      );
+      expect(
+        ServiceRoutes.seerrDiscover,
+        '${ServiceRoutes.seerr}/${ServiceTab.discover.segment}',
+      );
+      expect(
+        ServiceRoutes.seerrUsers,
+        '${ServiceRoutes.seerr}/${ServiceTab.users.segment}',
+      );
+      // Requests did not move, and that is the assertion: the all-requests list
+      // was already at this address as a pushed page, so every link that ever
+      // pointed at it still resolves — now to a tab.
+      expect(ServiceRoutes.seerrRequests, '/dashboard/seerr/requests');
+    });
+
+    test('every Seerr see-all and detail hangs off the Discover tab', () {
+      // Eight link shapes moved at once, and they moved because one constant
+      // each says so: nothing in the app builds a Seerr path by hand. A drift
+      // here silently retargets every poster tap in Discover.
+      for (final base in [
+        ServiceRoutes.seerrMoviesAll,
+        ServiceRoutes.seerrTvAll,
+        ServiceRoutes.seerrTrendingAll,
+        ServiceRoutes.seerrGenreBase,
+        ServiceRoutes.seerrPersonBase,
+        ServiceRoutes.seerrCollectionBase,
+      ]) {
+        expect(base, startsWith('${ServiceRoutes.seerrDiscover}/'));
+      }
+      expect(
+        ServiceRoutes.seerrDetail(mediaType: 'movie', id: 7),
+        startsWith('${ServiceRoutes.seerrDiscover}/'),
+      );
+      expect(
+        ServiceRoutes.seerrPerson(287),
+        '/dashboard/seerr/discover/person/287',
+      );
+      expect(
+        ServiceRoutes.seerrCollection(10),
+        '/dashboard/seerr/discover/collection/10',
+      );
+      expect(
+        ServiceRoutes.seerrGenre(mediaType: 'tv', genreId: 28, title: 'Action'),
+        '/dashboard/seerr/discover/genre/tv/28?title=Action',
+      );
+    });
+
     test('encodes Seerr detail query values once', () {
       expect(
         ServiceRoutes.seerrDetail(
@@ -238,18 +302,18 @@ void main() {
           heroTag: 'hero tag',
           posterUrl: 'https://image.tmdb.org/t/p/w500/a/b.jpg',
         ),
-        '/dashboard/seerr/tv/123?heroTag=hero+tag&posterUrl=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Fw500%2Fa%2Fb.jpg',
+        '/dashboard/seerr/discover/tv/123?heroTag=hero+tag&posterUrl=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Fw500%2Fa%2Fb.jpg',
       );
     });
 
     test('normalizes non-tv Seerr media types to movie', () {
       expect(
         ServiceRoutes.seerrDetail(mediaType: 'movie', id: 1),
-        '/dashboard/seerr/movie/1',
+        '/dashboard/seerr/discover/movie/1',
       );
       expect(
         ServiceRoutes.seerrDetail(mediaType: 'person', id: 1),
-        '/dashboard/seerr/movie/1',
+        '/dashboard/seerr/discover/movie/1',
       );
     });
 
@@ -257,10 +321,96 @@ void main() {
       expect(ServiceRoutes.bazarr, '/dashboard/bazarr');
     });
 
-    test('builds Prowlarr library and indexer detail routes', () {
+    test('the Bazarr tab roots are spelled by the tabs they mount', () {
+      // Six literals, the widest bar in the app, tied one by one for the reason
+      // every other service's are: an enum instance's field is not a
+      // compile-time constant, so nothing the analyzer sees holds these to the
+      // table that draws them.
+      expect(
+        ServiceRoutes.bazarrOverview,
+        '${ServiceRoutes.bazarr}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.bazarrWanted,
+        '${ServiceRoutes.bazarr}/${ServiceTab.wanted.segment}',
+      );
+      expect(
+        ServiceRoutes.bazarrSeriesBase,
+        '${ServiceRoutes.bazarr}/${ServiceTab.series.segment}',
+      );
+      expect(
+        ServiceRoutes.bazarrMovieBase,
+        '${ServiceRoutes.bazarr}/${ServiceTab.movies.segment}',
+      );
+      expect(
+        ServiceRoutes.bazarrHistory,
+        '${ServiceRoutes.bazarr}/${ServiceTab.history.segment}',
+      );
+      expect(
+        ServiceRoutes.bazarrProviders,
+        '${ServiceRoutes.bazarr}/${ServiceTab.providers.segment}',
+      );
+    });
+
+    test('the Bazarr details hang off the tabs that own them', () {
+      // Bazarr is the one service whose bar names the record types, so the
+      // detail is `<tab>/:id` rather than `<tab>/<record>/:id`. The series link
+      // is byte-for-byte what it always was; the film's moved from the singular
+      // `movie/`, and every link to one in the app is built here.
+      expect(ServiceRoutes.bazarrSeries(7), '/dashboard/bazarr/series/7');
+      expect(
+        ServiceRoutes.bazarrSeries(7, heroTag: 'ignored'),
+        '/dashboard/bazarr/series/7?heroTag=ignored',
+      );
+      expect(ServiceRoutes.bazarrMovie(12), '/dashboard/bazarr/movies/12');
+    });
+
+    test('the Prowlarr tab roots are spelled by the tabs they mount', () {
+      // `library` became `indexers` — the word the bar uses and the word the
+      // page always meant. The literal is tied to the tab here because nothing
+      // the analyzer sees ties them.
       expect(ServiceRoutes.prowlarr, '/dashboard/prowlarr');
-      expect(ServiceRoutes.prowlarrLibrary, '/dashboard/prowlarr/library');
-      expect(ServiceRoutes.prowlarrIndexer(3), '/dashboard/prowlarr/indexer/3');
+      expect(
+        ServiceRoutes.prowlarrOverview,
+        '${ServiceRoutes.prowlarr}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.prowlarrIndexers,
+        '${ServiceRoutes.prowlarr}/${ServiceTab.indexers.segment}',
+      );
+      expect(
+        ServiceRoutes.prowlarrHistory,
+        '${ServiceRoutes.prowlarr}/${ServiceTab.history.segment}',
+      );
+      expect(
+        ServiceRoutes.prowlarrStats,
+        '${ServiceRoutes.prowlarr}/${ServiceTab.stats.segment}',
+      );
+    });
+
+    test('the indexer detail hangs off the Indexers tab', () {
+      // Every link to an indexer in the app is built by this helper, so this
+      // constant is what moved them all inside the branch at once.
+      expect(
+        ServiceRoutes.prowlarrIndexerBase,
+        startsWith('${ServiceRoutes.prowlarrIndexers}/'),
+      );
+      expect(
+        ServiceRoutes.prowlarrIndexer(3),
+        '/dashboard/prowlarr/indexers/indexer/3',
+      );
+    });
+
+    test('Prowlarr settings is not a tab and did not move', () {
+      // Decision 26: the four field-driven sections are one page, not a fifth
+      // bar entry. It stays a page pushed from the service, at the address it
+      // always had, so every link into it still resolves.
+      expect(ServiceRoutes.prowlarrSettings, '/dashboard/prowlarr/settings');
+      expect(
+        ServiceTab.fromSegment('settings'),
+        isNull,
+        reason: 'settings must not become a tab segment by accident',
+      );
     });
   });
 }

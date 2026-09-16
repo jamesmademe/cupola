@@ -102,7 +102,7 @@ void main() {
     // The arr rows point inside their Library tab's branch: on the tab model
     // the record is a page pushed from the library list, not a sibling of it.
     expect(routes.map((uri) => uri.path), [
-      '/dashboard/seerr/movie/101',
+      '/dashboard/seerr/discover/movie/101',
       '/dashboard/radarr/library/movie/10',
       '/dashboard/sonarr/library/series/20',
       '/dashboard/lidarr/library/artist/30',

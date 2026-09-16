@@ -12,6 +12,8 @@ import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/presentation/music_detail_screen.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/prowlarr/data/prowlarr_service.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
@@ -26,6 +28,7 @@ import 'package:cupola/features/settings/presentation/settings_appearance_screen
 import 'package:cupola/features/settings/presentation/settings_connections_screen.dart';
 import 'package:cupola/features/settings/presentation/service_settings_screen.dart';
 
+import '../test_helpers/fake_api_client.dart';
 import '../test_helpers/fake_services.dart';
 import '../test_helpers/model_builders.dart';
 
@@ -78,17 +81,21 @@ void main() {
       expect(find.byType(OnboardingScreen), findsNothing);
     });
 
-    testWidgets('redirects invalid discover detail ids back to services', (
+    testWidgets('redirects invalid discover detail ids back to Discover', (
       tester,
     ) async {
+      // Two hops now, and both are the point: the pre-tab spelling rewrites to
+      // the detail inside the Discover branch, and *that* route rejects the id.
+      // It falls back to the tab the page would have been pushed from rather
+      // than to the app home — the branch is where the user still is, and
+      // sending them out of the service is a bigger move than the mistake.
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
       router.go('/dashboard/seerr/movie/not-a-number');
       await tester.pumpAndSettle();
 
-      expect(router.state.uri.toString(), '/dashboard');
-      expect(find.byType(DashboardScreen), findsOneWidget);
+      expect(router.state.uri.toString(), ServiceRoutes.seerrDiscover);
       expect(find.byType(DiscoverDetailScreen), findsNothing);
     });
 
@@ -100,7 +107,9 @@ void main() {
         const encodedPosterUrl =
             'https%3A%2F%2Fcdn.example.com%2Fposter%20image.jpg';
 
-        router.go('/dashboard/seerr/movie/123?posterUrl=$encodedPosterUrl');
+        router.go(
+          '/dashboard/seerr/discover/movie/123?posterUrl=$encodedPosterUrl',
+        );
         await tester.pumpAndSettle();
 
         final screen = tester.widget<DiscoverDetailScreen>(
@@ -109,7 +118,7 @@ void main() {
 
         expect(
           router.state.uri.toString(),
-          '/dashboard/seerr/movie/123?posterUrl=$encodedPosterUrl',
+          '/dashboard/seerr/discover/movie/123?posterUrl=$encodedPosterUrl',
         );
         expect(screen.mediaId, 123);
         expect(screen.mediaType, 'movie');
@@ -284,10 +293,9 @@ void main() {
 
       // A service on the tab model has a redirect-only prefix for a root: the
       // service home is a tab now, so the bare path names a place that draws
-      // nothing and hands off to Overview. Seerr is not on the model yet and
-      // still lands on itself, which is what makes this table worth keeping.
+      // nothing and hands off to Overview.
       for (final entry in {
-        '/dashboard/seerr': '/dashboard/seerr',
+        ServiceRoutes.seerr: ServiceRoutes.seerrOverview,
         ServiceRoutes.radarr: ServiceRoutes.radarrOverview,
         ServiceRoutes.sonarr: ServiceRoutes.sonarrOverview,
         ServiceRoutes.lidarr: ServiceRoutes.lidarrOverview,
@@ -337,6 +345,66 @@ void main() {
       }
     });
 
+    testWidgets('every tab on Seerr\'s bar resolves to its own location', (
+      tester,
+    ) async {
+      // The bar draws one label per entry in `tabsFor`, so a tab the table
+      // names with no branch behind it would 404 on tap rather than fail
+      // anywhere a reader would look. Seerr is faked by this harness, so
+      // Overview, Requests and Discover all reach a service; Issues and Users
+      // answer without a request.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final tab in tabsFor(ServiceKey.seerr)!) {
+        final location = '/dashboard/seerr/${tab.segment}';
+        router.go(location);
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.toString(), location, reason: tab.name);
+      }
+    });
+
+    testWidgets('every pre-tab Seerr path still resolves', (tester) async {
+      // Seerr shipped more link shapes than any other service, all of them
+      // hanging off the service root because the service root *was* Discover.
+      // Every one of them moved under the Discover tab, so every one needs a
+      // tail — and the two `.../all` literals need to be matched before the
+      // `:id` details, or `/dashboard/seerr/tv/all` becomes a media detail
+      // whose id is the word `all`. Both spellings of the prefix, because the
+      // `/services` rewrite chains into these rather than duplicating them.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final prefix in ['/dashboard/seerr', '/services/seerr']) {
+        for (final entry in {
+          '': ServiceRoutes.seerrOverview,
+          '/requests': ServiceRoutes.seerrRequests,
+          '/movies/all': ServiceRoutes.seerrMoviesAll,
+          '/tv/all': ServiceRoutes.seerrTvAll,
+          '/trending/all': ServiceRoutes.seerrTrendingAll,
+          '/genre/tv/28?title=Action': ServiceRoutes.seerrGenre(
+            mediaType: 'tv',
+            genreId: 28,
+            title: 'Action',
+          ),
+          '/movie/42': '${ServiceRoutes.seerrDiscover}/movie/42',
+          '/tv/55': '${ServiceRoutes.seerrDiscover}/tv/55',
+          '/person/287?heroTag=cast_287': ServiceRoutes.seerrPerson(
+            287,
+            heroTag: 'cast_287',
+          ),
+          '/collection/10': ServiceRoutes.seerrCollection(10),
+        }.entries) {
+          final from = '$prefix${entry.key}';
+          router.go(from);
+          await tester.pumpAndSettle();
+
+          expect(router.state.uri.toString(), entry.value, reason: from);
+        }
+      }
+    });
+
     testWidgets(
       'every tab on a download client\'s bar resolves to its own location',
       (tester) async {
@@ -372,6 +440,94 @@ void main() {
         }
       },
     );
+
+    testWidgets('every tab on Bazarr\'s bar resolves to its own location', (
+      tester,
+    ) async {
+      // Six tabs, the widest bar in the app. No fake: every Bazarr surface
+      // checks `isServiceConfigured` before it reads anything, so an
+      // unconfigured connection is answered without a request and there is no
+      // retry timer left pending.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final tab in tabsFor(ServiceKey.bazarr)!) {
+        final location = '/dashboard/bazarr/${tab.segment}';
+        router.go(location);
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.toString(), location, reason: tab.name);
+      }
+    });
+
+    testWidgets('every pre-tab Bazarr path still resolves', (tester) async {
+      // Three shapes moved and one did not, which is the whole point of the
+      // table: `library` was the combined Series/Movies page and lands on
+      // Series, the singular `movie/:id` lands on the film inside Movies, and
+      // `series/:id` is unchanged because the Series tab's root IS its base.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final prefix in ['/dashboard/bazarr', '/services/bazarr']) {
+        for (final entry in {
+          '': ServiceRoutes.bazarrOverview,
+          '/library': ServiceRoutes.bazarrSeriesBase,
+          '/wanted': ServiceRoutes.bazarrWanted,
+          '/series/7': ServiceRoutes.bazarrSeries(7),
+          '/movie/12': ServiceRoutes.bazarrMovie(12),
+        }.entries) {
+          final from = '$prefix${entry.key}';
+          router.go(from);
+          await tester.pumpAndSettle();
+
+          expect(router.state.uri.toString(), entry.value, reason: from);
+        }
+      }
+    });
+
+    testWidgets('every tab on Prowlarr\'s bar resolves to its own location', (
+      tester,
+    ) async {
+      // No fake: every Prowlarr surface checks `isServiceConfigured` before it
+      // reads anything, so an unconfigured connection is answered without a
+      // request and there is no retry timer left pending.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final tab in tabsFor(ServiceKey.prowlarr)!) {
+        final location = '/dashboard/prowlarr/${tab.segment}';
+        router.go(location);
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.toString(), location, reason: tab.name);
+      }
+    });
+
+    testWidgets('every pre-tab Prowlarr path still resolves', (tester) async {
+      // Settings is in this table for the opposite reason to the others: it is
+      // NOT a tab (decision 26) and must not have moved. It hangs off the
+      // service node beside the shell, so a link into any of its sections has
+      // to keep landing exactly where it did.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final prefix in ['/dashboard/prowlarr', '/services/prowlarr']) {
+        for (final entry in {
+          '': ServiceRoutes.prowlarrOverview,
+          '/library': ServiceRoutes.prowlarrIndexers,
+          '/indexer/3': ServiceRoutes.prowlarrIndexer(3),
+          '/settings': ServiceRoutes.prowlarrSettings,
+          '/settings/tags': ServiceRoutes.prowlarrTags,
+          '/settings/sync-profiles': ServiceRoutes.prowlarrSyncProfiles,
+        }.entries) {
+          final from = '$prefix${entry.key}';
+          router.go(from);
+          await tester.pumpAndSettle();
+
+          expect(router.state.uri.toString(), entry.value, reason: from);
+        }
+      }
+    });
 
     testWidgets('the pre-tab download client paths still resolve', (
       tester,
@@ -542,9 +698,14 @@ void main() {
       router.go('/discover/movie/123?posterUrl=$encodedPosterUrl');
       await tester.pumpAndSettle();
 
+      // Two hops: the `/discover` tree rewrites onto the pre-tab Seerr
+      // spelling, which rewrites again onto the detail inside the Discover
+      // branch. What this asserts is that the chain finishes — a rewrite that
+      // stopped at the first hop would leave the user on a path that draws
+      // nothing.
       expect(
         router.state.uri.toString(),
-        '/dashboard/seerr/movie/123?posterUrl=$encodedPosterUrl',
+        '/dashboard/seerr/discover/movie/123?posterUrl=$encodedPosterUrl',
       );
       expect(find.byType(DiscoverDetailScreen), findsOneWidget);
 
@@ -595,6 +756,16 @@ Future<ProviderContainer> _pumpRouter(
       radarrServiceProvider.overrideWith((ref) => FakeRadarrService()),
       sonarrServiceProvider.overrideWith((ref) => FakeSonarrService()),
       lidarrServiceProvider.overrideWith((ref) => FakeLidarrService()),
+      // Prowlarr has no hand-written fake, and does not need one: every call
+      // its screens make is a GET whose envelope is an array or an object that
+      // degrades to `{}`, so one canned empty array answers all of them. What
+      // it buys is a *quiet* teardown — an unconfigured `ProwlarrService`
+      // throws, and Riverpod retries the throw on a timer that outlives the
+      // widget tree. Prowlarr's Settings pages and its indexer detail are
+      // reachable from this file's tables, and neither gates on configuration.
+      prowlarrServiceProvider.overrideWith(
+        (ref) => ProwlarrService(FakeApiClient()..getResponseData = const []),
+      ),
     ],
   );
   addTearDown(container.dispose);

@@ -287,7 +287,7 @@ class _BazarrQuickActions extends StatelessWidget {
               icon: Icons.library_books_rounded,
               label: 'Library',
               accent: accent,
-              onTap: () => context.push(ServiceRoutes.bazarrLibrary),
+              onTap: () => context.push(ServiceRoutes.bazarrSeriesBase),
             ),
           ),
         ],

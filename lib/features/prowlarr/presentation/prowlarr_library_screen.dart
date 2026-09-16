@@ -8,12 +8,15 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_category_picker.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_indexer_tile.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_list_shimmer.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 enum _ProtocolFilter { all, torrent, usenet }
 
@@ -36,7 +39,22 @@ enum _SortKey {
 }
 
 class ProwlarrLibraryScreen extends ConsumerStatefulWidget {
-  const ProwlarrLibraryScreen({super.key});
+  /// Whether to draw this screen's own app bar.
+  ///
+  /// False inside the tab shell, where `ServiceHomeScreen` draws the service
+  /// band and `ServiceTabScaffold` the tab bar above it: a third bar of its own
+  /// would put two titles and two back chevrons in one corner.
+  final bool showAppBar;
+
+  /// Room those two glass bands take above this page, since they float over it
+  /// rather than pushing it down.
+  final double topPadding;
+
+  const ProwlarrLibraryScreen({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  });
 
   @override
   ConsumerState<ProwlarrLibraryScreen> createState() =>
@@ -233,6 +251,38 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Asked before anything is read, and that is new with the tab model. This
+    // page used to be reachable only by tapping through a configured service,
+    // so an unconfigured Prowlarr could only arrive here by deep link and got
+    // "Failed to load indexers" with a Retry that retried forever — a dead end
+    // wearing fault chrome for a state the user created by not filling in a
+    // form. It is a *tab* now: the bar draws it whether or not the service is
+    // set up, so this is an ordinary daily arrival.
+    final isConfigured = ref.watch(
+      currentSettingsProvider.select(
+        (settings) => settings.isServiceConfigured(ServiceKey.prowlarr),
+      ),
+    );
+    if (!isConfigured) {
+      return Scaffold(
+        appBar: widget.showAppBar
+            ? AppBar(
+                backgroundColor: AppColors.prowlarr.withValues(alpha: 0.12),
+                leading: IconButton(
+                  icon: const Icon(Icons.chevron_left_rounded),
+                  onPressed: () =>
+                      RouteUtils.popOrGo(context, ServiceRoutes.prowlarr),
+                  tooltip: 'Back',
+                ),
+                title: const Text('Indexers'),
+              )
+            : null,
+        // `.forService`: its door goes to Prowlarr's own connection form rather
+        // than to the settings index, where its setup note is printed.
+        body: NotConfiguredPlaceholder.forService(ServiceKey.prowlarr),
+      );
+    }
+
     final indexersAsync = ref.watch(prowlarrIndexersProvider);
     final statusAsync = ref.watch(prowlarrIndexerStatusProvider);
     _acceptedCategoryIds = prowlarrExpandCategories(
@@ -263,76 +313,113 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
         .map((indexer) => indexer.id)
         .toList(growable: false);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.prowlarr.withValues(alpha: 0.12),
-        leading: _selecting
-            ? IconButton(
-                icon: const Icon(Icons.close_rounded),
-                tooltip: 'Cancel selection',
-                onPressed: () => setState(() => _selection = null),
-              )
-            : IconButton(
-                icon: const Icon(Icons.chevron_left_rounded),
-                onPressed: () =>
-                    RouteUtils.popOrGo(context, ServiceRoutes.prowlarr),
-                tooltip: 'Back',
-              ),
-        title: Text(_selecting ? '${selected.length} selected' : 'Indexers'),
-        actions: _selecting
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.select_all_rounded),
-                  tooltip: 'Select all',
-                  onPressed: () {
-                    // Membership, not cardinality: comparing set *sizes* meant
-                    // that with as many hidden rows selected as there were
-                    // visible ones, "Select all" cleared the list instead of
-                    // selecting what the user could see.
-                    final current = selection ?? const <int>{};
-                    final allVisibleSelected =
-                        visibleIds.isNotEmpty &&
-                        visibleIds.every(current.contains);
-                    setState(
-                      () => _selection = allVisibleSelected
-                          ? current.difference(visibleIds)
-                          : {...current, ...visibleIds},
-                    );
-                  },
+    // Built once and placed in one of two ways. Hosted, the app bar is gone —
+    // but these controls must not go with it, and they cannot move up onto the
+    // service band either: Add indexer, Test all, Sync apps and the whole
+    // selection mode belong to THIS tab, and the band is drawn above every
+    // branch, so they would follow the user onto Overview, History and Stats.
+    // They move into the body instead, on one row above the search field.
+    final cancelSelection = IconButton(
+      icon: const Icon(Icons.close_rounded),
+      tooltip: 'Cancel selection',
+      onPressed: () => setState(() => _selection = null),
+    );
+    final selectionTitle = Text(
+      '${selected.length} selected',
+      style: Theme.of(context).appBarTheme.titleTextStyle,
+    );
+    final actions = _selecting
+        ? <Widget>[
+            IconButton(
+              icon: const Icon(Icons.select_all_rounded),
+              tooltip: 'Select all',
+              onPressed: () {
+                // Membership, not cardinality: comparing set *sizes* meant
+                // that with as many hidden rows selected as there were
+                // visible ones, "Select all" cleared the list instead of
+                // selecting what the user could see.
+                final current = selection ?? const <int>{};
+                final allVisibleSelected =
+                    visibleIds.isNotEmpty && visibleIds.every(current.contains);
+                setState(
+                  () => _selection = allVisibleSelected
+                      ? current.difference(visibleIds)
+                      : {...current, ...visibleIds},
+                );
+              },
+            ),
+          ]
+        : <Widget>[
+            IconButton(
+              icon: const Icon(Icons.add_rounded),
+              tooltip: 'Add indexer',
+              onPressed: () => addIndexerFlow(context, ref),
+            ),
+            PopupMenuButton<_LibraryMenuAction>(
+              tooltip: 'More actions',
+              onSelected: _handleMenu,
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: _LibraryMenuAction.testAll,
+                  child: Text('Test all indexers'),
                 ),
-              ]
-            : [
-                IconButton(
-                  icon: const Icon(Icons.add_rounded),
-                  tooltip: 'Add indexer',
-                  onPressed: () => addIndexerFlow(context, ref),
+                PopupMenuItem(
+                  value: _LibraryMenuAction.syncApps,
+                  child: Text('Sync app indexers'),
                 ),
-                PopupMenuButton<_LibraryMenuAction>(
-                  tooltip: 'More actions',
-                  onSelected: _handleMenu,
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(
-                      value: _LibraryMenuAction.testAll,
-                      child: Text('Test all indexers'),
-                    ),
-                    PopupMenuItem(
-                      value: _LibraryMenuAction.syncApps,
-                      child: Text('Sync app indexers'),
-                    ),
-                    PopupMenuItem(
-                      value: _LibraryMenuAction.select,
-                      child: Text('Select indexers'),
-                    ),
-                    PopupMenuItem(
-                      value: _LibraryMenuAction.settings,
-                      child: Text('Prowlarr settings'),
-                    ),
-                  ],
+                PopupMenuItem(
+                  value: _LibraryMenuAction.select,
+                  child: Text('Select indexers'),
+                ),
+                PopupMenuItem(
+                  value: _LibraryMenuAction.settings,
+                  child: Text('Prowlarr settings'),
                 ),
               ],
-      ),
+            ),
+          ];
+
+    return Scaffold(
+      appBar: widget.showAppBar
+          ? AppBar(
+              backgroundColor: AppColors.prowlarr.withValues(alpha: 0.12),
+              leading: _selecting
+                  ? cancelSelection
+                  : IconButton(
+                      icon: const Icon(Icons.chevron_left_rounded),
+                      onPressed: () =>
+                          RouteUtils.popOrGo(context, ServiceRoutes.prowlarr),
+                      tooltip: 'Back',
+                    ),
+              title: Text(
+                _selecting ? '${selected.length} selected' : 'Indexers',
+              ),
+              actions: actions,
+            )
+          : null,
       body: Column(
         children: [
+          if (!widget.showAppBar) ...[
+            SizedBox(height: widget.topPadding),
+            // No back chevron and no 'Indexers' title here: the service band
+            // above owns both, and repeating them is the two-titles-in-one-
+            // corner problem this mode exists to avoid. The count and the
+            // cancel appear only while selecting, when they are the only thing
+            // saying the list is in that mode.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              child: Row(
+                children: [
+                  if (_selecting) ...[
+                    cancelSelection,
+                    Expanded(child: selectionTitle),
+                  ] else
+                    const Spacer(),
+                  ...actions,
+                ],
+              ),
+            ),
+          ],
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.lg,

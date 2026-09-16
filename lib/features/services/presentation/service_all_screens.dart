@@ -27,7 +27,22 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class ServiceAllRequestsScreen extends ConsumerStatefulWidget {
-  const ServiceAllRequestsScreen({super.key});
+  /// Whether to draw this screen's own app bar.
+  ///
+  /// False inside Seerr's tab shell, where `ServiceHomeScreen` draws the
+  /// service band and `ServiceTabScaffold` the tab bar above it: a third bar of
+  /// its own would put two titles and two back chevrons in one corner.
+  final bool showAppBar;
+
+  /// Room those two glass bands take above this page, since they float over it
+  /// rather than pushing it down.
+  final double topPadding;
+
+  const ServiceAllRequestsScreen({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  });
 
   @override
   ConsumerState<ServiceAllRequestsScreen> createState() =>
@@ -45,16 +60,22 @@ class _ServiceAllRequestsScreenState
     final requests = ref.watch(servicesRequestsProvider);
 
     return Scaffold(
-      appBar: _ServiceListAppBar(
-        title: 'All Requests',
-        backRoute: ServiceRoutes.seerr,
-        accent: ServiceKey.seerr.accent,
-      ),
+      appBar: widget.showAppBar
+          ? _ServiceListAppBar(
+              title: 'All Requests',
+              backRoute: ServiceRoutes.seerr,
+              accent: ServiceKey.seerr.accent,
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(servicesRequestsProvider),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          // The host's bands float over this list rather than pushing it down,
+          // so the first filter chip has to clear them itself — otherwise it
+          // starts its life frosted under the tab bar.
           padding: EdgeInsets.only(
+            top: widget.topPadding,
             bottom:
                 AppSpacing.lg +
                 FloatingNavBarMetrics.getScrollViewBottomPadding(context),

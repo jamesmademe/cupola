@@ -96,7 +96,7 @@ class _ProwlarrDashboard extends ConsumerWidget {
           SectionHeader(
             title: 'Indexers',
             showChevron: true,
-            onTap: () => context.push(ServiceRoutes.prowlarrLibrary),
+            onTap: () => context.push(ServiceRoutes.prowlarrIndexers),
           ),
           const SizedBox(height: 2),
           _IndexerList(indexersAsync: indexersAsync, disabledIds: disabledIds),
