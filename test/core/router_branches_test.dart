@@ -26,6 +26,27 @@ const _secondSeerr = ServiceInstance(
   credential: 'key-2',
 );
 
+/// The services whose home is a tab bar rather than a single page.
+///
+/// Named here rather than derived from `serviceTabs`, and the difference is the
+/// point: that map is the *design*, this list is what the router has actually
+/// mounted, and the gap between the two is the migration's remaining work. A
+/// service added here before its shell exists fails loudly, which is what a
+/// checklist is for.
+const List<ServiceKey> _tabbedServices = [
+  ServiceKey.radarr,
+  ServiceKey.sonarr,
+  ServiceKey.lidarr,
+  ServiceKey.readarr,
+];
+
+/// The record each service's Library pushes, by the path it is mounted at.
+const Map<ServiceKey, String> _libraryDetailPaths = {
+  ServiceKey.radarr: 'movie/:id',
+  ServiceKey.sonarr: 'series/:id',
+  ServiceKey.lidarr: 'artist/:id',
+};
+
 /// The shape of the shell, asserted against the real router.
 ///
 /// `router_test.dart` covers what each path resolves to. This file covers the
@@ -90,21 +111,33 @@ void main() {
   StatefulShellRoute shellRouteOf(GoRouter router) =>
       router.configuration.routes.whereType<StatefulShellRoute>().single;
 
-  /// Radarr's own node, walked to from the app shell rather than looked up.
+  /// A service's own node, walked to from the app shell rather than looked up.
   ///
   /// Walking is the point: reaching it means passing through the Dashboard
-  /// branch, so a Radarr mounted anywhere else would not be found at all.
-  GoRoute radarrRouteOf(GoRouter router) {
+  /// branch, so a service shell mounted anywhere else would not be found at
+  /// all.
+  GoRoute serviceRouteOf(GoRouter router, ServiceKey service) {
     final dashboard =
         shellRouteOf(router).branches[NavTab.dashboard.index].routes.single
             as GoRoute;
     return dashboard.routes.whereType<GoRoute>().firstWhere(
-      (route) => route.path == ServiceKey.radarr.routeParam,
+      (route) => route.path == service.routeParam,
     );
   }
 
-  StatefulShellRoute radarrShellOf(GoRouter router) =>
-      radarrRouteOf(router).routes.whereType<StatefulShellRoute>().single;
+  StatefulShellRoute serviceShellOf(GoRouter router, ServiceKey service) =>
+      serviceRouteOf(
+        router,
+        service,
+      ).routes.whereType<StatefulShellRoute>().single;
+
+  /// The root route of one of a service's tab branches.
+  GoRoute branchRootOf(GoRouter router, ServiceKey service, ServiceTab tab) =>
+      serviceShellOf(
+            router,
+            service,
+          ).branches[tabsFor(service)!.indexOf(tab)].routes.single
+          as GoRoute;
 
   group('shell branches', () {
     testWidgets('there is one branch per tab, in NavTab order', (tester) async {
@@ -126,28 +159,31 @@ void main() {
       }
     });
 
-    testWidgets('Radarr has one branch per tab, in tabsFor order', (
-      tester,
-    ) async {
+    testWidgets('each service on the model has one branch per tab, in '
+        'tabsFor order', (tester) async {
       final router = await pumpRouter(tester);
-      final tabs = tabsFor(ServiceKey.radarr)!;
-      final branches = radarrShellOf(router).branches;
 
-      expect(branches, hasLength(tabs.length));
-      for (var i = 0; i < tabs.length; i++) {
-        final tab = tabs[i];
-        expect(
-          (branches[i].routes.single as GoRoute).path,
-          tab.segment,
-          reason:
-              'The bar is generated from the same list and taps it by index, '
-              'so branch $i must be ${tab.name}. Out of order it would light '
-              'one tab and show another rather than fail.',
-        );
+      for (final service in _tabbedServices) {
+        final tabs = tabsFor(service)!;
+        final branches = serviceShellOf(router, service).branches;
+
+        expect(branches, hasLength(tabs.length), reason: service.name);
+        for (var i = 0; i < tabs.length; i++) {
+          final tab = tabs[i];
+          expect(
+            (branches[i].routes.single as GoRoute).path,
+            tab.segment,
+            reason:
+                'The bar is generated from the same list and taps it by '
+                'index, so ${service.name} branch $i must be ${tab.name}. Out '
+                'of order it would light one tab and show another rather than '
+                'fail.',
+          );
+        }
       }
     });
 
-    testWidgets('the Radarr shell is nested inside the Dashboard branch', (
+    testWidgets('every service shell is nested inside the Dashboard branch', (
       tester,
     ) async {
       final router = await pumpRouter(tester);
@@ -161,36 +197,44 @@ void main() {
             'service would take the app\'s own navigation away with it.',
       );
       // Found only by walking down through the Dashboard branch, which is the
-      // assertion: nothing else in this file could reach it.
-      expect(radarrShellOf(router).branches, isNotEmpty);
+      // assertion: nothing else in this file could reach them.
+      for (final service in _tabbedServices) {
+        expect(
+          serviceShellOf(router, service).branches,
+          isNotEmpty,
+          reason: service.name,
+        );
+      }
     });
 
-    testWidgets('the film detail is inside the Library branch', (tester) async {
+    testWidgets('every library detail is inside its Library branch', (
+      tester,
+    ) async {
       final router = await pumpRouter(tester);
-      final tabs = tabsFor(ServiceKey.radarr)!;
-      final library =
-          radarrShellOf(
-                router,
-              ).branches[tabs.indexOf(ServiceTab.library)].routes.single
-              as GoRoute;
 
-      expect(
-        library.routes.whereType<GoRoute>().map((route) => route.path),
-        contains('movie/:id'),
-        reason:
-            'Pushed inside the branch, the film survives a switch away from '
-            'Radarr and its Hero flies, because list and detail share one '
-            'Navigator. Beside the branch it would be neither.',
-      );
+      for (final entry in _libraryDetailPaths.entries) {
+        final library = branchRootOf(router, entry.key, ServiceTab.library);
 
-      // The same spelling still hangs off the service node, and that one is a
-      // compatibility tail: it builds nothing and only forwards.
-      final tail = radarrRouteOf(
-        router,
-      ).routes.whereType<GoRoute>().firstWhere((r) => r.path == 'movie/:id');
-      expect(tail.builder, isNull);
-      expect(tail.pageBuilder, isNull);
-      expect(tail.redirect, isNotNull);
+        expect(
+          library.routes.whereType<GoRoute>().map((route) => route.path),
+          contains(entry.value),
+          reason:
+              'Pushed inside the branch, ${entry.key.name}\'s detail survives '
+              'a switch away from the service and its Hero flies, because '
+              'list and detail share one Navigator. Beside the branch it '
+              'would be neither.',
+        );
+
+        // The same spelling still hangs off the service node, and that one is
+        // a compatibility tail: it builds nothing and only forwards.
+        final tail = serviceRouteOf(
+          router,
+          entry.key,
+        ).routes.whereType<GoRoute>().firstWhere((r) => r.path == entry.value);
+        expect(tail.builder, isNull, reason: entry.key.name);
+        expect(tail.pageBuilder, isNull, reason: entry.key.name);
+        expect(tail.redirect, isNotNull, reason: entry.key.name);
+      }
     });
 
     testWidgets('no branch is preloaded', (tester) async {

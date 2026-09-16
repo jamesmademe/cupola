@@ -68,13 +68,65 @@ void main() {
     });
 
     test('builds Sonarr and Lidarr detail routes', () {
+      // The show moved under `library/` with the film, and for the same
+      // reason: it is a page inside the Library tab's branch now, not a
+      // sibling of the tabs.
       expect(
         ServiceRoutes.sonarrSeries(7, heroTag: 'series_7'),
-        '/dashboard/sonarr/series/7?heroTag=series_7',
+        '/dashboard/sonarr/library/series/7?heroTag=series_7',
       );
       expect(
         ServiceRoutes.lidarrArtist(9, heroTag: 'artist_9'),
-        '/dashboard/lidarr/artist/9?heroTag=artist_9',
+        '/dashboard/lidarr/library/artist/9?heroTag=artist_9',
+      );
+    });
+
+    test('the Sonarr tab roots are spelled by the tabs they mount', () {
+      // Same tie as Radarr's, and it has to be its own case rather than a loop
+      // over the four: these are `const` literals precisely because an enum
+      // instance's field is not a compile-time constant, so there is nothing
+      // to iterate that would not defeat the point.
+      expect(
+        ServiceRoutes.sonarrOverview,
+        '${ServiceRoutes.sonarr}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.sonarrLibrary,
+        '${ServiceRoutes.sonarr}/${ServiceTab.library.segment}',
+      );
+      expect(
+        ServiceRoutes.sonarrSeriesBase,
+        startsWith('${ServiceRoutes.sonarrLibrary}/'),
+      );
+    });
+
+    test('the Lidarr tab roots are spelled by the tabs they mount', () {
+      expect(
+        ServiceRoutes.lidarrOverview,
+        '${ServiceRoutes.lidarr}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.lidarrLibrary,
+        '${ServiceRoutes.lidarr}/${ServiceTab.library.segment}',
+      );
+      expect(
+        ServiceRoutes.lidarrArtistBase,
+        startsWith('${ServiceRoutes.lidarrLibrary}/'),
+      );
+    });
+
+    test('the Readarr tab roots are spelled by the tabs they mount', () {
+      expect(
+        ServiceRoutes.readarrOverview,
+        '${ServiceRoutes.readarr}/${ServiceTab.overview.segment}',
+      );
+      // Unchanged by the migration, and that is the assertion: the author list
+      // was already at this address as a pushed page, so every link that ever
+      // pointed at it still resolves — now to the Library tab.
+      expect(ServiceRoutes.readarrLibrary, '/dashboard/readarr/library');
+      expect(
+        ServiceRoutes.readarrLibrary,
+        '${ServiceRoutes.readarr}/${ServiceTab.library.segment}',
       );
     });
 

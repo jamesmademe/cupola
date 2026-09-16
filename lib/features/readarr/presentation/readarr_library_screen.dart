@@ -7,18 +7,61 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/readarr/presentation/widgets/readarr_tiles.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// Full author list for Readarr, reached from the dashboard "Authors" section.
+/// Readarr's Library tab: the full author list.
+///
+/// It was a page pushed from the dashboard's "Authors" section and is now the
+/// root of a branch, at the same path it always had. Two things follow from
+/// that and both are why this class grew parameters.
 class ReadarrLibraryScreen extends ConsumerWidget {
-  const ReadarrLibraryScreen({super.key});
+  /// Whether to draw this screen's own app bar.
+  ///
+  /// False inside the tab shell, where `ServiceHomeScreen` draws the service
+  /// band and `ServiceTabScaffold` the tab bar above it: a third bar of its own
+  /// would put two titles and two back chevrons in one corner.
+  final bool showAppBar;
+
+  /// Room those two glass bands take above this page, since they float over it
+  /// rather than pushing it down.
+  final double topPadding;
+
+  const ReadarrLibraryScreen({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // The configured check comes first, as it does on every other service's
+    // landing surface: `readarrServiceProvider` throws for a Readarr that was
+    // never set up, so without this the tab would answer a question about an
+    // unreachable server with "Failed to load authors" — an error about a
+    // request that was never worth making.
+    final configured = ref.watch(
+      currentSettingsProvider.select(
+        (settings) => settings.isServiceConfigured(ServiceKey.readarr),
+      ),
+    );
+    if (!configured) {
+      return AmbientScaffold(
+        accent: AppColors.readarr,
+        appBar: showAppBar ? const GlassAppBar(title: Text('Authors')) : null,
+        // `.forService`, never the generic form: the door goes to Readarr's own
+        // connection form rather than to the settings index.
+        body: SafeArea(
+          child: NotConfiguredPlaceholder.forService(ServiceKey.readarr),
+        ),
+      );
+    }
+
     final authorsAsync = ref.watch(readarrAuthorsProvider);
 
     return AmbientScaffold(
       accent: AppColors.readarr,
-      appBar: const GlassAppBar(title: Text('Authors')),
+      appBar: showAppBar ? const GlassAppBar(title: Text('Authors')) : null,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -39,7 +82,7 @@ class ReadarrLibraryScreen extends ConsumerWidget {
               return ListView.builder(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.only(
-                  top: AppSpacing.sm,
+                  top: topPadding + AppSpacing.sm,
                   bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(
                     context,
                   ),

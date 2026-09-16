@@ -522,39 +522,24 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
   ),
 };
 
-GoRoute _seriesRoutes({required String path, String? redirectLocation}) {
+/// The pre-tab-model `/series` tree, which now exists only to redirect.
+///
+/// Sonarr itself lives in [_sonarrRoutes]. Like `/movies` this keeps its `:id`
+/// child so a deep link crosses in ONE hop — `/series/55?heroTag=x` lands on
+/// the show inside the Library tab rather than bouncing through the service
+/// root and losing where it was going.
+GoRoute _seriesRoutes({required String path}) {
   return GoRoute(
     path: path,
-    redirect: redirectLocation == null
-        ? null
-        : (context, state) => _redirectLegacyLibrary(
-            state,
-            legacyBase: '/series',
-            serviceBase: ServiceRoutes.sonarrSeriesBase,
-          ),
-    builder: path.startsWith('/')
-        ? (context, state) => const SeriesScreen()
-        : null,
-    pageBuilder: path.startsWith('/')
-        ? null
-        : (context, state) => RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            child: ServiceHomeScreen(
-              service: ServiceKey.sonarr,
-              child: const SeriesScreen(
-                showAppBar: false,
-                topPadding: _serviceHomeTopPadding,
-              ),
-            ),
-          ),
+    redirect: (context, state) => _redirectLegacyLibrary(
+      state,
+      legacyBase: '/series',
+      serviceBase: ServiceRoutes.sonarrSeriesBase,
+    ),
+    builder: (context, state) => const SeriesScreen(),
     routes: [
       GoRoute(
-        path: 'media',
-        redirect: (context, state) =>
-            _preserveQuery(state.uri, ServiceRoutes.sonarr),
-      ),
-      GoRoute(
-        path: path.startsWith('/') ? ':id' : 'series/:id',
+        path: ':id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
             ? ServiceRoutes.dashboard
@@ -574,39 +559,159 @@ GoRoute _seriesRoutes({required String path, String? redirectLocation}) {
   );
 }
 
-GoRoute _musicRoutes({required String path, String? redirectLocation}) {
+/// Sonarr: the same shell as Radarr, and deliberately the same bar.
+///
+/// [_radarrRoutes] carries the reasoning in full and none of it is Radarr's:
+/// the shell is nested inside the Dashboard branch rather than mounted beside
+/// it, this node builds nothing and only sends the bare service path to
+/// Overview, **its guard is load-bearing** (a route-level redirect fires for
+/// every match in the list, so an unguarded one would bounce
+/// `/dashboard/sonarr/library` back to Overview forever), and the tails are
+/// childless so that `series/:id` here cannot shadow `library/series/:id`
+/// inside the shell.
+///
+/// Two files agreeing by accident is what this comment is trying not to be: the
+/// four \*arr share one bar so a user who has learned Radarr has learned this,
+/// and the only per-service facts below are the record's name and its screens.
+RouteBase _sonarrRoutes() {
+  const service = ServiceKey.sonarr;
+  final tabs = tabsFor(service)!;
+
   return GoRoute(
-    path: path,
-    redirect: redirectLocation == null
-        ? null
-        : (context, state) => _redirectLegacyLibrary(
-            state,
-            legacyBase: '/music',
-            serviceBase: ServiceRoutes.lidarrArtistBase,
-          ),
-    builder: path.startsWith('/')
-        ? (context, state) => const MusicScreen()
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == ServiceRoutes.sonarr
+        ? _preserveQuery(state.uri, ServiceRoutes.sonarrOverview)
         : null,
-    pageBuilder: path.startsWith('/')
-        ? null
-        : (context, state) => RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            child: ServiceHomeScreen(
-              service: ServiceKey.lidarr,
-              child: const MusicScreen(
-                showAppBar: false,
-                topPadding: _serviceHomeTopPadding,
-              ),
-            ),
-          ),
     routes: [
+      // `media` was the all-list tail every arr carried; on the tab model the
+      // whole library IS a tab, so it has somewhere real to land now.
       GoRoute(
         path: 'media',
         redirect: (context, state) =>
-            _preserveQuery(state.uri, ServiceRoutes.lidarr),
+            _preserveQuery(state.uri, ServiceRoutes.sonarrLibrary),
       ),
+      // Every link the app shipped before the tab model, and the second hop of
+      // every `/services/sonarr/series/55`. No id validation here: the
+      // canonical route below owns it, and doing it twice is two places to get
+      // it wrong.
       GoRoute(
-        path: path.startsWith('/') ? ':id' : 'artist/:id',
+        path: 'series/:id',
+        redirect: (context, state) => _preserveQuery(
+          state.uri,
+          '${ServiceRoutes.sonarrSeriesBase}/${state.pathParameters['id']}',
+        ),
+      ),
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        // `pageBuilder`, not `builder`: without it the shell's page takes the
+        // platform default transition, and the push from the Dashboard into a
+        // service would stop matching every other service in the app.
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_sonarrBranchRoot(tab)],
+            ),
+        ],
+      ),
+    ],
+  );
+}
+
+/// The route at the root of one Sonarr tab.
+///
+/// Branch order is `tabsFor(ServiceKey.sonarr)` and nothing else, because the
+/// bar is generated from the same list and taps it by index. The wildcard
+/// throws rather than quietly rendering a placeholder — a seventh tab added to
+/// that table with no case here is a bar and a router disagreeing.
+GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.library => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.sonarr,
+      tab: ServiceTab.library,
+      child: SeriesScreen(showAppBar: false, topPadding: _serviceTabTopPadding),
+    ),
+    routes: [
+      // The show, now INSIDE the Library branch. Pushing it keeps the branch,
+      // so leaving Sonarr for another app tab and coming back returns to the
+      // show — and the Hero still flies, because source and destination are in
+      // one Navigator.
+      GoRoute(
+        path: 'series/:id',
+        redirect: (context, state) =>
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.sonarrLibrary
+            : null,
+        pageBuilder: (context, state) => _libraryDetailPage<SonarrSeries>(
+          state,
+          heroPrefix: 'series',
+          buildChild: (id, heroTag, series, instanceId) => SeriesDetailScreen(
+            seriesId: id,
+            heroTag: heroTag,
+            initialSeries: series,
+            instanceId: instanceId,
+          ),
+        ),
+      ),
+    ],
+  ),
+  // Overview is in this list and that is the honest state, not an oversight:
+  // Sonarr's home has always BEEN the library grid, and there is no
+  // identity-and-readouts page for it the way `RadarrOverviewScreen` is
+  // Radarr's. Drawing the grid here as well would give the bar two tabs showing
+  // one thing, which teaches the wrong shape of the service; the well says what
+  // is true, and Library is one tap away.
+  //
+  // Calendar is not a missing screen but a missing call, and it is the one tab
+  // Radarr could build and Sonarr cannot: a film's dates are on the film, so
+  // Radarr's calendar is derivable from the library list it already holds,
+  // while episodes are not in `GET /api/v3/series` at all. Sonarr's needs
+  // `GET /api/v3/calendar`, which `SonarrService` has never called. Queue,
+  // Wanted and History are the same shape as Radarr's and wait on the same
+  // work.
+  ServiceTab.overview ||
+  ServiceTab.calendar ||
+  ServiceTab.queue ||
+  ServiceTab.wanted ||
+  ServiceTab.history => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.sonarr,
+      tab: tab,
+      child: ServiceTabPlaceholder(service: ServiceKey.sonarr, tab: tab),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on sonarr\'s bar with no branch root',
+  ),
+};
+
+/// The pre-tab-model `/music` tree, which now exists only to redirect.
+///
+/// Lidarr itself lives in [_lidarrRoutes]. Like `/movies` and `/series` it
+/// keeps its `:id` child so a deep link crosses in ONE hop.
+GoRoute _musicRoutes({required String path}) {
+  return GoRoute(
+    path: path,
+    redirect: (context, state) => _redirectLegacyLibrary(
+      state,
+      legacyBase: '/music',
+      serviceBase: ServiceRoutes.lidarrArtistBase,
+    ),
+    builder: (context, state) => const MusicScreen(),
+    routes: [
+      GoRoute(
+        path: ':id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
             ? ServiceRoutes.dashboard
@@ -625,6 +730,110 @@ GoRoute _musicRoutes({required String path, String? redirectLocation}) {
     ],
   );
 }
+
+/// Lidarr: the third of the four \*arr on one shell and one bar.
+///
+/// [_radarrRoutes] carries the reasoning for every structural choice here — the
+/// nesting inside the Dashboard branch, the redirect-only node, the guard on
+/// the full location, the childless tails — and [_sonarrRoutes] is the same
+/// function with another record's name in it. That sameness is the feature.
+RouteBase _lidarrRoutes() {
+  const service = ServiceKey.lidarr;
+  final tabs = tabsFor(service)!;
+
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == ServiceRoutes.lidarr
+        ? _preserveQuery(state.uri, ServiceRoutes.lidarrOverview)
+        : null,
+    routes: [
+      GoRoute(
+        path: 'media',
+        redirect: (context, state) =>
+            _preserveQuery(state.uri, ServiceRoutes.lidarrLibrary),
+      ),
+      GoRoute(
+        path: 'artist/:id',
+        redirect: (context, state) => _preserveQuery(
+          state.uri,
+          '${ServiceRoutes.lidarrArtistBase}/${state.pathParameters['id']}',
+        ),
+      ),
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_lidarrBranchRoot(tab)],
+            ),
+        ],
+      ),
+    ],
+  );
+}
+
+/// The route at the root of one Lidarr tab.
+GoRoute _lidarrBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.library => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.lidarr,
+      tab: ServiceTab.library,
+      child: MusicScreen(showAppBar: false, topPadding: _serviceTabTopPadding),
+    ),
+    routes: [
+      GoRoute(
+        path: 'artist/:id',
+        redirect: (context, state) =>
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.lidarrLibrary
+            : null,
+        pageBuilder: (context, state) => _libraryDetailPage<LidarrArtist>(
+          state,
+          heroPrefix: 'artist',
+          buildChild: (id, heroTag, artist, instanceId) => MusicDetailScreen(
+            artistId: id,
+            heroTag: heroTag,
+            initialArtist: artist,
+            instanceId: instanceId,
+          ),
+        ),
+      ),
+    ],
+  ),
+  // Overview for the reason [_sonarrBranchRoot] gives: Lidarr's home is the
+  // artist wall and there is no readouts page behind it yet.
+  //
+  // Calendar is blocked the same way Sonarr's is, one level further down: a
+  // release date belongs to an *album*, and `GET /api/v1/artist` does not carry
+  // the albums. It needs `GET /api/v1/calendar`, which `LidarrService` has
+  // never called.
+  ServiceTab.overview ||
+  ServiceTab.calendar ||
+  ServiceTab.queue ||
+  ServiceTab.wanted ||
+  ServiceTab.history => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.lidarr,
+      tab: tab,
+      child: ServiceTabPlaceholder(service: ServiceKey.lidarr, tab: tab),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on lidarr\'s bar with no branch root',
+  ),
+};
 
 GoRoute _qbittorrentRoutes({required String path}) {
   return _page(
@@ -768,19 +977,98 @@ GoRoute _prowlarrRoutes({required String path}) {
   );
 }
 
-GoRoute _readarrRoutes({required String path}) {
-  return _page(
-    path,
-    (state) => ServiceHomeScreen(
-      service: ServiceKey.readarr,
-      child: const ReadarrScreen(
-        showAppBar: false,
-        topPadding: _serviceHomeTopPadding,
+/// Readarr: the last of the four \*arr on one shell and one bar.
+///
+/// [_radarrRoutes] carries the reasoning for the shape. Two things are Readarr's
+/// own. It needs no compatibility tails, because the only two paths it ever
+/// shipped are the two the model already spells: the bare service root, which
+/// this node redirects like the other three, and `/dashboard/readarr/library`,
+/// which was the pushed author list and is now the Library tab's root at the
+/// same address. And its Library pushes nothing, because there is no author
+/// detail to push: `ReadarrService` has `getAuthors()` and no
+/// `GET /api/v1/author/{id}`.
+RouteBase _readarrRoutes() {
+  const service = ServiceKey.readarr;
+  final tabs = tabsFor(service)!;
+
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == ServiceRoutes.readarr
+        ? _preserveQuery(state.uri, ServiceRoutes.readarrOverview)
+        : null,
+    routes: [
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_readarrBranchRoot(tab)],
+            ),
+        ],
       ),
-    ),
-    routes: [_page('library', (state) => const ReadarrLibraryScreen())],
+    ],
   );
 }
+
+/// The route at the root of one Readarr tab.
+///
+/// Readarr is the one arr whose Overview is real on the first day of the model,
+/// and not because more was built for it: `ReadarrScreen` was already a
+/// readouts-and-sections dashboard rather than a browse grid, so the tab model
+/// found its Overview written and only had to stop calling it the home.
+GoRoute _readarrBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.readarr,
+      tab: ServiceTab.overview,
+      child: ReadarrScreen(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.library => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.readarr,
+      tab: ServiceTab.library,
+      child: ReadarrLibraryScreen(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  // Calendar is blocked exactly as Sonarr's and Lidarr's are — a book's release
+  // date is not on the author — and needs `GET /api/v1/calendar`, which
+  // `ReadarrService` has never called. Queue, Wanted and History wait on the
+  // same work as the other three; upstream being archived at least makes that
+  // a frozen target (decision 13).
+  ServiceTab.calendar ||
+  ServiceTab.queue ||
+  ServiceTab.wanted ||
+  ServiceTab.history => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.readarr,
+      tab: tab,
+      child: ServiceTabPlaceholder(service: ServiceKey.readarr, tab: tab),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on readarr\'s bar with no branch root',
+  ),
+};
 
 GoRoute _sabnzbdRoutes({required String path}) {
   return _page(
@@ -1066,14 +1354,14 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       // deleting: the one path a typo would break was the only one guarded.
       _discoverRoutes(path: ServiceKey.seerr.routeParam),
       _radarrRoutes(),
-      _seriesRoutes(path: ServiceKey.sonarr.routeParam),
-      _musicRoutes(path: ServiceKey.lidarr.routeParam),
+      _sonarrRoutes(),
+      _lidarrRoutes(),
       _qbittorrentRoutes(path: ServiceKey.qbittorrent.routeParam),
       _bazarrRoutes(path: ServiceKey.bazarr.routeParam),
       _truenasRoutes(path: ServiceKey.truenas.routeParam),
       _dockgeRoutes(path: ServiceKey.dockge.routeParam),
       _prowlarrRoutes(path: ServiceKey.prowlarr.routeParam),
-      _readarrRoutes(path: ServiceKey.readarr.routeParam),
+      _readarrRoutes(),
       _sabnzbdRoutes(path: ServiceKey.sabnzbd.routeParam),
       _nzbgetRoutes(path: ServiceKey.nzbget.routeParam),
       _unraidRoutes(path: ServiceKey.unraid.routeParam),
@@ -1282,8 +1570,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         redirectLocation: ServiceRoutes.dashboard,
       ),
       _moviesRoutes(path: '/movies'),
-      _seriesRoutes(path: '/series', redirectLocation: ServiceRoutes.dashboard),
-      _musicRoutes(path: '/music', redirectLocation: ServiceRoutes.dashboard),
+      _seriesRoutes(path: '/series'),
+      _musicRoutes(path: '/music'),
       // The per-service activity drill-down: already full-screen above the
       // shell, and unchanged by the migration.
       GoRoute(

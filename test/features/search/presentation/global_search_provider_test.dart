@@ -99,13 +99,13 @@ void main() {
         .expand((lane) => lane.results)
         .map((item) => Uri.parse(item.route))
         .toList(growable: false);
-    // Radarr's row points inside the Library tab's branch: on the tab model
-    // the film is a page pushed from the library list, not a sibling of it.
+    // The arr rows point inside their Library tab's branch: on the tab model
+    // the record is a page pushed from the library list, not a sibling of it.
     expect(routes.map((uri) => uri.path), [
       '/dashboard/seerr/movie/101',
       '/dashboard/radarr/library/movie/10',
-      '/dashboard/sonarr/series/20',
-      '/dashboard/lidarr/artist/30',
+      '/dashboard/sonarr/library/series/20',
+      '/dashboard/lidarr/library/artist/30',
     ]);
     // Keyed on the CONNECTION and on the row's position, not on the service:
     // the same id names different things on two servers, and a lookup result

@@ -158,18 +158,39 @@ class ServiceRoutes {
     });
   }
 
-  // ── Radarr, under the tab model ───────────────────────────────────────────
+  // ── The \*arr family, under the tab model ─────────────────────────────────
   //
   // Spelled as literals rather than composed from `ServiceTab.segment`: an enum
   // instance's field is not a compile-time constant in Dart and these have to
   // stay `const`. A test ties each one to its tab so the two cannot drift.
+  //
+  // The four share a bar exactly, so they share these spellings exactly: a user
+  // who has learned where Radarr's library lives has learned where Sonarr's
+  // does, and a reader comparing two of these blocks should find nothing to
+  // compare.
   static const radarrOverview = '$radarr/overview';
   static const radarrLibrary = '$radarr/library';
 
   /// The film, inside the Library tab's branch.
   static const radarrMovieBase = '$radarrLibrary/movie';
-  static const sonarrSeriesBase = '$sonarr/series';
-  static const lidarrArtistBase = '$lidarr/artist';
+
+  static const sonarrOverview = '$sonarr/overview';
+  static const sonarrLibrary = '$sonarr/library';
+
+  /// The show, inside the Library tab's branch — the same move as the film and
+  /// for the same reason: a detail pushed *inside* its tab survives a switch
+  /// away from Sonarr and keeps its Hero flight, because the list it flew from
+  /// and the page it flew to share one Navigator.
+  static const sonarrSeriesBase = '$sonarrLibrary/series';
+
+  static const lidarrOverview = '$lidarr/overview';
+  static const lidarrLibrary = '$lidarr/library';
+
+  /// The artist, inside the Library tab's branch. The tab is drawn as one
+  /// segmented view of Artists and Albums (decision 24), but an album has no
+  /// route of its own to give: `getAllAlbums()` does not exist on
+  /// `LidarrService`, so there is one record type here and not two.
+  static const lidarrArtistBase = '$lidarrLibrary/artist';
   static const qbittorrentTorrentBase = '$qbittorrent/torrent';
 
   static const bazarrWanted = '$bazarr/wanted';
@@ -192,7 +213,14 @@ class ServiceRoutes {
   static String prowlarrSettingsSection(ProwlarrProviderKind kind) =>
       '$prowlarrSettings/${kind.routeSegment}';
 
-  // ── Readarr ─────────────────────────────────────────────────────────────
+  // ── Readarr, under the tab model ──────────────────────────────────────────
+  //
+  // Literals, like the other three arrs, and tied to their tabs by a test.
+  // `readarrLibrary` predates the model and needed no change: the author list
+  // was already a page at `/dashboard/readarr/library`, which is exactly where
+  // the Library tab's root mounts — so every link that ever pointed at it still
+  // points at it, this time at a tab rather than at a pushed page.
+  static const readarrOverview = '$readarr/overview';
   static const readarrLibrary = '$readarr/library';
 
   // ── Dockge ────────────────────────────────────────────────────────────────

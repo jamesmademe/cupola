@@ -5,11 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/readarr/presentation/widgets/readarr_tiles.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -106,7 +106,7 @@ class _ReadarrDashboard extends ConsumerWidget {
           SectionHeader(
             title: 'Authors',
             showChevron: true,
-            onTap: () => context.push(ServiceRoutes.readarrLibrary),
+            onTap: () => _goToTab(context, ServiceTab.library),
           ),
           const SizedBox(height: 2),
           _AuthorPreview(authorsAsync: authorsAsync),
@@ -118,6 +118,27 @@ class _ReadarrDashboard extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Switches to another of Readarr's tabs.
+///
+/// It was `context.push(ServiceRoutes.readarrLibrary)`, which was right while
+/// the author list was a pushed page and is wrong now that it is a tab: a push
+/// would stack the Library tab's root on the *Overview* branch, so the bar
+/// would light Library over a shell whose index still said Overview, and back
+/// would return here rather than to wherever Library had been left.
+///
+/// `goBranch` restores that branch's own stack instead, which is the whole of
+/// "back returns to the tab you left". `maybeOf` rather than `of` because this
+/// screen is also legitimately built outside a shell — a widget test, a
+/// preview — where there is no branch to switch and the link does nothing
+/// rather than throwing.
+void _goToTab(BuildContext context, ServiceTab tab) {
+  final tabs = tabsFor(ServiceKey.readarr);
+  if (tabs == null) return;
+  final index = tabs.indexOf(tab);
+  if (index < 0) return;
+  StatefulNavigationShell.maybeOf(context)?.goBranch(index);
 }
 
 void _invalidateAll(WidgetRef ref) {

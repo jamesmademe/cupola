@@ -137,7 +137,7 @@ void main() {
         expect(movieScreen.movieId, 42);
         expect(movieScreen.initialMovie, isNull);
 
-        router.go('/dashboard/sonarr/series/55');
+        router.go('${ServiceRoutes.sonarrSeriesBase}/55');
         await tester.pumpAndSettle();
 
         final seriesScreen = tester.widget<SeriesDetailScreen>(
@@ -147,7 +147,7 @@ void main() {
         expect(seriesScreen.seriesId, 55);
         expect(seriesScreen.initialSeries, isNull);
 
-        router.go('/dashboard/lidarr/artist/9');
+        router.go('${ServiceRoutes.lidarrArtistBase}/9');
         await tester.pumpAndSettle();
 
         final musicScreen = tester.widget<MusicDetailScreen>(
@@ -282,15 +282,16 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      // Radarr is the first service on the tab model, and `/dashboard/radarr`
-      // is a redirect-only prefix there: the service home is a tab now, so the
-      // bare path names a place that draws nothing and hands off to Overview.
-      // The other three still land on themselves.
+      // A service on the tab model has a redirect-only prefix for a root: the
+      // service home is a tab now, so the bare path names a place that draws
+      // nothing and hands off to Overview. Seerr is not on the model yet and
+      // still lands on itself, which is what makes this table worth keeping.
       for (final entry in {
         '/dashboard/seerr': '/dashboard/seerr',
         ServiceRoutes.radarr: ServiceRoutes.radarrOverview,
-        '/dashboard/sonarr': '/dashboard/sonarr',
-        '/dashboard/lidarr': '/dashboard/lidarr',
+        ServiceRoutes.sonarr: ServiceRoutes.sonarrOverview,
+        ServiceRoutes.lidarr: ServiceRoutes.lidarrOverview,
+        ServiceRoutes.readarr: ServiceRoutes.readarrOverview,
       }.entries) {
         router.go(entry.key);
         await tester.pumpAndSettle();
@@ -299,23 +300,36 @@ void main() {
       }
     });
 
-    testWidgets('every tab on Radarr\'s bar resolves to its own location', (
+    testWidgets('every tab on an arr\'s bar resolves to its own location', (
       tester,
     ) async {
       // The bar draws one label per entry in `tabsFor`, so a tab the table
       // names with no branch behind it would 404 on tap rather than fail
-      // anywhere a reader would look. Radarr is one of the four services this
-      // harness fakes, which is what keeps these six destinations off a
-      // provider retry timer.
+      // anywhere a reader would look. Three of the four are faked by this
+      // harness; the fourth, Readarr, needs no fake because every one of its
+      // tabs checks `isServiceConfigured` before it reads anything — an
+      // unconfigured service is answered without a request, so there is no
+      // retry timer to leave pending.
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      for (final tab in tabsFor(ServiceKey.radarr)!) {
-        final location = '${ServiceRoutes.radarr}/${tab.segment}';
-        router.go(location);
-        await tester.pumpAndSettle();
+      for (final service in [
+        ServiceKey.radarr,
+        ServiceKey.sonarr,
+        ServiceKey.lidarr,
+        ServiceKey.readarr,
+      ]) {
+        for (final tab in tabsFor(service)!) {
+          final location = '/dashboard/${service.routeParam}/${tab.segment}';
+          router.go(location);
+          await tester.pumpAndSettle();
 
-        expect(router.state.uri.toString(), location, reason: tab.name);
+          expect(
+            router.state.uri.toString(),
+            location,
+            reason: '${service.name}.${tab.name}',
+          );
+        }
       }
     });
 
@@ -329,14 +343,16 @@ void main() {
       expect(router.state.uri.toString(), '/dashboard/seerr/requests');
       expect(find.byType(ServiceAllRequestsScreen), findsOneWidget);
 
-      // `media` was the all-list tail every arr carried. Radarr's now lands on
-      // the Library tab rather than on the service root, because on the tab
-      // model the whole library IS a tab; the other two still have nowhere but
-      // their root to go.
+      // Readarr never had a `media` tail and does not grow one here: its
+      // author list always lived at `library`, which is now the tab.
+      // `media` was the all-list tail the other three arrs carried. On the tab model it
+      // lands on the Library tab rather than on the service root, because the
+      // whole library IS a tab now; a service still off the model has nowhere
+      // but its root to go.
       for (final entry in {
         '/dashboard/radarr/media': ServiceRoutes.radarrLibrary,
-        '/dashboard/sonarr/media': '/dashboard/sonarr',
-        '/dashboard/lidarr/media': '/dashboard/lidarr',
+        '/dashboard/sonarr/media': ServiceRoutes.sonarrLibrary,
+        '/dashboard/lidarr/media': ServiceRoutes.lidarrLibrary,
       }.entries) {
         router.go(entry.key);
         await tester.pumpAndSettle();
@@ -367,6 +383,9 @@ void main() {
       const cases = {
         '/services': '/dashboard',
         '/services/radarr': ServiceRoutes.radarrOverview,
+        '/services/sonarr': ServiceRoutes.sonarrOverview,
+        '/services/lidarr': ServiceRoutes.lidarrOverview,
+        '/services/readarr': ServiceRoutes.readarrOverview,
         '/services/seerr/requests': '/dashboard/seerr/requests',
       };
 
@@ -468,7 +487,7 @@ void main() {
 
       expect(
         router.state.uri.toString(),
-        '/dashboard/sonarr/series/55?heroTag=legacy_series',
+        '${ServiceRoutes.sonarrSeriesBase}/55?heroTag=legacy_series',
       );
       expect(find.byType(SeriesDetailScreen), findsOneWidget);
 
@@ -477,7 +496,7 @@ void main() {
 
       expect(
         router.state.uri.toString(),
-        '/dashboard/lidarr/artist/9?heroTag=legacy_artist',
+        '${ServiceRoutes.lidarrArtistBase}/9?heroTag=legacy_artist',
       );
       expect(find.byType(MusicDetailScreen), findsOneWidget);
     });
