@@ -20,6 +20,8 @@ import 'package:cupola/features/qbittorrent/presentation/qbittorrent_actions.dar
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/widgets/torrent_delete_dialog.dart';
 import 'package:cupola/features/qbittorrent/presentation/widgets/torrent_edit_dialogs.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 class TorrentDetailScreen extends ConsumerStatefulWidget {
   final String hash;
@@ -50,6 +52,28 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    // The not-configured gate, before anything is watched, for the reason
+    // `QbittorrentScreen` states at length: a provider that throws
+    // `qBittorrent not configured` is a provider that failed, and Riverpod
+    // retries a failure on a backoff. A connection is configured in Settings or
+    // it is not, so the poll and the retry are both spent on a question that
+    // cannot change while this page is open. The screen is the same either way
+    // — `AsyncValueWidget` was already routing that exception here.
+    //
+    // It matters more on this page than on the list, because a deep link lands
+    // straight on it: `/dashboard/qbittorrent/queue/torrent/<hash>` from a
+    // shortcut or a restored session reaches a torrent detail for a server the
+    // app has never been told about.
+    if (!ref
+        .watch(currentSettingsProvider)
+        .isServiceConfigured(ServiceKey.qbittorrent)) {
+      return Scaffold(
+        body: SafeArea(
+          child: NotConfiguredPlaceholder.forService(ServiceKey.qbittorrent),
+        ),
+      );
+    }
+
     // Only while this detail is the page on screen: a sort sheet over it, a
     // switch to another tab, or the app going away all stop the poll.
     ref.watchWhileLive(context, torrentDetailPollingProvider(widget.hash));

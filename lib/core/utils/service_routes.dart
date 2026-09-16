@@ -191,7 +191,55 @@ class ServiceRoutes {
   /// route of its own to give: `getAllAlbums()` does not exist on
   /// `LidarrService`, so there is one record type here and not two.
   static const lidarrArtistBase = '$lidarrLibrary/artist';
-  static const qbittorrentTorrentBase = '$qbittorrent/torrent';
+
+  // ── The download clients, under the tab model ────────────────────────────
+  //
+  // Literals for the reason the \*arr block gives: an enum instance's field is
+  // not a compile-time constant in Dart and these have to stay `const`, so
+  // nothing the analyzer sees ties a spelling to its tab. A test does, one per
+  // service.
+  //
+  // The four do **not** share a bar the way the four \*arr do — qBittorrent has
+  // RSS where Transmission has Labels and Session, and the two Usenet clients
+  // carry History — so there is no shared list to factor out here. What they do
+  // share is the shape: Overview first, the queue that was the whole service
+  // second, and the job detail pushed inside that Queue branch.
+  static const qbittorrentOverview = '$qbittorrent/overview';
+  static const qbittorrentQueue = '$qbittorrent/queue';
+  static const qbittorrentRss = '$qbittorrent/rss';
+
+  /// The torrent, inside the Queue tab's branch.
+  ///
+  /// It used to hang off the service root, which was the only place it could
+  /// hang from when the service was one page. Inside the branch it survives a
+  /// switch away from qBittorrent and back, and the row it was pushed from is
+  /// still under it on the same Navigator.
+  static const qbittorrentTorrentBase = '$qbittorrentQueue/torrent';
+
+  /// Transmission has no detail route to move, and that absence is the shape
+  /// rather than an omission: the torrent list is expandable rows and there has
+  /// never been a page to push, so Queue is a leaf branch.
+  static const transmissionOverview = '$transmission/overview';
+  static const transmissionQueue = '$transmission/queue';
+  static const transmissionLabels = '$transmission/labels';
+  static const transmissionSession = '$transmission/session';
+
+  /// SABnzbd and NZBGet both keep a History tab, and neither has a job detail:
+  /// a queue slot and a history slot are each one row that expands, so both
+  /// Queue branches are leaves like Transmission's.
+  static const sabnzbdOverview = '$sabnzbd/overview';
+  static const sabnzbdQueue = '$sabnzbd/queue';
+  static const sabnzbdHistory = '$sabnzbd/history';
+  static const sabnzbdServers = '$sabnzbd/servers';
+
+  /// NZBGet carries the widest bar of the four: five tabs, because the daemon
+  /// keeps its feeds and its log as first-class things the other three do not
+  /// have.
+  static const nzbgetOverview = '$nzbget/overview';
+  static const nzbgetQueue = '$nzbget/queue';
+  static const nzbgetHistory = '$nzbget/history';
+  static const nzbgetFeeds = '$nzbget/feeds';
+  static const nzbgetMessages = '$nzbget/messages';
 
   static const bazarrWanted = '$bazarr/wanted';
   static const bazarrLibrary = '$bazarr/library';

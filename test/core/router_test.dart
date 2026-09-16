@@ -292,6 +292,10 @@ void main() {
         ServiceRoutes.sonarr: ServiceRoutes.sonarrOverview,
         ServiceRoutes.lidarr: ServiceRoutes.lidarrOverview,
         ServiceRoutes.readarr: ServiceRoutes.readarrOverview,
+        ServiceRoutes.qbittorrent: ServiceRoutes.qbittorrentOverview,
+        ServiceRoutes.transmission: ServiceRoutes.transmissionOverview,
+        ServiceRoutes.sabnzbd: ServiceRoutes.sabnzbdOverview,
+        ServiceRoutes.nzbget: ServiceRoutes.nzbgetOverview,
       }.entries) {
         router.go(entry.key);
         await tester.pumpAndSettle();
@@ -330,6 +334,79 @@ void main() {
             reason: '${service.name}.${tab.name}',
           );
         }
+      }
+    });
+
+    testWidgets(
+      'every tab on a download client\'s bar resolves to its own location',
+      (tester) async {
+        // The same rule the \*arr case asserts, on the services whose bars do
+        // not match each other: qBittorrent has RSS where Transmission has
+        // Labels and Session, so there is no shared list and every one of them
+        // has to be walked.
+        //
+        // No fakes: every tab of these services answers an unconfigured
+        // connection without a request — the placeholder asks
+        // `isServiceConfigured` first and the queues gate on it too — so there
+        // is no retry timer left pending by the time the case ends.
+        final container = await _pumpRouter(tester);
+        final router = container.read(routerProvider);
+
+        for (final service in [
+          ServiceKey.qbittorrent,
+          ServiceKey.transmission,
+          ServiceKey.sabnzbd,
+          ServiceKey.nzbget,
+        ]) {
+          for (final tab in tabsFor(service)!) {
+            final location = '/dashboard/${service.routeParam}/${tab.segment}';
+            router.go(location);
+            await tester.pumpAndSettle();
+
+            expect(
+              router.state.uri.toString(),
+              location,
+              reason: '${service.name}.${tab.name}',
+            );
+          }
+        }
+      },
+    );
+
+    testWidgets('the pre-tab download client paths still resolve', (
+      tester,
+    ) async {
+      // Every path shape these services ever shipped, in both spellings: the
+      // bare root, the tab-less detail, and the same two under the pre-rename
+      // `/services` prefix. The prefix rewrite chains into the per-service
+      // redirects rather than duplicating them, so what this asserts is that
+      // the chain finishes — a rewrite that stopped at the first hop would
+      // leave the user on a path that draws nothing.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final entry in {
+        ServiceRoutes.qbittorrent: ServiceRoutes.qbittorrentOverview,
+        '/services/qbittorrent': ServiceRoutes.qbittorrentOverview,
+        '/dashboard/qbittorrent/torrent/abc123':
+            ServiceRoutes.qbittorrentTorrent('abc123'),
+        '/services/qbittorrent/torrent/abc123':
+            ServiceRoutes.qbittorrentTorrent('abc123'),
+        // Transmission carries only its root, in both spellings: it never had
+        // a detail path to keep resolving.
+        ServiceRoutes.transmission: ServiceRoutes.transmissionOverview,
+        '/services/transmission': ServiceRoutes.transmissionOverview,
+        // SABnzbd likewise: a job is an expanding row, never a pushed page.
+        ServiceRoutes.sabnzbd: ServiceRoutes.sabnzbdOverview,
+        '/services/sabnzbd': ServiceRoutes.sabnzbdOverview,
+        // NZBGet, the same: a group is an expanding row, never a pushed page.
+        ServiceRoutes.nzbget: ServiceRoutes.nzbgetOverview,
+        '/services/nzbget': ServiceRoutes.nzbgetOverview,
+      }.entries) {
+        router.go(entry.key);
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.toString(), entry.value, reason: entry.key);
       }
     });
 

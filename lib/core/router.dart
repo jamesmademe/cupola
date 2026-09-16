@@ -835,23 +835,110 @@ GoRoute _lidarrBranchRoot(ServiceTab tab) => switch (tab) {
   ),
 };
 
-GoRoute _qbittorrentRoutes({required String path}) {
-  return _page(
-    path,
-    (state) => ServiceHomeScreen(
+/// qBittorrent: the first download client on one shell and one bar.
+///
+/// [_radarrRoutes] carries the reasoning for every structural choice and none of
+/// it is Radarr's — the nesting inside the Dashboard branch, the redirect-only
+/// node whose guard is on the full location, the childless compatibility tail.
+///
+/// Two things are qBittorrent's own. The torrent list was the *whole* service,
+/// so what the four \*arr called Library this calls Queue and it is where the
+/// detail now hangs. And the transfer controls stay on the band as a
+/// `trailingAction`: they are alternative-speed-limit and add-torrent, which
+/// belong to the connection rather than to any one tab, so the band carries them
+/// on all three the way it carried them on the single page.
+RouteBase _qbittorrentRoutes() {
+  const service = ServiceKey.qbittorrent;
+  final tabs = tabsFor(service)!;
+
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == ServiceRoutes.qbittorrent
+        ? _preserveQuery(state.uri, ServiceRoutes.qbittorrentOverview)
+        : null,
+    routes: [
+      // The tab-less tail, childless on purpose: the matcher treats a prefix
+      // hit with no complete match as no match at all, so `torrent/:hash` here
+      // cannot shadow `queue/torrent/:hash` inside the shell below. It is the
+      // only shape qBittorrent ever shipped besides its root, and the second
+      // hop of every `/services/qbittorrent/torrent/<hash>`.
+      GoRoute(
+        path: 'torrent/:hash',
+        redirect: (context, state) => _preserveQuery(
+          state.uri,
+          '${ServiceRoutes.qbittorrentTorrentBase}/'
+          '${state.pathParameters['hash']}',
+        ),
+      ),
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                trailingAction: const QbittorrentActionsBar(),
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_qbittorrentBranchRoot(tab)],
+            ),
+        ],
+      ),
+    ],
+  );
+}
+
+/// The route at the root of one qBittorrent tab.
+///
+/// Branch order is `tabsFor(ServiceKey.qbittorrent)` and nothing else, because
+/// the bar is generated from the same list and taps it by index. The wildcard
+/// throws rather than quietly rendering a placeholder: a fourth tab added to
+/// that table with no case here is a bar and a router disagreeing.
+GoRoute _qbittorrentBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.queue => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.qbittorrent,
-      trailingAction: const QbittorrentActionsBar(),
-      child: const QbittorrentScreen(topPadding: _serviceHomeTopPadding),
+      tab: ServiceTab.queue,
+      child: QbittorrentScreen(topPadding: _serviceTabTopPadding),
     ),
     routes: [
+      // The torrent, now INSIDE the Queue branch. Pushing it keeps the branch,
+      // so leaving qBittorrent for another app tab and coming back returns to
+      // the torrent rather than to the top of the list.
       _page(
         'torrent/:hash',
         (state) =>
             TorrentDetailScreen(hash: state.pathParameters['hash'] ?? ''),
       ),
     ],
-  );
-}
+  ),
+  // Overview is a placeholder because it is not built, not because it cannot
+  // be: everything its board asks for — transfer rates, the session totals, the
+  // per-state counts — is already on `getTransferInfo()` and the torrent list.
+  //
+  // RSS is blocked, and on endpoints rather than on work: `QbittorrentService`
+  // calls nothing under `/api/v2/rss/` at all, so the feed tree
+  // (`GET /api/v2/rss/items`), the auto-download rules (`GET /api/v2/rss/rules`)
+  // and everything that writes them have no client to call.
+  ServiceTab.overview || ServiceTab.rss => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.qbittorrent,
+      tab: tab,
+      child: ServiceTabPlaceholder(service: ServiceKey.qbittorrent, tab: tab),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on qbittorrent\'s bar with no branch root',
+  ),
+};
 
 GoRoute _bazarrRoutes({required String path}) {
   return _page(
@@ -1070,31 +1157,169 @@ GoRoute _readarrBranchRoot(ServiceTab tab) => switch (tab) {
   ),
 };
 
-GoRoute _sabnzbdRoutes({required String path}) {
-  return _page(
-    path,
-    (state) => ServiceHomeScreen(
-      service: ServiceKey.sabnzbd,
-      child: const SabnzbdScreen(
-        showAppBar: false,
-        topPadding: _serviceHomeTopPadding,
+/// SABnzbd: one shell, one branch per tab.
+///
+/// [_radarrRoutes] carries the reasoning for the shape and [_qbittorrentRoutes]
+/// for what a download client does with it. Like Transmission it needs no
+/// compatibility tail: a queue slot and a history slot are each one row that
+/// expands, so it never had a detail page and its bare root is the only path it
+/// ever shipped.
+RouteBase _sabnzbdRoutes() {
+  const service = ServiceKey.sabnzbd;
+  final tabs = tabsFor(service)!;
+
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == ServiceRoutes.sabnzbd
+        ? _preserveQuery(state.uri, ServiceRoutes.sabnzbdOverview)
+        : null,
+    routes: [
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_sabnzbdBranchRoot(tab)],
+            ),
+        ],
       ),
-    ),
+    ],
   );
 }
 
-GoRoute _nzbgetRoutes({required String path}) {
-  return _page(
-    path,
-    (state) => ServiceHomeScreen(
-      service: ServiceKey.nzbget,
-      child: const NzbgetScreen(
+/// The route at the root of one SABnzbd tab.
+///
+/// Branch order is `tabsFor(ServiceKey.sabnzbd)` and nothing else, and the
+/// wildcard throws for the reason it throws everywhere else in this file.
+GoRoute _sabnzbdBranchRoot(ServiceTab tab) => switch (tab) {
+  // `SabnzbdScreen` is the whole service today — the queue *and* the readouts
+  // above it — so Queue takes it unsplit and Overview waits rather than the two
+  // tabs drawing the same thing. Separating them is the Overview's work, not
+  // the router's.
+  ServiceTab.queue => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.sabnzbd,
+      tab: ServiceTab.queue,
+      child: SabnzbdScreen(
         showAppBar: false,
-        topPadding: _serviceHomeTopPadding,
+        topPadding: _serviceTabTopPadding,
       ),
     ),
+  ),
+  // Overview and History are placeholders but not blocked: `mode=queue` and
+  // `mode=history` are both already called, so both tabs are a screen away.
+  //
+  // **Servers is blocked**, and on a narrower thing than a missing call.
+  // `mode=server_stats` is called, but `SabnzbdServerStats.fromJson` keeps one
+  // field of it — the all-time `total` — and throws away the per-server object
+  // the tab exists to show. The live half has nothing at all behind it:
+  // `mode=status`, which carries each server's connection count, its article
+  // errors and whether it is active, is never called, and neither is
+  // `mode=get_config&section=servers` for the configured list.
+  ServiceTab.overview || ServiceTab.history || ServiceTab.servers => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.sabnzbd,
+      tab: tab,
+      child: ServiceTabPlaceholder(service: ServiceKey.sabnzbd, tab: tab),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on sabnzbd\'s bar with no branch root',
+  ),
+};
+
+/// NZBGet: the last of the four download clients on one shell and one bar.
+///
+/// [_radarrRoutes] carries the reasoning for the shape and [_qbittorrentRoutes]
+/// for what a download client does with it. Like Transmission and SABnzbd it
+/// needs no compatibility tail — a group is an expanding row, never a pushed
+/// page — and its five tabs are the widest bar of the four because the daemon
+/// keeps feeds and a log as first-class things the others do not have.
+RouteBase _nzbgetRoutes() {
+  const service = ServiceKey.nzbget;
+  final tabs = tabsFor(service)!;
+
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == ServiceRoutes.nzbget
+        ? _preserveQuery(state.uri, ServiceRoutes.nzbgetOverview)
+        : null,
+    routes: [
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_nzbgetBranchRoot(tab)],
+            ),
+        ],
+      ),
+    ],
   );
 }
+
+/// The route at the root of one NZBGet tab.
+///
+/// Branch order is `tabsFor(ServiceKey.nzbget)` and nothing else, and the
+/// wildcard throws for the reason it throws everywhere else in this file — here
+/// over five cases rather than three, which is exactly when a hand-kept list
+/// starts drifting.
+GoRoute _nzbgetBranchRoot(ServiceTab tab) => switch (tab) {
+  // `NzbgetScreen` is the whole service today, readouts and group list
+  // together, so Queue takes it unsplit for the reason SABnzbd's does.
+  ServiceTab.queue => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.nzbget,
+      tab: ServiceTab.queue,
+      child: NzbgetScreen(showAppBar: false, topPadding: _serviceTabTopPadding),
+    ),
+  ),
+  // Overview and History are a screen away, not an endpoint away: `status`,
+  // `listgroups` and `history` are all already called.
+  //
+  // **Feeds and Messages are blocked**, and on whole RPC methods rather than on
+  // fields. `NzbgetClient` calls thirteen methods and none of them is a feed
+  // one — no `listfeeds` for the configured feeds, no `viewfeed`/`fetchfeed`
+  // for their contents — and none is a log one: `log` and `loadlog` are what
+  // the Messages tab is, and neither has ever been sent.
+  ServiceTab.overview ||
+  ServiceTab.history ||
+  ServiceTab.feeds ||
+  ServiceTab.messages => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.nzbget,
+      tab: tab,
+      child: ServiceTabPlaceholder(service: ServiceKey.nzbget, tab: tab),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on nzbget\'s bar with no branch root',
+  ),
+};
 
 GoRoute _unraidRoutes({required String path}) {
   return _page(
@@ -1109,18 +1334,95 @@ GoRoute _unraidRoutes({required String path}) {
   );
 }
 
-GoRoute _transmissionRoutes({required String path}) {
-  return _page(
-    path,
-    (state) => ServiceHomeScreen(
-      service: ServiceKey.transmission,
-      child: const TransmissionScreen(
-        showAppBar: false,
-        topPadding: _serviceHomeTopPadding,
+/// Transmission: one shell, one branch per tab.
+///
+/// [_radarrRoutes] carries the reasoning for the shape and [_qbittorrentRoutes]
+/// for what a download client does with it. Transmission's own difference is
+/// that it needs **no compatibility tail at all**: the only path it ever
+/// shipped is its bare root, because its torrent list expands rows in place and
+/// never had a detail page to push. The root is what this node redirects, and
+/// there is nothing else to forward.
+RouteBase _transmissionRoutes() {
+  const service = ServiceKey.transmission;
+  final tabs = tabsFor(service)!;
+
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == ServiceRoutes.transmission
+        ? _preserveQuery(state.uri, ServiceRoutes.transmissionOverview)
+        : null,
+    routes: [
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_transmissionBranchRoot(tab)],
+            ),
+        ],
       ),
-    ),
+    ],
   );
 }
+
+/// The route at the root of one Transmission tab.
+///
+/// Branch order is `tabsFor(ServiceKey.transmission)` and nothing else. The
+/// wildcard throws: a fifth tab on that table with no case here is a bar and a
+/// router disagreeing, and that has to fail loudly rather than light a tab that
+/// shows nothing.
+GoRoute _transmissionBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.queue => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.transmission,
+      tab: ServiceTab.queue,
+      child: TransmissionScreen(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  // Three placeholders, and they are blocked three different distances away —
+  // which is why each is named rather than waved at as "not built".
+  //
+  // **Overview** is the shortest: `session-stats` and the torrent list already
+  // carry every figure its board asks for.
+  //
+  // **Labels** can be *read* today — `labels` is parsed off every torrent by
+  // `TransmissionTorrent.fromJson` — but a Labels tab that cannot assign one is
+  // a filter, not a tab, and the write has no client method: `torrent-set` is
+  // called in exactly one place, with the four speed keys, and never with
+  // `labels`.
+  //
+  // **Session** is the furthest. `session-get` is called, but
+  // `TransmissionSession` keeps eight fields of the sixty the daemon returns —
+  // no peer port, encryption, port forwarding, peer limits, seed ratio,
+  // incomplete directory, blocklist or queue sizes — and `session-set` is
+  // called with `alt-speed-enabled` and nothing else. The tab needs both halves
+  // widened, not a new RPC method.
+  ServiceTab.overview || ServiceTab.labels || ServiceTab.session => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.transmission,
+      tab: tab,
+      child: ServiceTabPlaceholder(service: ServiceKey.transmission, tab: tab),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on transmission\'s bar with no branch root',
+  ),
+};
 
 GoRoute _npmRoutes({required String path}) {
   return _page(
@@ -1356,16 +1658,16 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       _radarrRoutes(),
       _sonarrRoutes(),
       _lidarrRoutes(),
-      _qbittorrentRoutes(path: ServiceKey.qbittorrent.routeParam),
+      _qbittorrentRoutes(),
       _bazarrRoutes(path: ServiceKey.bazarr.routeParam),
       _truenasRoutes(path: ServiceKey.truenas.routeParam),
       _dockgeRoutes(path: ServiceKey.dockge.routeParam),
       _prowlarrRoutes(path: ServiceKey.prowlarr.routeParam),
       _readarrRoutes(),
-      _sabnzbdRoutes(path: ServiceKey.sabnzbd.routeParam),
-      _nzbgetRoutes(path: ServiceKey.nzbget.routeParam),
+      _sabnzbdRoutes(),
+      _nzbgetRoutes(),
       _unraidRoutes(path: ServiceKey.unraid.routeParam),
-      _transmissionRoutes(path: ServiceKey.transmission.routeParam),
+      _transmissionRoutes(),
       _npmRoutes(path: ServiceKey.nginxProxyManager.routeParam),
       _streamRoutes(
         service: ServiceKey.jellyfin,

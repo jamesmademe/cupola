@@ -130,6 +130,106 @@ void main() {
       );
     });
 
+    test('the qBittorrent tab roots are spelled by the tabs they mount', () {
+      // Same tie as the four \*arr, and it has to be its own case for the same
+      // reason: these are `const` literals precisely because an enum instance's
+      // field is not a compile-time constant, so there is nothing to iterate
+      // that would not defeat the point.
+      expect(
+        ServiceRoutes.qbittorrentOverview,
+        '${ServiceRoutes.qbittorrent}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.qbittorrentQueue,
+        '${ServiceRoutes.qbittorrent}/${ServiceTab.queue.segment}',
+      );
+      expect(
+        ServiceRoutes.qbittorrentRss,
+        '${ServiceRoutes.qbittorrent}/${ServiceTab.rss.segment}',
+      );
+    });
+
+    test('the torrent detail hangs off the Queue tab', () {
+      // It used to be `/dashboard/qbittorrent/torrent/<hash>`, a sibling of
+      // nothing. Every link to a torrent in the app is built by this helper —
+      // the list row and the Dashboard's activity readout — so this constant is
+      // what moved them all inside the branch at once.
+      expect(
+        ServiceRoutes.qbittorrentTorrentBase,
+        startsWith('${ServiceRoutes.qbittorrentQueue}/'),
+      );
+      expect(
+        ServiceRoutes.qbittorrentTorrent('abc123'),
+        '/dashboard/qbittorrent/queue/torrent/abc123',
+      );
+    });
+
+    test('the Transmission tab roots are spelled by the tabs they mount', () {
+      // Four literals, and no detail constant under any of them: the torrent
+      // list expands rows in place, so Queue is a leaf and there has never been
+      // a page to push from it.
+      expect(
+        ServiceRoutes.transmissionOverview,
+        '${ServiceRoutes.transmission}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.transmissionQueue,
+        '${ServiceRoutes.transmission}/${ServiceTab.queue.segment}',
+      );
+      expect(
+        ServiceRoutes.transmissionLabels,
+        '${ServiceRoutes.transmission}/${ServiceTab.labels.segment}',
+      );
+      expect(
+        ServiceRoutes.transmissionSession,
+        '${ServiceRoutes.transmission}/${ServiceTab.session.segment}',
+      );
+    });
+
+    test('the SABnzbd tab roots are spelled by the tabs they mount', () {
+      expect(
+        ServiceRoutes.sabnzbdOverview,
+        '${ServiceRoutes.sabnzbd}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.sabnzbdQueue,
+        '${ServiceRoutes.sabnzbd}/${ServiceTab.queue.segment}',
+      );
+      expect(
+        ServiceRoutes.sabnzbdHistory,
+        '${ServiceRoutes.sabnzbd}/${ServiceTab.history.segment}',
+      );
+      expect(
+        ServiceRoutes.sabnzbdServers,
+        '${ServiceRoutes.sabnzbd}/${ServiceTab.servers.segment}',
+      );
+    });
+
+    test('the NZBGet tab roots are spelled by the tabs they mount', () {
+      // Five, the widest bar of the four download clients, and the one where a
+      // hand-kept list is most likely to drift from the table that draws it.
+      expect(
+        ServiceRoutes.nzbgetOverview,
+        '${ServiceRoutes.nzbget}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.nzbgetQueue,
+        '${ServiceRoutes.nzbget}/${ServiceTab.queue.segment}',
+      );
+      expect(
+        ServiceRoutes.nzbgetHistory,
+        '${ServiceRoutes.nzbget}/${ServiceTab.history.segment}',
+      );
+      expect(
+        ServiceRoutes.nzbgetFeeds,
+        '${ServiceRoutes.nzbget}/${ServiceTab.feeds.segment}',
+      );
+      expect(
+        ServiceRoutes.nzbgetMessages,
+        '${ServiceRoutes.nzbget}/${ServiceTab.messages.segment}',
+      );
+    });
+
     test('encodes Seerr detail query values once', () {
       expect(
         ServiceRoutes.seerrDetail(

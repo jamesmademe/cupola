@@ -38,6 +38,10 @@ const List<ServiceKey> _tabbedServices = [
   ServiceKey.sonarr,
   ServiceKey.lidarr,
   ServiceKey.readarr,
+  ServiceKey.qbittorrent,
+  ServiceKey.transmission,
+  ServiceKey.sabnzbd,
+  ServiceKey.nzbget,
 ];
 
 /// The record each service's Library pushes, by the path it is mounted at.
@@ -45,6 +49,16 @@ const Map<ServiceKey, String> _libraryDetailPaths = {
   ServiceKey.radarr: 'movie/:id',
   ServiceKey.sonarr: 'series/:id',
   ServiceKey.lidarr: 'artist/:id',
+};
+
+/// The job each download client's Queue pushes, by the path it is mounted at.
+///
+/// The same rule as [_libraryDetailPaths] applied to the tab that is the
+/// download clients' equivalent of Library: the list that *was* the whole
+/// service. A detail beside the branch rather than inside it would lose the
+/// stack on every switch away from the service.
+const Map<ServiceKey, String> _queueDetailPaths = {
+  ServiceKey.qbittorrent: 'torrent/:hash',
 };
 
 /// The shape of the shell, asserted against the real router.
@@ -234,6 +248,38 @@ void main() {
         expect(tail.builder, isNull, reason: entry.key.name);
         expect(tail.pageBuilder, isNull, reason: entry.key.name);
         expect(tail.redirect, isNotNull, reason: entry.key.name);
+      }
+    });
+
+    testWidgets('every job detail is inside its Queue branch', (tester) async {
+      final router = await pumpRouter(tester);
+
+      for (final entry in _queueDetailPaths.entries) {
+        final queue = branchRootOf(router, entry.key, ServiceTab.queue);
+
+        expect(
+          queue.routes.whereType<GoRoute>().map((route) => route.path),
+          contains(entry.value),
+          reason:
+              'Pushed inside the branch, ${entry.key.name}\'s job detail '
+              'survives a switch away from the service and comes back to the '
+              'job rather than to the top of the queue. Beside the branch it '
+              'would be neither.',
+        );
+
+        // The same spelling still hangs off the service node, and that one is
+        // a compatibility tail: it builds nothing and only forwards.
+        final tail = serviceRouteOf(
+          router,
+          entry.key,
+        ).routes.whereType<GoRoute>().firstWhere((r) => r.path == entry.value);
+        expect(tail.builder, isNull, reason: entry.key.name);
+        expect(tail.pageBuilder, isNull, reason: entry.key.name);
+        expect(tail.redirect, isNotNull, reason: entry.key.name);
+        // Childless, and that is what stops it shadowing the real route: the
+        // matcher treats a prefix hit with no complete match as no match, so a
+        // child here would win `torrent/:hash` before the shell ever saw it.
+        expect(tail.routes, isEmpty, reason: entry.key.name);
       }
     });
 
