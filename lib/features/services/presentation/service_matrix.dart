@@ -1655,10 +1655,19 @@ class _ReachabilityPip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    // A probe that has not come back yet is not a fault: nothing has failed,
+    // we simply do not know. Amber said "something is wrong" on every cell for
+    // the first second of every launch.
     final color = switch (reachability) {
-      ServiceReachability.online => AppColors.success,
-      ServiceReachability.checking => AppColors.warning,
-      ServiceReachability.offline => colorScheme.error,
+      ServiceReachability.online => statusToneColor(
+        colorScheme,
+        StatusTone.success,
+      ),
+      ServiceReachability.checking => colorScheme.onSurfaceVariant,
+      ServiceReachability.offline => statusToneColor(
+        colorScheme,
+        StatusTone.error,
+      ),
     };
 
     return Container(

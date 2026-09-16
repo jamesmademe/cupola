@@ -17,6 +17,8 @@ import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/services/domain/seerr_request_filter.dart';
@@ -187,7 +189,10 @@ class _RequestListRow extends ConsumerWidget {
     final requester = request.requestedBy?.displayName ?? 'Unknown';
     final mediaType = request.type == 'tv' ? 'Series' : 'Movie';
     final displayStatus = request.displayStatus;
-    final statusColor = _requestStatusColor(displayStatus.kind);
+    final statusColor = statusToneColor(
+      colorScheme,
+      resolveRequestStatus(request).tone,
+    );
     final posterUrl = ImageUtils.buildTmdbPosterUrl(media?.posterPath);
     final heroTag = 'services_all_request_${request.id}';
 
@@ -459,24 +464,4 @@ class _EmptyListState extends StatelessWidget {
 String _formatRequestDate(String value) {
   if (value.trim().isEmpty) return 'Unknown date';
   return formatIsoDate(value);
-}
-
-Color _requestStatusColor(SeerrRequestDisplayKind kind) {
-  switch (kind) {
-    case SeerrRequestDisplayKind.pending:
-      return AppColors.warning;
-    case SeerrRequestDisplayKind.approved:
-    case SeerrRequestDisplayKind.processing:
-      return AppColors.info;
-    case SeerrRequestDisplayKind.available:
-    case SeerrRequestDisplayKind.partiallyAvailable:
-    case SeerrRequestDisplayKind.completed:
-      return AppColors.success;
-    case SeerrRequestDisplayKind.declined:
-    case SeerrRequestDisplayKind.failed:
-    case SeerrRequestDisplayKind.deleted:
-      return AppColors.error;
-    case SeerrRequestDisplayKind.unknown:
-      return AppColors.info;
-  }
 }

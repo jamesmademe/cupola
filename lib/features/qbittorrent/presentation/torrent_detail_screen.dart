@@ -697,11 +697,10 @@ class _ActionsTab extends ConsumerWidget {
           label: const Text('Force Resume'),
         ),
         const SizedBox(height: AppSpacing.sm),
+        // Pause is an action the user chooses, not a state the client reports,
+        // so it wears no status tone at all — amber here said "something is
+        // wrong" about a button, and hardcoded its ink black to survive it.
         FilledButton.icon(
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.warning,
-            foregroundColor: Colors.black,
-          ),
           onPressed: () => runTorrentAction(
             context,
             ref,

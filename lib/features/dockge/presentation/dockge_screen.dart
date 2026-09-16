@@ -124,7 +124,7 @@ class _StackTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final statusColor = stack.status.color;
+    final statusColor = statusToneColor(colorScheme, stack.status.tone);
 
     return Padding(
       padding: const EdgeInsets.symmetric(

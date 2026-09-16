@@ -422,7 +422,10 @@ class _HistoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final color = slot.failed ? AppColors.error : AppColors.success;
+    final color = statusToneColor(
+      colorScheme,
+      slot.failed ? StatusTone.warning : StatusTone.success,
+    );
     final icon = slot.failed
         ? Icons.error_outline_rounded
         : Icons.check_circle_rounded;

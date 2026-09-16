@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 
 /// A single indexer row shared by the dashboard preview and the library list.
@@ -55,10 +56,13 @@ class ProwlarrIndexerTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isTorrent = (indexer.protocol ?? '').toLowerCase() == 'torrent';
     final protocolColor = isTorrent ? AppColors.prowlarr : AppColors.sonarr;
+    // A failing indexer is the canonical amber fault of this app — Prowlarr
+    // answered and told us which of its indexers did not. Red would claim
+    // Prowlarr itself is unreachable.
     final statusColor = failing
-        ? AppColors.error
+        ? statusToneColor(colorScheme, StatusTone.warning)
         : indexer.enable
-        ? AppColors.success
+        ? statusToneColor(colorScheme, StatusTone.success)
         : colorScheme.onSurfaceVariant;
     final subtitleParts = <String>[
       if (indexer.protocol != null) indexer.protocol!,

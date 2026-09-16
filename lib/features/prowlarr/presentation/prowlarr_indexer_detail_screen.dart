@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_history_format.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
@@ -189,6 +190,7 @@ class _StatusBanner extends ConsumerWidget {
     return statusAsync.maybeWhen(
       data: (status) {
         if (status == null) return const SizedBox.shrink();
+        final colorScheme = Theme.of(context).colorScheme;
         final until = status.disabledTill;
         return Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -200,16 +202,18 @@ class _StatusBanner extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: AppColors.error.withValues(alpha: 0.1),
+              color: AppColors.warning.withValues(alpha: 0.1),
               borderRadius: AppRadius.borderRadiusMd,
-              border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+              border: Border.all(
+                color: AppColors.warning.withValues(alpha: 0.4),
+              ),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.error_outline_rounded,
                   size: 18,
-                  color: AppColors.error,
+                  color: statusToneColor(colorScheme, StatusTone.warning),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -506,7 +510,7 @@ class _HistoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final event = prowlarrEventStyle(item);
+    final event = prowlarrEventStyle(item, colorScheme);
     final title = prowlarrHistoryTitle(item);
 
     return Padding(

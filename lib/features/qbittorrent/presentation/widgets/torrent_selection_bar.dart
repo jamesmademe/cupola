@@ -77,7 +77,8 @@ class TorrentSelectionBar extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.pause_rounded, color: AppColors.warning),
+                // See the detail screen's Pause: an action, not a fault.
+                icon: const Icon(Icons.pause_rounded),
                 tooltip: 'Pause',
                 onPressed: () => runTorrentAction(
                   context,

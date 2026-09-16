@@ -135,7 +135,9 @@ class _HealthBanner extends StatelessWidget {
         if (issues.isEmpty) return const SizedBox.shrink();
         final errors = issues.where((i) => i.isError).length;
         final colorScheme = Theme.of(context).colorScheme;
-        final accent = errors > 0 ? AppColors.error : AppColors.warning;
+        // Both arms are faults Prowlarr reported about itself, so both are
+        // amber; the count is what separates them, not the colour.
+        final accent = statusToneColor(colorScheme, StatusTone.warning);
         final label = errors > 0
             ? '$errors error${errors == 1 ? '' : 's'}, ${issues.length} issue${issues.length == 1 ? '' : 's'}'
             : '${issues.length} warning${issues.length == 1 ? '' : 's'}';
@@ -414,7 +416,7 @@ class _HistoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final event = prowlarrEventStyle(item);
+    final event = prowlarrEventStyle(item, colorScheme);
     final source = prowlarrHistorySource(item);
     final title = prowlarrHistoryTitle(item);
     final subtitleParts = <String>[

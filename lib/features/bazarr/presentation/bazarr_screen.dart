@@ -408,21 +408,27 @@ class _HistoryTile extends StatelessWidget {
 
   final BazarrHistoryItem item;
 
-  Color _historyColor() {
+  /// A subtitle somebody removed is not a fault, and neither is an action
+  /// Bazarr did not name — both were amber, which spent the fault colour on two
+  /// non-events and left the one real failure indistinguishable from them.
+  Color _historyColor(ColorScheme colorScheme) {
     return switch (item.action) {
-      BazarrHistoryAction.downloaded => AppColors.success,
+      BazarrHistoryAction.downloaded || BazarrHistoryAction.matched =>
+        statusToneColor(colorScheme, StatusTone.success),
       BazarrHistoryAction.upgraded => AppColors.bazarr,
-      BazarrHistoryAction.matched => AppColors.success,
-      BazarrHistoryAction.failed => AppColors.error,
-      BazarrHistoryAction.removed => AppColors.warning,
-      BazarrHistoryAction.unknown => AppColors.warning,
+      BazarrHistoryAction.failed => statusToneColor(
+        colorScheme,
+        StatusTone.warning,
+      ),
+      BazarrHistoryAction.removed || BazarrHistoryAction.unknown =>
+        statusToneColor(colorScheme, StatusTone.neutral),
     };
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final tagColor = _historyColor();
+    final tagColor = _historyColor(colorScheme);
     final isEpisode = item.kind == BazarrHistoryKind.episode;
     final subtitleParts = <String>[
       if (item.languageLabel != null) item.languageLabel!,

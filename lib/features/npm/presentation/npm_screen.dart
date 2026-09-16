@@ -231,10 +231,20 @@ class _ProxyHostTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    // NPM answered and told us this host's config is refused: a fault, not
+    // silence. Red on this screen belongs to an NPM that did not answer.
     final (Color tone, IconData glyph, String state) = host.hasConfigError
-        ? (AppColors.error, Icons.error_outline_rounded, 'nginx error')
+        ? (
+            statusToneColor(colorScheme, StatusTone.warning),
+            Icons.error_outline_rounded,
+            'nginx error',
+          )
         : host.enabled
-        ? (AppColors.success, Icons.check_circle_rounded, 'Online')
+        ? (
+            statusToneColor(colorScheme, StatusTone.success),
+            Icons.check_circle_rounded,
+            'Online',
+          )
         : (
             colorScheme.onSurfaceVariant,
             Icons.pause_circle_rounded,
@@ -291,7 +301,7 @@ class _ProxyHostTile extends ConsumerWidget {
                       host.errorText.isNotEmpty ? host.errorText : detail,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: host.errorText.isNotEmpty
-                            ? AppColors.error
+                            ? statusToneColor(colorScheme, StatusTone.warning)
                             : colorScheme.onSurfaceVariant,
                       ),
                       maxLines: 2,
@@ -427,11 +437,13 @@ class _CertificateTile extends ConsumerWidget {
     final days = cert.daysUntilExpiry(now);
     final expiring = cert.isExpiringSoon(now);
     final expired = days != null && days < 0;
-    final tone = expired
-        ? AppColors.error
-        : expiring
-        ? AppColors.warning
-        : AppColors.success;
+    // An expired certificate and one about to expire are the same kind of
+    // fact — the canvas names "expiring" in the amber set — and neither is a
+    // connection that did not answer.
+    final tone = statusToneColor(
+      colorScheme,
+      expired || expiring ? StatusTone.warning : StatusTone.success,
+    );
     final detail = days == null
         ? cert.provider
         : expired
@@ -568,7 +580,7 @@ class _SimpleHostTile extends StatelessWidget {
                     : Icons.subdirectory_arrow_right_rounded,
                 size: 18,
                 color: host.hasConfigError
-                    ? AppColors.error
+                    ? statusToneColor(colorScheme, StatusTone.warning)
                     : colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 10),

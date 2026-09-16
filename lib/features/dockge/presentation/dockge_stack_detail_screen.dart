@@ -110,22 +110,22 @@ class _StatusHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final statusColor = statusToneColor(colorScheme, status.tone);
+
     return Row(
       children: [
         Container(
           width: 12,
           height: 12,
-          decoration: BoxDecoration(
-            color: status.color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
         ),
         const SizedBox(width: 10),
         Text(
           status.label,
           style: Theme.of(context).textTheme.titleMedium!
               .weight(FontWeight.w700)
-              .copyWith(color: status.color),
+              .copyWith(color: statusColor),
         ),
       ],
     );
@@ -319,7 +319,13 @@ class _ServiceStatusList extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Column(
       children: services.map((service) {
-        final color = service.isRunning ? AppColors.success : AppColors.error;
+        // A container that is not running is not necessarily broken, and this
+        // payload cannot tell a deliberate stop from a crash (decision 15). Red
+        // asserted the crash on every one of them.
+        final color = statusToneColor(
+          colorScheme,
+          service.isRunning ? StatusTone.success : StatusTone.neutral,
+        );
         return Padding(
           padding: const EdgeInsets.only(bottom: 6),
           child: Container(

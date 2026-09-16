@@ -19,6 +19,7 @@ import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
@@ -648,13 +649,17 @@ class _RequestRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final media = request.media;
     final title = media?.title ?? 'Unknown Media';
     final requester = request.requestedBy?.displayName ?? 'Unknown';
     final subtitle =
         '$requester · ${request.type == 'tv' ? 'Series' : 'Movie'}';
     final displayStatus = request.displayStatus;
-    final statusColor = _requestStatusColor(displayStatus.kind);
+    final statusColor = statusToneColor(
+      colorScheme,
+      resolveRequestStatus(request).tone,
+    );
     final posterUrl = ImageUtils.buildTmdbPosterUrl(media?.posterPath);
     final heroTag = _requestHeroTag(request);
 
@@ -1004,6 +1009,7 @@ class _DownloadRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final percent = item.progress == null
         ? null
         : (item.progress! * 100).round();
@@ -1016,13 +1022,18 @@ class _DownloadRow extends StatelessWidget {
     // identity tile, and seven download sources putting their own hue on a
     // percentage is the rainbow that rule exists to prevent. The row already
     // names its client in the leading glyph and in the subtitle.
-    final accent = Theme.of(context).colorScheme.primary;
+    final accent = colorScheme.primary;
     final trailing = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         if (item.warning != null) ...[
-          _SmallStatusPill(label: 'Warning', color: AppColors.error),
+          // The label says Warning; the colour said error. One of the two was
+          // lying, and it was the colour.
+          _SmallStatusPill(
+            label: 'Warning',
+            color: statusToneColor(colorScheme, StatusTone.warning),
+          ),
           const SizedBox(height: AppSpacing.xs),
         ],
         // Nothing at all when the client reports no progress. It used to print
@@ -1340,26 +1351,6 @@ class _SectionEmptyState extends ConsumerWidget {
         ],
       ),
     );
-  }
-}
-
-Color _requestStatusColor(SeerrRequestDisplayKind kind) {
-  switch (kind) {
-    case SeerrRequestDisplayKind.pending:
-      return AppColors.warning;
-    case SeerrRequestDisplayKind.approved:
-    case SeerrRequestDisplayKind.processing:
-      return AppColors.info;
-    case SeerrRequestDisplayKind.available:
-    case SeerrRequestDisplayKind.partiallyAvailable:
-    case SeerrRequestDisplayKind.completed:
-      return AppColors.success;
-    case SeerrRequestDisplayKind.declined:
-    case SeerrRequestDisplayKind.failed:
-    case SeerrRequestDisplayKind.deleted:
-      return AppColors.error;
-    case SeerrRequestDisplayKind.unknown:
-      return AppColors.info;
   }
 }
 

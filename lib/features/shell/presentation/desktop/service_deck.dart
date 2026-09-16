@@ -6,6 +6,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
@@ -348,9 +349,13 @@ class _HealthReadout extends ConsumerWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _Dot(color: AppColors.success),
-            if (health.checking > 0) _Dot(color: AppColors.warning),
-            if (health.unreachable > 0) _Dot(color: colorScheme.error),
+            _Dot(color: statusToneColor(colorScheme, StatusTone.success)),
+            // Checking is not a fault — the deck's aggregate pill has to agree
+            // with the pip on the cards, or the same probe reads two ways in
+            // one window.
+            if (health.checking > 0) _Dot(color: colorScheme.onSurfaceVariant),
+            if (health.unreachable > 0)
+              _Dot(color: statusToneColor(colorScheme, StatusTone.error)),
             const SizedBox(width: AppSpacing.sm),
             Text(
               '${health.answering}',

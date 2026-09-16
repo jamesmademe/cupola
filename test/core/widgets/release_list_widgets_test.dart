@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/release_list_widgets.dart';
 
 void main() {
@@ -111,16 +111,21 @@ void main() {
         release: buildRelease(approved: true, rejections: const []),
       );
 
-      expect(_grabButtonColor(tester), AppColors.success);
+      expect(
+        _grabButtonColor(tester),
+        _expectedTone(tester, StatusTone.success),
+      );
     });
 
-    testWidgets('uses the warning tone for pending releases', (tester) async {
+    testWidgets('a release with reservations reads as informational', (
+      tester,
+    ) async {
       await _pumpReleaseItem(
         tester,
         release: buildRelease(approved: false, rejections: const []),
       );
 
-      expect(_grabButtonColor(tester), AppColors.warning);
+      expect(_grabButtonColor(tester), _expectedTone(tester, StatusTone.info));
     });
 
     testWidgets('shows a spinner instead of the grab button while grabbing', (
@@ -166,7 +171,13 @@ void main() {
 
       await _expandRelease(tester);
 
-      expect(_grabButtonColor(tester), AppColors.error);
+      // Amber, not red: the *Arr read the release and refused it, which is
+      // the decision engine working. Red belongs to a service that did not
+      // answer at all.
+      expect(
+        _grabButtonColor(tester),
+        _expectedTone(tester, StatusTone.warning),
+      );
       expect(find.text('REJECTION REASONS'), findsOneWidget);
       expect(find.text('Minimum seeders not met'), findsOneWidget);
     });
@@ -354,6 +365,16 @@ Future<void> _pumpReleaseItem(
 Future<void> _expandRelease(WidgetTester tester) async {
   await tester.tap(find.byType(InkWell).first);
   await tester.pumpAndSettle();
+}
+
+/// The tone a grab button is *supposed* to paint, resolved exactly as the
+/// widget resolves it. Pinning the raw palette constant instead made these
+/// tests assert a hex rather than a meaning, so they failed the moment the
+/// tones started being walked for contrast — which is a change they should
+/// never have been able to see.
+Color _expectedTone(WidgetTester tester, StatusTone tone) {
+  final context = tester.element(find.byType(ReleaseListItem).first);
+  return statusToneColor(Theme.of(context).colorScheme, tone);
 }
 
 Color? _grabButtonColor(WidgetTester tester) {

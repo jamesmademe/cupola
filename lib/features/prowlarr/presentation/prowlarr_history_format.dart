@@ -1,22 +1,34 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 
 /// Badge style (label, colour, icon) for a Prowlarr history [item].
 ///
 /// Shared by the dashboard activity feed and the indexer detail history so
 /// event styling stays consistent across both screens.
+/// [colorScheme] is required because the two *status* arms — a refused query
+/// and a successful grab — are resolved through [statusToneColor] and therefore
+/// walked against the surface. The remaining arms are identity colours, not
+/// statuses: an RSS sync is not "good", it is Prowlarr doing a Prowlarr thing.
 ({String label, Color color, IconData icon}) prowlarrEventStyle(
   ProwlarrHistoryItem item,
+  ColorScheme colorScheme,
 ) {
   if (!item.successful) {
-    return (label: 'FAILED', color: AppColors.error, icon: Icons.close_rounded);
+    // A query the indexer refused is a fault the indexer reported, which is
+    // amber. Red is kept for a Prowlarr that did not answer at all.
+    return (
+      label: 'FAILED',
+      color: statusToneColor(colorScheme, StatusTone.warning),
+      icon: Icons.close_rounded,
+    );
   }
   return switch (item.eventType) {
     'releaseGrabbed' => (
       label: 'GRAB',
-      color: AppColors.success,
+      color: statusToneColor(colorScheme, StatusTone.success),
       icon: Icons.download_rounded,
     ),
     'indexerQuery' => (
@@ -31,7 +43,7 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
     ),
     'indexerAuth' => (
       label: 'AUTH',
-      color: AppColors.warning,
+      color: statusToneColor(colorScheme, StatusTone.warning),
       icon: Icons.key_rounded,
     ),
     _ => (

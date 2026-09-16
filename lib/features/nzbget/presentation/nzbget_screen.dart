@@ -355,7 +355,12 @@ class _HistoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final color = item.failed ? AppColors.error : AppColors.success;
+    // The service answered and told us the job failed: that is a fault, which
+    // is amber. Red is kept for a service that did not answer at all.
+    final color = statusToneColor(
+      colorScheme,
+      item.failed ? StatusTone.warning : StatusTone.success,
+    );
     final icon = item.failed
         ? Icons.error_outline_rounded
         : Icons.check_circle_rounded;

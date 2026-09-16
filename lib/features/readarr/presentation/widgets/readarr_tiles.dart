@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 
 /// Visual style (icon + colour + label) for a Readarr history event type.
@@ -26,13 +27,13 @@ import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
     case 'bookFileDeleted':
       return (
         icon: Icons.delete_outline_rounded,
-        color: AppColors.warning,
+        color: statusToneColor(colorScheme, StatusTone.neutral),
         label: 'DELETED',
       );
     case 'downloadFailed':
       return (
         icon: Icons.error_outline_rounded,
-        color: AppColors.error,
+        color: statusToneColor(colorScheme, StatusTone.warning),
         label: 'FAILED',
       );
     default:

@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
@@ -261,13 +261,16 @@ void main() {
       // surface's error tone under Lidarr (offline) — the same three-state
       // reachability the expanded card spells out as a word, carried by
       // colour where a 32pt row has no room for a sentence.
+      final scheme = Theme.of(
+        tester.element(find.byType(ServicesScreen)),
+      ).colorScheme;
       expect(
         _dotColorIn(tester, 'service-matrix-cell-radarr'),
-        AppColors.success,
+        statusToneColor(scheme, StatusTone.success),
       );
       expect(
         _dotColorIn(tester, 'service-matrix-cell-lidarr'),
-        Theme.of(tester.element(find.byType(ServicesScreen))).colorScheme.error,
+        statusToneColor(scheme, StatusTone.error),
       );
     });
 

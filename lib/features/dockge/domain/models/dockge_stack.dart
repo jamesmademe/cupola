@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// Lifecycle state of a Dockge stack.
@@ -28,20 +29,26 @@ enum DockgeStackStatus {
 
   bool get isActive => this == DockgeStackStatus.running;
 
-  /// Accent colour used for the status dot/badge in the UI.
-  Color get color {
-    switch (this) {
-      case DockgeStackStatus.running:
-        return const Color(0xFF3BB273); // green
-      case DockgeStackStatus.exited:
-        return const Color(0xFFE5484D); // red
-      case DockgeStackStatus.createdFile:
-      case DockgeStackStatus.createdStack:
-        return const Color(0xFFF5A623); // amber (inactive)
-      case DockgeStackStatus.unknown:
-        return const Color(0xFF8A8F98); // grey
-    }
-  }
+  /// How this state reads, resolved to a colour by the presentation layer.
+  ///
+  /// It used to be a `Color` built from four raw hexes — none of them a palette
+  /// token, one of them an unregistered green sitting beside `AppColors.success`
+  /// — which is the only reason this domain file imported `material.dart`. Two
+  /// of the four were also wrong about what they were describing:
+  ///
+  ///  * **exited** was red. Red on this canvas means a connection that did not
+  ///    answer, and Dockge answered: it told us the stack is down. That is a
+  ///    fault, and a fault is amber.
+  ///  * **inactive** was amber. A stack that was never started is not a fault —
+  ///    nothing stopped, nothing failed. A container stopped on purpose is
+  ///    neutral, and so is one that has not been started yet.
+  StatusTone get tone => switch (this) {
+    DockgeStackStatus.running => StatusTone.success,
+    DockgeStackStatus.exited => StatusTone.warning,
+    DockgeStackStatus.createdFile ||
+    DockgeStackStatus.createdStack ||
+    DockgeStackStatus.unknown => StatusTone.neutral,
+  };
 }
 
 /// A Docker Compose stack as summarised by Dockge's `stackList` push event.

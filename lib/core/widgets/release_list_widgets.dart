@@ -8,20 +8,31 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/release_utils.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 
 /// Semantic tone of a release row.
 ///
 /// Drives the status rail, the grab button and the header badge so a list of
-/// releases can be triaged at a glance: green = the *Arr will accept it,
-/// amber = accepted with reservations, red = rejected by the decision engine.
+/// releases can be triaged at a glance: green = the \*Arr will accept it,
+/// blue = it has reservations, amber = it refuses.
+///
+/// It used to carry its own `Color` and its own red, which made it a second
+/// tone vocabulary beside [StatusTone] — and put the alarm colour on a screen
+/// where nothing is unreachable. A release the decision engine refused is the
+/// engine working: the \*Arr read the release, applied the profile and said no.
+/// That is a fault of the release, not of the connection, and the three states
+/// keep their ordering as green < blue < amber without borrowing red.
 enum ReleaseStatusTone {
-  approved(AppColors.success, 'Approved'),
-  pending(AppColors.warning, 'Not approved'),
-  rejected(AppColors.error, 'Rejected');
+  approved(StatusTone.success, 'Approved'),
+  pending(StatusTone.info, 'Not approved'),
+  rejected(StatusTone.warning, 'Rejected');
 
-  final Color color;
+  final StatusTone tone;
   final String label;
-  const ReleaseStatusTone(this.color, this.label);
+  const ReleaseStatusTone(this.tone, this.label);
+
+  /// The painted colour, walked against [colorScheme]'s surface.
+  Color color(ColorScheme colorScheme) => statusToneColor(colorScheme, tone);
 }
 
 /// Resolves the [ReleaseStatusTone] for a raw release map.
@@ -100,7 +111,7 @@ class _ReleaseListItemState extends State<ReleaseListItem> {
           borderRadius: AppRadius.borderRadiusMd,
           border: Border.all(
             color: tone == ReleaseStatusTone.rejected
-                ? tone.color.withValues(alpha: 0.28)
+                ? tone.color(colorScheme).withValues(alpha: 0.28)
                 : colorScheme.outlineVariant.withValues(alpha: 0.5),
           ),
           boxShadow: AppElevation.level1(colorScheme),
@@ -115,7 +126,9 @@ class _ReleaseListItemState extends State<ReleaseListItem> {
                 bottom: 0,
                 left: 0,
                 width: 3,
-                child: ColoredBox(color: tone.color.withValues(alpha: 0.9)),
+                child: ColoredBox(
+                  color: tone.color(colorScheme).withValues(alpha: 0.9),
+                ),
               ),
               Material(
                 type: MaterialType.transparency,
@@ -259,7 +272,7 @@ class _ReleaseBadgeRow extends StatelessWidget {
                 _Pill(
                   label: tone.label,
                   icon: Icons.block_rounded,
-                  color: tone.color,
+                  color: tone.color(colorScheme),
                 ),
             ],
           ),
@@ -313,11 +326,15 @@ class _ReleaseMetaRow extends StatelessWidget {
   }
 
   /// Torrents with no seeders will never finish — call that out in colour.
+  ///
+  /// Amber rather than red: a swarm with nobody in it is a property of the
+  /// release, and the indexer answered perfectly well to tell us so.
   Color? _peerColor(BuildContext context) {
     if (!isTorrent || seeders == null) return null;
-    if (seeders == 0) return AppColors.error;
-    if (seeders! < 5) return AppColors.warning;
-    return AppColors.success;
+    final colorScheme = Theme.of(context).colorScheme;
+    if (seeders == 0) return statusToneColor(colorScheme, StatusTone.warning);
+    if (seeders! < 5) return statusToneColor(colorScheme, StatusTone.info);
+    return statusToneColor(colorScheme, StatusTone.success);
   }
 }
 
@@ -460,6 +477,7 @@ class _GrabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: 40,
       height: 40,
@@ -470,21 +488,21 @@ class _GrabButton extends StatelessWidget {
                 height: 18,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: tone.color,
+                  color: tone.color(colorScheme),
                 ),
               ),
             )
           : IconButton(
               icon: const Icon(Icons.download_rounded, size: 20),
-              color: tone.color,
+              color: tone.color(colorScheme),
               onPressed: onPressed,
               tooltip: onPressed == null
                   ? 'Another download is starting'
                   : 'Grab Release',
               style: IconButton.styleFrom(
-                backgroundColor: tone.color.withValues(
-                  alpha: onPressed == null ? 0.06 : 0.14,
-                ),
+                backgroundColor: tone
+                    .color(colorScheme)
+                    .withValues(alpha: onPressed == null ? 0.06 : 0.14),
                 shape: const CircleBorder(),
               ),
             ),
