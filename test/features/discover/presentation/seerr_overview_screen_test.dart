@@ -1,0 +1,305 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
+
+import '../../../test_helpers/fake_services.dart';
+import '../../../test_helpers/settings_scope.dart';
+
+void main() {
+  testWidgets('draws the regions in the order the board draws them', (
+    tester,
+  ) async {
+    await _pump(tester, service: _scripted());
+
+    // Identity and the readouts come before any section, and only this tab
+    // carries them.
+    expect(find.byType(ServiceKpiPeek), findsOneWidget);
+
+    // Decisions first — Seerr is the exception, and the rails move down.
+    expect(
+      tester
+          .widgetList<SectionHeader>(find.byType(SectionHeader))
+          .map((header) => header.title),
+      ['Needs a decision', 'Processing', 'Trending'],
+    );
+  });
+
+  testWidgets('each section link is named after the tab it opens', (
+    tester,
+  ) async {
+    await _pump(tester, service: _scripted());
+
+    expect(
+      tester
+          .widgetList<SectionHeader>(find.byType(SectionHeader))
+          .map((header) => header.semanticHint),
+      [
+        'opens the Seerr Requests tab',
+        'opens the Seerr Requests tab',
+        'opens the Seerr Discover tab',
+      ],
+    );
+  });
+
+  testWidgets('the identity block says Answering, never Online', (
+    tester,
+  ) async {
+    await _pump(tester, service: _scripted(), version: '2.2.0');
+
+    expect(
+      find.semantics.byLabel('Seerr, seerr.local:5055, v2.2.0, Answering'),
+      findsOneWidget,
+    );
+    expect(find.text('Online'), findsNothing);
+  });
+
+  testWidgets('an unreachable Seerr reads Unreachable, and its version is —', (
+    tester,
+  ) async {
+    await _pump(tester, service: _scripted(), version: null);
+
+    expect(
+      find.semantics.byLabel('Seerr, seerr.local:5055, —, Unreachable'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a decision row is spoken as one sentence', (tester) async {
+    final now = DateTime.now();
+    await _pump(
+      tester,
+      service: _scripted(
+        requests: [
+          _request(
+            id: 1,
+            title: 'Severance',
+            type: 'tv',
+            seasons: [2],
+            requester: 'nadia',
+            createdAt: now.subtract(const Duration(hours: 4)).toIso8601String(),
+          ),
+        ],
+      ),
+    );
+
+    expect(
+      find.semantics.byLabel('Severance — Season 2, nadia, 4 h ago, TV'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a section whose source failed does not take the page with it', (
+    tester,
+  ) async {
+    await _pump(tester, service: _FailingTrendingSeerr());
+
+    // The failed region says so in its own slot…
+    expect(find.byType(AppErrorState), findsOneWidget);
+    // …and the other two still drew their headings.
+    expect(find.byType(SectionHeader), findsNWidgets(3));
+  });
+
+  testWidgets('a poster on the trending rail has an accessible name', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      service: _scripted(
+        trending: const [
+          MediaPreview(id: 9, title: 'Dune: Part Two', mediaType: 'movie'),
+        ],
+      ),
+    );
+
+    expect(
+      tester.getSemantics(
+        find.ancestor(
+          of: find.text('Dune: Part Two'),
+          matching: find.byType(PressableScale),
+        ),
+      ),
+      containsSemantics(label: 'Dune: Part Two', isButton: true),
+    );
+  });
+
+  testWidgets('nothing overflows at an accessibility reading size', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      textScaleFactor: 3.0,
+      service: _scripted(
+        requests: [
+          _request(
+            id: 1,
+            title: 'A Request Whose Title Will Not Fit On One Line At All',
+            requester: 'somebody-with-a-long-name',
+          ),
+        ],
+        trending: const [
+          MediaPreview(
+            id: 9,
+            title: 'A Trending Title That Will Not Fit Either',
+            mediaType: 'tv',
+          ),
+        ],
+      ),
+    );
+
+    // A `RenderFlex overflowed` is thrown, not merely painted, under test.
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a Seerr that was never set up gets its own door', (
+    tester,
+  ) async {
+    await _pump(tester, service: _scripted(), configured: false);
+
+    final placeholder = tester.widget<NotConfiguredPlaceholder>(
+      find.byType(NotConfiguredPlaceholder),
+    );
+    expect(placeholder.service, ServiceKey.seerr);
+    expect(find.byType(SectionHeader), findsNothing);
+  });
+}
+
+// ─── Harness ────────────────────────────────────────────────────────────────
+
+Future<void> _pump(
+  WidgetTester tester, {
+  required SeerrService service,
+  String? version = '2.2.0',
+  bool configured = true,
+  double textScaleFactor = 1.0,
+}) async {
+  await tester.binding.setSurfaceSize(const Size(420, 2600));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+
+  await tester.pumpWidget(
+    ProviderScope(
+      // Riverpod 3 re-runs a failed provider on an exponential backoff, so one
+      // `pumpAndSettle` would otherwise watch a deliberately failing section
+      // retry a dozen times and never settle.
+      retry: (_, _) => null,
+      overrides: [
+        currentSettingsProvider.overrideWith(
+          (ref) => configured
+              ? settingsWith(
+                  seerrUrl: 'http://seerr.local:5055',
+                  seerrApiKey: 'key',
+                )
+              : const SettingsModel(),
+        ),
+        seerrServiceProvider.overrideWith((ref) => service),
+        serviceStatusClientFactoryProvider.overrideWith(
+          (ref) =>
+              ({
+                required String baseUrl,
+                required String apiKey,
+                String? pinnedCertFingerprint,
+              }) => _StatusClient(version),
+        ),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.darkTheme(),
+        themeAnimationDuration: Duration.zero,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScaleFactor)),
+          child: child!,
+        ),
+        home: const SeerrOverviewScreen(topPadding: 0),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+SeerrService _scripted({
+  List<SeerrRequest> requests = const [],
+  List<MediaPreview> trending = const [],
+}) => _ScriptedSeerr(requests: requests, trending: trending);
+
+class _ScriptedSeerr extends FakeSeerrService {
+  _ScriptedSeerr({this.requests = const [], this.trending = const []});
+
+  final List<SeerrRequest> requests;
+  final List<MediaPreview> trending;
+
+  @override
+  Future<List<SeerrRequest>> getRequests() async => requests;
+
+  @override
+  Future<List<MediaPreview>> getDiscoverTrending({int page = 1}) async =>
+      trending;
+}
+
+class _FailingTrendingSeerr extends _ScriptedSeerr {
+  @override
+  Future<List<MediaPreview>> getDiscoverTrending({int page = 1}) async =>
+      throw Exception('trending failed');
+}
+
+/// The reachability probe, answered offline.
+///
+/// A null [version] is the wire shape of a service that did not answer: the
+/// probe throws, which is what `_loadServiceSummary` reads as offline.
+class _StatusClient extends ApiClient {
+  _StatusClient(this.version)
+    : super(baseUrl: 'http://seerr.local:5055', apiKey: 'key');
+
+  final String? version;
+
+  @override
+  Future<Response> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
+    Duration? receiveTimeout,
+  }) async {
+    if (version == null) throw Exception('unreachable');
+    return Response(
+      requestOptions: RequestOptions(path: path),
+      statusCode: 200,
+      data: {'version': version},
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+SeerrRequest _request({
+  required int id,
+  String title = 'Title',
+  String type = 'movie',
+  String? requester,
+  String createdAt = '2026-09-01T00:00:00Z',
+  List<int>? seasons,
+}) => SeerrRequest(
+  id: id,
+  status: RequestStatus.pendingApproval,
+  media: RequestMedia(title: title, tmdbId: id),
+  createdAt: createdAt,
+  type: type,
+  requestedBy: requester == null
+      ? null
+      : RequestedBy(id: id, displayName: requester),
+  seasons: seasons
+      ?.map((n) => RequestSeason(seasonNumber: n, status: 'pending'))
+      .toList(),
+);
