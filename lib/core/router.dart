@@ -11,6 +11,7 @@ import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
@@ -460,10 +461,7 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.radarr,
       tab: ServiceTab.overview,
-      child: ServiceTabPlaceholder(
-        service: ServiceKey.radarr,
-        tab: ServiceTab.overview,
-      ),
+      child: RadarrOverviewScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.library => _page(
