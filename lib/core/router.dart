@@ -220,7 +220,8 @@ String _redirectLegacyManualImport(GoRouterState state) {
 
 Page<void> _manualImportPage(
   GoRouterState state,
-  Widget Function(ServiceKey service, int? targetId) buildChild,
+  Widget Function(ServiceKey service, int? targetId, String? instanceId)
+  buildChild,
 ) {
   final service = manualImportServiceFromRoute(
     state.uri.queryParameters['service'],
@@ -230,9 +231,16 @@ Page<void> _manualImportPage(
   }
 
   final targetId = int.tryParse(state.uri.queryParameters['targetId'] ?? '');
+  // `?i=` names the connection the wizard is bound to, exactly as
+  // `_libraryDetailPage` reads it for the detail routes. It has to be read
+  // here or `manualImportLocation`'s whole `instanceId` argument is inert: a
+  // failed-import row on a non-lensed connection would open a wizard that
+  // re-resolves the service through the lens, browse the wrong server's disk
+  // and move the files into the wrong library. Null when the link named none,
+  // which is every link that predates a service being able to have two.
   return RouteUtils.cupertinoPage(
     key: state.pageKey,
-    child: buildChild(service, targetId),
+    child: buildChild(service, targetId, state.uri.queryParameters['i']),
   );
 }
 
@@ -1220,9 +1228,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: manualImportBrowsePath,
         pageBuilder: (context, state) => _manualImportPage(
           state,
-          (service, targetId) => ManualImportLocateScreen(
+          (service, targetId, instanceId) => ManualImportLocateScreen(
             service: service,
             targetId: targetId,
+            instanceId: instanceId,
             initialPath: state.uri.queryParameters['path'],
           ),
         ),
@@ -1231,8 +1240,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: manualImportReviewPath,
         pageBuilder: (context, state) => _manualImportPage(
           state,
-          (service, targetId) =>
-              ManualImportReviewScreen(service: service, targetId: targetId),
+          (service, targetId, instanceId) => ManualImportReviewScreen(
+            service: service,
+            targetId: targetId,
+            instanceId: instanceId,
+          ),
         ),
       ),
       // Steps of the retired four-screen flow; an old deep link lands on
@@ -1249,7 +1261,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: manualImportProgressPath,
         pageBuilder: (context, state) => _manualImportPage(
           state,
-          (service, targetId) => ManualImportProgressScreen(service: service),
+          // Station 3 takes no `instanceId`: by the time a command is running
+          // the binding is already on the flow state, and a second source of
+          // truth here could only disagree with it.
+          (service, targetId, instanceId) =>
+              ManualImportProgressScreen(service: service),
         ),
       ),
       // The retired top-level locations, kept so old deep links land somewhere.
