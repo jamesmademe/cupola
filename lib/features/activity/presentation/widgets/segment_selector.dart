@@ -15,7 +15,11 @@ enum ActivitySegment {
 
 enum WantedSegment {
   missing('Missing'),
-  cutoffUnmet('Cutoff Unmet');
+  // Sentence case. The same state is spelled in three places — this pill, the
+  // global screen's pill and `resolveWantedStatus`'s label — and Title Case
+  // here was the odd one out of an app that capitalises a state like a
+  // sentence.
+  cutoffUnmet('Cutoff unmet');
 
   final String label;
 

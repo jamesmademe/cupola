@@ -88,7 +88,41 @@ MediaStatusInfo resolveHistoryStatus(Map<String, dynamic> item) {
     labelOverride: label,
     toneOverride: tone,
     glyph: historyEventGlyph(eventType),
+    // Only the faults carry one. A failed grab or a failed import is the one
+    // history row a user has to act on, and until now it said "Failed" and
+    // nothing else — the service's own sentence was sitting in the record,
+    // unread, while the queue rows one tab away printed theirs. A `grabbed`
+    // row is gated out rather than filtered: a reason under a neutral label
+    // reads as a problem that is not there.
+    detail: tone == StatusTone.warning ? historyFailureReason(item) : null,
   );
+}
+
+/// The service's own explanation for a failed history record.
+///
+/// \*arr files it under `data`, not at the top level where the queue keeps it,
+/// so the queue's [arrQueueWarningMessage] cannot be reused — this is the read
+/// the `act` annotation names, and nothing in the app performed it. The
+/// top-level key is still checked second because Lidarr answers with a flat
+/// `message` on some events.
+String? historyFailureReason(Map<String, dynamic> item) {
+  final data = mapOrNull(item['data']);
+  final messages = extractArrStatusMessages(data?['statusMessages']);
+  if (messages.isNotEmpty) return messages.first;
+  return stringOrNull(data?['message']) ?? stringOrNull(item['message']);
+}
+
+/// Where a history record says its file landed, or was dropped.
+///
+/// `importedPath` is the destination an `downloadFolderImported` event wrote
+/// to; `droppedPath` is where the client left the file when the import failed,
+/// and is therefore the folder a manual import has to be seeded from. Both live
+/// under `data`, both were unread, and the failed row needs the second one to
+/// offer its way out at all.
+String? historyFilePath(Map<String, dynamic> item) {
+  final data = mapOrNull(item['data']);
+  return stringOrNull(data?['importedPath']) ??
+      stringOrNull(data?['droppedPath']);
 }
 
 /// The label and severity for an \*arr history `eventType`.
@@ -175,7 +209,7 @@ MediaStatusInfo resolveBlocklistStatus(Map<String, dynamic> item) {
 /// one row that is genuinely stuck.
 ///
 /// The distinctions the tones used to carry are still on the row, in the words:
-/// Missing, Cutoff Unmet, Unmonitored.
+/// Missing, Cutoff unmet, Unmonitored.
 MediaStatusInfo resolveWantedStatus(
   Map<String, dynamic> item, {
   required bool isCutoff,
@@ -192,9 +226,11 @@ MediaStatusInfo resolveWantedStatus(
   if (isCutoff) {
     return const MediaStatusInfo(
       availability: MediaAvailability.upgradable,
-      // Matches the "Cutoff Unmet" sub-segment label. The old string was
-      // 'Cutoff', which is not even the term the \*arr services use.
-      labelOverride: 'Cutoff Unmet',
+      // Matches the "Cutoff unmet" sub-segment label. The old string was
+      // 'Cutoff', which is not even the term the \*arr services use. Sentence
+      // case, not Title Case: this is a state, and the app capitalises a state
+      // like a sentence everywhere else it names one.
+      labelOverride: 'Cutoff unmet',
       toneOverride: StatusTone.neutral,
     );
   }

@@ -323,16 +323,9 @@ class GlobalActivityItemTile extends ConsumerWidget {
             item.kind == GlobalActivityKind.cutoff) &&
         extractWantedItemId(item.serviceType, raw) != null;
     // Resolved here rather than inside [_writeActions] because it is the one
-    // decision on this row that needs a `ref`. Short-circuited so only a queue
-    // row that would actually offer the hand-off subscribes to the lens — the
-    // History list builds thousands of these.
-    final canManualImport =
-        item.kind == GlobalActivityKind.queue &&
-        item.service.supportsManualImport &&
-        _manualImportFolder != null &&
-        (item.instanceId.isEmpty ||
-            item.instanceId ==
-                ref.watch(activeInstanceProvider(item.service))?.id);
+    // decision on this row that needs a `ref` — see [canManualImportFrom] for
+    // the three gates and why the lens is one of them.
+    final canManualImport = canManualImportFrom(ref, item);
     final writeActions = _writeActions(canManualImport: canManualImport);
     final icon = switch (item.kind) {
       GlobalActivityKind.request => Icons.person_add_alt_1_rounded,
@@ -369,8 +362,14 @@ class GlobalActivityItemTile extends ConsumerWidget {
               ? null
               : _RowActionsMenu(item: item, actions: writeActions));
 
-    if (AppBreakpoints.isDesktopShell &&
-        MediaQuery.sizeOf(context).width >= AppBreakpoints.desktopCompact) {
+    // A window gets the table at every width it has, not only above 1100. The
+    // gate used to be `isDesktopShell && width >= desktopCompact`, so dragging
+    // a desktop window narrower than 1100 swapped the whole list for phone
+    // cards — a different information architecture at a size the user reached
+    // by moving a mouse. The size-class rule is the opposite: below the compact
+    // breakpoint the shell keeps every part it had and shows fewer items in
+    // each, never smaller ones. So the row stays a row and sheds cells.
+    if (AppBreakpoints.isDesktopShell) {
       return _DesktopActivityRow(
         item: item,
         icon: icon,
@@ -379,6 +378,8 @@ class GlobalActivityItemTile extends ConsumerWidget {
         onOpen: onOpen,
         trailing: trailing,
         actions: writeActions,
+        compact:
+            MediaQuery.sizeOf(context).width < AppBreakpoints.desktopCompact,
       );
     }
 
@@ -583,13 +584,21 @@ class GlobalActivityItemTile extends ConsumerWidget {
         _RowAction.removeFromQueue,
       ],
       GlobalActivityKind.blocklist => const [_RowAction.removeFromBlocklist],
+      // A failed grab or a failed import is the one history record that is
+      // still actionable, and it gets exactly one way out.
+      //
+      // **Never Blocklist.** Blocklisting from history is a different endpoint
+      // from the queue's — `POST /api/{v}/history/failed/{id}` — and no client
+      // method calls it. Offering the item anyway would put a control on the
+      // row that cannot fire; offering the *queue's* blocklist would send the
+      // history record's id to an endpoint that indexes the queue, which is a
+      // different record entirely. So the row says what it can do and stops.
+      GlobalActivityKind.history => [
+        if (canManualImport) _RowAction.manualImport,
+      ],
       _ => const [],
     };
   }
-
-  String? get _manualImportFolder => manualImportFolderFromOutputPath(
-    dynamic_utils.stringOrNull(item.raw?['outputPath']),
-  );
 
   void _showDetails(
     BuildContext context,
@@ -874,6 +883,81 @@ String _requestsLocation(String instanceId) {
   return Uri(path: path, queryParameters: {'i': instanceId}).toString();
 }
 
+/// Whether [item] can hand the import wizard a folder on the server the app is
+/// currently looking at.
+///
+/// Three gates, and the third is the one that is a gap rather than a rule:
+/// `manualImportLocation` carries a service and no connection, and every screen
+/// in the import flow resolves through the lens — so sending a row off the
+/// *other* Radarr there would browse the wrong server's filesystem and import
+/// into it. The affordance is withheld rather than made to lie. Restoring it
+/// needs `?i=` on the import routes, which is that feature's work.
+///
+/// Shared by the row menu and the "Finished today" band so the two cannot
+/// disagree about when the affordance is honest.
+bool canManualImportFrom(WidgetRef ref, GlobalActivityItem item) {
+  // The queue knows where the client is writing; a failed history record knows
+  // where the client left the file. No other kind names a path on disk.
+  final offersPath = switch (item.kind) {
+    GlobalActivityKind.queue => true,
+    GlobalActivityKind.history => _isFailedHistoryEvent(item.raw),
+    _ => false,
+  };
+  if (!offersPath || !item.service.supportsManualImport) return false;
+  if (manualImportFolderFromOutputPath(_manualImportSourcePath(item)) == null) {
+    return false;
+  }
+  // Short-circuited last so only a row that would actually offer the hand-off
+  // subscribes to the lens — the History list builds thousands of these.
+  return item.instanceId.isEmpty ||
+      item.instanceId == ref.watch(activeInstanceProvider(item.service))?.id;
+}
+
+/// Opens the import wizard on the folder [item] names.
+///
+/// Callers gate on [canManualImportFrom] first; this re-derives the folder and
+/// returns quietly rather than trusting them to.
+void openManualImportFrom(BuildContext context, GlobalActivityItem item) {
+  final folder = manualImportFolderFromOutputPath(
+    _manualImportSourcePath(item),
+  );
+  if (folder == null || !item.service.supportsManualImport) return;
+  context.push(
+    manualImportLocation(
+      manualImportBrowsePath,
+      item.service,
+      folderPath: folder,
+    ),
+  );
+}
+
+/// The path a manual import is seeded from, per kind.
+///
+/// `outputPath` on a queue record is where the download client is writing.
+/// `data.droppedPath` on a failed history record is where it gave up — the
+/// folder full of files the \*arr could not place, and the only thing that makes
+/// "Manual import" from history mean anything. Neither was read on the history
+/// side until now, which is why that row carried no actions at all.
+String? _manualImportSourcePath(GlobalActivityItem item) {
+  final raw = item.raw;
+  if (raw == null) return null;
+  return switch (item.kind) {
+    GlobalActivityKind.queue => dynamic_utils.stringOrNull(raw['outputPath']),
+    GlobalActivityKind.history => historyFilePath(raw),
+    _ => null,
+  };
+}
+
+/// Whether a history record is one of the two failures worth acting on.
+///
+/// Read from `eventType` rather than from the resolved tone: the tone answers
+/// "how bad", and two different events can share it, while the affordance
+/// belongs only to these two.
+bool _isFailedHistoryEvent(Map<String, dynamic>? raw) {
+  final eventType = dynamic_utils.stringOrNull(raw?['eventType']);
+  return eventType == 'downloadFailed' || eventType == 'importFailed';
+}
+
 void _runRowAction(
   BuildContext context,
   WidgetRef ref,
@@ -903,17 +987,7 @@ void _runRowAction(
         title: item.title,
       );
     case _RowAction.manualImport:
-      final folder = manualImportFolderFromOutputPath(
-        dynamic_utils.stringOrNull(item.raw?['outputPath']),
-      );
-      if (folder == null || !item.service.supportsManualImport) return;
-      context.push(
-        manualImportLocation(
-          manualImportBrowsePath,
-          item.service,
-          folderPath: folder,
-        ),
-      );
+      openManualImportFrom(context, item);
     case _RowAction.blocklistAndRetry:
       final recordId = item.recordId;
       if (recordId == null) return;
@@ -1159,16 +1233,97 @@ List<Widget> _buildWantedChips(
   ];
 }
 
+/// The desktop table's geometry, shared by the header row and every data row.
+///
+/// One place, because a header that does not line up with its columns is worse
+/// than no header: the two used to be able to drift because only one of them
+/// existed.
+abstract final class _ActivityTableMetrics {
+  /// The figures cell — wide enough for `4.32 GB · 1h 12m left` in mono.
+  static const double figures = 210;
+
+  /// The relative-time cell.
+  static const double time = 104;
+
+  /// The trailing `⋮` plate's slot. 40, not 48: the plate is the drawn object
+  /// and the 48dp target extends past it, which is what `IconButton` already
+  /// reserves.
+  static const double actions = 40;
+
+  /// The leading glyph, and the gutter after it.
+  static const double glyph = 18;
+}
+
+/// The table's column header.
+///
+/// Drawn as `RELEASE · SIZE · DONE · SPEED · LEFT` and shipped as three labels,
+/// because annotation 5 collapsed the four figure columns into one cell: a
+/// header naming SPEED over a cell that can never contain a speed is a promise
+/// the data cannot keep. The words that survive are the ones each cell actually
+/// holds — and `DETAILS` rather than a measurement noun, because the same cell
+/// carries a size on a queue row and nothing at all on a wanted one.
+///
+/// The status badge gets no label and no cell. It is the one part of the row
+/// whose width is its own content, so a header word over it would sit at a
+/// different place on every row — and a badge already prints the word a header
+/// would repeat.
+///
+/// Absent below the compact breakpoint, where the cells it labels are absent
+/// too, and absent on the phone, which has no table.
+class ActivityTableHeader extends StatelessWidget {
+  const ActivityTableHeader({super.key});
+
+  /// Whether this width draws the table at all.
+  static bool visibleAt(BuildContext context) =>
+      AppBreakpoints.isDesktopShell &&
+      MediaQuery.sizeOf(context).width >= AppBreakpoints.desktopCompact;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppTheme.eyebrow(CupolaThemeColors.of(context).dimText);
+
+    Widget cell(String label, double width) => SizedBox(
+      width: width,
+      child: Text(label, textAlign: TextAlign.right, style: style),
+    );
+
+    return Semantics(
+      // A column header is structure, not content: it names the cells below it
+      // and a screen reader reads those cells' own labels. Hiding it keeps the
+      // list's first item from being five words of table furniture.
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.sm,
+          AppSpacing.lg,
+          AppSpacing.xs,
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: _ActivityTableMetrics.glyph + AppSpacing.md),
+            Expanded(child: Text('RELEASE', style: style)),
+            const SizedBox(width: AppSpacing.md),
+            cell('DETAILS', _ActivityTableMetrics.figures),
+            cell('WHEN', _ActivityTableMetrics.time),
+            const SizedBox(width: _ActivityTableMetrics.actions),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// One activity row as a table row: what it is, what it is doing, and the
 /// controls, on one line.
 ///
 /// The columns are the ones the data actually has. The design sheet draws
-/// separate `size`, `done`, `speed` and `left` columns, and the app does not
-/// have those as fields — the service hands them over pre-formatted in one
-/// subtitle string, so splitting them into columns would mean parsing English
-/// back into numbers and being wrong the first time a service words it
-/// differently. The figures therefore stay in one tabular-mono cell, which is
-/// still a column that lines up down the page.
+/// separate `size`, `done`, `speed` and `left` columns; `GlobalActivityItem`
+/// has no such fields and \*arr reports no transfer rate on a queue record at
+/// all, so the measurements arrive pre-formatted in [GlobalActivityItem.figures]
+/// and stay in one tabular-mono cell — still a column that lines up down the
+/// page. That cell used to be fed `subtitle`, which is prose: the table was
+/// right-aligning a release filename in a numeric column.
 class _DesktopActivityRow extends ConsumerStatefulWidget {
   const _DesktopActivityRow({
     required this.item,
@@ -1178,6 +1333,7 @@ class _DesktopActivityRow extends ConsumerStatefulWidget {
     required this.onOpen,
     required this.trailing,
     required this.actions,
+    required this.compact,
   });
 
   final GlobalActivityItem item;
@@ -1188,12 +1344,22 @@ class _DesktopActivityRow extends ConsumerStatefulWidget {
 
   /// The row's own actions. Always shown, never revealed only on hover: the
   /// phone has no hover, so nothing may be reachable that way alone — hover
-  /// here brightens the row, and that is all it does.
+  /// here brightens the row and lifts one action out of the menu it is already
+  /// in, which is an accelerator rather than a door.
   final Widget? trailing;
 
   /// Offered again on a right-click. The same list the `⋮` button shows, from
   /// the same place — see [_rowActionMenuItems].
   final List<_RowAction> actions;
+
+  /// A desktop window below 1100.
+  ///
+  /// The row keeps its identity, its title, its status and its controls, and
+  /// sheds the three cells that only pay for themselves when there is room:
+  /// the figures, the connection badge and the relative time. Fewer parts, not
+  /// smaller ones — and emphatically not the phone card, which is a different
+  /// shape for a different input device.
+  final bool compact;
 
   @override
   ConsumerState<_DesktopActivityRow> createState() =>
@@ -1202,6 +1368,7 @@ class _DesktopActivityRow extends ConsumerStatefulWidget {
 
 class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
   bool _hovered = false;
+  bool _focused = false;
 
   /// Right-click, at the pointer. Nothing new lives here: every item is also in
   /// the row's own button, which is why a phone can go without.
@@ -1221,18 +1388,58 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
     _runRowAction(context, ref, widget.item, action);
   }
 
+  /// The one action the hovered row lifts out of its own menu.
+  ///
+  /// The first non-destructive item, which is the rescue verb on every kind
+  /// that has one — `Manual import` on a stuck download, `Blocklist and search`
+  /// on a failed grab, `Approve request` on a pending request. Destructive
+  /// actions are never promoted: a Remove that appears under the pointer on
+  /// hover is a control the user did not ask to have within reach.
+  _RowAction? get _primaryAction {
+    for (final action in widget.actions) {
+      if (!action.destructive) return action;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final item = widget.item;
     final progress = item.progress;
+    final dim = CupolaThemeColors.of(context).dimText;
+    // The release name, the episode code, the artist — prose, and the one thing
+    // the desktop row lost when the figures cell stopped carrying it. It is the
+    // fallback rather than a second line: a row with a fault has one thing to
+    // say and the fault is it.
+    final secondary =
+        item.detail ?? (item.subtitle.isEmpty ? null : item.subtitle);
+    final promoted = _hovered ? _primaryAction : null;
 
-    return MouseRegion(
-      cursor: widget.onOpen == null
+    return FocusableActionDetector(
+      // The row was a bare `GestureDetector`: no focus node, so it was off the
+      // keyboard's path entirely and could not draw the 2px ring the Components
+      // sheet declares and calls never-removed. Enabled only when the row opens
+      // something — a focus stop that does nothing on Enter is a dead step in
+      // the tab order.
+      //
+      // The semantics stay on the `GestureDetector` below, which contributes
+      // its own tap node, and the trailing `⋮` keeps its own: wrapping the row
+      // in one label would have taken the menu off the screen reader's path.
+      enabled: widget.onOpen != null,
+      mouseCursor: widget.onOpen == null
           ? SystemMouseCursors.basic
           : SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onShowHoverHighlight: (value) => setState(() => _hovered = value),
+      onShowFocusHighlight: (value) => setState(() => _focused = value),
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onOpen?.call();
+            return null;
+          },
+        ),
+      },
       child: GestureDetector(
         onTap: widget.onOpen,
         onSecondaryTapUp: (details) => _showContextMenu(details.globalPosition),
@@ -1246,15 +1453,21 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
             color: _hovered
                 ? colorScheme.onSurface.withValues(alpha: 0.045)
                 : null,
-            border: Border(
-              bottom: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-              ),
-            ),
+            border: _focused
+                ? Border.all(color: colorScheme.primary, width: 2)
+                : Border(
+                    bottom: BorderSide(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
           ),
           child: Row(
             children: [
-              Icon(widget.icon, size: 18, color: widget.accent),
+              Icon(
+                widget.icon,
+                size: _ActivityTableMetrics.glyph,
+                color: widget.accent,
+              ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
@@ -1265,17 +1478,20 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
                       item.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      // 14, not 13: 13 is off the Components type ramp
+                      // (32/22/16/14/12/11), and an off-ramp size does not
+                      // scale with the rest of the row under Dynamic Type.
                       style: AppTheme.chrome(
                         context,
-                        size: 13,
+                        size: 14,
                         weight: FontWeight.w600,
                         color: colorScheme.onSurface,
                       ),
                     ),
                     if (progress != null) ...[
-                      const SizedBox(height: 5),
+                      const SizedBox(height: AppSpacing.xs),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius: AppRadius.borderRadiusXs,
                         child: LinearProgressIndicator(
                           value: progress,
                           minHeight: 3,
@@ -1284,66 +1500,76 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
                         ),
                       ),
                     ],
-                    if (item.detail != null) ...[
-                      const SizedBox(height: 3),
+                    if (secondary != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
-                        item.detail!,
+                        secondary,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTheme.chrome(
                           context,
                           size: 11,
-                          color: widget.toneColor,
+                          color: item.detail != null ? widget.toneColor : dim,
                         ),
                       ),
                     ],
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.md),
-              // The figures, in one tabular column so they line up down the page
-              // even though the words in them differ per service.
-              SizedBox(
-                width: 210,
-                child: Text(
-                  item.subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: AppTheme.chrome(
-                    context,
-                    size: 11,
-                    color: CupolaThemeColors.of(context).dimText,
-                  ).mono.tabular,
-                ),
-              ),
+              if (promoted != null) ...[
+                const SizedBox(width: AppSpacing.md),
+                _PromotedRowAction(item: item, action: promoted),
+              ],
+              // The badges sit between the title and the fixed cells, not
+              // inside them. A `StatusBadge` is as wide as its longest word, so
+              // anything to its left was pushed a different distance on every
+              // row — which is how a column that exists to line up down the
+              // page ended up ragged. Everything right of here is fixed-width,
+              // so the figures, the time and the `⋮` are the same three
+              // vertical rules on every row and under the header.
               const SizedBox(width: AppSpacing.md),
               StatusBadge(info: item.status),
-              if (item.instanceLabel.isNotEmpty) ...[
+              if (!widget.compact && item.instanceLabel.isNotEmpty) ...[
                 const SizedBox(width: AppSpacing.sm),
                 ConnectionBadge(
                   label: item.instanceLabel,
                   accent: widget.accent,
                 ),
               ],
-              SizedBox(
-                width: 104,
-                child: Text(
-                  item.sortDate == null
-                      ? ''
-                      : formatRelativeDateTime(item.sortDate!),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: AppTheme.chrome(
-                    context,
-                    size: 11,
-                    color: CupolaThemeColors.of(context).dimText,
+              if (!widget.compact) ...[
+                const SizedBox(width: AppSpacing.md),
+                // The measurements, in one tabular cell — never four sortable
+                // columns, which would need four fields the record does not
+                // have and a comparator each.
+                SizedBox(
+                  width: _ActivityTableMetrics.figures,
+                  child: Text(
+                    item.figures,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: AppTheme.chrome(
+                      context,
+                      size: 11,
+                      color: dim,
+                    ).mono.tabular,
                   ),
                 ),
-              ),
+                SizedBox(
+                  width: _ActivityTableMetrics.time,
+                  child: Text(
+                    item.sortDate == null
+                        ? ''
+                        : formatRelativeDateTime(item.sortDate!),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: AppTheme.chrome(context, size: 11, color: dim),
+                  ),
+                ),
+              ],
               SizedBox(
-                width: 40,
+                width: _ActivityTableMetrics.actions,
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: widget.trailing ?? const SizedBox.shrink(),
@@ -1351,6 +1577,43 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One row action, lifted out of the `⋮` menu onto the hovered row.
+///
+/// A 28pt plate inside a 44pt target, the Components sheet's row-action
+/// geometry. It duplicates a menu item rather than replacing one: the phone has
+/// no hover, so nothing may be reachable this way alone.
+class _PromotedRowAction extends ConsumerWidget {
+  const _PromotedRowAction({required this.item, required this.action});
+
+  final GlobalActivityItem item;
+  final _RowAction action;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SizedBox(
+      height: 28,
+      child: OutlinedButton.icon(
+        onPressed: () => _runRowAction(context, ref, item, action),
+        icon: Icon(action.icon, size: 14),
+        label: Text(action.label),
+        style: OutlinedButton.styleFrom(
+          visualDensity: VisualDensity.compact,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          textStyle: AppTheme.chrome(
+            context,
+            size: 11,
+            weight: FontWeight.w600,
+          ),
+          // The 44pt target the 28pt plate sits inside, so a pointer that is a
+          // few pixels high of the drawing still lands on the control.
+          tapTargetSize: MaterialTapTargetSize.padded,
+          minimumSize: const Size(0, 28),
         ),
       ),
     );

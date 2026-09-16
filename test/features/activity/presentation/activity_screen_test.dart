@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_screen.dart';
@@ -17,6 +19,7 @@ import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/release_search/presentation/release_searches_body.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 
@@ -260,6 +263,162 @@ void main() {
     // type* — a second axis no service filter can reach.
     expect(find.byType(SelectionPills<int>), findsOneWidget);
     expect(find.text('Blocklist'), findsOneWidget);
+  });
+
+  testWidgets('a connection that did not answer reads as unreachable, not as a '
+      'fault', (tester) async {
+    // The tone rule in one band: amber is a service answering and reporting
+    // trouble — a stalled transfer, a failed grab — and red is silence. This
+    // band is the only place on the page that means silence, and it was amber,
+    // which put "Sonarr is not there" in the same ink as "this download is
+    // stuck".
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...await settingsScopeOverrides(configured: activityServiceKeys),
+          requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
+          seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
+          radarrServiceProvider.overrideWith(
+            (ref) => _ActivityRadarrService(
+              queue: const [
+                {
+                  'title': 'Furiosa.2024.2160p.WEB-DL-GROUP',
+                  'status': 'downloading',
+                  'size': 100,
+                  'sizeleft': 25,
+                  'movie': {'title': 'Furiosa', 'year': 2024},
+                },
+              ],
+            ),
+          ),
+          sonarrServiceProvider.overrideWith((ref) => _SilentSonarrService()),
+          lidarrServiceProvider.overrideWith((ref) => FakeLidarrService()),
+        ],
+        child: const MaterialApp(home: GlobalActivityScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('did not respond'), findsOneWidget);
+
+    // Scoped to the band: the service strip draws the same glyph on the tile
+    // of a service that did not answer, and it is toned from the same rule.
+    final glyph = find.descendant(
+      of: find.byType(AppCard),
+      matching: find.byIcon(Icons.cloud_off_rounded),
+    );
+    expect(glyph, findsOneWidget);
+    final colorScheme = Theme.of(tester.element(glyph)).colorScheme;
+    expect(
+      tester.widget<Icon>(glyph).color,
+      statusToneColor(colorScheme, StatusTone.error),
+    );
+    expect(
+      tester.widget<Icon>(glyph).color,
+      isNot(statusToneColor(colorScheme, StatusTone.warning)),
+    );
+
+    // And red never travels alone: the pip is the non-colour half of the
+    // signal, for a reader who cannot separate red from amber.
+    expect(
+      find.descendant(
+        of: find.byType(AppCard),
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is Container &&
+              w.decoration is BoxDecoration &&
+              (w.decoration! as BoxDecoration).shape == BoxShape.circle,
+        ),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('the page bar names what the queue is doing, and names its verb', (
+    tester,
+  ) async {
+    // "Activity" alone names the tab the user just tapped. The figure they came
+    // for — how much is in flight and how much of it is stuck — was reachable
+    // only by counting rows. And the import wizard is this page's one
+    // cross-cutting verb: an icon-only button hid it behind a hover the phone
+    // does not have, with a tooltip as its only label.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...await settingsScopeOverrides(configured: activityServiceKeys),
+          requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
+          seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
+          radarrServiceProvider.overrideWith(
+            (ref) => _ActivityRadarrService(
+              queue: const [
+                {
+                  'title': 'Furiosa.2024.2160p.WEB-DL-GROUP',
+                  'status': 'downloading',
+                  'size': 100,
+                  'sizeleft': 25,
+                  'movie': {'title': 'Furiosa', 'year': 2024},
+                },
+                {
+                  'title': 'Dune.Part.Two.2024.2160p.WEB-DL-GROUP',
+                  'status': 'warning',
+                  'errorMessage': 'The download is stalled with no connections',
+                  'size': 100,
+                  'sizeleft': 90,
+                  'movie': {'title': 'Dune: Part Two', 'year': 2024},
+                },
+              ],
+            ),
+          ),
+          sonarrServiceProvider.overrideWith((ref) => FakeSonarrService()),
+          lidarrServiceProvider.overrideWith((ref) => FakeLidarrService()),
+        ],
+        child: const MaterialApp(home: GlobalActivityScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('2 in the queue'), findsOneWidget);
+    // Sentence case, and a word rather than a tooltip.
+    expect(find.text('Manual import'), findsOneWidget);
+    expect(find.text('Manual Import'), findsNothing);
+  });
+
+  testWidgets('pull-to-refresh belongs to the tab, including its custom bodies', (
+    tester,
+  ) async {
+    // Now › Searching returned above the `RefreshIndicator` the feed path sits
+    // inside, so it was the one list on the section that claims to be live that
+    // a pull could not refresh.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...await settingsScopeOverrides(configured: activityServiceKeys),
+          requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
+          seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
+          radarrServiceProvider.overrideWith((ref) => FakeRadarrService()),
+          sonarrServiceProvider.overrideWith((ref) => FakeSonarrService()),
+          lidarrServiceProvider.overrideWith((ref) => FakeLidarrService()),
+        ],
+        child: const MaterialApp(home: GlobalActivityScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Searching'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.ancestor(
+        of: find.byType(ReleaseSearchesBody),
+        matching: find.byType(RefreshIndicator),
+      ),
+      findsOneWidget,
+    );
+
+    // The window ticker this section holds comes down with the tree.
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('buckets are swipeable, not just tappable', (tester) async {
@@ -552,6 +711,14 @@ class _PagedScreenHistoryRadarrService extends FakeRadarrService {
     _served = end;
     return slice;
   }
+}
+
+/// A Sonarr that is simply not there — the fact the health band exists for.
+class _SilentSonarrService extends FakeSonarrService {
+  @override
+  Future<List<dynamic>> getQueue({
+    Map<String, dynamic>? queryParameters,
+  }) async => throw Exception('Connection refused');
 }
 
 class _ActivityRadarrService extends FakeRadarrService {

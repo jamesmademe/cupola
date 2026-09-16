@@ -10,7 +10,7 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
-    show activitySecondaryLine;
+    show activitySecondaryLine, formatActivityDuration, formatActivitySize;
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
@@ -173,6 +173,24 @@ class GlobalActivityItem {
   final String title;
   final String subtitle;
 
+  /// The figures, pre-formatted, for the desktop table's one right-aligned
+  /// tabular cell.
+  ///
+  /// Separate from [subtitle] because they are not the same fact and the
+  /// desktop row was printing the wrong one. `subtitle` is prose — the release
+  /// name, the episode code, the artist — and the table was right-aligning it
+  /// in tabular mono under a column the class doc called "the figures", so a
+  /// 60-character release filename arrived ellipsised in a numeric column and
+  /// the size and time left were nowhere on the row.
+  ///
+  /// Four columns were never an option: `GlobalActivityItem` has no
+  /// size/speed/eta fields and \*arr reports no transfer rate on a queue record
+  /// at all, so splitting this would be a data change with a comparator per
+  /// column. One cell, joined with ` · `, is what the data honestly supports.
+  /// Empty for the kinds that have no figures — a wanted row is a title and a
+  /// date, not a measurement.
+  final String figures;
+
   /// The fully resolved status — tone, label, progress, warning and all.
   ///
   /// Replaces the previous `String status` + `double? progress` +
@@ -192,6 +210,7 @@ class GlobalActivityItem {
     required this.title,
     required this.subtitle,
     required this.status,
+    this.figures = '',
     this.instanceId = '',
     this.instanceLabel = '',
     this.sortDate,
@@ -423,6 +442,47 @@ final globalHistoryFeedProvider =
     NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
       () => PagedArrFeedNotifier(kinds: const [GlobalActivityKind.history]),
     );
+
+/// How many rows "Finished today" shows.
+///
+/// Six, and the cap is the point: the band is a glance at the day, not a second
+/// history list. What it cannot show is reachable through the `Open history`
+/// beside its heading, which is why the cap is allowed to be this low.
+const finishedTodayLimit = 6;
+
+/// What landed today, capped at [finishedTodayLimit].
+///
+/// In the history feed's own order, which is faults first and then newest —
+/// deliberately not re-sorted by time here, because a failed import is the row
+/// worth surfacing and re-sorting would bury it under five successes.
+///
+/// A provider rather than a filter inside a widget because **two** surfaces
+/// draw this — the Activity page and the desktop inspector pane — and a second
+/// hand-rolled `date.year == now.year && …` is how two readouts of one day
+/// start disagreeing at midnight. The pane still carries its own copy
+/// (`inspector_pane.dart`'s `_FinishedToday`) and has to be moved onto this;
+/// until it is, the drift this provider exists to prevent is still possible.
+///
+/// Reading it starts the history feed's first page, which is why the page only
+/// watches it on the Now section and the pane only when it is open: an
+/// inspector nobody opened must not cost a round of history requests per
+/// service.
+final finishedTodayProvider = Provider<List<GlobalActivityItem>>((ref) {
+  final feed = ref.watch(globalHistoryFeedProvider).feed;
+  if (feed == null) return const [];
+
+  final now = DateTime.now();
+  return feed.items
+      .where((item) {
+        final date = item.sortDate?.toLocal();
+        return date != null &&
+            date.year == now.year &&
+            date.month == now.month &&
+            date.day == now.day;
+      })
+      .take(finishedTodayLimit)
+      .toList(growable: false);
+});
 
 /// Wanted "All" bucket: missing and cutoff unmet, paged like History.
 final globalWantedFeedProvider =
@@ -1033,6 +1093,7 @@ GlobalActivityItem _arrItem(
     instanceLabel: connection.label,
     title: _titleFor(kind, serviceType, item),
     subtitle: _subtitleFor(kind, serviceType, item),
+    figures: _figuresFor(kind, item),
     status: resolveActivityStatus(kind, item),
     sortDate: _sortDateFor(kind, item),
     raw: item,
@@ -1149,6 +1210,41 @@ String _subtitleFor(
     ].whereType<String>().join(' · '),
     GlobalActivityKind.request => _serviceKeyFor(serviceType).title,
   };
+}
+
+/// The measurements on a record, pre-formatted and joined.
+///
+/// Built here, once, rather than in the row: the desktop table wants them
+/// tabular and right-aligned, and a widget that parses English back out of a
+/// prose line to find a number is wrong the first time a service words it
+/// differently. Only the two kinds that carry a measurement produce anything —
+/// the rest return empty and the column collapses to whitespace rather than to
+/// an em dash per row, which would draw a ladder of nothing down the page.
+///
+/// No speed. \*arr's queue record reports `size`, `sizeleft` and `timeleft`
+/// and no rate at all: the rate belongs to the download client, which is a
+/// different connection. Printing one would mean deriving it from two polls
+/// 15 s apart and calling the result a measurement.
+String _figuresFor(GlobalActivityKind kind, Map<String, dynamic> item) {
+  switch (kind) {
+    case GlobalActivityKind.queue:
+      final size = formatActivitySize(item['size']);
+      final left = formatActivityDuration(stringOrNull(item['timeleft']));
+      return [
+        if (size != '—') size,
+        if (left != '—' && left.isNotEmpty) '$left left',
+      ].join(' · ');
+    case GlobalActivityKind.history:
+      // \*arr files the imported file's size under `data`, not at the top
+      // level where the queue keeps it.
+      final size = formatActivitySize(mapOrNull(item['data'])?['size']);
+      return size == '—' ? '' : size;
+    case GlobalActivityKind.blocklist:
+    case GlobalActivityKind.missing:
+    case GlobalActivityKind.cutoff:
+    case GlobalActivityKind.request:
+      return '';
+  }
 }
 
 DateTime? _sortDateFor(GlobalActivityKind kind, Map<String, dynamic> item) {

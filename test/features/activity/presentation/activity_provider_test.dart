@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_tab.dart';
@@ -427,7 +428,134 @@ void main() {
       expect(feed.allConfiguredFailed, isTrue);
       expect(feed.firstError, isNotNull);
     });
+
+    test('a queue row carries measurements, not the release name', () async {
+      // The desktop table's right-aligned tabular cell was fed `subtitle`,
+      // which is prose — the release filename, the episode code, the artist —
+      // so a numeric column printed an ellipsised release title and the size
+      // and time left appeared nowhere on the row. `figures` is the separate
+      // field that fixes it, and the two must stay different facts.
+      final container = createContainer(radarrService: _QueueRadarrService());
+
+      final feed = await container.read(globalQueueItemsProvider.future);
+      final item = feed.items.single;
+
+      expect(item.figures, contains('7.45 GB'));
+      expect(item.figures, contains('left'));
+      // The prose stays where prose belongs.
+      expect(item.figures, isNot(contains('Dune.Part.Two')));
+      expect(item.subtitle, contains('Dune.Part.Two'));
+    });
+
+    test('a kind with no measurement carries no figures', () async {
+      // An em dash per row would draw a ladder of nothing down the column. A
+      // wanted row is a title and a date; it has no measurement to line up.
+      final container = createContainer(radarrService: _MissingRadarrService());
+
+      final feed = await _loadPagedFeed(container, globalMissingFeedProvider);
+
+      expect(feed.items.single.figures, isEmpty);
+    });
   });
+
+  group('finishedTodayProvider', () {
+    test('keeps today, drops yesterday, and stops at the cap', () {
+      // One provider rather than a filter inside each widget: the Activity page
+      // and the desktop inspector both draw this band, and two hand-rolled
+      // "is it today" comparisons are how two readouts of one day start
+      // disagreeing at midnight.
+      final now = DateTime.now();
+      final container = ProviderContainer(
+        overrides: [
+          globalHistoryFeedProvider.overrideWith(
+            () => _StubHistoryFeed([
+              for (var i = 0; i < 9; i++)
+                _historyItem('Landed $i', now.subtract(Duration(minutes: i))),
+              _historyItem('Yesterday', now.subtract(const Duration(days: 1))),
+            ]),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final today = container.read(finishedTodayProvider);
+
+      expect(today, hasLength(finishedTodayLimit));
+      expect(today.map((i) => i.title), isNot(contains('Yesterday')));
+    });
+
+    test('an unloaded history feed is empty rather than absent', () {
+      // The band renders nothing until the feed has something, which is what
+      // keeps a surface nobody opened from costing a round of history requests
+      // per service.
+      final container = ProviderContainer(
+        overrides: [
+          globalHistoryFeedProvider.overrideWith(() => _StubHistoryFeed(null)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(finishedTodayProvider), isEmpty);
+    });
+  });
+}
+
+GlobalActivityItem _historyItem(String title, DateTime at) =>
+    GlobalActivityItem(
+      kind: GlobalActivityKind.history,
+      service: ServiceKey.radarr,
+      serviceType: ServiceType.movies,
+      title: title,
+      subtitle: '',
+      status: const MediaStatusInfo.unknown(),
+      sortDate: at,
+    );
+
+/// A history feed whose contents the test dictates, so "today" can be asserted
+/// without three services and a clock.
+class _StubHistoryFeed extends PagedArrFeedNotifier {
+  _StubHistoryFeed(this.items)
+    : super(kinds: const [GlobalActivityKind.history]);
+
+  /// Null stands for "the first page has not landed yet".
+  final List<GlobalActivityItem>? items;
+
+  @override
+  PagedArrFeedState build() {
+    final loaded = items;
+    return PagedArrFeedState(
+      feed: loaded == null
+          ? null
+          : ActivityFeed(items: loaded, results: const []),
+    );
+  }
+}
+
+class _QueueRadarrService extends FakeRadarrService {
+  @override
+  Future<List<dynamic>> getQueue({
+    Map<String, dynamic>? queryParameters,
+  }) async => [
+    {
+      'id': 11,
+      'title': 'Dune.Part.Two.2024.2160p.WEB-DL-GROUP',
+      'movie': {'title': 'Dune: Part Two', 'year': 2024},
+      'status': 'downloading',
+      'size': 8003897815,
+      'sizeleft': 2001000000,
+      'timeleft': '00:12:00',
+    },
+  ];
+}
+
+class _MissingRadarrService extends FakeRadarrService {
+  @override
+  Future<List<dynamic>> getMissing({int page = 1, int pageSize = 20}) async =>
+      page == 1
+      ? [
+          {'id': 3, 'title': 'Cool Movie', 'year': 2024, 'monitored': true},
+        ]
+      : const [];
 }
 
 Future<ActivityFeed> _loadPagedFeed(

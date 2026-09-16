@@ -64,6 +64,64 @@ void main() {
     test('a missing event type does not throw', () {
       expect(resolveHistoryStatus(const {}).tone, StatusTone.neutral);
     });
+
+    test('a fault carries the service\'s own reason, and nothing else does', () {
+      // The read the design names and that nothing in the app performed: \*arr
+      // files a history record's messages under `data`, not at the top level
+      // where the queue keeps them, so the queue's extractor could not be
+      // reused and the failed row said "Failed" and stopped.
+      final failed = resolveHistoryStatus(const {
+        'eventType': 'importFailed',
+        'data': {
+          'statusMessages': [
+            {
+              'title': 'Import failed',
+              'messages': ['No files found are eligible for import'],
+            },
+          ],
+        },
+      });
+      expect(failed.detail, contains('No files found'));
+
+      // A successful event with messages attached prints none of them: a
+      // reason under a neutral label reads as a problem that is not there.
+      final grabbed = resolveHistoryStatus(const {
+        'eventType': 'grabbed',
+        'data': {
+          'statusMessages': [
+            {'message': 'Release accepted'},
+          ],
+        },
+      });
+      expect(grabbed.detail, isNull);
+    });
+  });
+
+  group('historyFilePath', () {
+    test('prefers where the file landed over where it was dropped', () {
+      // `importedPath` is the destination of a successful import;
+      // `droppedPath` is where the client left the files when it failed, and is
+      // therefore what a manual import has to be seeded from. A record can
+      // carry both, and the destination is the one worth printing.
+      expect(
+        historyFilePath(const {
+          'data': {
+            'importedPath': '/mnt/tank/media/movies/Dune (2024).mkv',
+            'droppedPath': '/downloads/complete/Dune.2024',
+          },
+        }),
+        '/mnt/tank/media/movies/Dune (2024).mkv',
+      );
+
+      expect(
+        historyFilePath(const {
+          'data': {'droppedPath': '/downloads/complete/Dune.2024'},
+        }),
+        '/downloads/complete/Dune.2024',
+      );
+
+      expect(historyFilePath(const {}), isNull);
+    });
   });
 
   group('resolveQueueDisplayStatus', () {
@@ -129,10 +187,12 @@ void main() {
       expect(missing.label, 'Missing');
       expect(missing.tone, StatusTone.neutral);
 
-      // Matches the "Cutoff Unmet" sub-segment label; the old string was
-      // 'Cutoff', which is not the term the *arr services use.
+      // Matches the "Cutoff unmet" sub-segment label; the old string was
+      // 'Cutoff', which is not the term the *arr services use. Sentence case
+      // since the lexicon pass: the pill, the badge and this label are one
+      // string, and Title Case here was the odd one out.
       final cutoff = resolveWantedStatus(const {}, isCutoff: true);
-      expect(cutoff.label, 'Cutoff Unmet');
+      expect(cutoff.label, 'Cutoff unmet');
       expect(cutoff.tone, StatusTone.neutral);
 
       // The distinctions the tones used to carry are still on the row, in the
@@ -235,7 +295,7 @@ void main() {
       );
       expect(
         resolveActivityStatus(GlobalActivityKind.cutoff, const {}).label,
-        'Cutoff Unmet',
+        'Cutoff unmet',
       );
     });
   });

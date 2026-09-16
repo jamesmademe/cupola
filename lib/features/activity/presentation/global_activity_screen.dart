@@ -6,11 +6,13 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
+import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -22,10 +24,12 @@ import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/import/presentation/import_service_picker_sheet.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_activity_section.dart';
+import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_searches_body.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -75,18 +79,31 @@ class _ActivitySub {
   /// services, which is an axis a media-server session does not sit on.
   final Widget Function(double bottomPadding)? body;
 
+  /// What a pull on a custom body refreshes.
+  ///
+  /// Null for a body that already owns the gesture — Streaming ships its own
+  /// `RefreshIndicator` inside `StreamActivitySection`, and two nested
+  /// indicators over one scrollable both answer the same overscroll. Null also
+  /// for the feed path, which refreshes through the version bump instead.
+  final void Function(WidgetRef ref)? onRefresh;
+
   const _ActivitySub(this.label, this.provider, this.emptyMessage)
     : pagedProvider = null,
-      body = null;
+      body = null,
+      onRefresh = null;
 
   const _ActivitySub.paged(this.label, this.pagedProvider, this.emptyMessage)
     : provider = null,
-      body = null;
+      body = null,
+      onRefresh = null;
 
-  const _ActivitySub.custom({required this.label, required this.body})
-    : provider = null,
-      pagedProvider = null,
-      emptyMessage = '';
+  const _ActivitySub.custom({
+    required this.label,
+    required this.body,
+    this.onRefresh,
+  }) : provider = null,
+       pagedProvider = null,
+       emptyMessage = '';
 }
 
 /// Sub-segments per bucket. The first entry is the default selection.
@@ -115,7 +132,11 @@ final Map<_ActivitySection, List<_ActivitySub>> _activitySubs = {
     // A background release search is live, and an expiring result is live too —
     // the gerund is what makes it a sibling of the two above rather than a
     // different kind of thing filed next to them.
-    _ActivitySub.custom(label: _searchingSubLabel, body: _releaseSearchesBody),
+    _ActivitySub.custom(
+      label: _searchingSubLabel,
+      body: _releaseSearchesBody,
+      onRefresh: _refreshReleaseSearches,
+    ),
   ],
   _ActivitySection.history: [
     // Paged: History can be thousands of rows, so it loads a window and
@@ -135,7 +156,10 @@ final Map<_ActivitySection, List<_ActivitySub>> _activitySubs = {
     _ActivitySub.paged('All', globalWantedFeedProvider, 'Nothing wanted'),
     _ActivitySub.paged('Missing', globalMissingFeedProvider, 'Nothing missing'),
     _ActivitySub.paged(
-      'Cutoff Unmet',
+      // Sentence case, and the same string `resolveWantedStatus` stamps on the
+      // rows behind it — the pill and the badge under it used to disagree about
+      // the capital U.
+      'Cutoff unmet',
       globalCutoffFeedProvider,
       'Cutoff met for everything',
     ),
@@ -295,12 +319,39 @@ class _GlobalActivityScreenState extends ConsumerState<GlobalActivityScreen>
       onStale: () => ref.triggerNavigationRefresh(NavigationSection.activity),
       child: AmbientScaffold(
         appBar: GlassAppBar(
-          title: const Text('Activity'),
+          // The bar grew a second line, so the box grows with the reading size
+          // (The Grown Box Rule). `kToolbarHeight` was sized for one line; at an
+          // accessibility size the readout under the title would have met a
+          // constant and painted the overflow stripe across the page's own
+          // heading. The delta is zero at the default size, so nothing moves
+          // for anyone who has not asked for larger text.
+          toolbarHeight: TextScaleMetrics.boxHeight(
+            context,
+            base: kToolbarHeight,
+            textHeight: _readoutLineHeight,
+          ),
+          title: const _ActivityTitle(),
           actions: [
-            IconButton(
-              tooltip: 'Manual Import',
-              icon: const Icon(Icons.download_for_offline_outlined),
-              onPressed: () => showImportServicePickerSheet(context),
+            // A word, not a glyph. This is the page's one cross-cutting verb
+            // and the only way into the import wizard that does not start from
+            // a stuck row, and an icon-only button hid it behind a hover the
+            // phone does not have — the tooltip was the only thing that named
+            // it, and a tooltip is not a label.
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
+              child: OutlinedButton.icon(
+                onPressed: () => showImportServicePickerSheet(context),
+                icon: const Icon(Icons.download_for_offline_outlined, size: 18),
+                label: const Text('Manual import'),
+                style: OutlinedButton.styleFrom(
+                  // 44, not the Material 36 default: the Components sheet's
+                  // floor for a control a finger aims at.
+                  minimumSize: const Size(0, 44),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                ),
+              ),
             ),
           ],
           // Text-only tabs. `Tab(icon:, text:)` stacks the two and doubles the bar's
@@ -324,6 +375,102 @@ class _GlobalActivityScreenState extends ConsumerState<GlobalActivityScreen>
   }
 }
 
+/// One `labelSmall` line at the default reading size — what the app bar's
+/// second line costs, and therefore what has to grow with the reading size.
+const _readoutLineHeight = 14.0;
+
+/// The page's name over what the queue is actually doing.
+///
+/// The readout is the reason this is two lines and not one: "Activity" alone
+/// names the tab the user just tapped, which they already know, and the one
+/// figure they came for — how much is in flight and how much of it is stuck —
+/// was only reachable by counting rows.
+///
+/// Drawn for **Now** only, and deliberately. The History and Wanted boards draw
+/// their own sub-lines (`4 blocklisted`, `63 wanted · 54 missing`), and those
+/// are totals the client does not hold: `getHistory`/`getMissing`/`getCutoff`
+/// return `records` and drop the `totalRecords` envelope, so the only figure
+/// available is "how many rows are loaded", which changes every time the user
+/// taps Show more. A number that moves while the data does not is worse than no
+/// number.
+class _ActivityTitle extends ConsumerWidget {
+  const _ActivityTitle();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final section = ref.watch(_activitySectionProvider);
+    // `.value`, not `asData`: the 15 s poll puts this provider into
+    // `AsyncLoading(isReloading:)` on every tick, and `asData` is null there —
+    // the readout would blink out twice a minute. Same contract as the feed
+    // body below.
+    final feed = section == _ActivitySection.now
+        ? ref.watch(globalNowItemsProvider).value
+        : null;
+    final readout = feed == null ? null : _nowReadout(feed);
+
+    final title = Text(
+      'Activity',
+      style: theme.appBarTheme.titleTextStyle ?? theme.textTheme.titleLarge,
+    );
+    if (readout == null) return title;
+
+    return Semantics(
+      container: true,
+      header: true,
+      label: 'Activity, $readout',
+      child: ExcludeSemantics(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            title,
+            Text(
+              readout,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "6 in the queue · 2 stalled · 2 importing" — and only the clauses that are
+/// true. A readout that prints "0 stalled" spends a third of its width telling
+/// the user that nothing happened.
+String _nowReadout(ActivityFeed feed) {
+  final queued = feed.items
+      .where((i) => i.kind == GlobalActivityKind.queue)
+      .toList(growable: false);
+  if (queued.isEmpty) return 'Nothing in the queue';
+
+  var stalled = 0;
+  var importing = 0;
+  for (final item in queued) {
+    switch (item.status.pipeline) {
+      case MediaPipeline.stalled:
+        stalled++;
+      case MediaPipeline.importing:
+      case MediaPipeline.importPending:
+      case MediaPipeline.importBlocked:
+        importing++;
+      default:
+        break;
+    }
+  }
+
+  return [
+    '${queued.length} in the queue',
+    if (stalled > 0) '$stalled stalled',
+    if (importing > 0) '$importing importing',
+  ].join(' · ');
+}
+
 /// One bucket's contents: its record-type pills, the service strip, and the feed.
 class _BucketBody extends ConsumerWidget {
   final _ActivitySection section;
@@ -342,12 +489,35 @@ class _BucketBody extends ConsumerWidget {
         .clamp(0, subs.length - 1);
     final sub = subs[subIndex];
 
+    // Pull-to-refresh belongs to the TAB, never to a list inside it — so a
+    // custom body that does not already own the gesture gets it here. Now ›
+    // Searching had none at all: the branch returned above the
+    // `RefreshIndicator` below, on the one section of the app that claims to be
+    // live.
+    //
+    // The callback is the sub's own, not the feed's `refresh()`: bumping
+    // `activityRefreshVersionProvider` re-reads the \*arr feeds and would leave
+    // a search list spinning at a gesture that could not possibly change it.
+    //
+    // No `_RefreshingBar` on this path. A custom body carries no `refreshing`
+    // flag, and a hairline that never lights is the same lie in the other
+    // direction. Still returns before the feed's own watches: a session list
+    // must not rebuild because the \*arr service filter moved.
     final customBody = sub.body;
     if (customBody != null) {
+      final onRefresh = sub.onRefresh;
+      final body = customBody(bottomPadding);
       return Column(
         children: [
           _SubPills(section: section, subs: subs, subIndex: subIndex),
-          Expanded(child: customBody(bottomPadding)),
+          Expanded(
+            child: onRefresh == null
+                ? body
+                : RefreshIndicator(
+                    onRefresh: () async => onRefresh(ref),
+                    child: body,
+                  ),
+          ),
         ],
       );
     }
@@ -478,6 +648,17 @@ Widget _streamActivityBody(double bottomPadding) =>
 
 Widget _releaseSearchesBody(double bottomPadding) =>
     ReleaseSearchesBody(bottomPadding: bottomPadding);
+
+/// What a pull on Now › Searching actually refreshes.
+///
+/// Not a refetch: the jobs are in memory and the indexer searches behind them
+/// are already running. What goes stale is each result's **grab window** — a
+/// completed search's releases expire — and re-evaluating those is the only
+/// honest thing a pull can do here. The 10 s tick inside the body does the
+/// same thing on a timer; this is the user asking for it now.
+void _refreshReleaseSearches(WidgetRef ref) {
+  ref.read(releaseSearchJobsProvider.notifier).refreshWindows();
+}
 
 /// A hairline progress line while a refresh runs behind visible content.
 ///
@@ -654,10 +835,22 @@ class _ActivityData extends ConsumerWidget {
         ? _StackHealthStrip(feed: feed, onRetry: onRetry)
         : null;
 
+    // What landed today, below the rows and inside the scroll. Only under the
+    // Now table: on History it would be the same records twice, and on Wanted
+    // it answers a question the section is not asking. Watching it starts the
+    // history feed's first page, which is the cost the design signs up for by
+    // drawing the band on this page at all.
+    final trailing = <Widget>[
+      if (section == _ActivitySection.now &&
+          _FinishedTodayBand.visibleAt(context))
+        const _FinishedTodayBand(),
+    ];
+
     if (visible.isEmpty) {
       return _ScrollableState(
         bottomPadding: bottomPadding,
         header: health,
+        footer: trailing.isEmpty ? null : trailing.first,
         child: AppEmptyState(
           icon: section.icon,
           // The title used to be the bucket name — "Now" as a heading, which
@@ -671,23 +864,37 @@ class _ActivityData extends ConsumerWidget {
       );
     }
 
+    // The table's column header, on the sizes that draw a table. It rides
+    // inside the list rather than above it so it scrolls away with the rows: a
+    // pinned header is a promise about a sortable column, and nothing here
+    // sorts.
+    final leading = <Widget>[
+      ?health,
+      if (ActivityTableHeader.visibleAt(context)) const ActivityTableHeader(),
+    ];
+
     // Flat list when a single service is selected.
     if (filter != null) {
       final footerVisible = hasMore || loadingMore || loadMoreFailed;
-      final headerCount = health == null ? 0 : 1;
+      final headerCount = leading.length;
+      final tail = <Widget>[
+        if (footerVisible)
+          _FeedFooter(
+            loadingMore: loadingMore,
+            loadMoreFailed: loadMoreFailed,
+            onLoadMore: onLoadMore,
+          ),
+        ...trailing,
+      ];
       return ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(top: AppSpacing.md, bottom: bottomPadding),
-        itemCount: visible.length + headerCount + (footerVisible ? 1 : 0),
+        itemCount: visible.length + headerCount + tail.length,
         itemBuilder: (context, index) {
-          if (health != null && index == 0) return health;
+          if (index < headerCount) return leading[index];
           final itemIndex = index - headerCount;
           if (itemIndex >= visible.length) {
-            return _FeedFooter(
-              loadingMore: loadingMore,
-              loadMoreFailed: loadMoreFailed,
-              onLoadMore: onLoadMore,
-            );
+            return tail[itemIndex - visible.length];
           }
           return GlobalActivityItemTile(item: visible[itemIndex]);
         },
@@ -712,12 +919,13 @@ class _ActivityData extends ConsumerWidget {
     // Order, widgets, padding and physics are unchanged; only the construction
     // became lazy, which is what the filtered path above already did.
     final rows = <Object>[
-      ?health,
+      ...leading,
       for (final service in orderedServices) ...[
         service,
         if (!collapsed.contains(service)) ...grouped[service]!,
       ],
       if (hasMore || loadingMore || loadMoreFailed) const _FooterRow(),
+      ...trailing,
     ];
 
     return ListView.builder(
@@ -744,6 +952,157 @@ class _ActivityData extends ConsumerWidget {
         final Widget widget => widget,
         _ => const SizedBox.shrink(),
       },
+    );
+  }
+}
+
+/// What landed today, under the Now table.
+///
+/// Not a port of the inspector pane's list, and not the same job: the pane is
+/// an accelerator over one service, this is the record. It answers a question
+/// the queue cannot — "did the thing I was watching an hour ago actually
+/// arrive, and where did it go" — which is why every row carries a destination
+/// and a clock rather than a relative age.
+///
+/// Desktop and the compact window only. The phone boards draw no such band, and
+/// they are right to: on a 390pt column a destination path is a second ellipsis
+/// under a title that already has one, and the phone's answer to "where did it
+/// go" is the History section, one tap away.
+///
+/// The failed import is **amber**. It was red until the tone pass, which put it
+/// in the same ink as a connection that did not answer — and a failed import is
+/// a service answering and telling us it could not place a file.
+class _FinishedTodayBand extends ConsumerWidget {
+  const _FinishedTodayBand();
+
+  /// Whether this width draws the band at all.
+  static bool visibleAt(BuildContext context) => AppBreakpoints.isDesktopShell;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(finishedTodayProvider);
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Finished today · ${items.length} '
+                  '${items.length == 1 ? 'item' : 'items'}',
+                  style: AppTheme.eyebrow(
+                    CupolaThemeColors.of(context).dimText,
+                  ),
+                ),
+              ),
+              // The band is capped at six, so it is never the whole day — the
+              // way out has to be on the band itself rather than left to the
+              // user to find the History tab.
+              TextButton(
+                onPressed: () =>
+                    ref.read(_activitySectionProvider.notifier).state =
+                        _ActivitySection.history,
+                child: const Text('Open history'),
+              ),
+            ],
+          ),
+          for (final item in items)
+            _FinishedTodayRow(item: item, colorScheme: colorScheme),
+        ],
+      ),
+    );
+  }
+}
+
+class _FinishedTodayRow extends ConsumerWidget {
+  const _FinishedTodayRow({required this.item, required this.colorScheme});
+
+  final GlobalActivityItem item;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tone = statusToneColor(colorScheme, item.status.tone);
+    final dim = CupolaThemeColors.of(context).dimText;
+    // The two reads the annotation names and nothing in the app performed:
+    // where the file landed, and — when it did not — what the service said.
+    final destination = item.raw == null ? null : historyFilePath(item.raw!);
+    final canImport = canManualImportFrom(ref, item);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTheme.chrome(
+                    context,
+                    size: 12,
+                    weight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                // The destination, or the reason there is none. A failed import
+                // has a `detail` after the resolver learned to read
+                // `data.statusMessages`; a successful one has a path.
+                if (item.detail != null || destination != null)
+                  Text(
+                    item.detail ?? 'imported to $destination',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTheme.chrome(
+                      context,
+                      size: 11,
+                      color: item.detail != null ? tone : dim,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          // The failed row's one way out. Blocklist is the other half the
+          // annotation asks for and it is not offered here or anywhere else:
+          // blocklisting a *history* record is `POST history/failed/{id}` and
+          // no client method calls it.
+          if (canImport)
+            TextButton(
+              onPressed: () => openManualImportFrom(context, item),
+              child: const Text('Manual import'),
+            ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            item.sortDate == null ? '' : formatTimeOnly(item.sortDate!),
+            // Tabular so six clocks make a column rather than six ragged
+            // strings — the only reason a time-only stamp beats a relative age
+            // here.
+            style: AppTheme.chrome(context, size: 11, color: dim).mono.tabular,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -930,6 +1289,17 @@ class _StackHealthStrip extends StatelessWidget {
         ? 'connections'
         : 'services';
 
+    // The one place in Activity that earns red. Every other fault on this page
+    // — a stalled transfer, a failed grab, a failed import — is a service
+    // answering and telling us something went wrong, which is amber. This band
+    // says a connection did not answer at all, and that is the whole of what
+    // red means in this app. It was amber, which put it in the same tone as the
+    // rows it is warning about.
+    //
+    // The fill and border are walked against the surface the card composites
+    // on, not the raw token: error red is 3.74:1 on paper.
+    final alarm = statusToneColor(colorScheme, StatusTone.error);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -938,17 +1308,25 @@ class _StackHealthStrip extends StatelessWidget {
         AppSpacing.sm,
       ),
       child: AppCard.outlined(
-        backgroundColor: AppColors.warning.withValues(alpha: 0.10),
-        borderColor: AppColors.warning.withValues(alpha: 0.35),
+        backgroundColor: alarm.withValues(alpha: 0.07),
+        borderColor: alarm.withValues(alpha: 0.34),
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.cloud_off_rounded,
-              size: 20,
-              color: statusToneColor(colorScheme, StatusTone.warning),
+            // Red never travels alone: the pip is the non-colour half of the
+            // signal, so the band still reads as an alarm to a user who cannot
+            // separate red from amber. It sits before the glyph, not on it.
+            Container(
+              // 7pt, and nudged down by the glyph's own optical centre so the
+              // dot sits on the first line of type rather than above it.
+              margin: const EdgeInsets.only(top: 6),
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(color: alarm, shape: BoxShape.circle),
             ),
+            const SizedBox(width: AppSpacing.sm),
+            Icon(Icons.cloud_off_rounded, size: 20, color: alarm),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
@@ -1097,8 +1475,13 @@ class _ServiceTile extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
-    final warning = statusToneColor(colorScheme, StatusTone.warning);
-    final tone = failed ? warning : accent;
+    // The same fact the health band reports, so the same ink. `failed` here
+    // means every connection of this service was unreachable — silence, which
+    // is red — and it was amber, which is the tone reserved for a service that
+    // answered and said something was wrong.
+    final tone = failed
+        ? statusToneColor(colorScheme, StatusTone.error)
+        : accent;
 
     // Selected borrows the nav bar's pill treatment — the app's established
     // "this one is active" language — rather than inventing a third.
@@ -1210,10 +1593,16 @@ class _ScrollableState extends StatelessWidget {
   /// an empty list can still see that a service failed to answer.
   final Widget? header;
 
+  /// Optional content below it — "Finished today", which is at its most useful
+  /// exactly when the queue is empty: nothing is downloading *because* it all
+  /// landed an hour ago, and the empty state alone cannot say so.
+  final Widget? footer;
+
   const _ScrollableState({
     required this.bottomPadding,
     required this.child,
     this.header,
+    this.footer,
   });
 
   @override
@@ -1234,6 +1623,7 @@ class _ScrollableState extends StatelessWidget {
             constraints: BoxConstraints(minHeight: constraints.maxHeight * 0.6),
             child: child,
           ),
+          ?footer,
         ],
       ),
     );

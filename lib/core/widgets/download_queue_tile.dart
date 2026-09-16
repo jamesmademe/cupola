@@ -52,77 +52,103 @@ class DownloadQueueTile extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xs,
-      ),
-      child: Material(
-        color: colorScheme.surface,
-        borderRadius: AppRadius.borderRadiusMd,
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            border: Border.all(color: colorScheme.outlineVariant),
-            borderRadius: AppRadius.borderRadiusMd,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: theme.textTheme.bodyMedium!.weight(
-                        FontWeight.w600,
+    return Semantics(
+      container: true,
+      // The row read as four unrelated fragments — a filename, "63%", a
+      // counting-down line, and a menu button with no subject — because nothing
+      // here declared a container. One label, in the order a person would say
+      // it, and the percentage spoken as a percentage rather than as a bare
+      // numeral glued to the name.
+      label: '$title, $percentage per cent, $subtitle',
+      // `explicitChildNodes`, not `ExcludeSemantics`: the actions menu is the
+      // only control on the row and it has to stay on the screen reader's path.
+      explicitChildNodes: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.xs,
+        ),
+        child: Material(
+          color: colorScheme.surface,
+          borderRadius: AppRadius.borderRadiusMd,
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              border: Border.all(color: colorScheme.outlineVariant),
+              borderRadius: AppRadius.borderRadiusMd,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: ExcludeSemantics(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: theme.textTheme.bodyMedium!.weight(
+                                  FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text(
+                              '$percentage%',
+                              style: theme.textTheme.labelMedium!
+                                  .weight(FontWeight.w700)
+                                  .tabular
+                                  // One plate, four clients, every service
+                                  // accent: the percentage is the only
+                                  // accent-coloured *text* on the row, so it is
+                                  // the one that has to clear the surface.
+                                  .copyWith(
+                                    color: ServiceTheme.onTint(
+                                      accent,
+                                      surface: colorScheme.surface,
+                                      tintAlpha: 0,
+                                    ),
+                                  ),
+                            ),
+                          ],
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    ),
+                    ?actions,
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                ExcludeSemantics(
+                  child: ClipRRect(
+                    borderRadius: AppRadius.borderRadiusXs,
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 4,
+                      backgroundColor: colorScheme.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation(accent),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    '$percentage%',
-                    style: theme.textTheme.labelMedium!
-                        .weight(FontWeight.w700)
-                        .tabular
-                        // One plate, four clients, every service accent: the
-                        // percentage is the only accent-coloured *text* on the
-                        // row, so it is the one that has to clear the surface.
-                        .copyWith(
-                          color: ServiceTheme.onTint(
-                            accent,
-                            surface: colorScheme.surface,
-                            tintAlpha: 0,
-                          ),
-                        ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                ExcludeSemantics(
+                  child: Text(
+                    subtitle,
+                    // Carries the ETA and the remaining size, both counting
+                    // down, so the figures are tabular and do not jitter as
+                    // they tick.
+                    style: theme.textTheme.bodySmall!.tabular.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  ?actions,
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              ClipRRect(
-                borderRadius: AppRadius.borderRadiusXs,
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 4,
-                  backgroundColor: colorScheme.surfaceContainerHighest,
-                  valueColor: AlwaysStoppedAnimation(accent),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                subtitle,
-                // Carries the ETA and the remaining size, both counting down,
-                // so the figures are tabular and do not jitter as they tick.
-                style: theme.textTheme.bodySmall!.tabular.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

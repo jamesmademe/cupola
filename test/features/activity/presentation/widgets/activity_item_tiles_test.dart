@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/media_search_popup_menu.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
@@ -473,6 +475,156 @@ void main() {
       expect(find.byType(MediaSearchPopupMenu), findsOneWidget);
     });
 
+    testWidgets(
+      'a failed history row offers Manual import and never Blocklist',
+      (tester) async {
+        // Decision `act`: blocklisting a HISTORY record is
+        // `POST /api/{v}/history/failed/{id}` and no client method calls it,
+        // while the queue's Blocklist indexes the queue — sending a history id
+        // there would act on a different record. So the failed row's only way
+        // out is the import wizard, seeded from `data.droppedPath`: the read
+        // that made this row actionable at all.
+        await tester.pumpWidget(
+          const ProviderScope(
+            child: MaterialApp(
+              home: Scaffold(
+                body: GlobalActivityItemTile(
+                  item: GlobalActivityItem(
+                    kind: GlobalActivityKind.history,
+                    service: ServiceKey.radarr,
+                    serviceType: ServiceType.movies,
+                    title: 'Dune: Part Two',
+                    subtitle: 'Dune.Part.Two.2024.2160p',
+                    status: MediaStatusInfo(
+                      labelOverride: 'Import Failed',
+                      toneOverride: StatusTone.warning,
+                    ),
+                    raw: {
+                      'id': 7,
+                      'eventType': 'importFailed',
+                      'data': {
+                        'droppedPath': '/downloads/complete/Dune.2024/dune.mkv',
+                      },
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.byIcon(Icons.more_vert_rounded));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Manual import'), findsOneWidget);
+        expect(find.text('Blocklist and search'), findsNothing);
+        expect(find.text('Remove from queue'), findsNothing);
+      },
+    );
+
+    testWidgets('a history row with nowhere to import offers nothing', (
+      tester,
+    ) async {
+      // The row menu is not decoration: an event that succeeded has nothing to
+      // change, and a failed one whose record names no path on disk cannot
+      // seed the wizard. Either way the row carries no control rather than a
+      // control that does nothing.
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: GlobalActivityItemTile(
+                item: GlobalActivityItem(
+                  kind: GlobalActivityKind.history,
+                  service: ServiceKey.radarr,
+                  serviceType: ServiceType.movies,
+                  title: 'Dune: Part Two',
+                  subtitle: 'Dune.Part.Two.2024.2160p',
+                  status: MediaStatusInfo(
+                    labelOverride: 'Imported',
+                    toneOverride: StatusTone.success,
+                  ),
+                  raw: {'id': 7, 'eventType': 'downloadFolderImported'},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.more_vert_rounded), findsNothing);
+    });
+
+    group('on a desktop window', () {
+      Widget host(double width) => ProviderScope(
+        child: MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(size: Size(width, 800)),
+            child: const Scaffold(
+              body: GlobalActivityItemTile(
+                item: GlobalActivityItem(
+                  kind: GlobalActivityKind.queue,
+                  service: ServiceKey.radarr,
+                  serviceType: ServiceType.movies,
+                  title: 'Dune: Part Two',
+                  subtitle: 'Dune.Part.Two.2024.2160p.WEB-DL-GROUP',
+                  figures: '7.45 GB · 12m left',
+                  instanceLabel: '4K',
+                  status: MediaStatusInfo(
+                    pipeline: MediaPipeline.downloading,
+                    progress: 0.75,
+                  ),
+                  raw: {'id': 11},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      testWidgets('the table row carries measurements, not the release', (
+        tester,
+      ) async {
+        // Annotation `act`: Size, Done, Speed and Left land as ONE
+        // right-aligned tabular cell. That cell used to be handed `subtitle`,
+        // which is prose, so the numeric column printed an ellipsised release
+        // filename and the measurements appeared nowhere on the row.
+        await _onDesktop(() async {
+          await tester.pumpWidget(host(1200));
+          await tester.pumpAndSettle();
+
+          expect(find.text('7.45 GB · 12m left'), findsOneWidget);
+          // The release is not lost — it moved to where prose belongs, under
+          // the title.
+          expect(
+            find.text('Dune.Part.Two.2024.2160p.WEB-DL-GROUP'),
+            findsOneWidget,
+          );
+        });
+      });
+
+      testWidgets('a narrower window sheds cells, never the shape', (
+        tester,
+      ) async {
+        // The gate was `isDesktopShell && width >= 1100`, so dragging a window
+        // under 1100 swapped the whole list for phone cards — a different
+        // information architecture at a size reached by moving a mouse. The
+        // size-class rule is the opposite: fewer parts, never smaller ones.
+        await _onDesktop(() async {
+          await tester.pumpWidget(host(900));
+          await tester.pumpAndSettle();
+
+          // Still a row, not the phone's card.
+          expect(find.byType(AppCard), findsNothing);
+          expect(find.text('Dune: Part Two'), findsOneWidget);
+
+          // And the cells that only pay for themselves with room are gone.
+          expect(find.text('7.45 GB · 12m left'), findsNothing);
+          expect(find.text('4K'), findsNothing);
+        });
+      });
+    });
+
     testWidgets('hides search menu for requests', (tester) async {
       await tester.pumpWidget(
         const ProviderScope(
@@ -574,5 +726,16 @@ class _RecordingRadarrService extends FakeRadarrService {
     bool blocklist = false,
   }) async {
     removed.add(id);
+  }
+}
+
+/// The table draws on a desktop build only, and the override has to be undone
+/// inside the test body — `flutter_test` asserts on it before tear-downs run.
+Future<void> _onDesktop(Future<void> Function() body) async {
+  debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+  try {
+    await body();
+  } finally {
+    debugDefaultTargetPlatformOverride = null;
   }
 }

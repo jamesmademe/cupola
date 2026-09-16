@@ -16,6 +16,8 @@ export 'package:cupola/features/activity/domain/global_activity_status.dart'
     show
         GlobalActivityKind,
         historyEventDisplay,
+        historyFailureReason,
+        historyFilePath,
         resolveActivityStatus,
         resolveBlocklistStatus,
         resolveHistoryStatus,
@@ -109,6 +111,30 @@ String formatActivityDateTime(String? isoDate) {
   } catch (_) {
     return isoDate;
   }
+}
+
+/// `08:12` — the clock and nothing else.
+///
+/// A sibling of [formatActivityDateTime] rather than a change to it: every one
+/// of that function's callers wants the date, and the one surface that does not
+/// is "Finished today", where the date is in the heading. Repeating it on six
+/// consecutive rows is how a band that answers "when today" ends up answering
+/// "which day" six times instead.
+///
+/// 24-hour, like every other clock in the app, and zero-padded so the column
+/// stays a column.
+String formatActivityTimeOnly(String? isoDate) {
+  if (isoDate == null || isoDate.trim().isEmpty) return '—';
+  final parsed = DateTime.tryParse(isoDate);
+  return parsed == null ? isoDate : formatTimeOnly(parsed);
+}
+
+/// The same clock from an already-parsed timestamp.
+String formatTimeOnly(DateTime date) {
+  final local = date.toLocal();
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '$hour:$minute';
 }
 
 String formatDateOnly(String? isoDate) {

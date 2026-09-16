@@ -37,4 +37,31 @@ void main() {
       expect(formatActivitySize(double.infinity), '—');
     });
   });
+
+  group('formatActivityTimeOnly', () {
+    test('prints the clock and leaves the date to the heading', () {
+      // "Finished today" already says which day in its header, so repeating the
+      // date on six consecutive rows answers "which day" six times instead of
+      // "when today". `formatActivityDateTime` prints both and every one of its
+      // other callers wants that, hence a sibling rather than a change.
+      final stamp = DateTime(2026, 9, 16, 8, 12).toIso8601String();
+      final printed = formatActivityTimeOnly(stamp);
+
+      expect(printed, '08:12');
+      expect(printed, isNot(contains('2026')));
+      // Zero-padded, so six of them make a column rather than a ragged edge.
+      expect(
+        formatActivityTimeOnly(DateTime(2026, 9, 16, 9, 5).toIso8601String()),
+        '09:05',
+      );
+    });
+
+    test('answers the em dash for anything that is not a timestamp', () {
+      expect(formatActivityTimeOnly(null), '—');
+      expect(formatActivityTimeOnly('   '), '—');
+      // An unparseable string is handed back rather than swallowed: the same
+      // contract the rest of this file's formatters keep.
+      expect(formatActivityTimeOnly('yesterday'), 'yesterday');
+    });
+  });
 }

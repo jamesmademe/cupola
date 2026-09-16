@@ -84,7 +84,7 @@ void main() {
       expect(find.text('Missing Movie'), findsOneWidget);
       expect(service.missingCalls, 1);
 
-      await tester.tap(find.text('Cutoff Unmet'));
+      await tester.tap(find.text('Cutoff unmet'));
       await tester.pumpAndSettle();
 
       expect(find.text('Cutoff Movie'), findsOneWidget);
@@ -125,7 +125,7 @@ void main() {
         child: const WantedTab(serviceType: ServiceType.movies),
       );
 
-      await tester.tap(find.text('Cutoff Unmet'));
+      await tester.tap(find.text('Cutoff unmet'));
       await tester.pumpAndSettle();
 
       expect(find.text('HD-1080p'), findsOneWidget);
@@ -138,7 +138,7 @@ void main() {
       expect(find.text('Missing Movie'), findsOneWidget);
       expect(service.missingCalls, 2);
 
-      await tester.tap(find.text('Cutoff Unmet'));
+      await tester.tap(find.text('Cutoff unmet'));
       await tester.pumpAndSettle();
 
       expect(find.text('Ultra HD'), findsOneWidget);
@@ -181,7 +181,7 @@ void main() {
       expect(find.text('Missing Show'), findsOneWidget);
       expect(service.missingCalls, 1);
 
-      await tester.tap(find.text('Cutoff Unmet'));
+      await tester.tap(find.text('Cutoff unmet'));
       await tester.pumpAndSettle();
 
       expect(find.text('Cutoff Show'), findsOneWidget);
