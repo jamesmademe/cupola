@@ -67,6 +67,55 @@ Future<List<T>> _mapArrItems<T>(
   );
 }
 
+/// One page of an \*arr paged endpoint: the rows, and how many rows there are.
+///
+/// Every paged \*arr endpoint answers with the same envelope —
+/// `{page, pageSize, totalRecords, records}` — and for a long time this app
+/// threw away three quarters of it. `getHistory`, `getMissing` and `getCutoff`
+/// each returned `response.data['records']` and nothing else, so **every count
+/// derived from them was the size of the page, not the size of the set**: a
+/// library with 340 missing episodes read "20 missing" on the Activity pill,
+/// because 20 is the default page size. The number was not approximate, it was
+/// answering a different question — *how many did we fetch* — and it happened to
+/// look like an answer to the one the user asked.
+///
+/// [total] is nullable rather than defaulted to [records]`.length`, and that is
+/// the point of the type: a server that does not send `totalRecords` (an older
+/// build, a proxy that rewrites the body) has told us nothing about the size of
+/// the set, and `records.length` would be the same lie with a fresh coat on it.
+/// A caller that gets null must print a count it can defend — "20 shown" — or
+/// no count at all.
+class ArrRecordPage {
+  const ArrRecordPage({required this.records, required this.total});
+
+  /// The rows on this page — exactly what the old `List<dynamic>` return was.
+  final List<dynamic> records;
+
+  /// How many records the server says exist across every page, or null when it
+  /// did not say.
+  final int? total;
+
+  /// Reads the envelope, tolerating the shapes the four \*arr forks answer with.
+  ///
+  /// `totalRecords` arrives as an int from a healthy server, as a double through
+  /// a JSON layer that widened it, and as a string through at least one reverse
+  /// proxy that re-serialises bodies. Anything else is treated as *absent*
+  /// rather than coerced, because a total we cannot read is exactly the case
+  /// [total] is nullable for.
+  factory ArrRecordPage.fromEnvelope(Object? data) {
+    if (data is! Map) return const ArrRecordPage(records: [], total: null);
+    return ArrRecordPage(
+      records: (data['records'] as List<dynamic>?) ?? const [],
+      total: switch (data['totalRecords']) {
+        final int value => value,
+        final num value => value.toInt(),
+        final String value => int.tryParse(value),
+        _ => null,
+      },
+    );
+  }
+}
+
 /// Mixin providing shared activity endpoints and common service helpers for
 /// *arr services (Radarr, Sonarr, Lidarr).
 mixin ArrActivityMixin {
@@ -94,8 +143,20 @@ mixin ArrActivityMixin {
     );
   }
 
-  /// Fetches recent history.
-  Future<List<dynamic>> getHistory({
+  /// Fetches one page of history, **with the envelope's total**.
+  ///
+  /// The primitive; [getHistory] is the same request with the total dropped on
+  /// the floor. Anything that prints a figure — the Activity pills, a service
+  /// readout — must come through here, because the other one can only say how
+  /// many rows it happened to fetch.
+  ///
+  /// NOTE for whoever migrates the callers: Radarr and Sonarr hang their extra
+  /// query parameters (`includeMovie`, `includeSeries`/`includeEpisode`) off an
+  /// override of [getHistory], not of this method, so calling this one directly
+  /// on those two services returns records without the embedded media. Move
+  /// those overrides onto [getHistoryPage] — same body, same super call — and
+  /// [getHistory] inherits them through the delegation below.
+  Future<ArrRecordPage> getHistoryPage({
     int page = 1,
     int pageSize = 20,
     Map<String, dynamic>? queryParameters,
@@ -108,7 +169,27 @@ mixin ArrActivityMixin {
         ...?queryParameters,
       },
     );
-    return response.data['records'] as List<dynamic>;
+    return ArrRecordPage.fromEnvelope(response.data);
+  }
+
+  /// Fetches recent history, records only.
+  ///
+  /// Kept at its original signature rather than widened in place: two \*arr
+  /// services override it and half a dozen callers spread across features this
+  /// change does not reach read it, and a return type that moved under them
+  /// would be a refactor of the whole activity layer disguised as a bug fix.
+  /// It delegates, so there is still exactly one request here.
+  Future<List<dynamic>> getHistory({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final result = await getHistoryPage(
+      page: page,
+      pageSize: pageSize,
+      queryParameters: queryParameters,
+    );
+    return result.records;
   }
 
   Future<List<dynamic>> _fetchAllPages(
@@ -125,18 +206,23 @@ mixin ArrActivityMixin {
         queryParameters: {'page': page, 'pageSize': pageSize, ...extraParams},
       );
 
-      final data = response.data as Map<String, dynamic>;
-      final pageRecords = (data['records'] as List<dynamic>? ?? const []);
-      final totalRecords = switch (data['totalRecords']) {
-        final int value => value,
-        final num value => value.toInt(),
-        final String value => int.tryParse(value) ?? records.length,
-        _ => records.length + pageRecords.length,
-      };
+      // The same envelope reader the single-page getters use, rather than the
+      // second copy of the parse that used to live here — one of which had
+      // already drifted, coercing an unreadable total into `records.length`
+      // where the other coerced it into a page-sized guess.
+      final envelope = ArrRecordPage.fromEnvelope(response.data);
+      records.addAll(envelope.records);
 
-      records.addAll(pageRecords);
-
-      if (pageRecords.isEmpty || records.length >= totalRecords) {
+      // A null total means the server did not say how many there are, so this
+      // page is the last thing we can honestly claim to know about: stop rather
+      // than walk on asking for pages we have no reason to believe exist. That
+      // is what the old `records.length + pageRecords.length` fallback did too,
+      // by arranging for the comparison below to be true — the intent is just
+      // legible now.
+      final total = envelope.total;
+      if (envelope.records.isEmpty ||
+          total == null ||
+          records.length >= total) {
         break;
       }
     }
@@ -168,13 +254,27 @@ mixin ArrActivityMixin {
     return _fetchAllPages('blocklist', pageSize: 200);
   }
 
-  /// Fetches missing items (wanted).
-  Future<List<dynamic>> getMissing({int page = 1, int pageSize = 20}) async {
+  /// Fetches one page of missing items (wanted), **with the envelope's total**.
+  ///
+  /// This is the one the "34 missing" figure has to come from. `wanted/missing`
+  /// defaults to 20 rows, so a count taken from [getMissing] said 20 for every
+  /// library with more than twenty gaps in it — a number that is wrong in the
+  /// one direction that matters, since it makes a large backlog look small.
+  Future<ArrRecordPage> getMissingPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
     final response = await client.get(
       '/api/${config.apiVersion}/wanted/missing',
       queryParameters: {'page': page, 'pageSize': pageSize, ..._wantedParams()},
     );
-    return response.data['records'] as List<dynamic>;
+    return ArrRecordPage.fromEnvelope(response.data);
+  }
+
+  /// Fetches missing items (wanted), records only.
+  Future<List<dynamic>> getMissing({int page = 1, int pageSize = 20}) async {
+    final result = await getMissingPage(page: page, pageSize: pageSize);
+    return result.records;
   }
 
   /// Fetches all missing items across all pages.
@@ -182,8 +282,14 @@ mixin ArrActivityMixin {
     return _fetchAllPages('wanted/missing', extraParams: _wantedParams());
   }
 
-  /// Fetches items with cutoff unmet.
-  Future<List<dynamic>> getCutoff({int page = 1, int pageSize = 20}) async {
+  /// Fetches one page of cutoff-unmet items, **with the envelope's total**.
+  ///
+  /// Degrades to an empty page with a **null** total rather than a zero one, and
+  /// the distinction is the whole reason [ArrRecordPage.total] is nullable: not
+  /// every \*arr fork serves `wanted/cutoff`, and a service that cannot answer
+  /// the question has not answered "none". A zero here would put a confident
+  /// "0 to upgrade" on a dashboard for a server that was never asked.
+  Future<ArrRecordPage> getCutoffPage({int page = 1, int pageSize = 20}) async {
     try {
       final response = await client.get(
         '/api/${config.apiVersion}/wanted/cutoff',
@@ -193,11 +299,17 @@ mixin ArrActivityMixin {
           ..._wantedParams(includeCutoffParams: true),
         },
       );
-      return response.data['records'] as List<dynamic>;
-    } catch (e) {
-      // Cutoff endpoint may not be available on all *arr variants
-      return [];
+      return ArrRecordPage.fromEnvelope(response.data);
+    } catch (_) {
+      // Cutoff endpoint may not be available on all *arr variants.
+      return const ArrRecordPage(records: [], total: null);
     }
+  }
+
+  /// Fetches items with cutoff unmet, records only.
+  Future<List<dynamic>> getCutoff({int page = 1, int pageSize = 20}) async {
+    final result = await getCutoffPage(page: page, pageSize: pageSize);
+    return result.records;
   }
 
   /// Fetches all cutoff unmet items across all pages.

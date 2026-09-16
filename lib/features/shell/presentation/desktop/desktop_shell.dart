@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/features/settings/data/connection_test_command.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -112,6 +114,21 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
     ).go('${NavTab.dashboard.routePath}/${configured[next].routeParam}');
   }
 
+  /// `⌘R`: ask again, whatever "again" means on the tab you are standing on.
+  ///
+  /// Settings used to map to `null` here, which made the shortcut a deliberate
+  /// no-op on a quarter of the app — and stayed a no-op after Settings grew a
+  /// real "Test all" command, so the strip's own Refresh-all chip advertised a
+  /// shortcut that did nothing on the pane where the user most wants it. The two
+  /// are one sentence — *ask every server again* — so they spend the same
+  /// command, defined once in `connection_test_command.dart`; re-implementing it
+  /// here is how the button and the shortcut would start disagreeing about what
+  /// "every" covers.
+  ///
+  /// The announcement comes with it. The work is invisible on a pane of
+  /// seventeen rows — the ones that re-enter their checking state are usually
+  /// off screen — and a command whose only feedback is below the fold is a
+  /// command people press twice.
   void _refreshAll() {
     final tab =
         NavTab.values[widget.selectedIndex.clamp(0, NavTab.values.length - 1)];
@@ -121,7 +138,12 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
       NavTab.search => NavigationSection.search,
       NavTab.settings => null,
     };
-    if (section != null) ref.triggerNavigationRefresh(section);
+    if (section != null) {
+      ref.triggerNavigationRefresh(section);
+    } else {
+      final message = testAllConnectionsAnnouncement(testAllConnections(ref));
+      SnackBarHelper.info(context, message);
+    }
     ref.read(lastRefreshedAtProvider.notifier).state = DateTime.now();
   }
 

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -90,6 +92,102 @@ void main() {
       expect(received, [DownloadQueueCommand.resume]);
 
       handle.dispose();
+    });
+
+    // Selection is a *state*, not a word glued onto the label: a screen reader
+    // says "selected" in its own voice and stops saying it when the selection
+    // clears. qBittorrent's private copy tinted the row and told nobody.
+    testWidgets('announces selection as a state', (tester) async {
+      final handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        host(
+          DownloadQueueTile(
+            title: 'Job',
+            subtitle: 'Downloading',
+            progress: 0.2,
+            percentage: 20,
+            accent: Colors.teal,
+            selected: true,
+            onTap: () {},
+          ),
+        ),
+      );
+
+      final data = tester
+          .getSemantics(find.byType(DownloadQueueTile))
+          .getSemanticsData();
+      expect(data.flagsCollection.isSelected, Tristate.isTrue);
+      expect(data.label, isNot(contains('selected')));
+
+      handle.dispose();
+    });
+
+    // A plate with no gestures is a plate, not a control that highlights and
+    // does nothing — and it must not claim a selection state it cannot change.
+    testWidgets('a row with no gestures is not a button', (tester) async {
+      final handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        host(
+          const DownloadQueueTile(
+            title: 'Job',
+            subtitle: 'Downloading',
+            progress: 0.2,
+            percentage: 20,
+            accent: Colors.teal,
+          ),
+        ),
+      );
+
+      final data = tester
+          .getSemantics(find.byType(DownloadQueueTile))
+          .getSemanticsData();
+      expect(data.hasAction(SemanticsAction.tap), isFalse);
+      expect(data.hasAction(SemanticsAction.longPress), isFalse);
+      expect(data.flagsCollection.isButton, isFalse);
+      // `Tristate.none`, not `isFalse`: a row with no gestures does not claim a
+      // selection state at all, which is different from claiming an unselected
+      // one — the second would have a screen reader announce "not selected" on
+      // every Usenet job in the list.
+      expect(data.flagsCollection.isSelected, Tristate.none);
+
+      handle.dispose();
+    });
+
+    // "No progress" and "zero progress" are different facts. A queued job that
+    // has not started must not draw a 0% bar, which reads as a transfer that is
+    // stuck rather than one that has not begun.
+    testWidgets('draws no bar when there is no progress to draw', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const DownloadQueueTile(
+            title: 'Job',
+            subtitle: 'Queued',
+            progress: null,
+            percentage: 0,
+            accent: Colors.teal,
+          ),
+        ),
+      );
+
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+
+      await tester.pumpWidget(
+        host(
+          const DownloadQueueTile(
+            title: 'Job',
+            subtitle: 'Downloading',
+            progress: 0,
+            percentage: 0,
+            accent: Colors.teal,
+          ),
+        ),
+      );
+
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
     });
 
     testWidgets('offers the half of the toggle the job is not already in', (

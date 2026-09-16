@@ -20,7 +20,9 @@ import 'package:cupola/features/release_search/presentation/release_search_entry
 import 'package:cupola/features/release_search/domain/release_search_job.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_provider.dart';
 import 'package:cupola/features/release_search/presentation/widgets/search_headroom_card.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 
 /// Settings for background release search — and, underneath them, the limits.
 ///
@@ -120,94 +122,116 @@ class _ReleaseSearchSettingsScreenState
         : platform == TargetPlatform.iOS;
 
     return AmbientScaffold(
+      // The room belongs to the tab, not to the feature: this is a *settings*
+      // pane that happens to be owned by release search, and left unset
+      // `AmbientBackground` falls back to the brand indigo — Seerr's accent —
+      // so the one pane the rail could not reach was also the one pane glowing
+      // in a different colour from its six siblings.
+      accent: NavTab.settings.accentColor,
       appBar: const GlassAppBar(title: Text('Background search')),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.sm,
-          AppSpacing.lg,
-          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
-        children: [
-          if (canRunInBackground)
+      // Background search is a section of the settings rail
+      // (`SettingsMasterDetail.sections`), and it was the single destination in
+      // that list not wrapped in the layout — a bare `GoRoute` rather than a
+      // `_page`, rendering its body alone. On a desktop window that meant
+      // selecting Background search made the rail *disappear*, so the one
+      // control that got you here was the one control the page then hid: the
+      // way back was the window's back gesture, from a list you were still
+      // notionally standing in. The wrapper is inert below the rail threshold
+      // and on every touch build, where Settings is correctly a drill-down.
+      body: SettingsMasterDetail(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+          ),
+          children: [
+            if (canRunInBackground)
+              SettingsGroupCard(
+                children: [
+                  _MasterRow(
+                    enabled: settings.backgroundEnabled,
+                    onChanged: _toggleBackground,
+                  ),
+                  _DisclosureBlock(isIOS: isIOS),
+                ],
+              )
+            else
+              const _DesktopStatusCard(),
+            const SizedBox(height: AppSpacing.lg),
             SettingsGroupCard(
               children: [
-                _MasterRow(
-                  enabled: settings.backgroundEnabled,
-                  onChanged: _toggleBackground,
+                _StepperRow(
+                  icon: Icons.call_split_rounded,
+                  title: 'At the same time',
+                  subtitle: 'More is harder on rate-limited indexers',
+                  value: '${settings.concurrency}',
+                  range:
+                      '${ReleaseSearchSettings.minConcurrency}'
+                      '–${ReleaseSearchSettings.maxConcurrency}',
+                  onDecrement:
+                      settings.concurrency >
+                          ReleaseSearchSettings.minConcurrency
+                      ? () => notifier.setConcurrency(settings.concurrency - 1)
+                      : null,
+                  onIncrement:
+                      settings.concurrency <
+                          ReleaseSearchSettings.maxConcurrency
+                      ? () => notifier.setConcurrency(settings.concurrency + 1)
+                      : null,
                 ),
-                _DisclosureBlock(isIOS: isIOS),
+                _StepperRow(
+                  icon: Icons.schedule_rounded,
+                  title: 'Give up after',
+                  subtitle: 'Above every common proxy ceiling on purpose',
+                  value: '${settings.timeout.inMinutes} min',
+                  range:
+                      '${ReleaseSearchSettings.minTimeout.inMinutes}'
+                      '–${ReleaseSearchSettings.maxTimeout.inMinutes}',
+                  onDecrement:
+                      settings.timeout > ReleaseSearchSettings.minTimeout
+                      ? () => notifier.setTimeoutMinutes(
+                          settings.timeout.inMinutes - 1,
+                        )
+                      : null,
+                  onIncrement:
+                      settings.timeout < ReleaseSearchSettings.maxTimeout
+                      ? () => notifier.setTimeoutMinutes(
+                          settings.timeout.inMinutes + 1,
+                        )
+                      : null,
+                ),
+                _NotifyRow(
+                  enabled: settings.notifyOnFinish,
+                  busy: _asking,
+                  // Nothing to announce when a search cannot outlive the app: the
+                  // badge and the detail page already cover the in-app case.
+                  // Disabled rather than reset — the preference (and the OS
+                  // permission behind it) survives for when the master returns.
+                  available: !canRunInBackground || settings.backgroundEnabled,
+                  backgroundCapable: canRunInBackground,
+                  systemPermission: ref
+                      .watch(notificationPermissionProvider)
+                      .value,
+                  isIOS: isIOS,
+                  foregroundOnlyServices: [
+                    ...pinnedServices,
+                    ...cleartextServices,
+                  ],
+                  onChanged: _toggleNotifications,
+                ),
               ],
-            )
-          else
-            const _DesktopStatusCard(),
-          const SizedBox(height: AppSpacing.lg),
-          SettingsGroupCard(
-            children: [
-              _StepperRow(
-                icon: Icons.call_split_rounded,
-                title: 'At the same time',
-                subtitle: 'More is harder on rate-limited indexers',
-                value: '${settings.concurrency}',
-                range:
-                    '${ReleaseSearchSettings.minConcurrency}'
-                    '–${ReleaseSearchSettings.maxConcurrency}',
-                onDecrement:
-                    settings.concurrency > ReleaseSearchSettings.minConcurrency
-                    ? () => notifier.setConcurrency(settings.concurrency - 1)
-                    : null,
-                onIncrement:
-                    settings.concurrency < ReleaseSearchSettings.maxConcurrency
-                    ? () => notifier.setConcurrency(settings.concurrency + 1)
-                    : null,
-              ),
-              _StepperRow(
-                icon: Icons.schedule_rounded,
-                title: 'Give up after',
-                subtitle: 'Above every common proxy ceiling on purpose',
-                value: '${settings.timeout.inMinutes} min',
-                range:
-                    '${ReleaseSearchSettings.minTimeout.inMinutes}'
-                    '–${ReleaseSearchSettings.maxTimeout.inMinutes}',
-                onDecrement: settings.timeout > ReleaseSearchSettings.minTimeout
-                    ? () => notifier.setTimeoutMinutes(
-                        settings.timeout.inMinutes - 1,
-                      )
-                    : null,
-                onIncrement: settings.timeout < ReleaseSearchSettings.maxTimeout
-                    ? () => notifier.setTimeoutMinutes(
-                        settings.timeout.inMinutes + 1,
-                      )
-                    : null,
-              ),
-              _NotifyRow(
-                enabled: settings.notifyOnFinish,
-                busy: _asking,
-                // Nothing to announce when a search cannot outlive the app: the
-                // badge and the detail page already cover the in-app case.
-                // Disabled rather than reset — the preference (and the OS
-                // permission behind it) survives for when the master returns.
-                available: !canRunInBackground || settings.backgroundEnabled,
-                backgroundCapable: canRunInBackground,
-                systemPermission: ref
-                    .watch(notificationPermissionProvider)
-                    .value,
-                isIOS: isIOS,
-                foregroundOnlyServices: [
-                  ...pinnedServices,
-                  ...cleartextServices,
-                ],
-                onChanged: _toggleNotifications,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          _LimitsCard(
-            pinnedServices: pinnedServices,
-            cleartextServices: cleartextServices,
-            backgroundActive: canRunInBackground && settings.backgroundEnabled,
-          ),
-        ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _LimitsCard(
+              pinnedServices: pinnedServices,
+              cleartextServices: cleartextServices,
+              backgroundActive:
+                  canRunInBackground && settings.backgroundEnabled,
+            ),
+          ],
+        ),
       ),
     );
   }

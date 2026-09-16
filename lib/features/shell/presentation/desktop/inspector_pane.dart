@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/services/presentation/services_alert_band.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -75,6 +77,16 @@ class InspectorPane extends ConsumerWidget {
   }
 }
 
+/// The ground every tone and accent in this pane is measured against.
+///
+/// Not `colorScheme.surface`: the pane paints its own fill, so a tone walked
+/// against the default would be walked against a surface it never lands on. The
+/// alpha is dropped because a translucent fill composited over the shell's
+/// surface sits within a hair of the opaque container, and the walk needs an
+/// opaque colour to measure.
+Color _paneSurface(ColorScheme colorScheme) =>
+    colorScheme.surfaceContainerLowest;
+
 /// 44pt, matching the window strip above it, so the two read as one bar.
 class _InspectorHeader extends ConsumerWidget {
   const _InspectorHeader();
@@ -94,10 +106,19 @@ class _InspectorHeader extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          const Icon(
+          // The tab's own accent, walked against the pane's ground rather than
+          // painted raw. `AppColors.navActivity` is a palette constant tuned for
+          // the dark canvas — it measures 2.20:1 on paper — so a literal here
+          // rendered the dark palette on the Light theme and the one glyph that
+          // names the pane went nearly invisible in daylight.
+          Icon(
             Icons.insights_rounded,
             size: 16,
-            color: AppColors.navActivity,
+            color: ServiceTheme.onTint(
+              NavTab.activity.accentColor,
+              surface: _paneSurface(colorScheme),
+              tintAlpha: 0,
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -162,7 +183,18 @@ class _QueueRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(item.service.icon, size: 17, color: item.service.accent),
+          // Seven of the seventeen service accents are under 3:1 on paper, so
+          // the glyph that says *which* service a row belongs to is walked
+          // against the pane's ground rather than painted at its palette value.
+          Icon(
+            item.service.icon,
+            size: 17,
+            color: ServiceTheme.onTint(
+              item.service.accent,
+              surface: _paneSurface(colorScheme),
+              tintAlpha: 0,
+            ),
+          ),
           const SizedBox(width: 11),
           Expanded(
             child: Column(
@@ -188,8 +220,20 @@ class _QueueRow extends StatelessWidget {
                       value: progress.clamp(0, 1),
                       minHeight: 3,
                       backgroundColor: colorScheme.surfaceContainerHighest,
+                      // `AppColors.warning` raw was a dark-palette literal at
+                      // 1.39:1 on paper — a bar that says "this one is in
+                      // trouble" and cannot be seen saying it. The row already
+                      // carries a resolved tone; the bar spends that instead of
+                      // re-deciding, through the same walk every other status
+                      // colour in the app goes through.
                       valueColor: AlwaysStoppedAnimation(
-                        warning ? AppColors.warning : colorScheme.primary,
+                        warning
+                            ? statusToneColor(
+                                colorScheme,
+                                item.status.tone,
+                                surface: _paneSurface(colorScheme),
+                              )
+                            : colorScheme.primary,
                       ),
                     ),
                   ),
@@ -248,10 +292,19 @@ class _UnreachableCard extends ConsumerWidget {
               children: [
                 Row(
                   children: [
+                    // Red here is *correct* under the tone rule — these are
+                    // connections that did not answer, which is the one thing
+                    // red means — but as ink on its own 7% tint it still has to
+                    // clear the composite, which raw `colorScheme.error` does
+                    // not on paper (3.42:1).
                     Icon(
                       Icons.warning_amber_rounded,
                       size: 15,
-                      color: colorScheme.error,
+                      color: statusToneColor(
+                        colorScheme,
+                        StatusTone.error,
+                        surface: _paneSurface(colorScheme),
+                      ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
@@ -338,6 +391,8 @@ class _FinishedToday extends ConsumerWidget {
         .toList(growable: false);
     if (today.isEmpty) return const SizedBox.shrink();
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md + 2,
@@ -359,9 +414,25 @@ class _FinishedToday extends ConsumerWidget {
                     height: 7,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: item.status.hasWarning
-                          ? Theme.of(context).colorScheme.error
-                          : AppColors.success,
+                      // Two defects in one expression, both now gone.
+                      //
+                      // It painted **red** for a failed import. Under the tone
+                      // rule red means one thing and only one: a connection that
+                      // did not answer. An import the service reported as failed
+                      // is the opposite — the server answered, and told us what
+                      // went wrong — so it is a fault, and faults are amber.
+                      // `historyEventTone` has said exactly that since the
+                      // Activity pass; this row was re-deciding from a boolean
+                      // instead of spending the answer, and getting it wrong.
+                      //
+                      // And the calm half was `AppColors.success` raw, a dark
+                      // palette constant at 2.07:1 on paper — a green dot that
+                      // is legible at night and a pale smudge in daylight.
+                      color: statusToneColor(
+                        colorScheme,
+                        item.status.tone,
+                        surface: _paneSurface(colorScheme),
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),

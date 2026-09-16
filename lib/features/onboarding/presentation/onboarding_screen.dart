@@ -719,10 +719,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // so the room drifts from Radarr amber to Sonarr blue on the same 300ms
     // clock as the page and the ring's resize — three instruments, one beat.
     //
-    // The tween is here rather than inside `AmbientBackground` only because
-    // `lib/core/widgets/` is not this unit's to edit: it belongs in the widget,
-    // where every other caller would inherit it instead of re-implementing it.
-    return _AmbientRoom(
+    // The drift itself lives in `AmbientBackground` now, so this passes the
+    // colour and nothing else: a private `_AmbientRoom` here tweened on the way
+    // in, and with the widget tweening too the room would have crossed the same
+    // 300ms twice and arrived late.
+    return AmbientBackground(
       accent: activeWalk?.accent,
       child: OnboardingKeyboardScope(
         up: keyboardUp,
@@ -974,57 +975,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           ),
         ),
       ),
-    );
-  }
-}
-
-/// [AmbientBackground] with the walk's accent drifting into place rather than
-/// cutting to it.
-///
-/// The flow changes subject eight times in a row, and the room is one of the
-/// three things that answer: the page slides, the ring rotates the service to
-/// noon, and the glow behind both becomes that service's colour. Cutting the
-/// glow while the other two travel is what made the change read as a repaint
-/// instead of a move — so it runs on the same clock, `AppAnimation.durationMd`
-/// with the standard curve.
-///
-/// The tween is what Reduce Motion removes, not what it shortens: with the
-/// animator gone the room is simply already the new colour, which is the rule
-/// the rest of this flow keeps. Without that gate this would have added a
-/// seventh violation of it while fixing a drift.
-///
-/// This belongs *inside* `AmbientBackground`, where every other caller — a
-/// service dashboard switching services, most obviously — would inherit it.
-/// It is here because `lib/core/widgets/` is not this unit's to edit.
-class _AmbientRoom extends StatelessWidget {
-  const _AmbientRoom({required this.accent, required this.child});
-
-  /// The service the room is tinted for, or null for the brand's own glow —
-  /// which is what [AmbientBackground] falls back to.
-  final Color? accent;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    // Resolved here rather than left null: `AmbientBackground`'s own fallback is
-    // the brand primary, and `TweenAnimationBuilder` requires an end value —
-    // a null one asserts. Naming it is also what makes the walk's first and last
-    // steps drift *out of* and *back into* the brand glow rather than cutting.
-    final target = accent ?? Theme.of(context).colorScheme.primary;
-    if (MediaQuery.disableAnimationsOf(context)) {
-      return AmbientBackground(accent: target, child: child);
-    }
-    return TweenAnimationBuilder<Color?>(
-      // ColorTween rather than Tween<Color?>: only the former knows how to
-      // interpolate a colour.
-      tween: ColorTween(end: target),
-      duration: AppAnimation.durationMd,
-      curve: AppAnimation.standardCurve,
-      // The child is built once and carried through every frame of the drift:
-      // the room is repainting, the flow inside it is not.
-      child: child,
-      builder: (context, drifting, child) =>
-          AmbientBackground(accent: drifting, child: child!),
     );
   }
 }

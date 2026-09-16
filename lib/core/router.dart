@@ -1092,9 +1092,15 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
     pageBuilder: (context, state) =>
         _tabPage(state, const SettingsHomeScreen()),
     routes: [
-      GoRoute(
-        path: 'background-search',
-        builder: (context, state) => const ReleaseSearchSettingsScreen(),
+      // `_page`, like its six siblings, rather than the bare `GoRoute` with a
+      // `builder` it was: that form gave this route a Material page while every
+      // other settings destination got `RouteUtils.cupertinoPage`, so the one
+      // section owned by another feature was also the one that transitioned
+      // differently and lost the rail. Nothing else about the route changes —
+      // same path, same screen, same location in the rail's `sections` list.
+      _page(
+        'background-search',
+        (state) => const ReleaseSearchSettingsScreen(),
       ),
       _page('appearance', (state) => const SettingsAppearanceScreen()),
       _page('hints', (state) => const SettingsHintsScreen()),

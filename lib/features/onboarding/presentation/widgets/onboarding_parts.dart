@@ -29,38 +29,21 @@ const onboardingPadding = EdgeInsets.fromLTRB(
 /// control drift too far apart to read as a pair.
 const onboardingMaxWidth = 560.0;
 
-/// The shape at which a frame stops stacking and starts putting two things
-/// side by side.
-///
-/// Decision 46, in one number: **the compact frame is not a narrow one**. The
-/// gate is the window's aspect, not its width. 720x450 is 1.6:1 and gets the
-/// two-column arrangement exactly as 1440x900 does — the drawn compact frame
-/// puts the certificate beside the form at 308pt columns — while the phone, at
-/// 390x844, is the only portrait frame in the flow and the only one that stacks
-/// and scrolls.
-///
-/// 1.2 rather than a bare `width > height`: the three drawn frames measure 1.6,
-/// 1.6 and 0.46, so anything between them separates the flow's two arrangements,
-/// and a window dragged to nearly square has no room for a second column
-/// whatever its orientation says.
-///
-/// It is a constant rather than an inline number for the reason the Reflow sheet
-/// gives — every threshold in this app is named — and it belongs beside
-/// `AppBreakpoints.touchRail` and friends rather than here; it is in this file
-/// only because `app_breakpoints.dart` is not this unit's to edit.
-const onboardingLandscapeAspect = 1.2;
-
 /// Whether this window puts the ring beside the step instead of above it.
 ///
 /// Platform first, then shape. The width test this replaced asked for
 /// `AppBreakpoints.desktopCompact` (1100), which is why the four drawn compact
 /// onboarding frames were code the app could not reach: at 720 the flow kept
 /// the phone's stacked arrangement in a window shaped nothing like a phone.
+///
+/// The threshold itself now lives on [AppBreakpoints] as `landscapeAspect`,
+/// beside `touchRail` and `desktopCompact`, which is where the constant said it
+/// belonged while it sat here: it is a size class, not a fact about onboarding.
+/// This function keeps only the half that *is* about onboarding — the platform
+/// gate in front of it.
 bool onboardingSideBySide(BuildContext context) {
   if (!AppBreakpoints.isDesktopShell) return false;
-  final size = MediaQuery.sizeOf(context);
-  if (size.height <= 0) return false;
-  return size.width / size.height >= onboardingLandscapeAspect;
+  return AppBreakpoints.isLandscapeFrame(context);
 }
 
 /// The well on a desktop window, where the ring sits *beside* the step.

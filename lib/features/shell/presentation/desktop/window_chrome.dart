@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
+import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/platform/desktop_window.dart';
@@ -136,32 +137,77 @@ class WindowChrome extends ConsumerWidget {
   }
 }
 
-/// The window's two obligations, for a screen the shell does not host.
+/// The window's obligations, for a screen the shell does not host.
 ///
 /// Onboarding gates the shell, and a handful of flows live above it on the root
-/// navigator. On macOS those screens are still fine — AppKit lets a frameless
-/// window be dragged by its background — but on Windows and Linux a frameless
-/// window with no drag region and no caption buttons is a window that cannot be
-/// moved and, worse, cannot be closed. So those two platforms get a 44pt strip
-/// with exactly what the OS took away, and nothing else: no breadcrumb, no
-/// chips, no state. Renders nothing at all on a phone or a Mac.
+/// navigator — so those screens have no [WindowChrome], and the window's three
+/// jobs have to be done by something. This is that something, and annotation
+/// `onb1` is explicit that it is load-bearing rather than decoration:
+///
+///  * on **Windows and Linux** it is the only thing that can move a frameless
+///    window, and the only place its caption buttons can be — without it the
+///    window cannot be moved and, worse, cannot be closed;
+///  * on **macOS** it reserves the traffic-light gutter, so AppKit's buttons
+///    have somewhere to sit that is not on top of the beat. It used to render
+///    nothing at all here (the old guard bailed on `!drawsOwnButtons`, which is
+///    exactly the Mac), so the onboarding walk drew its content under the
+///    lights;
+///  * on **all three** it carries the trail. Not a window *title* — the Chrome
+///    sheet forbids one — but the same breadcrumb the shell prints everywhere
+///    else, so the strip above a beat is recognisably the strip above a page.
+///
+/// Renders nothing on a phone, which has no window to move and no gutter to
+/// reserve.
+///
+/// [trail] is plain strings rather than [Crumb]s, and that is the difference
+/// between this strip and the shell's: these crumbs point nowhere. Onboarding
+/// gates the shell, so there is no `/dashboard` to send someone to, and a
+/// clickable crumb that navigates into a locked app is worse than a label.
 class WindowDragStrip extends StatelessWidget {
-  const WindowDragStrip({super.key});
+  const WindowDragStrip({super.key, this.trail = const [kAppName, 'Setup']});
+
+  /// The breadcrumb, outermost first. Defaults to onboarding's, since the setup
+  /// walk is the only flow above the shell today; a second one passes its own
+  /// rather than teaching this widget about routes it cannot reach.
+  final List<String> trail;
 
   @override
   Widget build(BuildContext context) {
-    if (!DesktopWindow.isSupported || !DesktopWindow.drawsOwnButtons) {
-      return const SizedBox.shrink();
-    }
+    if (!DesktopWindow.isSupported) return const SizedBox.shrink();
+    final compact = AppBreakpoints.isCompactDesktop(context);
+
     return SizedBox(
-      height: WindowChrome.height,
+      // The shell's own heights, through the shell's own helper: 44 full, 38
+      // compact. A strip that agreed with the shell by coincidence would stop
+      // agreeing the first time one of the two numbers moved.
+      height: WindowChrome.heightFor(compact: compact),
       child: DragToMoveArea(
-        child: Row(
-          children: [
-            const Spacer(),
-            const _CaptionButtons(),
-            const SizedBox(width: AppSpacing.md),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: Row(
+            children: [
+              // Zero everywhere but macOS, where it is the measured width of
+              // the traffic lights plus the design's gap after them.
+              SizedBox(width: DesktopWindow.leadingButtonGutter),
+              Expanded(
+                child: _Breadcrumb(
+                  crumbs: [
+                    for (final label in trail) (label: label, location: null),
+                  ],
+                  // 11px dim throughout, per `onb1`. The shell's trail sets its
+                  // leaf in onSurface because that leaf is where you are and
+                  // the others are links; nothing here is a link, so nothing
+                  // here earns the emphasis.
+                  size: 11,
+                  dim: true,
+                ),
+              ),
+              if (DesktopWindow.drawsOwnButtons) ...[
+                const SizedBox(width: AppSpacing.md),
+                const _CaptionButtons(),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -170,9 +216,20 @@ class WindowDragStrip extends StatelessWidget {
 
 /// The trail, and therefore the window title.
 class _Breadcrumb extends StatelessWidget {
-  const _Breadcrumb({required this.crumbs});
+  const _Breadcrumb({required this.crumbs, this.size = 12, this.dim = false});
 
   final List<Crumb> crumbs;
+
+  /// 12 in the shell's chrome, 11 on the drag strip above a gated flow.
+  final double size;
+
+  /// Whether the whole trail prints in the dim tone, leaf included.
+  ///
+  /// The shell's trail says where you *are* by giving the leaf the full ink and
+  /// the ancestors the dim one. A trail whose crumbs are not links has no such
+  /// distinction to draw, so it prints as one dim line rather than inventing an
+  /// emphasis that means nothing.
+  final bool dim;
 
   @override
   Widget build(BuildContext context) {
@@ -197,9 +254,9 @@ class _Breadcrumb extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: AppTheme.chrome(
           context,
-          size: 12,
-          weight: isLast ? FontWeight.w700 : FontWeight.w500,
-          color: isLast
+          size: size,
+          weight: isLast && !dim ? FontWeight.w700 : FontWeight.w500,
+          color: isLast && !dim
               ? colorScheme.onSurface
               : CupolaThemeColors.of(context).dimText,
         ),

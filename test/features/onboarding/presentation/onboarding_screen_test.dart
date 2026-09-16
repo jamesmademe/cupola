@@ -566,9 +566,28 @@ void main() {
         tester.element(find.byType(OnboardingScreen)),
       ).colorScheme.primary;
 
-      Color? roomAccent() => tester
-          .widget<AmbientBackground>(find.byType(AmbientBackground))
-          .accent;
+      // Read off the gradient the room actually paints, not off the argument it
+      // was handed. `AmbientBackground` resolves its own fallback and tweens the
+      // accent now — the drift used to live in a private `_AmbientRoom` wrapper
+      // here — so the constructor argument is null on the beats that want the
+      // brand glow, and asserting on it would be asserting on the plumbing
+      // rather than on the rule.
+      Color roomAccent() {
+        final decorated = tester
+            .widgetList<DecoratedBox>(
+              find.descendant(
+                of: find.byType(AmbientBackground),
+                matching: find.byType(DecoratedBox),
+              ),
+            )
+            .firstWhere(
+              (box) => (box.decoration as BoxDecoration).gradient != null,
+            );
+        final gradient =
+            (decorated.decoration as BoxDecoration).gradient as RadialGradient;
+        // The accent is the first stop, painted at the theme's wash alpha.
+        return gradient.colors.first.withValues(alpha: 1.0);
+      }
 
       // The beats either side of the walk are the brand's own glow.
       expect(roomAccent(), brand);

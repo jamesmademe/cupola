@@ -47,6 +47,44 @@ abstract final class AppBreakpoints {
   /// part it had and shows fewer items in each, never smaller ones.
   static const double desktopCompact = 1100;
 
+  /// Aspect ratio at or above which a frame stops stacking and starts putting
+  /// two things side by side.
+  ///
+  /// Decision 46, in one number: **the compact frame is not a narrow one.** The
+  /// gate is the window's *shape*, not its width. 720x450 is 1.6:1 and gets the
+  /// two-column arrangement exactly as 1440x900 does — the drawn compact frame
+  /// puts the certificate beside the form at 308pt columns — while the phone, at
+  /// 390x844, is the only portrait frame in the flow and the only one that
+  /// stacks and scrolls.
+  ///
+  /// 1.2 rather than a bare `width > height`: the three drawn frames measure
+  /// 1.6, 1.6 and 0.46, so anything between them separates the two arrangements,
+  /// and a window dragged to nearly square has no room for a second column
+  /// whatever its orientation says.
+  ///
+  /// It sits here rather than in the onboarding feature — where it was born,
+  /// with a comment saying it belonged here — because it is a size class like
+  /// [touchRail] and [desktopCompact], not a fact about onboarding: any screen
+  /// whose two-column arrangement is governed by shape rather than measure asks
+  /// this same question. It is *not* a width, which is the whole point:
+  /// [desktopCompact] answers "how much room", this answers "what shape", and
+  /// the onboarding walk asking the first one is why four drawn compact frames
+  /// were code the app could never reach.
+  static const double landscapeAspect = 1.2;
+
+  /// Whether [context]'s frame is landscape enough for a side-by-side
+  /// arrangement.
+  ///
+  /// A zero (or absent) height answers false rather than dividing by it: the
+  /// first frame of a test harness and a window mid-restore both hand out a
+  /// degenerate size, and "stack it" is the safe answer to a frame whose shape
+  /// is not known yet.
+  static bool isLandscapeFrame(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    if (size.height <= 0) return false;
+    return size.width / size.height >= landscapeAspect;
+  }
+
   /// Widest the main content well is allowed to grow.
   ///
   /// A dashboard stretched across a 27-inch display is not more information, it

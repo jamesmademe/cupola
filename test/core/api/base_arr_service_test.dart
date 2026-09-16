@@ -262,6 +262,81 @@ void main() {
       ]);
     });
 
+    // The defect the page variants exist for: every paged endpoint answers with
+    // `{page, pageSize, totalRecords, records}` and the app kept only the last
+    // field, so every count derived from history / missing / cutoff was the size
+    // of the *page*. A library with 340 gaps read "20 missing", because 20 is
+    // the default page size — not an approximation, an answer to a different
+    // question that happened to look like an answer to this one.
+    test('getMissingPage carries the set size, not the page size', () async {
+      client.getResponseData = {
+        'records': [
+          for (var id = 0; id < 20; id++) {'id': id, 'title': 'Gap \$id'},
+        ],
+        'totalRecords': 340,
+      };
+
+      final page = await service.getMissingPage();
+
+      expect(page.records, hasLength(20));
+      expect(page.total, 340);
+      // And the records-only getter is unchanged, because two \*arr services
+      // override it and a dozen callers still read it.
+      expect(await service.getMissing(), hasLength(20));
+    });
+
+    test('getHistoryPage and getCutoffPage carry it too', () async {
+      client.getResponseData = {
+        'records': [
+          {'id': 1, 'sourceTitle': 'A'},
+        ],
+        'totalRecords': 7421,
+      };
+      expect((await service.getHistoryPage()).total, 7421);
+      expect((await service.getCutoffPage()).total, 7421);
+    });
+
+    // A server that did not send a total has told us nothing about the size of
+    // the set, and `records.length` would be the same lie with a fresh coat on
+    // it. Null is the honest answer, and it is what lets a caller print "20
+    // shown" instead of a confident wrong number.
+    test('a missing total reads as null, never as the page length', () async {
+      client.getResponseData = {
+        'records': [
+          {'id': 1, 'title': 'One'},
+        ],
+      };
+
+      final page = await service.getMissingPage();
+
+      expect(page.records, hasLength(1));
+      expect(page.total, isNull);
+    });
+
+    test('a total sent as a string or a double still reads', () async {
+      client.getResponseData = {'records': const [], 'totalRecords': '128'};
+      expect((await service.getMissingPage()).total, 128);
+
+      client.getResponseData = {'records': const [], 'totalRecords': 128.0};
+      expect((await service.getMissingPage()).total, 128);
+
+      // Anything else is absent rather than coerced.
+      client.getResponseData = {'records': const [], 'totalRecords': 'many'};
+      expect((await service.getMissingPage()).total, isNull);
+    });
+
+    // Not every \*arr fork serves `wanted/cutoff`, and a service that cannot
+    // answer the question has not answered "none". A zero would put a confident
+    // "0 to upgrade" on a dashboard for a server that was never asked.
+    test('an unavailable cutoff endpoint yields no total, not zero', () async {
+      client.getException = Exception('404');
+
+      final page = await service.getCutoffPage();
+
+      expect(page.records, isEmpty);
+      expect(page.total, isNull, reason: 'zero would be a claim, null is not');
+    });
+
     test('fetchRootFolders reads the server\'s configured libraries', () async {
       client.getResponseData = [
         {'id': 1, 'path': '/data/movies', 'accessible': true},
