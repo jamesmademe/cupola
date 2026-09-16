@@ -13,6 +13,7 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
+import 'package:cupola/features/stream/domain/models/stream_search_group.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 import 'package:cupola/features/stream/presentation/stream_library_screen.dart';
@@ -108,6 +109,19 @@ class _ScriptedServer implements StreamServerClient {
 
   @override
   Future<List<StreamLibrary>> getLibraries() async => const [];
+
+  @override
+  Future<int?> getLibraryItemCount(
+    String libraryId, {
+    CancelToken? cancelToken,
+  }) async => null;
+
+  @override
+  Future<List<StreamSearchGroup>> search(
+    String query, {
+    int? limit,
+    CancelToken? cancelToken,
+  }) async => const [];
 
   @override
   Future<List<StreamSession>> getSessions() async => const [];

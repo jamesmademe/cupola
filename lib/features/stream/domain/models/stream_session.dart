@@ -19,6 +19,8 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import 'package:cupola/core/status/media_status.dart';
+
 /// How the server is delivering the bytes.
 ///
 /// Ordered least to most expensive, which is also the order the board sorts by:
@@ -120,6 +122,31 @@ class StreamSession {
 
   /// Whether this session is the reason you would look at the board.
   bool get needsAttention => playMethod.isTranscode;
+
+  /// The tone the delivery method is drawn in.
+  ///
+  /// Resolved here rather than in the card, for the reason every other status in
+  /// the app is: a widget renders a status and never computes one. The card used
+  /// to branch on [needsAttention] and paint `AppColors.warning` directly, which
+  /// broke two rules at once — it bypassed the contrast walk `statusToneColor`
+  /// performs (raw warning measures 1.39:1 on paper, effectively invisible in
+  /// daylight) and it left a direct play in the neutral `onSurfaceVariant`, so
+  /// the board said nothing about the state that is actually *good*.
+  ///
+  /// The mapping is the tone rule's, not a gradient of expense:
+  ///
+  ///  * [StreamPlayMethod.directPlay] is **success** — the file is going out
+  ///    untouched, which is the complete-and-working arm.
+  ///  * [StreamPlayMethod.directStream] is **success** too, and deliberately so.
+  ///    A container rewrap leaves the video alone; it carries an explanation but
+  ///    it is not a fault, and amber is reserved for faults.
+  ///  * [StreamPlayMethod.transcode] is **warning** — the box is re-encoding,
+  ///    which is the one delivery state that costs a CPU and can stutter.
+  ///
+  /// Never `error`: red means the server did not answer, and a transcode is the
+  /// server answering rather well.
+  StatusTone get deliveryTone =>
+      playMethod.isTranscode ? StatusTone.warning : StatusTone.success;
 
   /// The transcode explanation as one phrase, or null when there is nothing to
   /// explain.

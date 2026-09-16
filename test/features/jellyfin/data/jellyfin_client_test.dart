@@ -300,6 +300,204 @@ void main() {
     });
   });
 
+  group('remote control', () {
+    test('pause and unpause are two endpoints, not one toggle', () async {
+      final adapter = CapturingHttpAdapter(response: '', statusCode: 204);
+      final client = _client(adapter);
+
+      await client.pauseSession('abc');
+      expect(adapter.lastUri!.path, '/Sessions/abc/Playing/Pause');
+      expect(adapter.lastRequest!.method, 'POST');
+
+      await client.unpauseSession('abc');
+      expect(adapter.lastUri!.path, '/Sessions/abc/Playing/Unpause');
+    });
+
+    test('a message carries text, a header and a timeout', () async {
+      final adapter = CapturingHttpAdapter(response: '', statusCode: 204);
+      await _client(adapter).sendMessage('abc', text: 'Dinner in ten');
+
+      expect(adapter.lastUri!.path, '/Sessions/abc/Message');
+      final body = adapter.lastBody as Map<String, dynamic>;
+      expect(body['Text'], 'Dinner in ten');
+      // The player draws this above the text; without it the toast is anonymous.
+      expect(body['Header'], kJellyfinClientName);
+      // Milliseconds — the one field in this client that is not in ticks.
+      expect(body['TimeoutMs'], kJellyfinMessageTimeoutMs);
+    });
+
+    test('a failed command surfaces, like every other write here', () {
+      final adapter = CapturingHttpAdapter(response: '', statusCode: 500);
+      expect(
+        _client(adapter).pauseSession('abc'),
+        throwsA(isA<DioException>()),
+      );
+    });
+  });
+
+  group('getLibraryItemCount', () {
+    test('asks for no rows and reads the envelope', () async {
+      final adapter = _ConversationAdapter(
+        byPath: {
+          '/Library/VirtualFolders': jsonFixtureList(
+            'jellyfin/virtual_folders.json',
+          ),
+          '/Items': {'Items': <dynamic>[], 'TotalRecordCount': 1020},
+        },
+      );
+
+      final count = await _client(adapter).getLibraryItemCount(_showsLibraryId);
+
+      expect(count, 1020);
+      final query = adapter.lastUri!.queryParameters;
+      expect(query['parentId'], _showsLibraryId);
+      expect(query['limit'], '0');
+      // Recursive, or `/Items` answers with the library's folders.
+      expect(query['recursive'], 'true');
+      // **In the library's own unit.** A TV library counts series; counting
+      // recursively without this returns several thousand episodes and puts a
+      // number on the card the grid then contradicts.
+      expect(query['includeItemTypes'], 'Series');
+      // A count is the same count for everyone, so no viewer is named.
+      expect(query.containsKey('userId'), isFalse);
+    });
+
+    test('a server that will not say answers null, never zero', () async {
+      final adapter = CapturingHttpAdapter(response: '', statusCode: 500);
+      // "—" is what the card prints from this. Zero would be a claim the
+      // library is empty, which is precisely what was not established.
+      expect(await _client(adapter).getLibraryItemCount('x'), isNull);
+    });
+  });
+
+  group('search', () {
+    test('asks for media and people, and never by item type', () async {
+      final adapter = CapturingHttpAdapter(
+        response: jsonFixtureMap('jellyfin/search_hints.json'),
+      );
+      await _client(adapter).search('inter');
+
+      expect(adapter.lastUri!.path, '/Search/Hints');
+      final query = adapter.lastUri!.queryParameters;
+      expect(query['searchTerm'], 'inter');
+      expect(query['limit'], '$kJellyfinSearchLimit');
+      // People are gated behind their own flag on this endpoint, so naming
+      // `Person` in `includeItemTypes` returns nothing instead of failing —
+      // which is why no type filter is sent at all.
+      expect(query['includeMedia'], 'true');
+      expect(query['includePeople'], 'true');
+      expect(query.containsKey('includeItemTypes'), isFalse);
+      // A row that opens nothing is noise in a five-row answer.
+      expect(query['includeStudios'], 'false');
+      expect(query['includeArtists'], 'false');
+    });
+
+    test('every declared band survives, empty ones included', () async {
+      final adapter = CapturingHttpAdapter(
+        response: jsonFixtureMap('jellyfin/search_hints.json'),
+      );
+      final groups = await _client(adapter).search('inter');
+
+      // The strip has to say what was *searched*, not only what answered:
+      // "Albums 0" means this server holds no matching album, which is a
+      // different statement from never having looked.
+      expect(groups.map((group) => group.label).take(6).toList(), [
+        'Movies',
+        'Shows',
+        'Episodes',
+        'Albums',
+        'Books',
+        'People',
+      ]);
+      expect(
+        groups.firstWhere((group) => group.label == 'Albums').isEmpty,
+        isTrue,
+      );
+      expect(
+        groups
+            .firstWhere((group) => group.label == 'Movies')
+            .items
+            .single
+            .title,
+        'Interstellar',
+      );
+      expect(
+        groups
+            .firstWhere((group) => group.label == 'People')
+            .items
+            .single
+            .title,
+        'Interpol',
+      );
+    });
+
+    test('People and Books are two bands, not one', () async {
+      final adapter = CapturingHttpAdapter(
+        response: jsonFixtureMap('jellyfin/search_hints.json'),
+      );
+      final groups = await _client(adapter).search('inter');
+
+      // `StreamItemKind` folds `Person`, `Book` and `BoxSet` all onto `other`,
+      // so grouping the mapped items would merge two of the six bands the
+      // design names separately. The raw `Type` is the only place that
+      // distinction still exists.
+      final books = groups.firstWhere((group) => group.label == 'Books');
+      final people = groups.firstWhere((group) => group.label == 'People');
+      expect(books.isEmpty, isTrue);
+      expect(people.count, 1);
+      expect(books.kind, isNull);
+      expect(people.kind, isNull);
+    });
+
+    test('what no band claims gets one, and only when it has rows', () async {
+      final adapter = CapturingHttpAdapter(
+        response: jsonFixtureMap('jellyfin/search_hints.json'),
+      );
+      final groups = await _client(adapter).search('inter');
+
+      // The fixture's `BoxSet` is nobody's band. It is not smuggled into a
+      // neighbour and it gets no zero pill, because it was never a question the
+      // strip asked.
+      final other = groups.last;
+      expect(other.label, kJellyfinSearchOtherBandLabel);
+      expect(other.items.single.title, 'Interiors');
+    });
+
+    test('an episode hint keeps its series and its numbering', () async {
+      final adapter = CapturingHttpAdapter(
+        response: jsonFixtureMap('jellyfin/search_hints.json'),
+      );
+      final groups = await _client(adapter).search('inter');
+
+      // A hint spells the series `Series`, not `SeriesName`. Normalising it into
+      // the shape the one item mapper speaks is what keeps the subtitle rules
+      // from drifting into a second copy.
+      final episode = groups
+          .firstWhere((group) => group.label == 'Episodes')
+          .items
+          .single;
+      expect(episode.subtitle, 'The Internet Is Made Of Cats · S2E4');
+      expect(episode.kind, StreamItemKind.episode);
+      // A hint carries no `UserData` at any setting, so watch state is absent by
+      // construction rather than by a missing parameter.
+      expect(episode.isPlayed, isFalse);
+      expect(episode.resumeOffsetMs, isNull);
+    });
+
+    test('an empty query never reaches the server', () async {
+      final adapter = CapturingHttpAdapter(response: {});
+      expect(await _client(adapter).search('   '), isEmpty);
+      expect(adapter.callCount, 0);
+    });
+
+    test('a failure is no bands at all, not six empty ones', () async {
+      final adapter = CapturingHttpAdapter(response: '', statusCode: 500);
+      // The distinction the page renders: no groups means the question could not
+      // be asked; empty groups mean it was asked and nothing matched.
+      expect(await _client(adapter).search('inter'), isEmpty);
+    });
+  });
+
   group('getLibraries', () {
     test('maps virtual folders, and skips one that cannot be browsed', () async {
       final adapter = CapturingHttpAdapter(

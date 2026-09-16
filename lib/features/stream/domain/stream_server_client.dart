@@ -18,6 +18,7 @@ import 'package:dio/dio.dart' show CancelToken;
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
+import 'package:cupola/features/stream/domain/models/stream_search_group.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 
 /// A viewer whose watch state a library can be read through.
@@ -71,6 +72,47 @@ abstract interface class StreamServerClient {
 
   /// Queue a scan for one library.
   Future<void> refreshLibrary(String libraryId);
+
+  /// How many items one library holds, or null when the server would not say.
+  ///
+  /// **One call per library, and never on the list.** Both servers can answer a
+  /// count only as its own request (`/Items?limit=0` reading `TotalRecordCount`,
+  /// `X-Plex-Container-Size=0` reading `totalSize`), so folding it into
+  /// [getLibraries] would turn one round trip into one per library on every
+  /// dashboard load. That cost is the whole reason the count belongs to the
+  /// pushed Libraries page and not to the Overview rows: the card renders
+  /// complete without it and the number lands afterwards.
+  ///
+  /// Counted in whatever unit the library browses in — series for a TV library,
+  /// not episodes — so the card cannot show a figure the grid then contradicts.
+  ///
+  /// Null on failure, per the read convention, and the caller prints "—" rather
+  /// than 0: a count that could not be read is not a count of nothing.
+  Future<int?> getLibraryItemCount(
+    String libraryId, {
+    CancelToken? cancelToken,
+  });
+
+  /// What this server holds matching [query], grouped the way it groups it.
+  ///
+  /// The two servers arrive at grouping from opposite directions and meet here:
+  /// Jellyfin types every hint (`GET /Search/Hints`) and the client buckets
+  /// them, Plex answers in hubs (`GET /hubs/search`) already grouped *and*
+  /// ordered, so the page renders the order it is given rather than imposing
+  /// one. See [StreamSearchGroup] for why an empty group survives.
+  ///
+  /// [limit]'s unit genuinely differs — it is a total on Jellyfin and per hub on
+  /// Plex — which is why it has no shared default: null asks each client for the
+  /// number that suits its own endpoint.
+  ///
+  /// Degrades to `[]` like every other read. That is distinct from a list of
+  /// empty groups: no groups means the question could not be asked, empty groups
+  /// mean it was asked and nothing matched.
+  Future<List<StreamSearchGroup>> search(
+    String query, {
+    int? limit,
+    CancelToken? cancelToken,
+  });
 
   /// One page of a library under one lens.
   ///

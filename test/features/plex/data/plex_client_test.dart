@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/plex/data/plex_client.dart';
+import 'package:cupola/features/plex/domain/models/plex_item_mapper.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/plex/domain/models/plex_transcode_session.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -1181,6 +1182,24 @@ void main() {
       expect(adapter.lastUri!.path, '/');
     });
 
+    test('an unclaimed server does not name the box as a person', () async {
+      final capabilities = jsonFixtureMap('plex/capabilities.json');
+      final container =
+          (capabilities['MediaContainer'] as Map).cast<String, dynamic>()
+            ..remove('myPlexUsername')
+            ..['friendlyName'] = 'tower';
+      final adapter = CapturingHttpAdapter(
+        response: {'MediaContainer': container},
+      );
+
+      // `friendlyName` is what the owner called the *machine*, so falling back
+      // to it invented a household member named "tower". The owner is still the
+      // owner when Plex will not name them (decision 16).
+      final viewers = await _client(adapter).getViewers();
+      expect(viewers.single.name, kPlexOwnerFallbackName);
+      expect(viewers.single.name, isNot('tower'));
+    });
+
     test('a viewerId is accepted and has no effect on the request', () async {
       final adapter = CapturingHttpAdapter(
         byPath: {
@@ -1266,10 +1285,77 @@ void main() {
         expect(query['limit'], '12');
         expect(query['includeExternalMedia'], '0');
 
-        expect(results.map((i) => i.title).toList(), [
-          'Interstellar',
-          'Tidelines: Interstitial',
+        // CHANGED: `search` used to flatten every hub into one list. It now
+        // hands back the server's own bands, because Plex has already grouped
+        // and ranked them and the page renders that order rather than imposing
+        // one. The rows inside a band, and the provider-row rejection, are
+        // unchanged.
+        expect(results.map((group) => group.label).toList(), [
+          'Movies',
+          'Shows',
         ]);
+        expect(
+          results.map((group) => group.items.map((i) => i.title).toList()),
+          [
+            ['Interstellar'],
+            ['Tidelines: Interstitial'],
+          ],
+        );
+      },
+    );
+
+    test('a hub keeps the kind it is about, and only when there is one', () {
+      // The band's kind is not `plexItemKindFromType`: that one bends `artist`
+      // onto `album` so a music browse stays traversable, and folds everything
+      // else onto `other`. Neither answer is true of a *band*.
+      expect(plexHubKind('movie'), StreamItemKind.movie);
+      expect(plexHubKind('show'), StreamItemKind.series);
+      expect(plexHubKind('artist'), isNull);
+      expect(plexHubKind('actor'), isNull);
+      expect(plexHubKind(null), isNull);
+    });
+
+    test('an empty hub survives as an empty band', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {
+          'MediaContainer': {
+            'Hub': [
+              {'type': 'movie', 'title': 'Movies', 'size': 0, 'Metadata': []},
+              {'type': 'actor', 'title': 'Actors', 'size': 0},
+            ],
+          },
+        },
+      );
+
+      final groups = await _client(adapter).search('inter');
+
+      // The strip draws a zero pill from this. Dropping the hub would turn "no
+      // matching film on this server" into "films were never searched", and the
+      // two are not the same answer.
+      expect(groups.map((group) => group.label).toList(), ['Movies', 'Actors']);
+      expect(groups.every((group) => group.isEmpty), isTrue);
+      // An Actors hub is about something the shared vocabulary has no word for.
+      expect(groups.last.kind, isNull);
+    });
+
+    test(
+      'a hub with no title is dropped rather than folded into its neighbour',
+      () async {
+        final adapter = CapturingHttpAdapter(
+          response: {
+            'MediaContainer': {
+              'Hub': [
+                {'type': 'movie', 'title': 'Movies', 'Metadata': []},
+                {'type': 'tag', 'Metadata': []},
+              ],
+            },
+          },
+        );
+
+        // An unlabelled band on a strip of pills would draw a pill that says
+        // nothing at all; its rows are not smuggled into the band above it.
+        final groups = await _client(adapter).search('inter');
+        expect(groups.map((group) => group.label).toList(), ['Movies']);
       },
     );
 

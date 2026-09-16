@@ -13,6 +13,7 @@ import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
+import 'package:cupola/features/stream/domain/models/stream_search_group.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
@@ -32,6 +33,26 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 /// `settings.jellyfinUserId` is a first-class setting rather than an optional
 /// nicety. It is also the asymmetry the Stream contract was built around: a Plex
 /// token *is* a user and cannot impersonate, an API key is nobody and must.
+///
+/// ## Why there is no administrator probe, and must not be one
+///
+/// Decision 19 gates Jellyfin's admin writes on `Policy.IsAdministrator`, read
+/// from `GET /Users/Me` once per connection, with a banner and dimmed writes
+/// when it is absent — the same shape Unraid's key-scope and NPM's role probes
+/// take. **That probe has no target here.** This client is constructed from an
+/// `apiKey` and nothing else, and an API key is Administrator by construction:
+/// it passes every admin policy before any endpoint is called. `/Users/Me` has
+/// no "me" to answer for and does not return a policy for it.
+///
+/// So the probe would be a request whose answer is fixed, the banner would be a
+/// card that can never appear, and every write would dim on a condition that
+/// cannot arise. `JellyfinUserDto.isAdministrator` is parsed and stays parsed —
+/// it describes the *household members* the Users surface administers, which is
+/// a different question from what this credential may do.
+///
+/// The probe becomes real the day this constructor takes a user token
+/// (`POST /Users/AuthenticateByName`), and not before. Adding a second
+/// credential kind is what unblocks it; adding a probe first does not.
 ///
 /// ## Units
 ///
@@ -180,6 +201,48 @@ class JellyfinClient implements StreamServerClient {
     // may ignore the command, which is why callers re-read [getSessions] instead
     // of trusting this returning normally.
     await _api.post('/Sessions/$sessionId/Playing/Stop');
+  }
+
+  /// Ask the player to pause, or to pick up again.
+  ///
+  /// `POST /Sessions/{id}/Playing/Pause` and `/Unpause` are *remote control*
+  /// commands: Jellyfin relays them over the WebSocket it already holds open to
+  /// that client, and a client that is not listening (a browser tab, an old
+  /// Infuse build) simply never acts on the 204. So this is dispatch, not
+  /// control, exactly like [stopSession] — the caller re-reads [getSessions]
+  /// rather than flipping [StreamSession.isPaused] optimistically.
+  ///
+  /// **Plex has no counterpart reachable from here**, which is why the board
+  /// draws pause on Jellyfin alone: Plex's `/player/playback/*` routes address
+  /// the client directly on its own LAN address, not through the server.
+  Future<void> pauseSession(String sessionId) async {
+    await _api.post('/Sessions/$sessionId/Playing/Pause');
+  }
+
+  /// The other half of [pauseSession].
+  Future<void> unpauseSession(String sessionId) async {
+    await _api.post('/Sessions/$sessionId/Playing/Unpause');
+  }
+
+  /// Put a line of text on someone's screen.
+  ///
+  /// `POST /Sessions/{id}/Message`, whose body is a `MessageCommand`: `Text` is
+  /// required, `Header` is the title the client draws above it, and `TimeoutMs`
+  /// is how long the toast stays. Sent as milliseconds because that is the
+  /// field's unit — the one Jellyfin write in this file that is not in ticks.
+  ///
+  /// The same dispatch caveat as [pauseSession]: the client decides whether it
+  /// has anywhere to draw a message, and several have nowhere.
+  Future<void> sendMessage(
+    String sessionId, {
+    required String text,
+    String header = kJellyfinMessageHeader,
+    int timeoutMs = kJellyfinMessageTimeoutMs,
+  }) async {
+    await _api.post(
+      '/Sessions/$sessionId/Message',
+      data: {'Text': text, 'Header': header, 'TimeoutMs': timeoutMs},
+    );
   }
 
   @override
@@ -332,6 +395,150 @@ class JellyfinClient implements StreamServerClient {
     } catch (_) {
       return StreamLibraryPage.failed(startIndex: startIndex);
     }
+  }
+
+  /// How many items a library holds, without downloading any of them.
+  ///
+  /// `limit=0` still returns the `BaseItemDtoQueryResult` envelope, so
+  /// `TotalRecordCount` arrives with an empty `Items` array — the cheapest count
+  /// Jellyfin offers, and the reason `VirtualFolderInfo` carrying none is
+  /// survivable.
+  ///
+  /// **Counted in the library's own unit** (`_includeItemTypesFor`), so a TV
+  /// library answers in series rather than in the several thousand episodes
+  /// `recursive=true` would otherwise sweep up. Whatever the browse lists is
+  /// what the count counts; anything else would put two numbers on one card that
+  /// disagree.
+  ///
+  /// Deliberately **not** folded into [getLibraries]: six libraries would become
+  /// six extra round trips on every dashboard load, which is exactly the cost
+  /// decision 21 moved off the Overview and onto the pushed Libraries page. It
+  /// is opt-in, one call per card, and a card renders complete without it.
+  @override
+  Future<int?> getLibraryItemCount(
+    String libraryId, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      await _ensureLibraryKind(libraryId);
+      final response = await _api.get(
+        '/Items',
+        queryParameters: {
+          'parentId': libraryId,
+          'recursive': true,
+          'limit': 0,
+          'includeItemTypes': ?_includeItemTypesFor(libraryId),
+          // No `userId`: a count is the same count for everyone, and asking for
+          // `UserData` on a zero-row page only costs the server a join.
+          'enableImages': false,
+          'enableUserData': false,
+        },
+        cancelToken: cancelToken,
+      );
+      final data = response.data;
+      return data is Map ? intOrNull(data['TotalRecordCount']) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// `GET /Search/Hints` — the library search, typed and grouped.
+  ///
+  /// **Why the type set is not sent as `includeItemTypes`.** This endpoint gates
+  /// people, studios and artists behind their own boolean flags rather than
+  /// through the type filter, so naming `Person` in `includeItemTypes` quietly
+  /// returns nothing instead of failing. Asking for media and people by flag and
+  /// grouping the answer here is the only spelling that returns both.
+  ///
+  /// The bands in [kJellyfinSearchBands] are emitted **even when empty**, in
+  /// their declared order, because the strip has to say what was searched and
+  /// not only what answered — see [StreamSearchGroup]. Anything Jellyfin returns
+  /// that none of them claims (a `MusicArtist`, a `BoxSet`) falls into a
+  /// trailing band that appears only when it has something, since nobody asked
+  /// for it by name.
+  ///
+  /// [limit] is the total across every band, not per band, and the hints arrive
+  /// in the server's own relevance order — grouping preserves it within each.
+  @override
+  Future<List<StreamSearchGroup>> search(
+    String query, {
+    int? limit,
+    CancelToken? cancelToken,
+  }) async {
+    final term = query.trim();
+    if (term.isEmpty) return const [];
+
+    List<Map<String, dynamic>> hints;
+    try {
+      final response = await _api.get(
+        '/Search/Hints',
+        queryParameters: {
+          'searchTerm': term,
+          'limit': limit ?? kJellyfinSearchLimit,
+          'includeMedia': true,
+          'includePeople': true,
+          // Left off on purpose: a studio or an artist row opens nothing in this
+          // app, and a hit that cannot be tapped is noise in a five-row answer.
+          'includeStudios': false,
+          'includeArtists': false,
+        },
+        cancelToken: cancelToken,
+      );
+      final data = response.data;
+      // `SearchHints` on every build; the bare array is the reverse-proxy shape
+      // the item pager already tolerates.
+      final raw = data is Map ? data['SearchHints'] : data;
+      hints = raw is! List
+          ? const []
+          : raw
+                .whereType<Map>()
+                .map((hint) => hint.cast<String, dynamic>())
+                .toList(growable: false);
+    } catch (_) {
+      // The read convention: a failed search is no groups, not zero pills — zero
+      // pills would assert that the server answered and holds nothing.
+      return const [];
+    }
+
+    // **Bucketed on the raw `Type`, before mapping, and that ordering is not an
+    // optimisation.** `StreamItemKind` folds `Person`, `Book`, `MusicArtist` and
+    // `BoxSet` all onto `other`, so grouping the mapped items would merge People
+    // and Books into one band — two of the six the design names separately.
+    // `Type` is the only place that distinction still exists.
+    final byType = <String, List<Map<String, dynamic>>>{};
+    for (final hint in hints) {
+      final type = hint['Type']?.toString() ?? '';
+      (byType[type] ??= <Map<String, dynamic>>[]).add(hint);
+    }
+
+    List<StreamItem> mapped(List<Map<String, dynamic>>? rows) => rows == null
+        ? const []
+        : rows.map(jellyfinSearchHintFromJson).toList(growable: false);
+
+    final groups = <StreamSearchGroup>[
+      for (final band in kJellyfinSearchBands)
+        StreamSearchGroup(
+          label: band.label,
+          kind: band.kind,
+          items: mapped(byType.remove(band.type)),
+        ),
+    ];
+    // Whatever the six named bands did not claim. No zero pill, because it was
+    // never a question the strip asked.
+    final remainder = byType.values
+        .expand((rows) => rows)
+        .map(jellyfinSearchHintFromJson)
+        .toList(growable: false);
+    if (remainder.isNotEmpty) {
+      groups.add(
+        StreamSearchGroup(
+          label: kJellyfinSearchOtherBandLabel,
+          kind: null,
+          items: remainder,
+        ),
+      );
+    }
+    return groups;
   }
 
   @override
@@ -700,6 +907,51 @@ extension _JellyfinItemsPageX on _JellyfinItemsPage {
     );
   }
 }
+
+/// One band of a `/Search/Hints` answer: the word the strip prints, the raw
+/// `Type` it collects, and the shared kind when there is one.
+///
+/// [kind] is null where `StreamItemKind` has no entry — a person and a book are
+/// both `other` to the item model, and the bands must not merge because of it.
+typedef JellyfinSearchBand = ({
+  String label,
+  String type,
+  StreamItemKind? kind,
+});
+
+/// The six bands a Jellyfin search asks for, in the order the page draws them.
+///
+/// Fixed rather than derived from the answer, because an empty band is itself
+/// the result: "Episodes 0" says this server holds no matching episode, which is
+/// a different statement from never having looked.
+const List<JellyfinSearchBand> kJellyfinSearchBands = [
+  (label: 'Movies', type: 'Movie', kind: StreamItemKind.movie),
+  (label: 'Shows', type: 'Series', kind: StreamItemKind.series),
+  (label: 'Episodes', type: 'Episode', kind: StreamItemKind.episode),
+  (label: 'Albums', type: 'MusicAlbum', kind: StreamItemKind.album),
+  (label: 'Books', type: 'Book', kind: null),
+  (label: 'People', type: 'Person', kind: null),
+];
+
+/// Where hits land that none of [kJellyfinSearchBands] claims.
+const String kJellyfinSearchOtherBandLabel = 'Other';
+
+/// Total hints one search asks for, across every band.
+///
+/// Small on purpose: a library search is answered by a person reading five rows,
+/// not by a pager. The endpoint's own default is 10 and is not enough to fill
+/// six bands.
+const int kJellyfinSearchLimit = 40;
+
+/// The title a player draws above a message from Cupola.
+const String kJellyfinMessageHeader = kJellyfinClientName;
+
+/// How long a sent message stays on the player's screen.
+///
+/// Milliseconds — `MessageCommand.TimeoutMs` is the one Jellyfin field in this
+/// file that is not in ticks. Eight seconds is long enough to read a sentence
+/// over a film and short enough not to sit on top of one.
+const int kJellyfinMessageTimeoutMs = 8000;
 
 /// What Jellyfin's Dashboard → Devices list calls this app.
 const String kJellyfinClientName = 'Cupola';

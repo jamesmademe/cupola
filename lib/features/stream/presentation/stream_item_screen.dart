@@ -49,8 +49,8 @@ class StreamItemScreen extends ConsumerWidget {
             icon: Icons.help_outline_rounded,
             title: 'Not on the server',
             message:
-                'This item is no longer in the library, or the viewer it '
-                'belongs to cannot see it.',
+                'This item is no longer in the library, or the account this '
+                'connection uses cannot see it.',
           ),
           data: (item) => _Body(service: service, item: item!),
         ),
@@ -104,8 +104,15 @@ class _Body extends ConsumerWidget {
 /// Watch state, as chips.
 ///
 /// This is the whole reason a Stream detail page is not a duplicate of Radarr's:
-/// where the arr answers "do I own it", this answers "has anyone watched it, and
-/// where did they stop".
+/// where the arr answers "do I own it", this answers "have *you* watched it, and
+/// where did you stop".
+///
+/// **One perspective, never the household's.** The earlier wording here said
+/// "has anyone watched it", which is a claim neither server supports: on Plex the
+/// token *is* the user and there is no other viewpoint to read (decision 16), and
+/// on Jellyfin the admin key must name a household member, so what comes back is
+/// the configured viewer's state alone. A chip reading "Watched" means watched by
+/// the person this connection speaks for.
 class _StateRow extends StatelessWidget {
   const _StateRow({required this.item, required this.accent});
 

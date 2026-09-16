@@ -13,9 +13,18 @@ import 'package:cupola/features/stream/presentation/stream_lookup_provider.dart'
 /// The "it's watchable, and you're 34 minutes in" slot for an *arr detail page.
 ///
 /// **This is where the pipeline closes.** Radarr answers "do I own it"; a media
-/// server is the only thing that knows "can anyone play it, and has anyone
-/// started". Cupola is the only place both facts sit on one screen, and this slot
-/// is that sentence.
+/// server is the only thing that knows "is it in the library, and where did *you*
+/// stop". Cupola is the only place both facts sit on one screen, and this slot is
+/// that sentence.
+///
+/// **"You", never "anyone", and the difference is load-bearing.** This used to
+/// claim the slot knew whether *anyone* had started the title, which neither
+/// server will answer: a Plex token is one user and `/library/*` takes no
+/// impersonation parameter (decision 16), and Jellyfin's admin key has to name a
+/// household member, so its answer is the configured viewer's and nobody else's.
+/// Both readings are one perspective. The line the card prints — "34 min in",
+/// "Watched" — is therefore about the person the connection speaks for, and the
+/// slot must never be widened into a household summary it cannot compute.
 ///
 /// It is a *decoration on the arr's own record*, not a second catalogue and not a
 /// search group — see [streamMatchProvider] for why adding Jellyfin and Plex as

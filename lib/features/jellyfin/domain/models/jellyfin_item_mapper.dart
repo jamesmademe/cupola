@@ -217,6 +217,50 @@ StreamItem jellyfinStreamItemFromJson(Map<String, dynamic> item) {
 List<StreamItem> jellyfinStreamItemsFromJson(Object? raw) =>
     jsonObjects(raw, jellyfinStreamItemFromJson);
 
+/// One `SearchHint` from `GET /Search/Hints` → one [StreamItem].
+///
+/// **A hint is not a `BaseItemDto`, and the differences are all renames.** The
+/// search endpoint returns its own flattened DTO: the id is `ItemId`, the series
+/// is `Series` rather than `SeriesName`, and artwork arrives as loose
+/// `*ImageTag` strings instead of the `ImageTags` map every other endpoint
+/// sends. So this normalises the hint into the shape the one item mapper already
+/// speaks and hands it over, rather than growing a second parallel mapper that
+/// would drift on the subtitle rules within a release.
+///
+/// A hint carries **no `UserData`** at any `enableUserData` setting, so watch
+/// state is absent by construction: every hit maps to `isPlayed: false` with no
+/// resume point. That is a property of the endpoint and not a missing parameter
+/// — a search page that wants the watch mark has to re-read the item.
+StreamItem jellyfinSearchHintFromJson(Map<String, dynamic> hint) {
+  final primaryTag = hint['PrimaryImageTag']?.toString();
+  final thumbTag = hint['ThumbImageTag']?.toString();
+
+  return jellyfinStreamItemFromJson({
+    // `ItemId` is the hint's own spelling; `Id` appears on 10.9+ and is the same
+    // value. Both are read so the mapper does not depend on the server version.
+    'Id': hint['ItemId']?.toString() ?? hint['Id']?.toString() ?? '',
+    'Name': hint['Name'],
+    'Type': hint['Type'],
+    'ProductionYear': hint['ProductionYear'],
+    'RunTimeTicks': hint['RunTimeTicks'],
+    'IndexNumber': hint['IndexNumber'],
+    'ParentIndexNumber': hint['ParentIndexNumber'],
+    'SeriesName': hint['Series'],
+    'Album': hint['Album'],
+    'AlbumArtist': hint['AlbumArtist'],
+    if (primaryTag != null && primaryTag.isNotEmpty ||
+        thumbTag != null && thumbTag.isNotEmpty)
+      'ImageTags': {
+        if (primaryTag != null && primaryTag.isNotEmpty) 'Primary': primaryTag,
+        if (thumbTag != null && thumbTag.isNotEmpty) 'Thumb': thumbTag,
+      },
+  });
+}
+
+/// A whole `SearchHints` array. Top-level for `Isolate.run`, like its sibling.
+List<StreamItem> jellyfinSearchHintsFromJson(Object? raw) =>
+    jsonObjects(raw, jellyfinSearchHintFromJson);
+
 /// Jellyfin's `PlayMethod` → the shared decision enum.
 ///
 /// A missing `PlayMethod` with a live `TranscodingInfo` is treated as a

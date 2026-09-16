@@ -14,6 +14,7 @@ import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
+import 'package:cupola/features/stream/domain/models/stream_search_group.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
@@ -54,6 +55,27 @@ const double _kPosterHeightRatio = 3 / 2;
 
 /// Default page size for a library browse.
 const int kPlexLibraryPageSize = 50;
+
+/// Rows per hub for `/hubs/search`.
+///
+/// **Per hub, not in total** — Plex's own default is 3, which is too few to tell
+/// "one match" from "the band was truncated", and a search that returns six
+/// bands of 12 is still a page a person reads rather than pages.
+const int kPlexSearchHubLimit = 12;
+
+/// What the token's owner is called when Plex will not say.
+///
+/// `myPlexUsername` is absent on a server that has never been claimed through
+/// plex.tv, and there is no other endpoint that names the account a token
+/// belongs to.
+const String kPlexOwnerFallbackName = 'This account';
+
+/// What an unwrapped, band-less hub response is called.
+///
+/// Reached only on the builds that answer a hub request with a bare `Metadata`
+/// array. There is no server-given title to print, and an empty string would
+/// draw a nameless pill.
+const String kPlexUngroupedHubLabel = 'Results';
 
 /// Plex's own type ids for `/library/sections/{id}/all?type=`.
 const int _kPlexTypeMovie = 1;
@@ -558,7 +580,9 @@ class PlexClient implements StreamServerClient {
   /// `totalSize` — the cheapest count Plex offers. Kept off [getLibraries]
   /// deliberately: doing it there would turn one request into one-per-section on
   /// every dashboard load, which is why `StreamLibrary.itemCount` arrives null
-  /// and this is opt-in.
+  /// and this is opt-in. Nothing in `lib/` called it until the pushed Libraries
+  /// page existed to pay for it, one card at a time (decision 21).
+  @override
   Future<int?> getLibraryItemCount(
     String libraryId, {
     CancelToken? cancelToken,
@@ -801,8 +825,13 @@ class PlexClient implements StreamServerClient {
   Future<List<StreamViewer>> getViewers() async {
     final capabilities = await getCapabilities();
     if (capabilities == null) return const [];
-    final name = capabilities.myPlexUsername ?? capabilities.friendlyName;
-    if (name == null) return const [];
+    // **`friendlyName` is not a fallback here, and used to be one.**
+    // `friendlyName` is what the owner called the *box* — "tower", "basement
+    // NAS" — so a server not linked to plex.tv produced a viewer named after a
+    // machine, which reads as a household member who does not exist. Decision 16
+    // is that no Plex surface may claim a viewer it cannot name; an unnamed
+    // owner is still the owner, so the entry stays and says so.
+    final name = capabilities.myPlexUsername ?? kPlexOwnerFallbackName;
     // 'me' rather than an account id: there is no endpoint that says which
     // account a token belongs to, and the value is never sent anywhere — every
     // read is already scoped to this token.
@@ -834,15 +863,28 @@ class PlexClient implements StreamServerClient {
     }
   }
 
-  /// `GET /hubs/search`.
+  /// `GET /hubs/search` — the library search, in the server's own bands.
   ///
-  /// `limit` is per hub and defaults to 3, so it is always sent explicitly.
-  /// `includeExternalMedia=0` asks Plex not to mix its catalogue in — belt to
-  /// [plexIsServerItem]'s braces, since the parameter is advisory and the
-  /// provider rows still arrive on some builds.
-  Future<List<StreamItem>> search(
+  /// **The hubs are the answer and are handed back whole.** Plex has already
+  /// grouped the hits and ranked both the hubs and the rows inside them, using a
+  /// relevance model this client cannot reproduce; flattening that — which is
+  /// what this method used to do — threw away the grouping and then left the
+  /// page with a flat list it had no way to band. The order is rendered as
+  /// given, and an empty hub survives as an empty group so the strip can draw
+  /// its zero pill (see [StreamSearchGroup]).
+  ///
+  /// Every hit here is the **owner's** own: the token is one user, so no result
+  /// may carry another viewer's watch mark (decision 16). Nothing extra is done
+  /// to enforce that — `/hubs/search` simply has no other perspective to offer.
+  ///
+  /// `limit` is per hub and Plex's own default is 3, so it is always sent
+  /// explicitly. `includeExternalMedia=0` asks Plex not to mix its catalogue in
+  /// — belt to [plexIsServerItem]'s braces, since the parameter is advisory and
+  /// the provider rows still arrive on some builds.
+  @override
+  Future<List<StreamSearchGroup>> search(
     String query, {
-    int limit = 20,
+    int? limit,
     CancelToken? cancelToken,
   }) async {
     final term = query.trim();
@@ -852,12 +894,12 @@ class PlexClient implements StreamServerClient {
         '/hubs/search',
         queryParameters: {
           'query': term,
-          'limit': limit,
+          'limit': limit ?? kPlexSearchHubLimit,
           'includeExternalMedia': 0,
         },
         cancelToken: cancelToken,
       );
-      return _itemsFromHubs(container);
+      return _groupsFromHubs(container);
     } catch (_) {
       return const [];
     }
@@ -1043,6 +1085,10 @@ class PlexClient implements StreamServerClient {
   }
 
   /// Flattens `Hub[] → Metadata[]`, keeping hub order.
+  ///
+  /// For the surfaces that genuinely want one list — Continue watching is one
+  /// hub's worth of rows however the server wrapped it. A *search* must not come
+  /// through here: see [_groupsFromHubs].
   List<StreamItem> _itemsFromHubs(Map<String, dynamic> container) {
     final hubs = container['Hub'];
     if (hubs is! List) {
@@ -1055,6 +1101,51 @@ class PlexClient implements StreamServerClient {
       items.addAll(_itemsFrom(hub['Metadata']));
     }
     return items;
+  }
+
+  /// `Hub[]` kept as bands, in the order the server ranked them.
+  ///
+  /// The hub's own `title` is what the band prints. Deriving a word from the
+  /// hub's `type` instead would quietly rename the server's own vocabulary — a
+  /// Plex hub is titled "Movies", "Shows", "Episodes", "Actors" by the server
+  /// that owns the library, and a localised server titles them in its language.
+  ///
+  /// An empty hub is **kept**. That is the difference between "this server holds
+  /// no matching episode" and "episodes were never searched", and it is the only
+  /// thing that lets the strip draw a zero pill honestly.
+  List<StreamSearchGroup> _groupsFromHubs(Map<String, dynamic> container) {
+    final hubs = container['Hub'];
+    if (hubs is! List) {
+      // The unwrapped shape carries no band at all, so there is nothing to
+      // group by and one unnamed band is the honest reading.
+      final items = _itemsFrom(container['Metadata']);
+      if (items.isEmpty) return const [];
+      return [
+        StreamSearchGroup(
+          label: kPlexUngroupedHubLabel,
+          kind: null,
+          items: items,
+        ),
+      ];
+    }
+
+    final groups = <StreamSearchGroup>[];
+    for (final hub in hubs.whereType<Map>()) {
+      final map = hub.cast<String, dynamic>();
+      final title = plexString(map['title']);
+      // A hub with no title is one this client cannot label, and an unlabelled
+      // band on a strip of pills is worse than its rows being absent — the pill
+      // would say nothing at all. Its rows are not smuggled into a neighbour.
+      if (title == null || title.isEmpty) continue;
+      groups.add(
+        StreamSearchGroup(
+          label: title,
+          kind: plexHubKind(map['type']),
+          items: _itemsFrom(map['Metadata']),
+        ),
+      );
+    }
+    return groups;
   }
 }
 

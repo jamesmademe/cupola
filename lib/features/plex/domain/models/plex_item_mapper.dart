@@ -117,6 +117,36 @@ StreamItemKind plexItemKindFromType(dynamic type) {
   }
 }
 
+/// A search hub's `type` → the kind that band holds, or null when the shared
+/// vocabulary has no word for it.
+///
+/// **Not [plexItemKindFromType], and the difference is deliberate.** That
+/// function answers "what should this row behave like", so it bends `artist`
+/// onto `album` to keep a music browse traversable and folds everything unknown
+/// onto `other`. A *band* is a different question — what is this group of hits
+/// about — and neither answer survives it: an Artists hub does not hold albums,
+/// and an Actors hub labelled `other` would claim a vocabulary entry the app
+/// does not have. Null says so, and the band still draws from the hub's own
+/// title.
+StreamItemKind? plexHubKind(dynamic type) {
+  switch (plexString(type)?.toLowerCase()) {
+    case 'movie':
+      return StreamItemKind.movie;
+    case 'show':
+      return StreamItemKind.series;
+    case 'season':
+      return StreamItemKind.season;
+    case 'episode':
+      return StreamItemKind.episode;
+    case 'album':
+      return StreamItemKind.album;
+    case 'track':
+      return StreamItemKind.track;
+    default:
+      return null;
+  }
+}
+
 /// Maps a `/library/sections` `Directory` element.
 StreamLibrary? plexLibraryFromJson(Map<String, dynamic> json) {
   // Relative to `/library/sections`, so `'1'` and not `'/library/sections/1'`.

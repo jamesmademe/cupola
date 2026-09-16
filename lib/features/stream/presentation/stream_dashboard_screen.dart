@@ -14,6 +14,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
+import 'package:cupola/features/stream/presentation/widgets/stream_message_prompt.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_session_card.dart';
 
 /// The Stream board — one dashboard serving both Jellyfin and Plex.
@@ -159,6 +160,8 @@ class _NowPlayingSection extends ConsumerWidget {
                         session: list[i],
                         accent: service.accent,
                         onStop: _stopHandler(context, ref, list[i]),
+                        onTogglePause: _pauseHandler(context, ref, list[i]),
+                        onMessage: _messageHandler(context, ref, list[i]),
                       ),
                     ),
                   ),
@@ -172,12 +175,23 @@ class _NowPlayingSection extends ConsumerWidget {
 
   /// The stop control, or null when stopping is not available.
   ///
-  /// Plex gates termination behind Plex Pass *and* admin scope, and answers a
-  /// server without it with a 401 that has nothing to do with the token. Reading
-  /// `myPlexSubscription` first means the control is simply absent rather than
-  /// present-and-misleading — and a user who taps it never gets sent off to
-  /// re-paste a credential that was fine. A session with no server-side id cannot
-  /// be terminated at all, which is a real Plex shape, not a defensive guard.
+  /// Plex gates termination behind Plex Pass, and answers a server without it
+  /// with a 401 that has nothing to do with the token. Reading the flag first
+  /// means the control is simply absent rather than present-and-misleading — and
+  /// a user who taps it never gets sent off to re-paste a credential that was
+  /// fine. A session with no server-side id cannot be terminated at all, which is
+  /// a real Plex shape, not a defensive guard.
+  ///
+  /// **Through [PlexServerCapabilities.canTerminateSessions], not through
+  /// `myPlexSubscription` again.** This re-derived the gate as
+  /// `myPlexSubscription != true`, which is the opposite of what that getter
+  /// decided for two whole populations: a server that does not send the
+  /// attribute at all (it is absent on several builds) lost the button, and so
+  /// did every session drawn before `plexCapabilitiesProvider` had resolved —
+  /// the control appeared a beat later, which on a live list reads as a glitch.
+  /// The getter's own comment says it treats silence as available so a missing
+  /// attribute hides the button on nobody's server by mistake; a widget is not
+  /// the place to disagree with it.
   VoidCallback? _stopHandler(
     BuildContext context,
     WidgetRef ref,
@@ -187,10 +201,104 @@ class _NowPlayingSection extends ConsumerWidget {
 
     if (service == ServiceKey.plex) {
       final capabilities = ref.watch(plexCapabilitiesProvider).value;
-      if (capabilities?.myPlexSubscription != true) return null;
+      // Null while the sheet is still loading, and `canTerminateSessions` is
+      // true by default, so an unanswered probe keeps the control rather than
+      // flickering one in.
+      if (capabilities != null && !capabilities.canTerminateSessions) {
+        return null;
+      }
     }
 
     return () => _confirmStop(context, ref, session);
+  }
+
+  /// Pause / resume, and only on Jellyfin.
+  ///
+  /// `/Sessions/{id}/Playing/Pause` is a Jellyfin remote-control command relayed
+  /// over the WebSocket the server already holds to that client. Plex has no
+  /// equivalent this app can reach: its player routes address the client
+  /// directly on the LAN, so the board keeps **stop alone** there rather than
+  /// drawing two controls that would fail. Absent, not dimmed — a dimmed control
+  /// promises a way to enable it, and there is none.
+  VoidCallback? _pauseHandler(
+    BuildContext context,
+    WidgetRef ref,
+    StreamSession session,
+  ) {
+    if (service != ServiceKey.jellyfin || session.id.isEmpty) return null;
+    return () => _togglePause(context, ref, session);
+  }
+
+  /// Send a line of text to the player. Jellyfin only, same reason as
+  /// [_pauseHandler].
+  VoidCallback? _messageHandler(
+    BuildContext context,
+    WidgetRef ref,
+    StreamSession session,
+  ) {
+    if (service != ServiceKey.jellyfin || session.id.isEmpty) return null;
+    return () => _sendMessage(context, ref, session);
+  }
+
+  /// Pausing asks nobody: it is the one control here that is instantly
+  /// reversible by the person it happens to, and a confirm on it would be
+  /// ceremony. Stopping and messaging both ask, because neither is.
+  Future<void> _togglePause(
+    BuildContext context,
+    WidgetRef ref,
+    StreamSession session,
+  ) async {
+    final client = ref.read(jellyfinClientProvider);
+    try {
+      if (session.isPaused) {
+        await client.unpauseSession(session.id);
+      } else {
+        await client.pauseSession(session.id);
+      }
+      // Re-read rather than flipping `isPaused` here: the 204 means the command
+      // was dispatched to the client, not that the client acted on it.
+      ref.invalidate(jellyfinSessionsProvider);
+    } catch (error) {
+      if (!context.mounted) return;
+      SnackBarHelper.error(
+        context,
+        session.isPaused
+            ? 'Could not resume playback'
+            : 'Could not pause playback',
+        detail: '$error',
+      );
+    }
+  }
+
+  Future<void> _sendMessage(
+    BuildContext context,
+    WidgetRef ref,
+    StreamSession session,
+  ) async {
+    final text = await showStreamMessagePrompt(
+      context: context,
+      userName: session.userName,
+      playerLabel: session.deviceLabel,
+    );
+    if (text == null || !context.mounted) return;
+
+    try {
+      await ref
+          .read(jellyfinClientProvider)
+          .sendMessage(session.id, text: text);
+      if (!context.mounted) return;
+      // "Sent", never "delivered": the server relays it and the client decides
+      // whether it has anywhere to draw it. Claiming delivery would be the same
+      // overstatement the stop dialog's note exists to avoid.
+      SnackBarHelper.success(context, 'Message sent to ${session.userName}');
+    } catch (error) {
+      if (!context.mounted) return;
+      SnackBarHelper.error(
+        context,
+        'Could not send the message',
+        detail: '$error',
+      );
+    }
   }
 
   Future<void> _confirmStop(
@@ -245,27 +353,49 @@ class _NowPlayingSection extends ConsumerWidget {
 /// answered, and an idle media server is the normal daily condition rather than a
 /// state the user needs to fix. One quiet line, in the same register the
 /// `/services` outage notice uses for a fault that is normal for the product.
+///
+/// **A dashed rule, and that is the whole shape of it.** A well — a filled box
+/// with a centred glyph and a sentence — is how this surface reads when
+/// something is missing, and nothing is missing here. The dash says the region
+/// exists and is empty by nature, the way an outline on a plan says "this space
+/// is reserved" rather than "this space failed".
 class _IdleRoom extends StatelessWidget {
   const _IdleRoom();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = theme.colorScheme.onSurfaceVariant;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
       child: Row(
         children: [
-          Icon(
-            Icons.nights_stay_outlined,
-            size: 16,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          Icon(Icons.nights_stay_outlined, size: 16, color: color),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(
+          Flexible(
             child: Text(
               streamIdleMessage,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              style: theme.textTheme.bodyMedium?.copyWith(color: color),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          // The dash carries no information, so it is hidden from the screen
+          // reader: `streamIdleMessage` already says the room is quiet, and a
+          // second node announcing a line would only lengthen the sentence.
+          Expanded(
+            child: ExcludeSemantics(
+              child: CustomPaint(
+                // A height rather than a `SizedBox.shrink`: a `CustomPaint`
+                // with no child takes its size from the parent, and inside a
+                // `Row` that is an unbounded cross axis.
+                size: const Size.fromHeight(1),
+                painter: _DashedRulePainter(
+                  // Dimmer than the text it trails, because it is scenery: at
+                  // the text's own weight it reads as a divider between two
+                  // regions, and there is only one region here.
+                  color: color.withValues(alpha: 0.4),
+                ),
               ),
             ),
           ),
@@ -275,6 +405,47 @@ class _IdleRoom extends StatelessWidget {
   }
 }
 
+/// The hairline that trails the idle sentence.
+///
+/// Local to this file on purpose. There is no dashed primitive in
+/// `lib/core/widgets/`, and one line on one screen does not earn a shared
+/// widget — the moment a second surface wants dashes, this is what moves.
+class _DashedRulePainter extends CustomPainter {
+  const _DashedRulePainter({required this.color});
+
+  final Color color;
+
+  /// Dash and gap, in logical pixels. Even-length dashes on an even gap read as
+  /// a deliberate rule; anything finer disappears on a low-density display.
+  static const double _dash = 4;
+  static const double _gap = 4;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    final y = size.height / 2;
+    for (var x = 0.0; x < size.width; x += _dash + _gap) {
+      final end = (x + _dash).clamp(0.0, size.width);
+      canvas.drawLine(Offset(x, y), Offset(end, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRulePainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+/// The libraries, as destinations — and as a count of *rooms*, never of what is
+/// in them.
+///
+/// Decision 21: a per-library item count is its own round trip on both servers
+/// (`/Items?limit=0`, `X-Plex-Container-Size=0`), so six libraries would be six
+/// extra requests on every load of the page you see most. The count is paid on
+/// the pushed Libraries page, one card at a time. What the Overview can say for
+/// free is how many there are and which one is scanning — both already in the
+/// single `getLibraries` response.
 class _LibrariesSection extends StatelessWidget {
   const _LibrariesSection({required this.service, required this.libraries});
 
@@ -286,9 +457,16 @@ class _LibrariesSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: SectionHeader(title: 'Libraries', showChevron: false),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: SectionHeader(
+            title: 'Libraries',
+            // Null until the list lands, so the header never prints "0
+            // libraries" over a region that is still loading — a figure whose
+            // source has not answered is not zero.
+            subtitle: _summaryOf(libraries.value),
+            showChevron: false,
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -314,6 +492,17 @@ class _LibrariesSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// The header's line, or null while the list has not landed.
+  static String? _summaryOf(List<StreamLibrary>? list) {
+    if (list == null) return null;
+    final scanning = list.where((library) => library.isRefreshing).toList();
+    return streamLibrariesSummary(
+      total: list.length,
+      scanningName: scanning.length == 1 ? scanning.first.name : null,
+      scanningCount: scanning.length,
     );
   }
 }
@@ -344,7 +533,6 @@ class _LibraryRow extends StatelessWidget {
       semanticLabel: library.name,
       semanticValue: streamLibraryValue(
         kindLabel: library.kind.label,
-        itemCount: library.itemCount,
         lastScannedLabel: _scannedLabel(library.lastScannedAt),
         isRefreshing: library.isRefreshing,
       ),
@@ -400,10 +588,15 @@ class _LibraryRow extends StatelessWidget {
   /// per-library scan timestamp — only a global scheduled task — so the scan half
   /// is simply absent there rather than printed as "unknown", which would imply
   /// the server was asked and declined.
+  ///
+  /// **No item count here (decision 21).** `StreamLibrary.itemCount` is null out
+  /// of both `getLibraries` calls and always was, so the branch that printed it
+  /// was unreachable code describing a page this is not: the count is a separate
+  /// request per library and belongs to the pushed Libraries page, where a card
+  /// can render complete and let its number arrive afterwards. Putting it back
+  /// here would make opening a service cost one request per library.
   static String _subtitleFor(StreamLibrary library) {
     final parts = <String>[library.kind.label];
-    final count = library.itemCount;
-    if (count != null) parts.add('$count items');
     if (library.isRefreshing) {
       parts.add('Scanning');
     } else {

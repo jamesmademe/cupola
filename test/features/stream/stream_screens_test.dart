@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/plex/domain/models/plex_models.dart';
+import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -11,6 +14,7 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_semantics.dart';
 import 'package:cupola/features/stream/presentation/stream_dashboard_screen.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_session_card.dart';
 
@@ -80,6 +84,86 @@ Future<void> _pumpBoard(
   await tester.pumpAndSettle();
 }
 
+final _plexConfigured = settingsWith(
+  plexUrl: 'http://plex.local:32400',
+  plexToken: 'token',
+);
+
+/// A Plex server whose capability sheet the test chooses.
+///
+/// `null` is the shape that matters most here: the sheet has not resolved yet,
+/// or the build simply does not send `myPlexSubscription`.
+Future<void> _pumpPlexBoard(
+  WidgetTester tester, {
+  List<StreamSession> sessions = const [],
+  PlexServerCapabilities? capabilities,
+}) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        currentSettingsProvider.overrideWith((ref) => _plexConfigured),
+        plexSessionsProvider.overrideWith((ref) async => sessions),
+        plexLibrariesProvider.overrideWith((ref) async => const [_library]),
+        plexCapabilitiesProvider.overrideWith((ref) async => capabilities),
+        serviceKpiProvider.overrideWith((ref, service) async => const []),
+      ],
+      child: const MaterialApp(
+        home: StreamDashboardScreen(service: ServiceKey.plex),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+PlexServerCapabilities _capabilities({bool? subscription}) =>
+    PlexServerCapabilities(
+      friendlyName: 'tower',
+      machineIdentifier: 'abc',
+      version: '1.41',
+      myPlexUsername: 'matt',
+      myPlexSubscription: subscription,
+      multiuser: true,
+      transcoderActiveVideoSessions: 0,
+    );
+
+/// The colour the tone authority resolves for [tone] on a filled card.
+///
+/// Read through `statusToneColor` rather than compared with a literal: the rule
+/// under test is "the delivery method is drawn in its semantic tone", and the
+/// tone's actual value moves with the theme and with the contrast walk. A hex
+/// here would be asserting the palette instead of the rule.
+Color _toneOn(WidgetTester tester, Finder anchor, StatusTone tone) {
+  final colorScheme = Theme.of(tester.element(anchor)).colorScheme;
+  return statusToneColor(
+    colorScheme,
+    tone,
+    surface: colorScheme.surfaceContainer,
+  );
+}
+
+/// Asserts that [name] is on screen as a control a screen reader can reach and
+/// can name.
+///
+/// Checked on the semantics node rather than on the widget: an icon-only button
+/// carries its name in `SemanticsNode.tooltip`, which is what both screen
+/// readers speak, and the whole point of the check is that the node exists at
+/// all — the card's readout sits under `excludeSemantics`, which is exactly the
+/// thing that used to swallow these.
+void expectReachableControl(WidgetTester tester, String name) {
+  final finder = find.byTooltip(name);
+  expect(finder, findsOneWidget, reason: '"$name" must be on screen');
+  expect(
+    tester.getSemantics(finder),
+    containsSemantics(tooltip: name, isButton: true, hasTapAction: true),
+  );
+}
+
+void expectNoControl(String name) => expect(
+  find.byTooltip(name),
+  findsNothing,
+  reason: '"$name" must be absent',
+);
+
 void main() {
   group('the Stream board', () {
     testWidgets('idle is a quiet line, not an error and not an empty state', (
@@ -140,15 +224,115 @@ void main() {
       expect(find.text("client can't decode HEVC"), findsOneWidget);
       expect(find.text('Transcode'), findsOneWidget);
 
+      // CHANGED: this used to assert the raw `AppColors.warning` constant. The
+      // card no longer paints a palette entry — it paints the tone
+      // `StreamSession.deliveryTone` resolves, walked for contrast against the
+      // card's own fill, because raw warning measures 1.39:1 on paper and is
+      // effectively invisible in daylight. The *rule* is unchanged: a transcode
+      // is amber.
       final reason = tester.widget<Text>(find.text("client can't decode HEVC"));
-      expect(reason.style?.color, AppColors.warning);
+      expect(
+        reason.style?.color,
+        _toneOn(tester, find.text('Transcode'), StatusTone.warning),
+      );
     });
 
-    testWidgets('a direct play is not painted as a problem', (tester) async {
+    testWidgets('a direct play is green, not merely not-amber', (tester) async {
       await _pumpBoard(tester, sessions: [_session()]);
 
+      // CHANGED from "is not painted as a problem", which passed while the
+      // label sat in neutral `onSurfaceVariant` and said nothing at all. Direct
+      // play is the complete-and-working arm of the tone rule and is drawn in
+      // it: the board's good state has to be legible as good.
       final label = tester.widget<Text>(find.text('Direct play'));
-      expect(label.style?.color, isNot(AppColors.warning));
+      expect(
+        label.style?.color,
+        _toneOn(tester, find.text('Direct play'), StatusTone.success),
+      );
+      expect(
+        label.style?.color,
+        isNot(_toneOn(tester, find.text('Direct play'), StatusTone.warning)),
+      );
+    });
+
+    testWidgets('a direct stream is not a fault', (tester) async {
+      await _pumpBoard(
+        tester,
+        sessions: [
+          _session(
+            method: StreamPlayMethod.directStream,
+            reasons: const ['container rewrap to MKV'],
+          ),
+        ],
+      );
+
+      // Amber means a fault, and a rewrap is not one: the video is untouched.
+      // It carries an explanation, which is why the reason cannot be the gate.
+      final label = tester.widget<Text>(find.text('Direct stream'));
+      expect(
+        label.style?.color,
+        _toneOn(tester, find.text('Direct stream'), StatusTone.success),
+      );
+    });
+
+    testWidgets('every session control is reachable by a screen reader', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _pumpBoard(tester, sessions: [_session()]);
+
+      // The card wraps its four text lines in one `excludeSemantics` node so
+      // they are read as a sentence rather than as fragments — and that node
+      // used to swallow the stop button with them, leaving a control that was
+      // on screen, tappable by a pointer and absent from the traversal. The
+      // readout is one node; the controls are their own.
+      expectReachableControl(tester, 'Stop this playback');
+      expectReachableControl(tester, 'Pause this playback');
+      expectReachableControl(tester, 'Send a message to this player');
+      handle.dispose();
+    });
+
+    testWidgets('a paused session offers resume, named for what it does', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _pumpBoard(tester, sessions: [_session(paused: true)]);
+
+      // "Pause" on an already-paused session is the one label that can be read
+      // two ways; the control is named for the tap, not for the state.
+      expectReachableControl(tester, 'Resume this playback');
+      expectNoControl('Pause this playback');
+      handle.dispose();
+    });
+
+    testWidgets('the Overview counts libraries, never their contents', (
+      tester,
+    ) async {
+      await _pumpBoard(
+        tester,
+        libraries: const [
+          _library,
+          StreamLibrary(
+            id: 'lib-2',
+            name: 'Shows',
+            kind: StreamLibraryKind.shows,
+            // Carried by the model and deliberately not drawn here: this is the
+            // figure decision 21 moved off the Overview.
+            itemCount: 86,
+            lastScannedAt: null,
+            isRefreshing: false,
+          ),
+        ],
+      );
+
+      // Decision 21: a per-library count is one extra round trip each, so the
+      // Overview says how many rooms there are — free out of the single
+      // `getLibraries` response — and the count is paid on the pushed Libraries
+      // page, one card at a time. The scanning half of that line is asserted on
+      // `streamLibrariesSummary` itself, because a live scan spins an indicator
+      // that never settles.
+      expect(find.text('2 libraries'), findsOneWidget);
+      expect(find.textContaining('items'), findsNothing);
     });
 
     testWidgets('the transcode reason survives an accessibility text size', (
@@ -224,6 +408,140 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Plex is stop-alone, and the owner\'s own', () {
+    testWidgets('pause and message are absent, because Plex cannot do them', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _pumpPlexBoard(
+        tester,
+        sessions: [_session()],
+        capabilities: _capabilities(subscription: true),
+      );
+
+      // Pause and message are Jellyfin remote-control commands relayed over the
+      // socket the server already holds. Plex's player routes address the client
+      // directly on the LAN, so the board keeps stop alone — absent, not dimmed:
+      // a dimmed control promises a way to enable it and there is none.
+      expectReachableControl(tester, 'Stop this playback');
+      expectNoControl('Pause this playback');
+      expectNoControl('Send a message to this player');
+      handle.dispose();
+    });
+
+    testWidgets('a server that never mentions Plex Pass keeps its stop', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _pumpPlexBoard(
+        tester,
+        sessions: [_session()],
+        capabilities: _capabilities(subscription: null),
+      );
+
+      // `PlexServerCapabilities.canTerminateSessions` treats silence as
+      // available on purpose, so a missing attribute hides the button on
+      // nobody's server by mistake — the terminate call explains itself if it
+      // comes back 401. The board used to re-derive the gate as
+      // `myPlexSubscription != true` and disagree with it.
+      expectReachableControl(tester, 'Stop this playback');
+      handle.dispose();
+    });
+
+    testWidgets('the stop is there before the capability sheet answers', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _pumpPlexBoard(tester, sessions: [_session()], capabilities: null);
+
+      // Same defect, second population: while the sheet was unresolved the
+      // control was absent and then appeared a beat later, which on a live list
+      // reads as a glitch.
+      expectReachableControl(tester, 'Stop this playback');
+      handle.dispose();
+    });
+
+    testWidgets('a Plex Pass-less server offers no stop at all', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _pumpPlexBoard(
+        tester,
+        sessions: [_session()],
+        capabilities: _capabilities(subscription: false),
+      );
+
+      // The one case where absence is right: Plex answers a terminate on a
+      // server without Plex Pass with a 401 that has nothing to do with the
+      // token, which would send the user off to re-paste a credential that was
+      // fine.
+      expectNoControl('Stop this playback');
+      handle.dispose();
+    });
+  });
+
+  group('the delivery tone', () {
+    test('transcode is the only fault arm', () {
+      // The tone rule's five arms: amber is a fault and nothing else. A
+      // re-encode is the one delivery state that costs a CPU and can stutter; a
+      // rewrap and a direct play are the stack working.
+      expect(
+        _session(method: StreamPlayMethod.transcode).deliveryTone,
+        StatusTone.warning,
+      );
+      expect(
+        _session(method: StreamPlayMethod.directStream).deliveryTone,
+        StatusTone.success,
+      );
+      expect(
+        _session(method: StreamPlayMethod.directPlay).deliveryTone,
+        StatusTone.success,
+      );
+    });
+
+    test('nothing here is ever red', () {
+      // Red is reserved for unreachable. A server describing a transcode is a
+      // server answering, and answering rather well.
+      for (final method in StreamPlayMethod.values) {
+        expect(
+          _session(method: method).deliveryTone,
+          isNot(StatusTone.error),
+          reason: '$method must not read as an outage',
+        );
+      }
+    });
+  });
+
+  group('the Libraries summary', () {
+    test('says how many rooms there are, never what is in them', () {
+      expect(
+        streamLibrariesSummary(total: 1, scanningName: null, scanningCount: 0),
+        '1 library',
+      );
+      expect(
+        streamLibrariesSummary(total: 5, scanningName: null, scanningCount: 0),
+        '5 libraries',
+      );
+    });
+
+    test('names the one library being scanned, counts several', () {
+      // Naming the first of three would imply the other two are idle, which on
+      // a full rescan is the opposite of what is happening.
+      expect(
+        streamLibrariesSummary(
+          total: 5,
+          scanningName: 'Films',
+          scanningCount: 1,
+        ),
+        '5 libraries · Films scanning',
+      );
+      expect(
+        streamLibrariesSummary(total: 5, scanningName: null, scanningCount: 3),
+        '5 libraries · 3 scanning',
+      );
     });
   });
 

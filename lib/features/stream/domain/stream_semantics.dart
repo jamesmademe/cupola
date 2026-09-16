@@ -80,16 +80,39 @@ const String streamIdleMessage = 'Nobody is watching right now';
 /// [lastScannedLabel] is null on Jellyfin, which exposes no per-library scan
 /// timestamp — only a global scheduled task. The row simply omits it rather than
 /// speaking "unknown", which would imply the server was asked and declined.
+///
+/// **No item count, on the Overview or in its spoken form** (decision 21): the
+/// count is a separate request per library and is paid on the pushed Libraries
+/// page. Speaking a figure the visible row does not show would also put the two
+/// out of step, which is the failure this file exists to prevent.
 String streamLibraryValue({
   required String kindLabel,
-  required int? itemCount,
   required String? lastScannedLabel,
   required bool isRefreshing,
-}) => _join([
-  kindLabel,
-  itemCount == null ? null : '$itemCount items',
-  isRefreshing ? 'scanning now' : lastScannedLabel,
-]);
+}) => _join([kindLabel, isRefreshing ? 'scanning now' : lastScannedLabel]);
+
+/// The line under the Overview's *Libraries* header.
+///
+/// The two facts a single `getLibraries` response can answer for free: how many
+/// rooms there are, and whether one of them is being scanned right now. Both are
+/// about the shelf rather than about what is on it, which is the line decision
+/// 21 draws.
+///
+/// [scanningName] names the library when exactly one is scanning, because that
+/// is the case worth pointing at. Several at once is a full rescan and gets a
+/// count instead — naming the first would imply the others are idle.
+String streamLibrariesSummary({
+  required int total,
+  required String? scanningName,
+  required int scanningCount,
+}) {
+  final rooms = '$total ${total == 1 ? 'library' : 'libraries'}';
+  if (scanningCount == 0) return rooms;
+  if (scanningCount == 1 && scanningName != null && scanningName.isNotEmpty) {
+    return '$rooms · $scanningName scanning';
+  }
+  return '$rooms · $scanningCount scanning';
+}
 
 /// The confirm prompt for stopping someone else's playback.
 ///
