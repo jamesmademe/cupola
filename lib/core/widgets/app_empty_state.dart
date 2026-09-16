@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 
 /// A single, premium empty-state widget used across the app.
@@ -86,7 +87,17 @@ class AppEmptyState extends StatelessWidget {
                 ? accent.withValues(alpha: 0.14)
                 : colorScheme.surfaceContainerHigh,
           ),
-          child: Icon(icon, size: iconSize, color: accent),
+          // The glyph sits on a 14% wash of its own accent, so the composite —
+          // not the accent — is what it has to be legible against.
+          child: Icon(
+            icon,
+            size: iconSize,
+            color: ServiceTheme.onTint(
+              accent,
+              surface: colorScheme.surface,
+              tintAlpha: accentColor != null ? 0.14 : 0,
+            ),
+          ),
         ),
         SizedBox(height: compact ? AppSpacing.md : AppSpacing.lg),
         Text(
@@ -199,7 +210,15 @@ class _InlineNote extends StatelessWidget {
           // sentence and not floating in the middle of the paragraph.
           Padding(
             padding: const EdgeInsets.only(top: 1),
-            child: Icon(icon, size: 16, color: accent),
+            child: Icon(
+              icon,
+              size: 16,
+              color: ServiceTheme.onTint(
+                accent,
+                surface: colorScheme.surface,
+                tintAlpha: 0,
+              ),
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(

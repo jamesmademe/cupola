@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 
@@ -86,7 +87,16 @@ class DownloadQueueTile extends StatelessWidget {
                     style: theme.textTheme.labelMedium!
                         .weight(FontWeight.w700)
                         .tabular
-                        .copyWith(color: accent),
+                        // One plate, four clients, every service accent: the
+                        // percentage is the only accent-coloured *text* on the
+                        // row, so it is the one that has to clear the surface.
+                        .copyWith(
+                          color: ServiceTheme.onTint(
+                            accent,
+                            surface: colorScheme.surface,
+                            tintAlpha: 0,
+                          ),
+                        ),
                   ),
                   ?actions,
                 ],

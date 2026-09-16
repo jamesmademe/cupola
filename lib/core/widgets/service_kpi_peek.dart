@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_elevation.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/models/service_kpi.dart';
@@ -120,7 +121,13 @@ class _KpiCard extends StatelessWidget {
     // these cards sit on `surfaceContainer`, and on paper that is the ground
     // the walk has to clear.
     final accent = kpi.tone == null
-        ? fallbackAccent
+        // The service accent is walked too: seven of the seventeen are under
+        // 3:1 on paper, and this glyph appears on every service home.
+        ? ServiceTheme.onTint(
+            fallbackAccent,
+            surface: colorScheme.surfaceContainer,
+            tintAlpha: 0,
+          )
         : statusToneColor(
             colorScheme,
             kpi.tone!,

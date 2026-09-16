@@ -543,17 +543,17 @@ class _ResultAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fill = owned ? AppColors.success : result.service.accent;
     final glyph = SizedBox.square(
       dimension: 32,
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: owned ? AppColors.success : result.service.accent,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: fill, shape: BoxShape.circle),
+        // Seventeen possible fills, seven of them under 3:1 on paper: white was
+        // the right ink for some of them and never for all.
         child: Icon(
           owned ? Icons.check_rounded : Icons.add_rounded,
           size: 15,
-          color: Colors.white,
+          color: ServiceTheme.foregroundOn(fill),
         ),
       ),
     );

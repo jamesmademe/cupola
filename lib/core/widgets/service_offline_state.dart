@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 
 /// Full-page state shown when a service is configured but unreachable.
@@ -38,7 +39,15 @@ class ServiceOfflineState extends StatelessWidget {
                 color: accent.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.cloud_off_rounded, size: 32, color: accent),
+              child: Icon(
+                Icons.cloud_off_rounded,
+                size: 32,
+                color: ServiceTheme.onTint(
+                  accent,
+                  surface: colorScheme.surface,
+                  tintAlpha: 0.12,
+                ),
+              ),
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(

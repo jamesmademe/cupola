@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -211,9 +212,13 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         text,
+        // The chip's fill is a caller-supplied colour — a quality profile
+        // accent, a service accent — so the ink has to be measured against it
+        // rather than asserted. Black was right for the ambers and wrong for
+        // every dark fill that ever reached this widget.
         style: theme.textTheme.labelSmall
             ?.weight(FontWeight.bold)
-            .copyWith(color: Colors.black),
+            .copyWith(color: ServiceTheme.foregroundOn(color)),
       ),
     );
   }
@@ -267,7 +272,7 @@ class _StatusBadge extends StatelessWidget {
         displayStatus.label,
         style: theme.textTheme.labelSmall
             ?.weight(FontWeight.bold)
-            .copyWith(color: Colors.white),
+            .copyWith(color: ServiceTheme.foregroundOn(color)),
       ),
     );
   }
@@ -326,7 +331,7 @@ class MediaSection extends StatelessWidget {
             label: Text('Remove from $serviceName'),
             style: ElevatedButton.styleFrom(
               backgroundColor: colorScheme.error,
-              foregroundColor: Colors.white,
+              foregroundColor: colorScheme.onError,
             ),
           ),
         ),
@@ -375,7 +380,7 @@ class AdvancedSection extends StatelessWidget {
             label: const Text('Clear Data'),
             style: ElevatedButton.styleFrom(
               backgroundColor: colorScheme.error,
-              foregroundColor: Colors.white,
+              foregroundColor: colorScheme.onError,
             ),
           ),
         ),

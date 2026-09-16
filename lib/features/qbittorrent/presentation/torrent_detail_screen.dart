@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
@@ -683,7 +684,7 @@ class _ActionsTab extends ConsumerWidget {
         FilledButton.icon(
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.qbittorrent,
-            foregroundColor: Colors.white,
+            foregroundColor: ServiceTheme.foregroundOn(AppColors.qbittorrent),
           ),
           onPressed: () => runTorrentAction(
             context,
