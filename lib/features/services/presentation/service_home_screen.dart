@@ -24,15 +24,30 @@ class ServiceHomeScreen extends StatelessWidget {
   final Widget child;
   final Widget? trailingAction;
 
+  /// Whether to draw the band at all.
+  ///
+  /// The band is drawn above every branch navigator, so unlike the tab bar —
+  /// which a pushed page simply covers — it cannot be hidden by the page that
+  /// wants it gone, and has to be told. A pushed detail brings its own back
+  /// control, floated top left, and two chevrons in one corner is what this
+  /// answers.
+  ///
+  /// Defaults to true so the fourteen screens that host this band directly,
+  /// with no tabs under them, are untouched.
+  final bool showAppBar;
+
   const ServiceHomeScreen({
     super.key,
     required this.service,
     required this.child,
     this.trailingAction,
+    this.showAppBar = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (!showAppBar) return child;
+
     return Stack(
       children: [
         child,

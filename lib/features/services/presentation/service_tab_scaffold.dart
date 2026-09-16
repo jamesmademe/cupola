@@ -1,0 +1,82 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/service_tab_bar.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+/// The root page of one of a service's tabs: the bar, and the tab's own content
+/// under it.
+///
+/// **The bar is drawn here and not by the shell.** That is what lets a pushed
+/// page — a film, a wizard, a search result — hide it without leaving the branch
+/// it was pushed from: the page is pushed on *this* branch's navigator and
+/// simply covers this widget. A bar owned by the shell would sit above every
+/// branch navigator and could not be covered by anything inside one, so hiding
+/// it would mean unmounting the thing that holds the stack you want to come back
+/// to.
+///
+/// The band is glass for the same reason the service app bar above it is: the
+/// hosted screen's ambient gradient has to read continuously behind both, and a
+/// scrolling list has to frost under them rather than stop at a hard edge.
+class ServiceTabScaffold extends StatelessWidget {
+  final ServiceKey service;
+  final ServiceTab tab;
+  final Widget child;
+
+  const ServiceTabScaffold({
+    super.key,
+    required this.service,
+    required this.tab,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // TrueNAS keeps its console, so it has no bar to draw and no branch to
+    // switch. Nothing is drawn rather than an empty strip.
+    if (tabsFor(service) == null) return child;
+
+    return Stack(
+      children: [
+        child,
+        Positioned(
+          top: kToolbarHeight,
+          left: 0,
+          right: 0,
+          child: GlassSurface(
+            child: SafeArea(
+              bottom: false,
+              // The shell's own band already consumed the top inset, so this
+              // one must not consume it again — it sits directly under it.
+              top: false,
+              child: ServiceTabBar(
+                service: service,
+                current: tab,
+                onSelected: (next) => _go(context, next),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _go(BuildContext context, ServiceTab next) {
+    final tabs = tabsFor(service);
+    if (tabs == null) return;
+    final index = tabs.indexOf(next);
+    if (index < 0) return;
+
+    // `goBranch`, not `context.go`. It restores the target branch's own stack,
+    // which is the whole of "back returns to the tab you left, scrolled where
+    // you left it" — a plain `go` would rebuild that branch at its root and
+    // throw away where the user was.
+    //
+    // `StatefulNavigationShell.of` walks up for the nearest shell state, so
+    // from inside one of a service's tabs it finds that *service's* shell and
+    // not the app's four-branch one.
+    StatefulNavigationShell.of(context).goBranch(index);
+  }
+}

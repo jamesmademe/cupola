@@ -214,3 +214,30 @@ const List<ServiceTab> _arrTabs = [
 /// defaulting to an empty bar: an empty bar is a service whose tabs failed to
 /// load, which is a different thing from a console.
 List<ServiceTab>? tabsFor(ServiceKey service) => serviceTabs[service];
+
+/// The tab [path] is on, when it is on one of [service]'s.
+///
+/// Derived from the path, like the breadcrumb and for the same reason: a deep
+/// link, a restored window and a cold start all arrive carrying nothing but a
+/// location, so anything that reads the selection from state instead would be
+/// wrong for the first frame of all three.
+///
+/// Returns null for a tab the service does not have, rather than the tab: a
+/// link naming another service's view is not a place on this one.
+ServiceTab? serviceTabOf(ServiceKey service, String path) {
+  final segments = Uri.parse(path).pathSegments;
+  if (segments.length < 3 || segments[1] != service.routeParam) return null;
+  final tab = ServiceTab.fromSegment(segments[2]);
+  if (tab == null || !(tabsFor(service)?.contains(tab) ?? false)) return null;
+  return tab;
+}
+
+/// Whether [path] is a tab's own root rather than a page pushed from it.
+///
+/// The one question the service shell's app-bar band has to ask. The band is
+/// drawn above every branch navigator, so unlike the tab bar — which a pushed
+/// page simply covers — it cannot be hidden by the page that wants it gone, and
+/// has to hide itself. Two back chevrons in one corner is what this answers.
+bool isServiceTabRoot(ServiceKey service, String path) =>
+    serviceTabOf(service, path) != null &&
+    Uri.parse(path).pathSegments.length == 3;
