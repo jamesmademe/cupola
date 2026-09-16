@@ -188,13 +188,18 @@ class MediaDetailView extends StatelessWidget {
   /// beside each other.
   ///
   /// The threshold is the sum of the two tracks and their gutters, not a round
-  /// number: below it the side track would be narrower than the 300 its content
-  /// is drawn for, and a 240pt column of poster tiles is the Column Floor
-  /// mistake one axis over. A touch build never takes this path at any width —
+  /// number, and it is `AppBreakpoints.contentWell` rather than the 1000 that
+  /// used to be typed here: with the side track at its drawn 380 and the
+  /// `AppSpacing.xl` channel between them, 1140 is the first width at which the
+  /// main track still clears `MediaDetailMetrics.bodyMaxWidth` (1140 - 380 - 32
+  /// = 728). At the old 1000 the main track was 588 — narrower than the reading
+  /// measure the page exists to hold — and the side track's content was drawn
+  /// for 380 it did not have. A touch build never takes this path at any width:
   /// a tablet in landscape is still held in two hands, and the spine is what it
   /// is holding.
   static bool _twoTrack(double availableWidth) =>
-      AppBreakpoints.isDesktopShell && availableWidth >= 1000;
+      AppBreakpoints.isDesktopShell &&
+      availableWidth >= AppBreakpoints.contentWell;
 
   /// The spine and its side track, as one scroll.
   ///
@@ -204,15 +209,17 @@ class MediaDetailView extends StatelessWidget {
   /// still builds the eight rows on screen and not all 250. A `Row` would have
   /// cost either the laziness or the shared scroll.
   ///
-  /// Which regions go where: `operate` and `related` move, the rest stay. Both
-  /// are lists *about* the title rather than the reading of it, and a 1440pt
-  /// window that keeps them under the synopsis wastes half its glass on a
-  /// column of air.
+  /// Which slots go where is `MediaDetailBody.sideTrack`'s answer, per slot.
+  /// This method used to answer it per *region* — `operate` and `related` moved,
+  /// the rest stayed — and that is the inverse of every board: the Overview and
+  /// the Details grid stand in the 380 column while the episode table and the
+  /// releases run the wide one.
   ///
   /// **Reading order is not visual order here.** A screen reader walks the main
-  /// track and then the side track, so it hears deck, readout, synopsis,
-  /// reference, operate, related — the spine's six regions, two of them later
-  /// than on the phone. Interleaving them back would need sort keys the sliver
+  /// track and then the side track, so it hears every main-track slot in
+  /// canonical region order and then every side-track one — the spine's six
+  /// regions, some of them later than on the phone. Interleaving them back would
+  /// need sort keys the sliver
   /// semantics tree does not honour across cross-axis groups, and a broken sort
   /// key is worse than an honest reordering: every region still carries its own
   /// label, and none of them has moved out of the page.
@@ -221,20 +228,41 @@ class MediaDetailView extends StatelessWidget {
     double availableWidth,
     Duration entranceDelay,
   ) {
-    const sideTrackWidth = 300.0;
-    final mainWidth = math.min(
-      MediaDetailMetrics.bodyMaxWidth,
-      availableWidth - sideTrackWidth - AppSpacing.xl,
-    );
-    final mainGutter = MediaDetailMetrics.gutterOf(mainWidth);
+    const sideTrackWidth = MediaDetailMetrics.sideTrackWidth;
 
-    final main = MediaDetailBody(
-      deck: body.deck,
-      readout: body.readout,
-      synopsis: body.synopsis,
-      reference: body.reference,
-    );
-    final side = MediaDetailBody(operate: body.operate, related: body.related);
+    // Both tracks take the plain screen gutter, and neither is centred inside
+    // itself.
+    //
+    // This is what the code already did and never admitted: it computed a
+    // `mainWidth` capped at `bodyMaxWidth`, fed it to `gutterOf` — which then
+    // always returned exactly `AppSpacing.lg`, because the cap made the surplus
+    // zero — and let `SliverCrossAxisExpanded(flex: 1)` hand the main track
+    // every remaining pixel anyway. So the cap bound nothing here while binding
+    // hard on the one-track path, which is a silent difference between two
+    // layouts of the same page. Said out loud instead: on this path the side
+    // track *is* the bound, the main track is a track, and running prose keeps
+    // itself honest at `proseMaxWidth` inside `MediaProseSection`.
+    const mainGutter = MediaDetailMetrics.trackGutter;
+
+    // Where each slot stands is the page's declaration, not this method's.
+    // `sideTrack` names them one by one; a page that has not declared falls back
+    // to the region split this used to hardcode, which is the inverse of what
+    // every board draws and is kept only so an undeclared page does not change
+    // shape under it.
+    final MediaDetailBody main;
+    final MediaDetailBody side;
+    if (body.sideTrack != null) {
+      main = body.partition(inSideTrack: false);
+      side = body.partition(inSideTrack: true);
+    } else {
+      main = MediaDetailBody(
+        deck: body.deck,
+        readout: body.readout,
+        synopsis: body.synopsis,
+        reference: body.reference,
+      );
+      side = MediaDetailBody(operate: body.operate, related: body.related);
+    }
 
     return [
       SliverCrossAxisGroup(
@@ -361,13 +389,25 @@ class MediaDetailView extends StatelessWidget {
       final index = staggerIndex++;
       final hasLabel = slot.label != null && slot.label!.trim().isNotEmpty;
 
+      // A `track` slot escapes the centred reading column and runs the width it
+      // is given, inset by the screen gutter alone. Its label moves with it:
+      // a heading indented 155pt from the table it names reads as a heading for
+      // something else.
+      final slotGutter = switch (slot.measure) {
+        MediaDetailMeasure.column => gutter,
+        MediaDetailMeasure.track => MediaDetailMetrics.trackGutter,
+      };
+      final slotHorizontal = slotGutter == gutter
+          ? horizontal
+          : EdgeInsets.symmetric(horizontal: slotGutter);
+
       if (hasLabel) {
         slivers.add(
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.only(
-                left: gutter,
-                right: gutter,
+                left: slotGutter,
+                right: slotGutter,
                 top: AppSpacing.xl,
                 bottom: AppSpacing.sm,
               ),
@@ -404,14 +444,18 @@ class MediaDetailView extends StatelessWidget {
         slivers.add(
           SliverToBoxAdapter(
             child: Padding(
-              padding: horizontal,
+              padding: slotHorizontal,
               child: stagger(slot.box!, index),
             ),
           ),
         );
       } else if (slot.sliver != null) {
-        slivers.add(SliverPadding(padding: horizontal, sliver: slot.sliver!));
+        slivers.add(
+          SliverPadding(padding: slotHorizontal, sliver: slot.sliver!),
+        );
       } else if (slot.railBuilder != null) {
+        // A rail is always `column`: it is handed the resolved gutter and bleeds
+        // past it on purpose.
         slivers.add(SliverToBoxAdapter(child: slot.railBuilder!(horizontal)));
       }
     }

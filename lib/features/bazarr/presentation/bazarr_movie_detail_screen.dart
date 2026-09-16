@@ -95,6 +95,11 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
         ),
       ),
       body: MediaDetailBody(
+        // The board's wide track is the per-language subtitle table and the file
+        // Radarr reports; both need Bazarr write and read endpoints this client
+        // has none of, so the missing-subtitle list holds it. Details and Tags
+        // stand aside.
+        sideTrack: const {'Details', 'Tags'},
         // Region 1 wants Bazarr's own promoted action ('Refresh from Bazarr'
         // while anything is missing). Until a Bazarr action resolver exists the
         // refresh lives on the section label, where the spine documents a

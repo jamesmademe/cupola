@@ -385,15 +385,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // On an available title the primary is withheld, which frees both visible
-      // slots — so the profile is a labelled button in the band rather than a
-      // sheet row. Still two deliberate steps to a server write, and still not
-      // one stray tap in a crowded row of six equal-weight buttons.
+      // Decision 25: the profile is a field, and a field is edited where it is
+      // read — the row in the Details card, not a button in the action band and
+      // not a line in the ⋯ sheet. Still two deliberate steps to a server write.
+      await _scrollUntilVisible(tester, find.text('Quality profile'));
       await tester.tap(find.text('Quality profile'));
-      await tester.pumpAndSettle();
+      await _settleRoute(tester);
 
       await tester.tap(find.text('Ultra-HD'));
-      await tester.pumpAndSettle();
+      await _settleRoute(tester);
 
       // The confirmation names the transition and what it may set off, rather
       // than firing a library-wide upgrade sweep straight off a 42pt tap.
@@ -414,7 +414,7 @@ void main() {
       expect(radarrService.profileWrites, isEmpty);
 
       await tester.tap(find.text('Cancel'));
-      await tester.pumpAndSettle();
+      await _settleRoute(tester);
 
       expect(radarrService.profileWrites, isEmpty);
     });
@@ -431,16 +431,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // On an available title the primary is withheld, which frees both visible
-      // slots — so the profile is a labelled button in the band rather than a
-      // sheet row. Still two deliberate steps to a server write, and still not
-      // one stray tap in a crowded row of six equal-weight buttons.
+      // The Details row, not the action band — see the test above.
+      await _scrollUntilVisible(tester, find.text('Quality profile'));
       await tester.tap(find.text('Quality profile'));
-      await tester.pumpAndSettle();
+      await _settleRoute(tester);
       await tester.tap(find.text('Ultra-HD'));
-      await tester.pumpAndSettle();
+      await _settleRoute(tester);
       await tester.tap(find.text('Change profile'));
-      await tester.pumpAndSettle();
+      await _settleRoute(tester);
 
       expect(radarrService.profileWrites, [(1, 2)]);
       expect(find.text('Quality profile changed to Ultra-HD'), findsOneWidget);
@@ -594,6 +592,19 @@ RadarrMovie _movieWithProfile() => buildMovie(
   genres: const ['Sci-Fi'],
   qualityProfileId: 1,
 );
+
+/// Pumps a route transition to its end without `pumpAndSettle`.
+///
+/// Once this page has been scrolled, something under it keeps a frame scheduled
+/// for as long as a route is pushed over it, and `pumpAndSettle` then never
+/// returns — it waits on `hasScheduledFrame`, not on the route. A bounded pump
+/// is the honest way to drive a sheet or a dialog here; the tests that use it
+/// are about what the write does, not about when the motion stops.
+Future<void> _settleRoute(WidgetTester tester) async {
+  for (var i = 0; i < 20; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+}
 
 Future<void> _scrollUntilVisible(WidgetTester tester, Finder finder) async {
   await tester.scrollUntilVisible(

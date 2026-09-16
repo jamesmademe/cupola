@@ -10,7 +10,6 @@ import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/header_action_row.dart';
-import 'package:cupola/core/widgets/media_profile_selector.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -57,17 +56,13 @@ class _SecondaryCandidate {
   /// Lower wins a slot first. Null can never be visible.
   final int? visibleRank;
 
-  /// Shorter label for the visible button, where a sheet row's width is not
-  /// available. Falls back to the sheet's own label.
-  final String? visibleLabel;
+  // No `visibleLabel` override any more. It existed for exactly one candidate —
+  // the quality profile, which said `Quality profile: HD-1080p` in the sheet and
+  // `Quality profile` on the button — and that candidate left with decision 25.
+  // Every remaining action is a verb that fits on a button as it is written.
+  const _SecondaryCandidate({required this.action, required this.visibleRank});
 
-  const _SecondaryCandidate({
-    required this.action,
-    required this.visibleRank,
-    this.visibleLabel,
-  });
-
-  String get visibleName => visibleLabel ?? action.label;
+  String get visibleName => action.label;
 }
 
 /// The candidates that earn the row's visible slots, in rank order.
@@ -326,17 +321,16 @@ class LibraryDetailActions extends StatelessWidget {
   /// Deletes the item from the service. Always lands last in the overflow.
   final VoidCallback? onDelete;
 
-  /// Current quality profile name. Null hides the profile row.
-  final String? currentProfileName;
-
-  /// Current quality profile ID, for the picker's selected state.
-  final int? currentProfileId;
-
-  /// Available quality profiles for the picker.
-  final List<Map<String, dynamic>> qualityProfiles;
-
-  /// Called when a new quality profile is chosen.
-  final Future<void> Function(int profileId)? onProfileSelected;
+  // No quality-profile fields, and that is decision 25 rather than an omission:
+  // **a detail edits in place.** The profile is a field, it is read in the
+  // Details grid, and it is now changed there through `MediaDetailValueRow`.
+  // This band used to carry it twice over — `Quality profile: HD-1080p` in the
+  // overflow *and* promoted into the visible row at `visibleRank: 1` — which put
+  // a field edit among the verbs, offered one thing at two densities in two
+  // places, and left the grid showing a value that looked untouchable.
+  //
+  // What stays here is whole-item only: search, interactive search, monitor,
+  // manual import, delete.
 
   const LibraryDetailActions({
     super.key,
@@ -354,10 +348,6 @@ class LibraryDetailActions extends StatelessWidget {
     this.onOpenQueue,
     this.onMonitoredChanged,
     this.onDelete,
-    this.currentProfileName,
-    this.currentProfileId,
-    this.qualityProfiles = const [],
-    this.onProfileSelected,
   });
 
   MediaActionCapabilities get _capabilities => MediaActionCapabilities(
@@ -413,18 +403,10 @@ class LibraryDetailActions extends StatelessWidget {
   /// The two orders are deliberately different. The sheet reads best grouped by
   /// kind — both searches together, then state, then the destructive one last.
   /// The row must never spend both of its slots on two searches, so
-  /// `visibleRank` promotes Interactive search and then the quality profile,
-  /// which are the two an operator actually reaches for on a title that is
-  /// already complete. A null rank can only ever appear in the sheet, which is
-  /// how Delete is kept from becoming a visible peer of Import on any rung.
-  List<_SecondaryCandidate> _candidates(
-    BuildContext context,
-    MediaActionKind promoted,
-  ) {
-    final profiles = qualityProfiles;
-    final profileName = currentProfileName;
-    final profileSetter = onProfileSelected;
-
+  /// `visibleRank` promotes Interactive search first. A null rank can only ever
+  /// appear in the sheet, which is how Delete is kept from becoming a visible
+  /// peer of Import on any rung.
+  List<_SecondaryCandidate> _candidates(MediaActionKind promoted) {
     return <_SecondaryCandidate>[
       if (onInteractiveSearch != null &&
           promoted != MediaActionKind.interactiveSearch)
@@ -456,28 +438,14 @@ class LibraryDetailActions extends StatelessWidget {
             onInvoke: () => onMonitoredChanged!(!isMonitored),
           ),
         ),
-      if (profileName != null && profileSetter != null && profiles.isNotEmpty)
-        _SecondaryCandidate(
-          visibleRank: 1,
-          // The sheet names the current profile because it has the width for it;
-          // the visible button cannot, so it carries the bare noun and the
-          // current value stays one tap away. Same action, two densities.
-          visibleLabel: 'Quality profile',
-          action: MediaOverflowAction(
-            label: 'Quality profile: $profileName',
-            icon: Icons.high_quality_rounded,
-            onInvoke: () => showMediaProfileSelector(
-              context,
-              currentProfileName: profileName,
-              currentProfileId: currentProfileId,
-              qualityProfiles: profiles,
-              onProfileSelected: profileSetter,
-              accent: service.accent,
-            ),
-          ),
-        ),
       if (onImport != null && promoted != MediaActionKind.manualImport)
         _SecondaryCandidate(
+          // Rank 1 is vacant, and stays vacant: it belonged to the quality
+          // profile until decision 25 moved that field onto its own row in the
+          // Details card. Closing the gap would re-order the band — Manual
+          // import would start taking the single visible slot from Automatic
+          // search on an upgradable title — and nothing in that decision asked
+          // for the promotion order to change.
           visibleRank: 3,
           action: MediaOverflowAction(
             label: 'Manual import',
@@ -518,7 +486,7 @@ class LibraryDetailActions extends StatelessWidget {
     // unchanged — promoting a search on a complete title is what the previous
     // pass deliberately killed — but the space it leaves is now spent on the two
     // actions an operator does reach for, instead of on nothing.
-    final candidates = _candidates(context, action.kind);
+    final candidates = _candidates(action.kind);
     final visible = _visibleSecondaries(candidates, slots: hasPrimary ? 1 : 2);
     final overflow = candidates
         .where((candidate) => !visible.contains(candidate))

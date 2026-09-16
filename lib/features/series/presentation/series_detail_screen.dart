@@ -130,8 +130,11 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       baseUrl: connection?.url ?? '',
       apiKey: connection?.credential ?? '',
     );
+    // An empty profile name on purpose: decision 25 moves that field out of the
+    // read-only grid and onto an editable row above it, and a value offered in
+    // two places is a value the user has to guess about.
     final infoGroups = viewModel.buildInfoGroups(
-      currentProfileName ?? '',
+      '',
       // Only a series Sonarr actually holds can be retyped. For anything else
       // the row stays a fact, which is what it is.
       seriesTypeControl: viewModel.isInLibrary && series.id > 0
@@ -253,10 +256,38 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     int tvdbId,
   ) {
     final accent = ServiceKey.sonarr.accent;
+
+    // Decision 25 — the profile is edited where it is read, not from the deck's
+    // ⋯ menu. The write already exists and asks first, because changing a
+    // profile can start an upgrade search that cannot be called back.
+    //
+    // Series type is the other field that ships, and it is edited the same way
+    // one cell over (`SeriesTypeRow`, in the grid). Root folder and tags are
+    // drawn on the board and neither has a write here — a generic
+    // read-modify-PUT for the first, `GET /api/v3/tag` for the second — and a
+    // picker with nothing behind it is a control that fails in the user's hand.
+    final profileRow = viewModel.isInLibrary && qualityProfiles.isNotEmpty
+        ? MediaDetailValueRow<int>(
+            label: 'Quality profile',
+            value: currentProfileId,
+            options: qualityProfileOptions(qualityProfiles),
+            onChanged: (profileId) =>
+                _updateProfile(profileId, mediaTitle: viewModel.title),
+            accent: accent,
+            hint: 'Changes it on Sonarr',
+          )
+        : null;
     final total = viewModel.episodeCount ?? 0;
     final onDisk = viewModel.episodeFileCount ?? 0;
 
     return MediaDetailBody(
+      // Sonarr's column, and it is not Radarr's. The wide track is the season
+      // table — a table is the widest thing on this page and the reason the
+      // spine stopped capping tables at the reading measure — and the Overview
+      // rides with it, because on a series the synopsis is a caption to the
+      // manifest rather than the subject. The 380 column takes the fact grid and
+      // the catalogue.
+      sideTrack: const {'Details', 'Scores', 'Genres', 'Collection'},
       deck: viewModel.isInLibrary
           ? LibraryDetailActions(
               service: ServiceKey.sonarr,
@@ -268,9 +299,6 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
                   : null,
               isBusy: isAutoSearching || isUpdatingMonitoredState || isDeleting,
               isConfirmed: isAutoSearchConfirmed,
-              currentProfileName: currentProfileName,
-              currentProfileId: currentProfileId,
-              qualityProfiles: qualityProfiles,
               onSearch: () => _triggerSearch(context),
               onInteractiveSearch: () =>
                   _showInteractiveSearch(context, title: viewModel.title),
@@ -289,8 +317,6 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
                 seriesId: seriesId,
                 monitored: monitored,
               ),
-              onProfileSelected: (profileId) =>
-                  _updateProfile(profileId, mediaTitle: viewModel.title),
               onDelete: () => _confirmDelete(context, title: viewModel.title),
             )
           // See the Radarr screen: no add path from this view, so an untracked
@@ -309,6 +335,11 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
           MediaDetailSlot.lazy(
             label: 'Seasons',
             count: total > 0 ? '$onDisk of $total on disk' : null,
+            // `# · Episode · Aired · File` is read down its columns, so the
+            // reading measure that keeps prose at 720 does not apply: capping it
+            // there inside a 1000pt window is a table with a 155pt margin on
+            // each side and four columns fighting for what is left.
+            measure: MediaDetailMeasure.track,
             // State at the point of intent: a live search for this title's
             // primary target rewrites what the action would have promised. The
             // caller owns this box's gutter — see MediaDetailSlot.leadingBox.
@@ -384,11 +415,11 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
           ),
       ],
       reference: [
-        if (infoGroups.isNotEmpty)
+        if (infoGroups.isNotEmpty || profileRow != null)
           MediaDetailSlot.box(
             label: 'Details',
             child: AppCard.surfaceOutlined(
-              child: MediaInfoCard(groups: infoGroups),
+              child: MediaInfoCard(rows: [?profileRow], groups: infoGroups),
             ),
           ),
         if (viewModel.ratings.isNotEmpty)

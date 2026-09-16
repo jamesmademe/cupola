@@ -78,6 +78,7 @@ export 'app_bottom_sheet.dart';
 export 'app_dialog.dart';
 export 'delete_media_dialog.dart';
 export 'interactive_search_sheet.dart';
+export 'media_detail_value_row.dart';
 export 'media_profile_selector.dart';
 export 'media_search_popup_menu.dart';
 

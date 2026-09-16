@@ -118,7 +118,9 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
       baseUrl: connection?.url ?? '',
       apiKey: connection?.credential ?? '',
     );
-    final infoGroups = viewModel.buildInfoGroups(currentProfileName ?? '');
+    // An empty profile name on purpose: decision 25 moves that field out of the
+    // read-only grid and onto an editable row above it.
+    final infoGroups = viewModel.buildInfoGroups('');
 
     // One fetch feeds both the artist badge and the per-album badges below.
     final queues = ref
@@ -217,9 +219,36 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     int artistId,
   ) {
     final accent = ServiceKey.lidarr.accent;
+
+    // Decision 25 — the profile is edited where it is read, not from the deck's
+    // ⋯ menu. The write already exists and asks first, because changing a
+    // profile can start an upgrade search that cannot be called back.
+    //
+    // **This is the only field that ships.** Metadata profile, root folder
+    // and tags are drawn on the board and every one needs a write this
+    // client does not have — a generic read-modify-PUT for the first, `GET
+    // /api/v1/tag` for the rest — and a picker with nothing behind it is a
+    // control that fails in the user's hand.
+    final profileRow = viewModel.isInLibrary && qualityProfiles.isNotEmpty
+        ? MediaDetailValueRow<int>(
+            label: 'Quality profile',
+            value: currentProfileId,
+            options: qualityProfileOptions(qualityProfiles),
+            onChanged: (profileId) =>
+                _updateProfile(profileId, mediaTitle: viewModel.title),
+            accent: accent,
+            hint: 'Changes it on Lidarr',
+          )
+        : null;
     final tracks = viewModel.trackCount;
 
     return MediaDetailBody(
+      // Lidarr's column. The wide track is the discography and the search strip
+      // — the only two things on this page that are about doing something — and
+      // everything an artist *is* stands in the 380 column. `related` is empty
+      // here (there is no cast and no collection for a musician), so the side
+      // track is the encyclopaedia and nothing else.
+      sideTrack: const {'Overview', 'Details', 'Scores', 'Genres'},
       deck: viewModel.isInLibrary
           ? LibraryDetailActions(
               service: ServiceKey.lidarr,
@@ -231,9 +260,6 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
                   : null,
               isBusy: isAutoSearching || isUpdatingMonitoredState || isDeleting,
               isConfirmed: isAutoSearchConfirmed,
-              currentProfileName: currentProfileName,
-              currentProfileId: currentProfileId,
-              qualityProfiles: qualityProfiles,
               onSearch: () => _triggerSearch(context),
               onInteractiveSearch: () =>
                   _showInteractiveSearch(context, title: viewModel.title),
@@ -252,8 +278,6 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
                 artistId: artistId,
                 monitored: monitored,
               ),
-              onProfileSelected: (profileId) =>
-                  _updateProfile(profileId, mediaTitle: viewModel.title),
               onDelete: () => _confirmDelete(context, title: viewModel.title),
             )
           // See the Radarr screen: no add path from this view, so an untracked
@@ -337,11 +361,11 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
           ),
       ],
       reference: [
-        if (infoGroups.isNotEmpty)
+        if (infoGroups.isNotEmpty || profileRow != null)
           MediaDetailSlot.box(
             label: 'Details',
             child: AppCard.surfaceOutlined(
-              child: MediaInfoCard(groups: infoGroups),
+              child: MediaInfoCard(rows: [?profileRow], groups: infoGroups),
             ),
           ),
         if (viewModel.ratings.isNotEmpty)

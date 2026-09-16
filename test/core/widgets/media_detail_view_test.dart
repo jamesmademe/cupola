@@ -2,10 +2,13 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
+import 'package:flutter/foundation.dart'
+    show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
@@ -803,6 +806,206 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(refreshed, 1);
+    });
+  });
+
+  group('the deck', () {
+    testWidgets('never rides inside the hero', (tester) async {
+      const deckKey = Key('deck');
+      await tester.pumpWidget(
+        _wrap(
+          _detailView(
+            staggerSections: false,
+            body: const MediaDetailBody(
+              deck: SizedBox(key: deckKey, height: 40, width: double.infinity),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // A do-not-regress line, not a new rule. The action row is region 1 of the
+      // *body*; put it in the collapsing header and it becomes cargo on the Hero
+      // flight — a live control animating between two routes, resizing as the
+      // header collapses, and tappable mid-flight.
+      expect(find.byKey(deckKey), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SliverPersistentHeader),
+          matching: find.byKey(deckKey),
+        ),
+        findsNothing,
+      );
+    });
+  });
+
+  group('the side track', () {
+    Future<void> pumpWide(WidgetTester tester, MediaDetailBody body) async {
+      tester.view.physicalSize = const Size(1440, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        _wrap(_detailView(staggerSections: false, body: body)),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('is the page\'s declaration, slot by slot', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        await pumpWide(
+          tester,
+          const MediaDetailBody(
+            sideTrack: {'Details', 'Collection'},
+            // One slot from the region that used to move wholesale, one from the
+            // region that used to stay, and — the case that kills every rule
+            // cleverer than a set — two slots out of ONE region landing in
+            // different tracks.
+            operate: [MediaDetailSlot.box(label: 'Seasons', child: Text('s'))],
+            reference: [
+              MediaDetailSlot.box(label: 'Details', child: Text('d')),
+            ],
+            related: [
+              MediaDetailSlot.box(label: 'Cast', child: Text('c')),
+              MediaDetailSlot.box(label: 'Collection', child: Text('x')),
+            ],
+          ),
+        );
+
+        final seasons = tester.getRect(find.text('SEASONS'));
+        final cast = tester.getRect(find.text('CAST'));
+        final details = tester.getRect(find.text('DETAILS'));
+        final collection = tester.getRect(find.text('COLLECTION'));
+
+        // Named → side track.
+        expect(details.left, greaterThan(seasons.right));
+        expect(collection.left, greaterThan(seasons.right));
+        // Unnamed → main track, whatever region it came from.
+        expect(cast.left, closeTo(seasons.left, 0.5));
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('undeclared pages keep the split they shipped with', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        await pumpWide(
+          tester,
+          const MediaDetailBody(
+            operate: [MediaDetailSlot.box(label: 'Seasons', child: Text('s'))],
+            reference: [
+              MediaDetailSlot.box(label: 'Details', child: Text('d')),
+            ],
+          ),
+        );
+
+        // No set, so the old region rule still applies rather than the page
+        // collapsing to one column under it.
+        expect(
+          tester.getRect(find.text('SEASONS')).left,
+          greaterThan(tester.getRect(find.text('DETAILS')).right),
+        );
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+  });
+
+  group('the measured geometry', () {
+    const columnKey = Key('column-slot');
+    const trackKey = Key('track-slot');
+
+    MediaDetailView spine() => _detailView(
+      staggerSections: false,
+      body: const MediaDetailBody(
+        operate: [
+          MediaDetailSlot.box(
+            label: 'Column',
+            child: SizedBox(key: columnKey, height: 24, width: double.infinity),
+          ),
+          MediaDetailSlot.box(
+            label: 'Track',
+            measure: MediaDetailMeasure.track,
+            child: SizedBox(key: trackKey, height: 24, width: double.infinity),
+          ),
+        ],
+      ),
+    );
+
+    Future<void> pumpAt(WidgetTester tester, double width) async {
+      tester.view.physicalSize = Size(width, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(_wrap(spine()));
+      await tester.pump();
+    }
+
+    testWidgets('a table is not held to the prose measure', (tester) async {
+      // The rule, not the rendering: `bodyMaxWidth` is where the eye loses the
+      // line it came from on the return sweep, and a table has no return sweep.
+      // At 1000pt the centred column is 688 — a 312pt margin around a four
+      // column table — and the track slot must refuse it.
+      await pumpAt(tester, 1000);
+
+      expect(tester.getSize(find.byKey(columnKey)).width, 688);
+      expect(
+        tester.getSize(find.byKey(trackKey)).width,
+        1000 - 2 * MediaDetailMetrics.trackGutter,
+      );
+    });
+
+    testWidgets('a section label travels with the slot it names', (
+      tester,
+    ) async {
+      await pumpAt(tester, 1000);
+
+      // A heading indented 155pt from its own table reads as a heading for
+      // something else.
+      expect(
+        tester.getRect(find.text('TRACK')).left,
+        lessThan(tester.getRect(find.text('COLUMN')).left),
+      );
+      expect(
+        tester.getRect(find.text('TRACK')).left,
+        closeTo(tester.getRect(find.byKey(trackKey)).left, 0.5),
+      );
+    });
+
+    testWidgets('the second track opens only once the first one fits', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        // One pixel under the gate: two tracks here would leave the main one
+        // below the reading measure it exists to hold.
+        await pumpAt(tester, AppBreakpoints.contentWell - 1);
+        expect(find.byType(SliverCrossAxisGroup), findsNothing);
+
+        await pumpAt(tester, AppBreakpoints.contentWell);
+        expect(find.byType(SliverCrossAxisGroup), findsOneWidget);
+        expect(
+          tester
+              .widget<SliverConstrainedCrossAxis>(
+                find.byType(SliverConstrainedCrossAxis),
+              )
+              .maxExtent,
+          MediaDetailMetrics.sideTrackWidth,
+        );
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+      // And what is left over still clears the reading measure.
+      expect(
+        AppBreakpoints.contentWell -
+            MediaDetailMetrics.sideTrackWidth -
+            AppSpacing.xl,
+        greaterThanOrEqualTo(MediaDetailMetrics.bodyMaxWidth),
+      );
     });
   });
 }

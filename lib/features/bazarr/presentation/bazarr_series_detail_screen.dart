@@ -108,6 +108,13 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
         ),
       ),
       body: MediaDetailBody(
+        // Bazarr's column, one region short of the drawn one. The board gives
+        // the wide track an episode x language chip table and demotes this
+        // wanted list to the 380 column beside it; the table needs
+        // `GET /api/episodes?seriesid[]=`, which this client cannot ask for, so
+        // the list *is* the page and holds the wide track until it can. Details
+        // and Tags stand aside either way.
+        sideTrack: const {'Details', 'Tags'},
         // No deck: see the Bazarr movie screen — region 1 wants a Bazarr action
         // resolver, and a null deck costs no air where a blank box did.
         // Region 3 — the manifest. The lazy episode list used to be handed to the

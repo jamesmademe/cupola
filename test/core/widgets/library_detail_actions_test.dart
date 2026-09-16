@@ -364,7 +364,6 @@ void main() {
         tester,
         status: const MediaStatusInfo(availability: MediaAvailability.missing),
         isMonitored: true,
-        currentProfileName: 'HD-1080p',
       );
 
       // Interactive search won the one visible slot a primary leaves, so the
@@ -375,8 +374,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Stop monitoring'), findsOneWidget);
-      expect(find.text('Quality profile: HD-1080p'), findsOneWidget);
       expect(find.text('Manual import'), findsOneWidget);
+      // Decision 25: the band is whole-item actions only. `Quality profile:
+      // HD-1080p` used to sit here *and* claim a visible slot; it is a field,
+      // and a field is edited on its own row in the Details card.
+      expect(find.textContaining('Quality profile'), findsNothing);
       expect(find.text('Delete'), findsOneWidget);
       // Automatic search is promoted; Interactive search took the visible slot.
       // Neither is a row in the sheet — the one 'Automatic search' on screen is the
@@ -717,7 +719,6 @@ Future<void> _pumpActions(
   bool isBusy = false,
   bool isConfirmed = false,
   bool reduceMotion = false,
-  String? currentProfileName,
   ValueChanged<bool>? onMonitoredChanged,
   VoidCallback? onSearch,
   VoidCallback? onInteractiveSearch,
@@ -738,19 +739,12 @@ Future<void> _pumpActions(
           isMonitored: isMonitored,
           isBusy: isBusy,
           isConfirmed: isConfirmed,
-          currentProfileName: currentProfileName,
-          currentProfileId: 1,
-          qualityProfiles: const [
-            {'id': 1, 'name': 'HD-1080p'},
-            {'id': 2, 'name': 'Ultra-HD'},
-          ],
           onSearch: onSearch ?? () {},
           onInteractiveSearch: onInteractiveSearch ?? () {},
           onImport: onImport ?? () {},
           onOpenQueue: () {},
           onMonitoredChanged: onMonitoredChanged ?? (_) {},
           onDelete: onDelete ?? () {},
-          onProfileSelected: (_) async {},
         ),
       ),
     ),

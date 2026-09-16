@@ -123,7 +123,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       baseUrl: connection?.url ?? '',
       apiKey: connection?.credential ?? '',
     );
-    final infoGroups = viewModel.buildInfoGroups(currentProfileName ?? '');
+    // An empty profile name on purpose, which drops the read-only `Profile`
+    // cell from the grid: decision 25 moves that field to an editable row above
+    // it, and a value offered twice is a value the user has to guess about.
+    final infoGroups = viewModel.buildInfoGroups('');
 
     // Without the queue the badge cannot tell "nothing on disk" from "being
     // downloaded right now", and every in-flight movie reads as Missing.
@@ -206,7 +209,41 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
   ) {
     final accent = ServiceKey.radarr.accent;
 
+    // Decision 25 — the profile is edited where it is read, not from the deck's
+    // ⋯ menu. The write already exists and asks first, because changing a
+    // profile can start an upgrade search that cannot be called back.
+    //
+    // **This is the only field that ships.** Root folder, minimum
+    // availability and tags are drawn on the board and every one needs a
+    // write this client does not have — a generic read-modify-PUT for the
+    // first, `GET /api/v3/tag` for the rest — and a picker with nothing
+    // behind it is a control that fails in the user's hand.
+    final profileRow = viewModel.isInLibrary && qualityProfiles.isNotEmpty
+        ? MediaDetailValueRow<int>(
+            label: 'Quality profile',
+            value: currentProfileId,
+            options: qualityProfileOptions(qualityProfiles),
+            onChanged: (profileId) =>
+                _updateProfile(profileId, mediaTitle: viewModel.title),
+            accent: accent,
+            hint: 'Changes it on Radarr',
+          )
+        : null;
+
     return MediaDetailBody(
+      // Radarr's own column, not a shared one. The wide track carries what the
+      // server is doing about this film — the file, whether a media server can
+      // already play it, the search strip — and the 380 column carries what the
+      // film *is*: the overview, the fact grid, the scores and genres, the rest
+      // of its collection. Cast stays wide: faces at 380 are four to a row and
+      // the rail exists to be scrolled.
+      sideTrack: const {
+        'Overview',
+        'Details',
+        'Scores',
+        'Genres',
+        'Collection',
+      },
       deck: viewModel.isInLibrary
           ? LibraryDetailActions(
               service: ServiceKey.radarr,
@@ -217,9 +254,6 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
               // on this page: only one action is ever promoted.
               isBusy: isAutoSearching || isUpdatingMonitoredState || isDeleting,
               isConfirmed: isAutoSearchConfirmed,
-              currentProfileName: currentProfileName,
-              currentProfileId: currentProfileId,
-              qualityProfiles: qualityProfiles,
               onSearch: () => _triggerSearch(context),
               onInteractiveSearch: () =>
                   _showInteractiveSearch(context, title: viewModel.title),
@@ -238,8 +272,6 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
                 movieId: movieId,
                 monitored: monitored,
               ),
-              onProfileSelected: (profileId) =>
-                  _updateProfile(profileId, mediaTitle: viewModel.title),
               onDelete: () => _confirmDelete(context, title: viewModel.title),
             )
           // No add path exists from this view, so an untracked title falls
@@ -290,11 +322,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
           ),
       ],
       reference: [
-        if (infoGroups.isNotEmpty)
+        if (infoGroups.isNotEmpty || profileRow != null)
           MediaDetailSlot.box(
             label: 'Details',
             child: AppCard.surfaceOutlined(
-              child: MediaInfoCard(groups: infoGroups),
+              child: MediaInfoCard(rows: [?profileRow], groups: infoGroups),
             ),
           ),
         if (viewModel.ratings.isNotEmpty)

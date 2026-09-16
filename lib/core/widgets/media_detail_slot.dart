@@ -1,5 +1,21 @@
 import 'package:flutter/widgets.dart';
 
+/// How wide a slot's content is allowed to run inside its track.
+///
+/// One number for the whole body was the mistake: `bodyMaxWidth` is a *reading*
+/// measure, derived from where the eye loses the line it came from on the return
+/// sweep, and a table has no return sweep — it is read down its columns. Capping
+/// an episode table at 720 inside a 1000pt window does not make it readable, it
+/// makes it a table with a margin and four columns fighting for 688pt.
+enum MediaDetailMeasure {
+  /// The centred reading column, capped at `MediaDetailMetrics.bodyMaxWidth`.
+  /// The default, and what prose, fact grids and cards want.
+  column,
+
+  /// The whole track, inset by the screen gutter only. For tables and grids.
+  track,
+}
+
 /// One addressable block inside a [MediaDetailBody] region.
 ///
 /// The region label is a `String` and never a `Widget`: the spine builds every
@@ -63,11 +79,38 @@ class MediaDetailSlot {
   /// the rail bleeds past it.
   final Widget Function(EdgeInsets padding)? railBuilder;
 
+  /// How wide this slot runs inside its track. See [MediaDetailMeasure].
+  ///
+  /// Declared per slot rather than inferred from the content, because the spine
+  /// cannot see through its own child: a `SliverList` of episode rows and a
+  /// `SliverList` of prose paragraphs are the same type here.
+  final MediaDetailMeasure measure;
+
+  /// The name [MediaDetailBody.sideTrack] addresses this slot by. Defaults to
+  /// [label], which is the name the page already gave it.
+  ///
+  /// Pass it only where the label cannot serve: an unlabelled slot that has to
+  /// move, or two slots on one page sharing a label. Everything else is keyed by
+  /// the heading the user reads, which keeps the declaration legible — a page
+  /// says `sideTrack: {'Overview', 'Details', 'Collection'}` and that is exactly
+  /// what stands in the side track.
+  ///
+  /// The cost of that legibility: renaming a label moves the region unless the
+  /// set is renamed with it. That is why a slot the page did *not* name stays in
+  /// the main track — the failure mode is a section in the wrong column, never a
+  /// section that disappears.
+  final String? id;
+
+  /// The key [MediaDetailBody.sideTrack] matches against.
+  String? get trackKey => id ?? label;
+
   const MediaDetailSlot.box({
     required Widget child,
     this.label,
     this.count,
     this.labelAction,
+    this.measure = MediaDetailMeasure.column,
+    this.id,
   }) : box = child,
        sliver = null,
        leadingBox = null,
@@ -79,18 +122,24 @@ class MediaDetailSlot {
     this.count,
     this.labelAction,
     this.leadingBox,
+    this.measure = MediaDetailMeasure.column,
+    this.id,
   }) : box = null,
        railBuilder = null;
 
+  /// A rail bleeds by definition, so it is always [MediaDetailMeasure.column]:
+  /// it receives the resolved gutter and runs past it either way.
   const MediaDetailSlot.rail({
     required Widget Function(EdgeInsets padding) builder,
     this.label,
     this.count,
     this.labelAction,
+    this.id,
   }) : railBuilder = builder,
        box = null,
        sliver = null,
-       leadingBox = null;
+       leadingBox = null,
+       measure = MediaDetailMeasure.column;
 }
 
 /// The media detail body's six regions, in canonical order.
@@ -165,6 +214,32 @@ class MediaDetailBody {
   /// request outright, so it reads as reference and sits under `DETAILS`.
   final List<MediaDetailSlot> related;
 
+  /// Which slots stand in the desktop side track, by [MediaDetailSlot.trackKey].
+  ///
+  /// **The split is per slot, not per region**, and the region-based one it
+  /// replaces was the inverse of what is drawn. The spine used to send `operate`
+  /// and `related` to the side track and keep `synopsis` and `reference` in the
+  /// main one; every board does the opposite — the Overview, the Details grid
+  /// and the Reference block stand in the 380 column while the file, the
+  /// episode table, the releases and the history run the wide one.
+  ///
+  /// It cannot be a smarter rule either, because two facts kill every candidate:
+  /// **History is not a fixed side region** (wide on Radarr and Sonarr, side on
+  /// Lidarr and Readarr) and **`related` is not atomic** (Radarr puts Cast wide
+  /// and Collection side, out of one list). What column a section belongs in is
+  /// a per-service editorial judgement, which is the same thing the binding rule
+  /// says about details generally: they share the chrome and nothing else.
+  ///
+  /// Null means the page has not declared, and the legacy region split applies.
+  /// It is not a default worth having — it is there so a page that predates this
+  /// keeps the layout it shipped with instead of silently collapsing to one
+  /// column. An empty set is a real declaration: everything in the main track.
+  ///
+  /// A key naming no slot is not an error: a page omits the region it has
+  /// nothing to say in, and the set describes where a section goes *if* it is
+  /// there.
+  final Set<String>? sideTrack;
+
   const MediaDetailBody({
     this.deck,
     this.readout,
@@ -172,7 +247,28 @@ class MediaDetailBody {
     this.synopsis = const <MediaDetailSlot>[],
     this.reference = const <MediaDetailSlot>[],
     this.related = const <MediaDetailSlot>[],
+    this.sideTrack,
   });
+
+  /// This body with only the slots on [inSideTrack]'s side of [sideTrack].
+  ///
+  /// The deck and the readout never move: the answer and the decisive facts are
+  /// the top of the page in both layouts.
+  MediaDetailBody partition({required bool inSideTrack}) {
+    final side = sideTrack ?? const <String>{};
+    List<MediaDetailSlot> keep(List<MediaDetailSlot> slots) => slots
+        .where((slot) => side.contains(slot.trackKey) == inSideTrack)
+        .toList(growable: false);
+
+    return MediaDetailBody(
+      deck: inSideTrack ? null : deck,
+      readout: inSideTrack ? null : readout,
+      operate: keep(operate),
+      synopsis: keep(synopsis),
+      reference: keep(reference),
+      related: keep(related),
+    );
+  }
 
   /// Every slot, flattened in canonical region order.
   ///
