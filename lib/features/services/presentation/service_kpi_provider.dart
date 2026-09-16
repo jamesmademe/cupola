@@ -8,6 +8,12 @@ import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/music/data/lidarr_service.dart';
+import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
@@ -24,8 +30,10 @@ import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/series/presentation/series_provider.dart';
+import 'package:cupola/features/services/domain/kpi_aggregate.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
@@ -84,6 +92,119 @@ final serviceKpiProvider = FutureProvider.autoDispose
           );
       }
     });
+
+/// The same KPIs, for one **named connection** rather than for the lens.
+///
+/// The Dashboard's stack card needs this: a service with two connections draws
+/// `×2` and the fleet's figures, and there is no fleet figure to compute while
+/// the only thing the app can ask is "what does the lens say". Keyed on
+/// [InstanceRef] and not on a bare id, for the reason that record already
+/// carries — a probe for a connection that has since been removed still has to
+/// know what kind of thing it was.
+///
+/// The lens's own id collapses back onto [serviceKpiProvider] rather than
+/// fetching the same server twice, which is the same collapse
+/// `requestsForProvider` and the `*ServiceFor` families make, and what keeps an
+/// override of the plain provider from being bypassed in tests.
+///
+/// **Null means this connection cannot be read on its own yet**, which is not
+/// the same as having no figures. Four services can answer per connection today
+/// — Radarr, Sonarr, Lidarr and Seerr, the four with a `*ServiceForProvider` to
+/// build a client from an id. The other thirteen (qBittorrent, SABnzbd, NZBGet,
+/// Transmission, Prowlarr, Bazarr, Readarr, Dockge, TrueNAS, Unraid, NPM,
+/// Jellyfin, Plex) have no per-connection client provider at all: their client
+/// providers read `activeInstanceProvider` themselves and take no id, so there
+/// is nothing to ask a second server with. That is the missing piece, named
+/// rather than stubbed — a fold that guessed would print the lens's rate as the
+/// fleet's, which is the bug this provider exists to end.
+final serviceKpiForProvider = FutureProvider.autoDispose
+    .family<List<ServiceKpi>?, InstanceRef>((ref, key) async {
+      final lens = ref.watch(activeInstanceProvider(key.service))?.id ?? '';
+      if (key.instanceId.isEmpty || key.instanceId == lens) {
+        return ref.watch(serviceKpiProvider(key.service).future);
+      }
+      return switch (key.service) {
+        ServiceKey.radarr => await _radarrKpisFor(ref, key.instanceId),
+        ServiceKey.sonarr => await _sonarrKpisFor(ref, key.instanceId),
+        ServiceKey.lidarr => await _lidarrKpisFor(ref, key.instanceId),
+        ServiceKey.seerr => await _seerrKpisFor(ref, key.instanceId),
+        _ => null,
+      };
+    });
+
+/// The whole service's figures, folded across every connection it has.
+///
+/// Null when there is no aggregate to show, and the three reasons are all the
+/// same refusal:
+///
+///  * **a connection is dark.** Gated on `offline == 0` before anything is
+///    fetched: the fold is never partial, because a sum missing a term looks
+///    exactly like a sum.
+///  * **a connection cannot be read per connection** — see
+///    [serviceKpiForProvider].
+///  * **the figures do not fold** — see [aggregateServiceKpis], which is where
+///    the arithmetic and, more importantly, the refusals live.
+///
+/// A single-connection service folds to itself, so the card does not have to
+/// know whether it is looking at one server or six.
+final foldedServiceKpisProvider = FutureProvider.autoDispose
+    .family<List<ServiceKpi>?, ServiceKey>((ref, service) async {
+      final settings = ref.watch(currentSettingsProvider);
+      final connections = settings.configuredInstancesOf(service);
+      if (connections.isEmpty) return null;
+
+      // Lens first. `aggregateServiceKpis` falls back to the head of this list
+      // for every figure whose unit cannot be added — a percentage, a ratio, a
+      // state word — and the lens is the connection the rest of the app is
+      // already pointed at, so it is the only defensible one to keep.
+      final lens = ref.watch(activeInstanceProvider(service))?.id;
+      final ordered = [
+        for (final connection in connections)
+          if (connection.id == lens) connection,
+        for (final connection in connections)
+          if (connection.id != lens) connection,
+      ];
+
+      // Reachability first, and **awaited**. Reading the synchronous fold
+      // instead was the bug this line replaces: on a cold open every probe is
+      // still in flight, so `offline` is zero, the gate opens, and the fold
+      // publishes a sum over however many servers happened to have answered.
+      // The figure has to wait for every connection to have said something,
+      // because that is the whole claim it makes.
+      final answers = await Future.wait([
+        for (final connection in ordered)
+          _connectionAnswers(ref, (
+            service: service,
+            instanceId: connection.id,
+          )),
+      ]);
+      if (answers.contains(false)) return null;
+
+      final perConnection = await Future.wait([
+        for (final connection in ordered)
+          ref.watch(
+            serviceKpiForProvider((
+              service: service,
+              instanceId: connection.id,
+            )).future,
+          ),
+      ]);
+      return aggregateServiceKpis(perConnection);
+    });
+
+/// Whether one connection answered, with a probe that threw counted as a no.
+///
+/// `instanceSummaryProvider` normally reports an unreachable server as an
+/// offline summary rather than by throwing, but the fold must not be the place
+/// that finds out otherwise: an error escaping here would take the card into
+/// `AsyncError` and lose the reading for every connection that *was* fine.
+Future<bool> _connectionAnswers(Ref ref, InstanceRef key) async {
+  try {
+    return (await ref.watch(instanceSummaryProvider(key).future)).isOnline;
+  } catch (_) {
+    return false;
+  }
+}
 
 /// The single live figure a service contributes to the stack matrix on
 /// `/services`.
@@ -177,6 +298,25 @@ Future<List<ServiceKpi>> _streamKpis(
 Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
   final movies = await ref.watch(moviesProvider.future);
   final queued = await ref.watch(radarrQueuedMovieIdsProvider.future);
+  return _radarrKpisFrom(movies, queued.length);
+}
+
+/// The same four figures for one **named** connection, whatever the lens is on.
+///
+/// Only ever called for a connection that is *not* the lens — see
+/// [serviceKpiForProvider], which collapses the lens back onto the plain
+/// builder so the card and the library screen keep reading one cache.
+Future<List<ServiceKpi>> _radarrKpisFor(Ref ref, String instanceId) async {
+  final movies = await ref
+      .watch(radarrServiceForProvider(instanceId))
+      .getMovies();
+  final queue = await ref.watch(
+    radarrQueueSnapshotForProvider(instanceId).future,
+  );
+  return _radarrKpisFrom(movies, queue.entriesById.length);
+}
+
+List<ServiceKpi> _radarrKpisFrom(List<RadarrMovie> movies, int queued) {
   final monitored = movies.where((m) => m.monitored).length;
   final missing = movies.where((m) => m.monitored && !m.hasFile).length;
   return [
@@ -196,16 +336,20 @@ Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
       icon: Icons.report_gmailerrorred_rounded,
       tone: _backlogIf(missing > 0),
     ),
-    ServiceKpi(
-      label: 'Queue',
-      value: '${queued.length}',
-      icon: Icons.download_rounded,
-    ),
+    ServiceKpi(label: 'Queue', value: '$queued', icon: Icons.download_rounded),
   ];
 }
 
-Future<List<ServiceKpi>> _sonarrKpis(Ref ref) async {
-  final series = await ref.watch(seriesProvider.future);
+Future<List<ServiceKpi>> _sonarrKpis(Ref ref) async =>
+    _sonarrKpisFrom(await ref.watch(seriesProvider.future));
+
+/// See [_radarrKpisFor].
+Future<List<ServiceKpi>> _sonarrKpisFor(Ref ref, String instanceId) async =>
+    _sonarrKpisFrom(
+      await ref.watch(sonarrServiceForProvider(instanceId)).getSeries(),
+    );
+
+List<ServiceKpi> _sonarrKpisFrom(List<SonarrSeries> series) {
   var epHave = 0;
   var epTotal = 0;
   var monitored = 0;
@@ -240,8 +384,16 @@ Future<List<ServiceKpi>> _sonarrKpis(Ref ref) async {
   ];
 }
 
-Future<List<ServiceKpi>> _lidarrKpis(Ref ref) async {
-  final artists = await ref.watch(musicProvider.future);
+Future<List<ServiceKpi>> _lidarrKpis(Ref ref) async =>
+    _lidarrKpisFrom(await ref.watch(musicProvider.future));
+
+/// See [_radarrKpisFor].
+Future<List<ServiceKpi>> _lidarrKpisFor(Ref ref, String instanceId) async =>
+    _lidarrKpisFrom(
+      await ref.watch(lidarrServiceForProvider(instanceId)).getArtists(),
+    );
+
+List<ServiceKpi> _lidarrKpisFrom(List<LidarrArtist> artists) {
   var albums = 0;
   var trackHave = 0;
   var trackTotal = 0;
@@ -308,8 +460,15 @@ Future<List<ServiceKpi>> _qbittorrentKpis(Ref ref) async {
   ];
 }
 
-Future<List<ServiceKpi>> _seerrKpis(Ref ref) async {
-  final requests = await ref.watch(requestsProvider.future);
+Future<List<ServiceKpi>> _seerrKpis(Ref ref) async =>
+    _seerrKpisFrom(await ref.watch(requestsProvider.future));
+
+/// See [_radarrKpisFor]. Seerr already owned its per-connection read, because a
+/// request id is per instance and a merged list cannot be acted on by id alone.
+Future<List<ServiceKpi>> _seerrKpisFor(Ref ref, String instanceId) async =>
+    _seerrKpisFrom(await ref.watch(requestsForProvider(instanceId).future));
+
+List<ServiceKpi> _seerrKpisFrom(List<SeerrRequest> requests) {
   var pending = 0;
   var processing = 0;
   var available = 0;

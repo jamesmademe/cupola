@@ -140,7 +140,13 @@ class ServicesAlertBand extends ConsumerWidget {
           ref.invalidate(serviceKpiProvider(service));
           ref.invalidate(serviceSignalProvider(service));
           ref.invalidate(serviceSignalPairProvider(service));
+          ref.invalidate(foldedServiceKpisProvider(service));
+          ref.invalidate(foldedServiceSignalPairProvider(service));
         }
+        // Keyed on the connection, so it cannot be narrowed to the offenders
+        // by service key — and a retry that left the fleet's figures cached
+        // would redraw the recovered card with the numbers from the outage.
+        ref.invalidate(serviceKpiForProvider);
       },
       onDismiss: () =>
           ref.read(dismissedOutagesProvider.notifier).dismiss(unacknowledged),

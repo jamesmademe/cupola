@@ -1,9 +1,12 @@
-/// The header's counting rule and its clock.
+/// The stack headline's counting rule and its clock.
+///
+/// These assertions moved here from `stack_readout_test.dart` when the two
+/// models became one: the rules did not change, the file that owns them did.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/features/services/domain/stack_readout.dart';
+import 'package:cupola/features/shell/domain/stack_health.dart';
 
 void main() {
   group('foldServiceState', () {
@@ -28,6 +31,19 @@ void main() {
       );
     });
 
+    test('one connection can never be degraded', () {
+      // Degraded means *disagreement*, and one opinion cannot disagree with
+      // itself. A single connection only ever answers or does not.
+      expect(
+        foldServiceState(total: 1, offline: 0, checking: 0),
+        StackServiceState.answering,
+      );
+      expect(
+        foldServiceState(total: 1, offline: 1, checking: 0),
+        StackServiceState.unreachable,
+      );
+    });
+
     test('a probe still out is checking, and is not a fault', () {
       expect(
         foldServiceState(total: 1, offline: 0, checking: 1),
@@ -42,9 +58,9 @@ void main() {
     });
   });
 
-  group('stackReadoutFrom', () {
+  group('stackHealthFrom', () {
     test('the sum closes: degraded is counted inside answering', () {
-      final readout = stackReadoutFrom(
+      final health = stackHealthFrom(
         states: const [
           StackServiceState.answering,
           StackServiceState.degraded,
@@ -53,15 +69,15 @@ void main() {
         registrySize: 5,
       );
 
-      expect(readout.configured, 3);
-      expect(readout.answering + readout.unreachable, readout.configured);
-      expect(readout.degraded, 1);
-      expect(readout.notSetUp, 2);
-      expect(readout.headline, '2 of 3 answering');
+      expect(health.configured, 3);
+      expect(health.answering + health.unreachable, health.configured);
+      expect(health.degraded, 1);
+      expect(health.notSetUp, 2);
+      expect(health.headline, '2 of 3 answering');
     });
 
     test('the qualifiers are in reading order and omitted at zero', () {
-      final readout = stackReadoutFrom(
+      final health = stackHealthFrom(
         states: const [
           StackServiceState.answering,
           StackServiceState.degraded,
@@ -71,7 +87,7 @@ void main() {
         registrySize: 5,
       );
 
-      expect(readout.qualifiers, [
+      expect(health.qualifiers, [
         '1 degraded',
         '1 unreachable',
         '1 checking',
@@ -80,22 +96,38 @@ void main() {
     });
 
     test('a clear stack says only the headline — no permanent green', () {
-      final readout = stackReadoutFrom(
+      final health = stackHealthFrom(
         states: const [StackServiceState.answering],
         registrySize: 1,
       );
 
-      expect(readout.allClear, isTrue);
-      expect(readout.sentence, '1 of 1 answering');
+      expect(health.allClear, isTrue);
+      expect(health.sentence, '1 of 1 answering');
     });
 
     test('a degraded service is not all clear', () {
-      final readout = stackReadoutFrom(
+      final health = stackHealthFrom(
         states: const [StackServiceState.degraded],
         registrySize: 1,
       );
 
-      expect(readout.allClear, isFalse);
+      expect(health.allClear, isFalse);
+    });
+
+    test('a probe in flight is never a fault', () {
+      // The one assertion that keeps the cold open honest: while answers are
+      // still coming in the stack is *not* wrong, so nothing on this sentence
+      // may read as a fault — `allClear` stays true and the only thing said is
+      // that somebody is being asked.
+      final health = stackHealthFrom(
+        states: const [StackServiceState.answering, StackServiceState.checking],
+        registrySize: 2,
+      );
+
+      expect(health.allClear, isTrue);
+      expect(health.degraded, 0);
+      expect(health.unreachable, 0);
+      expect(health.qualifiers, ['1 checking']);
     });
   });
 
@@ -103,38 +135,38 @@ void main() {
     final at = DateTime.utc(2024, 6, 1, 12);
 
     test('is bucketed, and never counts seconds', () {
-      final readout = stackReadoutFrom(
+      final health = stackHealthFrom(
         states: const [StackServiceState.answering],
         registrySize: 1,
         checkedAt: at,
       );
 
       expect(
-        readout.ageLabel(at.add(const Duration(seconds: 45))),
+        health.ageLabel(at.add(const Duration(seconds: 45))),
         'refreshed just now',
       );
       expect(
-        readout.ageLabel(at.add(const Duration(minutes: 1))),
+        health.ageLabel(at.add(const Duration(minutes: 1))),
         'refreshed 1 minute ago',
       );
       expect(
-        readout.ageLabel(at.add(const Duration(minutes: 6))),
+        health.ageLabel(at.add(const Duration(minutes: 6))),
         'refreshed 6 minutes ago',
       );
       expect(
-        readout.ageLabel(at.add(const Duration(hours: 2))),
+        health.ageLabel(at.add(const Duration(hours: 2))),
         'refreshed 2 hours ago',
       );
     });
 
     test('a reading that has not happened has no age', () {
-      final readout = stackReadoutFrom(
+      final health = stackHealthFrom(
         states: const [StackServiceState.checking],
         registrySize: 1,
       );
 
-      expect(readout.ageLabel(at), isNull);
-      expect(readout.sentenceAt(at), isNot(contains('refreshed')));
+      expect(health.ageLabel(at), isNull);
+      expect(health.sentenceAt(at), isNot(contains('refreshed')));
     });
   });
 }

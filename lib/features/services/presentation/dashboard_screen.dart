@@ -16,6 +16,7 @@ import 'package:cupola/features/services/presentation/service_matrix.dart';
 import 'package:cupola/features/services/presentation/services_alert_band.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/shell/domain/stack_health.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -105,7 +106,7 @@ class DashboardScreen extends ConsumerWidget {
                   // *what needs me* → *what is happening*. The stack itself is
                   // fourth — it is a launcher, not the headline.
                   //
-                  //  * the header is one line of StackReadout under the h1, and
+                  //  * the header is one line of StackHealth under the h1, and
                   //    it is neutral when clear: no permanent green
                   //  * the band is absent unless something stopped answering
                   //  * decisions is the centre of the screen and is absent when
@@ -136,7 +137,7 @@ class DashboardScreen extends ConsumerWidget {
 /// is being looked at instead of where you are, and the fleet *is* the subject
 /// here.
 ///
-/// The sentence under it is [StackReadout]'s, counting **connections folded per
+/// The sentence under it is [StackHealth]'s, counting **connections folded per
 /// service** rather than the lensed summary — so a Radarr with one of its two
 /// connections dark reads as *degraded* rather than inheriting whichever answer
 /// the lens happened to be pointing at.
@@ -147,8 +148,8 @@ class _StackHeadline extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final readout = ref.watch(stackReadoutProvider);
-    final sentence = readout.sentenceAt(DateTime.now());
+    final health = ref.watch(stackHealthProvider);
+    final sentence = health.sentenceAt(DateTime.now());
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -289,7 +290,15 @@ void _invalidateServicesDashboard(WidgetRef ref) {
     // `autoDispose` family entry — invalidating only the single-figure provider
     // left the cards showing the figures from before the pull.
     ref.invalidate(serviceSignalPairProvider(service));
+    // And the fleet's, for the multi-connection cards. Its own family entry
+    // again, and it reads every connection rather than the lens — so a refresh
+    // that stopped at the lens left a folded card stale by N-1 servers.
+    ref.invalidate(foldedServiceKpisProvider(service));
+    ref.invalidate(foldedServiceSignalPairProvider(service));
   }
+  // The per-connection leg, invalidated as a whole family: it is keyed on the
+  // connection, and the loop above only knows service keys.
+  ref.invalidate(serviceKpiForProvider);
   ref.invalidate(servicesRequestsProvider);
   ref.invalidate(servicesQueueProvider);
   // One history read per arr, feeding both Recently added and the failed-import

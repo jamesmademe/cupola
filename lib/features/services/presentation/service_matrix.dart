@@ -612,13 +612,23 @@ class ServiceMatrixCell extends ConsumerWidget {
         ? service.extractHost(instance.url) ?? instance.url
         : '';
 
+    // A folded cell with more than one connection asks for the *fleet's*
+    // figures; everything else asks for the connection it stands for. The two
+    // providers reduce the same KPI list through the same ranking, so the split
+    // changes which servers are counted and nothing else.
+    //
     // Only asked for once the service has answered. Watching it while offline
     // would fan out a library fetch per unreachable service on every rebuild,
     // and there is nothing to paint with the result.
     final signals =
         role == ServiceMatrixRole.readout &&
             reachability == ServiceReachability.online
-        ? ref.watch(serviceSignalPairProvider(service)).asData?.value
+        ? (folded != null && folded.total > 1
+              ? ref
+                    .watch(foldedServiceSignalPairProvider(service))
+                    .asData
+                    ?.value
+              : ref.watch(serviceSignalPairProvider(service)).asData?.value)
         : null;
 
     return _ServiceMatrixCellBody(

@@ -39,7 +39,6 @@ import 'package:cupola/features/services/domain/arr_import.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/request_ordering.dart';
-import 'package:cupola/features/services/domain/stack_readout.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
@@ -1385,72 +1384,6 @@ String? _queueQualityLabel(dynamic value) {
   return stringOrNull(value);
 }
 
-/// The Dashboard's header line: `14 of 16 answering · 1 degraded · 2 unreachable`.
-///
-/// A `Notifier` rather than a plain `Provider` for one reason: the timestamp.
-/// The counts are derived from the summaries and would recompute happily in a
-/// `Provider`, but the *age* of the reading is a fact about when the probes
-/// settled, and a `Provider` that called `DateTime.now()` in its body would
-/// restamp itself every time any unrelated dependency moved — a readout that
-/// claims to have been refreshed "just now" because a theme toggle rebuilt it.
-/// A notifier instance survives its own `build`, so it can remember when the
-/// last probe actually landed.
-///
-/// See `domain/stack_readout.dart` for the counting rule, which lives there
-/// precisely so it can be argued about without a container.
-final stackReadoutProvider =
-    NotifierProvider<StackReadoutNotifier, StackReadout>(
-      StackReadoutNotifier.new,
-    );
-
-class StackReadoutNotifier extends Notifier<StackReadout> {
-  DateTime? _checkedAt;
-
-  /// Whether a probe was outstanding the last time this rebuilt. The stamp is
-  /// taken on the *transition* to settled, not on every settled build, so a
-  /// rebuild caused by something else does not restate the age.
-  bool _wasChecking = true;
-
-  @override
-  StackReadout build() {
-    final settings = ref.watch(currentSettingsProvider);
-    final configured = ServiceKey.values
-        .where(settings.isServiceConfigured)
-        .toList(growable: false);
-
-    final states = <StackServiceState>[];
-    for (final service in configured) {
-      // Connections folded per service, never the lensed summary: with two
-      // Radarr and one dark, the lens answers about whichever one it happens to
-      // point at and the header inherits that coin flip.
-      final folded = ref.watch(foldedServiceHealthProvider(service));
-      states.add(
-        foldServiceState(
-          total: folded.total,
-          offline: folded.offline,
-          checking: folded.checking,
-        ),
-      );
-    }
-
-    final checking = states
-        .where((state) => state == StackServiceState.checking)
-        .length;
-    if (checking > 0) {
-      _wasChecking = true;
-    } else if (_wasChecking || _checkedAt == null) {
-      _wasChecking = false;
-      _checkedAt = configured.isEmpty ? null : DateTime.now();
-    }
-
-    return stackReadoutFrom(
-      states: states,
-      registrySize: ServiceKey.values.length,
-      checkedAt: _checkedAt,
-    );
-  }
-}
-
 /// Everything waiting on a human, from every source, merged and ranked.
 ///
 /// Reads what the page has already loaded — the requests it was going to show,
@@ -1717,4 +1650,22 @@ final serviceSignalPairProvider = FutureProvider.autoDispose
     .family<ServiceSignalPair?, ServiceKey>((ref, service) async {
       final kpis = await ref.watch(serviceKpiProvider(service).future);
       return resolveServiceSignalPair(kpis);
+    });
+
+/// The two figures a **folded** card shows: the fleet's, not the lens's.
+///
+/// A card carrying `×2` beside one server's numbers is the lens wearing the
+/// fleet's clothes — it reads as a total and is short by whatever the other
+/// server holds. This reduces the aggregate through the same ranking
+/// [serviceSignalPairProvider] uses, so a single-connection service cannot
+/// disagree with itself depending on which provider the cell happened to watch.
+///
+/// Null where there is no aggregate to show — a dark connection, a connection
+/// the app cannot yet read on its own, or figures that do not fold. See
+/// [foldedServiceKpisProvider]. The card then draws `×N` and no figure, which
+/// is what the design asks for and the only honest reading available.
+final foldedServiceSignalPairProvider = FutureProvider.autoDispose
+    .family<ServiceSignalPair?, ServiceKey>((ref, service) async {
+      final kpis = await ref.watch(foldedServiceKpisProvider(service).future);
+      return kpis == null ? null : resolveServiceSignalPair(kpis);
     });
