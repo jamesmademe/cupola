@@ -106,7 +106,7 @@ void main() {
 
       expect(
         harness.container.read(
-          navigationRefreshProvider(NavigationSection.services),
+          navigationRefreshProvider(NavigationSection.dashboard),
         ),
         0,
       );
@@ -117,7 +117,7 @@ void main() {
       expect(harness.router.state.uri.path, '/dashboard');
       expect(
         harness.container.read(
-          navigationRefreshProvider(NavigationSection.services),
+          navigationRefreshProvider(NavigationSection.dashboard),
         ),
         1,
       );
@@ -138,7 +138,7 @@ void main() {
         expect(find.text('ServicesPage'), findsOneWidget);
         expect(
           harness.container.read(
-            navigationRefreshProvider(NavigationSection.services),
+            navigationRefreshProvider(NavigationSection.dashboard),
           ),
           0,
         );
@@ -271,7 +271,7 @@ void main() {
       expect(announcements.messages, ['Refreshing Dashboard']);
       expect(
         harness.container.read(
-          navigationRefreshProvider(NavigationSection.services),
+          navigationRefreshProvider(NavigationSection.dashboard),
         ),
         1,
       );
@@ -324,7 +324,7 @@ void main() {
       expect(harness.router.state.uri.path, '/settings');
       expect(
         harness.container.read(
-          navigationRefreshProvider(NavigationSection.services),
+          navigationRefreshProvider(NavigationSection.dashboard),
         ),
         0,
       );
@@ -749,7 +749,7 @@ Future<_ShellHarness> _pumpShell(
             ShellScreen(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
-            navigatorKey: branchNavigatorKeyFor(NavTab.services),
+            navigatorKey: branchNavigatorKeyFor(NavTab.dashboard),
             routes: [
               GoRoute(
                 path: '/dashboard',

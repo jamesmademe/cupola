@@ -10,35 +10,36 @@ class ServiceRoutes {
   /// route all say Dashboard, one service is a *service home* at
   /// `/dashboard/{key}`, and TrueNAS keeps the word for its own console
   /// section because the app does not rename another product's furniture.
-  static const services = '/dashboard';
+  static const dashboard = '/dashboard';
 
   /// Where the app used to live. Every path under it still resolves — see the
   /// rewrite in `router.dart`'s top-level redirect — because a bookmark, a
   /// deep link or a restored session from before the rename must not 404.
   static const legacyServices = '/services';
-  static const seerr = '$services/seerr';
-  static const radarr = '$services/radarr';
-  static const sonarr = '$services/sonarr';
-  static const lidarr = '$services/lidarr';
-  static const qbittorrent = '$services/qbittorrent';
-  static const bazarr = '$services/bazarr';
-  static const truenas = '$services/truenas';
-  static const dockge = '$services/dockge';
-  static const prowlarr = '$services/prowlarr';
-  static const readarr = '$services/readarr';
-  static const sabnzbd = '$services/sabnzbd';
-  static const nzbget = '$services/nzbget';
-  static const unraid = '$services/unraid';
-  static const jellyfin = '$services/jellyfin';
-  static const plex = '$services/plex';
+
+  static const seerr = '$dashboard/seerr';
+  static const radarr = '$dashboard/radarr';
+  static const sonarr = '$dashboard/sonarr';
+  static const lidarr = '$dashboard/lidarr';
+  static const qbittorrent = '$dashboard/qbittorrent';
+  static const bazarr = '$dashboard/bazarr';
+  static const truenas = '$dashboard/truenas';
+  static const dockge = '$dashboard/dockge';
+  static const prowlarr = '$dashboard/prowlarr';
+  static const readarr = '$dashboard/readarr';
+  static const sabnzbd = '$dashboard/sabnzbd';
+  static const nzbget = '$dashboard/nzbget';
+  static const unraid = '$dashboard/unraid';
+  static const jellyfin = '$dashboard/jellyfin';
+  static const plex = '$dashboard/plex';
 
   /// The two the file was missing. Both services shipped with their callers
   /// building `'/services/transmission'` and `'/services/npm'` by hand, which
   /// is how a single source of truth stops being one — and `npm` is precisely
   /// the segment that is *not* derivable from the enum name, so a hand-built
   /// path is a spelling nobody checks.
-  static const transmission = '$services/transmission';
-  static const nginxProxyManager = '$services/npm';
+  static const transmission = '$dashboard/transmission';
+  static const nginxProxyManager = '$dashboard/npm';
 
   /// The home of any service, by key.
   ///
@@ -47,7 +48,7 @@ class ServiceRoutes {
   /// one irregular segment — Nginx Proxy Manager's `npm` — spelled in exactly
   /// one place.
   static String forService(ServiceKey service) =>
-      '$services/${service.routeParam}';
+      '$dashboard/${service.routeParam}';
 
   // ── Stream sections ───────────────────────────────────────────────────────
   //

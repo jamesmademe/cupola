@@ -29,7 +29,7 @@ class MoviesScreen extends ConsumerWidget {
       title: 'Movies',
       searchHint: 'Search movies...',
       activityRoute: '/activity/movies',
-      navigationSection: NavigationSection.services,
+      navigationSection: NavigationSection.dashboard,
       serviceName: 'Radarr',
       accentColor: ServiceKey.radarr.accent,
       heroTagPrefix: 'movie',

@@ -5,7 +5,7 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:cupola/features/services/presentation/service_dashboard_screen.dart';
+import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
@@ -31,17 +31,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.byKey(const ValueKey('service-dashboard-title-radarr')),
+      find.byKey(const ValueKey('service-home-title-radarr')),
       findsOneWidget,
     );
     expect(find.text('Radarr body'), findsOneWidget);
 
     // The title is the room's name, not a control: the dropdown picker it
     // used to open was retired when the Portal became the one switcher.
-    expect(
-      find.byKey(const ValueKey('service-dashboard-switcher')),
-      findsNothing,
-    );
+    expect(find.byKey(const ValueKey('service-home-switcher')), findsNothing);
 
     await tester.tap(find.byTooltip('Back to Dashboard'));
     await tester.pumpAndSettle();
@@ -114,7 +111,7 @@ GoRouter _buildRouter(String initialLocation) {
           for (final service in ServiceKey.values)
             GoRoute(
               path: service.routeParam,
-              builder: (context, state) => ServiceDashboardScreen(
+              builder: (context, state) => ServiceHomeScreen(
                 service: service,
                 child: Scaffold(body: Text('${service.title} body')),
               ),

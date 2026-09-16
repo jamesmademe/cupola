@@ -12,7 +12,7 @@ void main() {
       // checks and no analyzer rule sees.
       for (final service in ServiceKey.values) {
         final route = ServiceRoutes.forService(service);
-        expect(route, startsWith('${ServiceRoutes.services}/'));
+        expect(route, startsWith('${ServiceRoutes.dashboard}/'));
         expect(route, isNot(contains(r'$')));
         expect(route, isNot(contains('{')));
         expect(route, endsWith('/${service.routeParam}'));

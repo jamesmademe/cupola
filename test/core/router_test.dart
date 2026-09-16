@@ -15,7 +15,7 @@ import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/presentation/series_detail_screen.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
-import 'package:cupola/features/services/presentation/services_screen.dart';
+import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -33,7 +33,7 @@ void main() {
       final router = container.read(routerProvider);
 
       expect(router.state.uri.toString(), '/dashboard');
-      expect(find.byType(ServicesScreen), findsOneWidget);
+      expect(find.byType(DashboardScreen), findsOneWidget);
     });
 
     testWidgets('starts on onboarding when onboarding is incomplete', (
@@ -71,7 +71,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(router.state.uri.toString(), '/dashboard');
-      expect(find.byType(ServicesScreen), findsOneWidget);
+      expect(find.byType(DashboardScreen), findsOneWidget);
       expect(find.byType(OnboardingScreen), findsNothing);
     });
 
@@ -85,7 +85,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(router.state.uri.toString(), '/dashboard');
-      expect(find.byType(ServicesScreen), findsOneWidget);
+      expect(find.byType(DashboardScreen), findsOneWidget);
       expect(find.byType(DiscoverDetailScreen), findsNothing);
     });
 
@@ -169,7 +169,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(router.state.uri.toString(), '/dashboard');
-      expect(find.byType(ServicesScreen), findsOneWidget);
+      expect(find.byType(DashboardScreen), findsOneWidget);
       expect(find.byType(MovieDetailScreen), findsNothing);
     });
 
@@ -371,7 +371,7 @@ void main() {
       // Asserted on what rendered rather than on `router.state`: an unmatched
       // location leaves the match list empty and reading `state` throws, which
       // would pass this test for entirely the wrong reason.
-      expect(find.byType(ServicesScreen), findsNothing);
+      expect(find.byType(DashboardScreen), findsNothing);
     });
 
     testWidgets('legacy top-level routes redirect to services', (tester) async {
@@ -383,7 +383,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(router.state.uri.toString(), '/dashboard');
-        expect(find.byType(ServicesScreen), findsOneWidget);
+        expect(find.byType(DashboardScreen), findsOneWidget);
       }
     });
 

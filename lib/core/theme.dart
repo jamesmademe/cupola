@@ -177,7 +177,7 @@ class AppColors {
   //   in the cool, instrument-panel end of the palette rather than reaching for
   //   the alarm hues.
   // - Services keeps `primary`: it is the app's own colour and the home tab.
-  static const Color navServices = primary;
+  static const Color navDashboard = primary;
   static const Color navActivity = Color(0xFF06B6D4); // cyan-500
   static const Color navSearch = Color(0xFFA855F7); // purple-500
   static const Color navSettings = Color(0xFF14B8A6); // teal-500

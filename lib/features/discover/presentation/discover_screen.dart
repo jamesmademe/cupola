@@ -47,7 +47,7 @@ class DiscoverScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final searchQuery = ref.watch(discoverSearchQueryProvider);
 
-    ref.listen<int>(navigationRefreshProvider(NavigationSection.services), (
+    ref.listen<int>(navigationRefreshProvider(NavigationSection.dashboard), (
       previous,
       next,
     ) {

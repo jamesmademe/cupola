@@ -153,8 +153,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
           // Spelled out rather than left to the arithmetic: a lens moving with
           // the path unchanged cannot satisfy the two tests below, but the
           // journey being counted is a *journey*, and it should say so.
-          _lastLocation == NavTab.services.routePath &&
-          location.startsWith('${NavTab.services.routePath}/')) {
+          _lastLocation == NavTab.dashboard.routePath &&
+          location.startsWith('${NavTab.dashboard.routePath}/')) {
         // Dashboard → service without going through the Portal: exactly the
         // journey the Portal replaces. The coach mark counts these.
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -321,8 +321,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
 
   NavigationSection? _refreshSectionFor(NavTab tab) {
     switch (tab) {
-      case NavTab.services:
-        return NavigationSection.services;
+      case NavTab.dashboard:
+        return NavigationSection.dashboard;
       case NavTab.activity:
         return NavigationSection.activity;
       case NavTab.search:

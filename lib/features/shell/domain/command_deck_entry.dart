@@ -128,7 +128,7 @@ final commandDeckEntriesProvider = Provider<List<CommandDeckEntry>>((ref) {
         return CommandDeckEntry(
           kind: CommandDeckKind.connection,
           label: label.isEmpty ? service.title : '${service.title} · $label',
-          location: '${NavTab.services.routePath}/${service.routeParam}',
+          location: '${NavTab.dashboard.routePath}/${service.routeParam}',
           service: service,
           instanceId: instance.id,
           detail: Uri.tryParse(instance.url)?.host,

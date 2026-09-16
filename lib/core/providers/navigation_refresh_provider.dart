@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/legacy.dart';
 /// Enum for navigation sections.
 ///
 /// Each counter is incremented when a bottom navigation tab is reselected.
-enum NavigationSection { services, activity, search }
+enum NavigationSection { dashboard, activity, search }
 
 /// Provider to trigger refresh for each navigation section.
 /// Incrementing the counter signals that the section should refresh its data.

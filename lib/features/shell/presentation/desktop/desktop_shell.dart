@@ -109,14 +109,14 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
         : (current + delta) % configured.length;
     GoRouter.of(
       context,
-    ).go('${NavTab.services.routePath}/${configured[next].routeParam}');
+    ).go('${NavTab.dashboard.routePath}/${configured[next].routeParam}');
   }
 
   void _refreshAll() {
     final tab =
         NavTab.values[widget.selectedIndex.clamp(0, NavTab.values.length - 1)];
     final section = switch (tab) {
-      NavTab.services => NavigationSection.services,
+      NavTab.dashboard => NavigationSection.dashboard,
       NavTab.activity => NavigationSection.activity,
       NavTab.search => NavigationSection.search,
       NavTab.settings => null,

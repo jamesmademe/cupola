@@ -19,12 +19,12 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// went back to being what it looks like: the name of the room you are in.
 /// Screen-reader users switch through the accessible path that always
 /// existed — Services tab → matrix — since the Portal's drag is gesture-only.
-class ServiceDashboardScreen extends StatelessWidget {
+class ServiceHomeScreen extends StatelessWidget {
   final ServiceKey service;
   final Widget child;
   final Widget? trailingAction;
 
-  const ServiceDashboardScreen({
+  const ServiceHomeScreen({
     super.key,
     required this.service,
     required this.child,
@@ -81,7 +81,7 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
                 color: colorScheme.onSurfaceVariant,
               ),
               onPressed: () =>
-                  RouteUtils.popOrGo(context, ServiceRoutes.services),
+                  RouteUtils.popOrGo(context, ServiceRoutes.dashboard),
               tooltip: 'Back to Dashboard',
               padding: const EdgeInsets.only(right: AppSpacing.xs),
               constraints: const BoxConstraints(minWidth: 36, minHeight: 40),
@@ -109,7 +109,7 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
             Flexible(
               child: Text(
                 service.title,
-                key: ValueKey('service-dashboard-title-${service.routeParam}'),
+                key: ValueKey('service-home-title-${service.routeParam}'),
                 style: titleStyle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

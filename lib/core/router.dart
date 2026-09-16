@@ -25,8 +25,8 @@ import 'package:cupola/features/music/presentation/music_detail_screen.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
-import 'package:cupola/features/services/presentation/service_dashboard_screen.dart';
-import 'package:cupola/features/services/presentation/services_screen.dart';
+import 'package:cupola/features/services/presentation/service_home_screen.dart';
+import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_see_all_screen.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_screen.dart';
@@ -95,7 +95,7 @@ import 'package:cupola/features/discover/presentation/collection_detail_screen.d
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
-const double _serviceDashboardTopPadding = kToolbarHeight;
+const double _serviceHomeTopPadding = kToolbarHeight;
 
 /// The page for a top-level tab: a short fade instead of the platform default.
 ///
@@ -148,7 +148,7 @@ Page<void> _discoverDetailPage(
   if (id == null) {
     return RouteUtils.redirectPage(
       key: state.pageKey,
-      location: ServiceRoutes.services,
+      location: ServiceRoutes.dashboard,
     );
   }
   final heroTag =
@@ -182,7 +182,7 @@ Page<void> _libraryDetailPage<T>(
   if (id == null) {
     return RouteUtils.redirectPage(
       key: state.pageKey,
-      location: ServiceRoutes.services,
+      location: ServiceRoutes.dashboard,
     );
   }
   final item = RouteUtils.safeExtra<T>(state);
@@ -236,11 +236,11 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
         ? null
         : (context, state) => RouteUtils.cupertinoPage(
             key: state.pageKey,
-            child: ServiceDashboardScreen(
+            child: ServiceHomeScreen(
               service: ServiceKey.seerr,
               child: const DiscoverScreen(
                 showAppBar: false,
-                topPadding: _serviceDashboardTopPadding,
+                topPadding: _serviceHomeTopPadding,
               ),
             ),
           ),
@@ -287,7 +287,7 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
         path: 'movie/:id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.services
+            ? ServiceRoutes.dashboard
             : null,
         pageBuilder: (context, state) =>
             _discoverDetailPage(state, mediaType: 'movie'),
@@ -296,7 +296,7 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
         path: 'tv/:id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.services
+            ? ServiceRoutes.dashboard
             : null,
         pageBuilder: (context, state) =>
             _discoverDetailPage(state, mediaType: 'tv'),
@@ -310,7 +310,7 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
         ),
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.services
+            ? ServiceRoutes.dashboard
             : null,
       ),
       _page(
@@ -321,7 +321,7 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
         ),
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.services
+            ? ServiceRoutes.dashboard
             : null,
       ),
     ],
@@ -345,11 +345,11 @@ GoRoute _moviesRoutes({required String path, String? redirectLocation}) {
         ? null
         : (context, state) => RouteUtils.cupertinoPage(
             key: state.pageKey,
-            child: ServiceDashboardScreen(
+            child: ServiceHomeScreen(
               service: ServiceKey.radarr,
               child: const MoviesScreen(
                 showAppBar: false,
-                topPadding: _serviceDashboardTopPadding,
+                topPadding: _serviceHomeTopPadding,
               ),
             ),
           ),
@@ -363,7 +363,7 @@ GoRoute _moviesRoutes({required String path, String? redirectLocation}) {
         path: path.startsWith('/') ? ':id' : 'movie/:id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.services
+            ? ServiceRoutes.dashboard
             : null,
         pageBuilder: (context, state) => _libraryDetailPage<RadarrMovie>(
           state,
@@ -397,11 +397,11 @@ GoRoute _seriesRoutes({required String path, String? redirectLocation}) {
         ? null
         : (context, state) => RouteUtils.cupertinoPage(
             key: state.pageKey,
-            child: ServiceDashboardScreen(
+            child: ServiceHomeScreen(
               service: ServiceKey.sonarr,
               child: const SeriesScreen(
                 showAppBar: false,
-                topPadding: _serviceDashboardTopPadding,
+                topPadding: _serviceHomeTopPadding,
               ),
             ),
           ),
@@ -415,7 +415,7 @@ GoRoute _seriesRoutes({required String path, String? redirectLocation}) {
         path: path.startsWith('/') ? ':id' : 'series/:id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.services
+            ? ServiceRoutes.dashboard
             : null,
         pageBuilder: (context, state) => _libraryDetailPage<SonarrSeries>(
           state,
@@ -449,11 +449,11 @@ GoRoute _musicRoutes({required String path, String? redirectLocation}) {
         ? null
         : (context, state) => RouteUtils.cupertinoPage(
             key: state.pageKey,
-            child: ServiceDashboardScreen(
+            child: ServiceHomeScreen(
               service: ServiceKey.lidarr,
               child: const MusicScreen(
                 showAppBar: false,
-                topPadding: _serviceDashboardTopPadding,
+                topPadding: _serviceHomeTopPadding,
               ),
             ),
           ),
@@ -467,7 +467,7 @@ GoRoute _musicRoutes({required String path, String? redirectLocation}) {
         path: path.startsWith('/') ? ':id' : 'artist/:id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.services
+            ? ServiceRoutes.dashboard
             : null,
         pageBuilder: (context, state) => _libraryDetailPage<LidarrArtist>(
           state,
@@ -487,10 +487,10 @@ GoRoute _musicRoutes({required String path, String? redirectLocation}) {
 GoRoute _qbittorrentRoutes({required String path}) {
   return _page(
     path,
-    (state) => ServiceDashboardScreen(
+    (state) => ServiceHomeScreen(
       service: ServiceKey.qbittorrent,
       trailingAction: const QbittorrentActionsBar(),
-      child: const QbittorrentScreen(topPadding: _serviceDashboardTopPadding),
+      child: const QbittorrentScreen(topPadding: _serviceHomeTopPadding),
     ),
     routes: [
       _page(
@@ -505,11 +505,11 @@ GoRoute _qbittorrentRoutes({required String path}) {
 GoRoute _bazarrRoutes({required String path}) {
   return _page(
     path,
-    (state) => ServiceDashboardScreen(
+    (state) => ServiceHomeScreen(
       service: ServiceKey.bazarr,
       child: const BazarrScreen(
         showAppBar: false,
-        topPadding: _serviceDashboardTopPadding,
+        topPadding: _serviceHomeTopPadding,
       ),
     ),
     routes: [
@@ -528,7 +528,7 @@ GoRoute _bazarrRoutes({required String path}) {
         ),
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.services
+            ? ServiceRoutes.dashboard
             : null,
       ),
       // See the series route above: no Hero source, so no `heroTag`.
@@ -540,7 +540,7 @@ GoRoute _bazarrRoutes({required String path}) {
         ),
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.services
+            ? ServiceRoutes.dashboard
             : null,
       ),
     ],
@@ -550,11 +550,11 @@ GoRoute _bazarrRoutes({required String path}) {
 GoRoute _dockgeRoutes({required String path}) {
   return _page(
     path,
-    (state) => ServiceDashboardScreen(
+    (state) => ServiceHomeScreen(
       service: ServiceKey.dockge,
       child: const DockgeScreen(
         showAppBar: false,
-        topPadding: _serviceDashboardTopPadding,
+        topPadding: _serviceHomeTopPadding,
       ),
     ),
     routes: [
@@ -578,11 +578,11 @@ GoRoute _dockgeRoutes({required String path}) {
 GoRoute _prowlarrRoutes({required String path}) {
   return _page(
     path,
-    (state) => ServiceDashboardScreen(
+    (state) => ServiceHomeScreen(
       service: ServiceKey.prowlarr,
       child: const ProwlarrScreen(
         showAppBar: false,
-        topPadding: _serviceDashboardTopPadding,
+        topPadding: _serviceHomeTopPadding,
       ),
     ),
     routes: [
@@ -594,7 +594,7 @@ GoRoute _prowlarrRoutes({required String path}) {
         ),
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.services
+            ? ServiceRoutes.dashboard
             : null,
       ),
       _page(
@@ -629,11 +629,11 @@ GoRoute _prowlarrRoutes({required String path}) {
 GoRoute _readarrRoutes({required String path}) {
   return _page(
     path,
-    (state) => ServiceDashboardScreen(
+    (state) => ServiceHomeScreen(
       service: ServiceKey.readarr,
       child: const ReadarrScreen(
         showAppBar: false,
-        topPadding: _serviceDashboardTopPadding,
+        topPadding: _serviceHomeTopPadding,
       ),
     ),
     routes: [_page('library', (state) => const ReadarrLibraryScreen())],
@@ -643,11 +643,11 @@ GoRoute _readarrRoutes({required String path}) {
 GoRoute _sabnzbdRoutes({required String path}) {
   return _page(
     path,
-    (state) => ServiceDashboardScreen(
+    (state) => ServiceHomeScreen(
       service: ServiceKey.sabnzbd,
       child: const SabnzbdScreen(
         showAppBar: false,
-        topPadding: _serviceDashboardTopPadding,
+        topPadding: _serviceHomeTopPadding,
       ),
     ),
   );
@@ -656,11 +656,11 @@ GoRoute _sabnzbdRoutes({required String path}) {
 GoRoute _nzbgetRoutes({required String path}) {
   return _page(
     path,
-    (state) => ServiceDashboardScreen(
+    (state) => ServiceHomeScreen(
       service: ServiceKey.nzbget,
       child: const NzbgetScreen(
         showAppBar: false,
-        topPadding: _serviceDashboardTopPadding,
+        topPadding: _serviceHomeTopPadding,
       ),
     ),
   );
@@ -669,11 +669,11 @@ GoRoute _nzbgetRoutes({required String path}) {
 GoRoute _unraidRoutes({required String path}) {
   return _page(
     path,
-    (state) => ServiceDashboardScreen(
+    (state) => ServiceHomeScreen(
       service: ServiceKey.unraid,
       child: const UnraidScreen(
         showAppBar: false,
-        topPadding: _serviceDashboardTopPadding,
+        topPadding: _serviceHomeTopPadding,
       ),
     ),
   );
@@ -682,11 +682,11 @@ GoRoute _unraidRoutes({required String path}) {
 GoRoute _transmissionRoutes({required String path}) {
   return _page(
     path,
-    (state) => ServiceDashboardScreen(
+    (state) => ServiceHomeScreen(
       service: ServiceKey.transmission,
       child: const TransmissionScreen(
         showAppBar: false,
-        topPadding: _serviceDashboardTopPadding,
+        topPadding: _serviceHomeTopPadding,
       ),
     ),
   );
@@ -695,11 +695,11 @@ GoRoute _transmissionRoutes({required String path}) {
 GoRoute _npmRoutes({required String path}) {
   return _page(
     path,
-    (state) => ServiceDashboardScreen(
+    (state) => ServiceHomeScreen(
       service: ServiceKey.nginxProxyManager,
       child: const NpmScreen(
         showAppBar: false,
-        topPadding: _serviceDashboardTopPadding,
+        topPadding: _serviceHomeTopPadding,
       ),
     ),
   );
@@ -729,7 +729,7 @@ GoRoute _streamRoutes({required ServiceKey service, required String path}) {
     (state) => StreamDashboardScreen(
       service: service,
       showAppBar: false,
-      topPadding: _serviceDashboardTopPadding,
+      topPadding: _serviceHomeTopPadding,
     ),
     routes: [
       _page(
@@ -762,11 +762,11 @@ GoRoute _streamRoutes({required ServiceKey service, required String path}) {
 GoRoute _truenasRoutes({required String path}) {
   return _page(
     path,
-    (state) => ServiceDashboardScreen(
+    (state) => ServiceHomeScreen(
       service: ServiceKey.truenas,
       child: const TrueNasHubScreen(
         showAppBar: false,
-        topPadding: _serviceDashboardTopPadding,
+        topPadding: _serviceHomeTopPadding,
       ),
     ),
     routes: _truenasSectionRoutes(),
@@ -866,7 +866,7 @@ List<GoRoute> _truenasSectionRoutes() => <GoRoute>[
 
 String? _redirectLegacyDiscover(GoRouterState state) {
   final path = state.uri.path;
-  if (path == '/discover') return ServiceRoutes.services;
+  if (path == '/discover') return ServiceRoutes.dashboard;
 
   const legacyBase = '/discover/';
   if (!path.startsWith(legacyBase)) return null;
@@ -880,7 +880,7 @@ String? _redirectLegacyDiscover(GoRouterState state) {
     return _preserveQuery(state.uri, '${ServiceRoutes.seerr}/$suffix');
   }
 
-  return ServiceRoutes.services;
+  return ServiceRoutes.dashboard;
 }
 
 String? _redirectLegacyLibrary(
@@ -889,13 +889,13 @@ String? _redirectLegacyLibrary(
   required String serviceBase,
 }) {
   final path = state.uri.path;
-  if (path == legacyBase) return ServiceRoutes.services;
+  if (path == legacyBase) return ServiceRoutes.dashboard;
 
   final prefix = '$legacyBase/';
   if (!path.startsWith(prefix)) return null;
 
   final id = path.substring(prefix.length);
-  if (id.isEmpty || id.contains('/')) return ServiceRoutes.services;
+  if (id.isEmpty || id.contains('/')) return ServiceRoutes.dashboard;
   return _preserveQuery(state.uri, '$serviceBase/$id');
 }
 
@@ -913,9 +913,9 @@ String _preserveQuery(Uri source, String path) {
 /// visible. Exhaustive, so a fifth tab cannot be added without deciding what
 /// its branch opens on.
 RouteBase _branchRootFor(NavTab tab) => switch (tab) {
-  NavTab.services => GoRoute(
-    path: ServiceRoutes.services,
-    pageBuilder: (context, state) => _tabPage(state, const ServicesScreen()),
+  NavTab.dashboard => GoRoute(
+    path: ServiceRoutes.dashboard,
+    pageBuilder: (context, state) => _tabPage(state, const DashboardScreen()),
     routes: [
       // Every mount takes its segment from `ServiceKey.routeParam` rather than
       // repeating the literal. Sixteen of these were spelled out by hand and
@@ -1007,7 +1007,8 @@ String? _rewriteLegacyServicesPath(Uri uri) {
   const legacy = ServiceRoutes.legacyServices;
   final path = uri.path;
   if (path != legacy && !path.startsWith('$legacy/')) return null;
-  final rewritten = '${ServiceRoutes.services}${path.substring(legacy.length)}';
+  final rewritten =
+      '${ServiceRoutes.dashboard}${path.substring(legacy.length)}';
   return uri.hasQuery ? '$rewritten?${uri.query}' : rewritten;
 }
 
@@ -1018,12 +1019,12 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     refreshListenable: notifier,
-    initialLocation: onboardingDone ? ServiceRoutes.services : '/onboarding',
+    initialLocation: onboardingDone ? ServiceRoutes.dashboard : '/onboarding',
     redirect: (context, state) {
       final done = ref.read(onboardingCompletedProvider);
       final isOnboarding = state.matchedLocation == '/onboarding';
       if (!done && !isOnboarding) return '/onboarding';
-      if (done && isOnboarding) return ServiceRoutes.services;
+      if (done && isOnboarding) return ServiceRoutes.dashboard;
 
       // Everything that used to live under `/services` still resolves.
       //
@@ -1122,11 +1123,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       // that tab's subtree and invite someone to give them a real builder.
       _discoverRoutes(
         path: '/discover',
-        redirectLocation: ServiceRoutes.services,
+        redirectLocation: ServiceRoutes.dashboard,
       ),
-      _moviesRoutes(path: '/movies', redirectLocation: ServiceRoutes.services),
-      _seriesRoutes(path: '/series', redirectLocation: ServiceRoutes.services),
-      _musicRoutes(path: '/music', redirectLocation: ServiceRoutes.services),
+      _moviesRoutes(path: '/movies', redirectLocation: ServiceRoutes.dashboard),
+      _seriesRoutes(path: '/series', redirectLocation: ServiceRoutes.dashboard),
+      _musicRoutes(path: '/music', redirectLocation: ServiceRoutes.dashboard),
       // The per-service activity drill-down: already full-screen above the
       // shell, and unchanged by the migration.
       GoRoute(

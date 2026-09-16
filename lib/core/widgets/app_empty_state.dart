@@ -132,7 +132,7 @@ class AppEmptyState extends StatelessWidget {
     // title, a two-line message and a 40pt button can clear a short phone —
     // a full-page caller must therefore put this inside a scroll view whose
     // `minHeight` is the viewport, which keeps it centred while it fits and lets
-    // it grow past that. `ServicesScreen` is the worked example.
+    // it grow past that. `DashboardScreen` is the worked example.
     //
     // Owning the viewport here instead was tried and is wrong: a `LayoutBuilder`
     // cannot report intrinsic dimensions, so it breaks every caller that

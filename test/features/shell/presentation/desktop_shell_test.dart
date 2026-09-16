@@ -256,7 +256,7 @@ Future<_Harness> _pumpShell(
             ShellScreen(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
-            navigatorKey: branchNavigatorKeyFor(NavTab.services),
+            navigatorKey: branchNavigatorKeyFor(NavTab.dashboard),
             routes: [
               GoRoute(
                 path: '/dashboard',

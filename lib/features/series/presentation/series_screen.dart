@@ -29,7 +29,7 @@ class SeriesScreen extends ConsumerWidget {
       title: 'TV Series',
       searchHint: 'Search TV series...',
       activityRoute: '/activity/series',
-      navigationSection: NavigationSection.services,
+      navigationSection: NavigationSection.dashboard,
       serviceName: 'Sonarr',
       accentColor: ServiceKey.sonarr.accent,
       heroTagPrefix: 'series',

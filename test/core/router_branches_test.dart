@@ -246,7 +246,7 @@ void main() {
       // Landing on Activity starts its Now poll, which is the correct
       // behaviour and a pending timer at teardown. Switching away closes that
       // gate — proof of the same mechanism, and it leaves the test tidy.
-      router.go(NavTab.services.routePath);
+      router.go(NavTab.dashboard.routePath);
       await tester.pumpAndSettle();
     });
 

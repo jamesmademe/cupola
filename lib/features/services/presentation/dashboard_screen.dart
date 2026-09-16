@@ -13,13 +13,13 @@ import 'package:cupola/core/widgets/service_ring.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/service_matrix.dart';
 import 'package:cupola/features/services/presentation/services_alert_band.dart';
-import 'package:cupola/features/services/presentation/services_dashboard_sections.dart';
+import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-class ServicesScreen extends ConsumerWidget {
-  const ServicesScreen({super.key});
+class DashboardScreen extends ConsumerWidget {
+  const DashboardScreen({super.key});
 
   /// How stale the control room may be before returning to it earns a refetch.
   ///
@@ -35,7 +35,7 @@ class ServicesScreen extends ConsumerWidget {
       context,
     );
 
-    ref.listen<int>(navigationRefreshProvider(NavigationSection.services), (
+    ref.listen<int>(navigationRefreshProvider(NavigationSection.dashboard), (
       previous,
       next,
     ) {
@@ -53,7 +53,7 @@ class ServicesScreen extends ConsumerWidget {
       // The same refresh a re-tap of the tab performs, rather than a second
       // path to the same invalidations — and silent, because nobody pressed
       // anything.
-      onStale: () => ref.triggerNavigationRefresh(NavigationSection.services),
+      onStale: () => ref.triggerNavigationRefresh(NavigationSection.dashboard),
       child: AmbientScaffold(
         // No accent passed: the room on this screen is lit by the brand primary.
         // Thirteen service accents cannot light one room, so identity is confined

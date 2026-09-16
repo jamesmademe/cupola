@@ -12,17 +12,12 @@ import 'package:cupola/core/utils/service_routes.dart';
 /// per-service accents belong to service surfaces; the app shell is one colour.
 enum NavTab {
   /// The app home.
-  ///
-  /// The enum *name* stays `services` on purpose: it is what the selected tab
-  /// is persisted as, so renaming the identifier would silently drop every
-  /// existing install back to the first tab on upgrade. The label, the route
-  /// and the crumb are what the user sees, and those are the rename.
-  services(
+  dashboard(
     label: 'Dashboard',
     icon: Icons.view_list_outlined,
     selectedIcon: Icons.view_list_rounded,
-    routePath: ServiceRoutes.services,
-    accentColor: AppColors.navServices,
+    routePath: ServiceRoutes.dashboard,
+    accentColor: AppColors.navDashboard,
   ),
   activity(
     label: 'Activity',
@@ -59,10 +54,4 @@ enum NavTab {
   final IconData selectedIcon;
   final String routePath;
   final Color accentColor;
-
-  static final Map<String, NavTab> _tabsByName = {
-    for (final tab in values) tab.name: tab,
-  };
-
-  static NavTab? fromName(String name) => _tabsByName[name];
 }

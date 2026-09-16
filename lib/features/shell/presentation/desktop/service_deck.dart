@@ -300,7 +300,7 @@ class _GlyphCellState extends ConsumerState<_GlyphCell> {
           child: GestureDetector(
             onTap: () => GoRouter.of(context).go(
               configured
-                  ? '${NavTab.services.routePath}/${service.routeParam}'
+                  ? '${NavTab.dashboard.routePath}/${service.routeParam}'
                   // An unset service is still a door: it leads to the form that
                   // sets it up, which is the only useful thing it can do.
                   : '${NavTab.settings.routePath}/services',

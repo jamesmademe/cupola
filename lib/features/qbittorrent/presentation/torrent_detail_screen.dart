@@ -87,7 +87,7 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
                 color: colorScheme.onSurfaceVariant,
               ),
               onPressed: () =>
-                  RouteUtils.popOrGo(context, ServiceRoutes.services),
+                  RouteUtils.popOrGo(context, ServiceRoutes.dashboard),
             ),
             title: Row(
               children: [

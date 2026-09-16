@@ -84,7 +84,7 @@ abstract final class ShellBreadcrumb {
 
     final tab = NavTab.values.firstWhere(
       (t) => t.routePath == '/${segments.first}',
-      orElse: () => NavTab.services,
+      orElse: () => NavTab.dashboard,
     );
     final crumbs = <Crumb>[(label: tab.label, location: tab.routePath)];
     if (segments.length == 1) return crumbs;

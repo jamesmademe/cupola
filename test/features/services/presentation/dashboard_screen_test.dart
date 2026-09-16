@@ -20,7 +20,7 @@ import 'package:cupola/features/services/presentation/services_alert_band.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
-import 'package:cupola/features/services/presentation/services_screen.dart';
+import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -263,7 +263,7 @@ void main() {
       // reachability the expanded card spells out as a word, carried by
       // colour where a 32pt row has no room for a sentence.
       final scheme = Theme.of(
-        tester.element(find.byType(ServicesScreen)),
+        tester.element(find.byType(DashboardScreen)),
       ).colorScheme;
       expect(
         _dotColorIn(tester, 'service-matrix-cell-radarr'),
@@ -339,7 +339,7 @@ void main() {
             ..._providerOverrides(),
             sharedPreferencesProvider.overrideWithValue(prefs),
           ],
-          child: const MaterialApp(home: ServicesScreen()),
+          child: const MaterialApp(home: DashboardScreen()),
         ),
       );
       await _pumpDashboard(tester);
@@ -360,7 +360,7 @@ void main() {
             ..._providerOverrides(),
             sharedPreferencesProvider.overrideWithValue(prefs),
           ],
-          child: const MaterialApp(home: ServicesScreen()),
+          child: const MaterialApp(home: DashboardScreen()),
         ),
       );
       await _pumpDashboard(tester);
@@ -385,7 +385,7 @@ void main() {
             ..._providerOverrides(),
             sharedPreferencesProvider.overrideWithValue(prefs),
           ],
-          child: const MaterialApp(home: ServicesScreen()),
+          child: const MaterialApp(home: DashboardScreen()),
         ),
       );
       await _pumpDashboard(tester);
@@ -417,7 +417,7 @@ void main() {
       child: MediaQuery(
         data: MediaQueryData(disableAnimations: reduceMotion),
         child: MaterialApp(
-          home: show ? const ServicesScreen() : const SizedBox.shrink(),
+          home: show ? const DashboardScreen() : const SizedBox.shrink(),
         ),
       ),
     );
@@ -577,7 +577,7 @@ void main() {
           ..._providerOverrides(),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
-        child: const MaterialApp(home: ServicesScreen()),
+        child: const MaterialApp(home: DashboardScreen()),
       );
 
       await tester.pumpWidget(app());
@@ -614,7 +614,7 @@ void main() {
             ..._providerOverrides(),
             sharedPreferencesProvider.overrideWithValue(prefs),
           ],
-          child: const MaterialApp(home: ServicesScreen()),
+          child: const MaterialApp(home: DashboardScreen()),
         ),
       );
       await _pumpDashboard(tester);
@@ -925,7 +925,7 @@ void main() {
           overrides: _providerOverrides(),
           child: const MediaQuery(
             data: MediaQueryData(textScaler: TextScaler.linear(2.0)),
-            child: MaterialApp(home: ServicesScreen()),
+            child: MaterialApp(home: DashboardScreen()),
           ),
         ),
       );
@@ -959,7 +959,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: AppTheme.lightTheme(),
-            home: const ServicesScreen(),
+            home: const DashboardScreen(),
           ),
         ),
       );
@@ -1001,7 +1001,7 @@ void main() {
           ),
           child: const MediaQuery(
             data: MediaQueryData(textScaler: TextScaler.linear(2.0)),
-            child: MaterialApp(home: ServicesScreen()),
+            child: MaterialApp(home: DashboardScreen()),
           ),
         ),
       );
@@ -1027,7 +1027,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: _providerOverrides(settings: const SettingsModel()),
-          child: const MaterialApp(home: ServicesScreen()),
+          child: const MaterialApp(home: DashboardScreen()),
         ),
       );
       await _pumpDashboard(tester);
@@ -1068,7 +1068,7 @@ void main() {
           overrides: _providerOverrides(settings: const SettingsModel()),
           child: const MediaQuery(
             data: MediaQueryData(textScaler: TextScaler.linear(3.0)),
-            child: MaterialApp(home: ServicesScreen()),
+            child: MaterialApp(home: DashboardScreen()),
           ),
         ),
       );
@@ -1123,7 +1123,7 @@ void main() {
       routes: [
         GoRoute(
           path: '/dashboard',
-          builder: (context, state) => const ServicesScreen(),
+          builder: (context, state) => const DashboardScreen(),
         ),
         GoRoute(
           path: '/dashboard/radarr',
@@ -1182,7 +1182,7 @@ Future<void> _pumpServices(
   await tester.pumpWidget(
     ProviderScope(
       overrides: overrides,
-      child: const MaterialApp(home: ServicesScreen()),
+      child: const MaterialApp(home: DashboardScreen()),
     ),
   );
 }

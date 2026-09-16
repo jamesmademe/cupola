@@ -273,7 +273,7 @@ void main() {
   group('NavTab', () {
     test('matches the approved four-tab navigation model', () {
       expect(NavTab.values, [
-        NavTab.services,
+        NavTab.dashboard,
         NavTab.activity,
         NavTab.search,
         NavTab.settings,
@@ -291,12 +291,12 @@ void main() {
       // own colour and the home tab. Asserted against the tokens rather than
       // hex literals so a palette change does not need a test edit.
       expect(NavTab.values.map((tab) => tab.accentColor), [
-        AppColors.navServices,
+        AppColors.navDashboard,
         AppColors.navActivity,
         AppColors.navSearch,
         AppColors.navSettings,
       ]);
-      expect(NavTab.services.accentColor, AppColors.primary);
+      expect(NavTab.dashboard.accentColor, AppColors.primary);
     });
   });
 

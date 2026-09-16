@@ -436,7 +436,7 @@ void main() {
 
         container
             .read(
-              navigationRefreshProvider(NavigationSection.services).notifier,
+              navigationRefreshProvider(NavigationSection.dashboard).notifier,
             )
             .state++;
         await tester.pump();
@@ -464,7 +464,7 @@ Widget _buildTestScaffold() {
     title: 'Test Title',
     searchHint: 'Search test...',
     activityRoute: '/activity/test',
-    navigationSection: NavigationSection.services,
+    navigationSection: NavigationSection.dashboard,
     serviceName: 'Test Service',
     heroTagPrefix: 'test',
     searchHeroTagPrefix: 'test_search',
@@ -497,7 +497,7 @@ Widget _buildCustomTestApp({
         title: 'Test Title',
         searchHint: 'Search test...',
         activityRoute: '/activity/test',
-        navigationSection: NavigationSection.services,
+        navigationSection: NavigationSection.dashboard,
         serviceName: 'Test Service',
         heroTagPrefix: 'test',
         searchHeroTagPrefix: 'test_search',
