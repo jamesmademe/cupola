@@ -17,9 +17,20 @@ class NpmException implements Exception, HasFailureReason {
   const NpmException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
+    this.forbidden = false,
   });
 
   final String message;
+
+  /// NPM answered **403**: the token is valid and this account may not do that.
+  ///
+  /// Separate from [reason] because NPM folds three different problems onto
+  /// `unauthorized` — a wrong password (400), an expired token (400) and a
+  /// permission refusal (403) — and only the third says anything about what
+  /// this account is allowed to change. Decision 34 turns a refusal into a
+  /// standing state for the connection, so the one that must not be mistaken
+  /// for the other two needs its own flag rather than a message match.
+  final bool forbidden;
 
   @override
   final ServiceFailureReason reason;
@@ -202,6 +213,25 @@ class NpmClient {
         .toList(growable: false);
   }
 
+  /// `GET /api/users/me` — the account behind the token, and what it may do.
+  ///
+  /// Decision 34's whole basis: NPM carries the role on the user record, so the
+  /// UI can dim what this account cannot do *before* a write is attempted
+  /// rather than after a 403. `expand=permissions` is not optional — without it
+  /// the record comes back with no permission map at all, which is
+  /// indistinguishable from an account that may do nothing.
+  ///
+  /// An admin's map is empty even so; [NpmAccount.isAdmin] is what reads the
+  /// `roles` array and short-circuits the lookup.
+  Future<NpmAccount> currentUser() async {
+    final data = await _request<Map<String, dynamic>>(
+      'GET',
+      '/api/users/me',
+      query: const {'expand': 'permissions'},
+    );
+    return NpmAccount.fromJson(data);
+  }
+
   Future<List<NpmCertificate>> certificates() async {
     final data = await _request<List<dynamic>>(
       'GET',
@@ -300,6 +330,42 @@ class NpmClient {
         'forward_host': host.trim(),
         'forward_port': port,
       },
+    );
+    return _reloadProxyHost(id);
+  }
+
+  /// Replaces this host's custom Nginx block (decision 33).
+  ///
+  /// **This is the most dangerous write in the app**, and it is dangerous in a
+  /// way no amount of care here can soften: NPM drops the text verbatim into
+  /// the host's `server` section and reloads nginx. If it does not parse, the
+  /// hostname stops answering and stays down until someone comes back and fixes
+  /// it. Cupola does not parse Nginx and cannot tell the user a line is wrong
+  /// before they save — which is why the call site asks for the domain to be
+  /// typed rather than tapped.
+  ///
+  /// Save and reload are **one call**; there is no separate reload endpoint and
+  /// no dry run. The verdict comes from re-reading the host: a refused block
+  /// leaves `meta.nginx_online` false and NPM's own `nginx: [emerg] …` line in
+  /// `meta.nginx_err`, which is what the editor prints, unedited. A null return
+  /// means the write went through but the re-read did not — the caller must not
+  /// report that as a failed save, because the block is on disk either way.
+  ///
+  /// Only the one field, for the reason [updateProxyForward] spells out: NPM's
+  /// PUT schema is `additionalProperties: false`, so handing back an object
+  /// read from `GET` is rejected outright.
+  Future<NpmProxyHost?> updateProxyHostAdvancedConfig(
+    int id,
+    String block,
+  ) async {
+    await _request<dynamic>(
+      'PUT',
+      '/api/nginx/proxy-hosts/$id',
+      // Sent exactly as typed, including an empty string — which is how a block
+      // is *removed*, and a legitimate thing to want. No trimming: leading
+      // whitespace inside a `location` body is the user's formatting, and
+      // trailing whitespace has never broken an nginx directive.
+      body: {'advanced_config': block},
     );
     return _reloadProxyHost(id);
   }
@@ -519,6 +585,7 @@ class NpmClient {
           'view-only user can read hosts and certificates but cannot change '
           'them.',
           reason: ServiceFailureReason.unauthorized,
+          forbidden: true,
         );
       case 404:
         return const NpmException(

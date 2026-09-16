@@ -215,6 +215,170 @@ void main() {
     });
   });
 
+  group('who this token belongs to (decision 34)', () {
+    test('asks for the permission map, because the record omits it', () async {
+      final adapter = ScriptedHttpAdapter([
+        _token,
+        const ScriptedReply(
+          body: {
+            'id': 2,
+            'nickname': 'Reader',
+            'roles': ['user'],
+            'permissions': {'proxy_hosts': 'view', 'certificates': 'view'},
+          },
+        ),
+      ]);
+
+      final account = await _client(adapter).currentUser();
+
+      final call = adapter.requests[1];
+      expect(call.uri.path, '/api/users/me');
+      // Without `expand=permissions` the record comes back with no permission
+      // map at all, which is indistinguishable from an account that may do
+      // nothing — and the UI would dim everything for an admin.
+      expect(call.uri.queryParameters['expand'], 'permissions');
+      expect(account.isAdmin, isFalse);
+      expect(account.isViewOnly, isTrue);
+      expect(account.canManage(NpmResource.proxyHosts), isFalse);
+    });
+
+    test(
+      'an admin may write even though its permission map is empty',
+      () async {
+        final adapter = ScriptedHttpAdapter([
+          _token,
+          const ScriptedReply(
+            body: {
+              'id': 1,
+              'nickname': 'Admin',
+              'roles': ['admin'],
+              'permissions': <String, dynamic>{},
+            },
+          ),
+        ]);
+
+        final account = await _client(adapter).currentUser();
+
+        expect(account.isAdmin, isTrue);
+        expect(account.isViewOnly, isFalse);
+        for (final resource in NpmResource.values) {
+          expect(account.canManage(resource), isTrue);
+        }
+      },
+    );
+
+    test('permissions are read per resource, not as one verdict', () async {
+      final adapter = ScriptedHttpAdapter([
+        _token,
+        const ScriptedReply(
+          body: {
+            'id': 3,
+            'nickname': 'Half',
+            'roles': ['user'],
+            'permissions': {'proxy_hosts': 'manage', 'certificates': 'view'},
+          },
+        ),
+      ]);
+
+      final account = await _client(adapter).currentUser();
+
+      expect(account.canManage(NpmResource.proxyHosts), isTrue);
+      expect(account.canManage(NpmResource.certificates), isFalse);
+      expect(account.isViewOnly, isFalse);
+    });
+
+    test('a 403 is flagged as a refusal, not as a bad credential', () async {
+      // NPM folds a wrong password, an expired token and a permission refusal
+      // onto the same `unauthorized` reason. Only the last says anything about
+      // what this account may change, so it carries its own flag.
+      final adapter = ScriptedHttpAdapter([
+        _token,
+        _error(403, 'Permission Denied'),
+      ]);
+
+      await expectLater(
+        _client(adapter).setProxyHostEnabled(7, false),
+        throwsA(
+          isA<NpmException>().having((e) => e.forbidden, 'forbidden', isTrue),
+        ),
+      );
+    });
+
+    test('a wrong password is not a refusal', () async {
+      final adapter = ScriptedHttpAdapter([
+        _error(400, 'Invalid email or password'),
+      ]);
+
+      await expectLater(
+        _client(adapter).proxyHosts(),
+        throwsA(
+          isA<NpmException>().having((e) => e.forbidden, 'forbidden', isFalse),
+        ),
+      );
+    });
+  });
+
+  group('the advanced Nginx block (decision 33)', () {
+    test(
+      'sends only advanced_config, and re-reads for nginx\'s verdict',
+      () async {
+        final adapter = ScriptedHttpAdapter([
+          _token,
+          const ScriptedReply(body: true),
+          const ScriptedReply(
+            body: {
+              'id': 14,
+              'domain_names': ['photos.example.net'],
+              'enabled': true,
+              'advanced_config': 'proxy_reed_timeout 600s;',
+              'meta': {
+                'nginx_online': false,
+                'nginx_err':
+                    'nginx: [emerg] unknown directive "proxy_reed_timeout" in '
+                    '/data/nginx/proxy_host/14.conf:4',
+              },
+            },
+          ),
+        ]);
+
+        final after = await _client(
+          adapter,
+        ).updateProxyHostAdvancedConfig(14, 'proxy_reed_timeout 600s;');
+
+        final put = adapter.requests[1];
+        expect(put.method, 'PUT');
+        expect(put.uri.path, '/api/nginx/proxy-hosts/14');
+        // NPM's PUT body schema is `additionalProperties: false`: handing back an
+        // object read from GET is rejected outright.
+        expect(put.body, {'advanced_config': 'proxy_reed_timeout 600s;'});
+        // A 200 only means the row changed. nginx's refusal shows up on the
+        // re-read, and it is the reason the write returns the host at all.
+        expect(after!.configLoaded, isFalse);
+        expect(after.errorText, contains('unknown directive'));
+      },
+    );
+
+    test('an empty block is a legitimate write, not a no-op', () async {
+      final adapter = ScriptedHttpAdapter([
+        _token,
+        const ScriptedReply(body: true),
+        const ScriptedReply(
+          body: {
+            'id': 14,
+            'domain_names': ['photos.example.net'],
+            'enabled': true,
+            'advanced_config': '',
+            'meta': {'nginx_online': true},
+          },
+        ),
+      ]);
+
+      await _client(adapter).updateProxyHostAdvancedConfig(14, '');
+
+      expect(adapter.requests[1].body, {'advanced_config': ''});
+    });
+  });
+
   group('authenticated requests', () {
     test('sends the token as a Bearer header, never in the query', () async {
       final adapter = ScriptedHttpAdapter([

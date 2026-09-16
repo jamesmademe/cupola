@@ -4,9 +4,10 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
+import 'package:cupola/features/npm/presentation/npm_access.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 
 /// Runs an [NpmClient] mutation with the shared plumbing.
@@ -34,6 +35,15 @@ Future<bool> runNpmAction(
     }
     return true;
   } catch (e) {
+    // The second half of decision 34's rule: the role comes back with the
+    // probe, and a refusal on any write marks the connection too. It reads
+    // `forbidden` rather than the reason because NPM folds a wrong password and
+    // an expired token onto the same `unauthorized` verdict, and neither of
+    // those says anything about what this account may change — dimming the
+    // whole screen over a mistyped password would be a lie with a long tail.
+    if (e is NpmException && e.forbidden) {
+      ref.read(npmWriteRefusedProvider.notifier).markRefused();
+    }
     for (final provider in invalidate) {
       ref.invalidate(provider);
     }
@@ -78,8 +88,19 @@ Future<bool> confirmByTyping(
     context: context,
     builder: (context) {
       final colorScheme = Theme.of(context).colorScheme;
+      // `statusToneColor`, not the bare palette constant: yellow-400 on a light
+      // dialog surface is under 3:1, so the one glyph telling the user this
+      // dialog is different from every other confirm was the faintest thing on
+      // it.
       return AlertDialog(
-        icon: const Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+        icon: Icon(
+          Icons.warning_amber_rounded,
+          color: statusToneColor(
+            colorScheme,
+            StatusTone.warning,
+            surface: colorScheme.surface,
+          ),
+        ),
         title: Text(title),
         content: Column(
           mainAxisSize: MainAxisSize.min,

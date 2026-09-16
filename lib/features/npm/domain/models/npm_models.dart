@@ -76,6 +76,7 @@ class NpmProxyHost {
     required this.allowWebsocketUpgrade,
     required this.configLoaded,
     required this.errorText,
+    required this.advancedConfig,
   });
 
   final int id;
@@ -117,7 +118,23 @@ class NpmProxyHost {
   final bool configLoaded;
 
   /// From `meta.nginx_err`, empty when the last configuration attempt was fine.
+  ///
+  /// NPM's own `nginx: [emerg] …` line, and the design prints it verbatim: it
+  /// names the directive and the line number, which is the entire difference
+  /// between "your config is broken" and a fix.
   final String errorText;
+
+  /// The custom Nginx block NPM writes into this host's `server` section.
+  ///
+  /// Empty for the overwhelming majority of hosts. NPM keeps exactly one block
+  /// per host and **no history**, which is why the editor holds the text it
+  /// opened with for the session: that copy is the only undo that exists.
+  final String advancedConfig;
+
+  /// Lines, for the "· 10 lines" subtitle. An empty block is 0 lines, not 1.
+  int get advancedConfigLines => advancedConfig.trim().isEmpty
+      ? 0
+      : advancedConfig.trim().split('\n').length;
 
   /// The name to show. NPM allows several hostnames per host; the first is the
   /// canonical one in its own UI too.
@@ -162,6 +179,7 @@ class NpmProxyHost {
           ? parseBool(metaMap['nginx_online'])
           : true,
       errorText: metaMap['nginx_err']?.toString() ?? '',
+      advancedConfig: json['advanced_config']?.toString() ?? '',
     );
   }
 }
@@ -208,6 +226,35 @@ class NpmCertificate {
     return days != null && days <= 21;
   }
 
+  /// A Let's Encrypt certificate inside its own renewal window that has not
+  /// renewed.
+  ///
+  /// This is the *only* honest failed-renewal reason this app can give, and it
+  /// is derived rather than quoted. NPM keeps no renewal-error field on the
+  /// certificate record: the text exists in `/api/audit-log` (not modelled) and
+  /// in the body of the renew call, which [NpmClient] deliberately never
+  /// renders — certbot failures carry the DNS-provider credentials used for the
+  /// challenge. What is left is the fact itself, and the fact is enough:
+  /// certbot renews from 30 days out, so a certificate still short-dated inside
+  /// that window is one whose renewal is not completing. The board says exactly
+  /// that — "renewal not completing · Let's Encrypt renews from 30 days out".
+  ///
+  /// The copy stays on the safe side of the inference — "renewal has not run"
+  /// rather than "renewal failed" — because the window is the only evidence
+  /// there is. Inside it, that sentence is true whether certbot is erroring or
+  /// simply never being reached.
+  ///
+  /// False for an uploaded certificate: nothing renews it, so nothing is
+  /// failing to.
+  bool renewalNotCompleting(DateTime now) {
+    if (!isLetsEncrypt) return false;
+    final days = daysUntilExpiry(now);
+    return days != null && days <= _letsEncryptRenewalWindowDays;
+  }
+
+  /// certbot's own window, not a number picked here.
+  static const int _letsEncryptRenewalWindowDays = 30;
+
   String get displayName =>
       niceName.isNotEmpty ? niceName : (domainNames.firstOrNull ?? 'Untitled');
 
@@ -223,6 +270,102 @@ class NpmCertificate {
       expiresOn: DateTime.tryParse(json['expires_on']?.toString() ?? ''),
     );
   }
+}
+
+/// The things an NPM account's permission map can be scoped to.
+///
+/// NPM's own keys, spelled as it spells them. A non-admin account carries one
+/// of `hidden` / `view` / `manage` per entry, and the app has to ask per
+/// resource rather than once: an account that may edit proxy hosts but not
+/// certificates is a shape NPM allows, and a single "can this user write"
+/// boolean would dim the wrong half of the screen.
+enum NpmResource {
+  proxyHosts('proxy_hosts'),
+  redirectionHosts('redirection_hosts'),
+  deadHosts('dead_hosts'),
+  streams('streams'),
+  certificates('certificates'),
+  accessLists('access_lists');
+
+  const NpmResource(this.key);
+
+  final String key;
+}
+
+/// `GET /api/users/me` — who this token belongs to and what it may do.
+///
+/// Decision 34: the screen knows before a write is attempted. NPM says so
+/// itself, so the alternative — offering every control and letting a 403 teach
+/// the user — is a choice rather than a limitation.
+///
+/// **The email is deliberately not modelled.** The role is what the UI needs;
+/// the address identifies a person and would end up in every diagnostics dump
+/// that touches this object. [name] is NPM's `nickname`, which is what its own
+/// UI shows.
+class NpmAccount {
+  const NpmAccount({
+    required this.id,
+    required this.name,
+    required this.isAdmin,
+    required Map<String, String> permissions,
+  }) : _permissions = permissions;
+
+  final int id;
+  final String name;
+
+  /// `roles` contains `admin`. An admin's permission map is not populated by
+  /// NPM at all, so this has to short-circuit the lookup rather than fall
+  /// through it — reading the map for an admin finds nothing and would dim
+  /// every control on the screen for the one account that can use them.
+  final bool isAdmin;
+
+  final Map<String, String> _permissions;
+
+  bool canManage(NpmResource resource) =>
+      isAdmin || _permissions[resource.key] == 'manage';
+
+  /// Nothing on this connection can be changed. What the banner is for; the
+  /// per-resource [canManage] is what each control is for.
+  bool get isViewOnly => !NpmResource.values.any(canManage);
+
+  factory NpmAccount.fromJson(Map<String, dynamic> json) {
+    final roles = json['roles'];
+    final permissions = json['permissions'];
+    return NpmAccount(
+      id: parseInt(json['id']),
+      // `nickname` is what NPM's own header shows; `name` is the fallback.
+      name: (json['nickname']?.toString().trim().isNotEmpty ?? false)
+          ? json['nickname'].toString()
+          : json['name']?.toString() ?? 'this account',
+      isAdmin:
+          roles is List &&
+          roles.any((r) => r.toString().toLowerCase() == 'admin'),
+      permissions: permissions is Map
+          ? {
+              for (final entry in permissions.entries)
+                entry.key.toString(): entry.value.toString(),
+            }
+          : const {},
+    );
+  }
+}
+
+/// What a client-side probe found at a proxy host's forward target.
+///
+/// Three values, not two: a host nobody probed is not a host that failed. The
+/// probe is budgeted — the board heads the table "reachability checked for 8 of
+/// 23" — so [unchecked] is the normal state for most rows and must read as the
+/// absence of a measurement rather than as a verdict.
+enum NpmUpstream {
+  /// Something accepted a TCP connection on the forward host and port.
+  answering,
+
+  /// Nothing accepted, or nothing answered in time.
+  down,
+
+  /// Outside this pass's budget, or the host is disabled so nothing is being
+  /// served through it anyway.
+  unchecked,
 }
 
 /// A `302`/`301` hostname, a `404` host, or a TCP/UDP stream — the three

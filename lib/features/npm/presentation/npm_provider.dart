@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/npm/data/npm_client.dart';
+import 'package:cupola/features/npm/data/npm_upstream_probe.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -64,4 +65,21 @@ final npmOtherHostsProvider = FutureProvider<List<NpmSimpleHost>>((ref) async {
 /// old enough to still carry NPM's hard-coded default administrator.
 final npmServerInfoProvider = FutureProvider<NpmServerInfo>((ref) async {
   return ref.watch(npmClientProvider).serverInfo();
+});
+
+/// What is actually answering behind each proxy host, measured from this
+/// device.
+///
+/// Keyed off the loaded hosts rather than off the client, so a pull-to-refresh
+/// re-probes with the same gesture that re-reads, and a host added on the
+/// server gets a verdict without a second control to press.
+///
+/// It cannot fail as a screen: a probe that throws is still a probe, and the
+/// column it feeds degrades to "unchecked" rather than taking the table down
+/// with it.
+final npmUpstreamReportProvider = FutureProvider<NpmUpstreamReport>((
+  ref,
+) async {
+  final hosts = await ref.watch(npmProxyHostsProvider.future);
+  return const NpmUpstreamProbe().run(hosts);
 });
