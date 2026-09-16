@@ -1,3 +1,4 @@
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -102,13 +103,29 @@ abstract final class ShellBreadcrumb {
     // an item's own identity, which the page owns.
     for (final segment in segments.skip(consumed)) {
       if (_isIdentifier(segment)) continue;
-      crumbs.add((label: _label(segment), location: null));
+      crumbs.add((label: _label(segment, service: service), location: null));
       break;
     }
     return crumbs;
   }
 
-  static String _label(String segment) {
+  /// The word for one path segment.
+  ///
+  /// Inside a service the third crumb *is* a tab, so it takes the tab's own
+  /// label rather than a title-cased guess at the segment. The guess was not
+  /// merely lucky — it was already wrong twice: nothing knew `vms` or `rss`,
+  /// so the crumb printed `Vms` and `Rss` beside bars that say VMs and RSS.
+  static String _label(String segment, {ServiceKey? service}) {
+    if (service != null) {
+      final tab = ServiceTab.fromSegment(segment);
+      // Only a tab this service actually has: a deep link naming someone
+      // else's tab is not a place on this service, and printing its label
+      // would claim it is.
+      if (tab != null && (tabsFor(service)?.contains(tab) ?? false)) {
+        return tab.label;
+      }
+    }
+
     final known = _known[segment];
     if (known != null) return known;
     final spaced = segment.replaceAll('-', ' ').replaceAll('_', ' ');
