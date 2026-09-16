@@ -22,11 +22,32 @@ final prowlarrIndexersProvider = FutureProvider<List<ProwlarrIndexer>>((
   return ref.watch(prowlarrServiceProvider).getIndexers();
 });
 
-/// Aggregated per-indexer usage statistics.
+/// How far back the indexer readout reaches.
+///
+/// The Overview labels its Queries / Grabs / Fails figures as the last day's
+/// work, and a self-hoster reads them that way: "did anything break today".
+/// This provider used to call `getIndexerStats()` with no window at all, so
+/// every one of those figures was an all-time total that had been climbing
+/// since the indexer was added — a number that can only go up is not a
+/// readout, and a Fails count that never returns to zero is not a fault
+/// signal. The client has accepted `startDate`/`endDate` all along.
+const prowlarrStatsWindow = Duration(hours: 24);
+
+/// Aggregated per-indexer usage statistics over [prowlarrStatsWindow].
+///
+/// The window is computed once per fetch rather than read from a clock inside
+/// the widget tree: two KPIs resolved a few milliseconds apart must describe
+/// the same day, or Grabs can exceed Queries.
 final prowlarrIndexerStatsProvider = FutureProvider<ProwlarrIndexerStats>((
   ref,
 ) async {
-  return ref.watch(prowlarrServiceProvider).getIndexerStats();
+  final now = DateTime.now().toUtc();
+  return ref
+      .watch(prowlarrServiceProvider)
+      .getIndexerStats(
+        startDate: now.subtract(prowlarrStatsWindow).toIso8601String(),
+        endDate: now.toIso8601String(),
+      );
 });
 
 /// Indexers currently disabled due to failures.

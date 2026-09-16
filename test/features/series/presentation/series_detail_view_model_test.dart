@@ -114,7 +114,7 @@ void main() {
           apiKey: 'test-key',
         );
 
-        expect(vm.buildInfoGroups(), isEmpty);
+        expect(vm.buildInfoGroups(null), isEmpty);
       });
 
       test('includes series type capitalized', () {
@@ -124,9 +124,9 @@ void main() {
           apiKey: 'test-key',
         );
 
-        final typeGroup = vm.buildInfoGroups().firstWhere(
-          (group) => group.title == 'Series Type',
-        );
+        final typeGroup = vm
+            .buildInfoGroups(null)
+            .firstWhere((group) => group.title == 'Series Type');
 
         expect(typeGroup.child, isA<Text>());
         expect((typeGroup.child as Text).data, 'Anime');
@@ -142,9 +142,9 @@ void main() {
           apiKey: 'test-key',
         );
 
-        final airDatesGroup = vm.buildInfoGroups().firstWhere(
-          (group) => group.title == 'Air Dates',
-        );
+        final airDatesGroup = vm
+            .buildInfoGroups(null)
+            .firstWhere((group) => group.title == 'Air Dates');
 
         expect(airDatesGroup.child, isA<MediaFactsList>());
       });
@@ -163,7 +163,7 @@ void main() {
           apiKey: 'test-key',
         );
 
-        expect(vm.buildInfoGroups().map((group) => group.title).toList(), [
+        expect(vm.buildInfoGroups(null).map((group) => group.title).toList(), [
           'Series Type',
           'Certification',
           'Original Language',
@@ -171,6 +171,31 @@ void main() {
           'Genre',
           'Network',
         ]);
+      });
+
+      test('the Series Type cell takes the caller\'s control when given', () {
+        // Decision 50 turns that cell into a write. The view model holds no
+        // service and no `ref`, so the screen passes the control in — but the
+        // view model stays the one place that decides where the cell sits, so
+        // the control cannot drift out of the Details card.
+        const control = SizedBox(key: Key('series-type-control'));
+        final vm = SeriesDetailViewModel.fromSeries(
+          makeSeries(seriesType: 'anime'),
+          baseUrl: 'http://localhost:8989',
+          apiKey: 'test-key',
+        );
+
+        final withControl = vm
+            .buildInfoGroups(null, seriesTypeControl: control)
+            .firstWhere((group) => group.title == 'Series Type');
+        expect(withControl.child, same(control));
+
+        // And without one it is still a fact — which is what a series this
+        // Sonarr does not hold has to stay.
+        final withoutControl = vm
+            .buildInfoGroups(null)
+            .firstWhere((group) => group.title == 'Series Type');
+        expect(withoutControl.child, isA<Text>());
       });
     });
   });

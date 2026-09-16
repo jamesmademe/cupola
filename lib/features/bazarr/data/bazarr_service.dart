@@ -205,6 +205,35 @@ class BazarrService {
     );
     return _parsePaged(response.data, (m) => m, start: start);
   }
+
+  // Bazarr's write layer does not exist here, and two commissioned decisions
+  // sit behind it. Naming the calls is the deliverable until they land; a pill
+  // over an empty list and a Sync button with nothing behind it would both be
+  // controls that fail, which is worse than their absence.
+  //
+  // DECISION 22 — History and Blacklist are one tab with a pill, so Bazarr
+  // keeps six tabs. Neutral throughout: blacklisting is a choice, not a fault.
+  // Missing:
+  //   GET    /api/episodes/blacklist   (paged, same envelope as the histories)
+  //   GET    /api/movies/blacklist
+  //   DELETE /api/episodes/blacklist   ({provider, subs_id}) — the row's ✕
+  //   DELETE /api/movies/blacklist
+  //   POST   /api/episodes/blacklist   — blacklist-and-search from a history
+  //   POST   /api/movies/blacklist       row, the action that makes the list
+  //                                      worth having
+  //
+  // DECISION 23 — one Sync action per subtitle row, on the detail. The Feature
+  // map had left it out and the detail drew it; the detail was right. Missing:
+  //   PATCH  /api/subtitles  ({action: 'sync', language, path, type, id})
+  // and, for the rest of the row's verbs the same boards draw:
+  //   PATCH  /api/episodes/subtitles / /api/movies/subtitles  (search one)
+  //   POST   /api/episodes/subtitles / /api/movies/subtitles  (upload)
+  //   DELETE /api/episodes/subtitles / /api/movies/subtitles  (remove)
+  //
+  // The models are as thin as the client: `BazarrWantedItem` carries the
+  // missing languages and nothing that identifies an *existing* subtitle file,
+  // so even once PATCH exists a row has no `path` to send. `GET
+  // /api/episodes` (with `seriesid`/`episodeid`) is the read that supplies it.
 }
 
 /// A single global-search match from the Bazarr library.

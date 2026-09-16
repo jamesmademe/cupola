@@ -392,7 +392,7 @@ class _BazarrWantedEmpty extends StatelessWidget {
             Icon(
               Icons.check_circle_outline_rounded,
               size: 36,
-              color: AppColors.success,
+              color: statusToneColor(colorScheme, StatusTone.success),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(

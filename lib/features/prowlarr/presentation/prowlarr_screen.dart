@@ -285,9 +285,14 @@ class _AppsList extends ConsumerWidget {
                             height: 8,
                             decoration: BoxDecoration(
                               // Applications carry no `enable` flag of their
-                              // own — a sync level of `disabled` is "off".
+                              // own — a sync level of `disabled` is "off". The
+                              // live arm is walked: an 8px dot at 2.07:1 is the
+                              // whole signal this row carries.
                               color: app.isActive
-                                  ? AppColors.success
+                                  ? statusToneColor(
+                                      colorScheme,
+                                      StatusTone.success,
+                                    )
                                   : colorScheme.onSurfaceVariant,
                               shape: BoxShape.circle,
                             ),

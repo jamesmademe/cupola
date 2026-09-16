@@ -255,6 +255,52 @@ void main() {
         );
       });
     });
+
+    group('updateSeriesType', () {
+      test(
+        'sends back the whole series record with only seriesType changed',
+        () async {
+          // The rule, not the route: Sonarr's series PUT replaces the resource
+          // and silently resets anything the body leaves out, so a write that
+          // posts `{seriesType: anime}` alone unmonitors the show and drops its
+          // quality profile. The body has to be what the GET just returned.
+          final client = FakeApiClient()
+            ..getResponseData = {
+              'id': 7,
+              'title': 'Frieren',
+              'monitored': true,
+              'qualityProfileId': 4,
+              'seriesType': 'standard',
+              'seasons': [
+                {'seasonNumber': 1, 'monitored': true},
+              ],
+            };
+          final service = SonarrService(client);
+
+          await service.updateSeriesType(7, 'anime');
+
+          expect(client.lastGetPath, '/api/v3/series/7');
+          expect(client.lastPutPath, '/api/v3/series/7');
+          final body = client.lastPutData as Map<String, dynamic>;
+          expect(body['seriesType'], 'anime');
+          expect(body['monitored'], isTrue);
+          expect(body['qualityProfileId'], 4);
+          expect(body['title'], 'Frieren');
+          expect(body['seasons'], hasLength(1));
+        },
+      );
+
+      test('surfaces a failure instead of degrading', () async {
+        // This write changes what imports. A swallowed error would leave the
+        // row showing the old value as though the change had landed.
+        final client = FakeApiClient()
+          ..getResponseData = {'id': 7, 'seriesType': 'standard'}
+          ..putException = Exception('403');
+        final service = SonarrService(client);
+
+        expect(() => service.updateSeriesType(7, 'daily'), throwsException);
+      });
+    });
   });
 }
 

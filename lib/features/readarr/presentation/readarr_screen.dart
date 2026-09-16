@@ -16,8 +16,28 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Readarr service dashboard: author overview, library KPIs and recent activity.
-/// Read-only for the first release. Readarr is archived upstream but its v1 API
-/// still works, so the standard *arr header-auth pattern applies.
+///
+/// Readarr is archived upstream, so its v1 API is frozen — which is why
+/// decision 13 makes full parity with the other three arrs a *fixed* target
+/// rather than a moving one, and why "read-only for the first release" is a
+/// gap in this screen rather than a boundary of the product.
+///
+/// What parity still needs, and none of it is UI work:
+/// - `getAuthor(id)` — `readarr_service.dart` has `getAuthors()` and
+///   `getRecentHistory()` and nothing else, so an author detail page has no
+///   first fetch. `GET /api/v1/author/{id}`.
+/// - a book list — `GET /api/v1/book` (optionally `?authorId=`), plus a
+///   `ReadarrBook` model. Today `ReadarrAuthor` is the only library entity.
+/// - the calendar — `GET /api/v1/calendar`, the same shape and the same
+///   builder the other three arrs need and none of them calls yet.
+/// - wanted and cutoff — `getMissingPage`/`getCutoffPage` already exist on the
+///   shared base, so these are provider and screen work, not client work.
+/// - the writes — `PUT /api/v1/author` for monitor and profile, `POST
+///   /api/v1/command` for the searches, `DELETE /api/v1/author/{id}`, and the
+///   manual-import routes.
+///
+/// The transport is settled: the standard *arr header-auth `ApiClient` and
+/// `ArrActivityMixin` already cover queue, history, releases and blocklist.
 class ReadarrScreen extends ConsumerWidget {
   const ReadarrScreen({super.key, this.showAppBar = true, this.topPadding = 0});
 

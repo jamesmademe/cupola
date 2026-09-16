@@ -92,9 +92,17 @@ class SeriesDetailViewModel {
     ?runtimeStr,
   ].where((item) => item.isNotEmpty).toList(growable: false);
 
-  List<MediaInfoGroup> buildInfoGroups([String? qualityProfileName]) {
+  /// [seriesTypeControl] replaces the Series type cell's `Text` with the
+  /// caller's widget. The view model stays free of the write — it holds no
+  /// `ref` and no service — but it stays the one place that decides *where* the
+  /// cell sits, so the control cannot drift out of the Details card the way a
+  /// screen-side rebuild of the whole group list would let it.
+  List<MediaInfoGroup> buildInfoGroups(
+    String? qualityProfileName, {
+    Widget? seriesTypeControl,
+  }) {
     if (qualityProfileName == null) {
-      return _buildLegacyInfoGroups();
+      return _buildLegacyInfoGroups(seriesTypeControl: seriesTypeControl);
     }
 
     final airDateFacts = _buildAirDateFacts();
@@ -114,7 +122,7 @@ class SeriesDetailViewModel {
       if (_hasText(seriesType))
         MediaInfoGroup(
           title: 'Series Type',
-          child: Text(capitalizeFirst(seriesType!)),
+          child: seriesTypeControl ?? Text(capitalizeFirst(seriesType!)),
         ),
       if (_hasText(certification))
         MediaInfoGroup(title: 'Certification', child: Text(certification!)),
@@ -127,14 +135,14 @@ class SeriesDetailViewModel {
     ];
   }
 
-  List<MediaInfoGroup> _buildLegacyInfoGroups() {
+  List<MediaInfoGroup> _buildLegacyInfoGroups({Widget? seriesTypeControl}) {
     final airDateFacts = _buildAirDateFacts();
 
     return [
       if (_hasText(seriesType))
         MediaInfoGroup(
           title: 'Series Type',
-          child: Text(capitalizeFirst(seriesType!)),
+          child: seriesTypeControl ?? Text(capitalizeFirst(seriesType!)),
         ),
       if (_hasText(certification))
         MediaInfoGroup(title: 'Certification', child: Text(certification!)),

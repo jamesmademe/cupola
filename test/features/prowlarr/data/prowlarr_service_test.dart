@@ -21,28 +21,6 @@ DioException _validationError(List<Map<String, dynamic>> failures) {
 }
 
 void main() {
-  group('ProwlarrService.getStatus', () {
-    test('parses the flat status object and surfaces the version', () async {
-      final client = FakeApiClient()
-        ..getResponseData = {
-          'appName': 'Prowlarr',
-          'instanceName': 'Prowlarr',
-          'version': '2.5.0.5422',
-          'osName': 'alpine',
-          'startTime': '2026-07-12T13:29:15Z',
-        };
-      final service = ProwlarrService(client);
-
-      final status = await service.getStatus();
-
-      expect(status.version, '2.5.0.5422');
-      expect(status.appName, 'Prowlarr');
-      expect(status.instanceName, 'Prowlarr');
-      expect(status.osName, 'alpine');
-      expect(client.lastGetPath, '/api/v1/system/status');
-    });
-  });
-
   group('ProwlarrService.getHealth', () {
     test('parses the flat health array', () async {
       final client = FakeApiClient()

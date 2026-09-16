@@ -20,11 +20,13 @@ import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/series/domain/sonarr_series_type.dart';
 import 'package:cupola/features/series/domain/sonarr_status.dart';
 import 'package:cupola/features/series/presentation/series_detail_provider.dart';
 import 'package:cupola/features/series/presentation/series_detail_view_model.dart';
 import 'package:cupola/features/series/presentation/series_provider.dart';
 import 'package:cupola/features/series/presentation/widgets/series_seasons_list.dart';
+import 'package:cupola/features/series/presentation/widgets/series_type_row.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -57,6 +59,12 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         ArrDetailActionsMixin<SeriesDetailScreen> {
   final Set<int> _searchingSeasons = {};
   final Set<int> _searchingEpisodes = {};
+
+  /// A series-type write is in flight. Held on the state rather than derived
+  /// from the provider because the read-modify-write takes two round trips and
+  /// the detail provider does not move until both land — without this the row
+  /// looks idle for the whole of it and takes a second tap.
+  bool _isUpdatingSeriesType = false;
 
   /// The connection resolved in the last build, for the callbacks to reuse —
   /// see [_MovieDetailScreenState] for why it is held rather than re-resolved.
@@ -122,7 +130,20 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       baseUrl: connection?.url ?? '',
       apiKey: connection?.credential ?? '',
     );
-    final infoGroups = viewModel.buildInfoGroups(currentProfileName ?? '');
+    final infoGroups = viewModel.buildInfoGroups(
+      currentProfileName ?? '',
+      // Only a series Sonarr actually holds can be retyped. For anything else
+      // the row stays a fact, which is what it is.
+      seriesTypeControl: viewModel.isInLibrary && series.id > 0
+          ? SeriesTypeRow(
+              rawValue: viewModel.seriesType ?? '',
+              accent: ServiceKey.sonarr.accent,
+              isBusy: _isUpdatingSeriesType,
+              onChanged: (type) =>
+                  _updateSeriesType(context, seriesId: series.id, type: type),
+            )
+          : null,
+    );
 
     // Without the queue the badge cannot tell "nothing on disk" from "being
     // downloaded right now", and every in-flight series reads as Missing.
@@ -421,14 +442,57 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       serviceName: 'Sonarr',
       subject: 'series',
       monitored: monitored,
-      write: () => ref
-          .read(sonarrServiceProvider)
-          .updateSeriesMonitored(seriesId, monitored),
+      // `_sonarr`, not `sonarrServiceProvider`. This wrote through the lens
+      // while the file above declares that every read and every write goes
+      // through the page's own connection: with two Sonarrs configured, a page
+      // opened for the 4K one sent its monitor flag to the other, carrying a
+      // seriesId that names a different show there.
+      write: () => _sonarr.updateSeriesMonitored(seriesId, monitored),
       invalidate: [
         seriesDetailForProvider((instanceId: _instanceId, id: seriesId)),
         seriesProvider,
       ],
     );
+  }
+
+  /// Writes the new series type and re-reads the page.
+  ///
+  /// Not routed through [ArrDetailActionsMixin]: its helpers each own one verb
+  /// (monitor, profile, delete, search) and this is a fifth. The shape is the
+  /// same — guard, write, confirm in words, invalidate — and the guard matters
+  /// more here than elsewhere, because the write reads the whole series
+  /// resource and puts it back, so two of them racing lose whichever landed
+  /// first.
+  Future<void> _updateSeriesType(
+    BuildContext context, {
+    required int seriesId,
+    required SonarrSeriesType type,
+  }) async {
+    if (_isUpdatingSeriesType) return;
+    setState(() => _isUpdatingSeriesType = true);
+    try {
+      await _sonarr.updateSeriesType(seriesId, type.wireValue);
+      if (!context.mounted) return;
+      // Names the consequence, not the field: "Series type set to Anime" says
+      // what was clicked, and the user already knows that.
+      SnackBarHelper.success(
+        context,
+        'Sonarr will number this series as ${type.label.toLowerCase()}',
+      );
+      ref.invalidate(
+        seriesDetailForProvider((instanceId: _instanceId, id: seriesId)),
+      );
+      ref.invalidate(seriesProvider);
+    } catch (e) {
+      if (!context.mounted) return;
+      SnackBarHelper.error(
+        context,
+        "Couldn't change the series type in Sonarr.",
+        detail: e,
+      );
+    } finally {
+      if (mounted) setState(() => _isUpdatingSeriesType = false);
+    }
   }
 
   Future<void> _triggerSearch(BuildContext context) {
@@ -555,9 +619,8 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       mediaTitle: mediaTitle,
       serviceName: 'Sonarr',
       consequence: 'upgrades across every monitored episode',
-      write: () => ref
-          .read(sonarrServiceProvider)
-          .updateSeriesProfile(widget.seriesId, profileId),
+      // See _updateMonitoredState: the page's connection, not the lens.
+      write: () => _sonarr.updateSeriesProfile(widget.seriesId, profileId),
       invalidate: [seriesProvider],
     );
   }
@@ -569,13 +632,13 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       subject: 'series',
       title: title,
       mediaType: DeleteMediaType.series,
-      write: (deleteFiles, addExclusion) => ref
-          .read(sonarrServiceProvider)
-          .deleteSeries(
-            widget.seriesId,
-            deleteFiles: deleteFiles,
-            addImportListExclusion: addExclusion,
-          ),
+      // The one that made the lens bug destructive: a delete aimed at the lens
+      // with this page's seriesId removes whatever holds that id over there.
+      write: (deleteFiles, addExclusion) => _sonarr.deleteSeries(
+        widget.seriesId,
+        deleteFiles: deleteFiles,
+        addImportListExclusion: addExclusion,
+      ),
     );
   }
 }

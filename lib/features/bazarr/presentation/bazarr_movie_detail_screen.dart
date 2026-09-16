@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_detail_view_model.dart';
@@ -120,11 +119,16 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
             child: wantedAsync.when(
               data: (item) {
                 if (item == null) {
-                  return const AppEmptyState.compact(
+                  return AppEmptyState.compact(
                     icon: Icons.check_circle_outline_rounded,
                     title: 'All languages covered',
                     message: 'No missing subtitles for this movie.',
-                    accentColor: AppColors.success,
+                    // See the series screen: the success green only clears AA
+                    // once it is walked against the ground it lands on.
+                    accentColor: statusToneColor(
+                      Theme.of(context).colorScheme,
+                      StatusTone.success,
+                    ),
                   );
                 }
                 if (item.missingLanguages.isEmpty) {

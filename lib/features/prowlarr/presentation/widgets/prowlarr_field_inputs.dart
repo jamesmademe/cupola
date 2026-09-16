@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 
 /// Inputs generated from a Prowlarr provider's `fields` array.
@@ -324,9 +325,13 @@ class ProwlarrMessageBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    // Prowlarr's own severity word, mapped onto the app's tones rather than
+    // onto the palette. Its `error` is still a fault it is telling us about —
+    // "this indexer needs FlareSolverr" — not a Prowlarr that stopped
+    // answering, so both severities land on amber and red stays reserved.
     final accent = switch ((type ?? '').toLowerCase()) {
-      'error' => AppColors.error,
-      'warning' => AppColors.warning,
+      'error' || 'warning' => statusToneColor(colorScheme, StatusTone.warning),
       _ => AppColors.prowlarr,
     };
     return Container(

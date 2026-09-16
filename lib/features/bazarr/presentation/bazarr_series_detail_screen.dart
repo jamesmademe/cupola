@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_detail_view_model.dart';
@@ -124,11 +123,17 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
               count: count,
               labelAction: refreshAction,
               child: wantedAsync.when(
-                data: (items) => const AppEmptyState.compact(
+                data: (items) => AppEmptyState.compact(
                   icon: Icons.check_circle_outline_rounded,
                   title: 'All languages covered',
                   message: 'No missing subtitles for this series.',
-                  accentColor: AppColors.success,
+                  // Raw `AppColors.success` is 2.07:1 on paper — the one mark
+                  // on a screen whose whole message is "nothing is missing"
+                  // was the one a daylight reader could not see.
+                  accentColor: statusToneColor(
+                    Theme.of(context).colorScheme,
+                    StatusTone.success,
+                  ),
                 ),
                 loading: () => ShimmerList(itemCount: 3, itemHeight: 56),
                 error: (error, _) => AppErrorState.compact(

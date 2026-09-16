@@ -76,6 +76,10 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
                 _ActionRow(indexer: indexer),
                 _InfoCard(indexer: indexer),
                 const SizedBox(height: AppSpacing.sm),
+                // The window, said out loud. These four figures are scoped to
+                // `prowlarrStatsWindow` — an unlabelled "Queries 4812" reads as
+                // a lifetime total and tells a self-hoster nothing about today.
+                _SectionLabel(text: 'Last 24 hours'),
                 _StatsSection(indexerId: indexerId),
                 const SizedBox(height: AppSpacing.sm),
                 _SectionLabel(text: 'Recent Activity'),
@@ -201,19 +205,28 @@ class _StatusBanner extends ConsumerWidget {
           ),
           child: Container(
             padding: const EdgeInsets.all(AppSpacing.md),
+            // A tonal card, not an alarm. The fill and border were the raw
+            // `AppColors.warning` at 0.1 and 0.4 — the chrome the app reserves
+            // for a service that did not answer — around a fact Prowlarr
+            // answered perfectly well: one of its indexers is failing. The
+            // icon and the ink carry the tone; the container stays quiet.
             decoration: BoxDecoration(
-              color: AppColors.warning.withValues(alpha: 0.1),
+              color: colorScheme.surfaceContainerHighest,
               borderRadius: AppRadius.borderRadiusMd,
-              border: Border.all(
-                color: AppColors.warning.withValues(alpha: 0.4),
-              ),
+              border: Border.all(color: colorScheme.outlineVariant),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.error_outline_rounded,
                   size: 18,
-                  color: statusToneColor(colorScheme, StatusTone.warning),
+                  color: statusToneColor(
+                    colorScheme,
+                    StatusTone.warning,
+                    // The tone lands on an elevated container, not on the page
+                    // ground — only this caller knows that.
+                    surface: colorScheme.surfaceContainerHighest,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -329,12 +342,14 @@ class _StatsSection extends ConsumerWidget {
     return statAsync.maybeWhen(
       data: (stat) {
         if (stat == null) {
+          // Prowlarr answered and this indexer was simply not in the window —
+          // a real reading of zero activity, not a figure the app is missing.
           return const Padding(
             padding: EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,
               vertical: AppSpacing.xs,
             ),
-            child: Text('No usage statistics yet.'),
+            child: Text('No queries in the last 24 hours.'),
           );
         }
         return Padding(
@@ -357,7 +372,12 @@ class _StatsSection extends ConsumerWidget {
                 label: 'Fails',
                 value: '${stat.numberOfFailures}',
                 icon: Icons.error_outline_rounded,
-                accent: stat.numberOfFailures > 0 ? AppColors.warning : null,
+                accent: stat.numberOfFailures > 0
+                    ? statusToneColor(
+                        Theme.of(context).colorScheme,
+                        StatusTone.warning,
+                      )
+                    : null,
               ),
               const SizedBox(width: AppSpacing.sm),
               _StatTile(

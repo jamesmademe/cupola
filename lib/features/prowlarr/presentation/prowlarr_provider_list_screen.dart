@@ -8,6 +8,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider_actions.dart';
@@ -234,8 +235,11 @@ class _ProviderRow extends StatelessWidget {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
+                    // Walked: see the applications row on the Prowlarr home —
+                    // an 8px dot is the only thing distinguishing an enabled
+                    // provider from a disabled one.
                     color: resource.isActive
-                        ? AppColors.success
+                        ? statusToneColor(colorScheme, StatusTone.success)
                         : colorScheme.onSurfaceVariant,
                     shape: BoxShape.circle,
                   ),

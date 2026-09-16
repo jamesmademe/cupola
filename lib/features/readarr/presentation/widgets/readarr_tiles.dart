@@ -14,14 +14,19 @@ import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
     case 'grabbed':
       return (
         icon: Icons.download_rounded,
-        color: AppColors.info,
+        // Walked, like the other three arms. These two were the raw palette
+        // constants: on paper `AppColors.info` measures 3.34:1 and
+        // `AppColors.success` 2.07:1, so a grab and an import — the two events
+        // this list shows most — were the only ones in it that could not be
+        // read in daylight.
+        color: statusToneColor(colorScheme, StatusTone.info),
         label: 'GRABBED',
       );
     case 'bookFileImported':
     case 'downloadFolderImported':
       return (
         icon: Icons.check_circle_rounded,
-        color: AppColors.success,
+        color: statusToneColor(colorScheme, StatusTone.success),
         label: 'IMPORTED',
       );
     case 'bookFileDeleted':

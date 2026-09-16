@@ -14,7 +14,6 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 /// wiring lives in `prowlarr_provider.dart`; this file only defines transport.
 ///
 /// Envelope shapes (verified against Prowlarr v2.5.0):
-/// - `system/status`: flat object.
 /// - `health`, `indexer`, `indexerstatus`, `applications`: bare JSON arrays.
 /// - `indexerstats`: object with the per-indexer breakdown under `indexers`.
 /// - `history`: paged object `{records, totalRecords, page, pageSize}`.
@@ -27,11 +26,13 @@ class ProwlarrService {
 
   ProwlarrService(this.client);
 
-  /// Authenticated system status (version, OS, instance name...).
-  Future<ProwlarrSystemStatus> getStatus() async {
-    final response = await client.get('/api/v1/system/status');
-    return ProwlarrSystemStatus.fromJson(mapOrNull(response.data) ?? const {});
-  }
+  // `getStatus()` used to live here, reading `/api/v1/system/status` into a
+  // `ProwlarrSystemStatus`. Nothing in the app ever called it: the version the
+  // Overview prints already comes from `serviceSummaryProvider`, which reads
+  // the same endpoint for all seventeen services through
+  // `ServiceKey.statusEndpoint`. Wiring it in would have been a second request
+  // for a string the app already has, so it is gone with its model and its
+  // test rather than kept as a method with one caller in `test/`.
 
   /// Current health issues (missing definitions, failing indexers, updates...).
   Future<List<ProwlarrHealthIssue>> getHealth() async {

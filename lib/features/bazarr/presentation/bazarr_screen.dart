@@ -73,8 +73,13 @@ class _BazarrDashboard extends ConsumerWidget {
             accent: AppColors.bazarr,
           ),
           const SizedBox(height: AppSpacing.xs),
-          // Search bar — decorative, non-functional for Fase 3
-          _SearchBar(accent: AppColors.bazarr),
+          // A decorative `TextField(enabled: false)` used to sit here, under a
+          // comment admitting it was "not wired to search yet". It occupied the
+          // exact spot the app-bar magnifier is meant to occupy, and a
+          // semantically disabled field is skipped by a screen reader entirely
+          // — so the one control a blind user could not reach was also the one
+          // that did nothing. Deleted rather than wired: Bazarr's search entry
+          // point is the app bar's, and a service home does not carry two.
           const SizedBox(height: AppSpacing.sm),
           // Quick action: open wanted/library lists
           _BazarrQuickActions(accent: AppColors.bazarr),
@@ -96,37 +101,6 @@ class _BazarrDashboard extends ConsumerWidget {
           // CTA
           _BazarrCta(accent: AppColors.bazarr),
         ],
-      ),
-    );
-  }
-}
-
-/// Decorative search bar matching the prototype. Not wired to search yet.
-class _SearchBar extends StatelessWidget {
-  const _SearchBar({required this.accent});
-
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: TextField(
-        enabled: false,
-        decoration: InputDecoration(
-          hintText: 'Search movies, series, subtitles...',
-          hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-          prefixIcon: Icon(Icons.search_rounded, color: accent),
-          filled: true,
-          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          border: OutlineInputBorder(
-            borderRadius: AppRadius.borderRadiusMd,
-            borderSide: BorderSide.none,
-          ),
-        ),
       ),
     );
   }

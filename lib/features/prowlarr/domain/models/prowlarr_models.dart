@@ -2,36 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
-/// Authenticated system status from `GET /api/v1/system/status`.
-///
-/// Prowlarr returns a flat object (no `data` wrapper); the `version` field is
-/// used for the services status card.
-class ProwlarrSystemStatus {
-  final String? version;
-  final String? appName;
-  final String? instanceName;
-  final String? osName;
-  final String? startTime;
-
-  const ProwlarrSystemStatus({
-    this.version,
-    this.appName,
-    this.instanceName,
-    this.osName,
-    this.startTime,
-  });
-
-  factory ProwlarrSystemStatus.fromJson(Map<String, dynamic> json) {
-    return ProwlarrSystemStatus(
-      version: stringOrNull(json['version']),
-      appName: stringOrNull(json['appName']),
-      instanceName: stringOrNull(json['instanceName']),
-      osName: stringOrNull(json['osName']),
-      startTime: stringOrNull(json['startTime']),
-    );
-  }
-}
-
 /// A single entry from `GET /api/v1/health` (flat list, no `data` wrapper).
 class ProwlarrHealthIssue {
   final String? source;

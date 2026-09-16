@@ -269,6 +269,30 @@ class SonarrService with ArrActivityMixin {
     await updateItemMonitored('series', seriesId, monitored);
   }
 
+  /// Changes how Sonarr numbers this series's episodes.
+  ///
+  /// Read-modify-write against the same `PUT /api/v3/series/{id}` the monitor
+  /// and profile writes use: Sonarr's series endpoint takes the whole resource
+  /// and silently resets any field left out, so the body has to be the record
+  /// it just returned with one key changed. This is not a variant of
+  /// `updateItemProfile` that could be folded into it — that helper is shared
+  /// by four services whose resources have a `qualityProfileId`, and
+  /// `seriesType` exists on Sonarr alone.
+  ///
+  /// [seriesType] is a `SonarrSeriesType.wireValue`, never a UI label: Sonarr
+  /// matches the string exactly and answers 400 to "Anime".
+  ///
+  /// Throws on failure. This is a user action with a visible outcome — the
+  /// field's whole point is that it changes what imports — so a silent
+  /// degrade would leave the row showing the old value as if it were the new
+  /// one.
+  Future<void> updateSeriesType(int seriesId, String seriesType) async {
+    final response = await client.get('/api/v3/series/$seriesId');
+    final series = response.data as Map<String, dynamic>;
+    series['seriesType'] = seriesType;
+    await client.put('/api/v3/series/$seriesId', data: series);
+  }
+
   /// Deletes a series from Sonarr.
   Future<void> deleteSeries(
     int seriesId, {

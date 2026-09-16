@@ -41,9 +41,13 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
       color: AppColors.sonarr,
       icon: Icons.rss_feed_rounded,
     ),
+    // A *successful* auth handshake, because the `!item.successful` arm above
+    // has already taken every failure. It was amber, which spent the fault
+    // colour on an indexer doing exactly what it is supposed to — and left the
+    // one real failure in this list indistinguishable from it.
     'indexerAuth' => (
       label: 'AUTH',
-      color: statusToneColor(colorScheme, StatusTone.warning),
+      color: statusToneColor(colorScheme, StatusTone.info),
       icon: Icons.key_rounded,
     ),
     _ => (
