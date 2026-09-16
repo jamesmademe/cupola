@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/router.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_screen.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
+import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/presentation/music_detail_screen.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
@@ -14,6 +16,7 @@ import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/presentation/series_detail_screen.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -156,9 +159,13 @@ void main() {
       },
     );
 
-    testWidgets('redirects invalid library detail ids back to services', (
+    testWidgets('redirects invalid library detail ids back to the library', (
       tester,
     ) async {
+      // The fallback moved with the film. A bad id used to drop the user at
+      // the app home, which was the only place a detail route could name
+      // before it had a tab around it; now the film is a page inside Library,
+      // so the nearest place that exists is the list it was pushed from.
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
@@ -168,8 +175,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(router.state.uri.toString(), '/dashboard');
-      expect(find.byType(DashboardScreen), findsOneWidget);
+      expect(router.state.uri.toString(), ServiceRoutes.radarrLibrary);
+      expect(find.byType(MoviesScreen), findsOneWidget);
       expect(find.byType(MovieDetailScreen), findsNothing);
     });
 
@@ -179,20 +186,26 @@ void main() {
         final container = await _pumpRouter(tester);
         final router = container.read(routerProvider);
 
-        router.go('/dashboard/radarr/movie/42', extra: buildArtist(id: 9));
+        // Aimed at the canonical path — the one `ServiceRoutes.radarrMovie`
+        // builds and every in-app caller emits — rather than at the pre-tab
+        // `radarr/movie/:id` tail. That tail still resolves, but only by
+        // redirecting, and go_router re-matches a redirect with
+        // `findMatch(uri)` and no extra: the preload would arrive as null and
+        // the second half of this case would assert nothing.
+        router.go(ServiceRoutes.radarrMovie(42), extra: buildArtist(id: 9));
         await tester.pumpAndSettle();
 
-        expect(router.state.uri.toString(), '/dashboard/radarr/movie/42');
+        expect(router.state.uri.toString(), ServiceRoutes.radarrMovie(42));
         var movieScreen = tester.widget<MovieDetailScreen>(
           find.byType(MovieDetailScreen),
         );
         expect(movieScreen.movieId, 42);
         expect(movieScreen.initialMovie, isNull);
 
-        router.go('/dashboard/radarr/movie/42', extra: buildMovie(id: 7));
+        router.go(ServiceRoutes.radarrMovie(42), extra: buildMovie(id: 7));
         await tester.pumpAndSettle();
 
-        expect(router.state.uri.toString(), '/dashboard/radarr/movie/42');
+        expect(router.state.uri.toString(), ServiceRoutes.radarrMovie(42));
         movieScreen = tester.widget<MovieDetailScreen>(
           find.byType(MovieDetailScreen),
         );
@@ -215,7 +228,10 @@ void main() {
       );
 
       expect(screen.service, ServiceKey.seerr);
-      expect(find.text('Seerr Settings'), findsOneWidget);
+      // The page prints the service's name alone: "Seerr Settings" is the name
+      // of Seerr's own configuration, which is a different page from the form
+      // that tells Cupola how to reach it.
+      expect(find.text(ServiceKey.seerr.title), findsWidgets);
     });
 
     testWidgets('supports appearance and connections settings subroutes', (
@@ -266,16 +282,40 @@ void main() {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
-      for (final route in [
-        '/dashboard/seerr',
-        '/dashboard/radarr',
-        '/dashboard/sonarr',
-        '/dashboard/lidarr',
-      ]) {
-        router.go(route);
+      // Radarr is the first service on the tab model, and `/dashboard/radarr`
+      // is a redirect-only prefix there: the service home is a tab now, so the
+      // bare path names a place that draws nothing and hands off to Overview.
+      // The other three still land on themselves.
+      for (final entry in {
+        '/dashboard/seerr': '/dashboard/seerr',
+        ServiceRoutes.radarr: ServiceRoutes.radarrOverview,
+        '/dashboard/sonarr': '/dashboard/sonarr',
+        '/dashboard/lidarr': '/dashboard/lidarr',
+      }.entries) {
+        router.go(entry.key);
         await tester.pumpAndSettle();
 
-        expect(router.state.uri.toString(), route);
+        expect(router.state.uri.toString(), entry.value, reason: entry.key);
+      }
+    });
+
+    testWidgets('every tab on Radarr\'s bar resolves to its own location', (
+      tester,
+    ) async {
+      // The bar draws one label per entry in `tabsFor`, so a tab the table
+      // names with no branch behind it would 404 on tap rather than fail
+      // anywhere a reader would look. Radarr is one of the four services this
+      // harness fakes, which is what keeps these six destinations off a
+      // provider retry timer.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final tab in tabsFor(ServiceKey.radarr)!) {
+        final location = '${ServiceRoutes.radarr}/${tab.segment}';
+        router.go(location);
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.toString(), location, reason: tab.name);
       }
     });
 
@@ -289,18 +329,19 @@ void main() {
       expect(router.state.uri.toString(), '/dashboard/seerr/requests');
       expect(find.byType(ServiceAllRequestsScreen), findsOneWidget);
 
+      // `media` was the all-list tail every arr carried. Radarr's now lands on
+      // the Library tab rather than on the service root, because on the tab
+      // model the whole library IS a tab; the other two still have nowhere but
+      // their root to go.
       for (final entry in {
-        '/dashboard/radarr/media': ServiceKey.radarr,
-        '/dashboard/sonarr/media': ServiceKey.sonarr,
-        '/dashboard/lidarr/media': ServiceKey.lidarr,
+        '/dashboard/radarr/media': ServiceRoutes.radarrLibrary,
+        '/dashboard/sonarr/media': '/dashboard/sonarr',
+        '/dashboard/lidarr/media': '/dashboard/lidarr',
       }.entries) {
         router.go(entry.key);
         await tester.pumpAndSettle();
 
-        expect(
-          router.state.uri.toString(),
-          '/dashboard/${entry.value.routeParam}',
-        );
+        expect(router.state.uri.toString(), entry.value, reason: entry.key);
         expect(find.byType(ServiceAllRequestsScreen), findsNothing);
       }
     });
@@ -319,9 +360,13 @@ void main() {
       // Only services this harness fakes: an unfaked one leaves a provider
       // retry timer pending and the failure would be about the fixture rather
       // than about the rewrite.
+      // `/services/radarr` takes two hops now: the prefix rewrite lands it on
+      // `/dashboard/radarr`, which is redirect-only and hands off to Overview.
+      // That chaining is the property — a rewrite that stopped at the first
+      // hop would leave the user on a path that draws nothing.
       const cases = {
         '/services': '/dashboard',
-        '/services/radarr': '/dashboard/radarr',
+        '/services/radarr': ServiceRoutes.radarrOverview,
         '/services/seerr/requests': '/dashboard/seerr/requests',
       };
 
@@ -346,12 +391,15 @@ void main() {
       // connection this harness does not define leaves a provider retrying;
       // the property under test is the whole query surviving the swap, and
       // that is what `i=` rides on in production.
+      // Three hops, and the query survives all of them: the prefix rewrite,
+      // then the pre-tab `radarr/movie/:id` tail, then the film inside the
+      // Library branch where it lives now.
       router.go('/services/radarr/movie/42?heroTag=legacy_movie');
       await tester.pumpAndSettle();
 
       expect(
         router.state.uri.toString(),
-        '/dashboard/radarr/movie/42?heroTag=legacy_movie',
+        '${ServiceRoutes.radarrMovieBase}/42?heroTag=legacy_movie',
       );
       expect(find.byType(MovieDetailScreen), findsOneWidget);
     });
@@ -404,12 +452,14 @@ void main() {
       );
       expect(find.byType(DiscoverDetailScreen), findsOneWidget);
 
+      // `/movies/:id` still crosses in one hop, but its destination moved
+      // inside the Library branch with the film.
       router.go('/movies/42?heroTag=legacy_movie');
       await tester.pumpAndSettle();
 
       expect(
         router.state.uri.toString(),
-        '/dashboard/radarr/movie/42?heroTag=legacy_movie',
+        '${ServiceRoutes.radarrMovieBase}/42?heroTag=legacy_movie',
       );
       expect(find.byType(MovieDetailScreen), findsOneWidget);
 

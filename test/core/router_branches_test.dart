@@ -8,6 +8,7 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_screen.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
@@ -89,6 +90,22 @@ void main() {
   StatefulShellRoute shellRouteOf(GoRouter router) =>
       router.configuration.routes.whereType<StatefulShellRoute>().single;
 
+  /// Radarr's own node, walked to from the app shell rather than looked up.
+  ///
+  /// Walking is the point: reaching it means passing through the Dashboard
+  /// branch, so a Radarr mounted anywhere else would not be found at all.
+  GoRoute radarrRouteOf(GoRouter router) {
+    final dashboard =
+        shellRouteOf(router).branches[NavTab.dashboard.index].routes.single
+            as GoRoute;
+    return dashboard.routes.whereType<GoRoute>().firstWhere(
+      (route) => route.path == ServiceKey.radarr.routeParam,
+    );
+  }
+
+  StatefulShellRoute radarrShellOf(GoRouter router) =>
+      radarrRouteOf(router).routes.whereType<StatefulShellRoute>().single;
+
   group('shell branches', () {
     testWidgets('there is one branch per tab, in NavTab order', (tester) async {
       final router = await pumpRouter(tester);
@@ -107,6 +124,73 @@ void main() {
               'tab rather than fail.',
         );
       }
+    });
+
+    testWidgets('Radarr has one branch per tab, in tabsFor order', (
+      tester,
+    ) async {
+      final router = await pumpRouter(tester);
+      final tabs = tabsFor(ServiceKey.radarr)!;
+      final branches = radarrShellOf(router).branches;
+
+      expect(branches, hasLength(tabs.length));
+      for (var i = 0; i < tabs.length; i++) {
+        final tab = tabs[i];
+        expect(
+          (branches[i].routes.single as GoRoute).path,
+          tab.segment,
+          reason:
+              'The bar is generated from the same list and taps it by index, '
+              'so branch $i must be ${tab.name}. Out of order it would light '
+              'one tab and show another rather than fail.',
+        );
+      }
+    });
+
+    testWidgets('the Radarr shell is nested inside the Dashboard branch', (
+      tester,
+    ) async {
+      final router = await pumpRouter(tester);
+
+      expect(
+        router.configuration.routes.whereType<StatefulShellRoute>(),
+        hasLength(1),
+        reason:
+            'A second shell beside the app one would replace the page the nav '
+            'bar, the Portal and the whole desktop chrome hang off — opening a '
+            'service would take the app\'s own navigation away with it.',
+      );
+      // Found only by walking down through the Dashboard branch, which is the
+      // assertion: nothing else in this file could reach it.
+      expect(radarrShellOf(router).branches, isNotEmpty);
+    });
+
+    testWidgets('the film detail is inside the Library branch', (tester) async {
+      final router = await pumpRouter(tester);
+      final tabs = tabsFor(ServiceKey.radarr)!;
+      final library =
+          radarrShellOf(
+                router,
+              ).branches[tabs.indexOf(ServiceTab.library)].routes.single
+              as GoRoute;
+
+      expect(
+        library.routes.whereType<GoRoute>().map((route) => route.path),
+        contains('movie/:id'),
+        reason:
+            'Pushed inside the branch, the film survives a switch away from '
+            'Radarr and its Hero flies, because list and detail share one '
+            'Navigator. Beside the branch it would be neither.',
+      );
+
+      // The same spelling still hangs off the service node, and that one is a
+      // compatibility tail: it builds nothing and only forwards.
+      final tail = radarrRouteOf(
+        router,
+      ).routes.whereType<GoRoute>().firstWhere((r) => r.path == 'movie/:id');
+      expect(tail.builder, isNull);
+      expect(tail.pageBuilder, isNull);
+      expect(tail.redirect, isNotNull);
     });
 
     testWidgets('no branch is preloaded', (tester) async {

@@ -89,9 +89,11 @@ void main() {
         .expand((group) => group.results)
         .map((item) => Uri.parse(item.route))
         .toList(growable: false);
+    // Radarr's row points inside the Library tab's branch: on the tab model
+    // the film is a page pushed from the library list, not a sibling of it.
     expect(routes.map((uri) => uri.path), [
       '/dashboard/seerr/movie/101',
-      '/dashboard/radarr/movie/10',
+      '/dashboard/radarr/library/movie/10',
       '/dashboard/sonarr/series/20',
       '/dashboard/lidarr/artist/30',
     ]);

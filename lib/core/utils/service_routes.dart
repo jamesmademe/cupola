@@ -158,7 +158,16 @@ class ServiceRoutes {
     });
   }
 
-  static const radarrMovieBase = '$radarr/movie';
+  // ── Radarr, under the tab model ───────────────────────────────────────────
+  //
+  // Spelled as literals rather than composed from `ServiceTab.segment`: an enum
+  // instance's field is not a compile-time constant in Dart and these have to
+  // stay `const`. A test ties each one to its tab so the two cannot drift.
+  static const radarrOverview = '$radarr/overview';
+  static const radarrLibrary = '$radarr/library';
+
+  /// The film, inside the Library tab's branch.
+  static const radarrMovieBase = '$radarrLibrary/movie';
   static const sonarrSeriesBase = '$sonarr/series';
   static const lidarrArtistBase = '$lidarr/artist';
   static const qbittorrentTorrentBase = '$qbittorrent/torrent';

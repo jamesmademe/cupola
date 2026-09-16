@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/widgets/service_tab_bar.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/services/presentation/service_tab_placeholder.dart';
+import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
@@ -96,6 +100,14 @@ import 'package:cupola/features/discover/presentation/collection_detail_screen.d
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
 const double _serviceHomeTopPadding = kToolbarHeight;
+
+/// Room the service band AND the tab bar take above a tab's content.
+///
+/// Composed rather than written out: the two bands stack, so a hosted screen
+/// inside a tabbed service has to clear both, and a literal here would be a
+/// second place for the bar's height to be wrong.
+const double _serviceTabTopPadding =
+    _serviceHomeTopPadding + ServiceTabBar.height;
 
 /// The page for a top-level tab: a short fade instead of the platform default.
 ///
@@ -328,39 +340,24 @@ GoRoute _discoverRoutes({required String path, String? redirectLocation}) {
   );
 }
 
-GoRoute _moviesRoutes({required String path, String? redirectLocation}) {
+/// The pre-tab-model `/movies` tree, which now exists only to redirect.
+///
+/// Radarr itself lives in [_radarrRoutes]. This kept its `:id` child so the
+/// redirect can carry a deep link's own parameters across in ONE hop —
+/// `/movies/42?heroTag=x` lands directly on the film inside the Library tab
+/// rather than bouncing through the service root and losing where it was going.
+GoRoute _moviesRoutes({required String path}) {
   return GoRoute(
     path: path,
-    redirect: redirectLocation == null
-        ? null
-        : (context, state) => _redirectLegacyLibrary(
-            state,
-            legacyBase: '/movies',
-            serviceBase: ServiceRoutes.radarrMovieBase,
-          ),
-    builder: path.startsWith('/')
-        ? (context, state) => const MoviesScreen()
-        : null,
-    pageBuilder: path.startsWith('/')
-        ? null
-        : (context, state) => RouteUtils.cupertinoPage(
-            key: state.pageKey,
-            child: ServiceHomeScreen(
-              service: ServiceKey.radarr,
-              child: const MoviesScreen(
-                showAppBar: false,
-                topPadding: _serviceHomeTopPadding,
-              ),
-            ),
-          ),
+    redirect: (context, state) => _redirectLegacyLibrary(
+      state,
+      legacyBase: '/movies',
+      serviceBase: ServiceRoutes.radarrMovieBase,
+    ),
+    builder: (context, state) => const MoviesScreen(),
     routes: [
       GoRoute(
-        path: 'media',
-        redirect: (context, state) =>
-            _preserveQuery(state.uri, ServiceRoutes.radarr),
-      ),
-      GoRoute(
-        path: path.startsWith('/') ? ':id' : 'movie/:id',
+        path: ':id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
             ? ServiceRoutes.dashboard
@@ -379,6 +376,145 @@ GoRoute _moviesRoutes({required String path, String? redirectLocation}) {
     ],
   );
 }
+
+/// Radarr: one shell, one branch per tab.
+///
+/// **Nested inside the Dashboard branch, not mounted beside it.** Everything
+/// the app shell owns — the nav bar, the Portal, the whole desktop chrome —
+/// hangs off the page the four-branch shell builds. A sibling shell at root
+/// would replace that page, so opening a service would take the app's own
+/// navigation away with it.
+///
+/// The `radarr` node itself builds nothing: it is a redirect-only prefix whose
+/// entire job is to send the bare service path to Overview. **Its guard is
+/// load-bearing.** A route-level redirect fires for every match in the list,
+/// descendants included, so an unguarded one here would bounce
+/// `/dashboard/radarr/library` back to Overview forever.
+RouteBase _radarrRoutes() {
+  const service = ServiceKey.radarr;
+  final tabs = tabsFor(service)!;
+
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == ServiceRoutes.radarr
+        ? _preserveQuery(state.uri, ServiceRoutes.radarrOverview)
+        : null,
+    routes: [
+      // The tab-less tails, childless on purpose: the matcher treats a prefix
+      // hit with no complete match as no match at all, so `movie/:id` here
+      // cannot shadow `library/movie/:id` inside the shell below.
+      GoRoute(
+        path: 'media',
+        redirect: (context, state) =>
+            _preserveQuery(state.uri, ServiceRoutes.radarrLibrary),
+      ),
+      // Every link the app shipped before the tab model, and the second hop of
+      // every `/services/radarr/movie/42`. No id validation here: the canonical
+      // route below owns it, and doing it twice is two places to get it wrong.
+      GoRoute(
+        path: 'movie/:id',
+        redirect: (context, state) => _preserveQuery(
+          state.uri,
+          '${ServiceRoutes.radarrMovieBase}/${state.pathParameters['id']}',
+        ),
+      ),
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        // `pageBuilder`, not `builder`: without it the shell's page takes the
+        // platform default transition, and the push from the Dashboard into a
+        // service would stop matching every other service in the app.
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                // The band is drawn above every branch navigator, so a pushed
+                // page cannot cover it the way it covers the tab bar. It hides
+                // itself instead — the film brings its own back control.
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_radarrBranchRoot(tab)],
+            ),
+        ],
+      ),
+    ],
+  );
+}
+
+/// The route at the root of one Radarr tab.
+///
+/// Branch order is `tabsFor(ServiceKey.radarr)` and nothing else, because the
+/// bar is generated from the same list: an index that named a different branch
+/// would light one tab and show another. The wildcard throws rather than
+/// quietly rendering a placeholder — a seventh tab added to that table with no
+/// case here is a bar and a router disagreeing, and that has to fail loudly.
+GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.radarr,
+      tab: ServiceTab.overview,
+      child: ServiceTabPlaceholder(
+        service: ServiceKey.radarr,
+        tab: ServiceTab.overview,
+      ),
+    ),
+  ),
+  ServiceTab.library => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.radarr,
+      tab: ServiceTab.library,
+      child: MoviesScreen(showAppBar: false, topPadding: _serviceTabTopPadding),
+    ),
+    routes: [
+      // The detail, now INSIDE the Library branch. Pushing it keeps the branch,
+      // so leaving Radarr for another app tab and coming back returns to the
+      // film — and the Hero still flies, because source and destination are in
+      // one Navigator.
+      GoRoute(
+        path: 'movie/:id',
+        redirect: (context, state) =>
+            RouteUtils.safeIntParam(state, 'id') == null
+            ? ServiceRoutes.radarrLibrary
+            : null,
+        pageBuilder: (context, state) => _libraryDetailPage<RadarrMovie>(
+          state,
+          heroPrefix: 'movie',
+          buildChild: (id, heroTag, movie, instanceId) => MovieDetailScreen(
+            movieId: id,
+            heroTag: heroTag,
+            initialMovie: movie,
+            instanceId: instanceId,
+          ),
+        ),
+      ),
+    ],
+  ),
+  // The four whose data the client cannot fetch yet. The branch is declared
+  // from day one because the bar draws all six labels off `tabsFor`; a missing
+  // branch would be a tab that 404s rather than one that says it is not built.
+  ServiceTab.calendar ||
+  ServiceTab.queue ||
+  ServiceTab.wanted ||
+  ServiceTab.history => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.radarr,
+      tab: tab,
+      child: ServiceTabPlaceholder(service: ServiceKey.radarr, tab: tab),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on radarr\'s bar with no branch root',
+  ),
+};
 
 GoRoute _seriesRoutes({required String path, String? redirectLocation}) {
   return GoRoute(
@@ -923,7 +1059,7 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       // which is exactly the asymmetry that makes a hand-spelled table worth
       // deleting: the one path a typo would break was the only one guarded.
       _discoverRoutes(path: ServiceKey.seerr.routeParam),
-      _moviesRoutes(path: ServiceKey.radarr.routeParam),
+      _radarrRoutes(),
       _seriesRoutes(path: ServiceKey.sonarr.routeParam),
       _musicRoutes(path: ServiceKey.lidarr.routeParam),
       _qbittorrentRoutes(path: ServiceKey.qbittorrent.routeParam),
@@ -1125,7 +1261,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/discover',
         redirectLocation: ServiceRoutes.dashboard,
       ),
-      _moviesRoutes(path: '/movies', redirectLocation: ServiceRoutes.dashboard),
+      _moviesRoutes(path: '/movies'),
       _seriesRoutes(path: '/series', redirectLocation: ServiceRoutes.dashboard),
       _musicRoutes(path: '/music', redirectLocation: ServiceRoutes.dashboard),
       // The per-service activity drill-down: already full-screen above the

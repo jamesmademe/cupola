@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
@@ -33,10 +34,36 @@ void main() {
     });
 
     test('builds Radarr detail routes with optional hero tag', () {
-      expect(ServiceRoutes.radarrMovie(42), '/dashboard/radarr/movie/42');
+      // The film moved under `library/`: it is a page inside the Library tab's
+      // branch now, not a sibling of the tabs. Every link in the app is built
+      // here, so this constant is what put it there.
+      expect(
+        ServiceRoutes.radarrMovie(42),
+        '/dashboard/radarr/library/movie/42',
+      );
       expect(
         ServiceRoutes.radarrMovie(42, heroTag: 'movie hero'),
-        '/dashboard/radarr/movie/42?heroTag=movie+hero',
+        '/dashboard/radarr/library/movie/42?heroTag=movie+hero',
+      );
+    });
+
+    test('the Radarr tab roots are spelled by the tabs they mount', () {
+      // Both are written as literals in `ServiceRoutes` because an enum
+      // instance's field is not a compile-time constant in Dart and these have
+      // to stay `const` — so nothing the analyzer sees ties the URL spelling to
+      // the tab. This does, and the film hangs off the second one, which means
+      // a drift there moves every detail link in the app with it.
+      expect(
+        ServiceRoutes.radarrOverview,
+        '${ServiceRoutes.radarr}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.radarrLibrary,
+        '${ServiceRoutes.radarr}/${ServiceTab.library.segment}',
+      );
+      expect(
+        ServiceRoutes.radarrMovieBase,
+        startsWith('${ServiceRoutes.radarrLibrary}/'),
       );
     });
 

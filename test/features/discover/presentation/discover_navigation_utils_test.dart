@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/presentation/discover_navigation_utils.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
@@ -162,13 +163,16 @@ Future<void> _pumpHarness(
           ),
         ),
       ),
+      // Built from the constant the code under test builds its link from, not
+      // spelled out: the film moved inside Radarr's Library branch and a
+      // hand-written path here would simply stop matching, silently.
       GoRoute(
-        path: '/dashboard/radarr/movie/:id',
+        path: '${ServiceRoutes.radarrMovieBase}/:id',
         builder: (context, state) =>
             Text('movie:${state.pathParameters['id']}'),
       ),
       GoRoute(
-        path: '/dashboard/sonarr/series/:id',
+        path: '${ServiceRoutes.sonarrSeriesBase}/:id',
         builder: (context, state) =>
             Text('series:${state.pathParameters['id']}'),
       ),

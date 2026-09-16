@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
@@ -64,7 +65,10 @@ void main() {
           builder: (context, state) => const SearchScreen(),
         ),
         GoRoute(
-          path: '/dashboard/radarr/movie/:id',
+          // From the constant, because the row's link is built from it: the
+          // film lives inside Radarr's Library branch now, and a path spelled
+          // by hand here would stop matching without a word.
+          path: '${ServiceRoutes.radarrMovieBase}/:id',
           builder: (context, state) {
             final movie = state.extra as RadarrMovie?;
             return Scaffold(
@@ -89,7 +93,7 @@ void main() {
     await tester.tap(find.text('Dune'));
     await tester.pumpAndSettle();
 
-    expect(router.state.uri.path, '/dashboard/radarr/movie/10');
+    expect(router.state.uri.path, '${ServiceRoutes.radarrMovieBase}/10');
     // The poster's shared-element tag travels with the route so the detail
     // page's Hero has a matching destination.
     expect(
@@ -138,7 +142,10 @@ void main() {
           builder: (context, state) => const SearchScreen(),
         ),
         GoRoute(
-          path: '/dashboard/radarr/movie/:id',
+          // From the constant, because the row's link is built from it: the
+          // film lives inside Radarr's Library branch now, and a path spelled
+          // by hand here would stop matching without a word.
+          path: '${ServiceRoutes.radarrMovieBase}/:id',
           builder: (context, state) => Scaffold(
             body: SizedBox(
               width: 82,
