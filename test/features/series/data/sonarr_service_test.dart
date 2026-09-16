@@ -59,6 +59,39 @@ void main() {
       });
     });
 
+    // The override lives on the PAGE primitive, and this is the test that says
+    // why it has to. `getHistoryPage` is the only variant carrying the
+    // envelope's `totalRecords`, so it is the only one a count may come from —
+    // and while the parameters hung off `getHistory` instead, a caller that
+    // reached for the count got records with neither the series nor the
+    // episode embedded. On Sonarr that is the whole row: a bare history record
+    // names a season and an episode number against a series id, and without
+    // them there is nothing to print but the id.
+    test(
+      'getHistoryPage asks for the embedded series and episode too',
+      () async {
+        final client = FakeApiClient()
+          ..getResponseData = {
+            'totalRecords': 512,
+            'records': [
+              {'id': 1, 'sourceTitle': 'Imported.Release'},
+            ],
+          };
+        final service = SonarrService(client);
+
+        final page = await service.getHistoryPage();
+
+        expect(client.lastGetQueryParameters, {
+          'page': 1,
+          'pageSize': 20,
+          'includeSeries': true,
+          'includeEpisode': true,
+        });
+        expect(page.records, hasLength(1));
+        expect(page.total, 512);
+      },
+    );
+
     test('getReleases forwards the cancel token to ApiClient', () async {
       final client = FakeApiClient()..getResponseData = const [];
       final service = SonarrService(client);

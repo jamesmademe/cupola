@@ -16,9 +16,14 @@ import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/search/domain/global_search_result.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_search_group.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -69,9 +74,29 @@ const _laneDeadline = Duration(seconds: 10);
 ///
 /// **Prowlarr is deliberately not in it**, and that is the registry's answer
 /// too: an indexer search is a release search against trackers, not a title
-/// lookup, and it belongs on Prowlarr's own page.
+/// lookup, and it belongs on Prowlarr's own page. A tracker query is also the
+/// one leg that is rate-limited against its owner, which is the second reason
+/// it is not fired on every keystroke of a global search.
+///
+/// **Jellyfin and Plex are added on top of `isSearchable`, not through it.**
+/// Both now answer a title query — `GET /Search/Hints` and `GET /hubs/search`,
+/// behind the one `StreamServerClient.search` — so the registry flag is simply
+/// stale: it still carries the argument that a media server has nothing to look
+/// up, which stopped being true when those two reads landed. Correcting the
+/// flag is a registry edit and belongs with the registry; naming the two here
+/// keeps one list for the whole feature in the meantime, because the chip strip
+/// and the empty-state copy read *this* and not the flag. If the flag is ever
+/// widened, this predicate collapses back to `isSearchable` alone and nothing
+/// else moves. It stays a single `where` over `ServiceKey.values` rather than a
+/// spread of two lists so that section order is the registry's own by
+/// construction, however the predicate grows.
 final globalSearchServices = ServiceKey.values
-    .where((service) => service.isSearchable)
+    .where(
+      (service) =>
+          service.isSearchable ||
+          service == ServiceKey.jellyfin ||
+          service == ServiceKey.plex,
+    )
     .toList(growable: false);
 
 /// The connections the global search asks, in section order.
@@ -328,7 +353,7 @@ Future<GlobalSearchServiceResults> _runLeg(
     // one each. Which is also why its token cannot abort the transfer — the
     // download in flight belongs to the next query as much as to this one. It
     // still stops the match once the round is superseded.
-    _ => _loadLeg(
+    ServiceKey.bazarr => _loadLeg(
       leg: leg,
       cancelToken: cancelToken,
       loadItems: () => ref
@@ -336,7 +361,97 @@ Future<GlobalSearchServiceResults> _runLeg(
           .searchLibrary(query, cancelToken: cancelToken),
       toResult: (item, index) => _bazarrResult(item, instance, index),
     ),
+    // The two media servers share one arm because they share one interface:
+    // `StreamServerClient.search` is the whole difference between them, and it
+    // is the client that knows whether the bands came from typed hints or from
+    // the server's own hubs.
+    ServiceKey.jellyfin => _loadStreamLeg(
+      leg: leg,
+      client: ref.read(jellyfinServerProvider),
+      query: query,
+      cancelToken: cancelToken,
+    ),
+    ServiceKey.plex => _loadStreamLeg(
+      leg: leg,
+      client: ref.read(plexServerProvider),
+      query: query,
+      cancelToken: cancelToken,
+    ),
+    // Unreachable while `globalSearchLegsProvider` builds its legs out of
+    // `globalSearchServices` — and spelled out rather than folded into a
+    // catch-all for exactly that reason. Bazarr used to sit on the `_` arm, so
+    // adding a service to the fan-out without giving it an arm silently ran the
+    // new lane against Bazarr's library and labelled the rows with the new
+    // service's name. A lane that admits it has no leg is recoverable; one that
+    // answers with another server's contents is not.
+    _ => Future.value(
+      GlobalSearchServiceResults.fault(
+        leg,
+        StateError('no search leg for ${instance.service.title}'),
+      ),
+    ),
   };
+}
+
+/// A media server's lane: one `search`, rendered in the bands the server gave.
+///
+/// The groups are concatenated **in the order they arrive and never re-sorted**.
+/// Plex ranks both its hubs and the rows inside them with a relevance model this
+/// app cannot reproduce, and Jellyfin's bands come back in the declared order
+/// with the server's own relevance preserved inside each — so imposing an order
+/// here would be replacing an answer with a guess. The band's name rides along
+/// as the row's tag, because a lane heading names the *connection* and would
+/// otherwise be the only thing on screen saying what kind of hit this is.
+///
+/// Empty bands are dropped on the way in, and that is not a contradiction of
+/// [StreamSearchGroup]'s "an empty group is a result": a zero pill is something
+/// the service's own search page draws from the group list, and this lane has no
+/// strip to draw it on — one flat list of rows under one heading. The
+/// distinction it *does* keep is the one that matters here, below.
+Future<GlobalSearchServiceResults> _loadStreamLeg({
+  required SearchLeg leg,
+  required StreamServerClient client,
+  required String query,
+  required CancelToken cancelToken,
+}) {
+  return _loadLeg<({StreamSearchGroup group, StreamItem item})>(
+    leg: leg,
+    cancelToken: cancelToken,
+    loadItems: () async {
+      final groups = await client.search(query, cancelToken: cancelToken);
+      // `StreamServerClient.search` degrades to `[]` rather than throwing, and
+      // its contract makes that shape mean one specific thing: **no groups at
+      // all is "the question could not be asked"**, while a list of empty
+      // groups is "asked, and nothing matched". Without this throw a media
+      // server that is switched off would report "0 results" in the same words
+      // a working one uses for a query it does not hold — which is the exact
+      // confusion the per-connection fan-out exists to end. The reason is
+      // coarser than the arr legs' (`reportFailure: true` carries the real one
+      // up), so this lands on "Search failed" rather than on "Unreachable": a
+      // fault the user can retry, and not a claim about why.
+      if (groups.isEmpty) {
+        throw const _StreamSearchUnanswered();
+      }
+      return [
+        for (final group in groups)
+          for (final item in group.items) (group: group, item: item),
+      ];
+    },
+    toResult: (row, index) =>
+        _streamResult(row.item, row.group, leg.instance, client, index),
+  );
+}
+
+/// Thrown when a media server's search came back with no bands at all.
+///
+/// A type rather than a bare `Exception` so the intent survives a stack trace:
+/// this is the client's documented "could not ask" shape being re-raised, not a
+/// parse failure.
+class _StreamSearchUnanswered implements Exception {
+  const _StreamSearchUnanswered();
+
+  @override
+  String toString() => 'the server did not answer the search';
 }
 
 Future<GlobalSearchServiceResults> _loadLeg<T>({
@@ -568,6 +683,61 @@ GlobalSearchResult _bazarrResult(
     route: item.isMovie
         ? ServiceRoutes.bazarrMovie(item.id, heroTag: heroTag)
         : ServiceRoutes.bazarrSeries(item.id, heroTag: heroTag),
+  );
+}
+
+/// The poster width asked of a media server for a search row.
+///
+/// The row carries a 50×75 plate, so this is that at 3x and nothing more: both
+/// servers resize far more cheaply than Flutter does, and asking for the full
+/// artwork would ship a 2000px poster per row over the same link the rest of the
+/// fan-out is queued on.
+const _streamSearchPosterWidth = 160;
+
+GlobalSearchResult _streamResult(
+  StreamItem item,
+  StreamSearchGroup group,
+  ServiceInstance instance,
+  StreamServerClient client,
+  int index,
+) {
+  final path = item.posterPath;
+  // The client owns the credential, so it — and not this file — turns a
+  // relative key into something loadable. Null when the item carries no
+  // artwork, which reads as "does not fly" the same way a Bazarr row does.
+  final image = path == null || path.isEmpty
+      ? null
+      : client.imageFor(path, width: _streamSearchPosterWidth);
+  final heroTag = 'search_${instance.id}_${item.kind.name}_${item.id}_$index';
+  final year = item.year;
+  return GlobalSearchResult(
+    service: instance.service,
+    // Nothing reads this on a stream row, and there is nothing honest to put in
+    // it: a media server's id is an opaque string — a Jellyfin GUID, a Plex
+    // `ratingKey` — that does not fit an int. The real id travels where it is
+    // actually used, in the route and in the hero tag, and the tag's position
+    // tiebreak is what keeps two zero-id rows from colliding.
+    id: 0,
+    title: item.title,
+    // The server's own second line where it has one (series name for an
+    // episode, artist for a track), the year otherwise. Never both invented:
+    // a film with no year prints one line, not "· ".
+    subtitle: item.subtitle ?? (year == null ? '' : '$year'),
+    imageUrl: image?.url ?? '',
+    imageHeaders: image?.headers,
+    // The band the server put this hit in, verbatim. Deriving a word from
+    // `kind` instead would rename the server's own vocabulary — and a localised
+    // Plex titles its hubs in its own language.
+    tags: [group.label],
+    // No "In library" and no plus. Every row here is *already* on the server
+    // that listed it, so the tag would repeat the heading on every row, and
+    // there is no library on a media server this app can write into.
+    heroTag: heroTag,
+    route: instance.service == ServiceKey.jellyfin
+        ? ServiceRoutes.jellyfinItem(item.id)
+        : ServiceRoutes.plexItem(item.id),
+    // The item itself, so the detail page can draw before its own fetch lands.
+    routeExtra: item,
   );
 }
 

@@ -80,13 +80,22 @@ class RadarrService with ArrActivityMixin {
     return fetchItem('movie', movieId, RadarrMovie.fromJson);
   }
 
+  /// On the **page** primitive, not on `getHistory`.
+  ///
+  /// `getHistory` delegates to this, so both spellings pick the parameter up —
+  /// but only this way round. Hung off `getHistory` instead, as it was, a caller
+  /// that reached for `getHistoryPage` (the one that carries the envelope's
+  /// total, and therefore the only one a count may be derived from) got records
+  /// with no embedded `movie`, and the embedded movie is what the row draws: a
+  /// title, a poster and a year, all silently absent. So the count and the
+  /// content could not both be right at the same time.
   @override
-  Future<List<dynamic>> getHistory({
+  Future<ArrRecordPage> getHistoryPage({
     int page = 1,
     int pageSize = 20,
     Map<String, dynamic>? queryParameters,
   }) {
-    return super.getHistory(
+    return super.getHistoryPage(
       page: page,
       pageSize: pageSize,
       queryParameters: {'includeMovie': true, ...?queryParameters},

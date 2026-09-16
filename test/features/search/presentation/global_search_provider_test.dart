@@ -15,6 +15,11 @@ import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_search_group.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/search/domain/global_search_result.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
@@ -71,7 +76,17 @@ void main() {
 
     final lanes = await _settledLanes(container);
 
-    expect(lanes.map((lane) => lane.service), globalSearchServices);
+    // One lane per CONFIGURED connection, in the registry's own order — not one
+    // per searchable service. `globalSearchServices` now also names Jellyfin and
+    // Plex, which this container does not set up, and a lane for a connection
+    // nobody has configured would be a section that can only ever be empty.
+    expect(lanes.map((lane) => lane.service), [
+      ServiceKey.seerr,
+      ServiceKey.radarr,
+      ServiceKey.sonarr,
+      ServiceKey.lidarr,
+      ServiceKey.bazarr,
+    ]);
     expect(lanes.expand((lane) => lane.results).map((item) => item.title), [
       'Dune: Part Two',
       'Dune',
@@ -591,6 +606,177 @@ void main() {
       expect(radarr.leg.tokens, hasLength(2));
     },
   );
+
+  group('the media servers', () {
+    /// Configures Jellyfin and Plex on top of the shared settings and points
+    /// both lanes at scripted servers.
+    ProviderContainer streamContainer({
+      required _ScriptedStreamServer jellyfin,
+      required _ScriptedStreamServer plex,
+    }) {
+      final container = _container(
+        extra: [
+          jellyfinServerProvider.overrideWithValue(jellyfin),
+          plexServerProvider.overrideWithValue(plex),
+        ],
+      );
+      container.read(_testSettings.notifier).state = container
+          .read(_testSettings)
+          .copyWithInstance(
+            const ServiceInstance(
+              id: 'jellyfin',
+              service: ServiceKey.jellyfin,
+              url: 'http://jellyfin.local:8096',
+              credential: 'key',
+            ),
+          )
+          .copyWithInstance(
+            const ServiceInstance(
+              id: 'plex',
+              service: ServiceKey.plex,
+              url: 'http://plex.local:32400',
+              credential: 'token',
+            ),
+          );
+      return container;
+    }
+
+    test('both media servers get a lane of their own', () async {
+      final container = streamContainer(
+        jellyfin: _ScriptedStreamServer(const []),
+        plex: _ScriptedStreamServer(const []),
+      );
+      addTearDown(container.dispose);
+      container.read(globalSearchQueryProvider.notifier).state = 'dune';
+
+      final lanes = await _settledLanes(container);
+
+      // A title lookup is something both servers can now answer, so both are in
+      // the fan-out. Prowlarr still is not: an indexer search is a release
+      // search against trackers, and it belongs on Prowlarr's own page.
+      expect(
+        lanes.map((lane) => lane.service),
+        containsAll([ServiceKey.jellyfin, ServiceKey.plex]),
+      );
+      expect(
+        lanes.map((lane) => lane.service),
+        isNot(contains(ServiceKey.prowlarr)),
+      );
+    });
+
+    test("the server's own band order survives, in the server's own words", () async {
+      // Plex ranks its hubs and the rows inside them with a relevance model this
+      // app cannot reproduce, so the lane must render what it is given. The
+      // alphabet here is deliberately against the given order: sorting anything
+      // would show up immediately.
+      final plex = _ScriptedStreamServer([
+        _band('Movies', StreamItemKind.movie, ['Zulu', 'Alien']),
+        _band('Episodes', StreamItemKind.episode, const []),
+        _band('Actors', null, ['Bob Anderson']),
+      ]);
+      final container = streamContainer(
+        jellyfin: _ScriptedStreamServer(const []),
+        plex: plex,
+      );
+      addTearDown(container.dispose);
+      container.read(globalSearchQueryProvider.notifier).state = 'dune';
+
+      final lanes = await _settledLanes(container);
+      final lane = lanes.firstWhere((l) => l.service == ServiceKey.plex);
+
+      expect(lane.state, SearchLaneState.answered);
+      expect(lane.results.map((r) => r.title), [
+        'Zulu',
+        'Alien',
+        'Bob Anderson',
+      ]);
+      // The band's name rides on the row, verbatim. The lane heading names the
+      // connection, so without this nothing on screen says what kind of hit it
+      // is — and deriving a word from the kind would rename a localised Plex's
+      // own hubs.
+      expect(lane.results.map((r) => r.tags.single), [
+        'Movies',
+        'Movies',
+        'Actors',
+      ]);
+    });
+
+    test(
+      'a server that could not be asked is not a server holding nothing',
+      () async {
+        // `StreamServerClient.search` degrades to `[]` instead of throwing, and
+        // its contract makes the shape carry the meaning: no bands at all means
+        // the question never landed. Read as an answer it would put "0 results"
+        // on a media server that is switched off — the one confusion the
+        // per-connection fan-out exists to end.
+        final container = streamContainer(
+          jellyfin: _ScriptedStreamServer(const []),
+          plex: _ScriptedStreamServer(const []),
+        );
+        addTearDown(container.dispose);
+        container.read(globalSearchQueryProvider.notifier).state = 'dune';
+
+        final lanes = await _settledLanes(container);
+        final lane = lanes.firstWhere((l) => l.service == ServiceKey.jellyfin);
+
+        expect(lane.state, isNot(SearchLaneState.answered));
+        expect(lane.hasFault, isTrue);
+        expect(lane.state.canRetry, isTrue);
+      },
+    );
+
+    test('bands that came back empty are an answer, and say so', () async {
+      // The other half of the same contract: bands present but empty mean the
+      // server was asked and holds nothing. That is a real, retry-free answer.
+      final container = streamContainer(
+        jellyfin: _ScriptedStreamServer([
+          _band('Movies', StreamItemKind.movie, const []),
+          _band('Series', StreamItemKind.series, const []),
+        ]),
+        plex: _ScriptedStreamServer(const []),
+      );
+      addTearDown(container.dispose);
+      container.read(globalSearchQueryProvider.notifier).state = 'dune';
+
+      final lanes = await _settledLanes(container);
+      final lane = lanes.firstWhere((l) => l.service == ServiceKey.jellyfin);
+
+      expect(lane.state, SearchLaneState.answered);
+      expect(lane.results, isEmpty);
+      expect(lane.hasFault, isFalse);
+    });
+
+    test(
+      'a row opens the item it names and offers nothing it cannot honour',
+      () async {
+        final container = streamContainer(
+          jellyfin: _ScriptedStreamServer([
+            _band('Movies', StreamItemKind.movie, ['Dune']),
+          ]),
+          plex: _ScriptedStreamServer(const []),
+        );
+        addTearDown(container.dispose);
+        container.read(globalSearchQueryProvider.notifier).state = 'dune';
+
+        final lanes = await _settledLanes(container);
+        final row = lanes
+            .firstWhere((l) => l.service == ServiceKey.jellyfin)
+            .results
+            .single;
+
+        expect(row.route, '/dashboard/jellyfin/item/id-Dune');
+        // No plus and no "In library": every row here is already on the server
+        // that listed it, and a media server is not a library this app writes to.
+        expect(row.addRequest, isNull);
+        expect(row.inLibrary, isFalse);
+        expect(
+          row.imageUrl,
+          isNotEmpty,
+          reason: 'the client resolves the poster',
+        );
+      },
+    );
+  });
 }
 
 /// Drives every leg to completion and returns the lanes as they then stand.
@@ -787,4 +973,58 @@ class _SearchBazarrService extends FakeBazarrService {
     await leg.record(cancelToken);
     return const [];
   }
+}
+
+/// One scripted band, with the items named by title alone.
+StreamSearchGroup _band(
+  String label,
+  StreamItemKind? kind,
+  List<String> titles,
+) => StreamSearchGroup(
+  label: label,
+  kind: kind,
+  items: [
+    for (final title in titles)
+      StreamItem(
+        id: 'id-$title',
+        title: title,
+        subtitle: null,
+        kind: kind ?? StreamItemKind.other,
+        posterPath: '/poster/$title',
+        year: null,
+        runtimeMs: null,
+        isPlayed: false,
+        resumeOffsetMs: null,
+        unplayedChildCount: null,
+      ),
+  ],
+);
+
+/// Stands in for both media servers.
+///
+/// The leg asks exactly two things of a [StreamServerClient] — `search` and, per
+/// row, `imageFor` — so `noSuchMethod` covers the other eleven futures rather
+/// than the test pretending to implement a media server.
+class _ScriptedStreamServer implements StreamServerClient {
+  _ScriptedStreamServer(this.groups);
+
+  final List<StreamSearchGroup> groups;
+  final List<String> queries = [];
+
+  @override
+  Future<List<StreamSearchGroup>> search(
+    String query, {
+    int? limit,
+    CancelToken? cancelToken,
+  }) async {
+    queries.add(query);
+    return groups;
+  }
+
+  @override
+  StreamImageSource? imageFor(String posterPath, {int? width}) =>
+      (url: 'http://stream.local$posterPath?w=$width', headers: null);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

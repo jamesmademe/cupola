@@ -101,6 +101,45 @@ void main() {
       expect(blocked.icon, isNot(unreachable.icon));
     });
 
+    test('red is spent only on a host that never answered', () {
+      // The five-arm tone rule, applied to reachability. Amber is a fault: the
+      // host replied, so there is one thing to go and fix. Red is the absence
+      // of a reply, which is the only state the user cannot act on from the
+      // form. A timeout is reached-then-silent and a 5xx is the service
+      // talking — both used to be red, which put "your server is busy" beside
+      // "no route to host".
+      const red = {
+        ServiceFailureReason.unreachable,
+        ServiceFailureReason.unknown,
+      };
+      for (final reason in ServiceFailureReason.values) {
+        final presentation = describeConnection(
+          ServiceKey.radarr,
+          status: ServiceConnectionStatus.disconnected,
+          reason: reason,
+        );
+        expect(
+          presentation.tone,
+          red.contains(reason) ? StatusTone.error : StatusTone.warning,
+          reason: '$reason',
+        );
+      }
+    });
+
+    test('the failure vocabulary never says "slow"', () {
+      // Three surfaces read this one function; "Slow" is explicitly outside the
+      // closed vocabulary because it tells the user to wait, when what they
+      // should do is look at the server.
+      for (final reason in ServiceFailureReason.values) {
+        final label = describeConnection(
+          ServiceKey.radarr,
+          status: ServiceConnectionStatus.disconnected,
+          reason: reason,
+        ).label;
+        expect(label.toLowerCase(), isNot(contains('slow')), reason: '$reason');
+      }
+    });
+
     // The switch over `reason` is exhaustive, so this is a guard against a new
     // reason being added and quietly landing on the "Unreachable" fallback
     // rather than being given words of its own.

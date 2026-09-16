@@ -37,9 +37,16 @@ class ConnectionPresentation {
 
 /// Describes a connection state for [service].
 ///
-/// The split between `warning` and `error` is triage, not decoration: amber
-/// means the server answered and the credentials or the path are wrong — fixable
-/// in the form — while red means nothing answered at all.
+/// The split between `warning` and `error` is triage, not decoration, and it is
+/// the five-arm tone rule applied to reachability: amber is a **fault** — the
+/// host was reached, so there is one concrete thing to go and fix — and red is
+/// reserved for a host that did not answer at all. Everything that got a reply,
+/// however bad the reply was, is amber; red is the one word the user cannot act
+/// on from the form, so spending it on a fault costs the distinction.
+///
+/// The label vocabulary is closed and deliberately small. "Slow" is not in it:
+/// a request that ran out of time is reported as timed out, because "slow"
+/// invites the user to wait rather than to look at the server.
 ConnectionPresentation describeConnection(
   ServiceKey service, {
   required ServiceConnectionStatus status,
@@ -108,14 +115,23 @@ ConnectionPresentation describeConnection(
           label: 'Certificate not trusted',
           needsAttention: true,
         ),
+        // Amber, not red: `timeout` means the host was *reached* and then ran
+        // out of time answering (see ServiceFailureReason.timeout). A box that
+        // is up but overloaded, indexing or behind a stalled proxy is a fault
+        // with somewhere to go; painting it red put it beside "no route to
+        // host", where the only advice is to check the cable.
         ServiceFailureReason.timeout => const ConnectionPresentation(
-          tone: StatusTone.error,
+          tone: StatusTone.warning,
           icon: Icons.timer_off_rounded,
           label: 'Timed out',
           needsAttention: true,
         ),
+        // Amber for the same reason, more plainly: a 5xx is the service
+        // speaking. It answered, so it is reachable, configured and trusted —
+        // what is broken is inside it, and red would hide that the address and
+        // the key in the form are already right.
         ServiceFailureReason.serverError => const ConnectionPresentation(
-          tone: StatusTone.error,
+          tone: StatusTone.warning,
           icon: Icons.report_gmailerrorred_rounded,
           label: 'Answered with an error',
           needsAttention: true,

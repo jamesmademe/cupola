@@ -56,6 +56,35 @@ void main() {
       });
     });
 
+    // The override lives on the PAGE primitive, and this is the test that says
+    // why it has to. `getHistoryPage` is the only variant that carries the
+    // envelope's `totalRecords`, so it is the only one a count may be derived
+    // from — and while the parameter hung off `getHistory` instead, a caller
+    // that reached for the count got records with no embedded `movie`. The
+    // embedded movie is the row: title, poster, year. The count and the content
+    // could not both be right at once.
+    test('getHistoryPage asks for the embedded movie too', () async {
+      final client = FakeApiClient()
+        ..getResponseData = {
+          'totalRecords': 340,
+          'records': [
+            {'id': 1, 'sourceTitle': 'Imported.Release'},
+          ],
+        };
+      final service = RadarrService(client);
+
+      final page = await service.getHistoryPage();
+
+      expect(client.lastGetQueryParameters, {
+        'page': 1,
+        'pageSize': 20,
+        'includeMovie': true,
+      });
+      // And the total survives: how many there ARE, not how many we fetched.
+      expect(page.records, hasLength(1));
+      expect(page.total, 340);
+    });
+
     test('getReleases forwards the cancel token to ApiClient', () async {
       final client = FakeApiClient()..getResponseData = const [];
       final service = RadarrService(client);

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_animation.dart';
-import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
@@ -16,6 +15,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 import 'package:cupola/features/transmission/presentation/transmission_actions.dart';
 import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
+import 'package:cupola/features/transmission/presentation/widgets/transmission_torrent_tile.dart';
 
 /// Transmission dashboard: the live queue, what is seeding, and the controls
 /// that act on both.
@@ -404,7 +404,15 @@ class _TorrentList extends ConsumerWidget {
         return Column(
           children: matching
               .take(limit)
-              .map((torrent) => _TorrentTile(torrent: torrent))
+              .map(
+                (torrent) => TransmissionTorrentTile(
+                  torrent: torrent,
+                  // The menu is built here rather than inside the tile: it
+                  // dispatches through this screen's `ref`, and a plate that
+                  // reached for a provider would stop being a plate.
+                  actions: _TorrentMenu(torrent: torrent),
+                ),
+              )
               .toList(),
         );
       },
@@ -412,96 +420,6 @@ class _TorrentList extends ConsumerWidget {
       error: (error, _) => InlineErrorRetry(
         message: 'Failed to load torrents',
         onRetry: () => ref.invalidate(transmissionTorrentsProvider),
-      ),
-    );
-  }
-}
-
-class _TorrentTile extends ConsumerWidget {
-  const _TorrentTile({required this.torrent});
-
-  final TransmissionTorrent torrent;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final warning = torrent.warning;
-    final subtitle = <String>[
-      torrent.status.label,
-      if (torrent.status.isIncoming) torrent.remainingLabel,
-      if (torrent.rateDownload > 0) '↓ ${torrent.downloadSpeedLabel}',
-      if (torrent.rateUpload > 0) '↑ ${torrent.uploadSpeedLabel}',
-      if (!torrent.status.isIncoming) 'Ratio ${torrent.ratioLabel}',
-    ].join(' · ');
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xs,
-      ),
-      child: Material(
-        color: colorScheme.surface,
-        borderRadius: AppRadius.borderRadiusMd,
-        child: Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            border: Border.all(color: colorScheme.outlineVariant),
-            borderRadius: AppRadius.borderRadiusMd,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      torrent.name,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium!.weight(FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    '${(torrent.progress * 100).round()}%',
-                    style: Theme.of(context).textTheme.labelMedium!
-                        .weight(FontWeight.w700)
-                        .tabular
-                        .copyWith(color: AppColors.transmission),
-                  ),
-                  _TorrentMenu(torrent: torrent),
-                ],
-              ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: AppRadius.borderRadiusXs,
-                child: LinearProgressIndicator(
-                  value: torrent.progress,
-                  minHeight: 4,
-                  backgroundColor: colorScheme.surfaceContainerHighest,
-                  valueColor: AlwaysStoppedAnimation(
-                    warning == null
-                        ? AppColors.transmission
-                        : AppColors.warning,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                warning == null ? subtitle : '$warning · $subtitle',
-                style: Theme.of(context).textTheme.bodySmall!.tabular.copyWith(
-                  color: warning == null
-                      ? colorScheme.onSurfaceVariant
-                      : AppColors.warning,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

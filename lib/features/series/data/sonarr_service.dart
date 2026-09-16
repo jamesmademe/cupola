@@ -86,13 +86,23 @@ class SonarrService with ArrActivityMixin {
     return fetchItem('series', seriesId, SonarrSeries.fromJson);
   }
 
+  /// On the **page** primitive, not on `getHistory`.
+  ///
+  /// `getHistory` delegates to this, so both spellings pick the parameters up —
+  /// but only this way round. Hung off `getHistory` instead, as they were, a
+  /// caller that reached for `getHistoryPage` (the one that carries the
+  /// envelope's total, and therefore the only one a count may be derived from)
+  /// got records with no embedded `series` and no embedded `episode` — and on
+  /// Sonarr those are the whole row: a history record on its own names a season
+  /// and episode number against a series id, so without them the row has
+  /// nothing to print but the id.
   @override
-  Future<List<dynamic>> getHistory({
+  Future<ArrRecordPage> getHistoryPage({
     int page = 1,
     int pageSize = 20,
     Map<String, dynamic>? queryParameters,
   }) {
-    return super.getHistory(
+    return super.getHistoryPage(
       page: page,
       pageSize: pageSize,
       queryParameters: {

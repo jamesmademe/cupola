@@ -10,6 +10,7 @@ library;
 import 'package:dio/dio.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
@@ -80,6 +81,60 @@ class FakeRadarrService extends RadarrService {
 
   @override
   Future<List<dynamic>> getAllCutoff() async => const [];
+
+  /// The paged primitives, delegating **back** to the record-only getters.
+  ///
+  /// The inverse of the production layering, and deliberately so. In the real
+  /// services `getHistory` delegates to `getHistoryPage` — which is what lets
+  /// Radarr and Sonarr hang `includeMovie` / `includeSeries` off one place. But
+  /// every fake in this repo, here and in a dozen per-test subclasses, scripts
+  /// the *record-only* getter, so the moment a caller moved to the page variant
+  /// those scripts stopped being reached and the call fell through to a real
+  /// `Dio` aimed at `https://radarr.example.com`. Not a failure with a useful
+  /// message either: the test binding answers 400, the leg catches it, and the
+  /// bucket just renders empty.
+  ///
+  /// Inverting it here fixes every one of those subclasses at once and leaves
+  /// each of them scripting the method it already scripts. The recursion this
+  /// looks like is closed by the `getHistory` / `getMissing` / `getCutoff`
+  /// overrides above — delete one of those and the base's delegation and this
+  /// one meet in a loop.
+  ///
+  /// The totals are **null**, which is the honest answer rather than a
+  /// shortcut: a fake handed a list of rows was never told how many rows exist,
+  /// and `records.length` here would quietly make every test agree with the
+  /// defect the field was added to expose.
+  @override
+  Future<ArrRecordPage> getHistoryPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => ArrRecordPage(
+    records: await getHistory(
+      page: page,
+      pageSize: pageSize,
+      queryParameters: queryParameters,
+    ),
+    total: null,
+  );
+
+  @override
+  Future<ArrRecordPage> getMissingPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async => ArrRecordPage(
+    records: await getMissing(page: page, pageSize: pageSize),
+    total: null,
+  );
+
+  @override
+  Future<ArrRecordPage> getCutoffPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async => ArrRecordPage(
+    records: await getCutoff(page: page, pageSize: pageSize),
+    total: null,
+  );
 }
 
 class FakeSonarrService extends SonarrService {
@@ -137,6 +192,41 @@ class FakeSonarrService extends SonarrService {
 
   @override
   Future<List<dynamic>> getAllCutoff() async => const [];
+
+  /// See [FakeRadarrService.getHistoryPage]: the fakes invert the production
+  /// delegation, so a subclass scripting the record-only getter is still what a
+  /// page caller reaches.
+  @override
+  Future<ArrRecordPage> getHistoryPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => ArrRecordPage(
+    records: await getHistory(
+      page: page,
+      pageSize: pageSize,
+      queryParameters: queryParameters,
+    ),
+    total: null,
+  );
+
+  @override
+  Future<ArrRecordPage> getMissingPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async => ArrRecordPage(
+    records: await getMissing(page: page, pageSize: pageSize),
+    total: null,
+  );
+
+  @override
+  Future<ArrRecordPage> getCutoffPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async => ArrRecordPage(
+    records: await getCutoff(page: page, pageSize: pageSize),
+    total: null,
+  );
 }
 
 class FakeLidarrService extends LidarrService {
@@ -197,6 +287,41 @@ class FakeLidarrService extends LidarrService {
 
   @override
   Future<List<dynamic>> getAllCutoff() async => const [];
+
+  /// See [FakeRadarrService.getHistoryPage]: the fakes invert the production
+  /// delegation, so a subclass scripting the record-only getter is still what a
+  /// page caller reaches.
+  @override
+  Future<ArrRecordPage> getHistoryPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => ArrRecordPage(
+    records: await getHistory(
+      page: page,
+      pageSize: pageSize,
+      queryParameters: queryParameters,
+    ),
+    total: null,
+  );
+
+  @override
+  Future<ArrRecordPage> getMissingPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async => ArrRecordPage(
+    records: await getMissing(page: page, pageSize: pageSize),
+    total: null,
+  );
+
+  @override
+  Future<ArrRecordPage> getCutoffPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async => ArrRecordPage(
+    records: await getCutoff(page: page, pageSize: pageSize),
+    total: null,
+  );
 }
 
 class FakeSeerrService extends SeerrService {

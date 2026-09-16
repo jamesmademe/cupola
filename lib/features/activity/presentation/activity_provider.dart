@@ -75,6 +75,22 @@ class ActivityServiceResult {
 
   final List<GlobalActivityItem> items;
 
+  /// How many records this connection **has** of this kind, as the server
+  /// reported it — or null when it did not say.
+  ///
+  /// Not `items.length`, and the gap between the two is the whole reason this
+  /// field exists: the arr paged endpoints serve twenty rows by default, so a
+  /// count taken from the list said twenty for every library with more than
+  /// twenty gaps in it. Wrong in the one direction that matters, since it makes
+  /// a large backlog look small and a full queue look idle.
+  ///
+  /// **Null means unanswered, never none.** A caller that gets null must print
+  /// a figure it can defend — "20 shown" — or no figure at all; falling back to
+  /// `items.length` reinstates the defect one layer up. A count surface that
+  /// still reads `items.length` (the service tiles' `_countFor`) is reporting
+  /// the window, not the set, and belongs on this.
+  final int? total;
+
   /// Non-null when the service was configured but did not answer.
   final Object? error;
 
@@ -87,11 +103,13 @@ class ActivityServiceResult {
     required this.configured,
     this.instanceId = '',
     this.label = '',
+    this.total,
     this.error,
   });
 
   const ActivityServiceResult.unconfigured(this.service)
     : items = const [],
+      total = null,
       error = null,
       configured = false,
       instanceId = '',
@@ -515,29 +533,79 @@ const _pagedInitialPageSize = 50;
 /// instead of a dozen.
 const _pagedMorePageSize = 200;
 
+/// What one "load more" round brought back for one pair.
+///
+/// Three numbers rather than the item list alone, because after the overlap
+/// [PagedCursor.requestAt] introduces, the list's length answers none of the
+/// questions the next cursor needs: [received] is how far the offset advanced
+/// (records past the skip), and [pageWasFull] is whether the *server* filled the
+/// window — the fallback signal for a server that sends no total.
+typedef _PageDelta = ({
+  List<GlobalActivityItem> items,
+  int received,
+  bool pageWasFull,
+});
+
 /// One (kind, connection) pair's progress through a paged bucket.
 class PagedCursor {
+  /// How many records of the set this pair has walked past — the **offset**,
+  /// not the number of rows on screen.
+  ///
+  /// Counted in records the server sent rather than in items we managed to map,
+  /// because this is the number the next request's position is derived from:
+  /// the two differ only for a record shaped like nothing this app understands,
+  /// and on that day the offset still has to be right or every later page lands
+  /// somewhere else in the list.
   final int fetched;
-  final int nextPage;
+
   final bool lastPageFull;
   final bool configured;
+
+  /// How many records exist across every page, as the server reported it, or
+  /// null when it did not say. Carried from [ArrRecordPage.total].
+  final int? total;
+
   final Object? error;
 
   const PagedCursor({
     required this.fetched,
-    required this.nextPage,
     required this.lastPageFull,
     required this.configured,
+    this.total,
     this.error,
   });
 
+  /// Where the next request has to start, in the only terms the \*arr APIs
+  /// accept: a 1-based page over a window of [pageSize], plus however many
+  /// records of that window this pair already holds and must drop.
+  ///
+  /// Derived, and no longer a stored `nextPage` incremented once per load —
+  /// that is correct only while every page is the same size, and these are not.
+  /// The first page asks for 50 and every page after it asks for 200, so
+  /// `page: 2, pageSize: 200` requested records 201-400 and **records 51-200
+  /// were never asked for at all**: the list skipped 150 rows in silence. Once
+  /// the envelope's total started deciding [hasMore] the same gap turned the
+  /// footer into a control that could not be satisfied — `fetched` stalled
+  /// short of `total` while every further page came back empty, so "load more"
+  /// stayed lit and each press spent a request on nothing.
+  ///
+  /// The cost of doing it this way is one overlap, once: the first wide page
+  /// re-downloads the 50 records the narrow page already brought. Cheaper than
+  /// a second page size, and far cheaper than a hole in the list.
+  ({int page, int skip}) requestAt(int pageSize) =>
+      (page: fetched ~/ pageSize + 1, skip: fetched % pageSize);
+
   /// Whether another page might exist.
   ///
-  /// The \*arr page endpoints do not hand their total count to callers of this
-  /// shape, so "full last page" is the proxy: a page that came back with fewer
-  /// records than requested was the last one. The only cost of the heuristic is
-  /// one extra empty page when a list ends exactly on a page boundary.
-  bool get hasMore => lastPageFull;
+  /// [total] answers this outright when the server sent one: the list is
+  /// exhausted once we hold as many rows as it says there are, so the extra
+  /// empty round-trip a list ending exactly on a page boundary used to cost is
+  /// gone, and so is the footer spinner that came with it.
+  ///
+  /// The heuristic survives underneath for the servers that send no total — an
+  /// older build, a proxy that rewrote the body. There "full last page" is the
+  /// only signal there is: a page that came back short was the last one.
+  bool get hasMore => total != null ? fetched < total! : lastPageFull;
 
   bool get failed => error != null;
 }
@@ -635,7 +703,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
       for (final entry in current.cursors.entries)
         if (entry.value.hasMore) entry.key,
     ];
-    final fetched = <ActivityPageKey, List<GlobalActivityItem>>{};
+    final fetched = <ActivityPageKey, _PageDelta>{};
     final failed = <ActivityPageKey>{};
     await Future.wait([
       for (final pair in pairs) _loadNextPage(pair, fetched, failed),
@@ -644,7 +712,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
     if (generation != _generation) return;
 
     for (final entry in fetched.entries) {
-      _items.putIfAbsent(entry.key, () => []).addAll(entry.value);
+      _items.putIfAbsent(entry.key, () => []).addAll(entry.value.items);
     }
 
     final cursors = <ActivityPageKey, PagedCursor>{};
@@ -654,8 +722,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
       final extra = fetched[pair];
       final didFail = failed.contains(pair);
       cursors[pair] = PagedCursor(
-        fetched: cursor.fetched + (extra?.length ?? 0),
-        nextPage: cursor.nextPage + (extra == null ? 0 : 1),
+        fetched: cursor.fetched + (extra?.received ?? 0),
         // A page that never arrived says nothing about whether one exists, so
         // the pair keeps the answer it already had and stays retryable. Derived
         // from the missing page instead, `lastPageFull` came out false, `hasMore`
@@ -664,7 +731,10 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
         // had run out.
         lastPageFull: didFail
             ? cursor.lastPageFull
-            : (extra?.length ?? 0) == _pagedMorePageSize,
+            : (extra?.pageWasFull ?? false),
+        // The size of the set does not change because we fetched another window
+        // of it, and a page that never arrived cannot revise it either.
+        total: cursor.total,
         configured: cursor.configured,
         error: cursor.error,
       );
@@ -721,27 +791,27 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
           connection.instanceId,
         )),
       );
-      final raw = await _loadRawItems(
+      final page = await _loadPage(
         arrService,
         kind,
         page: 1,
         pageSize: _pagedInitialPageSize,
       );
-      final mapped = raw
+      final mapped = page.records
           .whereType<Map>()
           .map((item) => _arrItem(kind, connection, stringKeyMap(item)))
           .toList(growable: false);
       loaded[pair] = mapped;
       cursors[pair] = PagedCursor(
-        fetched: mapped.length,
-        nextPage: 2,
-        lastPageFull: mapped.length == _pagedInitialPageSize,
+        // The records, not the mapped items: this is an offset into the set.
+        fetched: page.records.length,
+        lastPageFull: page.records.length == _pagedInitialPageSize,
+        total: page.total,
         configured: true,
       );
     } catch (error) {
       cursors[pair] = PagedCursor(
         fetched: 0,
-        nextPage: 1,
         lastPageFull: false,
         configured: true,
         error: error,
@@ -751,7 +821,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
 
   Future<void> _loadNextPage(
     ActivityPageKey pair,
-    Map<ActivityPageKey, List<GlobalActivityItem>> fetched,
+    Map<ActivityPageKey, _PageDelta> fetched,
     Set<ActivityPageKey> failed,
   ) async {
     final (kind, serviceType, instanceId) = pair;
@@ -763,16 +833,29 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
       final arrService = ref.read(
         connectionArrServiceProvider((serviceType, instanceId)),
       );
-      final raw = await _loadRawItems(
+      final request = cursor.requestAt(_pagedMorePageSize);
+      final page = await _loadPage(
         arrService,
         kind,
-        page: cursor.nextPage,
+        page: request.page,
         pageSize: _pagedMorePageSize,
       );
-      fetched[pair] = raw
-          .whereType<Map>()
-          .map((item) => _arrItem(kind, connection, stringKeyMap(item)))
-          .toList(growable: false);
+      // The leading slice is the overlap [PagedCursor.requestAt] documents —
+      // records this pair already shows. Appending it would print each of them
+      // twice, which is the one way this fix could be worse than the gap it
+      // closes.
+      final fresh = page.records.skip(request.skip).toList(growable: false);
+      fetched[pair] = (
+        items: fresh
+            .whereType<Map>()
+            .map((item) => _arrItem(kind, connection, stringKeyMap(item)))
+            .toList(growable: false),
+        received: fresh.length,
+        // The window the *server* filled, not the part of it that was new —
+        // measured after the skip, a full page would read short and end the
+        // list one page early on every server that sends no total.
+        pageWasFull: page.records.length == _pagedMorePageSize,
+      );
     } catch (_) {
       // Recorded so [loadMore] can leave this pair's `hasMore` alone and light
       // the footer's retry. Swallowed silently, the pair looked exhausted.
@@ -796,6 +879,7 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
           instanceId: instanceId,
           label: connection?.label ?? '',
           items: _items[entry.key] ?? const [],
+          total: entry.value.total,
           configured: entry.value.configured,
           error: entry.value.error,
         ),
@@ -1010,15 +1094,16 @@ Future<ActivityServiceResult> _loadArrConnection(
         connection.instanceId,
       )),
     );
-    final items = await _loadRawItems(arrService, kind);
+    final page = await _loadPage(arrService, kind);
     return ActivityServiceResult(
       service: connection.service,
       instanceId: connection.instanceId,
       label: connection.label,
-      items: items
+      items: page.records
           .whereType<Map>()
           .map((item) => _arrItem(kind, connection, stringKeyMap(item)))
           .toList(growable: false),
+      total: page.total,
       configured: true,
     );
   } catch (error) {
@@ -1033,29 +1118,51 @@ Future<ActivityServiceResult> _loadArrConnection(
   }
 }
 
-Future<List<dynamic>> _loadRawItems(
+/// One page of a bucket, **with however many records the server says exist**.
+///
+/// It used to return the bare record list, which is why every figure this feed
+/// produced answered the wrong question. `wanted/missing` serves twenty rows by
+/// default, so a library with 340 gaps reported "20 missing" — not an
+/// approximation, a different question ("how many did we fetch") that happened
+/// to look like an answer to the one the user asked. The paged primitives carry
+/// the envelope's `totalRecords`, so the count and the rows now come from the
+/// same response.
+///
+/// Two kinds have no envelope to read and need none: [getQueue] and
+/// [getBlocklist] walk every page before they return, so what they fetched *is*
+/// the size of the set and their total is a fact rather than a guess. Every
+/// other total may still be null — a server that did not send `totalRecords`
+/// has told us nothing, and `records.length` would be the old lie with a fresh
+/// coat on it.
+Future<ArrRecordPage> _loadPage(
   ArrActivityMixin service,
   GlobalActivityKind kind, {
   int page = 1,
   int pageSize = _globalActivityPageSize,
-}) {
-  return switch (kind) {
-    GlobalActivityKind.queue => service.getQueue(),
-    GlobalActivityKind.history => service.getHistory(
-      page: page,
-      pageSize: pageSize,
-    ),
-    GlobalActivityKind.blocklist => service.getBlocklist(),
-    GlobalActivityKind.missing => service.getMissing(
-      page: page,
-      pageSize: pageSize,
-    ),
-    GlobalActivityKind.cutoff => service.getCutoff(
-      page: page,
-      pageSize: pageSize,
-    ),
-    GlobalActivityKind.request => Future.value(const <dynamic>[]),
-  };
+}) async {
+  switch (kind) {
+    case GlobalActivityKind.queue:
+      final records = await service.getQueue();
+      return ArrRecordPage(records: records, total: records.length);
+    case GlobalActivityKind.blocklist:
+      final records = await service.getBlocklist();
+      return ArrRecordPage(records: records, total: records.length);
+    // The page variants, not the record-only ones — and on Radarr and Sonarr
+    // that is now also what attaches `includeMovie` / `includeSeries` +
+    // `includeEpisode`, since both services hang those off this primitive.
+    case GlobalActivityKind.history:
+      return service.getHistoryPage(page: page, pageSize: pageSize);
+    case GlobalActivityKind.missing:
+      return service.getMissingPage(page: page, pageSize: pageSize);
+    case GlobalActivityKind.cutoff:
+      return service.getCutoffPage(page: page, pageSize: pageSize);
+    // Seerr answers this kind on its own leg; nothing here asked a server. The
+    // total is therefore **unknown**, not zero — a confident "0 requests" from
+    // a question that was never put is exactly the failure this type exists to
+    // stop.
+    case GlobalActivityKind.request:
+      return const ArrRecordPage(records: [], total: null);
+  }
 }
 
 GlobalActivityItem _requestItem(

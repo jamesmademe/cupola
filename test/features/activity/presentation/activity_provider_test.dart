@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cupola/core/api/base_arr_service.dart';
 
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
@@ -340,6 +341,69 @@ void main() {
       expect(state.feed!.items, hasLength(50));
       expect(state.hasMore, isTrue);
     });
+
+    // The whole point of moving onto the page primitives. `history` serves a
+    // window; the envelope says how big the set is. Read off the window, the
+    // figure answered "how many did we fetch" — 50, forever, for a server with
+    // 340 records — and it looked exactly like an answer to the question the
+    // user asked.
+    test('a bucket reports the size of the set, not of the window', () async {
+      final container = createContainer(
+        radarrService: _TotalledHistoryRadarrService(pageSize: 50, total: 340),
+      );
+
+      final notifier = container.read(globalHistoryFeedProvider.notifier);
+      await notifier.loading;
+
+      final state = container.read(globalHistoryFeedProvider);
+      final radarr = state.feed!.results.firstWhere(
+        (result) => result.service == ServiceKey.radarr,
+      );
+      expect(radarr.items, hasLength(50));
+      expect(radarr.total, 340);
+      // And the total, once the server has given one, is what decides whether
+      // there is more — so a list ending exactly on a page boundary no longer
+      // costs an empty round trip to discover it.
+      expect(state.hasMore, isTrue);
+      final radarrCursor = state.cursors.entries
+          .firstWhere((entry) => entry.key.$2 == ServiceType.movies)
+          .value;
+      expect(radarrCursor.total, 340);
+      expect(radarrCursor.hasMore, isTrue, reason: '50 of 340 fetched');
+    });
+
+    // Null is not zero. A server that did not send `totalRecords` — an older
+    // build, a proxy that rewrote the body — has told us nothing about the size
+    // of the set, and falling back to the row count here would reinstate the
+    // defect one layer up while looking like a sensible default.
+    test(
+      'a server that named no total says nothing rather than guessing',
+      () async {
+        final container = createContainer(
+          radarrService: _PagedHistoryRadarrService(
+            records: [
+              for (var i = 0; i < 10; i++)
+                {
+                  'sourceTitle': 'Release $i',
+                  'eventType': 'grabbed',
+                  'date': '2026-04-02T11:18:00Z',
+                },
+            ],
+          ),
+        );
+
+        final notifier = container.read(globalHistoryFeedProvider.notifier);
+        await notifier.loading;
+
+        final radarr = container
+            .read(globalHistoryFeedProvider)
+            .feed!
+            .results
+            .firstWhere((result) => result.service == ServiceKey.radarr);
+        expect(radarr.items, hasLength(10));
+        expect(radarr.total, isNull);
+      },
+    );
 
     test('history load more appends the next page and finishes', () async {
       final radarr = _PagedHistoryRadarrService(
@@ -723,4 +787,38 @@ class _ThrowingHistoryRadarrService extends FakeRadarrService {
     int pageSize = 20,
     Map<String, dynamic>? queryParameters,
   }) async => throw Exception('Radarr history down');
+}
+
+/// A Radarr whose history endpoint answers with a real envelope: a window of
+/// rows *and* the size of the set behind them.
+///
+/// It overrides the **page** primitive rather than `getHistory`, which is the
+/// layering the shared fakes invert for everyone else — here the total is the
+/// thing under test, so this one has to speak the envelope itself.
+class _TotalledHistoryRadarrService extends FakeRadarrService {
+  _TotalledHistoryRadarrService({required this.pageSize, required this.total});
+
+  final int pageSize;
+  final int total;
+
+  @override
+  Future<ArrRecordPage> getHistoryPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final start = (page - 1) * pageSize;
+    final end = (start + pageSize).clamp(0, total);
+    return ArrRecordPage(
+      records: [
+        for (var i = start; i < end; i++)
+          {
+            'sourceTitle': 'Release $i',
+            'eventType': 'grabbed',
+            'date': '2026-04-02T11:18:00Z',
+          },
+      ],
+      total: total,
+    );
+  }
 }
