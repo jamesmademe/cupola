@@ -80,4 +80,30 @@ class TrueNasSystemApi extends TrueNasApiBase {
 
   Future<List<Map<String, dynamic>>> getAlertServices() =>
       queryRawList('alertservice.query');
+
+  // ── Power ────────────────────────────────────────────────────────────────
+  //
+  // These two are the only calls in the app whose success is unobservable. The
+  // host executes them by killing the middleware, so the WebSocket carrying the
+  // request dies before any reply can come back: the future either hangs until
+  // the socket's own error closes it or completes with a connection error, and
+  // in both cases the outcome is indistinguishable from the call never landing.
+  // Callers must not await them — see `runTrueNasDetachedAction` — and must not
+  // report "done", only "shutting down".
+  //
+  // `reason` is required from SCALE 25.04 (this client's floor); it is what
+  // lands in the host's own shutdown log, so it says which app asked rather
+  // than leaving an unexplained reboot in the audit trail.
+
+  Future<void> shutdown({String reason = 'Requested from Cupola'}) =>
+      client.call('system.shutdown', [
+        reason,
+        {'delay': 0},
+      ]);
+
+  Future<void> reboot({String reason = 'Requested from Cupola'}) =>
+      client.call('system.reboot', [
+        reason,
+        {'delay': 0},
+      ]);
 }

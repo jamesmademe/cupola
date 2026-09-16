@@ -4,13 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/app_card.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
-import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/features/truenas/domain/models/service_item.dart';
 import 'package:cupola/features/truenas/presentation/shares/truenas_shares_providers.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
@@ -24,37 +24,24 @@ class TrueNasServicesScreen extends ConsumerWidget {
     return TrueNasSectionScaffold(
       title: 'Services',
       body: TrueNasConsoleShell(
-        child: RefreshIndicator(
-          onRefresh: () async => ref.invalidate(truenasServicesProvider),
-          child: services.when(
-            loading: () => ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [AppSkeleton.listRows()],
+        child: TrueNasAsyncBody(
+          value: services,
+          onRetry: () => ref.invalidate(truenasServicesProvider),
+          data: (list) => ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              FloatingNavBarMetrics.getScrollViewBottomPadding(context),
             ),
-            error: (e, _) => ListView(
-              children: [
-                AppErrorState(
-                  error: e,
-                  onRetry: () => ref.invalidate(truenasServicesProvider),
+            children: [
+              for (final item in list)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: _ServiceTile(item: item),
                 ),
-              ],
-            ),
-            data: (list) => ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-              ),
-              children: [
-                for (final item in list)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: _ServiceTile(item: item),
-                  ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
@@ -83,9 +70,12 @@ class _ServiceTile extends ConsumerWidget {
             height: 8,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: item.running
-                  ? AppColors.success
-                  : theme.colorScheme.outline,
+              // A stopped service is backlog, not a fault: somebody stopped it,
+              // or it was never started. Neutral, per decision 15.
+              color: statusToneColor(
+                theme.colorScheme,
+                item.running ? StatusTone.success : StatusTone.neutral,
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.md),
@@ -113,8 +103,12 @@ class _ServiceTile extends ConsumerWidget {
               icon: Icon(
                 item.enabled ? Icons.flash_on_rounded : Icons.flash_off_rounded,
                 size: 18,
+                // Autostart on is a *setting*, not a fault — amber said
+                // something was wrong with a service configured correctly. The
+                // service accent marks it as "on" the way every other toggle in
+                // the console does.
                 color: item.enabled
-                    ? AppColors.warning
+                    ? AppColors.truenas
                     : theme.colorScheme.outline,
               ),
               onPressed: () => runTrueNasAction(

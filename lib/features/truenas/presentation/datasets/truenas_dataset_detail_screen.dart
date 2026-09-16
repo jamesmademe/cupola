@@ -7,7 +7,6 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/section_header.dart';
@@ -18,6 +17,7 @@ import 'package:cupola/features/truenas/presentation/datasets/truenas_dataset_pr
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
@@ -64,36 +64,26 @@ class TrueNasDatasetDetailScreen extends ConsumerWidget {
         ),
       ],
       body: TrueNasConsoleShell(
-        child: RefreshIndicator(
-          onRefresh: () async {
+        child: TrueNasAsyncBody(
+          value: dataset,
+          onRetry: () {
             ref.invalidate(truenasDatasetProvider(datasetId));
             ref.invalidate(truenasSnapshotsProvider(datasetId));
           },
-          child: dataset.when(
-            loading: () => ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [AppSkeleton.detailBody()],
-            ),
-            error: (error, _) => ListView(
-              children: [
-                AppErrorState(
-                  error: error,
-                  onRetry: () =>
-                      ref.invalidate(truenasDatasetProvider(datasetId)),
-                ),
-              ],
-            ),
-            data: (d) => d == null
-                ? ListView(
-                    children: const [
-                      Padding(
-                        padding: EdgeInsets.all(AppSpacing.xl),
-                        child: Text('Dataset not found.'),
-                      ),
-                    ],
-                  )
-                : _DetailBody(dataset: d),
+          skeleton: ListView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            children: [AppSkeleton.detailBody()],
           ),
+          data: (d) => d == null
+              ? ListView(
+                  children: const [
+                    Padding(
+                      padding: EdgeInsets.all(AppSpacing.xl),
+                      child: Text('Dataset not found.'),
+                    ),
+                  ],
+                )
+              : _DetailBody(dataset: d),
         ),
       ),
     );

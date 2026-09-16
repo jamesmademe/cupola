@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -140,6 +141,20 @@ class _ActionBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    // Six chips that used to be six palette colours — green Start, red Stop,
+    // blue Update, amber Down — which put the whole status vocabulary on a row
+    // of *controls*. A tone describes a state; nothing here has a state. Amber
+    // on "Down" claimed a fault about an action the user is about to take on
+    // purpose, and red on "Stop" said "unreachable", which is the one thing red
+    // means on this canvas. So: the service accent for everything that is an
+    // ordinary operation, and `colorScheme.error` — Material's destructive
+    // role, not a status tone — for the two that destroy something.
+    final accent = ServiceTheme.onTint(
+      AppColors.dockge,
+      surface: colorScheme.surface,
+      tintAlpha: 0.12,
+    );
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -147,7 +162,7 @@ class _ActionBar extends ConsumerWidget {
         _ActionChip(
           icon: Icons.play_arrow_rounded,
           label: 'Start',
-          color: AppColors.success,
+          color: accent,
           onTap: () => runDockgeStackAction(
             context,
             ref,
@@ -160,7 +175,7 @@ class _ActionBar extends ConsumerWidget {
         _ActionChip(
           icon: Icons.stop_rounded,
           label: 'Stop',
-          color: AppColors.error,
+          color: colorScheme.error,
           onTap: () => runDockgeStackAction(
             context,
             ref,
@@ -173,7 +188,7 @@ class _ActionBar extends ConsumerWidget {
         _ActionChip(
           icon: Icons.restart_alt_rounded,
           label: 'Restart',
-          color: AppColors.dockge,
+          color: accent,
           onTap: () => runDockgeStackAction(
             context,
             ref,
@@ -186,7 +201,7 @@ class _ActionBar extends ConsumerWidget {
         _ActionChip(
           icon: Icons.system_update_alt_rounded,
           label: 'Update',
-          color: AppColors.info,
+          color: accent,
           onTap: () => runDockgeStackAction(
             context,
             ref,
@@ -199,7 +214,7 @@ class _ActionBar extends ConsumerWidget {
         _ActionChip(
           icon: Icons.arrow_downward_rounded,
           label: 'Down',
-          color: AppColors.warning,
+          color: accent,
           onTap: () => runDockgeStackAction(
             context,
             ref,
@@ -212,7 +227,7 @@ class _ActionBar extends ConsumerWidget {
         _ActionChip(
           icon: Icons.delete_outline_rounded,
           label: 'Delete',
-          color: AppColors.error,
+          color: colorScheme.error,
           onTap: () => _confirmDelete(context, ref),
         ),
       ],
@@ -234,7 +249,10 @@ class _ActionBar extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete'),
           ),

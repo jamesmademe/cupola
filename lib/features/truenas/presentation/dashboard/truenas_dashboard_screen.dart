@@ -7,8 +7,8 @@ import 'package:cupola/core/lifecycle/gated_poll.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/lifecycle/poll_clock.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/app_card.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
@@ -18,6 +18,7 @@ import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/charts/radial_gauge.dart';
 import 'package:cupola/features/truenas/presentation/widgets/charts/sparkline.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
@@ -198,21 +199,14 @@ class _TrueNasDashboardScreenState
     return TrueNasSectionScaffold(
       title: 'Dashboard',
       body: TrueNasConsoleShell(
-        child: RefreshIndicator(
-          onRefresh: () async => _refresh(),
-          child: dashboard.when(
-            skipLoadingOnReload: true,
-            loading: () => ListView(
-              padding: const EdgeInsets.only(top: AppSpacing.md),
-              children: [AppSkeleton.listRows()],
-            ),
-            error: (error, _) => ListView(
-              children: [
-                AppErrorState(error: error, onRetry: () => _refresh()),
-              ],
-            ),
-            data: (data) => _DashboardBody(data: data),
+        child: TrueNasAsyncBody(
+          value: dashboard,
+          onRetry: _refresh,
+          skeleton: ListView(
+            padding: const EdgeInsets.only(top: AppSpacing.md),
+            children: [AppSkeleton.listRows()],
           ),
+          data: (data) => _DashboardBody(data: data),
         ),
       ),
     );
@@ -374,7 +368,10 @@ class _MemoryCard extends StatelessWidget {
             value: usage ?? 0,
             valueLabel: label,
             caption: caption,
-            color: AppColors.info,
+            color: statusToneColor(
+              Theme.of(context).colorScheme,
+              StatusTone.info,
+            ),
             size: 108,
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -425,9 +422,14 @@ class _NetworkCard extends StatelessWidget {
                         Icon(
                           iface.isUp ? Icons.circle : Icons.circle_outlined,
                           size: 8,
-                          color: iface.isUp
-                              ? AppColors.success
-                              : theme.colorScheme.outline,
+                          // An interface that is down is backlog, not a fault:
+                          // nothing failed, it is simply not carrying traffic.
+                          color: statusToneColor(
+                            theme.colorScheme,
+                            iface.isUp
+                                ? StatusTone.success
+                                : StatusTone.neutral,
+                          ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         Text(
@@ -482,9 +484,13 @@ class _PoolHealthCard extends StatelessWidget {
                 vertical: 6,
               ),
               decoration: BoxDecoration(
-                color:
-                    (pool.healthy ? AppColors.success : theme.colorScheme.error)
-                        .withValues(alpha: 0.12),
+                // Amber for a degraded pool, not red: the NAS answered and told
+                // us the pool is unhealthy. Red is for the host that says
+                // nothing at all.
+                color: statusToneColor(
+                  theme.colorScheme,
+                  pool.healthy ? StatusTone.success : StatusTone.warning,
+                ).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -493,11 +499,13 @@ class _PoolHealthCard extends StatelessWidget {
                   Icon(
                     pool.healthy
                         ? Icons.check_circle_rounded
-                        : Icons.error_rounded,
+                        : Icons.warning_amber_rounded,
                     size: 14,
-                    color: pool.healthy
-                        ? AppColors.success
-                        : theme.colorScheme.error,
+                    color: statusToneColor(
+                      theme.colorScheme,
+                      pool.healthy ? StatusTone.success : StatusTone.warning,
+                      surface: theme.colorScheme.surface,
+                    ),
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -531,11 +539,14 @@ class _AlertCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final level = alert.level.toUpperCase();
-    final color = (level == 'CRITICAL' || level == 'ERROR')
-        ? colorScheme.error
-        : (level == 'WARNING')
-        ? AppColors.warning
-        : AppColors.truenas;
+    // TrueNAS's own severities, mapped onto the app's four tones. CRITICAL and
+    // ERROR are still faults the server is reporting, not a connection that
+    // died — amber, like WARNING, because red would say the NAS is gone while
+    // the alert it raised is on screen.
+    final color = statusToneColor(colorScheme, switch (level) {
+      'CRITICAL' || 'ERROR' || 'WARNING' => StatusTone.warning,
+      _ => StatusTone.info,
+    });
 
     return AppCard.surfaceOutlined(
       borderColor: color.withValues(alpha: 0.4),

@@ -6,13 +6,12 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
-import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/features/truenas/domain/models/credentials.dart';
 import 'package:cupola/features/truenas/presentation/system/truenas_system_providers.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_form_sheet.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
@@ -97,12 +96,9 @@ class _UsersTab extends ConsumerWidget {
     return _CrudList(
       onCreate: () => _create(context, ref),
       onRefresh: () => ref.invalidate(truenasUsersProvider),
-      child: users.when(
-        loading: () => AppSkeleton.listRows(),
-        error: (e, _) => AppErrorState(
-          error: e,
-          onRetry: () => ref.invalidate(truenasUsersProvider),
-        ),
+      child: TrueNasAsyncBody.inline(
+        value: users,
+        onRetry: () => ref.invalidate(truenasUsersProvider),
         data: (list) =>
             Column(children: [for (final user in list) _UserTile(user: user)]),
       ),
@@ -208,12 +204,9 @@ class _GroupsTab extends ConsumerWidget {
     return _CrudList(
       onCreate: () => _create(context, ref),
       onRefresh: () => ref.invalidate(truenasGroupsProvider),
-      child: groups.when(
-        loading: () => AppSkeleton.listRows(),
-        error: (e, _) => AppErrorState(
-          error: e,
-          onRetry: () => ref.invalidate(truenasGroupsProvider),
-        ),
+      child: TrueNasAsyncBody.inline(
+        value: groups,
+        onRetry: () => ref.invalidate(truenasGroupsProvider),
         data: (list) => Column(
           children: [for (final group in list) _GroupTile(group: group)],
         ),

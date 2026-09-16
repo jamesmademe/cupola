@@ -6,12 +6,11 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
-import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/truenas/domain/models/data_protection.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
@@ -65,12 +64,9 @@ class _TaskGroup extends ConsumerWidget {
       children: [
         SectionHeader(title: kind.label, showChevron: false),
         const SizedBox(height: AppSpacing.sm),
-        tasks.when(
-          loading: () => AppSkeleton.listRows(count: 2),
-          error: (e, _) => AppErrorState(
-            error: e,
-            onRetry: () => ref.invalidate(truenasProtectionTasksProvider(kind)),
-          ),
+        TrueNasAsyncBody.inline(
+          value: tasks,
+          onRetry: () => ref.invalidate(truenasProtectionTasksProvider(kind)),
           data: (list) => list.isEmpty
               ? AppCard.surfaceOutlined(
                   child: Text(

@@ -8,12 +8,11 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
-import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/truenas/domain/models/dataset.dart';
 import 'package:cupola/features/truenas/presentation/datasets/truenas_dataset_actions.dart';
 import 'package:cupola/features/truenas/presentation/datasets/truenas_dataset_providers.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
@@ -28,50 +27,37 @@ class TrueNasDatasetsScreen extends ConsumerWidget {
       title: 'Datasets',
       floatingActionButton: const DatasetCreateButton(),
       body: TrueNasConsoleShell(
-        child: RefreshIndicator(
-          onRefresh: () async => ref.invalidate(truenasDatasetTreeProvider),
-          child: tree.when(
-            loading: () => ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [AppSkeleton.listRows()],
-            ),
-            error: (error, _) => ListView(
-              children: [
-                AppErrorState(
-                  error: error,
-                  onRetry: () => ref.invalidate(truenasDatasetTreeProvider),
-                ),
-              ],
-            ),
-            data: (roots) => roots.isEmpty
-                ? const AppEmptyState(
-                    icon: Icons.account_tree_rounded,
-                    title: 'No datasets',
-                    accentColor: AppColors.truenas,
-                  )
-                : ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-                    ),
-                    children: [
-                      for (final root in roots)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: AppCard.surfaceOutlined(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.sm,
-                              vertical: AppSpacing.xs,
-                            ),
-                            child: _DatasetNode(dataset: root, depth: 0),
-                          ),
-                        ),
-                    ],
+        child: TrueNasAsyncBody(
+          value: tree,
+          onRetry: () => ref.invalidate(truenasDatasetTreeProvider),
+          data: (roots) => roots.isEmpty
+              ? const AppEmptyState(
+                  icon: Icons.account_tree_rounded,
+                  title: 'No datasets',
+                  accentColor: AppColors.truenas,
+                )
+              : ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                    FloatingNavBarMetrics.getScrollViewBottomPadding(context),
                   ),
-          ),
+                  children: [
+                    for (final root in roots)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: AppCard.surfaceOutlined(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.xs,
+                          ),
+                          child: _DatasetNode(dataset: root, depth: 0),
+                        ),
+                      ),
+                  ],
+                ),
         ),
       ),
     );

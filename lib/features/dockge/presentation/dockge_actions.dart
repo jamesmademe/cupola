@@ -20,7 +20,9 @@ Future<bool> runDockgeAction(
   required String failureMessage,
   List<ProviderOrFamily> invalidate = const [],
 }) async {
-  final client = ref.read(dockgeClientProvider);
+  // The *lensed* client: an action fired while the lens is on an agent has to
+  // reach that agent, and `dockgeClientProvider` is always the hub.
+  final client = ref.read(dockgeLensedClientProvider);
   try {
     await action(client);
     for (final provider in invalidate) {

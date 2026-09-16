@@ -4,10 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
-import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/truenas/domain/models/pool.dart';
@@ -15,6 +14,7 @@ import 'package:cupola/features/truenas/presentation/storage/truenas_storage_pro
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
@@ -57,32 +57,19 @@ class TrueNasPoolDetailScreen extends ConsumerWidget {
         ),
       ],
       body: TrueNasConsoleShell(
-        child: RefreshIndicator(
-          onRefresh: () async => ref.invalidate(truenasPoolProvider(poolName)),
-          child: pool.when(
-            loading: () => ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [AppSkeleton.detailBody()],
-            ),
-            error: (error, _) => ListView(
-              children: [
-                AppErrorState(
-                  error: error,
-                  onRetry: () => ref.invalidate(truenasPoolProvider(poolName)),
-                ),
-              ],
-            ),
-            data: (data) => data == null
-                ? ListView(
-                    children: const [
-                      Padding(
-                        padding: EdgeInsets.all(AppSpacing.xl),
-                        child: Text('Pool not found.'),
-                      ),
-                    ],
-                  )
-                : _PoolDetailBody(pool: data),
-          ),
+        child: TrueNasAsyncBody(
+          value: pool,
+          onRetry: () => ref.invalidate(truenasPoolProvider(poolName)),
+          data: (data) => data == null
+              ? ListView(
+                  children: const [
+                    Padding(
+                      padding: EdgeInsets.all(AppSpacing.xl),
+                      child: Text('Pool not found.'),
+                    ),
+                  ],
+                )
+              : _PoolDetailBody(pool: data),
         ),
       ),
     );
@@ -114,9 +101,12 @@ class _PoolDetailBody extends StatelessWidget {
               TrueNasInfoRow(
                 label: 'Status',
                 value: pool.status,
-                valueColor: pool.healthy
-                    ? AppColors.success
-                    : theme.colorScheme.error,
+                // Amber, not red: a DEGRADED pool is a fault the server is
+                // reporting, and red belongs to a server that reported nothing.
+                valueColor: statusToneColor(
+                  theme.colorScheme,
+                  pool.healthy ? StatusTone.success : StatusTone.warning,
+                ),
               ),
               TrueNasInfoRow(
                 label: 'Capacity',
@@ -239,7 +229,10 @@ class _StatusDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final healthy = status.toUpperCase() == 'ONLINE';
-    final color = healthy ? AppColors.success : AppColors.warning;
+    final color = statusToneColor(
+      Theme.of(context).colorScheme,
+      healthy ? StatusTone.success : StatusTone.warning,
+    );
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

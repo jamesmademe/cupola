@@ -11,6 +11,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/dockge/data/dockge_client.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
+import 'package:cupola/features/dockge/presentation/dockge_agent_lens_button.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -30,7 +31,18 @@ class DockgeScreen extends ConsumerWidget {
 
     return AmbientScaffold(
       accent: AppColors.dockge,
-      appBar: showAppBar ? const GlassAppBar(title: Text('Dockge')) : null,
+      appBar: showAppBar
+          ? const GlassAppBar(
+              title: Text('Dockge'),
+              // The lens belongs beside the title, not in a tab: it says which
+              // Dockge the rows below came off (decision 41). It draws nothing
+              // until there are two instances to tell apart.
+              actions: [
+                DockgeAgentLensButton(),
+                SizedBox(width: AppSpacing.sm),
+              ],
+            )
+          : null,
       body: SafeArea(
         child: isConfigured
             ? _DockgeDashboard(topPadding: topPadding)
@@ -193,7 +205,11 @@ class _StackQuickActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isRunning = stack.status == DockgeStackStatus.running;
+    final colorScheme = Theme.of(context).colorScheme;
+    // `isActive` rather than `== running`: the enum already owns what "this
+    // stack is up" means, and a second copy of that test is a second place to
+    // forget when Dockge adds a state.
+    final isRunning = stack.status.isActive;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -201,7 +217,10 @@ class _StackQuickActions extends ConsumerWidget {
           IconButton(
             tooltip: 'Stop',
             icon: const Icon(Icons.stop_rounded),
-            color: AppColors.error,
+            // Not red. Red on this canvas means a connection that did not
+            // answer, and this is a button offering to stop something that is
+            // running fine — the confirm below is where the weight belongs.
+            color: colorScheme.onSurfaceVariant,
             // Confirmed first: these buttons sit on a scrolling list of live
             // production stacks, and a mis-tap took one down with no warning —
             // while deleting a movie, a far smaller consequence, already asked.
@@ -223,7 +242,7 @@ class _StackQuickActions extends ConsumerWidget {
           IconButton(
             tooltip: 'Start',
             icon: const Icon(Icons.play_arrow_rounded),
-            color: AppColors.success,
+            color: statusToneColor(colorScheme, StatusTone.success),
             onPressed: () => runDockgeStackAction(
               context,
               ref,

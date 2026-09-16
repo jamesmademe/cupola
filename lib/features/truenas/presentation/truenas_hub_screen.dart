@@ -8,7 +8,7 @@ import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
-import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
@@ -44,11 +44,14 @@ class TrueNasHubScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.truenas.accent,
       appBar: showAppBar ? const GlassAppBar(title: Text('TrueNAS')) : null,
-      body: TrueNasConsoleShell(
-        child: configured
-            ? _HubGrid(topPadding: topPadding)
-            : _NotConfigured(topPadding: topPadding),
-      ),
+      // No `TrueNasConsoleShell` here, deliberately. The rail IS this page's
+      // Sections grid — the same nine doors — so drawing it beside them put the
+      // list on screen twice, once as a 232pt column and once as the content.
+      // Every *section* screen keeps the rail; the hub is the one route that
+      // does not.
+      body: configured
+          ? _HubGrid(topPadding: topPadding)
+          : _NotConfigured(topPadding: topPadding),
     );
   }
 }
@@ -136,24 +139,6 @@ class _SectionTile extends StatelessWidget {
                     color: serviceTheme.accent,
                   ),
                 ),
-                const Spacer(),
-                if (section.experimental)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      'BETA',
-                      style: theme.textTheme.labelSmall!
-                          .weight(FontWeight.w700)
-                          .copyWith(color: AppColors.warning),
-                    ),
-                  ),
               ],
             ),
             const Spacer(),
@@ -177,6 +162,12 @@ class _SectionTile extends StatelessWidget {
   }
 }
 
+/// The one state every other service in the app already drew with the shared
+/// placeholder. This used to be a bespoke `AppEmptyState` whose button went to
+/// TrueNAS's settings page — right destination, wrong widget: the copy drifted
+/// ("Add your TrueNAS URL and API key to see system status") from the sentence
+/// the other twelve services print, and it was the only place this condition
+/// was described rather than named.
 class _NotConfigured extends StatelessWidget {
   final double topPadding;
   const _NotConfigured({required this.topPadding});
@@ -189,18 +180,7 @@ class _NotConfigured extends StatelessWidget {
             topPadding +
             (topPadding > 0 ? MediaQuery.paddingOf(context).top : 0),
       ),
-      child: AppEmptyState(
-        icon: Icons.storage_rounded,
-        title: 'TrueNAS is not set up',
-        message: 'Add your TrueNAS URL and API key to see system status.',
-        accentColor: AppColors.truenas,
-        action: FilledButton.icon(
-          onPressed: () =>
-              context.go('/settings/service/${ServiceKey.truenas.routeParam}'),
-          icon: const Icon(Icons.settings_outlined, size: 18),
-          label: const Text('Set up TrueNAS'),
-        ),
-      ),
+      child: NotConfiguredPlaceholder.forService(ServiceKey.truenas),
     );
   }
 }

@@ -15,6 +15,7 @@ import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_form_sheet.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 
 /// Renders an async config map/list into a standard section scaffold.
@@ -38,26 +39,22 @@ class _AsyncSection<T> extends StatelessWidget {
     return TrueNasSectionScaffold(
       title: title,
       actions: actions,
-      body: RefreshIndicator(
-        onRefresh: () async => onRefresh(),
-        child: value.when(
-          loading: () => ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            children: [AppSkeleton.detailBody()],
+      body: TrueNasAsyncBody(
+        value: value,
+        onRetry: onRefresh,
+        skeleton: ListView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          children: [AppSkeleton.detailBody()],
+        ),
+        data: (data) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
-          error: (e, _) => ListView(
-            children: [AppErrorState(error: e, onRetry: onRefresh)],
-          ),
-          data: (data) => ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-            ),
-            children: [builder(data)],
-          ),
+          children: [builder(data)],
         ),
       ),
     );

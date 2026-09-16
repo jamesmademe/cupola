@@ -9,6 +9,7 @@ import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
 
@@ -55,7 +56,9 @@ class DockgeClient {
   /// SHA-256 fingerprint of a self-signed certificate the user chose to trust.
   final String? certFingerprint;
 
-  static const String _endpoint = '';
+  /// The agent every command is addressed to. Instance state, not a constant:
+  /// this is what the app-bar lens moves.
+  String _endpoint = '';
 
   /// How long to wait for `autoLogin` after connecting without credentials
   /// before concluding the instance requires a login.
@@ -69,11 +72,14 @@ class DockgeClient {
   Map<String, dynamic>? _serverInfo;
 
   List<DockgeStack> _latestStacks = const [];
+  Map<String, DockgeAgent> _latestAgents = const {};
 
   final StreamController<List<DockgeStack>> _stackListController =
       StreamController<List<DockgeStack>>.broadcast();
   final StreamController<DockgeTerminalOutput> _terminalController =
       StreamController<DockgeTerminalOutput>.broadcast();
+  final StreamController<List<DockgeAgent>> _agentListController =
+      StreamController<List<DockgeAgent>>.broadcast();
 
   DockgeClient({
     required this.baseUrl,
@@ -84,6 +90,29 @@ class DockgeClient {
 
   /// The most recent parsed stack list (empty until the first push).
   List<DockgeStack> get latestStacks => _latestStacks;
+
+  /// The agent commands are currently addressed to.
+  String get endpoint => _endpoint;
+
+  /// Points this client at [endpoint] and returns whether that changed
+  /// anything. The caller re-requests the stack list; nothing is cached per
+  /// agent, because a stack belongs to exactly one of them and keeping the
+  /// previous agent's rows on screen would show stacks the next command cannot
+  /// reach.
+  bool selectAgent(String endpoint) {
+    if (_endpoint == endpoint) return false;
+    _endpoint = endpoint;
+    _latestStacks = const [];
+    return true;
+  }
+
+  /// Every instance reachable from this login, the hub first. Always at least
+  /// [DockgeAgent.local]: a Dockge without the multi-agent feature never sends
+  /// an `agentList`, and "no agents at all" would be a worse lie than "one".
+  List<DockgeAgent> get latestAgents => _agentsInOrder(_latestAgents);
+
+  /// Broadcasts the agent list whenever Dockge pushes one.
+  Stream<List<DockgeAgent>> get agentListStream => _agentListController.stream;
 
   /// Broadcasts the full stack list whenever Dockge pushes an update.
   Stream<List<DockgeStack>> get stackListStream => _stackListController.stream;
@@ -241,6 +270,13 @@ class DockgeClient {
 
     socket.on('agent', _onAgentEvent);
     socket.on('stackStatusList', _onStackStatusList);
+    // Dockge pushes these at the top level rather than inside the `agent`
+    // envelope — the envelope is for commands *to* an agent, and this is the
+    // hub describing itself. Both shapes are tolerated anyway (see
+    // `_onAgentEvent`), because an instance without the multi-agent feature
+    // sends neither and must still work.
+    socket.on('agentList', _handleAgentList);
+    socket.on('agentStatus', _handleAgentStatus);
 
     socket.onConnectError((dynamic e) {
       if (!authCompleter.isCompleted) {
@@ -309,6 +345,12 @@ class DockgeClient {
         final payload = args.isNotEmpty ? mapOrNull(args.first) : null;
         if (payload != null) _handleStackList(payload);
         break;
+      case 'agentList':
+        if (args.isNotEmpty) _handleAgentList(args.first);
+        break;
+      case 'agentStatus':
+        if (args.isNotEmpty) _handleAgentStatus(args.first);
+        break;
       case 'terminalWrite':
         if (args.length >= 2) {
           _terminalController.add(
@@ -333,6 +375,69 @@ class DockgeClient {
     stacks.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     _latestStacks = stacks;
     if (!_stackListController.isClosed) _stackListController.add(stacks);
+  }
+
+  /// Parses Dockge's `agentList`, which arrives as a map keyed by endpoint (and
+  /// has been seen as a bare list), each value describing one agent.
+  ///
+  /// Deliberately forgiving: an unexpected shape leaves the list at "just the
+  /// hub" instead of throwing on a socket callback, where nothing could catch
+  /// it. The lens then offers one agent, which is the truth for every
+  /// single-instance Dockge anyway.
+  void _handleAgentList(dynamic data) {
+    final payload = mapOrNull(data);
+    final raw = payload?['agentList'] ?? payload ?? data;
+    final agents = <String, DockgeAgent>{};
+    if (raw is Map) {
+      raw.forEach((key, value) {
+        final map = mapOrNull(value);
+        if (map == null) return;
+        final agent = DockgeAgent.fromJson({'endpoint': key, ...map});
+        agents[agent.endpoint] = agent;
+      });
+    } else if (raw is List) {
+      for (final value in raw) {
+        final map = mapOrNull(value);
+        if (map == null) continue;
+        final agent = DockgeAgent.fromJson(map);
+        agents[agent.endpoint] = agent;
+      }
+    }
+    _latestAgents = agents;
+    if (!_agentListController.isClosed) {
+      _agentListController.add(_agentsInOrder(agents));
+    }
+  }
+
+  /// Patches one agent's connection state from `agentStatus`.
+  void _handleAgentStatus(dynamic data) {
+    final map = mapOrNull(data);
+    if (map == null) return;
+    final endpoint = stringOrNull(map['endpoint']) ?? '';
+    final status = stringOrNull(map['status']);
+    if (status == null) return;
+    final known = _latestAgents[endpoint];
+    final patched = Map<String, DockgeAgent>.from(_latestAgents);
+    patched[endpoint] =
+        known?.copyWith(status: status) ??
+        DockgeAgent(
+          endpoint: endpoint,
+          name: endpoint.isEmpty ? 'local' : endpoint,
+          status: status,
+        );
+    _latestAgents = patched;
+    if (!_agentListController.isClosed) {
+      _agentListController.add(_agentsInOrder(patched));
+    }
+  }
+
+  /// The hub first, then the agents by name. The hub is synthesised when Dockge
+  /// did not name it, because it is always there.
+  static List<DockgeAgent> _agentsInOrder(Map<String, DockgeAgent> agents) {
+    final local = agents[''] ?? DockgeAgent.local;
+    final remote = agents.values.where((a) => !a.isLocal).toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return [local, ...remote];
   }
 
   /// Handles the lighter `stackStatusList` event which patches only statuses.
@@ -528,5 +633,6 @@ class DockgeClient {
     socket?.dispose();
     await _stackListController.close();
     await _terminalController.close();
+    await _agentListController.close();
   }
 }

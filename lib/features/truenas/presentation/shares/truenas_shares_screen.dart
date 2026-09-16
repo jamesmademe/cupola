@@ -5,16 +5,16 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
-import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/features/truenas/domain/models/service_item.dart';
 import 'package:cupola/features/truenas/domain/models/share.dart';
 import 'package:cupola/features/truenas/presentation/shares/truenas_shares_providers.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_form_sheet.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
@@ -91,7 +91,12 @@ class _ServiceStateBanner extends ConsumerWidget {
             Icon(
               running ? Icons.check_circle_rounded : Icons.pause_circle_outline,
               size: 16,
-              color: running ? AppColors.success : theme.colorScheme.outline,
+              // A protocol nobody turned on is neutral: not running is the
+              // normal state for two of the three on most servers.
+              color: statusToneColor(
+                theme.colorScheme,
+                running ? StatusTone.success : StatusTone.neutral,
+              ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
@@ -175,12 +180,9 @@ class _SmbTab extends ConsumerWidget {
         serviceName: 'cifs',
         label: 'SMB',
       ),
-      child: shares.when(
-        loading: () => AppSkeleton.listRows(),
-        error: (e, _) => AppErrorState(
-          error: e,
-          onRetry: () => ref.invalidate(truenasSmbSharesProvider),
-        ),
+      child: TrueNasAsyncBody.inline(
+        value: shares,
+        onRetry: () => ref.invalidate(truenasSmbSharesProvider),
         data: (list) => list.isEmpty
             ? const _EmptyShares(text: 'No SMB shares.')
             : Column(
@@ -306,12 +308,9 @@ class _NfsTab extends ConsumerWidget {
         serviceName: 'nfs',
         label: 'NFS',
       ),
-      child: shares.when(
-        loading: () => AppSkeleton.listRows(),
-        error: (e, _) => AppErrorState(
-          error: e,
-          onRetry: () => ref.invalidate(truenasNfsSharesProvider),
-        ),
+      child: TrueNasAsyncBody.inline(
+        value: shares,
+        onRetry: () => ref.invalidate(truenasNfsSharesProvider),
         data: (list) => list.isEmpty
             ? const _EmptyShares(text: 'No NFS exports.')
             : Column(
@@ -360,12 +359,9 @@ class _IscsiTab extends ConsumerWidget {
         serviceName: 'iscsitarget',
         label: 'iSCSI',
       ),
-      child: targets.when(
-        loading: () => AppSkeleton.listRows(),
-        error: (e, _) => AppErrorState(
-          error: e,
-          onRetry: () => ref.invalidate(truenasIscsiTargetsProvider),
-        ),
+      child: TrueNasAsyncBody.inline(
+        value: targets,
+        onRetry: () => ref.invalidate(truenasIscsiTargetsProvider),
         data: (list) => list.isEmpty
             ? const _EmptyShares(text: 'No iSCSI targets.')
             : Column(

@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
@@ -15,6 +14,7 @@ import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/virt/truenas_virt_providers.dart';
 import 'package:cupola/features/truenas/presentation/virt/truenas_virt_screen.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
@@ -60,36 +60,26 @@ class TrueNasVirtDetailScreen extends ConsumerWidget {
         ),
       ],
       body: TrueNasConsoleShell(
-        child: RefreshIndicator(
-          onRefresh: () async {
+        child: TrueNasAsyncBody(
+          value: instance,
+          onRetry: () {
             ref.invalidate(truenasVirtInstanceProvider(id));
             ref.invalidate(truenasVirtDevicesProvider(id));
           },
-          child: instance.when(
-            loading: () => ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [AppSkeleton.detailBody()],
-            ),
-            error: (e, _) => ListView(
-              children: [
-                AppErrorState(
-                  error: e,
-                  onRetry: () =>
-                      ref.invalidate(truenasVirtInstanceProvider(id)),
-                ),
-              ],
-            ),
-            data: (data) => data == null
-                ? ListView(
-                    children: const [
-                      Padding(
-                        padding: EdgeInsets.all(AppSpacing.xl),
-                        child: Text('Instance not found.'),
-                      ),
-                    ],
-                  )
-                : _DetailBody(instance: data, type: type),
+          skeleton: ListView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            children: [AppSkeleton.detailBody()],
           ),
+          data: (data) => data == null
+              ? ListView(
+                  children: const [
+                    Padding(
+                      padding: EdgeInsets.all(AppSpacing.xl),
+                      child: Text('Instance not found.'),
+                    ),
+                  ],
+                )
+              : _DetailBody(instance: data, type: type),
         ),
       ),
     );

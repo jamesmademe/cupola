@@ -8,13 +8,12 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/app_card.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
-import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/truenas/domain/models/app.dart';
 import 'package:cupola/features/truenas/presentation/apps/truenas_apps_providers.dart';
 import 'package:cupola/features/truenas/presentation/apps/truenas_apps_screen.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
@@ -29,32 +28,19 @@ class TrueNasAppDetailScreen extends ConsumerWidget {
     return TrueNasSectionScaffold(
       title: name,
       body: TrueNasConsoleShell(
-        child: RefreshIndicator(
-          onRefresh: () async => ref.invalidate(truenasAppProvider(name)),
-          child: app.when(
-            loading: () => ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [AppSkeleton.detailBody()],
-            ),
-            error: (e, _) => ListView(
-              children: [
-                AppErrorState(
-                  error: e,
-                  onRetry: () => ref.invalidate(truenasAppProvider(name)),
-                ),
-              ],
-            ),
-            data: (data) => data == null
-                ? ListView(
-                    children: const [
-                      Padding(
-                        padding: EdgeInsets.all(AppSpacing.xl),
-                        child: Text('App not found.'),
-                      ),
-                    ],
-                  )
-                : _AppDetailBody(app: data),
-          ),
+        child: TrueNasAsyncBody(
+          value: app,
+          onRetry: () => ref.invalidate(truenasAppProvider(name)),
+          data: (data) => data == null
+              ? ListView(
+                  children: const [
+                    Padding(
+                      padding: EdgeInsets.all(AppSpacing.xl),
+                      child: Text('App not found.'),
+                    ),
+                  ],
+                )
+              : _AppDetailBody(app: data),
         ),
       ),
     );

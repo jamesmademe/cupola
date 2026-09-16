@@ -12,17 +12,43 @@ class TrueNasSection {
   final String subtitle;
   final IconData icon;
   final String route;
-  final bool experimental;
+
+  /// Extra paths this door owns, beyond [route].
+  ///
+  /// One door, two paths is a transitional state, not the model: Virtualization
+  /// is a single section (decision 36) whose containers and VMs still live at
+  /// `/containers` and `/vms` because collapsing them into one
+  /// `virtualization?kind=` route is a `router.dart` change, and `router.dart`
+  /// is not this file's to make. Without this the VMs deep link lit no rail row
+  /// at all.
+  final List<String> alsoMatches;
 
   const TrueNasSection({
     required this.title,
     required this.subtitle,
     required this.icon,
     required this.route,
-    this.experimental = false,
+    this.alsoMatches = const [],
   });
+
+  /// Every path that should light this row, longest first.
+  List<String> get routes => [route, ...alsoMatches];
 }
 
+/// The nine doors of the console, in the order the design draws them.
+///
+/// Two things this list used to get wrong. It had **ten** rows: `Containers`
+/// and `Virtual Machines` were separate doors for what is one question, which
+/// decision 36 merges into a single Virtualization section with pills inside
+/// it. And the order ran … Data protection → Containers → VMs → Apps, putting
+/// the two least-used doors between the two most-used ones.
+///
+/// The subtitles are still constants. Every one of them is a live count on the
+/// boards (`2 pools · 8 disks`, `SMB 6 · NFS 2 · iSCSI 1`, `11 running · 1
+/// stopped`) and every one of those counts is a data-layer addition — the
+/// dataset query does not ask for `snapshot_count`, the pool query does not
+/// return per-member capacity. A wrong count is worse than a description, so
+/// these stay descriptions until the queries can answer.
 const trueNasSections = <TrueNasSection>[
   TrueNasSection(
     title: 'Dashboard',
@@ -49,29 +75,23 @@ const trueNasSections = <TrueNasSection>[
     route: ServiceRoutes.truenasShares,
   ),
   TrueNasSection(
-    title: 'Data Protection',
-    subtitle: 'Snapshots & replication',
-    icon: Icons.shield_rounded,
-    route: ServiceRoutes.truenasDataProtection,
-  ),
-  TrueNasSection(
-    title: 'Containers',
-    subtitle: 'LXC instances',
-    icon: Icons.inventory_2_rounded,
-    route: ServiceRoutes.truenasContainers,
-    experimental: true,
-  ),
-  TrueNasSection(
-    title: 'Virtual Machines',
-    subtitle: 'Incus VMs',
-    icon: Icons.desktop_windows_rounded,
-    route: ServiceRoutes.truenasVms,
-  ),
-  TrueNasSection(
     title: 'Apps',
     subtitle: 'Installed applications',
     icon: Icons.apps_rounded,
     route: ServiceRoutes.truenasApps,
+  ),
+  TrueNasSection(
+    title: 'Virtualization',
+    subtitle: 'Incus containers & VMs',
+    icon: Icons.inventory_2_rounded,
+    route: ServiceRoutes.truenasContainers,
+    alsoMatches: [ServiceRoutes.truenasVms],
+  ),
+  TrueNasSection(
+    title: 'Data Protection',
+    subtitle: 'Snapshots & replication',
+    icon: Icons.shield_rounded,
+    route: ServiceRoutes.truenasDataProtection,
   ),
   TrueNasSection(
     title: 'Reporting',
@@ -81,7 +101,7 @@ const trueNasSections = <TrueNasSection>[
   ),
   TrueNasSection(
     title: 'System',
-    subtitle: 'Settings & services',
+    subtitle: 'Services, credentials & power',
     icon: Icons.settings_rounded,
     route: ServiceRoutes.truenasSystem,
   ),
@@ -163,16 +183,18 @@ class TrueNasConsoleShell extends StatelessWidget {
 
   /// Longest route match, so a pool detail still lights Storage.
   static bool _isSelected(TrueNasSection section, String location) {
-    final best = trueNasSections
-        .where((s) => location == s.route || location.startsWith('${s.route}/'))
-        .fold<TrueNasSection?>(
-          null,
-          (longest, s) =>
-              longest == null || s.route.length > longest.route.length
-              ? s
-              : longest,
-        );
-    return best?.route == section.route;
+    String? best;
+    TrueNasSection? owner;
+    for (final s in trueNasSections) {
+      for (final route in s.routes) {
+        if (location != route && !location.startsWith('$route/')) continue;
+        if (best == null || route.length > best.length) {
+          best = route;
+          owner = s;
+        }
+      }
+    }
+    return identical(owner, section);
   }
 }
 

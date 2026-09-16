@@ -5,15 +5,15 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
-import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/truenas/domain/models/pool.dart';
 import 'package:cupola/features/truenas/presentation/storage/truenas_storage_providers.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
@@ -27,45 +27,32 @@ class TrueNasStorageScreen extends ConsumerWidget {
     return TrueNasSectionScaffold(
       title: 'Storage',
       body: TrueNasConsoleShell(
-        child: RefreshIndicator(
-          onRefresh: () async => ref.invalidate(truenasPoolsProvider),
-          child: pools.when(
-            loading: () => ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [AppSkeleton.listRows()],
-            ),
-            error: (error, _) => ListView(
-              children: [
-                AppErrorState(
-                  error: error,
-                  onRetry: () => ref.invalidate(truenasPoolsProvider),
-                ),
-              ],
-            ),
-            data: (data) => data.isEmpty
-                ? const AppEmptyState(
-                    icon: Icons.dns_rounded,
-                    title: 'No pools',
-                    message: 'This system has no storage pools.',
-                    accentColor: AppColors.truenas,
-                  )
-                : ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-                    ),
-                    children: [
-                      for (final pool in data)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: _PoolCard(pool: pool),
-                        ),
-                    ],
+        child: TrueNasAsyncBody(
+          value: pools,
+          onRetry: () => ref.invalidate(truenasPoolsProvider),
+          data: (data) => data.isEmpty
+              ? const AppEmptyState(
+                  icon: Icons.dns_rounded,
+                  title: 'No pools',
+                  message: 'This system has no storage pools.',
+                  accentColor: AppColors.truenas,
+                )
+              : ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                    FloatingNavBarMetrics.getScrollViewBottomPadding(context),
                   ),
-          ),
+                  children: [
+                    for (final pool in data)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: _PoolCard(pool: pool),
+                      ),
+                  ],
+                ),
         ),
       ),
     );
@@ -81,10 +68,13 @@ class _PoolCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final used = pool.usedFraction;
-    final barColor = !pool.healthy
-        ? colorScheme.error
-        : (used != null && used >= 0.9)
-        ? AppColors.warning
+    // A degraded pool is amber, not red. The NAS answered — it told us the pool
+    // is unhealthy — and red on this canvas is reserved for a host that did not
+    // answer at all. `colorScheme.error` here said "unreachable" about a server
+    // that was talking to us.
+    final warning = statusToneColor(colorScheme, StatusTone.warning);
+    final barColor = !pool.healthy || (used != null && used >= 0.9)
+        ? warning
         : AppColors.truenas;
 
     return PressableScale(
@@ -100,7 +90,9 @@ class _PoolCard extends StatelessWidget {
                       ? Icons.check_circle_rounded
                       : Icons.error_rounded,
                   size: 16,
-                  color: pool.healthy ? AppColors.success : colorScheme.error,
+                  color: pool.healthy
+                      ? statusToneColor(colorScheme, StatusTone.success)
+                      : warning,
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(

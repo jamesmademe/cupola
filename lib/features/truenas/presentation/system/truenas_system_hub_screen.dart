@@ -12,6 +12,7 @@ import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/presentation/system/truenas_diagnostics_screen.dart';
+import 'package:cupola/features/truenas/presentation/system/truenas_power_card.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
@@ -93,10 +94,14 @@ class TrueNasSystemHubScreen extends StatelessWidget {
                 for (final entry in _entries) _SystemTile(entry: entry),
               ],
             ),
+            const SizedBox(height: AppSpacing.md),
+            const TrueNasPowerCard(),
             // Entry point for inspecting raw JSON-RPC responses. Debug builds
             // only: the screen dumps server payloads verbatim with a copy button,
             // which must never ship to release even while today's probes are
-            // limited to non-sensitive methods.
+            // limited to non-sensitive methods. It stays route-less on purpose
+            // (decision 37) — a `go_router` path would be reachable by deep link
+            // in a release build, where `kDebugMode` no longer guards anything.
             if (kDebugMode) ...[
               const SizedBox(height: AppSpacing.md),
               OutlinedButton.icon(
@@ -106,7 +111,7 @@ class TrueNasSystemHubScreen extends StatelessWidget {
                   ),
                 ),
                 icon: const Icon(Icons.bug_report_rounded, size: 18),
-                label: const Text('Diagnostics (debug)'),
+                label: const Text('Diagnostics · debug builds only'),
               ),
             ],
           ],

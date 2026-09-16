@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
@@ -178,12 +179,16 @@ class _ProbeCard extends StatelessWidget {
             children: [
               Icon(
                 result.isError
-                    ? Icons.error_outline_rounded
+                    ? Icons.warning_amber_rounded
                     : Icons.check_circle_outline_rounded,
                 size: 16,
-                color: result.isError
-                    ? theme.colorScheme.error
-                    : AppColors.success,
+                // A probe that threw is a fault this screen can name, which is
+                // amber; red would claim the whole connection is gone while the
+                // other probes on the page are answering.
+                color: statusToneColor(
+                  theme.colorScheme,
+                  result.isError ? StatusTone.warning : StatusTone.success,
+                ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(

@@ -5,11 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/features/truenas/domain/models/reporting.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/charts/line_area_chart.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
@@ -21,6 +21,14 @@ import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart'
 /// now also degrades gracefully per-graph as a safety net.
 const _graphNames = ['cpu', 'memory', 'interface'];
 
+/// Chart series, not statuses.
+///
+/// These are the same constants the tone vocabulary uses, which is a real
+/// collision — a green line on a CPU graph means "series 4", not "healthy" —
+/// but a categorical chart palette is its own axis and inventing one here would
+/// diverge from whatever the dataviz pass settles on for the whole app. Left as
+/// found, deliberately, and never read through `statusToneColor`: nothing on
+/// this screen has a state.
 const _seriesPalette = [
   AppColors.truenas,
   AppColors.info,
@@ -91,12 +99,10 @@ class _TrueNasReportingScreenState
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              graphs.when(
-                loading: () => AppSkeleton.listRows(count: 4),
-                error: (e, _) => AppErrorState(
-                  error: e,
-                  onRetry: () => ref.invalidate(_reportingProvider(query)),
-                ),
+              TrueNasAsyncBody.inline(
+                value: graphs,
+                onRetry: () => ref.invalidate(_reportingProvider(query)),
+                skeleton: AppSkeleton.listRows(count: 4),
                 data: (list) => list.isEmpty
                     ? AppCard.surfaceOutlined(
                         child: Text(

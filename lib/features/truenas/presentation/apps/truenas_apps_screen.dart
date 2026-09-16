@@ -7,15 +7,15 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
-import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/truenas/domain/models/app.dart';
 import 'package:cupola/features/truenas/presentation/apps/truenas_app_actions.dart';
 import 'package:cupola/features/truenas/presentation/apps/truenas_apps_providers.dart';
+import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
 
@@ -42,45 +42,32 @@ class TrueNasAppsScreen extends ConsumerWidget {
           ),
       ],
       body: TrueNasConsoleShell(
-        child: RefreshIndicator(
-          onRefresh: () async => ref.invalidate(truenasAppsProvider),
-          child: apps.when(
-            loading: () => ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [AppSkeleton.listRows()],
-            ),
-            error: (e, _) => ListView(
-              children: [
-                AppErrorState(
-                  error: e,
-                  onRetry: () => ref.invalidate(truenasAppsProvider),
-                ),
-              ],
-            ),
-            data: (list) => list.isEmpty
-                ? const AppEmptyState(
-                    icon: Icons.apps_rounded,
-                    title: 'No apps installed',
-                    message: 'Install apps from the TrueNAS catalog.',
-                    accentColor: AppColors.truenas,
-                  )
-                : ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-                    ),
-                    children: [
-                      for (final app in list)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: _AppCard(app: app),
-                        ),
-                    ],
+        child: TrueNasAsyncBody<List<TrueNasApp>>(
+          value: apps,
+          onRetry: () => ref.invalidate(truenasAppsProvider),
+          data: (list) => list.isEmpty
+              ? const AppEmptyState(
+                  icon: Icons.apps_rounded,
+                  title: 'No apps installed',
+                  message: 'Install apps from the TrueNAS catalog.',
+                  accentColor: AppColors.truenas,
+                )
+              : ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                    FloatingNavBarMetrics.getScrollViewBottomPadding(context),
                   ),
-          ),
+                  children: [
+                    for (final app in list)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: _AppCard(app: app),
+                      ),
+                  ],
+                ),
         ),
       ),
     );
@@ -175,11 +162,15 @@ class AppStateLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final upper = state.toUpperCase();
-    final color = upper == 'RUNNING'
-        ? AppColors.success
-        : upper == 'CRASHED'
-        ? theme.colorScheme.error
-        : theme.colorScheme.onSurfaceVariant;
+    // CRASHED is amber, not red: the app fell over and TrueNAS told us so,
+    // which is a fault. Red is the host that told us nothing. Everything else —
+    // STOPPED, DEPLOYING — is neutral, because an app nobody started is not a
+    // problem to be fixed.
+    final color = statusToneColor(theme.colorScheme, switch (upper) {
+      'RUNNING' => StatusTone.success,
+      'CRASHED' => StatusTone.warning,
+      _ => StatusTone.neutral,
+    });
     return Row(
       children: [
         Container(
@@ -202,17 +193,28 @@ class _UpgradeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: AppColors.info.withValues(alpha: 0.16),
+        color: statusToneColor(
+          colorScheme,
+          StatusTone.info,
+        ).withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         'UPDATE',
         style: Theme.of(context).textTheme.labelSmall!
             .weight(FontWeight.w700)
-            .copyWith(color: AppColors.info),
+            // The ink walks against the tint it sits on, not against the page.
+            .copyWith(
+              color: statusToneColor(
+                colorScheme,
+                StatusTone.info,
+                surface: colorScheme.surface,
+              ),
+            ),
       ),
     );
   }
@@ -233,7 +235,12 @@ class AppLifecycleControl extends ConsumerWidget {
             app.isRunning
                 ? Icons.stop_circle_outlined
                 : Icons.play_circle_outline,
-            color: app.isRunning ? null : AppColors.success,
+            color: app.isRunning
+                ? null
+                : statusToneColor(
+                    Theme.of(context).colorScheme,
+                    StatusTone.success,
+                  ),
           ),
           tooltip: app.isRunning ? 'Stop' : 'Start',
           onPressed: () => appLifecycleAction(
