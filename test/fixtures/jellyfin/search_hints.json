@@ -1,0 +1,42 @@
+{
+  "SearchHints": [
+    {
+      "ItemId": "3ca7ff1e0d9b4e2f8a6c5b4d3e2f1a09",
+      "Id": "3ca7ff1e0d9b4e2f8a6c5b4d3e2f1a09",
+      "Name": "Interstellar",
+      "Type": "Movie",
+      "ProductionYear": 2014,
+      "RunTimeTicks": 101640000000,
+      "PrimaryImageTag": "b1f2a3c4d5e6f708",
+      "MatchedTerm": "inter"
+    },
+    {
+      "ItemId": "0f4b8d2a6c1e39574a8b2c6d0e4f8192",
+      "Name": "The Internet Is Made Of Cats",
+      "Type": "Series",
+      "ProductionYear": 2019,
+      "PrimaryImageTag": "aa11bb22cc33dd44"
+    },
+    {
+      "ItemId": "9e8d7c6b5a4938271605f4e3d2c1b0a9",
+      "Name": "Interlude",
+      "Type": "Episode",
+      "Series": "The Internet Is Made Of Cats",
+      "IndexNumber": 4,
+      "ParentIndexNumber": 2,
+      "RunTimeTicks": 26400000000,
+      "ThumbImageTag": "ff00ee11dd22cc33"
+    },
+    {
+      "ItemId": "7b6a5948372615f0e9d8c7b6a5948372",
+      "Name": "Interpol",
+      "Type": "Person"
+    },
+    {
+      "ItemId": "11223344556677889900112233445566",
+      "Name": "Interiors",
+      "Type": "BoxSet"
+    }
+  ],
+  "TotalRecordCount": 5
+}

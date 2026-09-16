@@ -288,6 +288,7 @@ class _GateSeerrService extends FakeSeerrService {
     String query, {
     int page = 1,
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     tokens.add(cancelToken);
     await gate?.future;

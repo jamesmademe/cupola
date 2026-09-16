@@ -707,6 +707,7 @@ class _SearchSeerrService extends FakeSeerrService {
     String query, {
     int page = 1,
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     await leg.record(cancelToken);
     return results;
