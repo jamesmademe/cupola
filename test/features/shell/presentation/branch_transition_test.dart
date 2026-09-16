@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/features/shell/presentation/branch_transition.dart';
 
 /// A widget that spins forever, so a test can ask whether its ticker was muted.
@@ -54,6 +55,20 @@ class _HarnessState extends State<_Harness> {
       textDirection: TextDirection.ltr,
       child: BranchTransition(currentIndex: index, children: widget.children),
     ),
+  );
+}
+
+/// A probe that reports what `BranchActivityScope.isActiveOf` answers where it
+/// is mounted — which is the question every gated poller in the app asks.
+class _ActivityProbe extends StatelessWidget {
+  const _ActivityProbe({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    '$label:${BranchActivityScope.isActiveOf(context)}',
+    textDirection: TextDirection.ltr,
   );
 }
 
@@ -241,6 +256,61 @@ void main() {
         findsNothing,
         reason: 'no cross-fade to sit through',
       );
+    });
+
+    group('nested inside another branch', () {
+      // A service's own shell is mounted INSIDE the Dashboard branch, so two of
+      // these containers are in the tree at once — and `isActiveOf` resolves to
+      // the nearest scope. An inner branch that published a bare `isCurrent`
+      // would tell every poller under it that it was live while the branch
+      // above it was put away, and would never rebuild to discover otherwise.
+      testWidgets('an inner branch is not live inside an outer one that is '
+          'put away', (tester) async {
+        await tester.pumpWidget(
+          const _Harness(
+            children: [
+              Text('outer 0'),
+              // The inner container's branch 0 is "current" as far as the
+              // inner container knows. What it must not do is say so while
+              // outer 1 is the one nobody is looking at.
+              _Harness(
+                children: [
+                  _ActivityProbe(label: 'inner'),
+                  Text('inner 1'),
+                ],
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('inner:false', skipOffstage: false),
+          findsOneWidget,
+          reason: 'the outer branch holding it is put away',
+        );
+      });
+
+      testWidgets('an inner branch is live once the outer one is shown', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          const _Harness(
+            children: [
+              _Harness(
+                children: [
+                  _ActivityProbe(label: 'inner'),
+                  Text('inner 1'),
+                ],
+              ),
+              Text('outer 1'),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('inner:true'), findsOneWidget);
+      });
     });
   });
 }

@@ -175,8 +175,20 @@ class _BranchLayer extends StatelessWidget {
       offstage: !(isCurrent || isOutgoing),
       child: TickerMode(
         enabled: isCurrent,
+        // Composed with the scope above, not asserted over it. This container
+        // is nestable now — a service's own shell sits inside the Dashboard
+        // branch — and `isActiveOf` returns the NEAREST scope, so an inner
+        // branch publishing a bare `isCurrent` would claim to be live while the
+        // branch above it was put away: its pollers would keep running behind a
+        // tab nobody is looking at, and it would not even rebuild to find out,
+        // because it depends on the inner scope alone.
+        //
+        // Reading `isActiveOf` here registers the dependency, so the inner
+        // layers rebuild when the outer one flips. Outermost there is no scope
+        // to find and it answers true, so the app-level behaviour is unchanged
+        // to the bit.
         child: BranchActivityScope(
-          isActive: isCurrent,
+          isActive: isCurrent && BranchActivityScope.isActiveOf(context),
           branchIndex: branchIndex,
           child: ExcludeSemantics(
             excluding: !isCurrent,
