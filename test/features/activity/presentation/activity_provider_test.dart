@@ -427,10 +427,22 @@ void main() {
       final state = container.read(globalHistoryFeedProvider);
       expect(state.feed!.items, hasLength(60));
       expect(state.hasMore, isFalse);
-      // The first page asked for the initial window; the load-more page asks
-      // for the big page size.
+      // Every record once, and every record: the rule the overlap exists to
+      // protect. Length alone cannot tell "50 + 10 fresh" from "60 rows of
+      // which 10 are printed twice and 10 were never asked for".
+      expect(
+        state.feed!.items.map((item) => item.title).toSet(),
+        hasLength(60),
+      );
+      // The first page asked for the initial 50-wide window; the load-more page
+      // asks for the 200-wide one. It asks for **page 1** of that wider window,
+      // not page 2 — `page: 2, pageSize: 200` would start at record 201 and
+      // leave records 51-200 unrequested for ever. The bucket therefore
+      // re-fetches the first 50 and drops them itself (`PagedCursor.requestAt`
+      // returns that skip), which costs one overlapping window once and is the
+      // only arrangement that leaves no hole.
       expect(radarr.historyCalls, 2);
-      expect(radarr.lastPage, 2);
+      expect(radarr.lastPage, 1);
       expect(radarr.lastPageSize, 200);
     });
 
@@ -442,8 +454,8 @@ void main() {
       // like a list that had run out. `loadMoreFailed` was never set by
       // anything either, which left the footer's retry unreachable code.
       final radarr = _FlakySecondPageRadarrService(
-        firstPage: [
-          for (var i = 0; i < 50; i++)
+        records: [
+          for (var i = 0; i < 60; i++)
             {
               'sourceTitle': 'Release $i',
               'eventType': 'grabbed',
@@ -717,13 +729,35 @@ class _ThrowingQueueLidarrService extends FakeLidarrService {
   }) async => throw Exception('Lidarr down');
 }
 
+/// The window a real \*arr serves for `page`/`pageSize`: an **absolute** slice
+/// at `(page - 1) * pageSize`, and short or empty once the set runs out.
+///
+/// Positional on purpose, because the thing under test is positional. The
+/// bucket asks for a window and then drops the leading records it already holds
+/// (`PagedCursor.requestAt` returns a page *and a skip*, since the first window
+/// is 50 wide and every later one is 200). A fake that serves "whatever comes
+/// next" instead of "the records at this position" answers a question nobody
+/// asked: it silently pre-applies the skip, the bucket applies it again, and a
+/// page of 10 fresh records is skipped down to nothing. That is exactly how
+/// this file's two load-more tests broke — not because the paging was wrong,
+/// but because the double had never modelled paging at all.
+List<dynamic> _serverWindow(List<dynamic> records, int page, int pageSize) {
+  final start = (page - 1) * pageSize;
+  if (start >= records.length) return const [];
+  return records.sublist(start, (start + pageSize).clamp(0, records.length));
+}
+
 /// History that pages for real, so the paged-bucket tests can prove the window
 /// mechanics rather than the fake's willingness to answer everything at once.
 ///
-/// Page sizes vary between the first page (50) and load-more pages (200), so
-/// the slice boundary is tracked as a running cursor — like a real server,
-/// which pages from its own position rather than deriving it from a page
-/// number times a page size.
+/// Overrides `getHistory`, not `getHistoryPage`, and that is deliberate: the
+/// shared [FakeRadarrService] **inverts** the production delegation — in the
+/// real services `getHistory` delegates to `getHistoryPage`, in the fakes
+/// `getHistoryPage` delegates to `getHistory` — precisely so that a local
+/// subclass can keep scripting the record-only getter and still be reached by a
+/// caller that has moved onto the envelope. Override `getHistoryPage` here
+/// instead (as `_TotalledHistoryRadarrService` does, because *it* is testing
+/// the envelope) and this override stops being called at all.
 class _PagedHistoryRadarrService extends FakeRadarrService {
   _PagedHistoryRadarrService({required this.records});
 
@@ -731,7 +765,6 @@ class _PagedHistoryRadarrService extends FakeRadarrService {
   int historyCalls = 0;
   int? lastPage;
   int? lastPageSize;
-  int _served = 0;
 
   @override
   Future<List<dynamic>> getHistory({
@@ -742,19 +775,17 @@ class _PagedHistoryRadarrService extends FakeRadarrService {
     historyCalls++;
     lastPage = page;
     lastPageSize = pageSize;
-    if (_served >= records.length) return const [];
-    final end = (_served + pageSize).clamp(0, records.length);
-    final slice = records.sublist(_served, end);
-    _served = end;
-    return slice;
+    return _serverWindow(records, page, pageSize);
   }
 }
 
-/// Serves page one, then throws once before serving the rest.
+/// Pages like [_PagedHistoryRadarrService], but throws on every call after the
+/// first for as long as [failNext] is set — the connection that dies mid-scroll
+/// and then comes back.
 class _FlakySecondPageRadarrService extends FakeRadarrService {
-  _FlakySecondPageRadarrService({required this.firstPage});
+  _FlakySecondPageRadarrService({required this.records});
 
-  final List<dynamic> firstPage;
+  final List<dynamic> records;
   bool failNext = true;
   bool _servedFirst = false;
 
@@ -766,17 +797,10 @@ class _FlakySecondPageRadarrService extends FakeRadarrService {
   }) async {
     if (!_servedFirst) {
       _servedFirst = true;
-      return firstPage;
+      return _serverWindow(records, page, pageSize);
     }
     if (failNext) throw Exception('Radarr went away mid-scroll');
-    return [
-      for (var i = 0; i < 10; i++)
-        {
-          'sourceTitle': 'Late release $i',
-          'eventType': 'grabbed',
-          'date': '2026-04-02T11:18:00Z',
-        },
-    ];
+    return _serverWindow(records, page, pageSize);
   }
 }
 
