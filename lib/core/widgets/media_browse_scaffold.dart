@@ -32,7 +32,22 @@ typedef MediaBrowseItemTap<T> =
 typedef MediaBrowseTextExtractor<T> = String Function(T item);
 typedef MediaBrowseRefreshCallback = void Function(WidgetRef ref);
 
-enum MediaBrowseFilter { all, available, missing, inQueue }
+enum MediaBrowseFilter {
+  all,
+  available,
+  missing,
+  inQueue,
+
+  /// On disk, but not at the quality the profile asks for. Its own chip rather
+  /// than a shade of Missing: the file is there, so nothing is absent — what is
+  /// outstanding is an upgrade, and the operator who wants one is not the
+  /// operator hunting a gap.
+  cutoffUnmet,
+
+  /// Tracked by the service but not watched by it. Orthogonal to every other
+  /// chip, and the only one that says nothing about the file.
+  unmonitored,
+}
 
 /// Which library chip a resolved status belongs under.
 ///
@@ -84,10 +99,17 @@ MediaBrowseBucket mediaBrowseBucketOf(MediaStatusInfo? status) {
 ///
 /// Pure and top-level so the partition can be asserted rung by rung instead of
 /// only through a pumped scaffold.
+///
+/// [belowCutoff] is the one fact the status cannot carry: whether *this* item
+/// is in the service's own `wanted/cutoff` set. It arrives as a plain bool so
+/// this function stays a function of its arguments — the caller owns the id
+/// set and the lookup, and a screen with no cutoff source passes `false` and
+/// does not offer the chip at all.
 bool mediaBrowseFilterMatches(
   MediaBrowseFilter filter,
-  MediaStatusInfo? status,
-) {
+  MediaStatusInfo? status, {
+  bool belowCutoff = false,
+}) {
   return switch (filter) {
     MediaBrowseFilter.all => true,
     MediaBrowseFilter.available =>
@@ -98,8 +120,110 @@ bool mediaBrowseFilterMatches(
     // question from what is on disk, and a downloading title belongs in both
     // In Queue and Missing.
     MediaBrowseFilter.inQueue => status?.isInPipeline ?? false,
+    // Also orthogonal: a below-cutoff file is on disk, so it answers to
+    // Available too. Neither of these two may join the bucket partition or the
+    // two exhaustive lists stop being lists.
+    MediaBrowseFilter.cutoffUnmet => belowCutoff,
+    MediaBrowseFilter.unmonitored => status?.unmonitored ?? false,
   };
 }
+
+/// What the browse wall draws an item as.
+///
+/// Not a style flag: a poster and an artist portrait are different claims. A
+/// 2:3 crop of a band photograph is a worse lie than a circle — it invents a
+/// poster that does not exist and crops a face to do it — so Lidarr's wall is
+/// circular and says so here rather than tuning a radius at the call site.
+enum MediaBrowseTileShape {
+  /// The 2:3 poster, with the status dot painted over its lower-left corner.
+  poster,
+
+  /// The circular portrait, centred, with the status carried by the caption
+  /// instead of a dot: a circle has no corner to put one in, and `LidarrArtists`
+  /// draws the completeness in words (`6 albums · complete`).
+  circle,
+}
+
+/// One order the browse wall can be read in.
+///
+/// A sort is a label, a comparator and a claim about headings — not an enum the
+/// scaffold switches on, because the scaffold is generic over `T` and cannot
+/// read a release date or a file size. Each service declares the orders its own
+/// model can actually answer, which is also why there is no dead `Size` entry on
+/// a screen whose model has no size.
+@immutable
+class MediaBrowseSort<T> {
+  /// What the control reads after `Sort · `.
+  final String label;
+
+  final Comparator<T> compare;
+
+  /// Whether the A–Z letter headings belong over this order.
+  ///
+  /// They belong over exactly one: an alphabetical wall is what a letter
+  /// heading describes. Over a date-added order the same headings are a lie
+  /// told once per section — `LidarrArtists` says so in the board itself
+  /// ("letter headings appear only in Name A–Z sort") and `RadarrLibrary`,
+  /// sorted by date added, draws none.
+  final bool lettered;
+
+  const MediaBrowseSort({
+    required this.label,
+    required this.compare,
+    this.lettered = false,
+  });
+
+  /// Newest first, and anything the service did not date goes last.
+  ///
+  /// The arrs hand `added` back as an ISO string. Parsing it rather than
+  /// comparing the strings is not pedantry: a server that answers a local
+  /// offset sorts wrongly under a string compare, and a row the server never
+  /// dated sorts *first* under one — the loudest position in the list for the
+  /// item we know least about.
+  factory MediaBrowseSort.dateAdded(String? Function(T item) addedOf) {
+    return MediaBrowseSort<T>(
+      label: 'Date added',
+      compare: (left, right) {
+        final leftAt = DateTime.tryParse(addedOf(left) ?? '');
+        final rightAt = DateTime.tryParse(addedOf(right) ?? '');
+        if (leftAt == null && rightAt == null) return 0;
+        if (leftAt == null) return 1;
+        if (rightAt == null) return -1;
+        return rightAt.compareTo(leftAt);
+      },
+    );
+  }
+
+  /// Largest first. A zero is an honest answer here — nothing on disk — so it
+  /// sorts to the bottom rather than being held out.
+  factory MediaBrowseSort.size(int Function(T item) bytesOf) {
+    return MediaBrowseSort<T>(
+      label: 'Size',
+      compare: (left, right) => bytesOf(right).compareTo(bytesOf(left)),
+    );
+  }
+
+  /// Newest first; an unknown year (the arrs write 0) sorts last rather than
+  /// claiming to be the oldest title in the library.
+  factory MediaBrowseSort.year(int Function(T item) yearOf) {
+    return MediaBrowseSort<T>(
+      label: 'Year',
+      compare: (left, right) {
+        final leftYear = yearOf(left);
+        final rightYear = yearOf(right);
+        if (leftYear == 0 && rightYear == 0) return 0;
+        if (leftYear == 0) return 1;
+        if (rightYear == 0) return -1;
+        return rightYear.compareTo(leftYear);
+      },
+    );
+  }
+}
+
+/// The fewest columns the browse wall drops to, matching the three the phone
+/// boards draw. Below this the floor stops being the binding constraint: two
+/// posters across a 390pt phone would be enormous, not better.
+const int _minBrowseColumns = 3;
 
 /// A sort key whose first character is a Latin letter, and therefore gets its
 /// own section heading rather than landing under `#`.
@@ -142,6 +266,23 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
   /// Optional KPI peek rail shown under the search bar (hidden while searching).
   final Widget? kpiPeek;
 
+  /// Orders this service can offer beyond the built-in Title A–Z, which is
+  /// always first and always the default.
+  final List<MediaBrowseSort<T>> sorts;
+
+  /// What a tile is drawn as — see [MediaBrowseTileShape].
+  final MediaBrowseTileShape tileShape;
+
+  /// The ids the service reported under `wanted/cutoff`, or null when this
+  /// screen has no cutoff source.
+  ///
+  /// Null and empty are different answers and the chip strip treats them so: an
+  /// empty set means the service answered "none below cutoff" and the chip is
+  /// offered reading zero, while null means nothing was asked and the chip is
+  /// not drawn at all. A chip that cannot be told apart from an unasked
+  /// question is a claim the screen cannot honour.
+  final Set<int>? cutoffUnmetIds;
+
   const MediaBrowseScaffold({
     super.key,
     required this.title,
@@ -168,6 +309,9 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
     this.showAppBar = true,
     this.topPadding = 0,
     this.kpiPeek,
+    this.sorts = const [],
+    this.cutoffUnmetIds,
+    this.tileShape = MediaBrowseTileShape.poster,
   });
 
   @override
@@ -179,6 +323,10 @@ class _MediaBrowseScaffoldState<T>
     extends ConsumerState<MediaBrowseScaffold<T>> {
   MediaBrowseFilter _selectedFilter = MediaBrowseFilter.all;
 
+  /// Index into [_sortOptions]. Zero — Title A–Z — is the default order on
+  /// every service, which is also the only order the wall had before.
+  int _sortIndex = 0;
+
   /// The library list the cached order was computed from, and that order.
   ///
   /// The comparator does not read [_selectedFilter], so the sort is invariant
@@ -186,8 +334,12 @@ class _MediaBrowseScaffoldState<T>
   /// which the soft keyboard alone produces one per frame. [FutureProvider]
   /// hands back the same `List` instance until it is invalidated, so identity
   /// is a sound key; the filter itself still runs on every build.
+  ///
+  /// It is *not* invariant across a sort change, so the chosen order is part of
+  /// the key too — without it, picking a new sort would hand back the old one.
   List<T>? _sortedSource;
   List<T>? _sorted;
+  int? _sortedUnder;
 
   @override
   void didUpdateWidget(MediaBrowseScaffold<T> oldWidget) {
@@ -195,11 +347,53 @@ class _MediaBrowseScaffoldState<T>
     // The comparator reads both extractors, so a rebuild that re-closes over
     // new ones has to re-sort even when the list itself is unchanged.
     if (!identical(widget.titleExtractor, oldWidget.titleExtractor) ||
-        !identical(widget.sortTitleExtractor, oldWidget.sortTitleExtractor)) {
+        !identical(widget.sortTitleExtractor, oldWidget.sortTitleExtractor) ||
+        !identical(widget.sorts, oldWidget.sorts)) {
       _sortedSource = null;
       _sorted = null;
     }
+    // A service that offered five orders and now offers two must not stay
+    // parked on an index that no longer exists.
+    if (_sortIndex >= _sortOptions.length) {
+      _sortIndex = 0;
+    }
   }
+
+  /// Title A–Z first, then whatever the service declared.
+  ///
+  /// The built-in order cannot be a const in [MediaBrowseScaffold.sorts]
+  /// because it closes over this widget's own title extractors.
+  List<MediaBrowseSort<T>> get _sortOptions => [
+    MediaBrowseSort<T>(
+      label: 'Title A–Z',
+      lettered: true,
+      compare: (left, right) {
+        final bySortTitle = _sortKeyFor(left).compareTo(_sortKeyFor(right));
+        if (bySortTitle != 0) {
+          return bySortTitle;
+        }
+        return widget
+            .titleExtractor(left)
+            .toLowerCase()
+            .compareTo(widget.titleExtractor(right).toLowerCase());
+      },
+    ),
+    ...widget.sorts,
+  ];
+
+  /// The chips this screen can honestly offer.
+  ///
+  /// Cutoff unmet is conditional on a source — see
+  /// [MediaBrowseScaffold.cutoffUnmetIds]. Unmonitored never is: `monitored`
+  /// rides on every resolved status already, so the chip cannot be wrong.
+  List<MediaBrowseFilter> get _filterOptions => [
+    MediaBrowseFilter.all,
+    MediaBrowseFilter.available,
+    MediaBrowseFilter.missing,
+    MediaBrowseFilter.inQueue,
+    if (widget.cutoffUnmetIds != null) MediaBrowseFilter.cutoffUnmet,
+    MediaBrowseFilter.unmonitored,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -257,10 +451,6 @@ class _MediaBrowseScaffoldState<T>
       // The header (search + KPI + filters) lives in the NestedScrollView
       // header slivers as non-pinned adapters, so it scrolls away with the
       // content instead of staying fixed above the list.
-      // 1160 rather than the default well: eight 130pt posters and their gaps
-      // come to exactly that, and the grid is a column *floor* — see
-      // `MediaGrid`. A wider well would add a ninth column of smaller posters,
-      // which is the mistake the floor exists to prevent.
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           if (widget.topPadding > 0)
@@ -283,12 +473,21 @@ class _MediaBrowseScaffoldState<T>
           if (!isSearching)
             SliverToBoxAdapter(
               child: _MediaBrowseFilterChips(
+                filters: _filterOptions,
                 selectedFilter: _selectedFilter,
                 color:
                     widget.accentColor ?? Theme.of(context).colorScheme.primary,
                 onSelected: (filter) {
                   setState(() {
                     _selectedFilter = filter;
+                  });
+                },
+                sortLabel: _sortOptions[_sortIndex].label,
+                sortOptions: [for (final sort in _sortOptions) sort.label],
+                selectedSort: _sortIndex,
+                onSortSelected: (index) {
+                  setState(() {
+                    _sortIndex = index;
                   });
                 },
               ),
@@ -391,7 +590,9 @@ class _MediaBrowseScaffoldState<T>
       itemBuilder: (context, sectionIndex) {
         final section = sections[sectionIndex];
         return Padding(
-          key: ValueKey('media-browse-section-${section.label}'),
+          key: ValueKey(
+            'media-browse-section-${section.label.isEmpty ? 'flat' : section.label}',
+          ),
           padding: EdgeInsets.only(
             bottom: sectionIndex == sections.length - 1
                 ? AppSpacing.lg
@@ -400,29 +601,42 @@ class _MediaBrowseScaffoldState<T>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                section.label,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge!.weight(FontWeight.w700),
-              ),
-              const SizedBox(height: AppSpacing.md),
+              if (section.label.isNotEmpty) ...[
+                Text(
+                  section.label,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge!.weight(FontWeight.w700),
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
               LayoutBuilder(
                 builder: (context, constraints) {
-                  const tileWidth = 96.0;
-                  final columns = math.max(
-                    1,
-                    ((constraints.maxWidth + AppSpacing.gridGap) /
-                            (tileWidth + AppSpacing.gridGap))
-                        .floor(),
+                  // One column math for the whole app, and the tiles fill the
+                  // row they are given.
+                  //
+                  // This used to pin a 96pt tile — under the 130pt floor every
+                  // other grid is held to — and then compute a spacing to
+                  // distribute the leftover, only to `.clamp(0, gridGap)` that
+                  // spacing away again. The slack it had just measured came
+                  // back as a ragged right edge: at 390pt, three 96pt tiles
+                  // and two 12pt gaps are 312 inside 358, so 46pt of dead
+                  // space sat at the end of every row. The boards draw
+                  // `repeat(N, minmax(0, 1fr))`: the count is resolved first,
+                  // then the tiles take what is left.
+                  final columns = MediaGrid.columnsFor(
+                    constraints.maxWidth,
+                    _minBrowseColumns,
                   );
-                  final tileSpacing = columns > 1
-                      ? (constraints.maxWidth - (columns * tileWidth)) /
-                            (columns - 1)
-                      : 0.0;
+                  final tileWidth = math.max(
+                    1.0,
+                    (constraints.maxWidth -
+                            (AppSpacing.gridGap * (columns - 1))) /
+                        columns,
+                  );
 
                   return Wrap(
-                    spacing: tileSpacing.clamp(0, AppSpacing.gridGap),
+                    spacing: AppSpacing.gridGap,
                     runSpacing: AppSpacing.lg,
                     children: [
                       for (
@@ -431,6 +645,8 @@ class _MediaBrowseScaffoldState<T>
                         itemIndex++
                       )
                         _BrowsePosterTile(
+                          width: tileWidth,
+                          shape: widget.tileShape,
                           title: widget.titleExtractor(
                             section.items[itemIndex],
                           ),
@@ -490,42 +706,47 @@ class _MediaBrowseScaffoldState<T>
   }
 
   List<T> _filteredItems(List<T> items) {
+    final cutoff = widget.cutoffUnmetIds;
     return _sortedItems(items)
         .where(
           (item) => mediaBrowseFilterMatches(
             _selectedFilter,
             widget.statusExtractor?.call(item),
+            belowCutoff:
+                cutoff != null && cutoff.contains(widget.idExtractor(item)),
           ),
         )
         .toList(growable: false);
   }
 
-  /// [items] in display order, computed once per library list — see
-  /// [_sortedSource]. The result is never mutated afterwards.
+  /// [items] in display order, computed once per (library list, chosen order) —
+  /// see [_sortedSource]. The result is never mutated afterwards.
   List<T> _sortedItems(List<T> items) {
     final cached = _sorted;
-    if (cached != null && identical(items, _sortedSource)) {
+    if (cached != null &&
+        identical(items, _sortedSource) &&
+        _sortedUnder == _sortIndex) {
       return cached;
     }
 
-    final sortedItems = [...items]
-      ..sort((left, right) {
-        final bySortTitle = _sortKeyFor(left).compareTo(_sortKeyFor(right));
-        if (bySortTitle != 0) {
-          return bySortTitle;
-        }
-        return widget
-            .titleExtractor(left)
-            .toLowerCase()
-            .compareTo(widget.titleExtractor(right).toLowerCase());
-      });
+    final sortedItems = [...items]..sort(_sortOptions[_sortIndex].compare);
 
     _sortedSource = items;
     _sorted = sortedItems;
+    _sortedUnder = _sortIndex;
     return sortedItems;
   }
 
   List<_MediaBrowseSection<T>> _buildSections(List<T> items) {
+    // One unlabelled run under any order but Title A–Z. The headings used to be
+    // unconditional, so a date-added wall printed "A" over a section whose
+    // first title happened to start with one.
+    if (!_sortOptions[_sortIndex].lettered) {
+      final section = _MediaBrowseSection<T>(label: '', startIndex: 0);
+      section.items.addAll(items);
+      return [section];
+    }
+
     final sections = <_MediaBrowseSection<T>>[];
     for (var index = 0; index < items.length; index++) {
       final item = items[index];
@@ -566,41 +787,138 @@ class _MediaBrowseSection<T> {
 }
 
 class _MediaBrowseFilterChips extends StatelessWidget {
+  final List<MediaBrowseFilter> filters;
   final MediaBrowseFilter selectedFilter;
   final Color color;
   final ValueChanged<MediaBrowseFilter> onSelected;
+  final String sortLabel;
+  final List<String> sortOptions;
+  final int selectedSort;
+  final ValueChanged<int> onSortSelected;
 
   const _MediaBrowseFilterChips({
+    required this.filters,
     required this.selectedFilter,
     required this.color,
     required this.onSelected,
+    required this.sortLabel,
+    required this.sortOptions,
+    required this.selectedSort,
+    required this.onSortSelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.sm,
         AppSpacing.lg,
         AppSpacing.md,
       ),
+      // The chips scroll; the sort control does not. It is the one instrument
+      // on this strip that has to stay reachable no matter how many chips a
+      // service declares, and a control that scrolls off the end of a strip it
+      // does not belong to is a control nobody finds.
       child: Row(
         children: [
-          for (final filter in MediaBrowseFilter.values)
-            _MediaBrowseFilterChip(
-              label: switch (filter) {
-                MediaBrowseFilter.all => 'All',
-                MediaBrowseFilter.available => 'Available',
-                MediaBrowseFilter.missing => 'Missing',
-                MediaBrowseFilter.inQueue => 'In Queue',
-              },
-              color: color,
-              selected: selectedFilter == filter,
-              onTap: () => onSelected(filter),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final filter in filters)
+                    _MediaBrowseFilterChip(
+                      label: switch (filter) {
+                        MediaBrowseFilter.all => 'All',
+                        MediaBrowseFilter.available => 'Available',
+                        MediaBrowseFilter.missing => 'Missing',
+                        MediaBrowseFilter.inQueue => 'In Queue',
+                        MediaBrowseFilter.cutoffUnmet => 'Cutoff unmet',
+                        MediaBrowseFilter.unmonitored => 'Unmonitored',
+                      },
+                      color: color,
+                      selected: selectedFilter == filter,
+                      onTap: () => onSelected(filter),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (sortOptions.length > 1)
+            _MediaBrowseSortControl(
+              label: sortLabel,
+              options: sortOptions,
+              selected: selectedSort,
+              onSelected: onSortSelected,
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// `Sort · <label>`, opening the orders this service declared.
+///
+/// One order is not a choice, so the control is only built when there are two —
+/// a menu whose every opening shows the same single item is a control that
+/// cannot fail and cannot help either.
+class _MediaBrowseSortControl extends StatelessWidget {
+  final String label;
+  final List<String> options;
+  final int selected;
+  final ValueChanged<int> onSelected;
+
+  const _MediaBrowseSortControl({
+    required this.label,
+    required this.options,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return PopupMenuButton<int>(
+      tooltip: 'Change sort order',
+      initialValue: selected,
+      onSelected: onSelected,
+      itemBuilder: (context) => [
+        for (var index = 0; index < options.length; index++)
+          PopupMenuItem<int>(value: index, child: Text(options[index])),
+      ],
+      // The hint rides on the child, never on the button: a button is a
+      // semantic boundary and an annotation wrapped around one is dropped.
+      child: Semantics(
+        hint: 'Sorted by $label',
+        child: Container(
+          // 44, and no `VisualDensity.compact` anywhere near it — compact
+          // silently overrides a declared minimum and lands the real target at
+          // 40.
+          constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.swap_vert_rounded,
+                size: 18,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                label,
+                style: AppTheme.chrome(
+                  context,
+                  weight: FontWeight.w600,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -654,6 +972,13 @@ class _MediaBrowseFilterChip extends StatelessWidget {
 }
 
 class _BrowsePosterTile extends StatelessWidget {
+  /// Resolved by the row, not by the tile: the column count is decided against
+  /// [MediaGrid.tileWidthFloor] first and the tiles then fill what is left, so
+  /// a tile never has an opinion about how wide it is.
+  final double width;
+
+  final MediaBrowseTileShape shape;
+
   final String title;
   final String subtitle;
   final ImageSource imageSource;
@@ -662,6 +987,8 @@ class _BrowsePosterTile extends StatelessWidget {
   final VoidCallback onTap;
 
   const _BrowsePosterTile({
+    required this.width,
+    required this.shape,
     required this.title,
     required this.subtitle,
     required this.imageSource,
@@ -670,18 +997,75 @@ class _BrowsePosterTile extends StatelessWidget {
     required this.onTap,
   });
 
+  bool get isCircle => shape == MediaBrowseTileShape.circle;
+
+  /// The portrait or the poster, sized from the width the row resolved.
+  Widget _artwork(BuildContext context) {
+    if (isCircle) {
+      // Square, so the circle is a circle at any column count, and
+      // `MediaPosterCard.circular` brings its own Hero — the rectangular path
+      // has to supply one because `ContentCard` does not.
+      //
+      // No status dot: a circle has no corner to hold one without overlapping
+      // the face, and the caption carries the completeness in words instead.
+      return AspectRatio(
+        aspectRatio: 1,
+        child: MediaPosterCard.circular(
+          heroTag: heroTag,
+          imageUrl: imageSource.url,
+          imageHeaders: imageSource.headers,
+          fallbackIcon: Icons.person_outline,
+        ),
+      );
+    }
+
+    // 2:3 of whatever width the row resolved, rather than a 96×138 pair that
+    // only held at one column count.
+    return AspectRatio(
+      aspectRatio: 2 / 3,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Hero(
+              tag: heroTag,
+              transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
+              child: ContentCard(
+                imageUrl: imageSource.url,
+                httpHeaders: imageSource.headers,
+              ),
+            ),
+          ),
+          if (status != null)
+            Positioned(
+              left: 6,
+              bottom: 6,
+              // Redundant against the parent's `excludeSemantics`, but it keeps
+              // the invariant local: the tile speaks the status, the dot does
+              // not.
+              child: StatusBadge(
+                info: status!,
+                iconOnly: true,
+                excludeFromSemantics: true,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    // The status dot is painted inside the excluded subtree, so it has to be
-    // spoken here or it is lost entirely.
+    // The status is painted inside the excluded subtree — or, on the circular
+    // shape, not painted at all — so it has to be spoken here or it is lost
+    // entirely.
     final spokenValue = joinDisplayParts([
       subtitle,
       status?.semanticLabel,
     ], separator: ', ');
 
     return SizedBox(
-      width: 96,
+      width: width,
       // Labelled as one button: the visible title is truncated to a single line,
       // so a screen reader would otherwise announce a clipped name.
       child: Semantics(
@@ -695,45 +1079,17 @@ class _BrowsePosterTile extends StatelessWidget {
           onTap: onTap,
           borderRadius: AppRadius.borderRadiusMd,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: isCircle
+                ? CrossAxisAlignment.center
+                : CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                width: 96,
-                height: 138,
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: Hero(
-                        tag: heroTag,
-                        transitionOnUserGestures:
-                            MediaPosterCard.flightOnUserGestures,
-                        child: ContentCard(
-                          imageUrl: imageSource.url,
-                          httpHeaders: imageSource.headers,
-                        ),
-                      ),
-                    ),
-                    if (status != null)
-                      Positioned(
-                        left: 6,
-                        bottom: 6,
-                        // Redundant against the parent's `excludeSemantics`,
-                        // but it keeps the invariant local: the tile speaks the
-                        // status, the dot does not.
-                        child: StatusBadge(
-                          info: status!,
-                          iconOnly: true,
-                          excludeFromSemantics: true,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              _artwork(context),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                textAlign: isCircle ? TextAlign.center : TextAlign.start,
                 style: Theme.of(context).textTheme.labelSmall!
                     .weight(FontWeight.w600)
                     .copyWith(color: colorScheme.onSurface),
@@ -743,6 +1099,7 @@ class _BrowsePosterTile extends StatelessWidget {
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: isCircle ? TextAlign.center : TextAlign.start,
                   // Was fontSize 10, below the 11pt floor; the subtitle keeps
                   // its dimmer tone to stay a step under the title.
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(

@@ -86,6 +86,13 @@ class MediaGrid<T> extends StatelessWidget {
   /// The floor a poster is built on: below this width the artwork stops being
   /// readable as artwork and the title under it stops fitting. Chosen so a
   /// 390pt-wide phone keeps exactly three columns.
+  ///
+  /// The measurement this number exists to forbid: a 640pt well asked for the
+  /// most columns it could fit answers **five at 118pt**, under the floor —
+  /// where the same well, held to the floor, answers **four at 151pt**. Every
+  /// grid in the app resolves its count through [columnsFor] for that reason;
+  /// a delegate that rounds the count *up* from a maximum extent reproduces
+  /// the 5-at-118 failure exactly, which is why none of them uses one.
   static const double tileWidthFloor = 130.0;
 
   /// Columns that fit [availableWidth] at or above [tileWidthFloor], never

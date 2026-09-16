@@ -352,6 +352,27 @@ class _LibraryGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The column count comes from the space this grid is actually handed, and
+    // it is resolved by the one helper every other grid uses.
+    //
+    // What was here before claimed the Column Floor Rule and implemented its
+    // opposite. `SliverGridDelegateWithMaxCrossAxisExtent` rounds the count
+    // *up* — `ceil(extent / (max + spacing))` — so a 640pt well answered five
+    // columns of 118pt posters, under the 130pt floor, where four would have
+    // been 151. A maximum extent cannot express a minimum; only a fixed count
+    // computed against the floor can.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = MediaGrid.columnsFor(
+          constraints.maxWidth - (AppSpacing.lg * 2),
+          3,
+        );
+        return _pagedGrid(context, columns);
+      },
+    );
+  }
+
+  Widget _pagedGrid(BuildContext context, int columns) {
     return PagedGridView<int, StreamItem>(
       state: state,
       fetchNextPage: fetchNextPage,
@@ -361,10 +382,8 @@ class _LibraryGrid extends StatelessWidget {
         AppSpacing.lg,
         FloatingNavBarMetrics.getScrollViewBottomPadding(context),
       ),
-      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        // A floor rather than a fixed count, per the Column Floor Rule: a wide
-        // macOS window fills with more posters instead of stretching three.
-        maxCrossAxisExtent: 130 + AppSpacing.gridGap,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
         childAspectRatio: 2 / 3,
         crossAxisSpacing: AppSpacing.gridGap,
         mainAxisSpacing: AppSpacing.gridGap,

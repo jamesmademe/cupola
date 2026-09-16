@@ -89,6 +89,57 @@ void main() {
       );
     });
 
+    test('below cutoff is on disk, and never a gap', () {
+      // A file that is present but under the profile's cutoff is not missing.
+      // The chip is its own question and must not be folded into either bucket,
+      // or the Available/Missing partition stops being one.
+      const belowCutoff = MediaStatusInfo(
+        availability: MediaAvailability.upgradable,
+      );
+      expect(
+        mediaBrowseFilterMatches(
+          MediaBrowseFilter.cutoffUnmet,
+          belowCutoff,
+          belowCutoff: true,
+        ),
+        isTrue,
+      );
+      expect(
+        mediaBrowseFilterMatches(MediaBrowseFilter.available, belowCutoff),
+        isTrue,
+      );
+      expect(
+        mediaBrowseFilterMatches(MediaBrowseFilter.missing, belowCutoff),
+        isFalse,
+      );
+      // And with no id set the chip claims nothing rather than everything.
+      expect(
+        mediaBrowseFilterMatches(MediaBrowseFilter.cutoffUnmet, belowCutoff),
+        isFalse,
+      );
+    });
+
+    test('unmonitored says nothing about the file', () {
+      for (final availability in MediaAvailability.values) {
+        expect(
+          mediaBrowseFilterMatches(
+            MediaBrowseFilter.unmonitored,
+            MediaStatusInfo(availability: availability, unmonitored: true),
+          ),
+          isTrue,
+          reason: '$availability',
+        );
+        expect(
+          mediaBrowseFilterMatches(
+            MediaBrowseFilter.unmonitored,
+            MediaStatusInfo(availability: availability),
+          ),
+          isFalse,
+          reason: '$availability',
+        );
+      }
+    });
+
     test('what is moving is a different question from what is on disk', () {
       const downloading = MediaStatusInfo(
         availability: MediaAvailability.missing,
@@ -448,6 +499,251 @@ void main() {
       },
     );
   });
+
+  group('sort and the chips it decides', () {
+    testWidgets('letter headings appear only under Title A–Z', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: testLibraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+          sorts: [
+            MediaBrowseSort<String>(
+              label: 'Date added',
+              compare: (left, right) => right.compareTo(left),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('media-browse-section-A')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Title A–Z'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Date added').last);
+      await tester.pumpAndSettle();
+
+      // The order changed, so the headings went with it: an "A" over a
+      // date-added run describes nothing.
+      expect(
+        find.byKey(const ValueKey('media-browse-section-A')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('media-browse-section-flat')),
+        findsOneWidget,
+      );
+      expect(find.text('Beta'), findsOneWidget);
+    });
+
+    testWidgets('the Cutoff unmet chip is only offered with a source', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // No source: the chip must not exist. An empty set and an unasked
+      // question would otherwise draw the same control.
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: testLibraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Cutoff unmet'), findsNothing);
+      // Unmonitored rides on the status every screen already resolves, so it
+      // is never conditional.
+      expect(find.text('Unmonitored'), findsOneWidget);
+
+      final withSource = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(withSource.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: withSource,
+          libraryProvider: testLibraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+          cutoffUnmetIds: {'Alpha'.hashCode},
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Cutoff unmet'), findsOneWidget);
+
+      await tester.tap(find.text('Cutoff unmet'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Alpha'), findsOneWidget);
+      expect(find.text('Beta'), findsNothing);
+    });
+
+    testWidgets('the sort control clears a 44pt target', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: testLibraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+          sorts: [
+            MediaBrowseSort<String>(
+              label: 'Date added',
+              compare: (left, right) => right.compareTo(left),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final target = tester.getSize(
+        find.ancestor(
+          of: find.text('Title A–Z'),
+          matching: find.byType(PopupMenuButton<int>),
+        ),
+      );
+      expect(target.height, greaterThanOrEqualTo(44));
+      expect(target.width, greaterThanOrEqualTo(44));
+    });
+
+    testWidgets('one order is no choice, so no control is drawn', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PopupMenuButton<int>), findsNothing);
+    });
+  });
+
+  group('the tile shape is a claim about the artwork', () {
+    testWidgets('the circular wall clips oval and paints no status dot', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: testLibraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+          subtitleExtractor: (_) => '6 albums \u00b7 complete',
+          statusExtractor: (_) =>
+              const MediaStatusInfo(availability: MediaAvailability.available),
+          tileShape: MediaBrowseTileShape.circle,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ClipOval), findsWidgets);
+      // A circle has no corner to hold a dot without covering the face, so the
+      // completeness is in the caption instead — and the caption is what the
+      // screen reader was already given.
+      expect(find.byType(StatusBadge), findsNothing);
+      expect(find.text('6 albums \u00b7 complete'), findsWidgets);
+    });
+
+    testWidgets('the poster wall keeps its dot', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: testLibraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+          statusExtractor: (_) =>
+              const MediaStatusInfo(availability: MediaAvailability.available),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(StatusBadge), findsWidgets);
+    });
+  });
+
+  group('the browse wall holds the column floor', () {
+    testWidgets('tiles fill the row they were given, leaving no gutter', (
+      tester,
+    ) async {
+      // The wall used to pin a 96pt tile and then clamp away the spacing it
+      // had computed to absorb the slack, so every row ended in dead space —
+      // 46pt of it at phone width. The boards are `repeat(N, minmax(0, 1fr))`.
+      await _pumpBrowseWall(tester, const Size(390, 900));
+
+      final wrap = tester.getRect(find.byType(Wrap).first);
+      final rows = _browseRows(tester, 12);
+      final fullRows = rows.values.where(
+        (row) => row.length == rows.values.first.length,
+      );
+
+      for (final row in fullRows) {
+        row.sort((left, right) => left.left.compareTo(right.left));
+        expect(row.first.left, moreOrLessEquals(wrap.left, epsilon: 0.5));
+        expect(row.last.right, moreOrLessEquals(wrap.right, epsilon: 0.5));
+      }
+    });
+
+    testWidgets('a wider frame adds a column instead of stretching three', (
+      tester,
+    ) async {
+      await _pumpBrowseWall(tester, const Size(1280, 900));
+
+      final rows = _browseRows(tester, 12);
+      final widest = rows.values
+          .map((row) => row.length)
+          .reduce((a, b) => a > b ? a : b);
+      expect(widest, greaterThan(3));
+
+      // And the column count it chose is one every tile clears the floor at —
+      // the rule is fewer tiles, never smaller ones.
+      for (final rect in rows.values.expand((row) => row)) {
+        expect(
+          rect.width,
+          greaterThanOrEqualTo(MediaGrid.tileWidthFloor - 0.5),
+        );
+      }
+    });
+  });
 }
 
 Widget _buildTestApp() {
@@ -489,6 +785,9 @@ Widget _buildCustomTestApp({
   String Function(String item)? subtitleExtractor,
   StatusExtractor<String>? statusExtractor,
   void Function(BuildContext context, String item, String heroTag)? onItemTap,
+  List<MediaBrowseSort<String>> sorts = const [],
+  Set<int>? cutoffUnmetIds,
+  MediaBrowseTileShape tileShape = MediaBrowseTileShape.poster,
 }) {
   return UncontrolledProviderScope(
     container: container,
@@ -512,6 +811,9 @@ Widget _buildCustomTestApp({
         settingsSelector: (settings) =>
             (settings.radarrUrl, settings.radarrApiKey),
         onItemTap: onItemTap ?? (_, _, _) {},
+        sorts: sorts,
+        cutoffUnmetIds: cutoffUnmetIds,
+        tileShape: tileShape,
       ),
     ),
   );
@@ -524,4 +826,49 @@ Finder _gridItemGestureDetectorFinder() {
         matching: find.byType(GestureDetector),
       )
       .first;
+}
+
+/// The row of the browse wall a tile was laid out in, keyed by its top edge.
+Map<double, List<Rect>> _browseRows(WidgetTester tester, int itemCount) {
+  final rows = <double, List<Rect>>{};
+  for (var index = 0; index < itemCount; index++) {
+    final title = 'A${index.toString().padLeft(2, '0')}';
+    // Closest `SizedBox` ancestor of the title is the tile's own root box.
+    final tile = find
+        .ancestor(of: find.text(title), matching: find.byType(SizedBox))
+        .first;
+    final rect = tester.getRect(tile);
+    rows.putIfAbsent(rect.top, () => <Rect>[]).add(rect);
+  }
+  return rows;
+}
+
+Future<void> _pumpBrowseWall(WidgetTester tester, Size surface) async {
+  const itemCount = 12;
+  final libraryProvider = FutureProvider<List<String>>(
+    (ref) async => [
+      for (var index = 0; index < itemCount; index++)
+        'A${index.toString().padLeft(2, '0')}',
+    ],
+  );
+  final container = ProviderContainer(
+    overrides: [
+      currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+    ],
+  );
+  addTearDown(container.dispose);
+
+  tester.view.physicalSize = surface;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    _buildCustomTestApp(
+      container: container,
+      libraryProvider: libraryProvider,
+      searchQueryProvider: testSearchQueryProvider,
+      searchResultsProvider: testSearchResultsProvider,
+    ),
+  );
+  await tester.pumpAndSettle();
 }

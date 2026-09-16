@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/domain/radarr_status.dart';
 import 'package:cupola/features/movies/presentation/movies_provider.dart';
@@ -12,6 +13,30 @@ import 'package:cupola/features/movies/presentation/movies_search_provider.dart'
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+
+/// The movie ids Radarr reports under `wanted/cutoff`.
+///
+/// Screen-local because the chip is the only thing that reads it: the Overview's
+/// `radarrCutoffUnmetCountProvider` wants a count, this wants a membership test,
+/// and folding one into the other would make a library chip re-fetch every time
+/// a KPI refreshed.
+///
+/// The honest limit: `getAllCutoff()` answers `[]` on its own failures rather
+/// than throwing, because the endpoint is missing on some *arr builds. So an
+/// empty set here means "Radarr had nothing to say", not strictly "nothing is
+/// below cutoff". A Radarr that is not answering at all never reaches this
+/// chip — the library provider fails first and the wall goes under a fault
+/// band — so the residue is a reachable Radarr with a dead cutoff route, which
+/// reads as an empty chip rather than a wrong number.
+final radarrCutoffUnmetIdsProvider = FutureProvider.autoDispose<Set<int>>((
+  ref,
+) async {
+  final records = await ref.watch(radarrServiceProvider).getAllCutoff();
+  return {
+    for (final record in records.whereType<Map>())
+      if (record['id'] case final int id) id,
+  };
+});
 
 class MoviesScreen extends ConsumerWidget {
   final bool showAppBar;
@@ -57,6 +82,16 @@ class MoviesScreen extends ConsumerWidget {
       },
       showAppBar: showAppBar,
       topPadding: topPadding,
+      sorts: [
+        MediaBrowseSort<RadarrMovie>.dateAdded((movie) => movie.added),
+        MediaBrowseSort<RadarrMovie>.year((movie) => movie.year),
+        MediaBrowseSort<RadarrMovie>.size((movie) => movie.sizeOnDisk),
+      ],
+      // Null until the answer lands, so the chip appears with its set rather
+      // than appearing first and filtering to nothing while the fetch is out.
+      cutoffUnmetIds: ref
+          .watch(radarrCutoffUnmetIdsProvider)
+          .maybeWhen(data: (ids) => ids, orElse: () => null),
       kpiPeek: ServiceKpiPeek(
         kpis: ref.watch(serviceKpiProvider(ServiceKey.radarr)),
         accent: ServiceKey.radarr.accent,
