@@ -285,12 +285,12 @@ class _CodeField extends StatelessWidget {
       // resolved to light-theme `onSurface` (#111827) on a #0A0B11 fill —
       // **1.11:1**, i.e. a compose editor whose contents were invisible in light
       // mode. Against the same fill the dark tone measures 17.55:1.
-      style: Theme.of(
-        context,
-      ).textTheme.bodySmall!.mono.copyWith(color: AppColors.onSurfaceDark),
+      style: Theme.of(context).textTheme.bodySmall!.mono.copyWith(
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
       decoration: InputDecoration(
         filled: true,
-        fillColor: AppColors.surfaceDark,
+        fillColor: Theme.of(context).colorScheme.surface,
         contentPadding: const EdgeInsets.all(14),
         border: OutlineInputBorder(
           borderRadius: AppRadius.borderRadiusMd,

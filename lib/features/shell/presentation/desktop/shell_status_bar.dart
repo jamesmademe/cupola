@@ -133,11 +133,11 @@ class _Figure extends StatelessWidget {
     text,
     maxLines: 1,
     overflow: TextOverflow.ellipsis,
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 11,
       fontWeight: FontWeight.w500,
       height: 1.22,
-      color: AppColors.onSurfaceDimDark,
+      color: CupolaThemeColors.of(context).dimText,
     ),
   );
 }

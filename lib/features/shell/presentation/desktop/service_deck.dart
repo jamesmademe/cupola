@@ -248,7 +248,7 @@ class _GlyphCellState extends ConsumerState<_GlyphCell> {
     if (!configured) {
       background = Colors.transparent;
       border = colorScheme.outlineVariant;
-      glyph = AppColors.onSurfaceDimDark;
+      glyph = CupolaThemeColors.of(context).dimText;
     } else if (offline) {
       background = colorScheme.error.withValues(alpha: 0.1);
       border = colorScheme.error.withValues(alpha: 0.36);
@@ -370,7 +370,7 @@ class _HealthReadout extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: AppColors.onSurfaceDimDark,
+                color: CupolaThemeColors.of(context).dimText,
               ),
             ),
             if (health.unreachable > 0) ...[
@@ -452,7 +452,7 @@ class _JumpPillState extends State<_JumpPill> {
                 Icon(
                   Icons.search_rounded,
                   size: 14,
-                  color: AppColors.onSurfaceDimDark,
+                  color: CupolaThemeColors.of(context).dimText,
                 ),
                 const SizedBox(width: 9),
                 Text(
@@ -460,7 +460,7 @@ class _JumpPillState extends State<_JumpPill> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.onSurfaceDimDark,
+                    color: CupolaThemeColors.of(context).dimText,
                   ),
                 ),
                 const SizedBox(width: 9),
@@ -468,7 +468,7 @@ class _JumpPillState extends State<_JumpPill> {
                   ShellShortcuts.commandDeck,
                   style: TextStyle(
                     fontSize: 10,
-                    color: AppColors.onSurfaceDimDark,
+                    color: CupolaThemeColors.of(context).dimText,
                   ).mono.tabular,
                 ),
               ],

@@ -136,13 +136,13 @@ class _CommandDeckState extends ConsumerState<CommandDeck> {
                   children: [
                     Flexible(
                       child: results.isEmpty
-                          ? const Padding(
+                          ? Padding(
                               padding: EdgeInsets.all(AppSpacing.xl),
                               child: Text(
                                 'Nothing by that name.',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: AppColors.onSurfaceDimDark,
+                                  color: CupolaThemeColors.of(context).dimText,
                                 ),
                               ),
                             )
@@ -215,23 +215,23 @@ class _DeckField extends StatelessWidget {
               autofocus: true,
               onChanged: (_) => onChanged(),
               style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
                 hintText: 'Jump to a service, a title, a screen',
                 hintStyle: TextStyle(
                   fontSize: 13,
-                  color: AppColors.onSurfaceDimDark,
+                  color: CupolaThemeColors.of(context).dimText,
                 ),
               ),
             ),
           ),
           Text(
             'esc to close',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: AppColors.onSurfaceDimDark,
+              color: CupolaThemeColors.of(context).dimText,
             ),
           ),
         ],
@@ -290,7 +290,7 @@ class _EntryRow extends StatelessWidget {
                 size: 15,
                 color: entry.kind == CommandDeckKind.connection
                     ? accent
-                    : AppColors.onSurfaceDimDark,
+                    : CupolaThemeColors.of(context).dimText,
               ),
               const SizedBox(width: AppSpacing.md - 1),
               Expanded(
@@ -311,9 +311,9 @@ class _EntryRow extends StatelessWidget {
                   entry.detail!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: AppColors.onSurfaceDimDark,
+                    color: CupolaThemeColors.of(context).dimText,
                   ),
                 ),
               ],
@@ -362,17 +362,17 @@ class _DeckFooter extends ConsumerWidget {
           for (final hint in hints)
             Text(
               hint,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
-                color: AppColors.onSurfaceDimDark,
+                color: CupolaThemeColors.of(context).dimText,
               ).mono.tabular,
             ),
           Text(
             health.headline,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: AppColors.onSurfaceDimDark,
+              color: CupolaThemeColors.of(context).dimText,
             ),
           ),
         ],

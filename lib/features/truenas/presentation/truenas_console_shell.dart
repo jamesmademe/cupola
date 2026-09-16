@@ -344,7 +344,7 @@ class _AreaRowState extends State<_AreaRow> {
                               : FontWeight.w500,
                           color: selected
                               ? colorScheme.onSurface
-                              : AppColors.onSurfaceDimDark,
+                              : CupolaThemeColors.of(context).dimText,
                         ),
                       ),
                       // The subtitle earns its place here in a way it does not
@@ -355,9 +355,9 @@ class _AreaRowState extends State<_AreaRow> {
                         widget.section.subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
-                          color: AppColors.onSurfaceDimDark,
+                          color: CupolaThemeColors.of(context).dimText,
                         ),
                       ),
                     ],

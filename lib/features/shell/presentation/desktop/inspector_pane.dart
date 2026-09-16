@@ -197,9 +197,9 @@ class _QueueRow extends StatelessWidget {
                   item.subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
-                    color: AppColors.onSurfaceDimDark,
+                    color: CupolaThemeColors.of(context).dimText,
                   ).mono.tabular,
                 ),
               ],
@@ -266,13 +266,13 @@ class _UnreachableCard extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 7),
-                const Text(
+                Text(
                   'No response. Anything they hold is missing from this list.',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                     height: 1.3,
-                    color: AppColors.onSurfaceDimDark,
+                    color: CupolaThemeColors.of(context).dimText,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -365,11 +365,11 @@ class _FinishedToday extends ConsumerWidget {
                       item.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                         height: 1.22,
-                        color: AppColors.onSurfaceDimDark,
+                        color: CupolaThemeColors.of(context).dimText,
                       ),
                     ),
                   ),
@@ -392,12 +392,12 @@ class _SectionLabel extends StatelessWidget {
     padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
     child: Text(
       text.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.4,
         height: 1.2,
-        color: AppColors.onSurfaceDimDark,
+        color: CupolaThemeColors.of(context).dimText,
       ),
     ),
   );
@@ -413,10 +413,10 @@ class _InspectorNote extends StatelessWidget {
     padding: const EdgeInsets.all(AppSpacing.lg),
     child: Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 12,
         height: 1.4,
-        color: AppColors.onSurfaceDimDark,
+        color: CupolaThemeColors.of(context).dimText,
       ),
     ),
   );

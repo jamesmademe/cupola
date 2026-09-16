@@ -505,7 +505,7 @@ class _TerminalLogState extends ConsumerState<_TerminalLog> {
                     // measured 3.73:1 on it in light mode. The dark dim tone
                     // clears AA at 5.30:1.
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      color: AppColors.onSurfaceDimDark,
+                      color: CupolaThemeColors.of(context).dimText,
                     ),
                   ),
                 )

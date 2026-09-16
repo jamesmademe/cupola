@@ -1305,9 +1305,9 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: AppColors.onSurfaceDimDark,
+                    color: CupolaThemeColors.of(context).dimText,
                   ).mono.tabular,
                 ),
               ),
@@ -1329,9 +1329,9 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: AppColors.onSurfaceDimDark,
+                    color: CupolaThemeColors.of(context).dimText,
                   ),
                 ),
               ),

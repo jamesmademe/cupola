@@ -187,7 +187,7 @@ class _Breadcrumb extends StatelessWidget {
           Icon(
             Icons.chevron_right_rounded,
             size: 13,
-            color: AppColors.onSurfaceDimDark,
+            color: CupolaThemeColors.of(context).dimText,
           ),
         );
       }
@@ -198,7 +198,9 @@ class _Breadcrumb extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           fontWeight: isLast ? FontWeight.w700 : FontWeight.w500,
-          color: isLast ? colorScheme.onSurface : AppColors.onSurfaceDimDark,
+          color: isLast
+              ? colorScheme.onSurface
+              : CupolaThemeColors.of(context).dimText,
         ),
       );
       children.add(
@@ -251,7 +253,7 @@ class _CrumbLinkState extends State<_CrumbLink> {
         child: DefaultTextStyle.merge(
           style: TextStyle(
             decoration: _hovered ? TextDecoration.underline : null,
-            decorationColor: AppColors.onSurfaceDimDark,
+            decorationColor: CupolaThemeColors.of(context).dimText,
           ),
           child: widget.child,
         ),
@@ -340,9 +342,9 @@ class _ChromeChipState extends State<_ChromeChip> {
             SizedBox(width: labelled ? 6 : 4),
             Text(
               widget.shortcut!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: AppColors.onSurfaceDimDark,
+                color: CupolaThemeColors.of(context).dimText,
               ).mono.tabular,
             ),
           ],

@@ -197,7 +197,7 @@ class _SectionRowState extends State<_SectionRow> {
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                       color: selected
                           ? colorScheme.onSurface
-                          : AppColors.onSurfaceDimDark,
+                          : CupolaThemeColors.of(context).dimText,
                     ),
                   ),
                 ),

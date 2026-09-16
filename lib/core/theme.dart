@@ -254,6 +254,27 @@ class AppColors {
   static const Color error = Color(0xFFEF4444); // red-500
   static const Color errorContainer = Color(0xFF991B1B); // red-800
   static const Color info = Color(0xFF3B82F6); // blue-500
+
+  /// The ink a *bright* fill takes, when white loses the measurement.
+  ///
+  /// gray-900, the same value [ServiceTheme.foregroundOn] returns. It is a
+  /// constant here rather than a call so `theme.dart` stays a leaf — importing
+  /// `service_theme.dart` would pull a feature file into the palette — and
+  /// `theme_test.dart` re-measures every use of it against `foregroundOn`, so
+  /// the constant cannot quietly become the wrong answer.
+  ///
+  /// The three schemes entries it replaces all assumed white and all lost:
+  /// on the error red white is 3.76:1 against this ink's 4.71:1, on the success
+  /// green 2.28 against 7.79, and on `primaryLight` 2.98 against 5.95. Those
+  /// values are what every filled button, badge and checkbox paints its label
+  /// in — `filledButtonTheme` reads `colorScheme.onPrimary`, and the rest read
+  /// their own pair — so three of the app's filled controls were below AA
+  /// everywhere they appeared.
+  ///
+  /// `onPrimary` is deliberately still white: on brand indigo white measures
+  /// 4.47:1 and this ink 3.97:1, so white wins and the brand keeps its
+  /// familiar reversed-out label.
+  static const Color inkOnBright = Color(0xFF111827);
 }
 
 @immutable
@@ -280,6 +301,24 @@ class CupolaThemeColors extends ThemeExtension<CupolaThemeColors> {
     required this.brandGradientStart,
     required this.brandGradientEnd,
   });
+
+  /// The bundle for [context]'s theme, falling back to [defaults] when the
+  /// extension is absent — which happens in any widget test that pumps a bare
+  /// `MaterialApp`.
+  ///
+  /// The fallback is why this is worth a helper: without it every call site
+  /// writes `theme.extension<CupolaThemeColors>()?.dimText ?? <something>`, and
+  /// the `<something>` is where a dark-theme literal gets in. Eleven files were
+  /// skipping the lookup entirely and painting `AppColors.onSurfaceDimDark` in
+  /// both themes.
+  static CupolaThemeColors of(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.extension<CupolaThemeColors>() ??
+        CupolaThemeColors.defaults(
+          brightness: theme.brightness,
+          colorScheme: theme.colorScheme,
+        );
+  }
 
   factory CupolaThemeColors.defaults({
     required Brightness brightness,
@@ -702,17 +741,17 @@ class AppTheme {
     onPrimaryContainer: AppColors.primaryLighter,
     // Secondary (same as primary for unified look)
     secondary: AppColors.primaryLight,
-    onSecondary: Colors.white,
+    onSecondary: AppColors.inkOnBright,
     secondaryContainer: AppColors.surfaceContainerHighDark,
     onSecondaryContainer: AppColors.onSurfaceVariantDark,
     // Tertiary
     tertiary: AppColors.success,
-    onTertiary: Colors.white,
+    onTertiary: AppColors.inkOnBright,
     tertiaryContainer: AppColors.successContainer,
     onTertiaryContainer: Colors.white,
     // Error
     error: AppColors.error,
-    onError: Colors.white,
+    onError: AppColors.inkOnBright,
     errorContainer: AppColors.errorContainer,
     onErrorContainer: Colors.white,
     // Surface
@@ -756,12 +795,12 @@ class AppTheme {
     onSecondaryContainer: AppColors.onSurfaceLight,
     // Tertiary
     tertiary: AppColors.success,
-    onTertiary: Colors.white,
+    onTertiary: AppColors.inkOnBright,
     tertiaryContainer: const Color(0xFFDCFCE7), // green-100
     onTertiaryContainer: AppColors.successContainer,
     // Error
     error: AppColors.error,
-    onError: Colors.white,
+    onError: AppColors.inkOnBright,
     errorContainer: const Color(0xFFFEE2E2), // red-100
     onErrorContainer: AppColors.errorContainer,
     // Surface

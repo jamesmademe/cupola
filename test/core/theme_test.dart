@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 
 void main() {
@@ -108,6 +109,50 @@ void main() {
     // their hex: gray-500 measured 4.39:1 and gray-400 a failing 2.36:1, so
     // secondary and tertiary text was below WCAG AA on every light screen.
     group('contrast', () {
+      // `theme.dart` cannot call `ServiceTheme.foregroundOn` without importing a
+      // feature file, so the four scheme inks are constants — and this is what
+      // stops a constant from being the wrong answer. Every filled control in
+      // the app paints its label in one of these pairs.
+      test('every filled scheme pair takes the ink that measures better', () {
+        for (final scheme in [
+          AppTheme.darkTheme().colorScheme,
+          AppTheme.lightTheme().colorScheme,
+        ]) {
+          final pairs = <String, (Color, Color)>{
+            'onPrimary': (scheme.onPrimary, scheme.primary),
+            'onSecondary': (scheme.onSecondary, scheme.secondary),
+            'onTertiary': (scheme.onTertiary, scheme.tertiary),
+            'onError': (scheme.onError, scheme.error),
+          };
+          pairs.forEach((name, pair) {
+            final (ink, fill) = pair;
+            expect(
+              ink,
+              ServiceTheme.foregroundOn(fill),
+              reason: '$name on ${scheme.brightness.name}',
+            );
+            expect(
+              _contrast(ink, fill),
+              greaterThanOrEqualTo(3.0),
+              reason: '$name on ${scheme.brightness.name}',
+            );
+          });
+        }
+      });
+
+      test('the fault tone is not a service accent', () {
+        // `warning` and `radarr` were the same byte, so an accent chip and a
+        // fault chip were indistinguishable on every Radarr surface.
+        for (final accent in [
+          AppColors.radarr,
+          AppColors.sabnzbd,
+          AppColors.plex,
+          AppColors.unraid,
+        ]) {
+          expect(AppColors.warning, isNot(accent));
+        }
+      });
+
       test('light secondary and tertiary text clear WCAG AA', () {
         final scheme = AppTheme.lightTheme().colorScheme;
 

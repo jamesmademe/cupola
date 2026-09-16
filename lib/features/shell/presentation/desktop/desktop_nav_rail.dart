@@ -245,7 +245,7 @@ class _DeckKeyHintState extends State<_DeckKeyHint> {
                   fontSize: 10,
                   color: _hovered
                       ? colorScheme.onSurface
-                      : AppColors.onSurfaceDimDark,
+                      : CupolaThemeColors.of(context).dimText,
                 ).mono.tabular,
               ),
             ),
