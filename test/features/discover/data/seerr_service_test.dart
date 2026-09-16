@@ -443,4 +443,43 @@ void main() {
       expect(client.lastGetPath, '/api/v1/service/sonarr/9');
     });
   });
+
+  group('search reachability', () {
+    // The rule: a Seerr that did not answer and a Seerr that found nothing are
+    // different facts, and the caller decides which of them it can render. Both
+    // used to come back as `[]`, so the global search could only ever draw "no
+    // results" for a dead server and had nothing to colour.
+    test('reports the failure when the caller asks for it', () async {
+      client.getException = DioException(
+        requestOptions: RequestOptions(path: '/api/v1/search'),
+        type: DioExceptionType.connectionError,
+      );
+
+      expect(
+        () => service.search('dune', reportFailure: true),
+        throwsA(isA<DioException>()),
+      );
+    });
+
+    test('degrades to an empty list by default', () async {
+      // Seerr's own search-as-you-type field keeps the old behaviour: the user
+      // is mid-word and an error card between keystrokes is noise.
+      client.getException = Exception('boom');
+
+      expect(await service.search('dune'), isEmpty);
+    });
+
+    test('an answer with no matches is not a failure', () async {
+      client.getResponseData = {'results': const <dynamic>[]};
+
+      expect(await service.search('dune', reportFailure: true), isEmpty);
+    });
+
+    test('an empty query is still not a failure', () async {
+      // The empty-term guard runs before the try, so `reportFailure` has
+      // nothing to report and the field starts quiet rather than red.
+      expect(await service.search('', reportFailure: true), isEmpty);
+      expect(client.getCallCount, 0);
+    });
+  });
 }

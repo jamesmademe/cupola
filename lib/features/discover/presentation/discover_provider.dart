@@ -2,6 +2,7 @@ import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/services/domain/request_ordering.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,6 +46,55 @@ final requestsForProvider = FutureProvider.family<List<SeerrRequest>, String>((
     return ref.watch(requestsProvider.future);
   }
   return ref.watch(seerrServiceForProvider(instanceId)).getRequests();
+}, retry: noProviderRetry);
+
+/// How many waiting requests the Seerr home lists before deferring to the full
+/// list.
+///
+/// Its own constant rather than a reuse of `servicesRequestsPreviewLimit`: that
+/// number governs the /services hub, where the Requests region sorts pending
+/// first *without filtering it out of the rest*. A later change to the hub's
+/// budget must not silently re-cut the decisions list on this page.
+const int seerrDecisionsPreviewLimit = 5;
+
+/// The requests waiting on a human, and how many there are in all.
+///
+/// [total] is counted before [preview] is cut, so a header built from it tells
+/// the truth when there are more decisions than the section has room for.
+typedef SeerrDecisions = ({List<SeerrRequest> preview, int total});
+
+/// The Seerr home's first region: what is waiting on a decision.
+///
+/// Derived from [requestsProvider] rather than fetched again — one request list
+/// per Seerr per refresh, and the KPI readout, the hub region and this section
+/// all read the same one.
+///
+/// The filter goes through `isAwaitingApproval`, which reads the request's OWN
+/// status and never `displayStatus`. That is the whole trap on this service:
+/// `displayStatus` lets the media's availability override the request, so a
+/// request that is still `pendingApproval` for a title Radarr already holds
+/// reports as "Available". A decisions list keyed off it would silently drop
+/// exactly the approvals that matter most, and no amount of testing against a
+/// freshly made request would ever surface it.
+///
+/// `noProviderRetry` for the same reason [requestsProvider] carries it, one step
+/// further down: the source has already settled on its first failure, so the ten
+/// backed-off re-runs Riverpod would otherwise do here cannot reach the server
+/// again — they only hold this section in its loading state for the best part of
+/// a minute before showing the same error. The retry that matters is the one on
+/// the card the section draws, which the user presses.
+final seerrDecisionsProvider = FutureProvider<SeerrDecisions>((ref) async {
+  final requests = await ref.watch(requestsProvider.future);
+  final waiting = requests.where(isAwaitingApproval).toList(growable: false);
+  return (
+    // The set is already filtered to pending, so this sort is doing its second
+    // job only: newest first inside the group.
+    preview: sortRequestsPendingFirst(
+      waiting,
+      limit: seerrDecisionsPreviewLimit,
+    ),
+    total: waiting.length,
+  );
 }, retry: noProviderRetry);
 
 // Basic providers for the main Discover screen (Carousels) - fetching page 1

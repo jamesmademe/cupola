@@ -25,6 +25,8 @@ import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_search_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_region_chip.dart';
+import 'package:cupola/features/discover/presentation/widgets/seerr_decisions_section.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -124,6 +126,28 @@ class DiscoverScreen extends ConsumerWidget {
               FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
         children: [
+          // Decisions first, rails after. Seerr is the one media service whose
+          // home is not its catalogue: what is waiting on an approval is the
+          // reason the page is opened, and a trending rail is not. The section
+          // draws nothing at all when nothing is waiting, so on a stack with
+          // auto-approvals this page is exactly what it was.
+          const SeerrDecisionsSection(),
+          // The readout that labels the rails below it — and not the decisions
+          // above it, which no region touches. It sits here rather than in the
+          // header band for that reason. Decision 32: a label with a door, never
+          // a filter.
+          const Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              0,
+              AppSpacing.lg,
+              AppSpacing.xs,
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: DiscoverRegionChip(),
+            ),
+          ),
           const _DiscoverFeatured(),
           DiscoverCarousel(
             title: 'Trending',

@@ -12,6 +12,7 @@ import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_search_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 const _movies = [
   MediaPreview(id: 1, title: 'Movie One', mediaType: 'movie'),
@@ -58,6 +59,34 @@ void main() {
       // Empty rows collapse rather than showing a placeholder message.
       expect(find.text('Popular Movies'), findsNothing);
       expect(find.text('Trending'), findsOneWidget);
+    });
+
+    testWidgets('leads with the decisions and puts the rails under them', (
+      tester,
+    ) async {
+      // Seerr's home is the one that is not its catalogue: approving is what
+      // the phone opens it for, so a waiting request sits above Trending and
+      // above the region readout that labels the rails.
+      await _pumpDiscover(
+        tester,
+        requests: [
+          SeerrRequest(
+            id: 1,
+            status: RequestStatus.pendingApproval,
+            media: const RequestMedia(title: 'Dune', tmdbId: 1),
+            createdAt: '2026-09-15T00:00:00Z',
+            type: 'movie',
+          ),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      final decisions = tester.getTopLeft(find.text('Needs a decision')).dy;
+      expect(
+        decisions,
+        lessThan(tester.getTopLeft(find.text('Region · IT')).dy),
+      );
+      expect(decisions, lessThan(tester.getTopLeft(find.text('Trending')).dy));
     });
 
     testWidgets('renders app bar with title and activity button', (
@@ -153,6 +182,7 @@ Future<void> _pumpDiscover(
   Future<List<MediaPreview>> Function(Ref ref)? tvBuilder,
   String Function(Ref ref)? searchQueryBuilder,
   Future<List<MediaPreview>?> Function(Ref ref)? searchResultsBuilder,
+  List<SeerrRequest> requests = const [],
 }) async {
   // Tall viewport so all catalog rows build (the vertical ListView is lazy).
   tester.view.physicalSize = const Size(1200, 3000);
@@ -165,6 +195,10 @@ Future<void> _pumpDiscover(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // The region chip reads the app setting, which reaches
+        // `sharedPreferencesProvider` — wired in main.dart and throwing
+        // anywhere else. One value is all this screen needs from it.
+        regionProvider.overrideWithValue('IT'),
         discoverTrendingProvider.overrideWith(
           trendingBuilder ?? (ref) async => _trending,
         ),
@@ -183,7 +217,7 @@ Future<void> _pumpDiscover(
           (ref) async => const <MediaPreview>[],
         ),
         movieGenresProvider.overrideWith((ref) async => const <SeerrGenre>[]),
-        requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
+        requestsProvider.overrideWith((ref) async => requests),
         discoverSearchQueryProvider.overrideWith(
           searchQueryBuilder ?? (ref) => '',
         ),

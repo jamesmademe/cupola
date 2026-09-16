@@ -488,10 +488,28 @@ class SeerrService {
   /// been superseded: global search re-runs every service leg on each debounced
   /// keystroke, and a discarded round should stop paying for itself rather than
   /// run to completion.
+  ///
+  /// [reportFailure] decides whether a Seerr that did not answer is allowed to
+  /// look like a Seerr that found nothing — the same switch, the same default
+  /// and the same reasoning as `BaseArrService.lookupItems`, which the three arr
+  /// lookups already took and this one did not.
+  ///
+  /// The default keeps the old behaviour on purpose: inside Seerr's own
+  /// search-as-you-type field the user is mid-word, the box is theirs, and an
+  /// error card that appears and vanishes between keystrokes is noise. It was
+  /// the wrong behaviour for the **global** search, which draws one lane per
+  /// connection. This method used to swallow every failure unconditionally, so
+  /// an unreachable Seerr, a Seerr that refused the API key and a Seerr with no
+  /// match all produced one empty list: the lane could only ever say "no
+  /// results", and there was nothing for it to colour red. Pass true and the
+  /// failure travels, cancellation included — a superseded round is a
+  /// `DioException` of type `cancel`, which the caller that cancelled it already
+  /// knows how to tell from a dead server.
   Future<List<MediaPreview>> search(
     String query, {
     int page = 1,
     CancelToken? cancelToken,
+    bool reportFailure = false,
   }) async {
     if (query.isEmpty) return [];
     try {
@@ -511,7 +529,8 @@ class SeerrService {
           })
           .map((e) => MediaPreview.fromJson(e))
           .toList();
-    } catch (e) {
+    } catch (_) {
+      if (reportFailure) rethrow;
       return [];
     }
   }
