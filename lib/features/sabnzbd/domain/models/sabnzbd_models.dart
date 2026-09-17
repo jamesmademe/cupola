@@ -13,9 +13,33 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// SABnzbd reports decimals with the server's locale separator, so a comma has
 /// to become a dot before parsing — which is why this is not `doubleOrNull`.
-double _asDouble(dynamic value) {
+///
+/// Null when the field was absent, blank or unreadable. Kept separate from
+/// [_asDouble] because the two answers are different facts: a size the server
+/// reported as zero is zero, and a size it never reported is not a size at all
+/// — and the second one has to reach the UI as an absence so the row can drop
+/// the clause instead of printing a fabricated `0 B`.
+double? _asDoubleOrNull(dynamic value) {
+  if (value == null) return null;
   if (value is num) return value.toDouble();
-  return double.tryParse('$value'.replaceAll(',', '.')) ?? 0;
+  final text = '$value'.trim();
+  if (text.isEmpty) return null;
+  return double.tryParse(text.replaceAll(',', '.'));
+}
+
+double _asDouble(dynamic value) => _asDoubleOrNull(value) ?? 0;
+
+/// A size that is only a size when it is above zero.
+///
+/// SABnzbd answers `mb: 0` for a job whose full size it does not yet know — a
+/// fetched-but-unparsed NZB, a job still being grabbed — and zero beside a
+/// gigabyte still to fetch is a contradiction, not a measurement. Folded into
+/// the same absence as a missing field so exactly one branch downstream has to
+/// handle "no total".
+double? _asPositiveDouble(dynamic value) {
+  final parsed = _asDoubleOrNull(value);
+  if (parsed == null || parsed <= 0 || !parsed.isFinite) return null;
+  return parsed;
 }
 
 /// The download queue (`mode=queue`).
@@ -108,6 +132,7 @@ class SabnzbdQueueSlot {
     required this.category,
     required this.timeLeft,
     required this.mbLeft,
+    this.mb,
   });
 
   final String nzoId;
@@ -116,10 +141,46 @@ class SabnzbdQueueSlot {
   final int percentage;
   final String category;
   final String timeLeft;
+
+  /// Megabytes still to fetch for this job (`mbleft`).
   final double mbLeft;
+
+  /// The job's full size in megabytes (`mb`), or null when the slot carried
+  /// no usable one.
+  ///
+  /// Nullable on purpose. `mbleft` alone answers "how much is still coming"
+  /// and says nothing about how big the job is, so `1.2 GB left` reads the
+  /// same on a download a third of the way in as on one that is nearly done.
+  /// `mode=queue` returns `mb` on every slot beside `mbleft`, so the figure is
+  /// a parse away — but a server that omits it must leave the clause off the
+  /// row rather than have a total invented for it.
+  final double? mb;
 
   double get progress => (percentage / 100).clamp(0, 1).toDouble();
   String get sizeLeftLabel => formatMegabytes(mbLeft);
+
+  /// The job's full size, or null when SABnzbd did not report one.
+  String? get sizeLabel {
+    final total = mb;
+    return total == null ? null : formatMegabytes(total);
+  }
+
+  /// What a queue row says about size: `1.2 GB left of 3.4 GB`.
+  ///
+  /// Falls back to `1.2 GB left` — the clause dropped, never `1.2 GB left of
+  /// 0 B` and never an em dash wedged mid-sentence — when [mb] is absent. A
+  /// dash inside a dotted detail line reads as a figure that failed to load,
+  /// where the truth is that this server never claimed one.
+  ///
+  /// The scale is deliberately *not* re-derived into a percentage here:
+  /// SABnzbd reports `percentage` itself, and computing one from a total that
+  /// may be missing is the guess this getter exists to refuse.
+  String get sizeProgressLabel {
+    final total = sizeLabel;
+    return total == null
+        ? '$sizeLeftLabel left'
+        : '$sizeLeftLabel left of $total';
+  }
 
   factory SabnzbdQueueSlot.fromJson(Map<String, dynamic> json) {
     return SabnzbdQueueSlot(
@@ -130,6 +191,10 @@ class SabnzbdQueueSlot {
       category: (json['cat'] ?? '').toString(),
       timeLeft: (json['timeleft'] ?? '').toString(),
       mbLeft: _asDouble(json['mbleft']),
+      // The one field on this slot that is allowed to be absent, and the
+      // reason `_asPositiveDouble` exists: every other figure here has a
+      // defensible zero, a total does not.
+      mb: _asPositiveDouble(json['mb']),
     );
   }
 }

@@ -23,14 +23,28 @@ final _configured = settingsWith(
   sabnzbdApiKey: 'key',
 );
 
-SabnzbdQueue _queue({bool paused = false}) => SabnzbdQueue(
+SabnzbdQueue _queue({
+  bool paused = false,
+  List<SabnzbdQueueSlot> slots = const [],
+}) => SabnzbdQueue(
   paused: paused,
   status: paused ? 'Paused' : 'Downloading',
   kbPerSec: 2048,
   mbLeft: 1500,
   mb: 3000,
   timeLeft: '0:12:30',
-  slots: const [],
+  slots: slots,
+);
+
+SabnzbdQueueSlot _slot({double mbLeft = 1024, double? mb}) => SabnzbdQueueSlot(
+  nzoId: 'SABnzbd_nzo_1',
+  filename: 'Dune.Part.Two.2024.2160p',
+  status: 'Downloading',
+  percentage: 50,
+  category: 'movies',
+  timeLeft: '0:12:30',
+  mbLeft: mbLeft,
+  mb: mb,
 );
 
 /// Finds the queue toggle by its label.
@@ -176,5 +190,62 @@ void main() {
     expect(find.text('Add NZB by URL'), findsOneWidget);
     expect(find.byType(DropdownButtonFormField<String>), findsNothing);
     expect(find.text('Loading categories…'), findsNothing);
+  });
+
+  testWidgets('a queue row states how big the job is, not only what is left', (
+    tester,
+  ) async {
+    // The gap this row carried: `1.0 GB` on its own reads identically on a
+    // download a third of the way in and on one about to finish — and it did
+    // not even say it was a remainder. `mode=queue` returns `mb` on every slot
+    // beside `mbleft`, so the second figure was a parse away.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _configured),
+          ..._ambient(),
+          sabnzbdQueueProvider.overrideWith(
+            (ref) async => _queue(slots: [_slot(mbLeft: 1024, mb: 4096)]),
+          ),
+          sabnzbdCategoriesProvider.overrideWith(
+            (ref) async => const <String>[],
+          ),
+        ],
+        child: const MaterialApp(home: SabnzbdScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Downloading · 0:12:30 · 1.0 GB left of 4.0 GB'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a slot with no total drops the clause instead of faking it', (
+    tester,
+  ) async {
+    // Never `of 0 B`, never a dash mid-sentence. A server that did not answer
+    // leaves the row saying exactly what it does know.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _configured),
+          ..._ambient(),
+          sabnzbdQueueProvider.overrideWith(
+            (ref) async => _queue(slots: [_slot(mbLeft: 1024)]),
+          ),
+          sabnzbdCategoriesProvider.overrideWith(
+            (ref) async => const <String>[],
+          ),
+        ],
+        child: const MaterialApp(home: SabnzbdScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Downloading · 0:12:30 · 1.0 GB left'), findsOneWidget);
+    expect(find.textContaining('of 0 B'), findsNothing);
+    expect(find.textContaining('—'), findsNothing);
   });
 }

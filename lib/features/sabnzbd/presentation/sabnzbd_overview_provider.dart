@@ -298,7 +298,7 @@ class SabnzbdQueueRow {
   /// The release, as SABnzbd names it.
   final String name;
 
-  /// `downloading · 15.2 GB left · 2 min · movies`.
+  /// `downloading · 15.2 GB left of 40.1 GB · 2 min · movies`.
   final String detail;
 
   final StatusTone tone;
@@ -352,7 +352,12 @@ SabnzbdQueueSection sabnzbdQueuePreview(
         name: slot.filename,
         detail: joinDisplayParts([
           sabnzbdStatusLabel(slot.status),
-          '${slot.sizeLeftLabel} left',
+          // `1.2 GB left of 3.4 GB` — the remainder *and* the job's own size,
+          // because the remainder alone is the same sentence a third of the
+          // way in as it is at the end. The total is dropped rather than
+          // dashed when `mode=queue` sent none, for the reason the ETA below
+          // is dropped: this section prints what the server stood behind.
+          slot.sizeProgressLabel,
           // Absent rather than `—` when SABnzbd has no per-job estimate: a
           // queued job has no ETA to report and never claimed one, and a dash
           // in a dotted line reads as a value that failed to load.

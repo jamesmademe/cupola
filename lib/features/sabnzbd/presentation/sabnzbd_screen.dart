@@ -332,10 +332,16 @@ class _QueueTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return DownloadQueueTile(
       title: slot.filename,
+      // `1.2 GB left of 3.4 GB`, not the bare remainder this row used to
+      // print. Remaining alone reads identically at 30% and at 95%, which is
+      // the one thing a queue row is looked at to tell apart — and the bare
+      // figure did not even say it was a remainder. The clause is dropped
+      // whole when the slot carried no total; see
+      // `SabnzbdQueueSlot.sizeProgressLabel`.
       subtitle: <String>[
         if (slot.status.isNotEmpty) slot.status,
         if (slot.timeLeft.isNotEmpty) slot.timeLeft,
-        slot.sizeLeftLabel,
+        slot.sizeProgressLabel,
       ].join(' · '),
       progress: slot.progress,
       percentage: slot.percentage,

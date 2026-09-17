@@ -291,6 +291,51 @@ void main() {
       expect(row.isFault, isFalse);
     });
 
+    test('a row states the job\'s size beside what is left of it', () {
+      // `1.0 GB left` alone is the same sentence at 30% and at 95%. The total
+      // rides in the same `mode=queue` slot as the remainder, so the row that
+      // had one figure had both available all along.
+      final row = sabnzbdQueuePreview(
+        _queue(
+          slots: [
+            _slot(
+              filename: 'Dune.Part.Two.2024.2160p',
+              status: 'Downloading',
+              percentage: 72,
+              mbLeft: 1024,
+              mb: 4096,
+              timeLeft: '0:02:00',
+              category: 'movies',
+            ),
+          ],
+        ),
+      ).rows.single;
+
+      expect(
+        row.detail,
+        'downloading · 1.0 GB left of 4.0 GB · 2 min · movies',
+      );
+      expect(
+        row.spoken,
+        'Dune.Part.Two.2024.2160p, 72% downloaded, downloading, '
+        '1.0 GB left of 4.0 GB, 2 min, movies',
+      );
+    });
+
+    test('a slot with no total drops the clause rather than dashing it', () {
+      // Same rule the ETA below follows: the section prints what the server
+      // stood behind. Never `of 0 B`, and never a dash inside a dotted line,
+      // which reads as a figure that failed to load.
+      final row = sabnzbdQueuePreview(
+        _queue(slots: [_slot(status: 'Downloading', mbLeft: 1024)]),
+      ).rows.single;
+
+      expect(row.detail, 'downloading · 1.0 GB left · 5 min');
+      expect(row.detail, isNot(contains('of')));
+      expect(row.detail, isNot(contains('—')));
+      expect(row.detail, isNot(contains('0 B')));
+    });
+
     test('a queued job shows 0% and no invented estimate', () {
       // 0% is a percentage the server answered — "not started" — so it prints.
       // The ETA does not: a queued job has none, and a dash inside a dotted
@@ -578,6 +623,7 @@ SabnzbdQueueSlot _slot({
   String status = 'Downloading',
   int percentage = 50,
   double mbLeft = 100,
+  double? mb,
   String timeLeft = '0:05:00',
   String category = '',
 }) => SabnzbdQueueSlot(
@@ -588,6 +634,7 @@ SabnzbdQueueSlot _slot({
   category: category,
   timeLeft: timeLeft,
   mbLeft: mbLeft,
+  mb: mb,
 );
 
 SabnzbdHistorySlot _history({

@@ -214,6 +214,7 @@ void main() {
             status: 'Downloading',
             percentage: 72,
             mbLeft: 1024,
+            mb: 4096,
             timeLeft: '0:02:00',
             category: 'movies',
           ),
@@ -221,10 +222,13 @@ void main() {
       ),
     );
 
+    // One sentence, and the size clause carries both halves of the fact: what
+    // is left, and of how much. The remainder on its own reads the same at 30%
+    // as at 95%, which is exactly what a listener cannot see the bar for.
     expect(
       find.semantics.byLabel(
         'Dune.Part.Two.2024.2160p, 72% downloaded, '
-        'downloading, 1.0 GB left, 2 min, movies',
+        'downloading, 1.0 GB left of 4.0 GB, 2 min, movies',
       ),
       findsOneWidget,
     );
@@ -423,6 +427,7 @@ SabnzbdQueueSlot _slot({
   String status = 'Downloading',
   int percentage = 50,
   double mbLeft = 100,
+  double? mb,
   String timeLeft = '0:05:00',
   String category = '',
 }) => SabnzbdQueueSlot(
@@ -433,6 +438,7 @@ SabnzbdQueueSlot _slot({
   category: category,
   timeLeft: timeLeft,
   mbLeft: mbLeft,
+  mb: mb,
 );
 
 SabnzbdHistorySlot _history({
