@@ -26,8 +26,10 @@ import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
 import 'package:cupola/features/series/presentation/series_screen.dart';
 import 'package:cupola/features/series/presentation/series_detail_screen.dart';
+import 'package:cupola/features/series/presentation/sonarr_overview_screen.dart';
 import 'package:cupola/features/music/presentation/music_screen.dart';
 import 'package:cupola/features/music/presentation/music_detail_screen.dart';
+import 'package:cupola/features/music/presentation/lidarr_overview_screen.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
@@ -50,6 +52,7 @@ import 'package:cupola/features/import/presentation/manual_import_review_screen.
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/torrent_detail_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/widgets/qbittorrent_actions_bar.dart';
@@ -64,19 +67,26 @@ import 'package:cupola/features/prowlarr/presentation/prowlarr_settings_screen.d
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider_list_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_app_profiles_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_tags_screen.dart';
-import 'package:cupola/features/readarr/presentation/readarr_screen.dart';
+import 'package:cupola/features/readarr/presentation/readarr_overview_screen.dart';
 import 'package:cupola/features/readarr/presentation/readarr_library_screen.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_screen.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_screen.dart';
+import 'package:cupola/features/npm/presentation/npm_overview_screen.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart';
+import 'package:cupola/features/transmission/presentation/transmission_overview_screen.dart';
 import 'package:cupola/features/transmission/presentation/transmission_screen.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_overview_screen.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_screen.dart';
 import 'package:cupola/features/stream/presentation/stream_libraries_screen.dart';
+import 'package:cupola/features/stream/presentation/stream_overview_screen.dart';
 import 'package:cupola/features/stream/presentation/stream_item_screen.dart';
 import 'package:cupola/features/stream/presentation/stream_library_screen.dart';
+import 'package:cupola/features/unraid/presentation/unraid_overview_screen.dart';
 import 'package:cupola/features/unraid/presentation/unraid_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_series_detail_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_wanted_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_agent_lens_button.dart';
+import 'package:cupola/features/dockge/presentation/dockge_overview_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_stack_detail_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_stack_edit_screen.dart';
@@ -802,6 +812,14 @@ RouteBase _sonarrRoutes() {
 /// throws rather than quietly rendering a placeholder — a seventh tab added to
 /// that table with no case here is a bar and a router disagreeing.
 GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.sonarr,
+      tab: ServiceTab.overview,
+      child: SonarrOverviewScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
   ServiceTab.library => _page(
     tab.segment,
     (state) => const ServiceTabScaffold(
@@ -833,13 +851,6 @@ GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  // Overview is in this list and that is the honest state, not an oversight:
-  // Sonarr's home has always BEEN the library grid, and there is no
-  // identity-and-readouts page for it the way `RadarrOverviewScreen` is
-  // Radarr's. Drawing the grid here as well would give the bar two tabs showing
-  // one thing, which teaches the wrong shape of the service; the well says what
-  // is true, and Library is one tap away.
-  //
   // Calendar is not a missing screen but a missing call, and it is the one tab
   // Radarr could build and Sonarr cannot: a film's dates are on the film, so
   // Radarr's calendar is derivable from the library list it already holds,
@@ -847,7 +858,6 @@ GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
   // `GET /api/v3/calendar`, which `SonarrService` has never called. Queue,
   // Wanted and History are the same shape as Radarr's and wait on the same
   // work.
-  ServiceTab.overview ||
   ServiceTab.calendar ||
   ServiceTab.queue ||
   ServiceTab.wanted ||
@@ -952,6 +962,14 @@ RouteBase _lidarrRoutes() {
 
 /// The route at the root of one Lidarr tab.
 GoRoute _lidarrBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.lidarr,
+      tab: ServiceTab.overview,
+      child: LidarrOverviewScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
   ServiceTab.library => _page(
     tab.segment,
     (state) => const ServiceTabScaffold(
@@ -979,14 +997,10 @@ GoRoute _lidarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  // Overview for the reason [_sonarrBranchRoot] gives: Lidarr's home is the
-  // artist wall and there is no readouts page behind it yet.
-  //
   // Calendar is blocked the same way Sonarr's is, one level further down: a
   // release date belongs to an *album*, and `GET /api/v1/artist` does not carry
   // the albums. It needs `GET /api/v1/calendar`, which `LidarrService` has
   // never called.
-  ServiceTab.overview ||
   ServiceTab.calendar ||
   ServiceTab.queue ||
   ServiceTab.wanted ||
@@ -1069,6 +1083,14 @@ RouteBase _qbittorrentRoutes() {
 /// throws rather than quietly rendering a placeholder: a fourth tab added to
 /// that table with no case here is a bar and a router disagreeing.
 GoRoute _qbittorrentBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.qbittorrent,
+      tab: ServiceTab.overview,
+      child: QbittorrentOverviewScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
   ServiceTab.queue => _page(
     tab.segment,
     (state) => const ServiceTabScaffold(
@@ -1087,15 +1109,11 @@ GoRoute _qbittorrentBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  // Overview is a placeholder because it is not built, not because it cannot
-  // be: everything its board asks for — transfer rates, the session totals, the
-  // per-state counts — is already on `getTransferInfo()` and the torrent list.
-  //
   // RSS is blocked, and on endpoints rather than on work: `QbittorrentService`
   // calls nothing under `/api/v2/rss/` at all, so the feed tree
   // (`GET /api/v2/rss/items`), the auto-download rules (`GET /api/v2/rss/rules`)
   // and everything that writes them have no client to call.
-  ServiceTab.overview || ServiceTab.rss => _page(
+  ServiceTab.rss => _page(
     tab.segment,
     (state) => ServiceTabScaffold(
       service: ServiceKey.qbittorrent,
@@ -1380,8 +1398,19 @@ RouteBase _dockgeRoutes() {
 /// a stack's combined terminal and streams `terminalWrite` back, so the wire is
 /// there — what is missing is the screen, and a tab-level terminal has one
 /// question this pass does not get to answer: which stack it is attached to
-/// when no stack was named.
+/// when no stack was named. `DockgeOverviewScreen` answers it sideways rather
+/// than pretending to: every stack row it draws opens that stack's detail,
+/// which already carries the live combined terminal for a stack the user has
+/// just named by tapping it.
 GoRoute _dockgeBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.dockge,
+      tab: ServiceTab.overview,
+      child: DockgeOverviewScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
   // The list that was the whole service. Its own app bar stays off: the band
   // above draws the title and the lens, and the tab bar sits under it.
   ServiceTab.stacks => _page(
@@ -1421,7 +1450,7 @@ GoRoute _dockgeBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  ServiceTab.overview || ServiceTab.terminal => _page(
+  ServiceTab.terminal => _page(
     tab.segment,
     (state) => ServiceTabScaffold(
       service: ServiceKey.dockge,
@@ -1644,20 +1673,18 @@ RouteBase _readarrRoutes() {
 
 /// The route at the root of one Readarr tab.
 ///
-/// Readarr is the one arr whose Overview is real on the first day of the model,
-/// and not because more was built for it: `ReadarrScreen` was already a
-/// readouts-and-sections dashboard rather than a browse grid, so the tab model
-/// found its Overview written and only had to stop calling it the home.
+/// Readarr's Overview is `ReadarrOverviewScreen`, the page written against the
+/// board rather than the old `ReadarrScreen` home the model first borrowed: it
+/// draws only the regions the client can fill — the queue's faults, the
+/// library's backlog, where the books are filed, what happened today — and
+/// leaves out the two the board asks for and `ReadarrService` cannot answer.
 GoRoute _readarrBranchRoot(ServiceTab tab) => switch (tab) {
   ServiceTab.overview => _page(
     tab.segment,
     (state) => const ServiceTabScaffold(
       service: ServiceKey.readarr,
       tab: ServiceTab.overview,
-      child: ReadarrScreen(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: ReadarrOverviewScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.library => _page(
@@ -1737,10 +1764,16 @@ RouteBase _sabnzbdRoutes() {
 /// Branch order is `tabsFor(ServiceKey.sabnzbd)` and nothing else, and the
 /// wildcard throws for the reason it throws everywhere else in this file.
 GoRoute _sabnzbdBranchRoot(ServiceTab tab) => switch (tab) {
-  // `SabnzbdScreen` is the whole service today — the queue *and* the readouts
-  // above it — so Queue takes it unsplit and Overview waits rather than the two
-  // tabs drawing the same thing. Separating them is the Overview's work, not
-  // the router's.
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.sabnzbd,
+      tab: ServiceTab.overview,
+      child: SabnzbdOverviewScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
+  // `SabnzbdScreen` is still the whole queue page — the readouts above it now
+  // have their own home on Overview — so Queue takes it unsplit.
   ServiceTab.queue => _page(
     tab.segment,
     (state) => const ServiceTabScaffold(
@@ -1752,8 +1785,8 @@ GoRoute _sabnzbdBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  // Overview and History are placeholders but not blocked: `mode=queue` and
-  // `mode=history` are both already called, so both tabs are a screen away.
+  // History is a placeholder but not blocked: `mode=history` is already called,
+  // so the tab is a screen away.
   //
   // **Servers is blocked**, and on a narrower thing than a missing call.
   // `mode=server_stats` is called, but `SabnzbdServerStats.fromJson` keeps one
@@ -1762,7 +1795,7 @@ GoRoute _sabnzbdBranchRoot(ServiceTab tab) => switch (tab) {
   // `mode=status`, which carries each server's connection count, its article
   // errors and whether it is active, is never called, and neither is
   // `mode=get_config&section=servers` for the configured list.
-  ServiceTab.overview || ServiceTab.history || ServiceTab.servers => _page(
+  ServiceTab.history || ServiceTab.servers => _page(
     tab.segment,
     (state) => ServiceTabScaffold(
       service: ServiceKey.sabnzbd,
@@ -1822,8 +1855,16 @@ RouteBase _nzbgetRoutes() {
 /// over five cases rather than three, which is exactly when a hand-kept list
 /// starts drifting.
 GoRoute _nzbgetBranchRoot(ServiceTab tab) => switch (tab) {
-  // `NzbgetScreen` is the whole service today, readouts and group list
-  // together, so Queue takes it unsplit for the reason SABnzbd's does.
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.nzbget,
+      tab: ServiceTab.overview,
+      child: NzbgetOverviewScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
+  // `NzbgetScreen` is still readouts and group list together, so Queue takes it
+  // unsplit for the reason SABnzbd's does.
   ServiceTab.queue => _page(
     tab.segment,
     (state) => const ServiceTabScaffold(
@@ -1832,18 +1873,15 @@ GoRoute _nzbgetBranchRoot(ServiceTab tab) => switch (tab) {
       child: NzbgetScreen(showAppBar: false, topPadding: _serviceTabTopPadding),
     ),
   ),
-  // Overview and History are a screen away, not an endpoint away: `status`,
-  // `listgroups` and `history` are all already called.
+  // History is a screen away, not an endpoint away: `history` is already
+  // called.
   //
   // **Feeds and Messages are blocked**, and on whole RPC methods rather than on
   // fields. `NzbgetClient` calls thirteen methods and none of them is a feed
   // one — no `listfeeds` for the configured feeds, no `viewfeed`/`fetchfeed`
   // for their contents — and none is a log one: `log` and `loadlog` are what
   // the Messages tab is, and neither has ever been sent.
-  ServiceTab.overview ||
-  ServiceTab.history ||
-  ServiceTab.feeds ||
-  ServiceTab.messages => _page(
+  ServiceTab.history || ServiceTab.feeds || ServiceTab.messages => _page(
     tab.segment,
     (state) => ServiceTabScaffold(
       service: ServiceKey.nzbget,
@@ -1917,7 +1955,22 @@ RouteBase _unraidRoutes() {
 /// bar is generated from the same list and taps it by index. The wildcard
 /// throws rather than quietly rendering a placeholder: a seventh tab added to
 /// that table with no case here is a bar and a router disagreeing.
+///
+/// **VMs, Notifications and Shares stay placeholders, and are blocked rather
+/// than unbuilt.** `UnraidClient` speaks three documents — `info`, `array`,
+/// `dockerContainers` — and the committed SDL declares no `vms`, no
+/// `notifications` and no `shares` query, so there is nothing for a screen to
+/// read. `UnraidOverviewScreen` leaves those regions out for the same reason
+/// instead of drawing them as zeroes.
 GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.unraid,
+      tab: ServiceTab.overview,
+      child: UnraidOverviewScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
   ServiceTab.array => _page(
     tab.segment,
     (state) => const ServiceTabScaffold(
@@ -1940,10 +1993,7 @@ GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  ServiceTab.overview ||
-  ServiceTab.vms ||
-  ServiceTab.notifications ||
-  ServiceTab.shares => _page(
+  ServiceTab.vms || ServiceTab.notifications || ServiceTab.shares => _page(
     tab.segment,
     (state) => ServiceTabScaffold(
       service: ServiceKey.unraid,
@@ -2004,6 +2054,14 @@ RouteBase _transmissionRoutes() {
 /// router disagreeing, and that has to fail loudly rather than light a tab that
 /// shows nothing.
 GoRoute _transmissionBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.transmission,
+      tab: ServiceTab.overview,
+      child: TransmissionOverviewScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
   ServiceTab.queue => _page(
     tab.segment,
     (state) => const ServiceTabScaffold(
@@ -2015,11 +2073,8 @@ GoRoute _transmissionBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  // Three placeholders, and they are blocked three different distances away —
-  // which is why each is named rather than waved at as "not built".
-  //
-  // **Overview** is the shortest: `session-stats` and the torrent list already
-  // carry every figure its board asks for.
+  // Two placeholders, and they are blocked different distances away — which is
+  // why each is named rather than waved at as "not built".
   //
   // **Labels** can be *read* today — `labels` is parsed off every torrent by
   // `TransmissionTorrent.fromJson` — but a Labels tab that cannot assign one is
@@ -2033,7 +2088,7 @@ GoRoute _transmissionBranchRoot(ServiceTab tab) => switch (tab) {
   // incomplete directory, blocklist or queue sizes — and `session-set` is
   // called with `alt-speed-enabled` and nothing else. The tab needs both halves
   // widened, not a new RPC method.
-  ServiceTab.overview || ServiceTab.labels || ServiceTab.session => _page(
+  ServiceTab.labels || ServiceTab.session => _page(
     tab.segment,
     (state) => ServiceTabScaffold(
       service: ServiceKey.transmission,
@@ -2111,7 +2166,22 @@ RouteBase _npmRoutes() {
 /// because the bar is generated from the same list and taps it by index. The
 /// wildcard throws rather than quietly rendering a placeholder: a sixth tab
 /// added to that table with no case here is a bar and a router disagreeing.
+///
+/// **Access lists and Audit log stay placeholders, and both are blocked on an
+/// endpoint rather than on work**: `NpmClient` calls neither
+/// `GET /api/nginx/access-lists` nor `GET /api/audit-log`.
+/// `NpmOverviewScreen` omits the two regions the board draws from them for that
+/// same reason — the tabs are where the work belongs the day the client can
+/// read them.
 GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.overview => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.nginxProxyManager,
+      tab: ServiceTab.overview,
+      child: NpmOverviewScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
   ServiceTab.proxyHosts => _page(
     tab.segment,
     (state) => const ServiceTabScaffold(
@@ -2134,7 +2204,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  ServiceTab.overview || ServiceTab.accessLists || ServiceTab.auditLog => _page(
+  ServiceTab.accessLists || ServiceTab.auditLog => _page(
     tab.segment,
     (state) => ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
@@ -2267,9 +2337,14 @@ RouteBase _streamRoutes(ServiceKey service) {
 /// rather than quietly rendering a placeholder: a seventh tab added to that
 /// table with no case here is a bar and a router disagreeing.
 ///
-/// Every tab but Libraries is a placeholder, and the two services are
-/// placeholders for different reasons — which is the honest split given that
-/// Jellyfin has been run against a live server and Plex has not:
+/// Overview and Libraries are real on both servers, and `StreamOverviewScreen`
+/// is mounted twice from one class — the same shape every other screen in that
+/// folder has, where the only per-service input is the [ServiceKey] and the
+/// difference between the two servers lives in what their clients can answer.
+///
+/// The rest are placeholders, and the two services are placeholders for
+/// different reasons — which is the honest split given that Jellyfin has been
+/// run against a live server and Plex has not:
 ///
 ///  * **Jellyfin.** Users is unbuilt rather than blocked: `getViewers()` already
 ///    reads `/Users` for the settings viewer picker, so the tab has a client the
@@ -2337,7 +2412,17 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
         ),
       ],
     ),
-    ServiceTab.overview ||
+    ServiceTab.overview => _page(
+      tab.segment,
+      (state) => ServiceTabScaffold(
+        service: service,
+        tab: ServiceTab.overview,
+        child: StreamOverviewScreen(
+          service: service,
+          topPadding: _serviceTabTopPadding,
+        ),
+      ),
+    ),
     ServiceTab.users ||
     ServiceTab.devices ||
     ServiceTab.tasks ||

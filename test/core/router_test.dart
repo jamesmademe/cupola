@@ -5,23 +5,35 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/dockge/presentation/dockge_overview_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_stack_detail_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_stack_edit_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_screen.dart';
+import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
+import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
+import 'package:cupola/features/music/presentation/lidarr_overview_screen.dart';
 import 'package:cupola/features/music/presentation/music_detail_screen.dart';
+import 'package:cupola/features/npm/presentation/npm_overview_screen.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_overview_screen.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_overview_screen.dart';
 import 'package:cupola/features/prowlarr/data/prowlarr_service.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_overview_screen.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_screen.dart';
+import 'package:cupola/features/readarr/presentation/readarr_overview_screen.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/presentation/series_detail_screen.dart';
+import 'package:cupola/features/series/presentation/sonarr_overview_screen.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
@@ -30,6 +42,9 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/stream/presentation/stream_item_screen.dart';
+import 'package:cupola/features/stream/presentation/stream_overview_screen.dart';
+import 'package:cupola/features/transmission/presentation/transmission_overview_screen.dart';
+import 'package:cupola/features/unraid/presentation/unraid_overview_screen.dart';
 import 'package:cupola/features/unraid/presentation/unraid_screen.dart';
 import 'package:cupola/features/stream/presentation/stream_libraries_screen.dart';
 import 'package:cupola/features/stream/presentation/stream_library_screen.dart';
@@ -450,6 +465,73 @@ void main() {
       },
     );
 
+    testWidgets('every Overview that has been built is the one that draws', (
+      tester,
+    ) async {
+      // A branch that resolves is not a branch that shows the right page: for
+      // months every one of these tabs resolved to `ServiceTabPlaceholder`,
+      // which is a legitimate destination, so the location assertions above
+      // stayed green while eight Overviews sat in the tree reachable by
+      // nothing. This table is the one that would have caught it — it names
+      // the widget each Overview must build, and the `findsNothing` on the
+      // placeholder is what fails when a screen is unmounted again.
+      //
+      // Every one of the sixteen services on the tab model is listed, which
+      // it can be now that the last five Overviews are mounted: nothing on
+      // this model draws a placeholder on its first tab any more. TrueNAS is
+      // absent because it has no bar at all — `tabsFor` returns null for it by
+      // design, the console being ten sections that do not fit on one.
+      //
+      // Jellyfin and Plex both name `StreamOverviewScreen`, and that is the
+      // assertion rather than an accident of the table: one screen serves both
+      // servers, parameterised by `ServiceKey`, the way every other surface in
+      // that folder is.
+      //
+      // No fake needed: this harness leaves every service unconfigured and
+      // each of these screens checks `isServiceConfigured` before it reaches a
+      // provider, so nothing is requested and no retry timer outlives the case.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      final overviews = <String, Type>{
+        ServiceRoutes.radarrOverview: RadarrOverviewScreen,
+        ServiceRoutes.sonarrOverview: SonarrOverviewScreen,
+        ServiceRoutes.lidarrOverview: LidarrOverviewScreen,
+        ServiceRoutes.readarrOverview: ReadarrOverviewScreen,
+        ServiceRoutes.qbittorrentOverview: QbittorrentOverviewScreen,
+        ServiceRoutes.transmissionOverview: TransmissionOverviewScreen,
+        ServiceRoutes.sabnzbdOverview: SabnzbdOverviewScreen,
+        ServiceRoutes.nzbgetOverview: NzbgetOverviewScreen,
+        ServiceRoutes.seerrOverview: SeerrOverviewScreen,
+        ServiceRoutes.bazarrOverview: BazarrOverviewScreen,
+        ServiceRoutes.prowlarrOverview: ProwlarrOverviewScreen,
+        ServiceRoutes.dockgeOverview: DockgeOverviewScreen,
+        ServiceRoutes.unraidOverview: UnraidOverviewScreen,
+        ServiceRoutes.npmOverview: NpmOverviewScreen,
+        ServiceRoutes.jellyfinOverview: StreamOverviewScreen,
+        ServiceRoutes.plexOverview: StreamOverviewScreen,
+      };
+
+      for (final entry in overviews.entries) {
+        router.go(entry.key);
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.toString(), entry.key, reason: entry.key);
+        expect(
+          find.byType(entry.value),
+          findsOneWidget,
+          reason: '${entry.key} must draw ${entry.value}',
+        );
+        expect(
+          find.byType(ServiceTabPlaceholder),
+          findsNothing,
+          reason:
+              '${entry.key} has a real screen, so a placeholder there is the '
+              'screen having been unmounted rather than a tab not yet built.',
+        );
+      }
+    });
+
     testWidgets('every tab on Bazarr\'s bar resolves to its own location', (
       tester,
     ) async {
@@ -755,9 +837,10 @@ void main() {
   /// that now redirects, the two spellings the single-page service shipped, and
   /// the declaration order inside the Libraries branch. Neither server is
   /// configured in this harness, which is deliberate: an unconfigured tab is a
-  /// destination users reach routinely, it draws its placeholder without asking
-  /// any provider for anything, and it keeps the case about routing rather than
-  /// about a fixture.
+  /// destination users reach routinely, every surface here gates on
+  /// `isServiceConfigured` before it reaches a provider so nothing is asked of
+  /// a server that is not there, and it keeps the case about routing rather
+  /// than about a fixture.
   group('the media servers on the tab model', () {
     testWidgets('the bare service path lands on Overview', (tester) async {
       final container = await _pumpRouter(tester);
@@ -771,7 +854,20 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(router.state.uri.toString(), entry.value, reason: entry.key);
-        expect(find.byType(ServiceTabPlaceholder), findsOneWidget);
+        // One screen for both servers, so the assertion names the same type
+        // twice. Asserting the type rather than the location is what makes the
+        // redirect's destination a real page: for months it landed on
+        // `ServiceTabPlaceholder`, which resolves just as happily.
+        expect(
+          find.byType(StreamOverviewScreen),
+          findsOneWidget,
+          reason: entry.value,
+        );
+        expect(
+          find.byType(ServiceTabPlaceholder),
+          findsNothing,
+          reason: '${entry.value} draws its own screen now.',
+        );
       }
     });
 
@@ -909,27 +1005,45 @@ void main() {
   /// None of them is configured in this harness, which is deliberate and is
   /// what keeps these cases about routing: every destination below gates on
   /// `isServiceConfigured` before it reaches a provider, so an unconfigured
-  /// service draws its placeholder without asking anything for anything — and a
-  /// destination that did ask would leave a retrying provider behind and fail
-  /// this file at teardown rather than at the assertion.
+  /// service draws its not-configured door without asking anything for
+  /// anything — and a destination that did ask would leave a retrying provider
+  /// behind and fail this file at teardown rather than at the assertion.
   group('the infrastructure three on the tab model', () {
     testWidgets('the bare service path lands on Overview', (tester) async {
       final container = await _pumpRouter(tester);
       final router = container.read(routerProvider);
 
       for (final entry in {
-        ServiceRoutes.dockge: ServiceRoutes.dockgeOverview,
-        ServiceRoutes.unraid: ServiceRoutes.unraidOverview,
-        ServiceRoutes.nginxProxyManager: ServiceRoutes.npmOverview,
+        ServiceRoutes.dockge: (
+          ServiceRoutes.dockgeOverview,
+          DockgeOverviewScreen,
+        ),
+        ServiceRoutes.unraid: (
+          ServiceRoutes.unraidOverview,
+          UnraidOverviewScreen,
+        ),
+        ServiceRoutes.nginxProxyManager: (
+          ServiceRoutes.npmOverview,
+          NpmOverviewScreen,
+        ),
       }.entries) {
         router.go(entry.key);
         await tester.pumpAndSettle();
 
-        expect(router.state.uri.toString(), entry.value, reason: entry.key);
-        // All three Overviews are placeholders today. Asserting it here is what
-        // makes the redirect's destination a real page rather than a location
-        // that happens to resolve.
-        expect(find.byType(ServiceTabPlaceholder), findsOneWidget);
+        expect(router.state.uri.toString(), entry.value.$1, reason: entry.key);
+        // Naming the screen, not just the location: a placeholder resolves at
+        // exactly the same location, so asserting the location alone is what
+        // let three built Overviews sit in the tree reachable by nothing.
+        expect(
+          find.byType(entry.value.$2),
+          findsOneWidget,
+          reason: '${entry.value.$1} must draw ${entry.value.$2}',
+        );
+        expect(
+          find.byType(ServiceTabPlaceholder),
+          findsNothing,
+          reason: '${entry.value.$1} draws its own screen now.',
+        );
       }
     });
 
