@@ -143,6 +143,9 @@ void _goToTab(BuildContext context, ServiceTab tab) {
 
 void _invalidateAll(WidgetRef ref) {
   ref.invalidate(readarrAuthorsProvider);
+  // And the rail's own non-swallowing read of it. See
+  // `readarrKpiLibraryProvider`.
+  ref.invalidate(readarrKpiLibraryProvider);
   ref.invalidate(readarrRecentHistoryProvider);
   ref.invalidate(readarrQueueProvider);
   ref.invalidate(serviceKpiProvider(ServiceKey.readarr));

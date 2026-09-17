@@ -585,6 +585,7 @@ class _ScriptedSonarr extends FakeSonarrService {
   Future<ArrRecordPage> getMissingPage({
     int page = 1,
     int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
   }) async {
     if (missingThrows) throw Exception('wanted/missing is not served here');
     return missing;
@@ -594,6 +595,7 @@ class _ScriptedSonarr extends FakeSonarrService {
   Future<ArrRecordPage> getCutoffPage({
     int page = 1,
     int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
   }) async => cutoff;
 }
 

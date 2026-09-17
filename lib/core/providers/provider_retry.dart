@@ -35,7 +35,14 @@
 ///   Their `settle()` looks like the same shape, but each one already catches
 ///   its own failures and degrades to an offline summary or an empty list, so
 ///   they never throw and the retry never engages.
-/// * Prowlarr's derived providers and the service KPIs. They await `.future`
-///   without a `try`, so the error propagates to a screen that renders it —
-///   there a retry only delays an error rather than hiding a recovery.
+/// * Prowlarr's derived providers, and every service KPI builder that awaits
+///   `.future` without a `try`: the error propagates to a screen that renders
+///   it, and there a retry only delays an error rather than hiding a recovery.
+///
+/// Applied, since the KPI rail stopped printing a dark server's library as
+/// zeros, to the four \*arr library reads behind it and to the Readarr queue
+/// (`_radarrKpiLibraryProvider` and its three siblings in
+/// `service_kpi_provider.dart`; `readarrQueueProvider`). Those *are* awaited
+/// inside a `catch`, which turns a failure into an em dash — and without the
+/// policy that `catch` waits out ten backed-off attempts first.
 Duration? noProviderRetry(int retryCount, Object error) => null;

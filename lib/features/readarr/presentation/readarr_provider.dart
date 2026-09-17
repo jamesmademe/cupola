@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/readarr/data/readarr_service.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -25,12 +26,22 @@ final readarrRecentHistoryProvider = FutureProvider<List<ReadarrHistoryItem>>((
   return ref.watch(readarrServiceProvider).getRecentHistory();
 });
 
-/// Current download queue. Degrades to an empty list on failure so a queue
-/// error never hides the rest of the KPI rail.
+/// Current download queue, with a failed fetch allowed to reach the caller.
+///
+/// It used to catch everything and answer `const []`, so a Readarr whose queue
+/// endpoint was down read **`Queue 0`** on the rail — an idle downloader rather
+/// than an unread one, and indistinguishable from a queue that had just
+/// drained. The reason given for swallowing was that a queue error must not
+/// hide the rest of the KPI rail, which was true and is now answered properly:
+/// its one reader catches the throw into `ServiceKpi.unavailable`, so the other
+/// three figures survive *and* the fourth reads an em dash instead of a number
+/// nobody fetched.
+///
+/// `retry: noProviderRetry` comes with the throw and is not optional: its
+/// reader awaits `.future` inside a `catch`, and Riverpod's default retry would
+/// hold that `catch` for ten backed-off attempts before letting it run — the
+/// rail stuck in its skeleton for some forty seconds instead of printing the em
+/// dash. See `lib/core/providers/provider_retry.dart`.
 final readarrQueueProvider = FutureProvider<List<dynamic>>((ref) async {
-  try {
-    return await ref.watch(readarrServiceProvider).getQueue();
-  } catch (_) {
-    return const <dynamic>[];
-  }
-});
+  return ref.watch(readarrServiceProvider).getQueue();
+}, retry: noProviderRetry);

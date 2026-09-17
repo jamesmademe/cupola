@@ -189,6 +189,52 @@ void main() {
       expect(client.lastGetQueryParameters?['sortDirection'], 'ascending');
     });
 
+    // The backlog clause on the Lidarr Overview counts distinct
+    // `arrArtistName(row)` over the wanted page to say "across 6 artists", and
+    // `artist` only rides a `wanted/missing` record when the request asks for
+    // it. Without this the set is always empty on a real server and the clause
+    // is dropped every time — honest, but a promise the code could never keep.
+    test('getMissingPage asks for the artist the backlog counts', () async {
+      client.getResponseData = const {'records': [], 'totalRecords': 0};
+
+      await service.getMissingPage();
+
+      expect(client.lastGetPath, '/api/v1/wanted/missing');
+      expect(client.lastGetQueryParameters?['includeArtist'], isTrue);
+    });
+
+    test('getCutoffPage asks for it too', () async {
+      client.getResponseData = const {'records': [], 'totalRecords': 0};
+
+      await service.getCutoffPage();
+
+      expect(client.lastGetPath, '/api/v1/wanted/cutoff');
+      expect(client.lastGetQueryParameters?['includeArtist'], isTrue);
+    });
+
+    // Activity's Wanted tab reads the walks, not the pages, and its music rows
+    // print `arrArtistName` under the title.
+    test('the wanted walks ask for the artist as well', () async {
+      client.getResponseData = const {'records': [], 'totalRecords': 0};
+
+      await service.getAllMissing();
+      expect(client.lastGetQueryParameters?['includeArtist'], isTrue);
+
+      await service.getAllCutoff();
+      expect(client.lastGetQueryParameters?['includeArtist'], isTrue);
+    });
+
+    test('a caller may still add its own wanted parameters', () async {
+      client.getResponseData = const {'records': [], 'totalRecords': 0};
+
+      await service.getMissingPage(
+        queryParameters: const {'sortDirection': 'ascending'},
+      );
+
+      expect(client.lastGetQueryParameters?['includeArtist'], isTrue);
+      expect(client.lastGetQueryParameters?['sortDirection'], 'ascending');
+    });
+
     test('getReleases passes artistId query params', () async {
       client.getResponseData = [
         {'title': 'Artist Release'},

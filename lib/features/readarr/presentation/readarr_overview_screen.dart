@@ -95,6 +95,9 @@ class _OverviewBody extends ConsumerWidget {
         // that refreshed only the derived provider would redraw the same
         // cached figure and look broken.
         ref.invalidate(readarrAuthorsProvider);
+        // And the rail's own non-swallowing read of it. See
+        // `readarrKpiLibraryProvider`.
+        ref.invalidate(readarrKpiLibraryProvider);
         // And the queue behind the rail's fourth figure. `serviceKpiProvider`
         // is autoDispose; `readarrQueueProvider` is not, so invalidating only
         // the derived provider redrew the same cached count for the life of the
@@ -138,7 +141,13 @@ class _NeedsAttentionSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(readarrNeedsAttentionProvider);
-    final count = items.asData?.value.length;
+    // `hasValue`, never `asData`: `asData` is null on an `AsyncError` even when
+    // Riverpod retained the value it had, while `AsyncValueWidget` under this
+    // header draws exactly that retained list at full ink beneath the
+    // unreachable band. Read through `asData` the header printed "—" over rows
+    // it was still showing. A source that never answered has no retained value
+    // and still reads "—".
+    final count = items.hasValue ? items.requireValue.length : null;
 
     return ServiceOverviewSection(
       service: ServiceKey.readarr,
@@ -218,7 +227,13 @@ class _RootFolderSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final folders = ref.watch(readarrRootFoldersProvider);
-    final count = folders.asData?.value.length ?? 0;
+    // `hasValue`, never `asData`: `asData` is null on an `AsyncError` even when
+    // Riverpod retained the value it had, and `AsyncValueWidget` below draws
+    // exactly that retained list at full ink under the unreachable band. Read
+    // through `asData` the header went silent about the folders the section
+    // under it was still drawing — a server that stopped answering took the
+    // count with it and left the rows. Same test the widget itself applies.
+    final count = folders.hasValue ? folders.requireValue.length : 0;
 
     return ServiceOverviewSection(
       service: ServiceKey.readarr,

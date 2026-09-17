@@ -424,6 +424,7 @@ class _ScriptedLidarr extends FakeLidarrService {
   Future<ArrRecordPage> getMissingPage({
     int page = 1,
     int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
   }) async => missing;
 
   @override

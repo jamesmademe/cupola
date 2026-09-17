@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
@@ -23,13 +24,12 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
+import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
-import 'package:cupola/features/music/presentation/music_provider.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
-import 'package:cupola/features/series/presentation/series_provider.dart';
 import 'package:cupola/features/services/domain/kpi_aggregate.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -243,6 +243,31 @@ StatusTone? _backlogIf(bool condition) => condition ? StatusTone.neutral : null;
 /// or somebody is watching, because the stack is doing its job.
 StatusTone? _activityIf(bool condition) => condition ? StatusTone.info : null;
 
+/// One figure, or the em dash that stands in for it.
+///
+/// A null [value] means *nobody answered*, which is the case every \*arr
+/// builder below used to print as `0`. Routing both readings of a card through
+/// one call is what keeps the label and the icon written once: the rail shows
+/// the same four cards whether the server replied or not, so a reader can see
+/// *which* figure is missing rather than watching the strip change shape.
+ServiceKpi _figure({
+  required String label,
+  required IconData icon,
+  required String? value,
+  StatusTone? tone,
+  String? note,
+}) => value == null
+    ? ServiceKpi.unavailable(label: label, icon: icon, note: note)
+    : ServiceKpi(label: label, value: value, icon: icon, tone: tone);
+
+/// What an unanswered figure says instead of a number.
+///
+/// Carried by the **first** card only. The note replaces the label on the card
+/// that holds it (the rail is two lines tall by construction), so putting it on
+/// all four would leave a strip of four identical reasons and no way to tell
+/// which absence is which.
+String _notAnswering(ServiceKey service) => '${service.title} not answering';
+
 /// The shared KPI set for a media server, identical for Jellyfin and Plex.
 ///
 /// Three metrics, and the order is load-bearing in two ways that
@@ -295,8 +320,64 @@ Future<List<ServiceKpi>> _streamKpis(
   ];
 }
 
+/// The Radarr library, read so that a failure survives the fetch.
+///
+/// Not [moviesProvider]: that one goes through `fetchAllItems`, which swallows
+/// every failure into `[]`, so an unreachable Radarr resolved it *successfully*
+/// and the rail printed `Movies 0 · Monitored 0 · Missing 0` under an identity
+/// band whose own probe already read Unreachable. See `getMoviesOrThrow`.
+///
+/// Plain, not `autoDispose`, matching `moviesProvider` beside it: the library
+/// is a session-scoped read, and `serviceKpiProvider` *is* `autoDispose` — a
+/// disposing source under it would turn one `GET /movie` per session into one
+/// per visit to the Dashboard and to every Radarr tab. Pull-to-refresh
+/// invalidates it explicitly.
+///
+/// **`retry: noProviderRetry` is load-bearing**, not hygiene. Riverpod's
+/// default retry re-runs a throwing build ten times with backoff, and a
+/// `DioException` is an `Exception`, so it engages on every network failure —
+/// which means `await ref.watch(...future)` inside the `catch` below does not
+/// settle for some forty seconds. The `catch` exists precisely to report that
+/// the server did not answer, so holding it until the retries run out is the
+/// rail sitting in its skeleton state instead of saying so. Measured: the four
+/// tests for this timed out at thirty seconds each before the policy went on.
+/// See `lib/core/providers/provider_retry.dart`.
+final radarrKpiLibraryProvider = FutureProvider<List<RadarrMovie>>((ref) {
+  return ref.watch(radarrServiceProvider).getMoviesOrThrow();
+}, retry: noProviderRetry);
+
+/// The Sonarr library. See [radarrKpiLibraryProvider].
+///
+/// Its own rather than a share of `sonarrOverviewSeriesProvider`, which reads
+/// the same endpoint the same way: that one carries the default retry, on
+/// purpose, because the Overview watches it as an `AsyncValue` and wants the
+/// blip to heal itself. This one is *awaited* in a `catch`, and the two
+/// policies cannot both hold on one provider.
+final sonarrKpiLibraryProvider = FutureProvider<List<SonarrSeries>>((ref) {
+  return ref.watch(sonarrServiceProvider).getSeriesOrThrow();
+}, retry: noProviderRetry);
+
+/// The Lidarr library. See [radarrKpiLibraryProvider].
+final lidarrKpiLibraryProvider = FutureProvider<List<LidarrArtist>>((ref) {
+  return ref.watch(lidarrServiceProvider).getArtistsOrThrow();
+}, retry: noProviderRetry);
+
+/// The Readarr library. See [radarrKpiLibraryProvider].
+final readarrKpiLibraryProvider = FutureProvider<List<ReadarrAuthor>>((ref) {
+  return ref.watch(readarrServiceProvider).getAuthorsOrThrow();
+}, retry: noProviderRetry);
+
 Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
-  final movies = await ref.watch(moviesProvider.future);
+  final List<RadarrMovie> movies;
+  try {
+    movies = await ref.watch(radarrKpiLibraryProvider.future);
+  } catch (_) {
+    // The queue figure goes too. It comes off the same server through
+    // `radarrQueueSnapshotProvider`, which degrades to an empty snapshot — so
+    // once the library has told us the server is dark, `Queue 0` is the same
+    // fabrication wearing a different label.
+    return _radarrKpisFrom(null, null, note: _notAnswering(ServiceKey.radarr));
+  }
   final queued = await ref.watch(radarrQueuedMovieIdsProvider.future);
   return _radarrKpisFrom(movies, queued.length);
 }
@@ -307,119 +388,169 @@ Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
 /// [serviceKpiForProvider], which collapses the lens back onto the plain
 /// builder so the card and the library screen keep reading one cache.
 Future<List<ServiceKpi>> _radarrKpisFor(Ref ref, String instanceId) async {
-  final movies = await ref
-      .watch(radarrServiceForProvider(instanceId))
-      .getMovies();
+  final List<RadarrMovie> movies;
+  try {
+    movies = await ref
+        .watch(radarrServiceForProvider(instanceId))
+        .getMoviesOrThrow();
+  } catch (_) {
+    return _radarrKpisFrom(null, null, note: _notAnswering(ServiceKey.radarr));
+  }
   final queue = await ref.watch(
     radarrQueueSnapshotForProvider(instanceId).future,
   );
   return _radarrKpisFrom(movies, queue.entriesById.length);
 }
 
-List<ServiceKpi> _radarrKpisFrom(List<RadarrMovie> movies, int queued) {
-  final monitored = movies.where((m) => m.monitored).length;
-  final missing = movies.where((m) => m.monitored && !m.hasFile).length;
+/// Null means the server did not answer — see [_figure]. Never `[]`, which is
+/// an answer: it says the library is there and empty.
+List<ServiceKpi> _radarrKpisFrom(
+  List<RadarrMovie>? movies,
+  int? queued, {
+  String? note,
+}) {
+  final monitored = movies?.where((m) => m.monitored).length;
+  final missing = movies?.where((m) => m.monitored && !m.hasFile).length;
   return [
-    ServiceKpi(
+    _figure(
       label: 'Movies',
-      value: '${movies.length}',
+      value: movies == null ? null : '${movies.length}',
       icon: Icons.movie_rounded,
+      note: note,
     ),
-    ServiceKpi(
+    _figure(
       label: 'Monitored',
-      value: '$monitored',
+      value: monitored == null ? null : '$monitored',
       icon: Icons.visibility_rounded,
     ),
-    ServiceKpi(
+    _figure(
       label: 'Missing',
-      value: '$missing',
+      value: missing == null ? null : '$missing',
       icon: Icons.report_gmailerrorred_rounded,
-      tone: _backlogIf(missing > 0),
+      tone: _backlogIf(missing != null && missing > 0),
     ),
-    ServiceKpi(label: 'Queue', value: '$queued', icon: Icons.download_rounded),
+    _figure(
+      label: 'Queue',
+      value: queued == null ? null : '$queued',
+      icon: Icons.download_rounded,
+    ),
   ];
 }
 
-Future<List<ServiceKpi>> _sonarrKpis(Ref ref) async =>
-    _sonarrKpisFrom(await ref.watch(seriesProvider.future));
+Future<List<ServiceKpi>> _sonarrKpis(Ref ref) async {
+  try {
+    // [sonarrKpiLibraryProvider], not `seriesProvider`: the latter reads
+    // `getSeries`, which swallows its own failure into `[]`, and every figure
+    // below it was a confident zero for a question nobody answered.
+    return _sonarrKpisFrom(await ref.watch(sonarrKpiLibraryProvider.future));
+  } catch (_) {
+    return _sonarrKpisFrom(null, note: _notAnswering(ServiceKey.sonarr));
+  }
+}
 
 /// See [_radarrKpisFor].
-Future<List<ServiceKpi>> _sonarrKpisFor(Ref ref, String instanceId) async =>
-    _sonarrKpisFrom(
-      await ref.watch(sonarrServiceForProvider(instanceId)).getSeries(),
+Future<List<ServiceKpi>> _sonarrKpisFor(Ref ref, String instanceId) async {
+  try {
+    return _sonarrKpisFrom(
+      await ref.watch(sonarrServiceForProvider(instanceId)).getSeriesOrThrow(),
     );
+  } catch (_) {
+    return _sonarrKpisFrom(null, note: _notAnswering(ServiceKey.sonarr));
+  }
+}
 
-List<ServiceKpi> _sonarrKpisFrom(List<SonarrSeries> series) {
+/// Null means the server did not answer. See [_radarrKpisFrom].
+List<ServiceKpi> _sonarrKpisFrom(List<SonarrSeries>? series, {String? note}) {
   var epHave = 0;
   var epTotal = 0;
   var monitored = 0;
-  for (final s in series) {
+  for (final s in series ?? const <SonarrSeries>[]) {
     if (s.monitored) monitored++;
     epHave += _statInt(s.statistics, 'episodeFileCount');
     epTotal += _statInt(s.statistics, 'episodeCount');
   }
   final missing = (epTotal - epHave).clamp(0, epTotal);
+  final answered = series != null;
   return [
-    ServiceKpi(
+    _figure(
       label: 'Series',
-      value: '${series.length}',
+      value: answered ? '${series.length}' : null,
       icon: Icons.tv_rounded,
+      note: note,
     ),
-    ServiceKpi(
+    _figure(
       label: 'Episodes',
-      value: '$epHave/$epTotal',
+      value: answered ? '$epHave/$epTotal' : null,
       icon: Icons.playlist_play_rounded,
     ),
-    ServiceKpi(
+    _figure(
       label: 'Missing',
-      value: '$missing',
+      value: answered ? '$missing' : null,
       icon: Icons.report_gmailerrorred_rounded,
-      tone: _backlogIf(missing > 0),
+      tone: _backlogIf(answered && missing > 0),
     ),
-    ServiceKpi(
+    _figure(
       label: 'Monitored',
-      value: '$monitored',
+      value: answered ? '$monitored' : null,
       icon: Icons.visibility_rounded,
     ),
   ];
 }
 
-Future<List<ServiceKpi>> _lidarrKpis(Ref ref) async =>
-    _lidarrKpisFrom(await ref.watch(musicProvider.future));
+Future<List<ServiceKpi>> _lidarrKpis(Ref ref) async {
+  try {
+    // [lidarrKpiLibraryProvider], not `musicProvider`: see [_radarrKpis].
+    return _lidarrKpisFrom(await ref.watch(lidarrKpiLibraryProvider.future));
+  } catch (_) {
+    return _lidarrKpisFrom(null, note: _notAnswering(ServiceKey.lidarr));
+  }
+}
 
 /// See [_radarrKpisFor].
-Future<List<ServiceKpi>> _lidarrKpisFor(Ref ref, String instanceId) async =>
-    _lidarrKpisFrom(
-      await ref.watch(lidarrServiceForProvider(instanceId)).getArtists(),
+Future<List<ServiceKpi>> _lidarrKpisFor(Ref ref, String instanceId) async {
+  try {
+    return _lidarrKpisFrom(
+      await ref.watch(lidarrServiceForProvider(instanceId)).getArtistsOrThrow(),
     );
+  } catch (_) {
+    return _lidarrKpisFrom(null, note: _notAnswering(ServiceKey.lidarr));
+  }
+}
 
-List<ServiceKpi> _lidarrKpisFrom(List<LidarrArtist> artists) {
+/// Null means the server did not answer. See [_radarrKpisFrom].
+List<ServiceKpi> _lidarrKpisFrom(List<LidarrArtist>? artists, {String? note}) {
   var albums = 0;
   var trackHave = 0;
   var trackTotal = 0;
-  for (final a in artists) {
+  for (final a in artists ?? const <LidarrArtist>[]) {
     albums += a.albumCount;
     trackHave += a.trackFileCount;
     trackTotal += a.trackCount;
   }
   final missing = (trackTotal - trackHave).clamp(0, trackTotal);
+  final answered = artists != null;
   return [
-    ServiceKpi(
+    _figure(
       label: 'Artists',
-      value: '${artists.length}',
+      value: answered ? '${artists.length}' : null,
       icon: Icons.person_rounded,
+      note: note,
     ),
-    ServiceKpi(label: 'Albums', value: '$albums', icon: Icons.album_rounded),
-    ServiceKpi(
+    _figure(
+      label: 'Albums',
+      value: answered ? '$albums' : null,
+      icon: Icons.album_rounded,
+    ),
+    _figure(
       label: 'Tracks',
-      value: '$trackHave/$trackTotal',
+      value: answered ? '$trackHave/$trackTotal' : null,
       icon: Icons.music_note_rounded,
     ),
-    ServiceKpi(
+    _figure(
       label: 'Missing',
-      value: '$missing',
+      value: answered ? '$missing' : null,
       icon: Icons.report_gmailerrorred_rounded,
-      tone: _backlogIf(missing > 0),
+      tone: _backlogIf(answered && missing > 0),
     ),
   ];
 }
@@ -652,32 +783,57 @@ Future<List<ServiceKpi>> _prowlarrKpis(Ref ref) async {
 }
 
 Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
-  final authors = await ref.watch(readarrAuthorsProvider.future);
+  // [readarrKpiLibraryProvider], not [readarrAuthorsProvider]: see
+  // [_radarrKpis]. The two fetches fail independently — a library that answers
+  // over a queue endpoint that does not is the ordinary case on a Readarr
+  // mid-upgrade — so each figure says for itself whether it was answered.
+  List<ReadarrAuthor>? authors;
+  try {
+    authors = await ref.watch(readarrKpiLibraryProvider.future);
+  } catch (_) {
+    authors = null;
+  }
+  int? queued;
+  try {
+    queued = (await ref.watch(readarrQueueProvider.future)).length;
+  } catch (_) {
+    queued = null;
+  }
+
   var books = 0;
   var have = 0;
-  for (final a in authors) {
+  for (final a in authors ?? const <ReadarrAuthor>[]) {
     books += a.bookCount;
     have += a.bookFileCount;
   }
   final missing = (books - have).clamp(0, books);
-  final queue = await ref.watch(readarrQueueProvider.future);
+  final answered = authors != null;
   return [
-    ServiceKpi(
+    _figure(
       label: 'Authors',
-      value: '${authors.length}',
+      value: answered ? '${authors.length}' : null,
       icon: Icons.person_rounded,
+      note: answered ? null : _notAnswering(ServiceKey.readarr),
     ),
-    ServiceKpi(label: 'Books', value: '$books', icon: Icons.menu_book_rounded),
-    ServiceKpi(
+    _figure(
+      label: 'Books',
+      value: answered ? '$books' : null,
+      icon: Icons.menu_book_rounded,
+    ),
+    _figure(
       label: 'Missing',
-      value: '$missing',
+      value: answered ? '$missing' : null,
       icon: Icons.report_gmailerrorred_rounded,
-      tone: _backlogIf(missing > 0),
+      tone: _backlogIf(answered && missing > 0),
     ),
-    ServiceKpi(
+    _figure(
       label: 'Queue',
-      value: '${queue.length}',
+      value: queued == null ? null : '$queued',
       icon: Icons.download_rounded,
+      // Its own reason, because it is its own fetch: a Readarr whose library
+      // reads fine and whose queue endpoint is down used to print `Queue 0` —
+      // an idle downloader rather than an unread one.
+      note: queued == null ? 'queue not answering' : null,
     ),
   ];
 }
@@ -692,8 +848,13 @@ Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
       tone: _activityIf(queue.kbPerSec > 0),
     ),
     ServiceKpi(
+      // [SabnzbdQueue.jobCount], never `slots.length`: the client asks for a
+      // 50-slot page, so a queue deeper than the page read `50` forever — a
+      // figure that stops moving exactly when there is something to watch.
+      // `jobCount` prefers the server's own `noofslots_total` and falls back to
+      // the rows in hand when the payload carried no total.
       label: 'Queue',
-      value: '${queue.slots.length}',
+      value: '${queue.jobCount}',
       icon: Icons.list_rounded,
     ),
     ServiceKpi(

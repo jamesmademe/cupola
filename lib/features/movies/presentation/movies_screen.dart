@@ -71,6 +71,11 @@ class MoviesScreen extends ConsumerWidget {
           radarrMovieStatus(movie, queueEntry: queue?.entryFor(movie.id)),
       onRefresh: (ref) {
         ref.invalidate(radarrQueueSnapshotProvider);
+        // The rail above this grid reads its own non-swallowing copy of the
+        // library, so that a dark Radarr prints "—" and not "Movies 0". The
+        // scaffold invalidates `libraryProvider` for the grid; without this
+        // line the pull refreshed the posters and left the figures frozen.
+        ref.invalidate(radarrKpiLibraryProvider);
       },
       settingsSelector: (settings) =>
           (settings.radarrUrl, settings.radarrApiKey),

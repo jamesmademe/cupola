@@ -120,6 +120,9 @@ class _OverviewBody extends ConsumerWidget {
         // without this line a pull-to-refresh re-sorts the same six artists and
         // reports itself finished.
         ref.invalidate(musicProvider);
+        // And the rail's own non-swallowing read of it. See
+        // `sonarrKpiLibraryProvider`.
+        ref.invalidate(lidarrKpiLibraryProvider);
         ref.invalidate(lidarrRecentlyAddedProvider);
         ref.invalidate(lidarrQueueRecordsProvider);
         ref.invalidate(lidarrMissingPageProvider);

@@ -71,8 +71,18 @@ class ReadarrService with ArrActivityMixin {
   }
 
   /// Fetches all authors (the primary library entity).
+  ///
+  /// The degrading read: answers `[]` when the library cannot be read. Callers
+  /// that derive a *figure* use [getAuthorsOrThrow].
   Future<List<ReadarrAuthor>> getAuthors() {
     return fetchAllItems('author', ReadarrAuthor.fromJson);
+  }
+
+  /// The same library, with a failed fetch allowed to reach the caller.
+  ///
+  /// See [fetchAllItemsOrThrow].
+  Future<List<ReadarrAuthor>> getAuthorsOrThrow() {
+    return fetchAllItemsOrThrow('author', ReadarrAuthor.fromJson);
   }
 
   /// Fetches recent history mapped to typed items for the dashboard.

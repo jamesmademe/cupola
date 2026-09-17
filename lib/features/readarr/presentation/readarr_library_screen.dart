@@ -6,6 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/readarr/presentation/widgets/readarr_tiles.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -66,6 +67,8 @@ class ReadarrLibraryScreen extends ConsumerWidget {
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(readarrAuthorsProvider);
+            // The rail's own non-swallowing read. See `movies_screen.dart`.
+            ref.invalidate(readarrKpiLibraryProvider);
             await Future<void>.delayed(AppAnimation.durationMd);
           },
           child: authorsAsync.when(

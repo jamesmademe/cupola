@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -240,7 +242,41 @@ void main() {
     // for a condition no waiting changes.
     expect(find.byType(SectionHeader), findsNothing);
   });
+
+  testWidgets('a failed refresh keeps the folder count it was showing', (
+    tester,
+  ) async {
+    // `AsyncValueWidget` draws a retained value at full ink under the
+    // unreachable band, precisely so a screen keeps its last readout. Reading
+    // the count off `asData` threw that away: `asData` is null on an
+    // `AsyncError`, retained value or not, so the header went silent about
+    // three folders the section below it was still drawing.
+    final service = _FlakyRootFoldersReadarr(
+      rootFolders: const [
+        {'path': '/data/books', 'freeSpace': 1000},
+        {'path': '/data/comics', 'freeSpace': 2000},
+      ],
+    );
+    await _pump(tester, service: service);
+    expect(_rootFolderHeader(tester).subtitle, '2 folders');
+
+    service.failFromNowOn = true;
+    unawaited(
+      tester.state<RefreshIndicatorState>(find.byType(RefreshIndicator)).show(),
+    );
+    await tester.pumpAndSettle();
+
+    // The rows are still there…
+    expect(find.text('/data/books'), findsOneWidget);
+    expect(find.text('/data/comics'), findsOneWidget);
+    // …so the count above them has to still be true.
+    expect(_rootFolderHeader(tester).subtitle, '2 folders');
+  });
 }
+
+SectionHeader _rootFolderHeader(WidgetTester tester) => tester
+    .widgetList<SectionHeader>(find.byType(SectionHeader))
+    .firstWhere((header) => header.title == 'Root folder');
 
 // ─── Harness ────────────────────────────────────────────────────────────────
 
@@ -355,6 +391,23 @@ class _FailingHistoryReadarr extends _ScriptedReadarr {
     int pageSize = 20,
     Map<String, dynamic>? queryParameters,
   }) async => throw Exception('history failed');
+}
+
+/// A Readarr whose root folders answer once and then stop.
+///
+/// The wire shape of a server that was reachable when the page loaded and is
+/// not when the user pulls — which is the only way to get an `AsyncError`
+/// carrying a retained value.
+class _FlakyRootFoldersReadarr extends _ScriptedReadarr {
+  _FlakyRootFoldersReadarr({super.rootFolders});
+
+  bool failFromNowOn = false;
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchRootFolders() async {
+    if (failFromNowOn) throw Exception('root folders failed');
+    return rootFolders;
+  }
 }
 
 class _FailingQueueReadarr extends _ScriptedReadarr {

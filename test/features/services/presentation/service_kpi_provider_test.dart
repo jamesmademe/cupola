@@ -1,11 +1,23 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/movies/data/radarr_service.dart';
+import 'package:cupola/features/music/data/lidarr_service.dart';
+import 'package:cupola/features/readarr/data/readarr_service.dart';
+import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
+import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
+import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+
+import '../../../test_helpers/fake_api_client.dart';
 
 SeerrRequest _request({
   required int id,
@@ -29,6 +41,49 @@ Future<Map<String, String>> _seerrKpis(List<SeerrRequest> requests) async {
     serviceKpiProvider(ServiceKey.seerr).future,
   );
   return {for (final ServiceKpi kpi in kpis) kpi.label: kpi.value};
+}
+
+/// A real service over a client that fails every GET.
+///
+/// The gap the defect lives in is between "the library is empty" and "nobody
+/// answered", and the only way to stand in it is to let the transport fail the
+/// way it fails in the field. A hand-written fake that returns `[]` *is* the
+/// bug, so it cannot be the harness that catches it.
+FakeApiClient _deadClient() =>
+    FakeApiClient()..getException = Exception('unreachable');
+
+/// Answers the author list and refuses the queue, which is the half-broken
+/// Readarr the queue KPI had no way to draw: `getQueue` swallowed its own
+/// failure, so the rail read `Queue 0` over a queue nobody had read.
+class _ReadarrClientWithDeadQueue extends FakeApiClient {
+  @override
+  Future<Response<dynamic>> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
+    Duration? receiveTimeout,
+  }) {
+    if (path.contains('queue')) throw Exception('queue unreachable');
+    return super.get(
+      path,
+      queryParameters: queryParameters,
+      cancelToken: cancelToken,
+      receiveTimeout: receiveTimeout,
+    );
+  }
+}
+
+Map<String, ServiceKpi> _byLabel(List<ServiceKpi> kpis) => {
+  for (final kpi in kpis) kpi.label: kpi,
+};
+
+Future<Map<String, ServiceKpi>> _kpisFor(
+  ServiceKey service,
+  List<Override> overrides,
+) async {
+  final container = ProviderContainer(overrides: overrides);
+  addTearDown(container.dispose);
+  return _byLabel(await container.read(serviceKpiProvider(service).future));
 }
 
 void main() {
@@ -83,5 +138,152 @@ void main() {
       expect(kpis['Available'], '1');
       expect(kpis['Requests'], '3');
     });
+  });
+
+  group('a *arr that did not answer states nothing', () {
+    // Every figure below is derived from a library fetch that swallows its own
+    // failure into `[]`. An unreachable server therefore resolved the rail
+    // *successfully* with a full set of confident zeros, printed on the
+    // Dashboard card and on the service home directly under an identity band
+    // whose own probe already read Unreachable.
+
+    test('Sonarr prints em dashes, not "Series 0"', () async {
+      final kpis = await _kpisFor(ServiceKey.sonarr, [
+        sonarrServiceProvider.overrideWithValue(SonarrService(_deadClient())),
+      ]);
+
+      expect(kpis['Series']!.value, ServiceKpi.unavailableValue);
+      expect(kpis['Episodes']!.value, ServiceKpi.unavailableValue);
+      expect(kpis['Missing']!.value, ServiceKpi.unavailableValue);
+      expect(kpis['Monitored']!.value, ServiceKpi.unavailableValue);
+      // One card says why; the other three keep their own labels, because four
+      // identical reasons is a rail nobody can read a figure off.
+      expect(kpis['Series']!.note, isNotNull);
+      // Untoned on purpose: an absence is neither a fault nor a backlog.
+      expect(kpis.values.every((kpi) => kpi.tone == null), isTrue);
+    });
+
+    test('Radarr prints em dashes, not "Movies 0"', () async {
+      final kpis = await _kpisFor(ServiceKey.radarr, [
+        radarrServiceProvider.overrideWithValue(RadarrService(_deadClient())),
+        // The queue snapshot swallows too, so it would print "Queue 0" for the
+        // same dark server. Pinned here to an honest empty set so the
+        // assertion below is about the builder and not about that provider.
+        radarrQueuedMovieIdsProvider.overrideWith((ref) async => <int>{}),
+      ]);
+
+      expect(kpis['Movies']!.value, ServiceKpi.unavailableValue);
+      expect(kpis['Monitored']!.value, ServiceKpi.unavailableValue);
+      expect(kpis['Missing']!.value, ServiceKpi.unavailableValue);
+      // The queue figure is a count off the same dark server: a snapshot that
+      // degrades to empty cannot be told from a queue that drained.
+      expect(kpis['Queue']!.value, ServiceKpi.unavailableValue);
+    });
+
+    test('Lidarr prints em dashes, not "Artists 0"', () async {
+      final kpis = await _kpisFor(ServiceKey.lidarr, [
+        lidarrServiceProvider.overrideWithValue(LidarrService(_deadClient())),
+      ]);
+
+      expect(kpis['Artists']!.value, ServiceKpi.unavailableValue);
+      expect(kpis['Albums']!.value, ServiceKpi.unavailableValue);
+      expect(kpis['Tracks']!.value, ServiceKpi.unavailableValue);
+      expect(kpis['Missing']!.value, ServiceKpi.unavailableValue);
+    });
+
+    test('Readarr prints em dashes, not "Authors 0"', () async {
+      final kpis = await _kpisFor(ServiceKey.readarr, [
+        readarrServiceProvider.overrideWithValue(ReadarrService(_deadClient())),
+      ]);
+
+      expect(kpis['Authors']!.value, ServiceKpi.unavailableValue);
+      expect(kpis['Books']!.value, ServiceKpi.unavailableValue);
+      expect(kpis['Missing']!.value, ServiceKpi.unavailableValue);
+      expect(kpis['Queue']!.value, ServiceKpi.unavailableValue);
+    });
+
+    test('a library that really is empty still reads zero', () async {
+      // The other half of the pair. An em dash for an answered-and-empty
+      // library would be the same lie pointing the other way.
+      final client = FakeApiClient()..getResponseData = <dynamic>[];
+      final kpis = await _kpisFor(ServiceKey.sonarr, [
+        sonarrServiceProvider.overrideWithValue(SonarrService(client)),
+      ]);
+
+      expect(kpis['Series']!.value, '0');
+      expect(kpis['Series']!.note, isNull);
+    });
+  });
+
+  group('Readarr queue', () {
+    test('a queue endpoint that is down reads "—", not an idle 0', () async {
+      // The library answers and the queue does not, which is the ordinary
+      // shape of a half-broken Readarr. Three figures are real; only the
+      // fourth is unknown, and only the fourth says so.
+      final client = _ReadarrClientWithDeadQueue()
+        ..getResponseData = <dynamic>[
+          {
+            'id': 1,
+            'authorName': 'Le Guin',
+            'statistics': {'bookCount': 4, 'bookFileCount': 4},
+          },
+        ];
+      final kpis = await _kpisFor(ServiceKey.readarr, [
+        readarrServiceProvider.overrideWithValue(ReadarrService(client)),
+      ]);
+
+      expect(kpis['Authors']!.value, '1');
+      expect(kpis['Queue']!.value, ServiceKpi.unavailableValue);
+      expect(kpis['Queue']!.note, isNotNull);
+      // The reason belongs to the figure that has it: naming the whole service
+      // here would read as "Readarr is down" over three figures Readarr just
+      // answered.
+      expect(kpis['Authors']!.note, isNull);
+    });
+  });
+
+  group('SABnzbd queue depth', () {
+    SabnzbdQueue queue({required int slots, int? reportedSlots}) =>
+        SabnzbdQueue(
+          paused: false,
+          status: 'Downloading',
+          kbPerSec: 0,
+          mbLeft: 0,
+          mb: 0,
+          timeLeft: '0:00:00',
+          slots: List.generate(
+            slots,
+            (i) => SabnzbdQueueSlot.fromJson({
+              'nzo_id': '$i',
+              'filename': 'job $i',
+            }),
+          ),
+          reportedSlots: reportedSlots,
+        );
+
+    test('counts the queue, not the page the client asked for', () async {
+      // The client asks for 50 slots. A 62-job queue therefore arrives as 50
+      // rows plus a `noofslots_total` of 62, and a count off `slots.length`
+      // reads 50 for every queue deeper than the page — a figure that stops
+      // moving exactly when it matters.
+      final kpis = await _kpisFor(ServiceKey.sabnzbd, [
+        sabnzbdQueueProvider.overrideWith(
+          (ref) async => queue(slots: 50, reportedSlots: 62),
+        ),
+      ]);
+
+      expect(kpis['Queue']!.value, '62');
+    });
+
+    test(
+      'falls back to the rows in hand when the server gave no total',
+      () async {
+        final kpis = await _kpisFor(ServiceKey.sabnzbd, [
+          sabnzbdQueueProvider.overrideWith((ref) async => queue(slots: 3)),
+        ]);
+
+        expect(kpis['Queue']!.value, '3');
+      },
+    );
   });
 }

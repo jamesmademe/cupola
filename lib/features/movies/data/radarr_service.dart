@@ -70,9 +70,24 @@ class RadarrService with ArrActivityMixin {
     );
   }
 
-  /// Fetches all movies from Radarr.
+  /// Fetches all movies from Radarr, answering `[]` when it cannot be read.
+  ///
+  /// The degrading read, kept as it was: the browse grid behind it would rather
+  /// show nothing than a dialog. Callers that derive a *figure* use
+  /// [getMoviesOrThrow] — see the note there for why the two have to differ.
   Future<List<RadarrMovie>> getMovies() async {
     return fetchAllItems('movie', RadarrMovie.fromJson);
+  }
+
+  /// The same library, with a failed fetch allowed to reach the caller.
+  ///
+  /// See [fetchAllItemsOrThrow]. A Radarr that is unreachable, mis-keyed or
+  /// 500-ing resolves [getMovies] *successfully* with an empty list, and the
+  /// KPI rail printed `Movies 0 · Monitored 0 · Missing 0` off it — three
+  /// fabrications on the first screen the app opens, each contradicting the
+  /// identity band above them.
+  Future<List<RadarrMovie>> getMoviesOrThrow() async {
+    return fetchAllItemsOrThrow('movie', RadarrMovie.fromJson);
   }
 
   /// Fetches a single movie by its Radarr ID.

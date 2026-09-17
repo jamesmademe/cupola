@@ -18,6 +18,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
+import '../../../test_helpers/fake_api_client.dart';
 import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/model_builders.dart';
 
@@ -465,6 +466,51 @@ void main() {
       final second = await container.read(servicesRecentlyAddedProvider.future);
 
       expect(identical(first, second), isFalse);
+    });
+
+    // The comment above this fetch used to say the opposite — that Lidarr's
+    // records arrive without their artist because `LidarrService` has no
+    // override. It does have one, on `getHistoryPage`, and `getHistory`
+    // delegates through it. This is what makes that true rather than a claim:
+    // a real `LidarrService` over a fake client, so the query the dashboard
+    // actually sends is what is asserted, and the title that comes out is the
+    // album's rather than the release name.
+    test('the dashboard asks Lidarr for the artist and the album', () async {
+      final client = FakeApiClient();
+      client.getResponseData = const {
+        'records': [
+          {
+            'id': 1,
+            'eventType': 'downloadFolderImported',
+            'date': '2024-05-05T08:12:00Z',
+            'artistId': 5,
+            'artist': {'artistName': 'Cindy Lee'},
+            'album': {'id': 9, 'title': 'Diamond Jubilee'},
+            'sourceTitle': 'Cindy.Lee-Diamond.Jubilee-WEB-2024-XYZ',
+          },
+        ],
+        'totalRecords': 1,
+      };
+
+      final container = _container(
+        settings: settingsWith(
+          lidarrUrl: 'https://lidarr.local:8686',
+          lidarrApiKey: 'key',
+        ),
+        lidarrService: LidarrService(client),
+      );
+
+      final items = await container.read(servicesRecentlyAddedProvider.future);
+
+      expect(client.lastGetPath, '/api/v1/history');
+      expect(client.lastGetQueryParameters?['includeArtist'], isTrue);
+      expect(client.lastGetQueryParameters?['includeAlbum'], isTrue);
+      expect(items.single.service, ServiceKey.lidarr);
+      expect(
+        items.single.title,
+        'Diamond Jubilee',
+        reason: 'the embed is what keeps the raw release name off the tile',
+      );
     });
 
     test('it reads history, and keeps only what landed or failed', () async {

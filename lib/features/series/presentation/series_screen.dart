@@ -68,6 +68,8 @@ class SeriesScreen extends ConsumerWidget {
           sonarrSeriesStatus(series, queueEntry: queue?.entryFor(series.id)),
       onRefresh: (ref) {
         ref.invalidate(sonarrQueueSnapshotProvider);
+        // The rail's own non-swallowing read. See `movies_screen.dart`.
+        ref.invalidate(sonarrKpiLibraryProvider);
       },
       settingsSelector: (settings) =>
           (settings.sonarrUrl, settings.sonarrApiKey),

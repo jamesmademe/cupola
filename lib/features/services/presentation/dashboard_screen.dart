@@ -320,4 +320,13 @@ void _invalidateServicesDashboard(WidgetRef ref) {
   ref.invalidate(servicesMoviesProvider);
   ref.invalidate(servicesSeriesProvider);
   ref.invalidate(servicesMusicProvider);
+  // And the four non-swallowing reads the rail makes of those same libraries.
+  // They are separate providers so that a server which did not answer reads an
+  // em dash rather than a confident zero; separate also means a pull that
+  // stopped at the line above refreshed the grids and left every figure on
+  // every stack card exactly where it was.
+  ref.invalidate(radarrKpiLibraryProvider);
+  ref.invalidate(sonarrKpiLibraryProvider);
+  ref.invalidate(lidarrKpiLibraryProvider);
+  ref.invalidate(readarrKpiLibraryProvider);
 }

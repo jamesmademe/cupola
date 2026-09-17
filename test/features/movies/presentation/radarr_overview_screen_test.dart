@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
@@ -119,10 +122,7 @@ void main() {
             'errorMessage': 'Radarr could not match the file',
           },
         ],
-        cutoff: const [
-          {'id': 1},
-          {'id': 2},
-        ],
+        cutoffTotal: 2,
       ),
     );
 
@@ -188,14 +188,86 @@ void main() {
             ).toIso8601String(),
           ),
         ],
-        cutoff: const [
-          {'id': 1},
-        ],
+        cutoffTotal: 1,
       ),
     );
 
     // A `RenderFlex overflowed` is thrown, not merely painted, under test.
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('pulling to refresh refetches the library, not just the clock', (
+    tester,
+  ) async {
+    // Coming up, Recently added and all four readouts on the rail are derived
+    // from `moviesProvider`, which is not autoDispose and so is fetched once
+    // for the life of the app. Invalidating only the derived providers re-ran
+    // the window functions against that same cached list with a new
+    // `DateTime.now()` — a pull that recomputed and fetched nothing, so a film
+    // that landed, one that was added or a release date that moved never
+    // appeared.
+    final service = _scripted(movies: [_movie(id: 1)]) as _ScriptedRadarr;
+    await _pump(tester, service: service);
+    final before = service.libraryCalls;
+
+    // Driven through the indicator's own state rather than a fling: the page is
+    // one tall scroll view with a horizontal rail inside it, and what is under
+    // test is the invalidate list the callback runs, not the gesture.
+    unawaited(
+      tester.state<RefreshIndicatorState>(find.byType(RefreshIndicator)).show(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(service.libraryCalls, greaterThan(before));
+  });
+
+  testWidgets('pulling to refresh refetches the queue behind Queued too', (
+    tester,
+  ) async {
+    // `radarrQueueSnapshotProvider` is not autoDispose either, and the rail's
+    // fourth figure is read off it. Both readers of the queue have to refetch,
+    // or `Queued` sits frozen beside three figures that moved.
+    final service = _scripted() as _ScriptedRadarr;
+    await _pump(tester, service: service);
+    final before = service.queueCalls;
+
+    unawaited(
+      tester.state<RefreshIndicatorState>(find.byType(RefreshIndicator)).show(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(service.queueCalls, before * 2);
+  });
+
+  testWidgets('a failed refresh keeps the count over the rows it still draws', (
+    tester,
+  ) async {
+    // Same trap the NZBGet Overview names: `asData` is null on an `AsyncError`
+    // that carries a retained value, while `AsyncValueWidget` under the header
+    // draws that retained value at full ink beneath the unreachable band. The
+    // header printed "—" over rows it was still showing.
+    final service = _FlakyQueueRadarr(
+      queue: [
+        {
+          'movie': {'title': 'Nickel Boys'},
+          'trackedDownloadState': 'importFailed',
+          'errorMessage': 'Radarr could not match the file',
+        },
+      ],
+    );
+    await _pump(tester, service: service);
+    expect(_sectionHeader(tester, 'Needs attention').subtitle, '1');
+
+    service.failFromNowOn = true;
+    unawaited(
+      tester.state<RefreshIndicatorState>(find.byType(RefreshIndicator)).show(),
+    );
+    await tester.pumpAndSettle();
+
+    // The row is still on screen…
+    expect(find.text('Import failed · Nickel Boys'), findsOneWidget);
+    // …so the figure above it still has to count it.
+    expect(_sectionHeader(tester, 'Needs attention').subtitle, '1');
   });
 
   testWidgets('a Radarr that was never set up gets its own door', (
@@ -214,6 +286,10 @@ void main() {
 }
 
 // ─── Harness ────────────────────────────────────────────────────────────────
+
+SectionHeader _sectionHeader(WidgetTester tester, String title) => tester
+    .widgetList<SectionHeader>(find.byType(SectionHeader))
+    .firstWhere((header) => header.title == title);
 
 Future<void> _pump(
   WidgetTester tester, {
@@ -270,12 +346,12 @@ RadarrService _scripted({
   List<RadarrMovie> movies = const [],
   List<dynamic> queue = const [],
   List<dynamic> history = const [],
-  List<dynamic> cutoff = const [],
+  int? cutoffTotal,
 }) => _ScriptedRadarr(
   movies: movies,
   queue: queue,
   history: history,
-  cutoff: cutoff,
+  cutoffTotal: cutoffTotal,
 );
 
 class _ScriptedRadarr extends FakeRadarrService {
@@ -283,21 +359,44 @@ class _ScriptedRadarr extends FakeRadarrService {
     this.movies = const [],
     this.queue = const [],
     this.history = const [],
-    this.cutoff = const [],
+    this.cutoffTotal,
   });
 
   final List<RadarrMovie> movies;
   final List<dynamic> queue;
   final List<dynamic> history;
-  final List<dynamic> cutoff;
+
+  /// What `wanted/cutoff` reports as its `totalRecords`. Null is a fork that
+  /// does not serve the endpoint, and draws no backlog row at all.
+  final int? cutoffTotal;
+
+  /// How many times the library was actually fetched.
+  ///
+  /// `moviesProvider` is not autoDispose, so this is the only way to tell a
+  /// pull that refetched from a pull that re-read a session-old cache.
+  int libraryCalls = 0;
 
   @override
-  Future<List<RadarrMovie>> getMovies() async => movies;
+  Future<List<RadarrMovie>> getMovies() async {
+    libraryCalls++;
+    return movies;
+  }
+
+  /// How many times the queue was actually fetched.
+  ///
+  /// Two independent readers ask for it — the Needs attention section and the
+  /// snapshot behind the rail's `Queued` figure — and only one of them was
+  /// autoDispose, so this separates a pull that refetched the queue from one
+  /// that re-read a session-old snapshot.
+  int queueCalls = 0;
 
   @override
   Future<List<dynamic>> getQueue({
     Map<String, dynamic>? queryParameters,
-  }) async => queue;
+  }) async {
+    queueCalls++;
+    return queue;
+  }
 
   @override
   Future<List<dynamic>> getHistory({
@@ -307,7 +406,30 @@ class _ScriptedRadarr extends FakeRadarrService {
   }) async => history;
 
   @override
-  Future<List<dynamic>> getAllCutoff() async => cutoff;
+  Future<ArrRecordPage> getCutoffPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => ArrRecordPage(records: const [], total: cutoffTotal);
+}
+
+/// A Radarr whose queue answers once and then stops.
+///
+/// The wire shape of a server that was reachable when the page loaded and is
+/// not when the user pulls — the only way to get an `AsyncError` that carries a
+/// retained value.
+class _FlakyQueueRadarr extends _ScriptedRadarr {
+  _FlakyQueueRadarr({super.queue});
+
+  bool failFromNowOn = false;
+
+  @override
+  Future<List<dynamic>> getQueue({
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    if (failFromNowOn) throw Exception('queue failed');
+    return super.getQueue(queryParameters: queryParameters);
+  }
 }
 
 class _FailingHistoryRadarr extends _ScriptedRadarr {

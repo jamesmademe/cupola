@@ -22,6 +22,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 
+import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_provider.dart';
 
 import 'package:cupola/features/services/domain/service_tab.dart';
@@ -102,6 +103,30 @@ class _OverviewBody extends ConsumerWidget {
       onRefresh: () async {
         ref.invalidate(serviceSummaryProvider(ServiceKey.radarr));
         ref.invalidate(serviceKpiProvider(ServiceKey.radarr));
+        // The library itself, not only the three readings of it. Coming up,
+        // Recently added and all four figures on the rail fall out of
+        // `moviesProvider`, which is a plain `FutureProvider` fetched once for
+        // the life of the app — so invalidating only the derived trio re-ran
+        // the window functions against the same cached list with a new clock
+        // and re-read the rail off the same cached list again. A pull that
+        // refetched nothing: a film that landed, one that was added or a
+        // release date that moved never appeared.
+        ref.invalidate(moviesProvider);
+        // And the rail's own non-swallowing read of it. See
+        // `radarrKpiLibraryProvider`.
+        ref.invalidate(radarrKpiLibraryProvider);
+        // And the queue snapshot behind the rail's fourth figure, for the same
+        // reason: `serviceKpiProvider` is autoDispose, this one is not, so
+        // Queued stayed frozen for the life of the scope while the three
+        // figures beside it moved.
+        //
+        // The **family**, not `radarrQueueSnapshotProvider`: that one only
+        // resolves the lens and re-watches `radarrQueueSnapshotForProvider`,
+        // so invalidating it re-reads the member's cached future and fetches
+        // nothing. Invalidating the family is what reaches the request, and it
+        // takes the lens-resolving provider and the queued-id set down with it
+        // as dependents.
+        ref.invalidate(radarrQueueSnapshotForProvider);
         ref.invalidate(radarrComingUpProvider);
         ref.invalidate(radarrNeedsAttentionProvider);
         ref.invalidate(radarrQueueRecordsProvider);
@@ -142,7 +167,13 @@ class _ComingUpSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final releases = ref.watch(radarrComingUpProvider);
-    final count = releases.asData?.value.length;
+    // `hasValue`, never `asData`: `asData` is null on an `AsyncError` even when
+    // Riverpod retained the value it had, while `AsyncValueWidget` under this
+    // header draws exactly that retained list at full ink beneath the
+    // unreachable band. Read through `asData` the header printed "—" over rows
+    // it was still showing. A source that never answered has no retained value
+    // and still reads "—".
+    final count = releases.hasValue ? releases.requireValue.length : null;
 
     return ServiceOverviewSection(
       service: ServiceKey.radarr,
@@ -221,7 +252,13 @@ class _NeedsAttentionSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(radarrNeedsAttentionProvider);
-    final count = items.asData?.value.length;
+    // `hasValue`, never `asData`: `asData` is null on an `AsyncError` even when
+    // Riverpod retained the value it had, while `AsyncValueWidget` under this
+    // header draws exactly that retained list at full ink beneath the
+    // unreachable band. Read through `asData` the header printed "—" over rows
+    // it was still showing. A source that never answered has no retained value
+    // and still reads "—".
+    final count = items.hasValue ? items.requireValue.length : null;
 
     return ServiceOverviewSection(
       service: ServiceKey.radarr,

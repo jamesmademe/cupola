@@ -766,11 +766,16 @@ final servicesArrHistoryProvider = FutureProvider<List<ArrHistoryEntry>>((
           .watch(sonarrServiceProvider)
           .getHistory(pageSize: servicesHistoryPageSize),
     ),
-    // Lidarr's records arrive without their artist: `LidarrService` has no
-    // `getHistory` override, so nothing injects `includeArtist`, and the base
-    // call cannot add it without deciding for every arr. The record still
-    // carries `sourceTitle`, so the row has a name and a time — it has no
-    // poster, and the tile draws its service glyph instead.
+    // Lidarr's records DO arrive with their artist and their album:
+    // `LidarrService` overrides `getHistoryPage`, which this `getHistory`
+    // delegates through, and injects `includeArtist`/`includeAlbum` there. So
+    // the title resolves to the album (`arrPrimaryMediaTitle` reads `album`
+    // then `artist`) rather than falling back to the raw `sourceTitle`.
+    //
+    // What is still absent is the *poster*: `_historyEntryFrom` reads images
+    // off `movie` or `series` only, and an artist's cover art is not one of
+    // them, so a Lidarr tile draws its service glyph. That is a gap in the
+    // mapper below, not in the request.
     from(
       ServiceKey.lidarr,
       () => ref
@@ -1206,8 +1211,17 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(Ref ref) async {
           id: '${group.nzbId}',
           title: group.name,
           progress: group.progress,
-          doneBytes: (group.fileSizeMb - group.remainingSizeMb) * megabyte,
-          totalBytes: group.fileSizeMb * megabyte,
+          // Both sizes are nullable now — NZBGet reporting neither the `*MB`
+          // key nor the `*Hi`/`*Lo` pair used to read as zero megabytes, which
+          // made an unmeasured job render as a finished one.
+          doneBytes: switch ((group.fileSizeMb, group.remainingSizeMb)) {
+            (final int total, final int left) => (total - left) * megabyte,
+            _ => null,
+          },
+          totalBytes: switch (group.fileSizeMb) {
+            final int total => total * megabyte,
+            _ => null,
+          },
           // NZBGet reports a rate for the whole client and none per group, so
           // there is nothing to divide into an estimate. `—`, not a guess.
           etaSeconds: null,

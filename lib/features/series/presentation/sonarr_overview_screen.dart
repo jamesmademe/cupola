@@ -128,6 +128,10 @@ class _OverviewBody extends ConsumerWidget {
         // again — a pull-to-refresh that refetched nothing. An episode that
         // aired, a series added, a show that ended: none of it appeared.
         ref.invalidate(seriesProvider);
+        // And the rail's own non-swallowing read of it, which is a separate
+        // session-cached provider precisely so a dark Sonarr reads "—"
+        // instead of "0". Left out, the four figures never move again.
+        ref.invalidate(sonarrKpiLibraryProvider);
         ref.invalidate(sonarrOverviewSeriesProvider);
         ref.invalidate(sonarrAiringWeekProvider);
         ref.invalidate(sonarrNeedsAttentionProvider);

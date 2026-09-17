@@ -114,9 +114,75 @@ class LidarrService with ArrActivityMixin {
     );
   }
 
-  /// Fetches all artists from Lidarr.
+  /// The same embed on the wanted endpoints, and on the **page** primitive for
+  /// the same reason history is.
+  ///
+  /// A Lidarr `wanted/missing` record is an album: id, title, release date,
+  /// `artistId`. The artist object rides only when the request asks, and the
+  /// Overview's backlog line counts distinct `arrArtistName(row)` to say
+  /// "across 6 artists" — a clause that, unasked, computed an empty set on
+  /// every real server and was therefore dropped every single time. It dropped
+  /// rather than lied, which is why nobody saw it; it was still a promise the
+  /// request could never keep.
+  @override
+  Future<ArrRecordPage> getMissingPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) {
+    return super.getMissingPage(
+      page: page,
+      pageSize: pageSize,
+      queryParameters: {'includeArtist': true, ...?queryParameters},
+    );
+  }
+
+  /// As [getMissingPage]. Cutoff rows print the same `Artist — Album` line.
+  @override
+  Future<ArrRecordPage> getCutoffPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) {
+    return super.getCutoffPage(
+      page: page,
+      pageSize: pageSize,
+      queryParameters: {'includeArtist': true, ...?queryParameters},
+    );
+  }
+
+  /// The walks need their own override: they go through `_fetchAllPages`, not
+  /// through the page primitives, and they are what Activity's Wanted tab
+  /// reads — where a music row's secondary line *is* `arrArtistName`.
+  @override
+  Future<List<dynamic>> getAllMissing({Map<String, dynamic>? queryParameters}) {
+    return super.getAllMissing(
+      queryParameters: {'includeArtist': true, ...?queryParameters},
+    );
+  }
+
+  @override
+  Future<List<dynamic>> getAllCutoff({Map<String, dynamic>? queryParameters}) {
+    return super.getAllCutoff(
+      queryParameters: {'includeArtist': true, ...?queryParameters},
+    );
+  }
+
+  /// Fetches all artists from Lidarr, answering `[]` when it cannot be read.
+  ///
+  /// The degrading read, kept as it was. Callers that derive a *figure* use
+  /// [getArtistsOrThrow].
   Future<List<LidarrArtist>> getArtists() async {
     return fetchAllItems('artist', LidarrArtist.fromJson);
+  }
+
+  /// The same library, with a failed fetch allowed to reach the caller.
+  ///
+  /// See [fetchAllItemsOrThrow]. Off the swallowing read a dark Lidarr printed
+  /// `Artists 0 · Albums 0 · Tracks 0/0 · Missing 0`, which is a library that
+  /// exists and is empty — the opposite of what happened.
+  Future<List<LidarrArtist>> getArtistsOrThrow() async {
+    return fetchAllItemsOrThrow('artist', LidarrArtist.fromJson);
   }
 
   /// Fetches a single artist by ID, returning a typed model.

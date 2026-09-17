@@ -63,7 +63,38 @@ class ServiceKpiPeek extends StatelessWidget {
         height: railHeight,
         children: List.generate(4, (_) => const _KpiSkeletonCard()),
       ),
-      error: (_, _) => const SizedBox.shrink(),
+      error: (error, _) {
+        // A service that was never set up is answered by the page below —
+        // `NotConfiguredPlaceholder` — and a rail of em dashes over it would
+        // read as a fault to go and fix rather than a service nobody
+        // configured. Matched on the string the app throws everywhere for it;
+        // see `AsyncValueWidget`.
+        if (error.toString().contains('not configured')) {
+          return const SizedBox.shrink();
+        }
+        // Everything else: the figures could not be read, and *that* is the
+        // readout. Collapsing to nothing here made "no figures" and "no rail"
+        // the same pixels, so a reader had no way to tell a service with
+        // nothing to report from one that could not be asked — the same
+        // fabrication as a confident zero, told by omission.
+        return _rail(
+          context: context,
+          height: railHeight,
+          children: [
+            _KpiCard(
+              // One card, not four blanks: the rail cannot know which figures
+              // this service would have had, and inventing labels for them
+              // would be a second fabrication on top of the first.
+              kpi: const ServiceKpi.unavailable(
+                label: 'Figures',
+                icon: Icons.remove_rounded,
+                note: 'not answering',
+              ),
+              fallbackAccent: accent,
+            ),
+          ],
+        );
+      },
       data: (items) {
         if (items.isEmpty) return const SizedBox.shrink();
         return _rail(

@@ -53,7 +53,11 @@ class _ScriptedReadarr extends ReadarrService {
   Future<List<Map<String, dynamic>>> fetchRootFolders() async => rootFolders;
 
   @override
-  Future<ArrRecordPage> getCutoffPage({int page = 1, int pageSize = 20}) async {
+  Future<ArrRecordPage> getCutoffPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async {
     return ArrRecordPage(records: const [], total: cutoffTotal);
   }
 }

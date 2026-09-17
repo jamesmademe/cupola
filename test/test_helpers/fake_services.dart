@@ -35,6 +35,15 @@ class FakeRadarrService extends RadarrService {
   @override
   Future<List<RadarrMovie>> getMovies() async => const [];
 
+  /// Delegates to the swallowing getter, the way the paged fakes delegate to
+  /// the record-only ones: a subclass that scripts a library has scripted it
+  /// for both readings. A fake that answered `[]` here instead would turn
+  /// every counting caller in the suite into the very bug the throwing variant
+  /// exists to expose. A test that wants the *failure* builds the real service
+  /// over a failing client — see `service_kpi_provider_test.dart`.
+  @override
+  Future<List<RadarrMovie>> getMoviesOrThrow() async => getMovies();
+
   @override
   Future<RadarrMovie?> getMovie(int movieId) async => null;
 
@@ -69,18 +78,28 @@ class FakeRadarrService extends RadarrService {
   Future<List<dynamic>> getBlocklist() async => const [];
 
   @override
-  Future<List<dynamic>> getMissing({int page = 1, int pageSize = 20}) async =>
-      const [];
+  Future<List<dynamic>> getMissing({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
 
   @override
-  Future<List<dynamic>> getCutoff({int page = 1, int pageSize = 20}) async =>
-      const [];
+  Future<List<dynamic>> getCutoff({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
 
   @override
-  Future<List<dynamic>> getAllMissing() async => const [];
+  Future<List<dynamic>> getAllMissing({
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
 
   @override
-  Future<List<dynamic>> getAllCutoff() async => const [];
+  Future<List<dynamic>> getAllCutoff({
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
 
   /// The paged primitives, delegating **back** to the record-only getters.
   ///
@@ -122,6 +141,7 @@ class FakeRadarrService extends RadarrService {
   Future<ArrRecordPage> getMissingPage({
     int page = 1,
     int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
   }) async => ArrRecordPage(
     records: await getMissing(page: page, pageSize: pageSize),
     total: null,
@@ -131,6 +151,7 @@ class FakeRadarrService extends RadarrService {
   Future<ArrRecordPage> getCutoffPage({
     int page = 1,
     int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
   }) async => ArrRecordPage(
     records: await getCutoff(page: page, pageSize: pageSize),
     total: null,
@@ -142,6 +163,10 @@ class FakeSonarrService extends SonarrService {
 
   @override
   Future<List<SonarrSeries>> getSeries() async => const [];
+
+  /// See [FakeRadarrService.getMoviesOrThrow].
+  @override
+  Future<List<SonarrSeries>> getSeriesOrThrow() async => getSeries();
 
   @override
   Future<SonarrSeries?> getSeriesById(int seriesId) async => null;
@@ -180,18 +205,28 @@ class FakeSonarrService extends SonarrService {
   Future<List<dynamic>> getBlocklist() async => const [];
 
   @override
-  Future<List<dynamic>> getMissing({int page = 1, int pageSize = 20}) async =>
-      const [];
+  Future<List<dynamic>> getMissing({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
 
   @override
-  Future<List<dynamic>> getCutoff({int page = 1, int pageSize = 20}) async =>
-      const [];
+  Future<List<dynamic>> getCutoff({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
 
   @override
-  Future<List<dynamic>> getAllMissing() async => const [];
+  Future<List<dynamic>> getAllMissing({
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
 
   @override
-  Future<List<dynamic>> getAllCutoff() async => const [];
+  Future<List<dynamic>> getAllCutoff({
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
 
   /// See [FakeRadarrService.getHistoryPage]: the fakes invert the production
   /// delegation, so a subclass scripting the record-only getter is still what a
@@ -214,6 +249,7 @@ class FakeSonarrService extends SonarrService {
   Future<ArrRecordPage> getMissingPage({
     int page = 1,
     int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
   }) async => ArrRecordPage(
     records: await getMissing(page: page, pageSize: pageSize),
     total: null,
@@ -223,6 +259,7 @@ class FakeSonarrService extends SonarrService {
   Future<ArrRecordPage> getCutoffPage({
     int page = 1,
     int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
   }) async => ArrRecordPage(
     records: await getCutoff(page: page, pageSize: pageSize),
     total: null,
@@ -234,6 +271,10 @@ class FakeLidarrService extends LidarrService {
 
   @override
   Future<List<LidarrArtist>> getArtists() async => const [];
+
+  /// See [FakeRadarrService.getMoviesOrThrow].
+  @override
+  Future<List<LidarrArtist>> getArtistsOrThrow() async => getArtists();
 
   @override
   Future<LidarrArtist?> getArtistById(int artistId) async => null;
@@ -275,18 +316,28 @@ class FakeLidarrService extends LidarrService {
   Future<List<dynamic>> getBlocklist() async => const [];
 
   @override
-  Future<List<dynamic>> getMissing({int page = 1, int pageSize = 20}) async =>
-      const [];
+  Future<List<dynamic>> getMissing({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
 
   @override
-  Future<List<dynamic>> getCutoff({int page = 1, int pageSize = 20}) async =>
-      const [];
+  Future<List<dynamic>> getCutoff({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
 
   @override
-  Future<List<dynamic>> getAllMissing() async => const [];
+  Future<List<dynamic>> getAllMissing({
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
 
   @override
-  Future<List<dynamic>> getAllCutoff() async => const [];
+  Future<List<dynamic>> getAllCutoff({
+    Map<String, dynamic>? queryParameters,
+  }) async => const [];
 
   /// See [FakeRadarrService.getHistoryPage]: the fakes invert the production
   /// delegation, so a subclass scripting the record-only getter is still what a
@@ -309,6 +360,7 @@ class FakeLidarrService extends LidarrService {
   Future<ArrRecordPage> getMissingPage({
     int page = 1,
     int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
   }) async => ArrRecordPage(
     records: await getMissing(page: page, pageSize: pageSize),
     total: null,
@@ -318,6 +370,7 @@ class FakeLidarrService extends LidarrService {
   Future<ArrRecordPage> getCutoffPage({
     int page = 1,
     int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
   }) async => ArrRecordPage(
     records: await getCutoff(page: page, pageSize: pageSize),
     total: null,

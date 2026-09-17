@@ -100,6 +100,8 @@ class MusicScreen extends ConsumerWidget {
           lidarrArtistStatus(artist, queueEntry: queue?.entryFor(artist.id)),
       onRefresh: (ref) {
         ref.invalidate(lidarrQueueSnapshotsProvider);
+        // The rail's own non-swallowing read. See `movies_screen.dart`.
+        ref.invalidate(lidarrKpiLibraryProvider);
       },
       settingsSelector: (settings) =>
           (settings.lidarrUrl, settings.lidarrApiKey),

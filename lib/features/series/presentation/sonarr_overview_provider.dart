@@ -193,11 +193,14 @@ SonarrAiringWeek sonarrAiringWeek(
 /// one was the fabricated zero. [sonarrCanReportAirings] cannot catch it: a
 /// failed fetch and an empty library are the same `[]` by the time it runs.
 ///
-/// The cost is one extra `GET /series` per session on this tab, because the KPI
-/// rail above still reads [seriesProvider]. That is the price of the em dash
-/// until `seriesProvider` itself can stop swallowing — which is a change to the
-/// shared Sonarr fakes and to the six suites that lean on the degradation, not
-/// a change to this screen.
+/// The cost is one extra `GET /series` per session on this tab. The rail above
+/// no longer reads `seriesProvider` — it was printing the same fabricated zeros
+/// — but it does not share *this* provider either, and deliberately: it awaits
+/// its library inside a `catch`, so its own source carries
+/// `retry: noProviderRetry`, while this one keeps the default retry because the
+/// Overview watches it as an `AsyncValue` and a blip should heal itself. One
+/// provider cannot hold both policies. `seriesProvider` keeps its degradation
+/// for the browse grid, which is what it was written for.
 ///
 /// Plain, not `autoDispose`, matching [seriesProvider]: the library is a
 /// session-scoped read, and a per-visit refetch of the whole library is exactly

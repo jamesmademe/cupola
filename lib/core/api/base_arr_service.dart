@@ -260,26 +260,58 @@ mixin ArrActivityMixin {
   /// defaults to 20 rows, so a count taken from [getMissing] said 20 for every
   /// library with more than twenty gaps in it — a number that is wrong in the
   /// one direction that matters, since it makes a large backlog look small.
+  /// [queryParameters] is where a service's own wanted embeds ride, and it has
+  /// to be **here**, on the primitive, for the reason [getHistoryPage] gives:
+  /// [getMissing] delegates to this, so an override of this one reaches both
+  /// spellings, while an override of [getMissing] leaves every caller that
+  /// needs the envelope's total — which is every caller that prints a figure —
+  /// holding records the embed would have filled. Lidarr's `includeArtist` is
+  /// the live case: the Overview's backlog clause counts distinct artists over
+  /// this page, and without the embed that set is empty on every real server.
   Future<ArrRecordPage> getMissingPage({
     int page = 1,
     int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
   }) async {
     final response = await client.get(
       '/api/${config.apiVersion}/wanted/missing',
-      queryParameters: {'page': page, 'pageSize': pageSize, ..._wantedParams()},
+      queryParameters: {
+        'page': page,
+        'pageSize': pageSize,
+        ..._wantedParams(),
+        ...?queryParameters,
+      },
     );
     return ArrRecordPage.fromEnvelope(response.data);
   }
 
   /// Fetches missing items (wanted), records only.
-  Future<List<dynamic>> getMissing({int page = 1, int pageSize = 20}) async {
-    final result = await getMissingPage(page: page, pageSize: pageSize);
+  Future<List<dynamic>> getMissing({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final result = await getMissingPage(
+      page: page,
+      pageSize: pageSize,
+      queryParameters: queryParameters,
+    );
     return result.records;
   }
 
   /// Fetches all missing items across all pages.
-  Future<List<dynamic>> getAllMissing() async {
-    return _fetchAllPages('wanted/missing', extraParams: _wantedParams());
+  ///
+  /// Takes [queryParameters] of its own rather than inheriting the page
+  /// primitive's: it walks `_fetchAllPages` directly, so an override that only
+  /// covered [getMissingPage] would miss it — and this is the spelling
+  /// Activity's Wanted tab reads.
+  Future<List<dynamic>> getAllMissing({
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    return _fetchAllPages(
+      'wanted/missing',
+      extraParams: {..._wantedParams(), ...?queryParameters},
+    );
   }
 
   /// Fetches one page of cutoff-unmet items, **with the envelope's total**.
@@ -289,7 +321,11 @@ mixin ArrActivityMixin {
   /// every \*arr fork serves `wanted/cutoff`, and a service that cannot answer
   /// the question has not answered "none". A zero here would put a confident
   /// "0 to upgrade" on a dashboard for a server that was never asked.
-  Future<ArrRecordPage> getCutoffPage({int page = 1, int pageSize = 20}) async {
+  Future<ArrRecordPage> getCutoffPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async {
     try {
       final response = await client.get(
         '/api/${config.apiVersion}/wanted/cutoff',
@@ -297,6 +333,7 @@ mixin ArrActivityMixin {
           'page': page,
           'pageSize': pageSize,
           ..._wantedParams(includeCutoffParams: true),
+          ...?queryParameters,
         },
       );
       return ArrRecordPage.fromEnvelope(response.data);
@@ -307,17 +344,32 @@ mixin ArrActivityMixin {
   }
 
   /// Fetches items with cutoff unmet, records only.
-  Future<List<dynamic>> getCutoff({int page = 1, int pageSize = 20}) async {
-    final result = await getCutoffPage(page: page, pageSize: pageSize);
+  Future<List<dynamic>> getCutoff({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final result = await getCutoffPage(
+      page: page,
+      pageSize: pageSize,
+      queryParameters: queryParameters,
+    );
     return result.records;
   }
 
   /// Fetches all cutoff unmet items across all pages.
-  Future<List<dynamic>> getAllCutoff() async {
+  ///
+  /// Takes its own [queryParameters] for the reason [getAllMissing] does.
+  Future<List<dynamic>> getAllCutoff({
+    Map<String, dynamic>? queryParameters,
+  }) async {
     try {
       return await _fetchAllPages(
         'wanted/cutoff',
-        extraParams: _wantedParams(includeCutoffParams: true),
+        extraParams: {
+          ..._wantedParams(includeCutoffParams: true),
+          ...?queryParameters,
+        },
       );
     } catch (_) {
       return [];
@@ -337,6 +389,30 @@ mixin ArrActivityMixin {
     } catch (_) {
       return [];
     }
+  }
+
+  /// The same list, with a failed fetch allowed to reach the caller.
+  ///
+  /// The sibling of [fetchAllItems], and the pair is the point. Swallowing is
+  /// right for a browse grid, which would rather show nothing than a dialog —
+  /// and it is a fabrication for anything that *counts*, because an unreachable
+  /// server and an empty library arrive as the same `[]`. Every figure derived
+  /// from the swallowing read printed a confident zero for a question nobody
+  /// answered: `Series 0 · Episodes 0/0 · Missing 0` on a Dashboard card,
+  /// directly under an identity band whose own probe already read Unreachable.
+  ///
+  /// Callers that derive a figure read this one and turn the throw into
+  /// [ServiceKpi.unavailable]'s em dash. Callers that browse keep
+  /// [fetchAllItems] and are right to. Mapping is identical — straight through
+  /// for a small list, through an isolate once it is worth the port — so the
+  /// two differ in exactly one thing, which is whether the failure survives.
+  Future<List<T>> fetchAllItemsOrThrow<T>(
+    String endpoint,
+    T Function(Map<String, dynamic>) fromJson,
+  ) async {
+    final response = await client.get('/api/${config.apiVersion}/$endpoint');
+    final data = response.data as List<dynamic>;
+    return _mapArrItems(data, fromJson);
   }
 
   /// Fetches a single item by id, or null if it cannot be read.

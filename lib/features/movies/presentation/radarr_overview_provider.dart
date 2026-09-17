@@ -272,9 +272,13 @@ List<RadarrAttentionItem> radarrQueueFaults(
   return List.unmodifiable(items);
 }
 
-/// The backlog row, or null when there is no backlog to report.
-RadarrAttentionItem? radarrBelowCutoffItem(int count) {
-  if (count <= 0) return null;
+/// The backlog row, or null when there is no backlog to report — and null too
+/// when the server never reported one.
+///
+/// A null [count] is "we could not ask", which draws no row rather than a
+/// confident zero. Same rule as `sonarrBelowCutoffItem`.
+RadarrAttentionItem? radarrBelowCutoffItem(int? count) {
+  if (count == null || count <= 0) return null;
   return RadarrAttentionItem(
     kind: RadarrAttentionKind.belowCutoff,
     headline: count == 1
@@ -322,16 +326,28 @@ final radarrQueueRecordsProvider =
       return records.whereType<Map>().map(stringKeyMap).toList(growable: false);
     });
 
-/// How many library files sit below the configured quality cutoff.
+/// How many library files sit below the configured quality cutoff, or null
+/// when the server did not say.
 ///
-/// `getAllCutoff()` already swallows its own failures and answers `[]`, so a
-/// Radarr that does not serve the endpoint reports no backlog rather than
-/// taking the section down.
-final radarrCutoffUnmetCountProvider = FutureProvider.autoDispose<int>((
+/// One request, and the figure read off the envelope's `totalRecords` rather
+/// than counted from the records themselves. `getAllCutoff()` answers the same
+/// question by walking up to fifty pages of 250 records — thousands of maps
+/// parsed to take a `.length` the envelope hands over in a field, and a count
+/// that silently caps at 12,500 — and it swallows its own failure into `[]`,
+/// which made "this fork does not serve wanted/cutoff" and "there is no
+/// backlog" the same answer.
+///
+/// `getCutoffPage` degrades to a **null** total instead, and null draws no row:
+/// the shape `sonarrBacklogProvider` already uses.
+final radarrCutoffUnmetCountProvider = FutureProvider.autoDispose<int?>((
   ref,
 ) async {
-  final records = await ref.watch(radarrServiceProvider).getAllCutoff();
-  return records.length;
+  // The page itself is thrown away — only the total is read — so ask for the
+  // smallest one the server will send.
+  final page = await ref
+      .watch(radarrServiceProvider)
+      .getCutoffPage(page: 1, pageSize: 1);
+  return page.total;
 });
 
 /// Faults first, backlog last.

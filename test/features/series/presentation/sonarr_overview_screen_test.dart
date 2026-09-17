@@ -292,7 +292,12 @@ void main() {
       series: [_series(id: 1, title: 'Severance')],
     );
     await _pump(tester, service: service);
-    expect(service.libraryCalls, 1);
+    // Two, not one: the KPI rail above reads its own non-swallowing copy of the
+    // library (`sonarrKpiLibraryProvider`) rather than the browse grid's
+    // swallowing one, so that a dark Sonarr prints "—" on the rail instead of
+    // "Series 0". Two readers of `getSeriesOrThrow`, and the pull has to move
+    // both of them.
+    expect(service.libraryCalls, 2);
 
     // Driven through the indicator's own state rather than a fling: the page is
     // one tall scroll view with a horizontal rail inside it, and what is under
@@ -302,7 +307,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(service.libraryCalls, 2);
+    expect(service.libraryCalls, 4);
   });
 
   testWidgets('nothing overflows at an accessibility reading size', (
@@ -493,12 +498,14 @@ class _ScriptedSonarr extends FakeSonarrService {
   Future<ArrRecordPage> getMissingPage({
     int page = 1,
     int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
   }) async => missing;
 
   @override
   Future<ArrRecordPage> getCutoffPage({
     int page = 1,
     int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
   }) async => cutoff;
 }
 

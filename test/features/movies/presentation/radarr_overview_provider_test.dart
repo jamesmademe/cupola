@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
@@ -18,13 +19,23 @@ class _ScriptedRadarr extends FakeRadarrService {
     this.movies = const [],
     this.queue = const [],
     this.history = const [],
-    this.cutoff = const [],
+    this.cutoffTotal,
   });
 
   final List<RadarrMovie> movies;
   final List<dynamic> queue;
   final List<dynamic> history;
-  final List<dynamic> cutoff;
+
+  /// What `wanted/cutoff` reports as its `totalRecords` — **null** for a fork
+  /// that does not serve the endpoint, which is what
+  /// `ArrRecordPage.fromEnvelope` degrades an unreadable envelope to.
+  final int? cutoffTotal;
+
+  /// How many requests the cutoff figure cost.
+  int cutoffPageCalls = 0;
+
+  /// How many times the figure was taken by downloading every record.
+  int allCutoffCalls = 0;
 
   @override
   Future<List<RadarrMovie>> getMovies() async => movies;
@@ -42,7 +53,28 @@ class _ScriptedRadarr extends FakeRadarrService {
   }) async => history;
 
   @override
-  Future<List<dynamic>> getAllCutoff() async => cutoff;
+  Future<List<dynamic>> getAllCutoff({
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    allCutoffCalls++;
+    // What the real one answers: every record, a page of 250 at a time — and
+    // `[]` when the fork does not serve the endpoint, which is why a caller
+    // that counts these cannot tell "none" from "never answered".
+    return List<dynamic>.generate(
+      cutoffTotal ?? 0,
+      (index) => {'id': index + 1},
+    );
+  }
+
+  @override
+  Future<ArrRecordPage> getCutoffPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    cutoffPageCalls++;
+    return ArrRecordPage(records: const [], total: cutoffTotal);
+  }
 }
 
 ProviderContainer _container(_ScriptedRadarr service) {
@@ -342,6 +374,12 @@ void main() {
     test('no backlog, no row', () {
       expect(radarrBelowCutoffItem(0), isNull);
     });
+
+    test('a figure the server never gave draws no row either', () {
+      // Null is "we could not ask", and it has to read as no row rather than
+      // as a zero backlog.
+      expect(radarrBelowCutoffItem(null), isNull);
+    });
   });
 
   group('the providers', () {
@@ -426,10 +464,7 @@ void main() {
                 'errorMessage': 'Could not import',
               },
             ],
-            cutoff: const [
-              {'id': 1},
-              {'id': 2},
-            ],
+            cutoffTotal: 2,
           ),
         );
 
@@ -442,18 +477,32 @@ void main() {
       },
     );
 
-    test('the cutoff count is the length of the cutoff list', () async {
-      final container = _container(
-        _ScriptedRadarr(
-          cutoff: const [
-            {'id': 1},
-            {'id': 2},
-            {'id': 3},
-          ],
-        ),
-      );
+    test('the cutoff figure is the total the server reports', () async {
+      final service = _ScriptedRadarr(cutoffTotal: 3);
+      final container = _container(service);
 
       expect(await container.read(radarrCutoffUnmetCountProvider.future), 3);
+      // One request, and not one record downloaded. `getAllCutoff` walks up to
+      // fifty pages of 250 records to answer with `records.length` — a figure
+      // the envelope hands over in a field, and one that silently caps at
+      // 12,500.
+      expect(service.cutoffPageCalls, 1);
+      expect(service.allCutoffCalls, 0);
     });
+
+    test(
+      'a fork that does not serve wanted/cutoff answers null, not 0',
+      () async {
+        final container = _container(_ScriptedRadarr());
+
+        // `getAllCutoff` swallows its own failure into `[]`, so counting it made
+        // "the server never answered" and "there is no backlog" the same figure.
+        // Sonarr's equivalent already carries the null through.
+        expect(
+          await container.read(radarrCutoffUnmetCountProvider.future),
+          isNull,
+        );
+      },
+    );
   });
 }

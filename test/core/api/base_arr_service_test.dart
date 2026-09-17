@@ -285,6 +285,37 @@ void main() {
       expect(await service.getMissing(), hasLength(20));
     });
 
+    // The wanted primitives take a caller's parameters for the same reason the
+    // history one does: an \*arr whose wanted record needs an embed
+    // (`includeArtist` on Lidarr, as `includeMovie` is on the queue) can only
+    // ask for it here. Without this the service override has nowhere to hang,
+    // and the figure derived from the page is computed over rows the embed
+    // would have filled.
+    test('the wanted pages carry a caller\'s own parameters', () async {
+      client.getResponseData = {'records': const [], 'totalRecords': 0};
+
+      await service.getMissingPage(queryParameters: const {'x': 'missing'});
+      expect(client.lastGetQueryParameters?['x'], 'missing');
+      expect(client.lastGetQueryParameters?['page'], 1);
+      expect(client.lastGetQueryParameters?['pageSize'], 20);
+
+      await service.getCutoffPage(queryParameters: const {'x': 'cutoff'});
+      expect(client.lastGetQueryParameters?['x'], 'cutoff');
+    });
+
+    // And the record-only and walk-every-page spellings too: the Activity
+    // Wanted tab reads `getAllMissing`, not the page primitive, so an embed
+    // that only rode the page would leave that list unnamed.
+    test('the wanted walks carry them as well', () async {
+      client.getResponseData = {'records': const [], 'totalRecords': 0};
+
+      await service.getAllMissing(queryParameters: const {'x': 'all-missing'});
+      expect(client.lastGetQueryParameters?['x'], 'all-missing');
+
+      await service.getAllCutoff(queryParameters: const {'x': 'all-cutoff'});
+      expect(client.lastGetQueryParameters?['x'], 'all-cutoff');
+    });
+
     test('getHistoryPage and getCutoffPage carry it too', () async {
       client.getResponseData = {
         'records': [
