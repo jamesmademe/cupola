@@ -170,6 +170,25 @@ void main() {
       expect(find.textContaining('missing from this page'), findsNothing);
     });
 
+    testWidgets('stays silent for a degraded service the header names', (
+      tester,
+    ) async {
+      // Two Radarr, the dark one being the lens. The band used to read the
+      // lensed summary, so it printed "Radarr did not answer." directly under a
+      // header that had just called Radarr answering. One fold now: the header
+      // counts it degraded, the band names nobody.
+      await _pumpDashboard(
+        tester,
+        settings: _twoRadarrSettings,
+        instanceSummary: (key) =>
+            _summary(key.service, online: key.instanceId != 'radarr-hd'),
+        summary: (service) => _summary(service, online: false),
+      );
+
+      expect(find.textContaining('1 degraded'), findsOneWidget);
+      expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
+    });
+
     testWidgets('is absent entirely when the whole stack answers', (
       tester,
     ) async {

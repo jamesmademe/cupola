@@ -7,8 +7,8 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
-import 'package:cupola/features/services/presentation/services_alert_band.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/shell/domain/stack_health.dart';
 import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
 
 import '../../../test_helpers/settings_scope.dart';
@@ -52,7 +52,7 @@ Future<void> _pump(
       ),
       // Nothing unreachable: the pane's red card is correct when it appears,
       // and it is not what this file is about.
-      servicesOfflineProvider.overrideWithValue(const <ServiceKey>[]),
+      unreachableServicesProvider.overrideWithValue(const <ServiceKey>[]),
     ],
   );
   addTearDown(container.dispose);

@@ -28,6 +28,15 @@
 /// which is enough — the sentence names the service, and the cards below it
 /// have already drained to unlit.
 ///
+/// ## Which services it names
+///
+/// [unreachableServicesProvider], which is [StackHealth]'s own fold — a service
+/// is an offender only when **every** connection of it is dark. It used to pick
+/// them off the lensed summary, so with two Radarr and the lens on the dark one
+/// the header above said `1 of 1 answering · 1 degraded` and this line said
+/// `Radarr did not answer.` about the same service, in the same scroll. One
+/// fold, two projections: the header counts it, this names it.
+///
 /// ## Why it can be dismissed, and why the dismissal is not persisted
 ///
 /// A notice you cannot silence about a service you knowingly left down is just
@@ -54,35 +63,8 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-
-/// The configured services that have answered, and said no.
-///
-/// Split out of the band so the dismissal can be pruned against it from a
-/// listener: deriving it inline would leave nothing for `ref.listen` to watch,
-/// and mutating the dismissed set during `build` is the kind of thing that
-/// works until the first rebuild in the same frame.
-final servicesOfflineProvider = Provider<List<ServiceKey>>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-
-  // Only configured services can be "not answering". An unconfigured one is not
-  // a fault, and treating it as one is what made the old aggregate lie.
-  return ServiceKey.values
-      .where(settings.isServiceConfigured)
-      .where((service) {
-        // Strictly `false`, not `!= true`: a summary still loading is neither
-        // online nor a fault, and a band that appears during the first second of
-        // every cold open is a band that cried wolf.
-        return ref
-                .watch(serviceSummaryProvider(service))
-                .asData
-                ?.value
-                .isOnline ==
-            false;
-      })
-      .toList(growable: false);
-});
+import 'package:cupola/features/shell/domain/stack_health.dart';
 
 /// Outages the user has acknowledged this session. See the library docs for why
 /// this is deliberately not persisted.
@@ -116,12 +98,12 @@ class ServicesAlertBand extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final offline = ref.watch(servicesOfflineProvider);
+    final offline = ref.watch(unreachableServicesProvider);
     final dismissed = ref.watch(dismissedOutagesProvider);
 
     // In a listener rather than in `build`: pruning is a write, and a provider
     // written to while it is being read is a loop waiting to happen.
-    ref.listen<List<ServiceKey>>(servicesOfflineProvider, (_, next) {
+    ref.listen<List<ServiceKey>>(unreachableServicesProvider, (_, next) {
       ref.read(dismissedOutagesProvider.notifier).retainOnly(next.toSet());
     });
 
@@ -136,6 +118,15 @@ class ServicesAlertBand extends ConsumerWidget {
         // Only the offenders. Re-checking the whole stack would throw away
         // twelve good summaries to re-fetch one bad one.
         for (final service in unacknowledged) {
+          // The probe itself, one entry per connection. `serviceSummaryProvider`
+          // only *delegates* to these, so invalidating it alone rebuilt a
+          // wrapper that awaited the same cached answer — a Retry that re-read
+          // the old verdict and never went near the network.
+          for (final id in ref.read(serviceInstanceIdsProvider(service))) {
+            ref.invalidate(
+              instanceSummaryProvider((service: service, instanceId: id)),
+            );
+          }
           ref.invalidate(serviceSummaryProvider(service));
           ref.invalidate(serviceKpiProvider(service));
           ref.invalidate(serviceSignalProvider(service));
@@ -238,7 +229,6 @@ class _AlertBandBody extends StatelessWidget {
                 // shares its row with body text that would otherwise size it.
                 minimumSize: const Size(56, 44),
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                visualDensity: VisualDensity.compact,
               ),
               child: Text(
                 servicesRetryLabel(services.length),
@@ -260,7 +250,6 @@ class _AlertBandBody extends StatelessWidget {
                 foregroundColor: colorScheme.primary,
                 minimumSize: const Size(56, 44),
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                visualDensity: VisualDensity.compact,
               ),
               child: Text(
                 'Settings',
@@ -276,7 +265,6 @@ class _AlertBandBody extends StatelessWidget {
               tooltip: servicesDismissAlertLabel(titles),
               constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               padding: EdgeInsets.zero,
-              visualDensity: VisualDensity.compact,
               style: IconButton.styleFrom(
                 shape: RoundedRectangleBorder(
                   borderRadius: AppRadius.borderRadiusSm,

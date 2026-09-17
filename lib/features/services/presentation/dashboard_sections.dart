@@ -1215,8 +1215,18 @@ class _SectionAction extends StatelessWidget {
 /// empty copy, sending the user to look for missing media when the answer was a
 /// missing connection.
 ///
-/// The statuses come from [serviceSummaryProvider], already resolved for the
-/// stack at the top of the same screen, so this costs no extra request.
+/// The statuses come from [serviceSummaryProvider] — the **lens**, deliberately,
+/// and this is the one place on the Dashboard that is right to ask it. The
+/// header and the alert band speak about the fleet, so they fold every
+/// connection and call a half-dark service *degraded* rather than absent; this
+/// sentence explains *why this region is empty*, and the region was filled
+/// through the lens. With two Radarr and the lens on the dark one there is
+/// genuinely nothing here and the connection that failed is the one to name.
+/// Folding here would print the generic empty copy over a failed read, which is
+/// exactly the bug this widget exists to fix.
+///
+/// Already resolved for the stack at the top of the same screen, so it costs no
+/// extra request.
 class _SectionEmptyState extends ConsumerWidget {
   final String label;
 

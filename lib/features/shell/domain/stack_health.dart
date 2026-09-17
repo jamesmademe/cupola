@@ -32,6 +32,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// *degraded* or age itself, and a `StackReadout` the Dashboard derived beside
 /// it. Two derivations of one sentence is the classic way two surfaces come to
 /// disagree the first time one of them is wrong.
+///
+/// [unreachableServicesProvider] is the same fold projected as *names* instead
+/// of a count, and it lives here for the same reason: the alert band used to
+/// pick its offenders off the **lensed** summary while this counted the fold,
+/// so a two-connection Radarr with the lens on the dark one had the header
+/// saying `1 of 1 answering · 1 degraded` and the band directly beneath it
+/// saying `Radarr did not answer.` about the service the header had just called
+/// answering.
 @immutable
 class StackHealth {
   const StackHealth({
@@ -204,6 +212,41 @@ StackHealth stackHealthFrom({
     checkedAt: checkedAt,
   );
 }
+
+/// The configured services whose **every** connection is dark, by name.
+///
+/// The band, the inspector card and the sections that print "… did not answer"
+/// in place of their empty copy all read this, and it is
+/// [StackHealth.unreachable] with the names kept: `length` equals that count by
+/// construction, because both walk [foldServiceState] over the same fold. A
+/// surface that picked its own offenders off [serviceSummaryProvider] would be
+/// asking the *lens* — one connection's opinion standing in for a service — and
+/// that is how the header and the line under it came to contradict each other.
+///
+/// A **degraded** service is deliberately absent: it answered, so naming it here
+/// would print "did not answer" about a service that did. Its half-dark state is
+/// the header's `degraded` qualifier and its own matrix cell, which reports the
+/// worst connection it contains.
+///
+/// A service still being probed is absent too, for the reason the whole file
+/// exists: a band that appears during the first second of every cold open is a
+/// band that cried wolf.
+final unreachableServicesProvider = Provider<List<ServiceKey>>((ref) {
+  final settings = ref.watch(currentSettingsProvider);
+
+  return ServiceKey.values
+      .where(settings.isServiceConfigured)
+      .where((service) {
+        final folded = ref.watch(foldedServiceHealthProvider(service));
+        return foldServiceState(
+              total: folded.total,
+              offline: folded.offline,
+              checking: folded.checking,
+            ) ==
+            StackServiceState.unreachable;
+      })
+      .toList(growable: false);
+});
 
 /// The live aggregate. Rebuilds when any *connection's* reachability moves.
 ///

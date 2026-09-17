@@ -4,9 +4,15 @@
 /// models became one: the rules did not change, the file that owns them did.
 library;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 void main() {
   group('foldServiceState', () {
@@ -128,6 +134,72 @@ void main() {
       expect(health.degraded, 0);
       expect(health.unreachable, 0);
       expect(health.qualifiers, ['1 checking']);
+    });
+  });
+
+  /// The count and the names are one fold, and the band is the reason.
+  ///
+  /// The Dashboard header counts [StackHealth.unreachable]; the alert band, the
+  /// inspector card and the drained sections name
+  /// [unreachableServicesProvider]. Those used to be two derivations — the count
+  /// folded every connection, the names asked the *lens* — so one surface could
+  /// call a service answering while the line below it said it did not answer.
+  group('the names behind the count', () {
+    ProviderContainer containerWith(
+      Map<ServiceKey, FoldedServiceHealth> folds,
+    ) {
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith(
+            (ref) => settingsWithServices(folds.keys.toList()),
+          ),
+          foldedServiceHealthProvider.overrideWith(
+            (ref, service) =>
+                folds[service] ?? (total: 0, offline: 0, checking: 0),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('an unreachable service is both counted and named', () {
+      final container = containerWith({
+        ServiceKey.radarr: (total: 1, offline: 0, checking: 0),
+        ServiceKey.lidarr: (total: 2, offline: 2, checking: 0),
+      });
+
+      final health = container.read(stackHealthProvider);
+      final named = container.read(unreachableServicesProvider);
+
+      expect(health.unreachable, 1);
+      expect(named, [ServiceKey.lidarr]);
+      expect(named.length, health.unreachable);
+    });
+
+    test('a degraded service is counted as answering and never named', () {
+      // Two Radarr, one dark. The header says `degraded`; the band has nothing
+      // to say, because "Radarr did not answer" is false about a Radarr that
+      // did.
+      final container = containerWith({
+        ServiceKey.radarr: (total: 2, offline: 1, checking: 0),
+      });
+
+      final health = container.read(stackHealthProvider);
+
+      expect(health.degraded, 1);
+      expect(health.answering, 1);
+      expect(health.unreachable, 0);
+      expect(container.read(unreachableServicesProvider), isEmpty);
+    });
+
+    test('a probe still out names nobody', () {
+      final container = containerWith({
+        ServiceKey.radarr: (total: 1, offline: 0, checking: 1),
+      });
+
+      expect(container.read(stackHealthProvider).checking, 1);
+      expect(container.read(unreachableServicesProvider), isEmpty);
     });
   });
 

@@ -299,6 +299,11 @@ void _invalidateServicesDashboard(WidgetRef ref) {
   // The per-connection leg, invalidated as a whole family: it is keyed on the
   // connection, and the loop above only knows service keys.
   ref.invalidate(serviceKpiForProvider);
+  // And the reachability probe itself, which is the same shape of mistake one
+  // layer down: `serviceSummaryProvider` only delegates to this, so the loop
+  // above rebuilt a wrapper that awaited an answer already in the cache. A pull
+  // that redrew every figure and re-asked no server whether it was up.
+  ref.invalidate(instanceSummaryProvider);
   ref.invalidate(servicesRequestsProvider);
   ref.invalidate(servicesQueueProvider);
   // One history read per arr, feeding both Recently added and the failed-import

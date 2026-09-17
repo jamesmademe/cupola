@@ -8,12 +8,12 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
-import 'package:cupola/features/services/presentation/services_alert_band.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/inspector_state.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
+import 'package:cupola/features/shell/domain/stack_health.dart';
 
 /// The inspector: what is happening, without leaving what you are doing.
 ///
@@ -32,7 +32,9 @@ class InspectorPane extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final queue = ref.watch(globalNowItemsProvider);
-    final offline = ref.watch(servicesOfflineProvider);
+    // The same fold the Dashboard header counts: this card names a service
+    // only when every connection of it is dark.
+    final offline = ref.watch(unreachableServicesProvider);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -339,6 +341,19 @@ class _UnreachableCard extends ConsumerWidget {
                     OutlinedButton(
                       onPressed: () {
                         for (final service in services) {
+                          // Per connection: `serviceSummaryProvider` delegates
+                          // to these, so invalidating the delegate alone
+                          // re-awaited the cached verdict and probed nothing.
+                          for (final id in ref.read(
+                            serviceInstanceIdsProvider(service),
+                          )) {
+                            ref.invalidate(
+                              instanceSummaryProvider((
+                                service: service,
+                                instanceId: id,
+                              )),
+                            );
+                          }
                           ref.invalidate(serviceSummaryProvider(service));
                         }
                         ref.invalidate(globalNowItemsProvider);
