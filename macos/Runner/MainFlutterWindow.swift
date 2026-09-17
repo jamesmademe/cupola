@@ -78,9 +78,9 @@ enum SecureClipboardChannel {
   private static func copySecret(_ secret: String) -> Bool {
     // No availability guard: `prepareForNewContents(with:)` and
     // `.currentHostOnly` are both macOS 10.12 API and this app deploys to
-    // 10.15, so every version that can run it can harden the clip. A
-    // `#available(macOS 11.0, *)` guard used to sit here and returned false on
-    // 10.15/10.16, which sent `_copyApiKey` down its plain-copy fallback and
+    // 12.0, so every version that can run it can harden the clip. The old
+    // `#available(macOS 11.0, *)` guard returned false on pre-11 systems,
+    // which sent `_copyApiKey` down its plain-copy fallback and
     // put the API key on the syncing general pasteboard — the exact leak this
     // channel exists to close, disabled on the oldest OS it supports.
     let pasteboard = NSPasteboard.general
