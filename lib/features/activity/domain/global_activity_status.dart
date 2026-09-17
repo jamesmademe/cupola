@@ -129,6 +129,15 @@ String? historyFilePath(Map<String, dynamic> item) {
 ///
 /// Shared by the global feed and the per-service history tile so both spell and
 /// colour the same event identically.
+///
+/// **The table is the union of the forks' vocabularies, not Radarr's.** Each
+/// \*arr names the event after the entity it writes a record for, so an import
+/// is `downloadFolderImported` on Radarr and Sonarr and `bookFileImported` on
+/// Readarr — and an event this table does not name falls through to
+/// [humanizeCamelCase] and [StatusTone.neutral], which is the right answer for
+/// an event nobody has classified and the wrong one for a fork's most common
+/// row. A per-screen override table is how that gap used to be patched, and it
+/// puts two spellings of one event on two tabs of one service.
 (String, StatusTone) historyEventDisplay(String eventType) {
   return (historyEventLabel(eventType), historyEventTone(eventType));
 }
@@ -140,15 +149,26 @@ String? historyFilePath(Map<String, dynamic> item) {
 StatusGlyph? historyEventGlyph(String eventType) {
   return switch (eventType) {
     'grabbed' => StatusGlyph.grabbed,
-    'downloadFolderImported' || 'downloadImported' => StatusGlyph.imported,
+    'downloadFolderImported' ||
+    'downloadImported' ||
+    'bookFileImported' ||
+    'authorFolderImported' => StatusGlyph.imported,
     'downloadFailed' || 'importFailed' => StatusGlyph.failed,
+    // Readarr's own import failure. It depicts the same thing as an
+    // `importFailed`: a release that arrived and did not make it into the
+    // library.
+    'bookImportIncomplete' => StatusGlyph.failed,
     'downloadIgnored' => StatusGlyph.ignored,
     'episodeFileDeleted' ||
     'movieFileDeleted' ||
-    'trackFileDeleted' => StatusGlyph.deleted,
+    'trackFileDeleted' ||
+    'bookFileDeleted' => StatusGlyph.deleted,
     'episodeFileRenamed' ||
     'movieFileRenamed' ||
-    'trackFileRenamed' => StatusGlyph.renamed,
+    'trackFileRenamed' ||
+    'bookFileRenamed' => StatusGlyph.renamed,
+    // `bookFileRetagged` deliberately has none: a metadata rewrite is not a
+    // picture, and the five glyphs above are all events with a shape.
     _ => null,
   };
 }
@@ -164,11 +184,23 @@ StatusTone historyEventTone(String eventType) => _historyEvent(eventType).$2;
     // already says, and said it on every row of a page that is mostly grabs.
     'grabbed' => ('Grabbed', StatusTone.neutral),
     'downloadFolderImported' ||
-    'downloadImported' => ('Imported', StatusTone.success),
+    'downloadImported' ||
+    // Readarr spells its own import. It writes one record per *book file*,
+    // under names no other fork uses, so before these arms existed the most
+    // common row on a book history — a completed import, the one event on the
+    // page that is unambiguously good news — fell through to
+    // `humanizeCamelCase` and came out as a neutral "Book File Imported".
+    // `authorFolderImported` is the same event on an older Readarr.
+    'bookFileImported' ||
+    'authorFolderImported' => ('Imported', StatusTone.success),
     // Faults, and therefore amber. Red is reserved for a connection that did
     // not answer — a failed grab means the service answered and told us so.
     'downloadFailed' => ('Failed', StatusTone.warning),
     'importFailed' => ('Import Failed', StatusTone.warning),
+    // Readarr's import fault, and the failure a book library actually suffers:
+    // the book went in with files missing. Amber for the same reason as the two
+    // above — the service answered and told us so.
+    'bookImportIncomplete' => ('Import incomplete', StatusTone.warning),
     // Deliberately not an error, and no longer sharing `importFailed`'s wording.
     // `downloadIgnored` is a choice somebody made — the \*arr was told to leave
     // this release alone. Rendering it as a red "Import Failed" sent the user
@@ -178,10 +210,15 @@ StatusTone historyEventTone(String eventType) => _historyEvent(eventType).$2;
     // nobody experienced; this is backlog, and backlog is neutral.
     'episodeFileDeleted' ||
     'movieFileDeleted' ||
-    'trackFileDeleted' => ('Deleted', StatusTone.neutral),
+    'trackFileDeleted' ||
+    'bookFileDeleted' => ('Deleted', StatusTone.neutral),
     'episodeFileRenamed' ||
     'movieFileRenamed' ||
-    'trackFileRenamed' => ('Renamed', StatusTone.neutral),
+    'trackFileRenamed' ||
+    'bookFileRenamed' => ('Renamed', StatusTone.neutral),
+    // A metadata rewrite: Readarr doing maintenance nobody asked to be told
+    // about. Neutral, and not a fault.
+    'bookFileRetagged' => ('Retagged', StatusTone.neutral),
     _ => (humanizeCamelCase(eventType), StatusTone.neutral),
   };
 }

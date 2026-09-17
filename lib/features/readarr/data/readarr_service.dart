@@ -16,6 +16,60 @@ class ReadarrService with ArrActivityMixin {
   @override
   final ArrServiceConfig config = ArrServiceConfig.readarr;
 
+  /// Asks for the book and the author with every queue record.
+  ///
+  /// A Readarr queue record on its own carries `bookId`/`authorId` and the raw
+  /// release name, nothing else — so a row built from it could only print
+  /// `Orbital.2023.RETAIL.EPUB-XYZ`. The embeds are what turn that back into
+  /// `Import failed · Orbital`, and they only ride along when the request asks
+  /// for them, exactly as Sonarr must ask for `includeSeries`/`includeEpisode`.
+  @override
+  Future<List<dynamic>> getQueue({Map<String, dynamic>? queryParameters}) {
+    return super.getQueue(
+      queryParameters: {
+        'includeBook': true,
+        'includeAuthor': true,
+        ...?queryParameters,
+      },
+    );
+  }
+
+  /// On the **page** primitive, not on `getHistory`.
+  ///
+  /// `getHistory` delegates here, so both spellings pick the parameters up —
+  /// but only this way round. Hung off `getHistory` instead, a caller reaching
+  /// for `getHistoryPage` (the one carrying the envelope's total, and therefore
+  /// the only one a count may be derived from) would get records with no
+  /// embedded `book` and no embedded `author`. `base_arr_service.dart` warns
+  /// about precisely this.
+  @override
+  Future<ArrRecordPage> getHistoryPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) {
+    return super.getHistoryPage(
+      page: page,
+      pageSize: pageSize,
+      queryParameters: {
+        'includeBook': true,
+        'includeAuthor': true,
+        ...?queryParameters,
+      },
+    );
+  }
+
+  @override
+  Future<List<dynamic>> getAllHistory({Map<String, dynamic>? queryParameters}) {
+    return super.getAllHistory(
+      queryParameters: {
+        'includeBook': true,
+        'includeAuthor': true,
+        ...?queryParameters,
+      },
+    );
+  }
+
   /// Fetches all authors (the primary library entity).
   Future<List<ReadarrAuthor>> getAuthors() {
     return fetchAllItems('author', ReadarrAuthor.fromJson);

@@ -35,5 +35,49 @@ void main() {
       expect(items.first.eventType, 'grabbed');
       expect(items.first.authorName, 'Brandon Sanderson');
     });
+
+    test('the queue asks for the book and the author', () async {
+      // A Readarr queue record on its own carries `bookId`/`authorId` and the
+      // raw release name, nothing else, so a row built from it could only
+      // print `Orbital.2023.RETAIL.EPUB-XYZ`. The embeds only ride along when
+      // the request asks for them.
+      final client = FakeApiClient()..getResponseData = const <dynamic>[];
+      await ReadarrService(client).getQueue();
+
+      expect(client.lastGetPath, '/api/v1/queue');
+      expect(client.lastGetQueryParameters?['includeBook'], isTrue);
+      expect(client.lastGetQueryParameters?['includeAuthor'], isTrue);
+    });
+
+    test(
+      'the history page asks for them too, and so does getHistory',
+      () async {
+        // Hung off `getHistory` instead, a caller reaching for `getHistoryPage`
+        // — the one carrying the envelope's total, and therefore the only one a
+        // count may be derived from — would get records with no embedded book.
+        final client = FakeApiClient()..getResponseData = const <dynamic>[];
+        final service = ReadarrService(client);
+
+        await service.getHistoryPage();
+        expect(client.lastGetPath, '/api/v1/history');
+        expect(client.lastGetQueryParameters?['includeBook'], isTrue);
+        expect(client.lastGetQueryParameters?['includeAuthor'], isTrue);
+
+        client.lastGetQueryParameters = null;
+        await service.getHistory();
+        expect(client.lastGetQueryParameters?['includeBook'], isTrue);
+        expect(client.lastGetQueryParameters?['includeAuthor'], isTrue);
+      },
+    );
+
+    test('a caller can still add parameters of its own', () async {
+      final client = FakeApiClient()..getResponseData = const <dynamic>[];
+      await ReadarrService(
+        client,
+      ).getHistoryPage(queryParameters: const {'eventType': 3});
+
+      expect(client.lastGetQueryParameters?['eventType'], 3);
+      expect(client.lastGetQueryParameters?['includeBook'], isTrue);
+    });
   });
 }

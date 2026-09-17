@@ -41,6 +41,19 @@ import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
         color: statusToneColor(colorScheme, StatusTone.warning),
         label: 'FAILED',
       );
+    // Readarr's own import faults, and the only two events on this list a user
+    // has to act on. Without these arms they fell to the default below and
+    // drew as `onSurfaceVariant` under a camel-case shout —
+    // `BOOKIMPORTINCOMPLETE` — which is the backlog treatment given to the one
+    // row that is not backlog. Amber, not red: the service answered and told
+    // us the import went wrong.
+    case 'importFailed':
+    case 'bookImportIncomplete':
+      return (
+        icon: Icons.file_download_off_rounded,
+        color: statusToneColor(colorScheme, StatusTone.warning),
+        label: 'IMPORT FAILED',
+      );
     default:
       return (
         icon: Icons.history_rounded,

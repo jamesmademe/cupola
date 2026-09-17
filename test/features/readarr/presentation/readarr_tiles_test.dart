@@ -58,6 +58,21 @@ void main() {
           expect(deleted, isNot(statusToneColor(scheme, StatusTone.error)));
         });
 
+        test('an import fault is amber, not the grey of an unknown event', () {
+          // `bookImportIncomplete` is Readarr's own spelling and the failure a
+          // book library actually suffers. It used to fall through to the
+          // default arm, which paints `onSurfaceVariant` — the backlog
+          // treatment, given to the one row on the page that is not backlog.
+          final incomplete = readarrEventStyle('bookImportIncomplete', scheme);
+          expect(incomplete.color, statusToneColor(scheme, StatusTone.warning));
+          expect(incomplete.color, isNot(scheme.onSurfaceVariant));
+          expect(incomplete.label, 'IMPORT FAILED');
+          expect(
+            readarrEventStyle('importFailed', scheme).color,
+            statusToneColor(scheme, StatusTone.warning),
+          );
+        });
+
         test('an event Readarr invented prints its own name', () {
           final style = readarrEventStyle('authorRenamed', scheme);
           expect(style.label, 'AUTHORRENAMED');

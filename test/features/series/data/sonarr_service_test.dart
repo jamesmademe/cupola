@@ -10,6 +10,40 @@ import '../../../test_helpers/fake_api_client.dart';
 
 void main() {
   group('SonarrService', () {
+    test('getSeries answers [] when the library cannot be read', () async {
+      final client = FakeApiClient()..getException = Exception('unreachable');
+
+      expect(await SonarrService(client).getSeries(), isEmpty);
+    });
+
+    test('getSeriesOrThrow lets that same failure through', () async {
+      // The pair is the point. An empty library and an unreachable server are
+      // the same `[]` out of `getSeries`, so any figure derived from it prints
+      // a confident zero for a question nobody answered. Callers that count
+      // read this one instead.
+      final client = FakeApiClient()..getException = Exception('unreachable');
+
+      expect(
+        SonarrService(client).getSeriesOrThrow(),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('getSeriesOrThrow reads the same endpoint and maps it', () async {
+      final client = FakeApiClient()
+        ..getResponseData = [
+          {'id': 7, 'title': 'Severance'},
+        ];
+
+      final series = await SonarrService(client).getSeriesOrThrow();
+
+      expect(
+        client.lastGetPath,
+        '/api/${ArrServiceConfig.sonarr.apiVersion}/series',
+      );
+      expect(series.single.title, 'Severance');
+    });
+
     test('getQueue requests embedded series and episode data', () async {
       final client = FakeApiClient()
         ..getResponseData = {

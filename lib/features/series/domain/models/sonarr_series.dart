@@ -35,6 +35,23 @@ class SonarrSeries {
   final String? certification;
   final String? firstAired;
   final String? lastAired;
+
+  /// When Sonarr expects the next episode of this series to broadcast, in UTC.
+  ///
+  /// Read for exactly one surface: the Overview's week window. Sonarr puts this
+  /// on `SeriesResource` itself, so it costs nothing beyond the `series` call
+  /// the library already makes — and it is the **only** forward-looking date the
+  /// app can reach, because `GET /api/v3/calendar` is not a call this client
+  /// makes. It is one instant per series rather than a list of episodes: a
+  /// series airing twice in one week reports the earlier of the two and says
+  /// nothing about the later, which is why the section built on it counts
+  /// *series* and never claims to count episodes.
+  ///
+  /// Null both when nothing is scheduled and when the server never sent the
+  /// field at all — see `sonarrCanReportAirings`, which is what keeps those two
+  /// from collapsing into a confident "nothing airing this week".
+  final String? nextAiring;
+
   final String? added;
   final Map<String, dynamic>? originalLanguage;
 
@@ -62,6 +79,7 @@ class SonarrSeries {
     this.certification,
     this.firstAired,
     this.lastAired,
+    this.nextAiring,
     this.added,
     this.originalLanguage,
   });
@@ -117,6 +135,7 @@ class SonarrSeries {
       certification: json['certification'],
       firstAired: json['firstAired'],
       lastAired: json['lastAired'],
+      nextAiring: json['nextAiring'],
       added: json['added'],
       originalLanguage: json['originalLanguage'] is Map<String, dynamic>
           ? json['originalLanguage'] as Map<String, dynamic>

@@ -52,6 +52,63 @@ void main() {
       );
     });
 
+    test("Readarr's own spellings are in the table, not in one screen", () {
+      // Each \*arr names the event after the entity it writes a record for, and
+      // Readarr writes one record per **book file**. Before these arms existed
+      // every one of them fell through to `humanizeCamelCase` and neutral, so
+      // the most common row on a book history — a completed import, the one
+      // event on the page that is unambiguously good news — read as a grey
+      // "Book File Imported", and `bookImportIncomplete`, the failure a book
+      // library actually suffers, read as backlog rather than as a fault.
+      final imported = resolveHistoryStatus(const {
+        'eventType': 'bookFileImported',
+      });
+      expect(imported.label, 'Imported');
+      expect(imported.tone, StatusTone.success);
+      expect(imported.glyph, StatusGlyph.imported);
+
+      // The same event on an older Readarr.
+      expect(
+        resolveHistoryStatus(const {'eventType': 'authorFolderImported'}).tone,
+        StatusTone.success,
+      );
+
+      final incomplete = resolveHistoryStatus(const {
+        'eventType': 'bookImportIncomplete',
+      });
+      expect(incomplete.label, 'Import incomplete');
+      expect(incomplete.tone, StatusTone.warning);
+      expect(incomplete.glyph, StatusGlyph.failed);
+    });
+
+    test("Readarr's bookkeeping events stay neutral", () {
+      // A deletion, a rename and a metadata rewrite. Amber would claim a fault
+      // nobody experienced.
+      expect(
+        resolveHistoryStatus(const {'eventType': 'bookFileDeleted'}).label,
+        'Deleted',
+      );
+      expect(
+        resolveHistoryStatus(const {'eventType': 'bookFileDeleted'}).tone,
+        StatusTone.neutral,
+      );
+      expect(
+        resolveHistoryStatus(const {'eventType': 'bookFileRenamed'}).label,
+        'Renamed',
+      );
+      expect(
+        resolveHistoryStatus(const {'eventType': 'bookFileRenamed'}).tone,
+        StatusTone.neutral,
+      );
+      final retagged = resolveHistoryStatus(const {
+        'eventType': 'bookFileRetagged',
+      });
+      expect(retagged.label, 'Retagged');
+      expect(retagged.tone, StatusTone.neutral);
+      // Maintenance has no picture; the glyphs are for events with a shape.
+      expect(retagged.glyph, isNull);
+    });
+
     test('an unknown event type is humanised and stays neutral', () {
       final status = resolveHistoryStatus(const {
         'eventType': 'someFutureEvent',

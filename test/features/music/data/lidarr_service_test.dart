@@ -141,6 +141,54 @@ void main() {
       });
     });
 
+    test('getQueue asks for the artist and the album it will print', () async {
+      client.getResponseData = const [];
+
+      await service.getQueue();
+
+      expect(client.lastGetPath, '/api/v1/queue');
+      expect(client.lastGetQueryParameters?['includeArtist'], isTrue);
+      expect(client.lastGetQueryParameters?['includeAlbum'], isTrue);
+    });
+
+    test('getHistoryPage asks for the artist and the album', () async {
+      client.getResponseData = const {'records': []};
+
+      await service.getHistoryPage();
+
+      expect(client.lastGetPath, '/api/v1/history');
+      expect(client.lastGetQueryParameters?['includeArtist'], isTrue);
+      expect(client.lastGetQueryParameters?['includeAlbum'], isTrue);
+    });
+
+    // The embeds hang off the **page** primitive so the record-only spelling
+    // inherits them; hung off `getHistory` instead, every caller that reaches
+    // for the envelope's total — which is every caller that prints a figure —
+    // would get records with no `album` to fold on.
+    test('getHistory inherits the embeds through the page primitive', () async {
+      client.getResponseData = const {'records': []};
+
+      await service.getHistory();
+
+      expect(client.lastGetQueryParameters?['includeArtist'], isTrue);
+      expect(client.lastGetQueryParameters?['includeAlbum'], isTrue);
+    });
+
+    test('a caller may still add its own history parameters', () async {
+      client.getResponseData = const {'records': []};
+
+      await service.getHistoryPage(
+        queryParameters: const {
+          'sortKey': 'date',
+          'sortDirection': 'ascending',
+        },
+      );
+
+      expect(client.lastGetQueryParameters?['includeArtist'], isTrue);
+      expect(client.lastGetQueryParameters?['sortKey'], 'date');
+      expect(client.lastGetQueryParameters?['sortDirection'], 'ascending');
+    });
+
     test('getReleases passes artistId query params', () async {
       client.getResponseData = [
         {'title': 'Artist Release'},

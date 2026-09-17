@@ -65,6 +65,55 @@ class LidarrService with ArrActivityMixin {
 
   LidarrService(this.client);
 
+  /// Asks for the artist and the album with every queue record.
+  ///
+  /// A Lidarr queue record on its own carries `artistId`/`albumId` and the raw
+  /// release name, nothing else — so a row built from it could only print
+  /// `Cindy.Lee-Diamond.Jubilee-WEB-2024-XYZ`. The embeds are what turn that
+  /// into `Import failed · Cindy Lee — Diamond Jubilee`, and they only ride
+  /// along when the request asks for them, exactly as Radarr must ask for
+  /// `includeMovie` and Readarr for `includeBook`/`includeAuthor`.
+  @override
+  Future<List<dynamic>> getQueue({Map<String, dynamic>? queryParameters}) {
+    return super.getQueue(
+      queryParameters: {
+        'includeArtist': true,
+        'includeAlbum': true,
+        ...?queryParameters,
+      },
+    );
+  }
+
+  /// On the **page** primitive, not on `getHistory`.
+  ///
+  /// `getHistory` delegates here, so both spellings pick the parameters up —
+  /// but only this way round; `base_arr_service.dart` warns about precisely
+  /// this. Lidarr needs it more than its siblings do, because its history is
+  /// written **per track file**: the Overview's "today" section folds a page
+  /// back down to one row per album, and the key it folds on is
+  /// `record['album']['id']`. Without `includeAlbum` that object is absent,
+  /// every track of one import lands in a group of its own, and a fourteen-track
+  /// album fills the three-row cap three times over — each row titled with the
+  /// raw `sourceTitle`, because `includeArtist` is what supplies the other half
+  /// of `Artist — Album`. The fold and the titles are both promises this one
+  /// request keeps.
+  @override
+  Future<ArrRecordPage> getHistoryPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) {
+    return super.getHistoryPage(
+      page: page,
+      pageSize: pageSize,
+      queryParameters: {
+        'includeArtist': true,
+        'includeAlbum': true,
+        ...?queryParameters,
+      },
+    );
+  }
+
   /// Fetches all artists from Lidarr.
   Future<List<LidarrArtist>> getArtists() async {
     return fetchAllItems('artist', LidarrArtist.fromJson);

@@ -1,3 +1,5 @@
+import 'dart:isolate';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -76,9 +78,37 @@ class SonarrService with ArrActivityMixin {
     );
   }
 
-  /// Fetches all series from Sonarr.
+  /// Fetches all series from Sonarr, answering `[]` when it cannot be read.
+  ///
+  /// The degrading read, kept as it was: `fetchAllItems` swallows everything,
+  /// which is the right shape for a browse grid that would rather show nothing
+  /// than a dialog, and the wrong one for anything that *counts* — an
+  /// unreachable server and an empty library arrive as the same value. Callers
+  /// that derive a figure use [getSeriesOrThrow].
   Future<List<SonarrSeries>> getSeries() async {
     return fetchAllItems('series', SonarrSeries.fromJson);
+  }
+
+  /// The same library, with a failed fetch allowed to reach the caller.
+  ///
+  /// A Sonarr that is unreachable, mis-keyed or 500-ing resolves [getSeries]
+  /// *successfully* with an empty list, and every figure derived from that
+  /// printed a confident zero — the Overview's "next 7 days · 0 series" over
+  /// "Nothing airing this week", directly under an identity band whose own
+  /// probe already read Unreachable. Two contradictory claims on one screenful,
+  /// and the confident one was fabricated. A figure whose source did not answer
+  /// has to read an em dash, and the only way a reader can tell the two cases
+  /// apart is for the failure to survive the fetch.
+  ///
+  /// Mapping matches `fetchAllItems`: straight through for a small library,
+  /// through an isolate once it is large enough to be worth the port. The whole
+  /// library arrives in one response, so this is the list where that threshold
+  /// is regularly crossed.
+  Future<List<SonarrSeries>> getSeriesOrThrow() async {
+    final response = await client.get('/api/${config.apiVersion}/series');
+    final data = response.data as List<dynamic>;
+    if (data.length <= _seriesIsolateMapThreshold) return _mapSeries(data);
+    return Isolate.run(() => _mapSeries(data));
   }
 
   /// Fetches a single series by its Sonarr ID.
@@ -317,4 +347,17 @@ class SonarrService with ArrActivityMixin {
       },
     );
   }
+}
+
+/// Above this many rows the library is mapped off the platform thread.
+///
+/// The same number `base_arr_service.dart` uses for its own list mapping, kept
+/// here because that one is private to its library.
+const int _seriesIsolateMapThreshold = 200;
+
+/// Top-level and pure, so it can cross an isolate port.
+List<SonarrSeries> _mapSeries(List<dynamic> data) {
+  return data
+      .map((item) => SonarrSeries.fromJson(item as Map<String, dynamic>))
+      .toList(growable: false);
 }
