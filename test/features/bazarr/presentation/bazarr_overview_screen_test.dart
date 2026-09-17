@@ -16,6 +16,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_bazarr_service.dart';
+import '../../../test_helpers/reel_finders.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 void main() {
@@ -37,6 +38,27 @@ void main() {
       ['Wanted subtitles', 'History'],
     );
     expect(find.text('Providers'), findsNothing);
+  });
+
+  testWidgets('the readouts are Bazarr\'s four badge figures', (tester) async {
+    // Moved off the retired `BazarrScreen`, which was the only place asserting
+    // that the rail's first figure is a *sum*: Wanted is episodes + movies, and
+    // a rail that printed the episode count under a "Wanted" label would look
+    // perfectly plausible. Read off the widget rather than off the paint,
+    // because the section header below prints the same total and `16` alone
+    // cannot say which of the two drew it.
+    await _pump(
+      tester,
+      service: FakeBazarrService()..badges = _badges(episodes: 12, movies: 4),
+    );
+
+    final peek = tester.widget<ServiceKpiPeek>(find.byType(ServiceKpiPeek));
+    expect(
+      {for (final kpi in peek.kpis.requireValue) kpi.label: kpi.value},
+      {'Wanted': '16', 'Episodes': '12', 'Movies': '4', 'Providers': '5'},
+    );
+    // And the rail really painted them: `12` appears nowhere else on the page.
+    expect(findLine('12'), findsOneWidget);
   });
 
   testWidgets('each section link is named after the tab it opens', (
@@ -111,6 +133,32 @@ void main() {
     expect(find.byType(AppErrorState), findsOneWidget);
     // …and the other one still drew its heading.
     expect(find.byType(SectionHeader), findsNWidgets(2));
+  });
+
+  testWidgets('the retry on a failed section re-runs the load', (tester) async {
+    // Moved off the retired `BazarrScreen`. The invariant is the one its
+    // comment was written for: an earlier version of that test built a replica
+    // of the error widget inside its own body and tapped *that*, so it stayed
+    // green with the real retry unwired. Only a counter on the service can tell
+    // a retry that reloads from a button that merely exists.
+    final service = FakeBazarrService()
+      ..throwOnWanted = Exception('bazarr is down');
+
+    await _pump(tester, service: service);
+
+    expect(service.wantedEpisodesCalls, 1);
+    expect(find.byType(AppErrorState), findsOneWidget);
+
+    // Tapped by its label rather than by its button type: `AppErrorState` uses
+    // `FilledButton.tonalIcon`, whose runtime type is private, and
+    // `find.byType` matches exactly.
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+
+    expect(service.wantedEpisodesCalls, 2);
+    // Still failing, so the section stays in its error state rather than
+    // flickering to empty.
+    expect(find.byType(AppErrorState), findsOneWidget);
   });
 
   testWidgets('nothing overflows at an accessibility reading size', (
