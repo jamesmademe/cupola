@@ -173,7 +173,7 @@ Page<void> _discoverDetailPage(
   if (id == null) {
     return RouteUtils.redirectPage(
       key: state.pageKey,
-      location: ServiceRoutes.dashboard,
+      location: ServiceRoutes.seerrDiscover,
     );
   }
   final heroTag =
@@ -195,6 +195,7 @@ Page<void> _discoverDetailPage(
 Page<void> _libraryDetailPage<T>(
   GoRouterState state, {
   required String heroPrefix,
+  required String fallbackLocation,
   required Widget Function(
     int id,
     String heroTag,
@@ -207,7 +208,7 @@ Page<void> _libraryDetailPage<T>(
   if (id == null) {
     return RouteUtils.redirectPage(
       key: state.pageKey,
-      location: ServiceRoutes.dashboard,
+      location: fallbackLocation,
     );
   }
   final item = RouteUtils.safeExtra<T>(state);
@@ -540,6 +541,7 @@ GoRoute _moviesRoutes({required String path}) {
       state,
       legacyBase: '/movies',
       serviceBase: ServiceRoutes.radarrMovieBase,
+      fallbackLocation: ServiceRoutes.radarrLibrary,
     ),
     builder: (context, state) => const MoviesScreen(),
     routes: [
@@ -547,11 +549,12 @@ GoRoute _moviesRoutes({required String path}) {
         path: ':id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.dashboard
+            ? ServiceRoutes.radarrLibrary
             : null,
         pageBuilder: (context, state) => _libraryDetailPage<RadarrMovie>(
           state,
           heroPrefix: 'movie',
+          fallbackLocation: ServiceRoutes.radarrLibrary,
           buildChild: (id, heroTag, movie, instanceId) => MovieDetailScreen(
             movieId: id,
             heroTag: heroTag,
@@ -671,6 +674,7 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
         pageBuilder: (context, state) => _libraryDetailPage<RadarrMovie>(
           state,
           heroPrefix: 'movie',
+          fallbackLocation: ServiceRoutes.radarrLibrary,
           buildChild: (id, heroTag, movie, instanceId) => MovieDetailScreen(
             movieId: id,
             heroTag: heroTag,
@@ -713,6 +717,7 @@ GoRoute _seriesRoutes({required String path}) {
       state,
       legacyBase: '/series',
       serviceBase: ServiceRoutes.sonarrSeriesBase,
+      fallbackLocation: ServiceRoutes.sonarrLibrary,
     ),
     builder: (context, state) => const SeriesScreen(),
     routes: [
@@ -720,11 +725,12 @@ GoRoute _seriesRoutes({required String path}) {
         path: ':id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.dashboard
+            ? ServiceRoutes.sonarrLibrary
             : null,
         pageBuilder: (context, state) => _libraryDetailPage<SonarrSeries>(
           state,
           heroPrefix: 'series',
+          fallbackLocation: ServiceRoutes.sonarrLibrary,
           buildChild: (id, heroTag, series, instanceId) => SeriesDetailScreen(
             seriesId: id,
             heroTag: heroTag,
@@ -841,6 +847,7 @@ GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
         pageBuilder: (context, state) => _libraryDetailPage<SonarrSeries>(
           state,
           heroPrefix: 'series',
+          fallbackLocation: ServiceRoutes.sonarrLibrary,
           buildChild: (id, heroTag, series, instanceId) => SeriesDetailScreen(
             seriesId: id,
             heroTag: heroTag,
@@ -885,6 +892,7 @@ GoRoute _musicRoutes({required String path}) {
       state,
       legacyBase: '/music',
       serviceBase: ServiceRoutes.lidarrArtistBase,
+      fallbackLocation: ServiceRoutes.lidarrLibrary,
     ),
     builder: (context, state) => const MusicScreen(),
     routes: [
@@ -892,11 +900,12 @@ GoRoute _musicRoutes({required String path}) {
         path: ':id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.dashboard
+            ? ServiceRoutes.lidarrLibrary
             : null,
         pageBuilder: (context, state) => _libraryDetailPage<LidarrArtist>(
           state,
           heroPrefix: 'artist',
+          fallbackLocation: ServiceRoutes.lidarrLibrary,
           buildChild: (id, heroTag, artist, instanceId) => MusicDetailScreen(
             artistId: id,
             heroTag: heroTag,
@@ -987,6 +996,7 @@ GoRoute _lidarrBranchRoot(ServiceTab tab) => switch (tab) {
         pageBuilder: (context, state) => _libraryDetailPage<LidarrArtist>(
           state,
           heroPrefix: 'artist',
+          fallbackLocation: ServiceRoutes.lidarrLibrary,
           buildChild: (id, heroTag, artist, instanceId) => MusicDetailScreen(
             artistId: id,
             heroTag: heroTag,
@@ -2575,15 +2585,16 @@ String? _redirectLegacyLibrary(
   GoRouterState state, {
   required String legacyBase,
   required String serviceBase,
+  required String fallbackLocation,
 }) {
   final path = state.uri.path;
-  if (path == legacyBase) return ServiceRoutes.dashboard;
+  if (path == legacyBase) return fallbackLocation;
 
   final prefix = '$legacyBase/';
   if (!path.startsWith(prefix)) return null;
 
   final id = path.substring(prefix.length);
-  if (id.isEmpty || id.contains('/')) return ServiceRoutes.dashboard;
+  if (id.isEmpty || id.contains('/')) return fallbackLocation;
   return _preserveQuery(state.uri, '$serviceBase/$id');
 }
 

@@ -677,7 +677,7 @@ class _NotSetUpCell extends StatelessWidget {
 
     return AppCard.surfaceOutlined(
       key: ValueKey('service-matrix-cell-${service.routeParam}'),
-      onTap: () => context.go('/settings/services'),
+      onTap: () => context.go('/settings/connections'),
       pressFeedback: AppCardPressFeedback.scale,
       semanticLabel: service.title,
       semanticValue: servicesNotSetUpCellLabel,

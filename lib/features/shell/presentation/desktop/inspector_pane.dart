@@ -364,7 +364,7 @@ class _UnreachableCard extends ConsumerWidget {
                     TextButton(
                       onPressed: () => GoRouter.of(
                         context,
-                      ).go('${NavTab.settings.routePath}/services'),
+                      ).go('${NavTab.settings.routePath}/connections'),
                       child: const Text('Settings'),
                     ),
                   ],

@@ -303,7 +303,7 @@ class _GlyphCellState extends ConsumerState<_GlyphCell> {
                   ? '${NavTab.dashboard.routePath}/${service.routeParam}'
                   // An unset service is still a door: it leads to the form that
                   // sets it up, which is the only useful thing it can do.
-                  : '${NavTab.settings.routePath}/services',
+                  : '${NavTab.settings.routePath}/connections',
             ),
             child: Container(
               width: 22,

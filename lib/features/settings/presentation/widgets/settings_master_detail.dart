@@ -127,7 +127,7 @@ class SettingsMasterDetail extends StatelessWidget {
                       for (final section in sections)
                         _SectionRow(
                           section: section,
-                          // Longest match wins, so `/settings/services/radarr`
+                          // Longest match wins, so `/settings/service/radarr`
                           // still lights Connections rather than falling back
                           // to the root.
                           selected: _isSelected(section, location),

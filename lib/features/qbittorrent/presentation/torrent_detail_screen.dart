@@ -112,7 +112,7 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
                 color: colorScheme.onSurfaceVariant,
               ),
               onPressed: () =>
-                  RouteUtils.popOrGo(context, ServiceRoutes.dashboard),
+                  RouteUtils.popOrGo(context, ServiceRoutes.qbittorrentQueue),
             ),
             title: Row(
               children: [

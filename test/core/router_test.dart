@@ -765,18 +765,28 @@ void main() {
       expect(find.byType(DashboardScreen), findsNothing);
     });
 
-    testWidgets('legacy top-level routes redirect to services', (tester) async {
-      final container = await _pumpRouter(tester);
-      final router = container.read(routerProvider);
+   testWidgets('legacy top-level routes redirect to services', (tester) async {
+     final container = await _pumpRouter(tester);
+     final router = container.read(routerProvider);
 
-      for (final route in ['/discover', '/movies', '/series', '/music']) {
-        router.go(route);
-        await tester.pumpAndSettle();
+      const routes = {
+        '/discover': ServiceRoutes.dashboard,
+        '/movies': ServiceRoutes.radarrLibrary,
+        '/series': ServiceRoutes.sonarrLibrary,
+        '/music': ServiceRoutes.lidarrLibrary,
+      };
+      for (final entry in routes.entries) {
+        router.go(entry.key);
+       await tester.pumpAndSettle();
 
-        expect(router.state.uri.toString(), '/dashboard');
-        expect(find.byType(DashboardScreen), findsOneWidget);
-      }
-    });
+        expect(router.state.uri.toString(), entry.value);
+        if (entry.key == '/discover') {
+          expect(find.byType(DashboardScreen), findsOneWidget);
+        } else {
+          expect(find.byType(DashboardScreen), findsNothing);
+        }
+     }
+   });
 
     testWidgets('legacy detail routes redirect to equivalent services routes', (
       tester,

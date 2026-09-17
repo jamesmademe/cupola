@@ -91,7 +91,8 @@ class DashboardScreen extends ConsumerWidget {
                     child: Padding(
                       padding: EdgeInsets.only(bottom: bottomPadding),
                       child: _ServicesEmptyState(
-                        onSetUpServices: () => context.go('/settings/services'),
+                        onSetUpServices: () =>
+                            context.go('/settings/connections'),
                       ),
                     ),
                   ),

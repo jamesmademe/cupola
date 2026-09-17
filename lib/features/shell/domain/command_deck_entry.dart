@@ -84,7 +84,7 @@ void noteVisit(WidgetRef ref, String location) {
 const List<({String label, String location, String detail})> _namedScreens = [
   (
     label: 'Connections',
-    location: '/settings/services',
+    location: '/settings/connections',
     detail: 'Settings · every service and its state',
   ),
   (

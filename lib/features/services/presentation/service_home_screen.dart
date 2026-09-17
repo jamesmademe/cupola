@@ -108,8 +108,10 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
                 Icons.chevron_left_rounded,
                 color: colorScheme.onSurfaceVariant,
               ),
-              onPressed: () =>
-                  RouteUtils.popOrGo(context, ServiceRoutes.dashboard),
+              onPressed: () => RouteUtils.popOrGo(
+                context,
+                ServiceRoutes.forService(service),
+              ),
               tooltip: 'Back to Dashboard',
               padding: const EdgeInsets.only(right: AppSpacing.xs),
               constraints: const BoxConstraints(minWidth: 36, minHeight: 40),
