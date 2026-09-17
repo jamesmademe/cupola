@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The root page of one of a service's tabs: the bar, and the tab's own content
@@ -42,14 +43,21 @@ class ServiceTabScaffold extends StatelessWidget {
       children: [
         child,
         Positioned(
-          top: kToolbarHeight,
+          // The band's full height, inset included — not `kToolbarHeight`.
+          // The band consumes the top inset (`Positioned(top: 0)` under a
+          // `SafeArea`), so on every notched phone it reaches an inset lower
+          // than the constant, and a bar placed at the bare constant would be
+          // overlapped by exactly that much.
+          top: ServiceHomeScreen.bandHeightOf(context),
           left: 0,
           right: 0,
           child: GlassSurface(
             child: SafeArea(
               bottom: false,
-              // The shell's own band already consumed the top inset, so this
-              // one must not consume it again — it sits directly under it.
+              // The band above already consumed the top inset, and this widget
+              // has now been offset past it: consuming it a second time here
+              // would push the bar a status bar below where the content
+              // reserves it.
               top: false,
               child: ServiceTabBar(
                 service: service,

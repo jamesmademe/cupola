@@ -4,9 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/services/presentation/service_tab_placeholder.dart';
 import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -76,11 +78,24 @@ void main() {
   });
 
   group('ServiceTabScaffold', () {
-    Future<void> pump(WidgetTester tester, ServiceKey service) =>
-        tester.pumpWidget(
-          MaterialApp(
-            theme: AppTheme.darkTheme(),
-            home: Scaffold(
+    // The inset a notched iPhone or a cutout Android hands the app. Zero on
+    // the default test surface, which is the whole reason the bar could sit an
+    // inset too high for as long as it did.
+    const topInset = 47.0;
+
+    Future<void> pump(
+      WidgetTester tester,
+      ServiceKey service, {
+      double inset = 0,
+    }) => tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.darkTheme(),
+        home: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(padding: EdgeInsets.only(top: inset)),
+            child: Scaffold(
               body: ServiceTabScaffold(
                 service: service,
                 tab: ServiceTab.overview,
@@ -88,7 +103,57 @@ void main() {
               ),
             ),
           ),
-        );
+        ),
+      ),
+    );
+
+    /// The whole chrome as the shell draws it: the band over the bar over the
+    /// tab's own page, which is the only arrangement that can be asked whether
+    /// the two bands overlap.
+    Future<void> pumpUnderTheBand(
+      WidgetTester tester, {
+      required double inset,
+    }) => tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(padding: EdgeInsets.only(top: inset)),
+              child: Scaffold(
+                body: ServiceHomeScreen(
+                  service: ServiceKey.radarr,
+                  child: const ServiceTabScaffold(
+                    service: ServiceKey.radarr,
+                    tab: ServiceTab.overview,
+                    child: Text('tab content'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Rect bandRect(WidgetTester tester) => tester.getRect(
+      find.ancestor(
+        of: find.byKey(const ValueKey('service-home-title-radarr')),
+        matching: find.byType(GlassSurface),
+      ),
+    );
+
+    Rect barRect(WidgetTester tester) => tester.getRect(
+      find.ancestor(
+        of: find.byType(ServiceTabBar),
+        matching: find.byType(GlassSurface),
+      ),
+    );
 
     testWidgets('draws the bar over the tab\'s content', (tester) async {
       await pump(tester, ServiceKey.radarr);
@@ -105,6 +170,51 @@ void main() {
       await pump(tester, ServiceKey.radarr);
 
       expect(tester.getTopLeft(find.byType(ServiceTabBar)).dy, kToolbarHeight);
+    });
+
+    testWidgets('the top inset pushes the bar down with the band', (
+      tester,
+    ) async {
+      // The band consumes the inset, so it is drawn an inset lower than
+      // `kToolbarHeight` alone would say. A bar pinned to the bare constant
+      // ends up underneath it by exactly the inset — on every notched iPhone
+      // and every cutout Android, invisibly, because a test surface with no
+      // inset cannot tell the two numbers apart.
+      await pump(tester, ServiceKey.radarr, inset: topInset);
+
+      expect(
+        tester.getTopLeft(find.byType(ServiceTabBar)).dy,
+        topInset + kToolbarHeight,
+      );
+    });
+
+    testWidgets('the band and the bar meet, on a surface with an inset', (
+      tester,
+    ) async {
+      await pumpUnderTheBand(tester, inset: topInset);
+
+      final band = bandRect(tester);
+      final bar = barRect(tester);
+
+      // Flush: the bar starts exactly where the band ends. Not less — that is
+      // the overlap — and not more, which would be a strip of unclaimed
+      // gradient between two bands that read as one surface.
+      expect(band.bottom, topInset + kToolbarHeight);
+      expect(bar.top, band.bottom);
+      expect(bar.overlaps(band), isFalse);
+
+      // And the pair ends where every hosted screen reserves room to: its own
+      // inset (from a `SafeArea` or from `MediaQuery`) plus the chrome height
+      // the router hands it as `topPadding`.
+      expect(bar.bottom, topInset + kToolbarHeight + ServiceTabBar.height);
+    });
+
+    testWidgets('with no inset the two still meet', (tester) async {
+      // The regression this replaces: the pair was only ever flush here.
+      await pumpUnderTheBand(tester, inset: 0);
+
+      expect(barRect(tester).top, bandRect(tester).bottom);
+      expect(bandRect(tester).bottom, kToolbarHeight);
     });
 
     testWidgets('TrueNAS draws its content and no bar', (tester) async {

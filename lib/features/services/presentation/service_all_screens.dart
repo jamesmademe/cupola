@@ -74,8 +74,18 @@ class _ServiceAllRequestsScreenState
           // The host's bands float over this list rather than pushing it down,
           // so the first filter chip has to clear them itself — otherwise it
           // starts its life frosted under the tab bar.
+          //
+          // The top inset is part of that room and has to be added here. There
+          // is no `SafeArea` on this page and, hosted, no app bar for the
+          // `Scaffold` to strip the padding for: the band above consumes the
+          // inset and is drawn an inset lower than `kToolbarHeight` suggests,
+          // so a list clearing the bare chrome height starts under it on every
+          // notched phone. Only when hosted — standalone this page draws its
+          // own app bar, which owns the inset.
           padding: EdgeInsets.only(
-            top: widget.topPadding,
+            top:
+                widget.topPadding +
+                (widget.topPadding > 0 ? MediaQuery.paddingOf(context).top : 0),
             bottom:
                 AppSpacing.lg +
                 FloatingNavBarMetrics.getScrollViewBottomPadding(context),

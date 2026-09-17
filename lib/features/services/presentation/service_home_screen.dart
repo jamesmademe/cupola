@@ -44,6 +44,19 @@ class ServiceHomeScreen extends StatelessWidget {
     this.showAppBar = true,
   });
 
+  /// The room the band occupies measured from the very top of the screen —
+  /// the top inset included.
+  ///
+  /// **The band is the one that consumes the inset.** It is `Positioned(top: 0)`
+  /// under a `SafeArea`, so on a phone with a notch or a cutout it is a status
+  /// bar taller than [kToolbarHeight]. Anything floated underneath it — the
+  /// service tab bar — has to start at this, not at [kToolbarHeight], or it is
+  /// laid out an inset too high and the band is drawn straight over it. The
+  /// default test surface has no inset, which is exactly why that overlap can
+  /// be invisible for as long as nobody pumps one.
+  static double bandHeightOf(BuildContext context) =>
+      kToolbarHeight + MediaQuery.paddingOf(context).top;
+
   @override
   Widget build(BuildContext context) {
     if (!showAppBar) return child;
