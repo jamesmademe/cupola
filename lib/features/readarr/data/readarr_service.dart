@@ -7,6 +7,27 @@ import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 /// Reuses the shared *arr contract via [ArrActivityMixin] (queue, history,
 /// wanted, releases). Readarr is archived upstream but its v1 API is unchanged,
 /// so the same header-auth [ApiClient] and mixin apply as for Lidarr.
+///
+/// **What full parity with the other three \*arr still needs, and none of it
+/// is UI work.** The list moved here when the pre-tab-model home it used to
+/// live on was retired: every item is a call this class does not make, which
+/// is why the Calendar, Queue, Wanted and History tabs are still placeholders
+/// and why the Overview draws neither `Coming up` nor `Recently added`.
+/// Archived upstream makes it a *fixed* target rather than a moving one —
+/// decision 13 in `context/decisions.md`.
+///
+/// - `getAuthor(id)` — this class has [getAuthors] and nothing per-author, so
+///   an author detail page has no first fetch. `GET /api/v1/author/{id}`.
+/// - a book list — `GET /api/v1/book` (optionally `?authorId=`), plus a
+///   `ReadarrBook` model. Today `ReadarrAuthor` is the only library entity,
+///   and it carries neither a release date nor a cover.
+/// - the calendar — `GET /api/v1/calendar`, the same shape and the same
+///   builder the other three \*arr need and none of them calls yet.
+/// - wanted and cutoff — `getMissingPage`/`getCutoffPage` already exist on the
+///   shared base, so these are provider and screen work, not client work.
+/// - the writes — `PUT /api/v1/author` for monitor and profile,
+///   `POST /api/v1/command` for the searches, `DELETE /api/v1/author/{id}`,
+///   and the manual-import routes.
 class ReadarrService with ArrActivityMixin {
   ReadarrService(this.client);
 

@@ -151,8 +151,7 @@ class ReadarrAttentionItem {
 // user to stop reading the count, which is the one part of the section visible
 // without scrolling. The board (`HomeReadarr.dc.html`) draws no such row. The
 // fact itself is true and is stated where a fact about the service belongs —
-// `readarr_service.dart`, `readarr_screen.dart`, `service_tab.dart` — not in
-// the fault list.
+// `readarr_service.dart` and `service_tab.dart` — not in the fault list.
 
 /// Reads the faults out of a page of **raw** `/queue` records.
 ///
@@ -440,7 +439,7 @@ class ReadarrHistoryEntry {
 /// and a heading is a promise.
 ///
 /// Takes raw records rather than `ReadarrHistoryItem`, which
-/// `readarrRecentHistoryProvider` already maps: that model keeps id, eventType,
+/// `ReadarrService.getRecentHistory` maps: that model keeps id, eventType,
 /// sourceTitle, date and author and drops the book title, the quality and the
 /// size — which is three of the four things a row on this board prints.
 List<ReadarrHistoryEntry> readarrHistoryToday(

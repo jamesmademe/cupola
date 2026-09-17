@@ -1674,9 +1674,13 @@ RouteBase _readarrRoutes() {
 /// The route at the root of one Readarr tab.
 ///
 /// Readarr's Overview is `ReadarrOverviewScreen`, the page written against the
-/// board rather than the old `ReadarrScreen` home the model first borrowed: it
-/// draws only the regions the client can fill — the queue's faults, the
-/// library's backlog, where the books are filed, what happened today — and
+/// board rather than the pre-tab-model home the model first borrowed — and that
+/// home has since been retired, taking nothing with it: its author preview is
+/// the Library tab in full, and the two regions the notes record as lost
+/// (`Coming up`, `Recently added`) are the board's — that home never drew
+/// either of them, at any point in its history. The
+/// Overview draws only the regions the client can fill — the queue's faults,
+/// the library's backlog, where the books are filed, what happened today — and
 /// leaves out the two the board asks for and `ReadarrService` cannot answer.
 GoRoute _readarrBranchRoot(ServiceTab tab) => switch (tab) {
   ServiceTab.overview => _page(

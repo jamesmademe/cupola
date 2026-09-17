@@ -19,13 +19,6 @@ final readarrAuthorsProvider = FutureProvider<List<ReadarrAuthor>>((ref) async {
   return ref.watch(readarrServiceProvider).getAuthors();
 });
 
-/// Most recent activity for the dashboard.
-final readarrRecentHistoryProvider = FutureProvider<List<ReadarrHistoryItem>>((
-  ref,
-) async {
-  return ref.watch(readarrServiceProvider).getRecentHistory();
-});
-
 /// Current download queue, with a failed fetch allowed to reach the caller.
 ///
 /// It used to catch everything and answer `const []`, so a Readarr whose queue
