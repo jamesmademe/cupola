@@ -56,34 +56,89 @@ class NpmAccessBand extends ConsumerWidget {
             borderRadius: AppRadius.borderRadiusMd,
             border: Border.all(color: tone.withValues(alpha: 0.45)),
           ),
-          child: Row(
-            children: [
-              Icon(Icons.info_outline_rounded, color: tone, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ExcludeSemantics(
-                  child: Text(
-                    access.bandMessage,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                ),
+          child: _bandLayout(
+            context,
+            message: ExcludeSemantics(
+              child: Text(
+                access.bandMessage,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colorScheme.onSurface),
               ),
-              // Only the "we could not ask" state has anything to retry. A
-              // view-only account is not a transient failure and offering to
-              // re-check it would suggest the answer might change.
-              if (access.state == NpmWriteAccessState.unknown)
-                TextButton(
-                  onPressed: () => ref.invalidate(npmAccountProvider),
-                  child: const Text('Check again'),
-                ),
-            ],
+            ),
+            icon: Icon(Icons.info_outline_rounded, color: tone, size: 20),
+            // Only the "we could not ask" state has anything to retry. A
+            // view-only account is not a transient failure and offering to
+            // re-check it would suggest the answer might change.
+            action: access.state == NpmWriteAccessState.unknown
+                ? TextButton(
+                    onPressed: () => ref.invalidate(npmAccountProvider),
+                    child: const Text('Check again'),
+                  )
+                : null,
           ),
         ),
       ),
     );
   }
+}
+
+/// Above this scaled size, the band's button goes on its own line.
+///
+/// A `Row` of icon, sentence and button overflowed by 138pt at a 3x reading
+/// size: a `TextButton` is not flexible, so "Check again" laid out at three
+/// times its normal width simply took more room than the card had and the
+/// `Expanded` beside it could not give any more away. Shrinking the button is
+/// not an option — it is a 44pt target with a name that has to stay readable —
+/// so past this size the layout stacks instead.
+///
+/// 20 logical pixels is `bodySmall` (12) grown by about 1.6x, the same clamp
+/// `TextScaleMetrics.defaultMaxScaleFactor` uses for the boxes it grows. Below
+/// it the band reads as the board draws it; above it, the sentence takes the
+/// full width and the button sits under it, right-aligned.
+const double _bandStackThreshold = 20;
+
+/// The band's inside: a row until the text is too big for one, then a column.
+Widget _bandLayout(
+  BuildContext context, {
+  required Widget icon,
+  required Widget message,
+  required Widget? action,
+}) {
+  final row = Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      icon,
+      // A token, not the bare 10 this layout carried through both arms while
+      // spending `AppSpacing` on everything around it. `sm` is the gap the rest
+      // of the page puts between a status glyph and the sentence it marks.
+      const SizedBox(width: AppSpacing.sm),
+      Expanded(child: message),
+    ],
+  );
+
+  if (action == null) return row;
+
+  final stacked =
+      MediaQuery.textScalerOf(context).scale(12) > _bandStackThreshold;
+  if (!stacked) {
+    return Row(
+      children: [
+        icon,
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(child: message),
+        action,
+      ],
+    );
+  }
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      row,
+      const SizedBox(height: AppSpacing.xs),
+      Align(alignment: Alignment.centerRight, child: action),
+    ],
+  );
 }
 
 /// Whether [resource] may be written, and — when it may not — the answer the
@@ -137,26 +192,34 @@ class NpmWriteButton extends ConsumerWidget {
     final allowed = access.canManage(resource);
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Semantics(
-      button: true,
-      // The hint, not the label: the control is still "Renew", and a screen
-      // reader that read "Renew, requires an admin account" as one name would
-      // be unable to say the name on its own.
-      hint: allowed ? null : access.hint,
-      child: TextButton(
-        style: allowed
-            ? null
-            : TextButton.styleFrom(
-                foregroundColor: colorScheme.onSurfaceVariant.withValues(
-                  alpha: 0.6,
-                ),
+    final hint = allowed ? null : access.hint;
+
+    return TextButton(
+      style: allowed
+          ? null
+          : TextButton.styleFrom(
+              foregroundColor: colorScheme.onSurfaceVariant.withValues(
+                alpha: 0.6,
               ),
-        onPressed: () {
-          if (!npmWriteAllowed(context, ref, resource)) return;
-          onPressed();
-        },
-        child: Text(label),
-      ),
+            ),
+      onPressed: () {
+        if (!npmWriteAllowed(context, ref, resource)) return;
+        onPressed();
+      },
+      // The annotation goes on the **child**, inside the button, and that is
+      // the whole fix. `ButtonStyleButton` publishes `Semantics(container:
+      // true, button: true)`, which is a semantic boundary: a `Semantics(hint:)`
+      // wrapped around the button lands on a second, non-actionable node above
+      // it, the screen reader focuses the inner one, and the reason the control
+      // is attenuated is never spoken — to the one user this widget exists for.
+      // From here the hint merges into the button's own node alongside the
+      // label, the way `CrossServiceAction` passes `semanticHint` into the
+      // tappable rather than around it: one node, named "Renew", hinted
+      // "requires an admin account", still tappable.
+      //
+      // The hint and not the label, deliberately: a reader that said "Renew,
+      // requires an admin account" as one name could not say the name alone.
+      child: Semantics(hint: hint, child: Text(label)),
     );
   }
 }

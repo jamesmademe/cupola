@@ -172,7 +172,8 @@ void _invalidate(WidgetRef ref, NpmSection section) {
   ref.invalidate(serviceSummaryProvider(ServiceKey.nginxProxyManager));
 }
 
-/// `23 · reachability checked for 8 of 23`, and nothing before either answers.
+/// `25 · reachability checked for 8 of 23 enabled`, and nothing before either
+/// answers.
 String? _proxyHostSubtitle(
   List<NpmProxyHost>? hosts,
   NpmUpstreamReport? report,
@@ -226,7 +227,7 @@ class _NpmSection extends ConsumerWidget {
               kpis: ref.watch(serviceKpiProvider(ServiceKey.nginxProxyManager)),
               accent: AppColors.nginxProxyManager,
             ),
-          const _DefaultAdminWarning(),
+          const NpmDefaultAdminWarning(),
           const NpmAccessBand(),
           const SizedBox(height: AppSpacing.sm),
           if (section != NpmSection.certificates) ..._hostChildren(ref),
@@ -242,8 +243,8 @@ class _NpmSection extends ConsumerWidget {
       SectionHeader(
         title: 'Proxy hosts',
         showChevron: false,
-        // "23 · reachability checked for 8 of 23" — the coverage is drawn
-        // because the Upstream column is partial by design. Without it a
+        // "25 · reachability checked for 8 of 23 enabled" — the coverage is
+        // drawn because the Upstream column is partial by design. Without it a
         // column that answered for eight rows and stayed blank for fifteen
         // would read as fifteen healthy hosts.
         subtitle: _proxyHostSubtitle(
@@ -283,8 +284,15 @@ class _NpmSection extends ConsumerWidget {
 /// working login up to 2.12, and on this service that account can rewrite every
 /// route on the box. If the user has one of those versions, saying so is worth
 /// more than anything else on this screen.
-class _DefaultAdminWarning extends ConsumerWidget {
-  const _DefaultAdminWarning();
+///
+/// **Public because it is shared chrome, not a section.** It is a fact about
+/// the box rather than about a list, so every NPM surface draws it — this page
+/// in all three of its shapes and `NpmOverviewScreen` — and a second copy of
+/// the card written next door is a second copy that drifts. `NpmAccessBand`
+/// travels with it for the same reason and already lives in
+/// `npm_write_gate.dart`.
+class NpmDefaultAdminWarning extends ConsumerWidget {
+  const NpmDefaultAdminWarning({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -682,7 +690,10 @@ class _CertificateTile extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final days = cert.daysUntilExpiry(now);
     final expiring = cert.isExpiringSoon(now);
-    final expired = days != null && days < 0;
+    // `hasExpired`, not `days < 0`: the day count truncates toward zero, so for
+    // the twenty-four hours after a certificate lapses it answers 0 and this
+    // tile would print "Expires in 0 days" about something already refused.
+    final expired = cert.hasExpired(now);
     // An expired certificate and one about to expire are the same kind of
     // fact — the canvas names "expiring" in the amber set — and neither is a
     // connection that did not answer.
@@ -700,7 +711,7 @@ class _CertificateTile extends ConsumerWidget {
       if (days == null)
         cert.provider
       else if (expired)
-        'Expired ${-days} days ago'
+        (-days <= 0 ? 'Expired today' : 'Expired ${-days} days ago')
       else
         'Expires in $days days',
       if (cert.renewalNotCompleting(now))

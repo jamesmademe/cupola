@@ -41,7 +41,10 @@ void main() {
       expect(report.checked, 2);
       expect(report.total, 5);
       expect(report.forHost(hosts.last.id), NpmUpstream.unchecked);
-      expect(report.coverage, 'reachability checked for 2 of 5');
+      // The word `enabled` is part of the sentence: the total is the probe's
+      // own population, and it is printed beside a header count of the whole
+      // host table.
+      expect(report.coverage, 'reachability checked for 2 of 5 enabled');
     });
 
     test(

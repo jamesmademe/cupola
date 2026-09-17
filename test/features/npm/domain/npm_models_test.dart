@@ -79,6 +79,50 @@ void main() {
     });
   });
 
+  group('NpmCertificate — lapsed is a date, not a day count', () {
+    final now = DateTime.utc(2026, 1, 1, 12);
+
+    NpmCertificate cert(Duration offset) => NpmCertificate(
+      id: 1,
+      provider: 'letsencrypt',
+      niceName: 'photos.example.net',
+      domainNames: const ['photos.example.net'],
+      expiresOn: now.add(offset),
+    );
+
+    test('a certificate six hours past its date has expired', () {
+      // `daysUntilExpiry` truncates toward zero, so it answers 0 here and a
+      // `days < 0` test is blind for a full day. `hasExpired` compares the
+      // dates, so it is not.
+      final lapsed = cert(const Duration(hours: -6));
+      expect(lapsed.daysUntilExpiry(now), 0);
+      expect(lapsed.hasExpired(now), isTrue);
+    });
+
+    test('one still inside its last day has not', () {
+      final due = cert(const Duration(hours: 6));
+      expect(due.daysUntilExpiry(now), 0);
+      expect(due.hasExpired(now), isFalse);
+    });
+
+    test('an undated certificate makes no claim in either direction', () {
+      final undated = NpmCertificate.fromJson({
+        'id': 2,
+        'provider': 'letsencrypt',
+        'domain_names': ['x.example.net'],
+      });
+      expect(undated.hasExpired(now), isFalse);
+    });
+
+    test('isExpiringSoon deliberately still covers a lapsed certificate', () {
+      // The Dashboard's decision feed is built straight off this predicate, so
+      // narrowing it would make an expired certificate disappear from the one
+      // surface that collects faults across services. Anything printing the
+      // *word* "expiring" pairs it with `hasExpired` instead.
+      expect(cert(const Duration(days: -4)).isExpiringSoon(now), isTrue);
+    });
+  });
+
   group('NpmAccount — decision 34', () {
     NpmAccount account(Map<String, dynamic> json) => NpmAccount.fromJson(json);
 

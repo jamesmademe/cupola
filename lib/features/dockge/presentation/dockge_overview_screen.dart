@@ -1,0 +1,557 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/dockge/presentation/dockge_overview_provider.dart';
+import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+/// The first tab of Dockge's service home.
+///
+/// Overview alone carries the identity block and the readouts — Stacks is a
+/// view of one kind of record and Terminal is a console — and then three
+/// regions: what is not running, what is, and which instances this login can
+/// reach. The two stack regions end in a link named exactly like the tab they
+/// jump to.
+///
+/// **It draws neither the app bar nor the tab bar.** `ServiceHomeScreen` owns
+/// the first — including the agent lens, which is an app-bar control and not a
+/// tab (decision 41), and which this page must therefore never grow a second
+/// copy of — and `ServiceTabScaffold` owns the second. Both float above this
+/// page as glass bands so the ambient gradient reads continuously behind them;
+/// this screen reserves the room with [topPadding] instead.
+///
+/// ## Where this departs from the board, and why
+///
+/// Dockge speaks Socket.IO and not REST, and its `stackList` push is a name, an
+/// integer status, tags, a compose filename and an endpoint. Four things the
+/// board draws have no source in that protocol, and each is **absent rather
+/// than stubbed** — a section given a fake zero is worse than a section that
+/// was never promised:
+///
+///  * **`Updates 3 · images newer` and the `Update all 3` button.** Dockge has
+///    an `updateStack` command and no read that answers whether an update
+///    exists; there is no event for "newer image available". A readout that
+///    cannot be computed and a button that cannot know what it would pull are
+///    both promises this app cannot keep.
+///  * **`34 containers` beside the running count.** Container counts come from
+///    `serviceStatusList`, which is **per stack** — one socket round trip each.
+///    Fanning twelve of them out to fill one readout would be expensive, and
+///    fanning out only the five the preview draws and printing the sum as a
+///    total would be a figure counted inside a capped sample and then stated as
+///    a census. Neither is worth a number.
+///  * **`exited · 3 h ago` and `exit code 137 · out of memory`.** Nothing in
+///    this protocol is dated, and nothing carries a container exit code. See
+///    `dockge_overview_provider.dart` for the long form.
+///  * **The terminal card.** `DockgeClient` streams `terminalWrite` only after
+///    joining a *named* stack's combined terminal, and an Overview-level card
+///    has no stack to name — which is the exact question the Terminal tab is
+///    blocked on, and not one this page gets to answer. What it can do instead
+///    is offer a way *in*: every stack row here opens that stack, whose detail
+///    already carries the live combined terminal and the lifecycle controls the
+///    board draws on the card. Naming the stack is the whole of what was
+///    missing, and a row the user tapped has named it.
+///
+/// Sections load and fail independently. A Dockge that pushes a stack list but
+/// no agent list still draws two regions, and the third simply is not there.
+class DockgeOverviewScreen extends ConsumerWidget {
+  const DockgeOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
+
+  /// The room the two glass bands above this page occupy.
+  ///
+  /// Composed from the same two constants the router composes its own from, so
+  /// a screen built outside the router — a test, a preview — reserves the right
+  /// space instead of tucking its first region under the tab bar.
+  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+
+  /// Height of the chrome the host draws above this page.
+  final double topPadding;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Checked **before** any provider is reached. `dockgeClientProvider` throws
+    // `Dockge not configured`, and letting `AsyncValueWidget` catch that throw
+    // would draw the same pixels while leaving failed providers behind it, each
+    // scheduling a retry with backoff for a condition no amount of waiting
+    // changes — a pending timer in tests and a battery cost on device. It is
+    // the same order `DockgeAgentLensButton` keeps, and for the same reason.
+    final configured = ref.watch(
+      currentSettingsProvider.select(
+        (settings) => settings.isServiceConfigured(ServiceKey.dockge),
+      ),
+    );
+
+    return AmbientScaffold(
+      accent: ServiceKey.dockge.accent,
+      body: SafeArea(
+        child: configured
+            ? _OverviewBody(topPadding: topPadding)
+            // `.forService`, never the generic form: this is a service
+            // dashboard, so the door goes to Dockge's own connection form
+            // rather than the settings index.
+            : NotConfiguredPlaceholder.forService(ServiceKey.dockge),
+      ),
+    );
+  }
+}
+
+class _OverviewBody extends ConsumerWidget {
+  const _OverviewBody({required this.topPadding});
+
+  final double topPadding;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(serviceSummaryProvider(ServiceKey.dockge));
+        ref.invalidate(serviceKpiProvider(ServiceKey.dockge));
+        // The two pushes every region is folded from. The four derived
+        // providers are invalidated too rather than left to recompute: they are
+        // `autoDispose`, so a region the user has scrolled past may already
+        // have been collected, and invalidating the source alone would leave it
+        // holding the previous fold when it came back.
+        ref.invalidate(dockgeStackListProvider);
+        ref.invalidate(dockgeAgentsProvider);
+        ref.invalidate(dockgeOverviewCensusProvider);
+        ref.invalidate(dockgeOverviewAttentionProvider);
+        ref.invalidate(dockgeOverviewRunningProvider);
+        ref.invalidate(dockgeOverviewAgentsProvider);
+        await Future<void>.delayed(AppAnimation.durationMd);
+      },
+      // One scroll view for the whole page: the regions are one column of
+      // reading, not three independently scrolling panes.
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.only(
+          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+        ),
+        children: [
+          if (topPadding > 0) SizedBox(height: topPadding),
+          const ServiceOverviewIdentity(service: ServiceKey.dockge),
+          ServiceKpiPeek(
+            kpis: ref.watch(serviceKpiProvider(ServiceKey.dockge)),
+            accent: ServiceKey.dockge.accent,
+          ),
+          // The mobile board's order, which is the one that decides: what needs
+          // a decision, then the inventory. The desktop board leads with the
+          // stack grid because it has room to draw all twelve rows and the
+          // fault is visible inside them; at phone width it is not, so the
+          // narrow board promotes it and this page follows the narrow board.
+          const _NeedsAttentionSection(),
+          const _StacksSection(),
+          const _AgentsSection(),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── 1. Needs attention ─────────────────────────────────────────────────────
+
+/// What is not running, before what is.
+class _NeedsAttentionSection extends ConsumerWidget {
+  const _NeedsAttentionSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(dockgeOverviewAttentionProvider);
+    // The **census**, not the length of the list below it. `dockgeAttentionRows`
+    // caps the exited rows at `dockgeAttentionLimit`, so a server with nine
+    // stopped stacks would print "4" over four rows and report the other five
+    // nowhere. The census counts over the whole push, so the header is where
+    // the remainder gets reported.
+    final census = ref.watch(dockgeOverviewCensusProvider).asData?.value;
+
+    return ServiceOverviewSection(
+      service: ServiceKey.dockge,
+      title: 'Needs attention',
+      // **The faults, not everything that is down.** `exited + inactive +
+      // unknown` would print "9" on a server with one crashed stack and eight
+      // templates that were never started — the five-arm rule broken in the
+      // figure, over rows that got it right, and the number a user would read
+      // as nine things on fire. The backlog is not silenced by that: it states
+      // its own size in words, in the neutral row that is about it.
+      //
+      // `—` while the push is in flight or after it failed. A `0` printed over
+      // an unanswered question is a claim nobody made — and the claim it makes
+      // ("everything is up") is the one the user would act on.
+      subtitle: census == null ? '—' : '${census.exited}',
+      // Every row here is a stack, and every stack lives on the Stacks tab, so
+      // the destination is honest for all of them.
+      destination: ServiceTab.stacks,
+      child: AsyncValueWidget<List<DockgeAttentionItem>>(
+        value: items,
+        serviceName: 'Dockge',
+        loadingLabel: 'Loading what needs attention',
+        // The **source**, not the fold. Invalidating this fold alone would
+        // rebuild it against the `AsyncError` the stream is still holding and
+        // hand back the same failure without a round trip — and the stream,
+        // watched by the other two folds as well, is never disposed and so
+        // never re-subscribes on its own. Invalidating it is what reconnects;
+        // the folds follow it down.
+        onRetry: () {
+          ref.invalidate(dockgeStackListProvider);
+          ref.invalidate(dockgeOverviewAttentionProvider);
+        },
+        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
+        isEmpty: (data) => data.isEmpty,
+        // A resting state wears no alarm chrome: nothing is wrong, and saying
+        // so is not an error state.
+        emptyBuilder: const ServiceOverviewEmpty(
+          icon: Icons.check_circle_outline_rounded,
+          label: 'Every stack is up',
+        ),
+        data: (data) => Column(
+          children: [for (final item in data) _AttentionRow(item: item)],
+        ),
+      ),
+    );
+  }
+}
+
+class _AttentionRow extends StatelessWidget {
+  const _AttentionRow({required this.item});
+
+  final DockgeAttentionItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    // Through the tone rule, never a raw `AppColors.warning`: the walk resolves
+    // amber against the surface this row actually lands on, which on the light
+    // theme is a different hue from the one the dark artboards draw. And the
+    // aggregate rows are **neutral** — a stack the user brought down is
+    // backlog, and painting it the same amber as one that died is exactly the
+    // failure the five-arm rule exists to prevent.
+    final tone = statusToneColor(
+      colorScheme,
+      item.tone,
+      surface: colorScheme.surfaceContainerLow,
+    );
+    final name = item.stackName;
+
+    final row = ServiceOverviewRow(
+      spoken: item.spoken,
+      leading: Icon(item.icon, size: 18, color: tone),
+      title: item.headline,
+      titleColor: tone,
+      detail: item.detail,
+    );
+
+    // An aggregate row is about several stacks at once, so there is no single
+    // one to open and it stays inert rather than guessing.
+    return name == null ? row : _StackLink(stackName: name, child: row);
+  }
+}
+
+// ─── 2. Stacks ──────────────────────────────────────────────────────────────
+
+/// What is up right now.
+class _StacksSection extends ConsumerWidget {
+  const _StacksSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rows = ref.watch(dockgeOverviewRunningProvider);
+    final census = ref.watch(dockgeOverviewCensusProvider).asData?.value;
+
+    return ServiceOverviewSection(
+      service: ServiceKey.dockge,
+      title: 'Stacks',
+      subtitle: _subtitle(
+        ref,
+        census: census,
+        shown: rows.asData?.value.length,
+      ),
+      destination: ServiceTab.stacks,
+      child: AsyncValueWidget<List<DockgeStackRow>>(
+        value: rows,
+        serviceName: 'Dockge',
+        loadingLabel: 'Loading the stacks',
+        // The source, for the reason spelled out on Needs attention's Retry.
+        onRetry: () {
+          ref.invalidate(dockgeStackListProvider);
+          ref.invalidate(dockgeOverviewRunningProvider);
+        },
+        skeleton: const ServiceOverviewRowsSkeleton(rows: 3),
+        isEmpty: (data) => data.isEmpty,
+        // Two different absences, and they need opposite responses: a server
+        // with no stacks at all has nothing to run, while a server whose twelve
+        // stacks are all down has plenty — and the section above is already
+        // saying so.
+        emptyBuilder: ServiceOverviewEmpty(
+          icon: census != null && census.total == 0
+              ? Icons.layers_clear_rounded
+              : Icons.pause_circle_outline_rounded,
+          label: census != null && census.total == 0
+              ? 'No stacks here yet'
+              : 'Nothing running',
+        ),
+        data: (data) =>
+            Column(children: [for (final row in data) _StackRow(row: row)]),
+      ),
+    );
+  }
+
+  /// What the readout rail cannot say — and nothing it already has.
+  ///
+  /// `_dockgeKpis` fills the `ServiceKpiPeek` two regions above this one with
+  /// Stacks / Running / Exited / Inactive, off this same push. A subtitle
+  /// reading `12 stacks · 9 running · 2 exited · 1 inactive` would be those
+  /// four figures again, one region below the rail that already spells them, at
+  /// bodySmall and wrapping to three lines beside the `Stacks →` link at 375pt.
+  ///
+  /// Two things are left that the rail genuinely cannot say, and they are the
+  /// whole of this line:
+  ///
+  ///  * **which Dockge these figures came off**, when there is more than one to
+  ///    have come off. The client holds exactly one agent's stacks at a time,
+  ///    so the rail's own `12` is per agent too — this is the clause that keeps
+  ///    it from reading as the deployment's total.
+  ///  * **how much of the running list the five rows below leave out**, which
+  ///    is a fact about this preview and exists nowhere else on the page.
+  ///
+  /// Null when neither applies — a single-instance Dockge with nothing
+  /// truncated — because a header with nothing to add says nothing. There is no
+  /// em dash either: an em dash stands in for a figure whose source did not
+  /// answer, and this line no longer states a figure to stand in for.
+  static String? _subtitle(
+    WidgetRef ref, {
+    required DockgeStackCensus? census,
+    required int? shown,
+  }) {
+    final parts = joinDisplayParts([
+      _agentQualifier(ref),
+      if (census != null && shown != null && shown < census.running)
+        '$shown of ${census.running} running',
+    ]);
+    return parts.isEmpty ? null : parts;
+  }
+
+  /// `on nas`, or nothing on a Dockge with one instance.
+  ///
+  /// Read off the agent list rather than the lens alone, because the lens holds
+  /// an endpoint (`truenas.lan:5001`) and the header wants the name.
+  static String? _agentQualifier(WidgetRef ref) {
+    final agents = ref.watch(dockgeAgentsProvider).asData?.value ?? const [];
+    if (agents.length < 2) return null;
+    final selected = ref.watch(dockgeSelectedAgentProvider);
+    for (final agent in agents) {
+      if (agent.endpoint == selected) return 'on ${agent.name}';
+    }
+    return null;
+  }
+}
+
+class _StackRow extends StatelessWidget {
+  const _StackRow({required this.row});
+
+  final DockgeStackRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tone = statusToneColor(
+      colorScheme,
+      row.tone,
+      surface: colorScheme.surfaceContainerLow,
+    );
+
+    return _StackLink(
+      stackName: row.name,
+      child: ServiceOverviewRow(
+        spoken: row.spoken,
+        // A dot rather than a glyph: every row in this section is one state of
+        // one healthy thing, and an icon per row would read as a kind of event.
+        leading: Container(
+          width: 8,
+          height: 8,
+          margin: const EdgeInsets.only(top: 5),
+          decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
+        ),
+        // The name stays in ink: the tone belongs to the dot, and a page where
+        // every title is coloured has no way left to say one of them differs.
+        title: row.name,
+        detail: row.detail,
+      ),
+    );
+  }
+}
+
+// ─── 3. Agents ──────────────────────────────────────────────────────────────
+
+/// Which instances this login can reach.
+///
+/// Drawn **only when there are two or more**, which is the same guard
+/// `DockgeAgentLensButton` keeps and deliberately the same rule: most Dockge
+/// installs are a single instance, and a section listing "local" teaches the
+/// user there is a decision to make when there is not. It is also why the
+/// section has no link — the picker is the app-bar lens, and a second one here
+/// would be two controls fighting over one piece of state.
+///
+/// That missing link is why [dockgeAgentRows] is **uncapped**, and the two facts
+/// are one decision. Every other region on this page ends in a tab that holds
+/// the rest of its list; this one ends nowhere, so a row this section does not
+/// draw is a row the app never mentions. With no cap, the header's figures are
+/// counted over exactly what is on screen — which is the whole list — instead of
+/// stating a sample's own length as the deployment's total.
+class _AgentsSection extends ConsumerWidget {
+  const _AgentsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rows = ref.watch(dockgeOverviewAgentsProvider).asData?.value;
+    // Nothing at all while the list is in flight, and nothing on a
+    // single-instance Dockge: a skeleton here would promise a region that on
+    // most servers correctly does not exist, and an error state would report
+    // the failure of a feature the user may not have.
+    if (rows == null || rows.length < 2) return const SizedBox.shrink();
+
+    // Counted over `rows`, which is every agent the push carried — see the
+    // class doc. Red is the one tone that means "did not answer", so this is
+    // the offline count and not a roll-up of everything that is not green:
+    // `connecting` has not failed yet.
+    final offline = rows.where((row) => row.tone == StatusTone.error).length;
+
+    return ServiceOverviewSection(
+      service: ServiceKey.dockge,
+      title: 'Agents',
+      subtitle: joinDisplayParts([
+        '${rows.length} instances',
+        if (offline > 0)
+          offline == 1 ? '1 not answering' : '$offline not answering',
+      ]),
+      child: Column(children: [for (final row in rows) _AgentRow(row: row)]),
+    );
+  }
+}
+
+class _AgentRow extends StatelessWidget {
+  const _AgentRow({required this.row});
+
+  final DockgeAgentRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tone = statusToneColor(
+      colorScheme,
+      row.tone,
+      surface: colorScheme.surfaceContainerLow,
+    );
+
+    return ServiceOverviewRow(
+      spoken: row.spoken,
+      // The lens's position, drawn. `DockgeAgentRow.detail` already ends in
+      // "showing its stacks", which is what a screen reader hears; the ring is
+      // the same fact for an eye scanning four rows, and it is the only thing
+      // that makes this a list of instances rather than a readout of them. It
+      // borrows the row's own tone rather than an accent, so a selected agent
+      // that is offline does not quietly lose its red.
+      leading: _AgentDot(tone: tone, selected: row.isSelected),
+      title: row.name,
+      detail: row.detail,
+    );
+  }
+}
+
+/// The state dot, ringed on the agent the lens is on.
+class _AgentDot extends StatelessWidget {
+  const _AgentDot({required this.tone, required this.selected});
+
+  final Color tone;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final dot = Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
+    );
+
+    // The same 16pt box and the same optical centre either way — the ring eats
+    // the inset it needs out of the padding rather than growing the box, so the
+    // row's text does not step sideways when the lens moves.
+    return Container(
+      margin: const EdgeInsets.only(top: 1),
+      padding: EdgeInsets.all(selected ? 3 : 4),
+      decoration: selected
+          ? BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: tone.withValues(alpha: 0.45)),
+            )
+          : null,
+      child: dot,
+    );
+  }
+}
+
+// ─── The way into a stack ───────────────────────────────────────────────────
+
+/// A row that opens its stack.
+///
+/// Local to this feature rather than added to `ServiceOverviewSection`'s family
+/// in `lib/core/widgets/`: the shared row is inert by design, and three sibling
+/// agents are writing against that file today. A tappable variant belongs
+/// there eventually — this is the shape it should take.
+///
+/// Three things are load-bearing:
+///
+///  * **`PressableScale` carries the label, the row does not.** A button is a
+///    semantic boundary, so a hint or a label wrapped *around* one is dropped;
+///    here the button node and the annotation are the same node, and
+///    `excludeChildSemantics` silences the row's own container underneath so
+///    the sentence is announced once rather than twice.
+///  * **`GoRouter.maybeOf`, not `context.push`.** An Overview is legitimately
+///    built outside a router — a widget test, a preview — and there the row
+///    simply does not act rather than throwing. It is the reasoning
+///    `ServiceOverviewSection`'s own tab link already uses for
+///    `StatefulNavigationShell.maybeOf`.
+///  * **44pt minimum.** The two-line row clears it on its own at the default
+///    reading size, but only just, and a tap target is not something to leave
+///    to the sum of three paddings.
+class _StackLink extends StatelessWidget {
+  const _StackLink({required this.stackName, required this.child});
+
+  final String stackName;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final router = GoRouter.maybeOf(context);
+
+    return PressableScale(
+      onTap: router == null
+          ? null
+          : () => router.push(ServiceRoutes.dockgeStack(stackName)),
+      semanticLabel: _spokenOf(child),
+      // Names the destination and what is there, because "opens the stack" does
+      // not explain why someone looking at a stopped stack would want to: the
+      // log and the controls are the answer, and they are one tap away.
+      semanticHint: 'opens $stackName, with its log and controls',
+      excludeChildSemantics: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: child,
+      ),
+    );
+  }
+
+  /// The sentence the row already composed, reused as the button's name.
+  ///
+  /// Reaching into the child rather than taking a second `spoken` parameter:
+  /// two strings for one row is two strings that drift, and the row is the one
+  /// that knows how its parts were joined.
+  static String? _spokenOf(Widget child) =>
+      child is ServiceOverviewRow ? child.spoken : null;
+}

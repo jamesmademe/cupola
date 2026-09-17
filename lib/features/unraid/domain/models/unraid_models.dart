@@ -1,9 +1,12 @@
 /// Typed models for the Unraid GraphQL API.
 ///
 /// Unraid's GraphQL schema evolves between releases, so field access is
-/// deliberately tolerant: missing fields degrade to sensible defaults rather
-/// than throwing. Confirm exact field names against the target instance's
-/// schema (SDL / Apollo sandbox) before relying on any one of them.
+/// deliberately tolerant: a missing field degrades rather than throwing.
+/// Tolerant is not the same as inventive — a field the server did not answer
+/// degrades to **null**, so the page above can say it has no figure. It never
+/// degrades to a zero, an empty list stated as a census, or a word nobody sent.
+/// Confirm exact field names against the target instance's schema (SDL / Apollo
+/// sandbox) before relying on any one of them.
 library;
 
 import 'package:cupola/core/status/media_status.dart';
@@ -22,8 +25,14 @@ class UnraidInfo {
 
   factory UnraidInfo.fromJson(Map<String, dynamic> json) {
     final os = (json['os'] as Map?)?.cast<String, dynamic>() ?? const {};
+    // Empty, never `'Unraid'`: both `distro` and `release` are nullable in the
+    // committed SDL, and a server that answered `info: null` — or an `os` block
+    // without them — has stated no release. Filling the word in here would put
+    // a string the server never sent under a row labelled `Release`, in the one
+    // slot the page reserves for what the server said; the fold above this
+    // reads an empty join as `—`, which is the truthful reading.
     return UnraidInfo(
-      distro: (os['distro'] ?? 'Unraid').toString(),
+      distro: (os['distro'] ?? '').toString(),
       version: (os['release'] ?? '').toString(),
       uptime: os['uptime']?.toString(),
     );
@@ -35,35 +44,99 @@ class UnraidArray {
   const UnraidArray({
     required this.state,
     required this.usedFraction,
-    required this.disks,
-  });
+    required List<UnraidDisk>? disks,
+    this.usedBytes,
+    this.totalBytes,
+  }) : _disks = disks;
 
   final String state;
 
   /// Fraction of total capacity used (0..1), or null when unknown.
   final double? usedFraction;
 
-  final List<UnraidDisk> disks;
+  /// The slot list exactly as the array answered it — **null when it answered
+  /// with none at all**.
+  ///
+  /// `disks: [ArrayDisk!]` is nullable in the committed SDL, and this library
+  /// is deliberately tolerant of a field a release renamed. Folding both of
+  /// those into `const []` made an absent list indistinguishable from an empty
+  /// one, and the header that counts it then says `0 disks` — an assertion that
+  /// the array has no drives, built out of silence.
+  final List<UnraidDisk>? _disks;
 
-  int get usedPercent => ((usedFraction ?? 0) * 100).round();
+  /// The slots, empty when the array reported none *and* when it reported
+  /// nothing. Read [reportedDisks] before stating the length as a census.
+  List<UnraidDisk> get disks => _disks ?? const [];
+
+  /// Whether the payload carried a slot list at all.
+  ///
+  /// True for an array that answered `disks: []` — that is a real census of an
+  /// array with no drives in it — and false only for silence.
+  bool get reportedDisks => _disks != null;
+
+  /// The absolute capacity figures, normalised to **bytes**, or null when the
+  /// server reported no capacity block at all.
+  ///
+  /// Kept beside [usedFraction] rather than derived from it, because they
+  /// cannot be: a fraction is unitless and the board's headline readout —
+  /// `31.2 of 40 TB` — is the pair of absolute figures. The query has always
+  /// asked for `capacity { kilobytes { free used total } }`; the mapper simply
+  /// threw the numerator and denominator away after dividing them, so the
+  /// Overview had a percentage and no way to say what it was a percentage of.
+  ///
+  /// Null, never 0: a server that answered with no capacity block is a figure
+  /// nobody has, and `0 B` is a claim that the array is empty.
+  final int? usedBytes;
+  final int? totalBytes;
+
+  /// The used share as a whole percentage, or **null** when the array reported
+  /// no capacity block.
+  ///
+  /// Null and never 0, for the same reason [usedBytes] is: `Used 0%` on the
+  /// readout rail reads as an empty array, which is the one conclusion a user
+  /// acts on, and it would contradict the Array section an inch below — whose
+  /// capacity clause correctly disappears for exactly this input.
+  int? get usedPercent {
+    final fraction = usedFraction;
+    return fraction == null ? null : (fraction * 100).round();
+  }
 
   factory UnraidArray.fromJson(Map<String, dynamic> json) {
     double? usedFraction;
+    int? usedBytes;
+    int? totalBytes;
     final capacity = (json['capacity'] as Map?)?.cast<String, dynamic>();
-    final bucket =
-        (capacity?['kilobytes'] as Map?)?.cast<String, dynamic>() ??
-        (capacity?['bytes'] as Map?)?.cast<String, dynamic>();
+    final kilobytes = (capacity?['kilobytes'] as Map?)?.cast<String, dynamic>();
+    final bytes = (capacity?['bytes'] as Map?)?.cast<String, dynamic>();
+    // Which bucket answered decides the unit, and the unit has to be settled
+    // here: the fraction below is unitless and did not care, but an absolute
+    // figure read out of the kilobyte bucket and printed as bytes is off by
+    // 1024 — a 40 TB array rendered as 39 GB.
+    final bucket = kilobytes ?? bytes;
+    final scale = kilobytes != null ? 1024 : 1;
     if (bucket != null) {
       final total = doubleOrNull(bucket['total']) ?? 0.0;
       final used = doubleOrNull(bucket['used']) ?? 0.0;
-      if (total > 0) usedFraction = (used / total).clamp(0, 1).toDouble();
+      if (total > 0) {
+        usedFraction = (used / total).clamp(0, 1).toDouble();
+        totalBytes = (total * scale).round();
+        // `used` alone is kept only when the array reported a total as well:
+        // a used figure with nothing to compare it against is half a sentence,
+        // and the label this feeds says "x of y".
+        usedBytes = (used * scale).round();
+      }
     }
-    final disks = (json['disks'] as List?) ?? const [];
+    // Left null when the field is absent, rather than collapsed to an empty
+    // list: see [_disks]. An array that answered `disks: []` still lands here
+    // as a list, and that one is a census.
+    final disks = json['disks'] as List?;
     return UnraidArray(
       state: (json['state'] ?? 'UNKNOWN').toString(),
       usedFraction: usedFraction,
+      usedBytes: usedBytes,
+      totalBytes: totalBytes,
       disks: disks
-          .whereType<Map>()
+          ?.whereType<Map>()
           .map((e) => UnraidDisk.fromJson(e.cast<String, dynamic>()))
           .toList(growable: false),
     );
@@ -99,20 +172,29 @@ class UnraidDisk {
 
   bool get warm => (temp ?? 0) >= warmThresholdCelsius;
 
-  /// Unraid reports slot health as `DISK_OK`, `DISK_NEW`, `DISK_NP` (no disk
-  /// in the slot), `DISK_INVALID`, `DISK_DSBL` (disabled — the array is running
+  /// Whether the array has flagged this slot.
+  ///
+  /// Unraid reports slot health as `DISK_OK`, `DISK_NEW`, `DISK_NP` (no disk in
+  /// the slot), `DISK_INVALID`, `DISK_DSBL` (disabled — the array is running
   /// without it) and a handful of `DISK_*` siblings. Only the first two are
   /// "nothing to do here"; everything else is the array telling us something is
-  /// wrong with a slot it expected to use, which is a fault and therefore
-  /// amber. An empty status is not a verdict, so it stays neutral rather than
-  /// being guessed into one.
-  StatusTone get tone {
+  /// wrong with a slot it expected to use. An empty status is not a verdict, so
+  /// it is not one here either.
+  ///
+  /// Separate from [tone] because the header counts the two kinds of trouble
+  /// apart: a drive can be flagged *and* over temperature, and the count that
+  /// names the more serious of the two must never be the one that drops it.
+  bool get flagged {
     final value = status.trim().toUpperCase();
-    if (value.isEmpty || value == 'DISK_OK' || value == 'DISK_NEW') {
-      return warm ? StatusTone.warning : StatusTone.neutral;
-    }
-    return StatusTone.warning;
+    return value.isNotEmpty && value != 'DISK_OK' && value != 'DISK_NEW';
   }
+
+  /// Amber for a slot the array has [flagged] or a drive over the warning
+  /// threshold — both are faults the user can act on — and neutral otherwise.
+  /// Nothing here is ever red, because red on this canvas means the host did
+  /// not answer at all.
+  StatusTone get tone =>
+      flagged || warm ? StatusTone.warning : StatusTone.neutral;
 
   factory UnraidDisk.fromJson(Map<String, dynamic> json) {
     return UnraidDisk(

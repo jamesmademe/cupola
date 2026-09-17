@@ -148,5 +148,76 @@ void main() {
     test('no status is not a verdict', () {
       expect(disk('', temp: 30).tone, StatusTone.neutral);
     });
+
+    test('flagged and warm are two facts, and a slot can carry both', () {
+      // The header counts them apart, so the model has to keep them apart: a
+      // `DISK_DSBL` slot at 47 °C is the array running without a drive it
+      // expected *while that drive cooks*, and a count that folded the two
+      // together would report the more serious one nowhere.
+      final both = disk('DISK_DSBL', temp: 47);
+      expect(both.flagged, isTrue);
+      expect(both.warm, isTrue);
+
+      expect(disk('DISK_OK', temp: 47).flagged, isFalse);
+      expect(disk('DISK_NEW', temp: 30).flagged, isFalse);
+      expect(disk('', temp: 30).flagged, isFalse);
+      expect(disk('DISK_NP').flagged, isTrue);
+    });
+  });
+
+  group('UnraidInfo.fromJson', () {
+    test('a release nobody stated is empty, never the word "Unraid"', () {
+      // `distro` and `release` are both nullable in the committed SDL. Filling
+      // the distro in here put a string the server never sent under a row
+      // labelled `Release` — in the one slot the page reserves for what the
+      // server said — and made the fold's em-dash branch unreachable from a
+      // real payload.
+      expect(UnraidInfo.fromJson(const {}).distro, '');
+      expect(UnraidInfo.fromJson(const {}).version, '');
+      expect(
+        UnraidInfo.fromJson(const {
+          'os': {'uptime': '2026-07-01T00:00:00Z'},
+        }).distro,
+        '',
+      );
+    });
+  });
+
+  group('UnraidArray.fromJson', () {
+    test('an array that reported no capacity has no percentage', () {
+      // `Used 0%` on the readout rail reads as an empty array, which is the one
+      // conclusion a user acts on.
+      expect(
+        UnraidArray.fromJson(const {'state': 'STARTED'}).usedPercent,
+        isNull,
+      );
+      expect(
+        UnraidArray.fromJson(const {
+          'state': 'STARTED',
+          'capacity': {
+            'kilobytes': {'used': '600', 'total': '1000'},
+          },
+        }).usedPercent,
+        60,
+      );
+    });
+
+    test('a slot list the server did not send is silence, not zero slots', () {
+      // `disks: [ArrayDisk!]` is nullable, and this library is tolerant of a
+      // field a release renamed. Collapsing both into `const []` let the header
+      // above assert "0 disks" — an array with no drives — out of silence.
+      final silent = UnraidArray.fromJson(const {'state': 'STARTED'});
+      expect(silent.reportedDisks, isFalse);
+      expect(silent.disks, isEmpty);
+
+      // An array that answered with an empty list *is* a census of an array
+      // with no drives in it, and stays one.
+      final empty = UnraidArray.fromJson(const {
+        'state': 'STARTED',
+        'disks': <Object?>[],
+      });
+      expect(empty.reportedDisks, isTrue);
+      expect(empty.disks, isEmpty);
+    });
   });
 }

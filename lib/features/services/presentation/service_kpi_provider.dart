@@ -868,23 +868,44 @@ Future<List<ServiceKpi>> _unraidKpis(Ref ref) async {
   final array = results[0] as UnraidArray;
   final containers = results[1] as List<UnraidDockerContainer>;
   final running = containers.where((c) => c.running).length;
+  // Null when the array answered with no capacity block, which is nullable in
+  // the committed SDL. `Used 0%` would read as an empty array — the one
+  // conclusion a user acts on — and would contradict the Overview's Array
+  // section, whose capacity clause correctly disappears for the same input.
+  final usedPercent = array.usedPercent;
   return [
     ServiceKpi(label: 'Array', value: array.state, icon: Icons.dns_rounded),
-    ServiceKpi(
-      label: 'Used',
-      value: '${array.usedPercent}%',
-      icon: Icons.pie_chart_rounded,
-      tone: _faultIf(array.usedPercent >= 80),
-    ),
+    if (usedPercent == null)
+      const ServiceKpi.unavailable(
+        label: 'Used',
+        icon: Icons.pie_chart_rounded,
+        note: 'no capacity reported',
+      )
+    else
+      ServiceKpi(
+        label: 'Used',
+        value: '$usedPercent%',
+        icon: Icons.pie_chart_rounded,
+        tone: _faultIf(usedPercent >= 80),
+      ),
     ServiceKpi(
       label: 'Containers',
       value: '$running/${containers.length}',
       icon: Icons.widgets_rounded,
     ),
-    ServiceKpi(
-      label: 'Disks',
-      value: '${array.disks.length}',
-      icon: Icons.storage_rounded,
-    ),
+    // Same rule for the census: `disks` is nullable too, and a `0` here is an
+    // assertion that the array has no drives, built out of silence.
+    if (array.reportedDisks)
+      ServiceKpi(
+        label: 'Disks',
+        value: '${array.disks.length}',
+        icon: Icons.storage_rounded,
+      )
+    else
+      const ServiceKpi.unavailable(
+        label: 'Disks',
+        icon: Icons.storage_rounded,
+        note: 'no slots reported',
+      ),
   ];
 }

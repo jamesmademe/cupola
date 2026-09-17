@@ -35,6 +35,11 @@ class NpmUpstreamReport {
   final int checked;
 
   /// How many hosts there were to reach a verdict on.
+  ///
+  /// **Enabled hosts only**, which is a narrower population than the host
+  /// table a section header counts: a disabled host is not being served, so
+  /// its backend is not a fact about this screen and the probe never opens a
+  /// socket for it. [coverage] names that narrowing out loud — see its doc.
   final int total;
 
   final DateTime takenAt;
@@ -46,11 +51,20 @@ class NpmUpstreamReport {
   int get downCount =>
       byHostId.values.where((u) => u == NpmUpstream.down).length;
 
-  /// `reachability checked for 8 of 23`, or null when nothing was checked —
-  /// a coverage line reading "0 of 23" is noise on a screen that has not
-  /// probed anything yet.
-  String? get coverage =>
-      checked == 0 ? null : 'reachability checked for $checked of $total';
+  /// `reachability checked for 8 of 23 enabled`, or null when nothing was
+  /// checked — a coverage line reading "0 of 23" is noise on a screen that has
+  /// not probed anything yet.
+  ///
+  /// The word `enabled` is load-bearing and not padding. This line is printed
+  /// beside a header count of the **whole** host table, and [total] counts only
+  /// the hosts the probe is willing to look at. On a box with 25 hosts of which
+  /// two are switched off, `25 · reachability checked for 8 of 23` invites
+  /// exactly one reading — that two hosts went missing between the two figures
+  /// — and the sentence has no way to say otherwise. Naming the population is
+  /// what makes the pair honest.
+  String? get coverage => checked == 0
+      ? null
+      : 'reachability checked for $checked of $total enabled';
 }
 
 /// Asks, from **this device**, whether anything is listening where each proxy

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -45,8 +46,19 @@ void main() {
     // Still tappable: `onPressed: null` would take it off the screen reader's
     // path as well as off the pointer's, which is the whole point of the rule.
     expect(tester.widget<TextButton>(button).onPressed, isNotNull);
+
+    // The node a screen reader actually lands on — the one carrying the tap —
+    // has to be the node carrying the hint. Asserted together on purpose: this
+    // test used to read `find.byType(NpmWriteButton)`, which resolved to a
+    // `Semantics(hint:)` wrapped *around* the button. `ButtonStyleButton`
+    // publishes `container: true`, so that wrapper was a second, non-actionable
+    // parent node; the reader focused the inner one and never spoke the reason.
+    // The test was green the whole time, on the wrong node.
+    final spoken = tester.getSemantics(find.byType(TextButton));
+    expect(spoken.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    expect(spoken.label, 'Renew');
     expect(
-      tester.getSemantics(find.byType(NpmWriteButton)).hint.contains('admin'),
+      spoken.hint.contains('admin'),
       isTrue,
       reason: 'the reason has to be spoken, not only greyed',
     );
@@ -79,5 +91,7 @@ void main() {
 
     expect(ran, isTrue);
     expect(find.byType(SnackBar), findsNothing);
+    // And the same node is unhinted when there is nothing to explain.
+    expect(tester.getSemantics(find.byType(TextButton)).hint, isEmpty);
   });
 }

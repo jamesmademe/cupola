@@ -11,6 +11,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
+import 'package:cupola/features/stream/presentation/stream_overview_provider.dart';
 
 /// The Libraries tab of a media server: the rooms on the box, as destinations.
 ///
@@ -212,7 +213,11 @@ class _LibraryRow extends StatelessWidget {
       semanticHint: 'Browse this library',
       child: Row(
         children: [
-          Icon(_glyphFor(library.kind), size: 20, color: service.accent),
+          Icon(
+            streamLibraryGlyph(library.kind),
+            size: 20,
+            color: service.accent,
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -289,12 +294,4 @@ class _LibraryRow extends StatelessWidget {
     if (elapsed.inHours >= 1) return 'Scanned ${elapsed.inHours} h ago';
     return 'Scanned just now';
   }
-
-  static IconData _glyphFor(StreamLibraryKind kind) => switch (kind) {
-    StreamLibraryKind.movies => Icons.movie_outlined,
-    StreamLibraryKind.shows => Icons.tv_outlined,
-    StreamLibraryKind.music => Icons.library_music_outlined,
-    StreamLibraryKind.photos => Icons.photo_library_outlined,
-    StreamLibraryKind.other => Icons.folder_outlined,
-  };
 }

@@ -1,0 +1,357 @@
+/// What the media-server Overview reads, and the pure functions that shape it.
+///
+/// One file for both servers, like every other Stream surface: the screen is
+/// parameterised by `ServiceKey` and the difference between Jellyfin and Plex
+/// lives in what each client can actually answer, never in a fork of the page.
+///
+/// Every windowing rule here is a top-level pure function taking an explicit
+/// `now`, so a boundary — a scan timestamp from a host whose clock runs ahead,
+/// an hour-old scan against a day-old one — is tested without a clock and
+/// without a container.
+///
+/// ## What the board asks for that no client call can fill
+///
+/// The four artboards (`HomeJellyfin`, `HomeJellyfinMobile`, `HomePlex`,
+/// `HomePlexMobile`) were drawn against an ideal server. What is built here is
+/// the intersection of that drawing and what `JellyfinClient` / `PlexClient`
+/// genuinely fetch. Everything below is **absent rather than stubbed**, because
+/// a section given a fabricated figure is worse than a section that was never
+/// promised:
+///
+///  * **Bandwidth / egress** (`8.4 Mb/s`, `18 GB · 24 h`) — neither server
+///    reports measured outbound throughput. Jellyfin carries a bitrate only
+///    while transcoding and Plex's `Session.bandwidth` is a reservation made by
+///    its streaming brain; summing them adds two units and calls the result
+///    traffic. `service_kpi_provider.dart` already refuses this figure for the
+///    same reason, and per-session rates stay on the session cards where
+///    `StreamSession.bitrateIsNominal` can say what they are.
+///  * **Recently added** (`14 this week`) — a server-wide recent list needs
+///    `GET /Users/{userId}/Items/Latest` (Jellyfin) or
+///    `GET /library/recentlyAdded` (Plex). Neither is implemented, and the one
+///    lens that exists is per library: folding it would be one request per
+///    library on every load *and* would still have nothing to sort by, since
+///    `StreamItem` carries no `addedAt`. A rail ordered by nothing, claiming to
+///    be ordered by arrival, is the fake this file exists to avoid.
+///  * **Continue watching, on Jellyfin** — `GET /Users/{userId}/Items/Resume`.
+///    Plex has `/hubs/continueWatching` and therefore gets the rail; Jellyfin's
+///    equivalent is unbuilt, and the per-library `continueWatching` lens is not
+///    a substitute for the same two reasons as above.
+///  * **Scheduled tasks and the activity log** (Jellyfin) —
+///    `GET /ScheduledTasks` and `GET /System/ActivityLog/Entries`.
+///  * **Activities, devices and playlists** (Plex) — `GET /activities`,
+///    `GET /devices`, `GET /playlists`.
+///  * **`idle 4 h · last: nadia · 18:40`** (Plex) — the idle line needs watch
+///    history, `GET /status/sessions/history/all`.
+///  * **Remote access, mapped port, transcoder hardware, cache size, uptime**
+///    (the Plex *Server* region) — `GET /:/prefs` and
+///    `GET /statistics/resources`. What `GET /` does answer is drawn.
+///  * **Per-library item counts** (`1 020`, `86`) — decision 21: a count is its
+///    own request per library on both servers, and that cost belongs to the
+///    Libraries tab, not to a page the user lands on every time they open the
+///    service.
+library;
+
+import 'package:dio/dio.dart' show CancelToken;
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show IconData, Icons;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
+    show formatRelativeDateTime;
+import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_library.dart';
+import 'package:cupola/features/stream/domain/stream_semantics.dart';
+
+/// Posters on the On deck rail.
+///
+/// Six, the number the desktop board draws — and the number
+/// `/hubs/continueWatching` is asked for, so the rail is not a sample taken
+/// from a longer answer that nothing then reports.
+const int streamOnDeckPreviewLimit = 6;
+
+/// Rows the Libraries peek draws before the header's census is the only place
+/// the rest are reported.
+const int streamShelfPeekLimit = 3;
+
+// ─── The shelf: the rooms on the server, and what is happening to them ──────
+
+/// The glyph a library wears, by what it holds.
+///
+/// One switch for the whole feature: the Libraries tab draws the same rooms as
+/// cards and the Overview peek draws three of them as rows, and two copies of
+/// this mapping would be two vocabularies for the same shelf.
+IconData streamLibraryGlyph(StreamLibraryKind kind) => switch (kind) {
+  StreamLibraryKind.movies => Icons.movie_outlined,
+  StreamLibraryKind.shows => Icons.tv_outlined,
+  StreamLibraryKind.music => Icons.library_music_outlined,
+  StreamLibraryKind.photos => Icons.photo_library_outlined,
+  StreamLibraryKind.other => Icons.folder_outlined,
+};
+
+/// What one Libraries peek row is about.
+///
+/// Two states, and the tones are the point of the enum. A scan in progress is
+/// **informational** — the server is doing exactly what it was asked to do, and
+/// painting it amber would put a working library in the same colour as a broken
+/// import. A library at rest is **neutral**: it is the state of the shelf, not
+/// an event, and nothing about it needs a decision.
+enum StreamShelfKind {
+  /// A library being scanned right now.
+  scanning(StatusTone.info),
+
+  /// A library the server is not currently touching.
+  atRest(StatusTone.neutral);
+
+  const StreamShelfKind(this.tone);
+
+  final StatusTone tone;
+}
+
+/// One row of the Libraries peek: a room on the server.
+@immutable
+class StreamShelfRow {
+  const StreamShelfRow({
+    required this.kind,
+    required this.icon,
+    required this.title,
+    required this.detail,
+  });
+
+  final StreamShelfKind kind;
+
+  /// The glyph for what the room holds — [streamLibraryGlyph].
+  final IconData icon;
+
+  /// The subject: the library's own name, as the server spells it.
+  final String title;
+
+  /// The evidence: what it holds and what is happening to it, and **never the
+  /// title again**. A library called "Movies" whose kind is `movies` gets no
+  /// kind in its detail, because `Movies` over `Movies` is a row that reports
+  /// itself twice and a screen reader that says the word twice in one sentence.
+  /// It is empty when the server said nothing beyond the name, which is the
+  /// resting state of every Jellyfin library.
+  final String detail;
+
+  StatusTone get tone => kind.tone;
+
+  /// The row as one sentence, with the layout's `·` back as a comma — a screen
+  /// reader either names the dot or drops it depending on the user's
+  /// punctuation setting, and neither reading is a sentence.
+  String get spoken =>
+      joinSpokenParts([title, if (detail.isNotEmpty) spokenFromDotted(detail)]);
+}
+
+/// How long ago a scan finished, as of [now].
+///
+/// A thin wrapper on [formatRelativeDateTime] for one reason, and it is a real
+/// one on self-hosted hardware: a NAS whose clock runs ahead of the phone hands
+/// back a `scannedAt` in the future, and the shared formatter answers that
+/// honestly with `in 4 min` — which under a heading reading *Last scan* is not
+/// a sentence. A future timestamp is clamped to `just now`, exactly as
+/// `formatSampleAge` clamps its own, rather than being dropped: the scan did
+/// happen, only the two clocks disagree about when.
+String streamScanAgeLabel(DateTime scannedAt, {required DateTime now}) {
+  final local = scannedAt.toLocal();
+  final reference = now.toLocal();
+  if (!local.isBefore(reference)) return 'just now';
+  return formatRelativeDateTime(local, now: reference);
+}
+
+/// The second line of a peek row: what the room holds, then what is being done
+/// to it.
+///
+/// The kind is dropped when it merely restates the name. A scan in progress
+/// hides the last scan's age, because while something is being scanned *when
+/// the last one finished* is the stale half of the same fact.
+///
+/// **A library with no `lastScannedAt` is never called "never scanned".** That
+/// field is null both for a Plex section that has genuinely never been scanned
+/// *and* for every Jellyfin library, which exposes no per-library timestamp at
+/// all — one endpoint's silence and one server's absence arrive as the same
+/// null. Saying "never scanned" would be a fabrication on every Jellyfin
+/// install, so that half of the line is simply absent.
+String streamShelfDetail(StreamLibrary library, {required DateTime now}) {
+  final kind = library.kind.label;
+  final named = kind.toLowerCase() == library.name.trim().toLowerCase();
+  final scannedAt = library.lastScannedAt;
+  return joinDisplayParts([
+    if (!named) kind,
+    if (library.isRefreshing)
+      'Scanning'
+    else if (scannedAt != null)
+      'Scanned ${streamScanAgeLabel(scannedAt, now: now)}',
+  ]);
+}
+
+/// What the Libraries region draws under its header: the rooms themselves.
+///
+/// **A peek, not the list.** The Libraries tab one tap away draws every room as
+/// a destination; this draws [limit] of them as a readout, so a page the user
+/// lands on every time they open the service says what is on the shelf instead
+/// of only whether a broom is being pushed across it. Naming the rooms costs
+/// nothing — `getLibraries` already answered names and kinds — and it is the
+/// difference between a region with substance and the single "No scan running"
+/// line that was Jellyfin's Overview at rest, which is the *majority* state of
+/// a home server rather than an edge case.
+///
+/// **Scans come first**, so a rescan is never pushed off the peek by the
+/// alphabet; everything after keeps the server's own order, which is the order
+/// the Libraries tab lists them in.
+///
+/// **Rows are capped at [limit] and the census is not.** The header's subtitle
+/// is built from the whole list by [streamLibrariesCensus], so a full rescan of
+/// nine libraries reads `9 scanning` above three rows rather than reporting
+/// three and hiding six — counting inside a capped preview and then stating the
+/// result as a total is the defect this batch keeps finding.
+List<StreamShelfRow> streamShelfRows(
+  List<StreamLibrary> libraries, {
+  required DateTime now,
+  int limit = streamShelfPeekLimit,
+}) {
+  final ordered = [
+    ...libraries.where((library) => library.isRefreshing),
+    ...libraries.where((library) => !library.isRefreshing),
+  ];
+  return List.unmodifiable([
+    for (final library in ordered.take(limit))
+      StreamShelfRow(
+        kind: library.isRefreshing
+            ? StreamShelfKind.scanning
+            : StreamShelfKind.atRest,
+        icon: streamLibraryGlyph(library.kind),
+        title: library.name,
+        // The kind and the scan age, never a percentage: `StreamLibrary`
+        // carries no progress figure — Jellyfin's `RefreshProgress` is dropped
+        // at the parse boundary and Plex's lives on another endpoint — so the
+        // board's `62%` has no source behind it.
+        detail: streamShelfDetail(library, now: now),
+      ),
+  ]);
+}
+
+/// Whether an empty library list is the shelf's answer or the server's silence.
+///
+/// **Both clients swallow their own failure**: `JellyfinClient.getLibraries`
+/// and `PlexClient.getLibraries` each end `catch (_) { return const []; }`, and
+/// neither provider re-throws, so a server that is dark, off the LAN or 502-ing
+/// behind a proxy resolves to `data([])` — indistinguishable, at this layer,
+/// from a server whose libraries were genuinely deleted. Printing "0 libraries"
+/// over the first of those is the fake zero the contract names, and it is the
+/// reading a user acts on.
+///
+/// The discriminator is the reachability probe the identity line above already
+/// watched, so this costs no extra request. Only an *empty* list is ambiguous:
+/// a list with rooms in it was answered by definition, whatever the probe
+/// happens to be saying this second.
+bool streamLibrariesUnanswered({
+  required List<StreamLibrary> libraries,
+  required bool serverAnswering,
+}) => libraries.isEmpty && !serverAnswering;
+
+/// The Libraries header's census, or null when nothing behind it answered.
+///
+/// [libraries] is null while the list is in flight; it is empty both for an
+/// empty shelf and for a silent server, which [streamLibrariesUnanswered]
+/// separates. Null here reads "—" on the header — never 0.
+String? streamLibrariesCensus({
+  required List<StreamLibrary>? libraries,
+  required bool serverAnswering,
+}) {
+  if (libraries == null) return null;
+  if (streamLibrariesUnanswered(
+    libraries: libraries,
+    serverAnswering: serverAnswering,
+  )) {
+    return null;
+  }
+  final scanning = libraries.where((library) => library.isRefreshing).toList();
+  return streamLibrariesSummary(
+    total: libraries.length,
+    // Naming the first of several would imply the others were idle; the
+    // summary prints a count in that case instead.
+    scanningName: scanning.length == 1 ? scanning.first.name : null,
+    scanningCount: scanning.length,
+  );
+}
+
+// ─── On deck (Plex only) ────────────────────────────────────────────────────
+
+/// The rail, from whatever `/hubs/continueWatching` answered.
+///
+/// An item with no id is dropped rather than drawn: the tile's whole purpose is
+/// to open the thing, and a poster that routes nowhere is a control that fails.
+/// Capped at [limit] for the same reason the request asks for [limit] — the
+/// header states no count, so nothing here is a sample presented as a total.
+///
+/// **A repeated id is dropped too, and that is not hygiene.**
+/// `PlexClient._itemsFromHubs` concatenates `Metadata` across every hub the
+/// response carries — the method exists in that shape because
+/// `/hubs/continueWatching` answers as a hub list on some builds — with no
+/// dedupe of its own, so an episode sitting in both Continue watching and On
+/// deck arrives twice under one `ratingKey`. Two tiles for one episode is the
+/// visible half; the other half is two Heroes and a poster the user has already
+/// half-watched offered as if it were two different things.
+List<StreamItem> streamOnDeckPreview(
+  List<StreamItem> items, {
+  int limit = streamOnDeckPreviewLimit,
+}) {
+  final seen = <String>{};
+  final kept = <StreamItem>[];
+  for (final item in items) {
+    if (kept.length == limit) break;
+    final id = item.id.trim();
+    if (id.isEmpty || !seen.add(id)) continue;
+    kept.add(item);
+  }
+  return List.unmodifiable(kept);
+}
+
+/// The caption under an On deck poster.
+///
+/// The series (or year) it belongs to, then how far in the viewer is. A
+/// **percentage, not a position**: the board's `01:12` is a clock reading, and
+/// `StreamItem.resumeOffsetMs` is only half of one — a runtime the server did
+/// not send makes the position meaningless, while the percentage simply does not
+/// appear. A finished item says so, because one can sit on this hub having been
+/// watched to the end and not yet cleared.
+String streamOnDeckCaption(StreamItem item) {
+  final progress = item.resumeProgress;
+  return joinDisplayParts([
+    item.subtitle ?? (item.year == null ? null : '${item.year}'),
+    if (progress != null)
+      '${(progress * 100).round()}% in'
+    else if (item.isPlayed)
+      'watched',
+  ]);
+}
+
+/// In-progress playback across every Plex library.
+///
+/// **Plex only, and the name says so rather than pretending to be the shared
+/// shape.** `/hubs/continueWatching` has no Jellyfin counterpart in this client
+/// — see the library comment — so a `family` keyed by `ServiceKey` would have to
+/// answer Jellyfin with an empty list, and an empty list on this rail reads as
+/// "nothing in progress", which is a claim nobody made.
+///
+/// `getContinueWatching` swallows its own failure and answers `[]`, the same
+/// contract `getAllCutoff` has on the Radarr Overview: a Plex that serves
+/// sessions but not hubs shows a resting rail rather than taking the region
+/// down. `autoDispose` with a cancel token because this is a list fetch, and the
+/// project's convention is that those are cancellable.
+final plexOnDeckProvider = FutureProvider.autoDispose<List<StreamItem>>((
+  ref,
+) async {
+  final client = ref.watch(plexClientProvider);
+  final cancelToken = CancelToken();
+  ref.onDispose(cancelToken.cancel);
+  final items = await client.getContinueWatching(
+    count: streamOnDeckPreviewLimit,
+    cancelToken: cancelToken,
+  );
+  return streamOnDeckPreview(items);
+});

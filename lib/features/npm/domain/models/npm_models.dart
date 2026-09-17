@@ -212,15 +212,42 @@ class NpmCertificate {
   bool get isLetsEncrypt => provider == 'letsencrypt';
 
   /// Whole days until expiry, or null when NPM did not give a date.
+  ///
+  /// **Truncated toward zero, so it cannot be used to ask whether a
+  /// certificate has lapsed.** `Duration.inDays` on a date six hours in the
+  /// past is 0, not -1, which makes `days < 0` blind for a full day — and that
+  /// day is exactly the one somebody opens the app on. [hasExpired] is the
+  /// question; this is only the magnitude.
   int? daysUntilExpiry(DateTime now) {
     final expiry = expiresOn;
     if (expiry == null) return null;
     return expiry.difference(now).inDays;
   }
 
+  /// Whether the date NPM gave is already behind us.
+  ///
+  /// A date comparison rather than a day count, for the reason spelled out on
+  /// [daysUntilExpiry]: the truncated count says 0 for the whole twenty-four
+  /// hours after a certificate lapses, and 0 reads as "expires today" — a
+  /// deadline — about something every browser is already refusing.
+  ///
+  /// False for an undated certificate: no date, no claim in either direction.
+  bool hasExpired(DateTime now) {
+    final expiry = expiresOn;
+    return expiry != null && !expiry.isAfter(now);
+  }
+
   /// Certificates worth surfacing. Let's Encrypt renews at 30 days out, so a
   /// shorter window than that would only ever fire on one that is already
   /// failing to renew — which is exactly the case this is for.
+  ///
+  /// **Deliberately still true for a lapsed certificate.** This is the "needs
+  /// a human" window, and the Dashboard's decision feed
+  /// (`_expiringCertificateDecisions`) is built straight off it — narrowing it
+  /// here would make an expired certificate vanish from the one surface that
+  /// collects faults across services. Anything that *prints the word
+  /// "expiring"* has to pair it with [hasExpired] instead, so a lapse is never
+  /// reported as a deadline.
   bool isExpiringSoon(DateTime now) {
     final days = daysUntilExpiry(now);
     return days != null && days <= 21;
