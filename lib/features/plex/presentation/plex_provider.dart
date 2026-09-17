@@ -69,7 +69,10 @@ final plexCapabilitiesProvider = FutureProvider<PlexServerCapabilities?>((
   ref,
 ) async {
   return ref.watch(plexClientProvider).getCapabilities();
-});
+  // No automatic retry, for the reason [jellyfinLibrariesProvider] gives: the
+  // default one holds the future through ten backing-off attempts, so a dark
+  // Plex is a spinner rather than an unreachable band with a Retry on it.
+}, retry: noProviderRetry);
 
 /// Everything playing right now, most expensive first.
 ///
@@ -84,17 +87,18 @@ final plexSessionsProvider = FutureProvider<List<StreamSession>>((ref) async {
 /// The libraries ("sections") this server exposes.
 final plexLibrariesProvider = FutureProvider<List<StreamLibrary>>((ref) async {
   return ref.watch(plexClientProvider).getLibraries();
-});
+}, retry: noProviderRetry);
 
 /// One item at any depth — film, show, season, episode, album or track.
 final plexItemProvider = FutureProvider.autoDispose.family<StreamItem?, String>(
   (ref, ratingKey) async {
     return ref.watch(plexClientProvider).getItem(ratingKey);
   },
+  retry: noProviderRetry,
 );
 
 /// The children of a show, season or album.
 final plexChildrenProvider = FutureProvider.autoDispose
     .family<List<StreamItem>, String>((ref, ratingKey) async {
       return ref.watch(plexClientProvider).getChildren(ratingKey);
-    });
+    }, retry: noProviderRetry);

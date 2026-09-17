@@ -190,13 +190,32 @@ void main() {
 
     test('a job whose size the server did not report shows no percentage', () {
       final row = nzbgetQueueEntry(
-        _group(name: 'Sizeless', status: 'DOWNLOADING', fileSizeMb: 0),
+        _group(name: 'Sizeless', status: 'DOWNLOADING', fileSizeMb: null),
       );
 
       // Never "0%": that reading says "stuck", which nobody established.
       expect(row.percentLabel, isNull);
       expect(row.detail, 'tv · downloading');
       expect(row.spoken, 'Sizeless, tv, downloading');
+    });
+
+    test('a job whose remaining size nobody reported shows no percentage', () {
+      // Never "100%" either, which is what a `0` default for the remaining
+      // size used to compute: `(size - 0) / size` == 1, so a job the server
+      // said nothing about drew a full bar and read as finished.
+      final row = nzbgetQueueEntry(
+        _group(
+          name: 'Unmeasured',
+          status: 'DOWNLOADING',
+          fileSizeMb: 4915,
+          remainingSizeMb: null,
+        ),
+      );
+
+      expect(row.percentLabel, isNull);
+      // The size the server *did* report still prints — it is a fact, and the
+      // only one of the two that was answered.
+      expect(row.detail, 'tv · downloading · 4.8 GB');
     });
 
     test('a row is one sentence, with the dots read as commas', () {
@@ -452,8 +471,8 @@ NzbgetGroup _group({
   required String name,
   required String status,
   String category = 'tv',
-  int fileSizeMb = 4915,
-  int remainingSizeMb = 2162,
+  int? fileSizeMb = 4915,
+  int? remainingSizeMb = 2162,
 }) => NzbgetGroup(
   nzbId: name.hashCode,
   name: name,

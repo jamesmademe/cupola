@@ -33,6 +33,34 @@ void main() {
       });
       expect(info.altSpeedEnabled, isFalse);
     });
+
+    // qB's WebUI mixes JSON true, 1 and "true" for the same flag across builds
+    // and endpoints, which is why `parseBool` exists. A strict `== true` reads
+    // every one of these as "alternative limits off" and tells the user the
+    // throttle is not on while it is — so they throttle again.
+    test('altSpeedEnabled accepts every boolean spelling qB sends', () {
+      Map<String, dynamic> payload(dynamic alt) => {
+        'dl_info_speed': 0,
+        'up_info_speed': 0,
+        'dl_info_data': 0,
+        'up_info_data': 0,
+        'dl_rate_limit': 0,
+        'up_rate_limit': 0,
+        'use_alt_speed_limits': alt,
+      };
+
+      expect(TransferInfo.fromJson(payload(true)).altSpeedEnabled, isTrue);
+      expect(TransferInfo.fromJson(payload(1)).altSpeedEnabled, isTrue);
+      expect(TransferInfo.fromJson(payload('1')).altSpeedEnabled, isTrue);
+      expect(TransferInfo.fromJson(payload('true')).altSpeedEnabled, isTrue);
+      expect(TransferInfo.fromJson(payload('True')).altSpeedEnabled, isTrue);
+
+      expect(TransferInfo.fromJson(payload(false)).altSpeedEnabled, isFalse);
+      expect(TransferInfo.fromJson(payload(0)).altSpeedEnabled, isFalse);
+      expect(TransferInfo.fromJson(payload('0')).altSpeedEnabled, isFalse);
+      expect(TransferInfo.fromJson(payload('false')).altSpeedEnabled, isFalse);
+      expect(TransferInfo.fromJson(payload(null)).altSpeedEnabled, isFalse);
+    });
   });
 
   group('TransferInfo formatted helpers', () {

@@ -268,10 +268,24 @@ class _QueueTile extends ConsumerWidget {
       subtitle: <String>[
         if (group.status.isNotEmpty) group.status,
         if (group.category.isNotEmpty) group.category,
-        group.remainingLabel,
+        // "progress unknown" rather than "— left": the em dash alone reads as
+        // a missing size, and what is actually missing is the whole
+        // measurement. It is also the line that contradicts the `0%` below.
+        if (group.percentage == null)
+          'progress unknown'
+        else
+          group.remainingLabel,
       ].join(' · '),
+      // Null when NZBGet reported no size or no remaining size, so the bar is
+      // simply not drawn — which is the fix: the old `0` default computed a
+      // full bar for a job nobody measured.
       progress: group.progress,
-      percentage: group.percentage,
+      // `DownloadQueueTile.percentage` is a non-nullable `int` and always
+      // prints, so an unmeasurable job still renders `0%` here. `0%` is at
+      // least not a claim that the job finished, and the subtitle says the
+      // progress is unknown — but the plate wants a nullable percentage, the
+      // way it already has a nullable `progress`.
+      percentage: group.percentage ?? 0,
       accent: AppColors.nzbget,
       actions: DownloadQueueActionsMenu(
         paused: _paused,

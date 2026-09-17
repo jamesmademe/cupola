@@ -22,6 +22,10 @@ class _StubAdapter implements HttpClientAdapter {
   final Map<String, dynamic> responses = {};
   final Map<String, Exception> exceptions = {};
 
+  /// Every request this adapter served, newest last. Lets a test assert what
+  /// was asked of the server, not only what came back.
+  final List<RequestOptions> requests = [];
+
   @override
   void close({bool force = false}) {}
 
@@ -31,6 +35,7 @@ class _StubAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    requests.add(options);
     if (exceptions.containsKey(options.path)) {
       throw exceptions[options.path]!;
     }
@@ -73,6 +78,7 @@ Map<String, dynamic> _torrentJson({
 ProviderContainer _container({
   SettingsModel? settings,
   Map<String, dynamic>? responses,
+  _StubAdapter? adapter,
 }) {
   final container = ProviderContainer(
     overrides: [
@@ -85,9 +91,9 @@ ProviderContainer _container({
           throw Exception('qBittorrent not configured');
         }
         final dio = Dio(BaseOptions(baseUrl: s.qbittorrentUrl));
-        final adapter = _StubAdapter();
-        if (responses != null) adapter.responses.addAll(responses);
-        dio.httpClientAdapter = adapter;
+        final stub = adapter ?? _StubAdapter();
+        if (responses != null) stub.responses.addAll(responses);
+        dio.httpClientAdapter = stub;
         final client = QbittorrentClient(
           url: s.qbittorrentUrl,
           username: s.qbittorrentUsername.isEmpty
@@ -211,6 +217,60 @@ void main() {
         expect(torrents.map((t) => t.hash), isNot(contains('a')));
       },
     );
+
+    // `stopped` is the spelling qBittorrent introduced with the 5.1
+    // pause-to-stop rename. On 4.x and 5.0 an unrecognised `filter` is not an
+    // error: `/torrents/info` answers the UNFILTERED list. The stub adapter
+    // reproduces that exactly — it keys on path and ignores query parameters —
+    // so a Paused tab that leans on the server filter comes back holding
+    // everything, which is worse than a filter that errors.
+    test('paused filter holds only paused torrents on a 4.x server', () async {
+      final container = _container(
+        settings: settingsWith(qbittorrentUrl: 'http://localhost'),
+        responses: {
+          '/api/v2/torrents/info': [
+            _torrentJson(hash: 'a', state: 'downloading'),
+            _torrentJson(hash: 'b', state: 'pausedDL'),
+            _torrentJson(hash: 'c', state: 'uploading'),
+            _torrentJson(hash: 'd', state: 'stoppedUP'),
+          ],
+        },
+      );
+
+      container.read(torrentFilterProvider.notifier).state =
+          TorrentFilter.paused;
+      final torrents = await container.read(torrentsProvider.future);
+
+      expect(torrents.map((t) => t.hash), ['b', 'd']);
+    });
+
+    test('paused filter never sends a version-specific filter value', () async {
+      final adapter = _StubAdapter();
+      final container = _container(
+        settings: settingsWith(qbittorrentUrl: 'http://localhost'),
+        adapter: adapter,
+        responses: {
+          '/api/v2/torrents/info': [
+            _torrentJson(hash: 'a', state: 'downloading'),
+            _torrentJson(hash: 'b', state: 'pausedDL'),
+          ],
+        },
+      );
+
+      container.read(torrentFilterProvider.notifier).state =
+          TorrentFilter.paused;
+      await container.read(torrentsProvider.future);
+
+      final filters = adapter.requests
+          .where((r) => r.path == '/api/v2/torrents/info')
+          .map((r) => r.queryParameters['filter'])
+          .toList();
+      // Neither vocabulary: `stopped` is silently ignored before 5.1 and
+      // `paused` is deprecated from 5.1 on. The census the model already knows
+      // how to read is the only thing that spans both.
+      expect(filters, isNot(contains('stopped')));
+      expect(filters, isNot(contains('paused')));
+    });
 
     test('category filter is applied on top of API filter', () async {
       final container = _container(

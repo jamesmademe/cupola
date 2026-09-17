@@ -166,11 +166,13 @@ class NzbgetQueueEntry {
   /// Category, stage and total size, as far as the record carried them.
   final String detail;
 
-  /// `56%`, or null when NZBGet reported no file size.
+  /// `56%`, or null when NZBGet reported no file size **or no remaining size**.
   ///
   /// Null and never `0%`: a job whose size the server did not report has no
   /// measurable progress, and `0%` is the one reading a user would act on —
-  /// it says "stuck", which nobody established.
+  /// it says "stuck", which nobody established. The remaining half matters for
+  /// the opposite reason: a missing remaining size used to compute `100%`,
+  /// which says "done".
   final String? percentLabel;
 
   StatusTone get tone => state.tone;
@@ -193,11 +195,18 @@ NzbgetQueueEntry nzbgetQueueEntry(NzbgetGroup group) {
       group.category,
       stage,
       // The whole size, not what is left: the board prints the job's size, and
-      // "4.8 GB" beside "56%" is a fact the two numbers agree on. A zero size
-      // is dropped rather than printed — see [NzbgetQueueEntry.percentLabel].
-      group.fileSizeMb > 0 ? formatMegabytes(group.fileSizeMb) : null,
+      // "4.8 GB" beside "56%" is a fact the two numbers agree on. A size the
+      // record did not carry is dropped rather than printed — see
+      // [NzbgetQueueEntry.percentLabel].
+      switch (group.fileSizeMb) {
+        final int mb when mb > 0 => formatMegabytes(mb),
+        _ => null,
+      },
     ]),
-    percentLabel: group.fileSizeMb > 0 ? '${group.percentage}%' : null,
+    percentLabel: switch (group.percentage) {
+      final int percent => '$percent%',
+      null => null,
+    },
   );
 }
 

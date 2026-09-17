@@ -60,12 +60,14 @@ int _epochSeconds(DateTime when) => when.millisecondsSinceEpoch ~/ 1000;
 class _ScriptedClient extends TransmissionClient {
   _ScriptedClient({
     required this.scriptedSession,
-    this.freeBytes = 0,
+    this.freeBytes,
     this.freeSpaceThrows = false,
   }) : super(url: 'http://daemon.test:9091');
 
   final TransmissionSession scriptedSession;
-  final int freeBytes;
+
+  /// Null is the daemon declining to answer; 0 is a disk with nothing left.
+  final int? freeBytes;
   final bool freeSpaceThrows;
 
   /// Every path `free-space` was asked about. Empty means it was never called,
@@ -76,7 +78,7 @@ class _ScriptedClient extends TransmissionClient {
   Future<TransmissionSession> session() async => scriptedSession;
 
   @override
-  Future<int> freeSpace(String path) async {
+  Future<int?> freeSpace(String path) async {
     freeSpaceCalls.add(path);
     if (freeSpaceThrows) throw Exception('free-space refused');
     return freeBytes;
@@ -91,17 +93,22 @@ ProviderContainer _container(_ScriptedClient client) {
   return container;
 }
 
-TransmissionSession _session({String downloadDir = '/downloads'}) =>
-    TransmissionSession.fromJson({
-      'version': '4.0.6',
-      'rpc-version': 17,
-      'download-dir': downloadDir,
-      'alt-speed-enabled': false,
-      'speed-limit-down': 4096,
-      'speed-limit-down-enabled': true,
-      'speed-limit-up': 1024,
-      'speed-limit-up-enabled': false,
-    });
+TransmissionSession _session({
+  String downloadDir = '/downloads',
+  String? incompleteDir,
+  bool incompleteDirEnabled = false,
+}) => TransmissionSession.fromJson({
+  'version': '4.0.6',
+  'rpc-version': 17,
+  'download-dir': downloadDir,
+  'incomplete-dir': ?incompleteDir,
+  'incomplete-dir-enabled': incompleteDirEnabled,
+  'alt-speed-enabled': false,
+  'speed-limit-down': 4096,
+  'speed-limit-down-enabled': true,
+  'speed-limit-up': 1024,
+  'speed-limit-up-enabled': false,
+});
 
 void main() {
   group('transmissionFocusRank', () {
@@ -574,12 +581,12 @@ void main() {
       expect(client.freeSpaceCalls, isEmpty);
     });
 
-    test('a zero is silence, not a measurement', () async {
-      // `TransmissionClient.freeSpace` collapses a missing `size-bytes` key to
-      // 0, so at this layer a zero cannot be told from an unanswered question
-      // and must not be printed as one.
+    test('a daemon that did not answer costs the figure, not the row', () async {
+      // Null, never 0: the client now distinguishes an unanswered `size-bytes`
+      // from a measured one, so this layer no longer has to throw away the
+      // only reading that matters to fake that distinction.
       final container = _container(
-        _ScriptedClient(scriptedSession: _session(), freeBytes: 0),
+        _ScriptedClient(scriptedSession: _session(), freeBytes: null),
       );
 
       expect(
@@ -592,7 +599,86 @@ void main() {
       );
       final free = facts.firstWhere((f) => f.label == 'Free space');
       expect(free.value, '—');
-      expect(free.value, isNot(contains('0')));
+      expect(free.tone, StatusTone.neutral);
+    });
+
+    test('a full disk says so instead of reading as silence', () async {
+      // The defect: `freeSpace` collapsed a missing key to 0 and the provider
+      // folded every 0 back to null to recover the missing case — so the one
+      // reading a user needs before starting a grab rendered as an em dash,
+      // indistinguishable from a daemon that said nothing.
+      final container = _container(
+        _ScriptedClient(scriptedSession: _session(), freeBytes: 0),
+      );
+
+      expect(await container.read(transmissionFreeSpaceProvider.future), 0);
+
+      final facts = await container.read(
+        transmissionSessionFactsProvider.future,
+      );
+      final free = facts.firstWhere((f) => f.label == 'Free space');
+      expect(free.value, '0 B');
+      // A fault, and the only one this region can carry: the disk stopped
+      // being able to take a download, which is not a setting anybody chose.
+      expect(free.tone, StatusTone.warning);
+    });
+
+    test('measures the incomplete directory when one is in force', () async {
+      // Transmission downloads into `incomplete-dir` and only moves the file
+      // to `download-dir` when it finishes, so on that setup the free space at
+      // `download-dir` describes a volume the user is not filling.
+      final client = _ScriptedClient(
+        scriptedSession: _session(
+          downloadDir: '/mnt/media/complete',
+          incompleteDir: '/mnt/fast/incomplete',
+          incompleteDirEnabled: true,
+        ),
+        freeBytes: 512 * 1024 * 1024 * 1024,
+      );
+      final container = _container(client);
+
+      await container.read(transmissionFreeSpaceProvider.future);
+      expect(client.freeSpaceCalls, ['/mnt/fast/incomplete']);
+
+      final facts = await container.read(
+        transmissionSessionFactsProvider.future,
+      );
+      final free = facts.firstWhere((f) => f.label == 'Free space');
+      // The row names the path it measured, and which directory that is — the
+      // figure and its subject have to be the same volume, or the row answers
+      // the wrong question while looking right.
+      expect(free.detail, '/mnt/fast/incomplete · incomplete directory');
+    });
+
+    test('ignores an incomplete directory that is switched off', () async {
+      // Transmission keeps the stored path while the flag is false, exactly as
+      // it keeps a speed limit that is not in force.
+      final client = _ScriptedClient(
+        scriptedSession: _session(
+          downloadDir: '/mnt/media/complete',
+          incompleteDir: '/mnt/fast/incomplete',
+        ),
+        freeBytes: 1024,
+      );
+      final container = _container(client);
+
+      await container.read(transmissionFreeSpaceProvider.future);
+      expect(client.freeSpaceCalls, ['/mnt/media/complete']);
+    });
+
+    test('falls back when the flag is on and the path is empty', () async {
+      final client = _ScriptedClient(
+        scriptedSession: _session(
+          downloadDir: '/mnt/media/complete',
+          incompleteDir: '   ',
+          incompleteDirEnabled: true,
+        ),
+        freeBytes: 1024,
+      );
+      final container = _container(client);
+
+      await container.read(transmissionFreeSpaceProvider.future);
+      expect(client.freeSpaceCalls, ['/mnt/media/complete']);
     });
 
     test('a refused free-space costs the figure, not the region', () async {

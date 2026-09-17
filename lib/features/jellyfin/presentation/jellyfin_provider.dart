@@ -123,11 +123,20 @@ final jellyfinSessionsProvider = FutureProvider<List<StreamSession>>((
 }, retry: noProviderRetry);
 
 /// The libraries this server exposes.
+///
+/// `retry: noProviderRetry` from here down, for the reason
+/// [jellyfinSessionsProvider] gives one step above: the default retry re-runs a
+/// failed build ten times behind an exponential backoff and holds the future
+/// until it has, so a server that has gone dark is a spinner for the better
+/// part of a minute before any surface can say "unreachable" and offer the
+/// Retry it already draws. (The "not configured" throw never needed the flag —
+/// it reaches a watcher as a `ProviderException`, which `defaultRetry`
+/// declines on its own.)
 final jellyfinLibrariesProvider = FutureProvider<List<StreamLibrary>>((
   ref,
 ) async {
   return ref.watch(jellyfinServerProvider).getLibraries();
-});
+}, retry: noProviderRetry);
 
 /// Household members whose watch state a library can be read through.
 ///
@@ -136,7 +145,7 @@ final jellyfinLibrariesProvider = FutureProvider<List<StreamLibrary>>((
 /// the settings picker fills `jellyfinUserId` from.
 final jellyfinViewersProvider = FutureProvider<List<StreamViewer>>((ref) async {
   return ref.watch(jellyfinServerProvider).getViewers();
-});
+}, retry: noProviderRetry);
 
 /// The same list, from one named connection.
 ///
@@ -147,7 +156,7 @@ final jellyfinViewersProvider = FutureProvider<List<StreamViewer>>((ref) async {
 final jellyfinViewersForProvider =
     FutureProvider.family<List<StreamViewer>, String>((ref, instanceId) async {
       return ref.watch(jellyfinClientForProvider(instanceId)).getViewers();
-    });
+    }, retry: noProviderRetry);
 
 /// One item at any depth, by id.
 ///
@@ -162,7 +171,7 @@ final jellyfinItemProvider = FutureProvider.autoDispose
       final cancelToken = CancelToken();
       ref.onDispose(cancelToken.cancel);
       return client.getItem(itemId, cancelToken: cancelToken);
-    });
+    }, retry: noProviderRetry);
 
 /// The children of a series, season or album — seasons, episodes or tracks.
 ///
@@ -173,4 +182,4 @@ final jellyfinItemChildrenProvider = FutureProvider.autoDispose
       final cancelToken = CancelToken();
       ref.onDispose(cancelToken.cancel);
       return client.getChildren(itemId, cancelToken: cancelToken);
-    });
+    }, retry: noProviderRetry);

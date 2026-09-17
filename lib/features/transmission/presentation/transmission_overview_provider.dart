@@ -20,7 +20,7 @@
 ///
 /// The designed Session region draws a peer-port test, a blocklist size with an
 /// Update control, and the seed-ratio/idle/encryption triple. None of the three
-/// is reachable: `TransmissionSession` keeps eight of the sixty keys
+/// is reachable: `TransmissionSession` keeps ten of the sixty keys
 /// `session-get` returns — no `peer-port`, `blocklist-size`, `seedRatioLimit`,
 /// `idle-seeding-limit` or `encryption` — and `TransmissionClient` calls
 /// neither `port-test` nor `blocklist-update`. So the region draws the four
@@ -33,6 +33,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
@@ -268,12 +269,14 @@ String transmissionLimitLabel(int kbPerSec, {required bool enabled}) {
 ///
 /// [freeSpaceBytes] is null when the free-space call was never made or came
 /// back unusable; it renders `—` and not `0 B`, because "the disk is full" and
-/// "nobody asked" are opposite readings of the same glyph.
+/// "nobody asked" are opposite readings of the same glyph — and `0 B` is
+/// reserved for the first, which the client now reports as a measurement
+/// rather than folding into silence.
 List<TransmissionSessionFact> transmissionSessionFacts(
   TransmissionSession session, {
   int? freeSpaceBytes,
 }) {
-  final downloadDir = session.downloadDir.trim();
+  final measuredDir = session.activeDownloadDir;
 
   return List.unmodifiable([
     TransmissionSessionFact(
@@ -312,25 +315,38 @@ List<TransmissionSessionFact> transmissionSessionFacts(
     ),
     TransmissionSessionFact(
       label: 'Free space',
-      // `formatSize` answers `—` for anything at or below zero, which is the
-      // right reading of both cases it covers here: a daemon that did not
-      // report a figure, and one that reported a nonsensical one.
-      value: freeSpaceBytes == null ? '—' : formatSize(freeSpaceBytes),
-      // The path is the point. Every path in this API belongs to the *daemon's*
-      // filesystem, so `/downloads` in a container is not the user's
-      // `/downloads`, and a free-space figure with no path attached is a number
-      // about an unnamed disk.
-      detail: downloadDir.isEmpty ? 'download directory unknown' : downloadDir,
+      // Not `formatSize`, which answers `—` for anything at or below zero:
+      // that folds a full disk back into silence, which is the whole defect.
+      // A null here is the only silence, and it is decided upstream.
+      value: freeSpaceBytes == null ? '—' : formatBytesPrecise(freeSpaceBytes),
+      // The path is the point, and it has to be the path that was *measured*.
+      // Every path in this API belongs to the *daemon's* filesystem, so
+      // `/downloads` in a container is not the user's `/downloads`; and when
+      // an incomplete directory is in force it — not `download-dir` — is the
+      // volume a running grab fills, so the row names that one and says which
+      // it is.
+      detail: measuredDir.isEmpty
+          ? 'download directory unknown'
+          : session.usesIncompleteDir
+          ? '$measuredDir · incomplete directory'
+          : measuredDir,
       icon: Icons.sd_storage_outlined,
+      // The one fault this region can carry. Every other row is a setting the
+      // user chose, but a volume with nothing left is not a choice and is the
+      // reason the next grab will fail.
+      tone: freeSpaceBytes == 0 ? StatusTone.warning : StatusTone.neutral,
     ),
   ]);
 }
 
-/// Free bytes at the daemon's default download directory, or null.
+/// Free bytes on the volume a running download is filling, or null.
 ///
 /// Two calls, in order, because Transmission will not answer the second without
 /// the first: `free-space` takes a path and the only path the app knows is the
-/// one `session-get` reports.
+/// one `session-get` reports. Which path that is, is
+/// [TransmissionSession.activeDownloadDir]'s answer and not `download-dir`'s —
+/// a daemon with an incomplete directory in force is not touching
+/// `download-dir` until the grab finishes.
 ///
 /// **Null rather than a throw.** A daemon that answers `session-get` and
 /// refuses `free-space` — an unreadable path, a relocated volume, an older
@@ -338,18 +354,19 @@ List<TransmissionSessionFact> transmissionSessionFacts(
 /// good rows down to report a missing fourth is the trade the em-dash rule
 /// exists to refuse.
 ///
-/// Zero is folded into null for the same reason: `TransmissionClient.freeSpace`
-/// collapses a missing `size-bytes` key to `0`, so at this layer a zero cannot
-/// be told from silence and must not be printed as a measurement.
+/// **Zero is no longer folded into null.** It used to be, because
+/// `TransmissionClient.freeSpace` collapsed a missing `size-bytes` key to `0`
+/// and a zero could not be told from silence here; the client now answers null
+/// for silence, so a zero that reaches this point is a disk with nothing left
+/// on it and is printed as one.
 final transmissionFreeSpaceProvider = FutureProvider.autoDispose<int?>((
   ref,
 ) async {
   final session = await ref.watch(transmissionSessionProvider.future);
-  final path = session.downloadDir.trim();
+  final path = session.activeDownloadDir;
   if (path.isEmpty) return null;
   try {
-    final bytes = await ref.watch(transmissionClientProvider).freeSpace(path);
-    return bytes > 0 ? bytes : null;
+    return await ref.watch(transmissionClientProvider).freeSpace(path);
   } catch (_) {
     return null;
   }

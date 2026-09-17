@@ -18,6 +18,23 @@ int combineHiLo(dynamic hi, dynamic lo) {
   return (intOrNull(hi) ?? 0) * (1 << 32) + (intOrNull(lo) ?? 0);
 }
 
+/// Reads one of NZBGet's sizes — `<field>MB`, or the `<field>Hi`/`<field>Lo`
+/// pair — in megabytes, and answers **null** when the record carried neither.
+///
+/// Null and not zero. NZBGet's own responses carry all three keys, so an
+/// absent one means a truncated reply, a version that does not report the
+/// field, or a record this app guessed the shape of — none of which is the
+/// same statement as "zero megabytes", and each of which used to be rendered
+/// as one.
+int? megabytesOrNull(Map<String, dynamic> json, String field) {
+  final direct = intOrNull(json['${field}MB']);
+  if (direct != null) return direct;
+  final hi = json['${field}Hi'];
+  final lo = json['${field}Lo'];
+  if (intOrNull(hi) == null && intOrNull(lo) == null) return null;
+  return combineHiLo(hi, lo) ~/ (1024 * 1024);
+}
+
 /// Global download status (`status`).
 class NzbgetStatus {
   const NzbgetStatus({
@@ -66,32 +83,48 @@ class NzbgetGroup {
   final String name;
   final String status;
   final String category;
-  final int fileSizeMb;
-  final int remainingSizeMb;
 
-  double get progress {
-    if (fileSizeMb <= 0) return 0;
-    return ((fileSizeMb - remainingSizeMb) / fileSizeMb).clamp(0, 1).toDouble();
+  /// The job's whole size in megabytes, or **null** when the record carried
+  /// neither `FileSizeMB` nor the `FileSizeHi`/`FileSizeLo` pair.
+  final int? fileSizeMb;
+
+  /// What is left to fetch, or **null** on the same terms as [fileSizeMb].
+  ///
+  /// Nullable and not defaulted to zero, which is the whole point: with a `0`
+  /// standing in for silence, [progress] computed `(size - 0) / size` == 1 and
+  /// a job whose remaining size the server never reported drew a full bar and
+  /// read `100%` — a percentage nobody computed, presented as finished. Zero
+  /// stays available for what it actually means: a job with nothing left.
+  final int? remainingSizeMb;
+
+  /// 0..1, or **null** when either size is missing and there is therefore
+  /// nothing to divide.
+  double? get progress {
+    final total = fileSizeMb;
+    final left = remainingSizeMb;
+    if (total == null || left == null || total <= 0) return null;
+    return ((total - left) / total).clamp(0, 1).toDouble();
   }
 
-  int get percentage => (progress * 100).round();
-  String get remainingLabel => formatMegabytes(remainingSizeMb);
+  /// The same value as a whole number, or null on the same terms.
+  int? get percentage {
+    final value = progress;
+    return value == null ? null : (value * 100).round();
+  }
+
+  String get remainingLabel {
+    final left = remainingSizeMb;
+    return left == null ? '—' : formatMegabytes(left);
+  }
 
   factory NzbgetGroup.fromJson(Map<String, dynamic> json) {
-    final fileMb = json.containsKey('FileSizeMB')
-        ? intOrNull(json['FileSizeMB']) ?? 0
-        : combineHiLo(json['FileSizeHi'], json['FileSizeLo']) ~/ (1024 * 1024);
-    final remainingMb = json.containsKey('RemainingSizeMB')
-        ? intOrNull(json['RemainingSizeMB']) ?? 0
-        : combineHiLo(json['RemainingSizeHi'], json['RemainingSizeLo']) ~/
-              (1024 * 1024);
     return NzbgetGroup(
       nzbId: intOrNull(json['NZBID']) ?? 0,
       name: (json['NZBName'] ?? json['NZBNicename'] ?? 'Unknown').toString(),
       status: (json['Status'] ?? '').toString(),
       category: (json['Category'] ?? '').toString(),
-      fileSizeMb: fileMb,
-      remainingSizeMb: remainingMb,
+      fileSizeMb: megabytesOrNull(json, 'FileSize'),
+      remainingSizeMb: megabytesOrNull(json, 'RemainingSize'),
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/widgets/download_queue_tile.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
@@ -27,7 +28,7 @@ Finder _buttonWithText(String label) => find.ancestor(
   matching: find.byWidgetPredicate((w) => w is FilledButton),
 );
 
-List<Override> _ambient() => [
+List<Override> _ambient({List<NzbgetGroup> queue = const []}) => [
   serviceSummaryProvider.overrideWith(
     (ref, service) async => ServiceSummary(
       service: service,
@@ -37,7 +38,7 @@ List<Override> _ambient() => [
     ),
   ),
   serviceKpiProvider.overrideWith((ref, service) async => const <ServiceKpi>[]),
-  nzbgetQueueProvider.overrideWith((ref) async => const <NzbgetGroup>[]),
+  nzbgetQueueProvider.overrideWith((ref) async => queue),
   nzbgetHistoryProvider.overrideWith(
     (ref) async => const <NzbgetHistoryItem>[],
   ),
@@ -95,5 +96,51 @@ void main() {
     final resume = _buttonWithText('Resume all');
     expect(resume, findsOneWidget);
     expect(tester.widget<FilledButton>(resume).onPressed, isNotNull);
+  });
+
+  testWidgets('a job nobody measured draws no bar and says so', (tester) async {
+    // Regression: `remainingSizeMb` defaulted to 0, so a job whose remaining
+    // size NZBGet never reported computed `(size - 0) / size` == 1 and drew a
+    // full progress bar — a percentage nobody computed, presented as finished.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _configured),
+          ..._ambient(
+            queue: [
+              NzbgetGroup.fromJson(const {
+                'NZBID': 7,
+                'NZBName': 'Unmeasured.Job',
+                'Status': 'DOWNLOADING',
+                'Category': 'tv',
+                'FileSizeMB': 4800,
+              }),
+            ],
+          ),
+          nzbgetStatusProvider.overrideWith(
+            (ref) async => const NzbgetStatus(
+              downloadRateBytes: 0,
+              remainingSizeMb: 0,
+              paused: false,
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: NzbgetScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Unmeasured.Job'), findsOneWidget);
+    // No bar at all, rather than a full one.
+    expect(
+      find.descendant(
+        of: find.byType(DownloadQueueTile),
+        matching: find.byType(LinearProgressIndicator),
+      ),
+      findsNothing,
+    );
+    expect(find.text('100%'), findsNothing);
+    // And the row says why there is nothing to draw.
+    expect(find.textContaining('progress unknown'), findsOneWidget);
   });
 }

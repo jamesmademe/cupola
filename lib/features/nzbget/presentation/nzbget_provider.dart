@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -27,18 +28,26 @@ final nzbgetClientProvider = Provider<NzbgetClient>((ref) {
 });
 
 /// Global download status.
+///
+/// The three reads below carry `retry: noProviderRetry`, and the reason is the
+/// derivation rule rather than a screen: Riverpod's default re-runs a failed
+/// build ten times behind an exponential backoff and **holds the future until
+/// it has**, so a dark NZBGet spends forty seconds as a spinner before any
+/// surface can draw its unreachable band or offer its own Retry. (The "not
+/// configured" throw never needed the flag: it arrives as a `ProviderException`,
+/// which `defaultRetry` declines on its own.)
 final nzbgetStatusProvider = FutureProvider<NzbgetStatus>((ref) async {
   return ref.watch(nzbgetClientProvider).status();
-});
+}, retry: noProviderRetry);
 
 /// The active download queue.
 final nzbgetQueueProvider = FutureProvider<List<NzbgetGroup>>((ref) async {
   return ref.watch(nzbgetClientProvider).listGroups();
-});
+}, retry: noProviderRetry);
 
 /// Recent completed/failed downloads.
 final nzbgetHistoryProvider = FutureProvider<List<NzbgetHistoryItem>>((
   ref,
 ) async {
   return ref.watch(nzbgetClientProvider).history();
-});
+}, retry: noProviderRetry);

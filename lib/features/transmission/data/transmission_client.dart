@@ -414,15 +414,27 @@ class TransmissionClient {
     'recheckProgress',
   ];
 
-  /// Free space at [path] on the **daemon's** filesystem.
+  /// Free space at [path] on the **daemon's** filesystem, or null when the
+  /// daemon did not report a usable figure.
   ///
   /// Worth stating because it is a common source of confusion: every path in
   /// this API belongs to the server's namespace, and in Docker the daemon's
   /// `/downloads` is not the user's.
-  Future<int> freeSpace(String path) async {
+  ///
+  /// **Nullable, and zero is kept.** Collapsing an absent or non-numeric
+  /// `size-bytes` to `0` made "the daemon did not answer" and "the disk is
+  /// full" the same int, and the only way to recover the first was for the
+  /// caller to discard the second — which threw away precisely the reading a
+  /// user needs before starting a grab. A negative value is silence too:
+  /// `size-bytes` is documented as a count of free bytes, so a daemon that
+  /// answers below zero is saying it could not measure, not that the volume
+  /// owes space.
+  Future<int?> freeSpace(String path) async {
     final result = await _call('free-space', {'path': path});
     final bytes = result['size-bytes'];
-    return bytes is num ? bytes.toInt() : 0;
+    if (bytes is! num) return null;
+    final value = bytes.toInt();
+    return value < 0 ? null : value;
   }
 
   // ── Writes ────────────────────────────────────────────────────────────────

@@ -258,6 +258,8 @@ class TransmissionSession {
     required this.version,
     required this.rpcVersion,
     required this.downloadDir,
+    required this.incompleteDir,
+    required this.incompleteDirEnabled,
     required this.altSpeedEnabled,
     required this.speedLimitDownKbPerSec,
     required this.speedLimitDownEnabled,
@@ -275,8 +277,41 @@ class TransmissionSession {
   /// silently on 3.x.
   final int rpcVersion;
 
+  /// Where a finished download ends up.
   final String downloadDir;
+
+  /// Where a download is written **while it runs**, when
+  /// [incompleteDirEnabled]. Transmission keeps the stored path while the flag
+  /// is false, exactly as it keeps a speed limit that is not in force, so the
+  /// two fields have to be read together — see [activeDownloadDir].
+  final String incompleteDir;
+  final bool incompleteDirEnabled;
+
   final bool altSpeedEnabled;
+
+  /// The directory a running download is actually filling.
+  ///
+  /// This, and not [downloadDir], is the volume a free-space figure has to
+  /// measure: on the common setup that downloads into a separate incomplete
+  /// directory — a fast SSD in front of a slow array is the usual reason — the
+  /// space at `download-dir` describes a disk the grab is not touching until
+  /// it finishes. The figure was never wrong about its own path; it answered
+  /// the wrong question.
+  ///
+  /// Falls back to [downloadDir] when the flag is on but the path is blank,
+  /// which is what Transmission itself does with an unset `incomplete-dir`.
+  String get activeDownloadDir {
+    if (incompleteDirEnabled) {
+      final dir = incompleteDir.trim();
+      if (dir.isNotEmpty) return dir;
+    }
+    return downloadDir.trim();
+  }
+
+  /// True when [activeDownloadDir] is the incomplete directory rather than the
+  /// download directory, so a row can name which one it measured.
+  bool get usesIncompleteDir =>
+      incompleteDirEnabled && incompleteDir.trim().isNotEmpty;
 
   /// Kilobytes per second, per this API's limit convention.
   final int speedLimitDownKbPerSec;
@@ -289,6 +324,8 @@ class TransmissionSession {
       version: json['version']?.toString() ?? '',
       rpcVersion: parseInt(json['rpc-version']),
       downloadDir: json['download-dir']?.toString() ?? '',
+      incompleteDir: json['incomplete-dir']?.toString() ?? '',
+      incompleteDirEnabled: parseBool(json['incomplete-dir-enabled']),
       altSpeedEnabled: parseBool(json['alt-speed-enabled']),
       speedLimitDownKbPerSec: parseInt(json['speed-limit-down']),
       speedLimitDownEnabled: parseBool(json['speed-limit-down-enabled']),

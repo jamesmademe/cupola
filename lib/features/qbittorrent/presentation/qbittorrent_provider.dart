@@ -157,11 +157,19 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
       .trim()
       .toLowerCase();
 
+  // Paused is deliberately absent: it is folded client-side below, because
+  // neither spelling of it survives every qBittorrent in the wild. `paused` is
+  // what 4.x and 5.0 understand; 5.1 renamed the concept and answers `stopped`.
+  // An unrecognised `filter` is not an error to qB — `/torrents/info` returns
+  // the UNFILTERED list — so whichever word is sent, half the installed base
+  // gets a Paused tab holding every torrent it has. A filter that silently does
+  // nothing is worse than one that fails. [TorrentState.fromString] already
+  // accepts both vocabularies, so the census the model builds is the only thing
+  // that spans them.
   final apiFilter = switch (filter) {
     TorrentFilter.downloading => 'downloading',
     TorrentFilter.seeding => 'seeding',
     TorrentFilter.completed => 'completed',
-    TorrentFilter.paused => 'stopped',
     _ => 'all',
   };
 
@@ -182,6 +190,10 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
 
   if (filter == TorrentFilter.queued) {
     torrents = torrents.where((t) => t.parsedState.isQueued).toList();
+  }
+
+  if (filter == TorrentFilter.paused) {
+    torrents = torrents.where((t) => t.parsedState.isPaused).toList();
   }
 
   if (categoryFilter != null && categoryFilter.isNotEmpty) {

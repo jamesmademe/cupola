@@ -18,6 +18,11 @@ class _StubAdapter implements HttpClientAdapter {
   final List<RequestOptions> requests = [];
   final List<Map<String, String>> requestBodies = [];
 
+  /// Per-path HTTP status. Anything absent answers 200. A qBittorrent older
+  /// than 5.1 answers 404 for the endpoints that release introduced, which is
+  /// what this exists to reproduce.
+  final Map<String, int> statuses = {};
+
   void setJson(String path, dynamic body) {
     responses[path] = body;
     _registerContentType(path, isJson: true);
@@ -68,7 +73,7 @@ class _StubAdapter implements HttpClientAdapter {
         : Uint8List.fromList(utf8.encode(jsonEncode(body)));
     return ResponseBody.fromBytes(
       bytes,
-      200,
+      statuses[options.path] ?? 200,
       headers: {
         Headers.contentTypeHeader: [
           isJson ? 'application/json' : 'text/plain; charset=utf-8',
@@ -188,6 +193,50 @@ void main() {
       expect(adapter.requests.last.path, '/api/v2/torrents/start');
       expect(adapter.requestBodies.last, {'hashes': 'x'});
     });
+
+    // `/torrents/start` and `/torrents/stop` arrived with qBittorrent 5.1's
+    // pause-to-stop rename. A 4.x or 5.0 server has never heard of them and
+    // answers 404, so the pause and resume buttons are controls that fail on
+    // every install older than 5.1 — the one failure mode this app is not
+    // allowed to ship. The legacy spelling is the fallback, not the default:
+    // `/pause` and `/resume` are deprecated from 5.1 on and will go.
+    test('pauseTorrents falls back to /pause when /stop is unknown', () async {
+      final adapter = _StubAdapter()
+        ..setText('/api/v2/torrents/stop', '')
+        ..setText('/api/v2/torrents/pause', '')
+        ..statuses['/api/v2/torrents/stop'] = 404;
+      final service = _service(adapter);
+
+      await service.pauseTorrents(['a', 'b']);
+
+      expect(
+        adapter.requests.map((r) => r.path),
+        containsAllInOrder(['/api/v2/torrents/stop', '/api/v2/torrents/pause']),
+      );
+      expect(adapter.requestBodies.last, {'hashes': 'a|b'});
+    });
+
+    test(
+      'resumeTorrents falls back to /resume when /start is unknown',
+      () async {
+        final adapter = _StubAdapter()
+          ..setText('/api/v2/torrents/start', '')
+          ..setText('/api/v2/torrents/resume', '')
+          ..statuses['/api/v2/torrents/start'] = 404;
+        final service = _service(adapter);
+
+        await service.resumeTorrents(['x']);
+
+        expect(
+          adapter.requests.map((r) => r.path),
+          containsAllInOrder([
+            '/api/v2/torrents/start',
+            '/api/v2/torrents/resume',
+          ]),
+        );
+        expect(adapter.requestBodies.last, {'hashes': 'x'});
+      },
+    );
 
     test('deleteTorrents sends deleteFiles as string true/false', () async {
       final adapter = _StubAdapter()..setText('/api/v2/torrents/delete', '');

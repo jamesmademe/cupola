@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -26,25 +27,30 @@ final sabnzbdClientProvider = Provider<SabnzbdClient>((ref) {
 });
 
 /// The current download queue.
+///
+/// All four reads below carry `retry: noProviderRetry`, for the reason
+/// [nzbgetStatusProvider] states: the default retry holds the future through
+/// ten backing-off attempts, so a dark SABnzbd is a spinner for forty seconds
+/// instead of an unreachable band with a Retry on it.
 final sabnzbdQueueProvider = FutureProvider<SabnzbdQueue>((ref) async {
   return ref.watch(sabnzbdClientProvider).getQueue();
-});
+}, retry: noProviderRetry);
 
 /// Recent completed/failed downloads.
 final sabnzbdHistoryProvider = FutureProvider<List<SabnzbdHistorySlot>>((
   ref,
 ) async {
   return ref.watch(sabnzbdClientProvider).getHistory();
-});
+}, retry: noProviderRetry);
 
 /// Aggregate transfer statistics (total downloaded, etc.).
 final sabnzbdServerStatsProvider = FutureProvider<SabnzbdServerStats>((
   ref,
 ) async {
   return ref.watch(sabnzbdClientProvider).getServerStats();
-});
+}, retry: noProviderRetry);
 
 /// The configured categories, for the add-NZB dialog.
 final sabnzbdCategoriesProvider = FutureProvider<List<String>>((ref) async {
   return ref.watch(sabnzbdClientProvider).getCategories();
-});
+}, retry: noProviderRetry);

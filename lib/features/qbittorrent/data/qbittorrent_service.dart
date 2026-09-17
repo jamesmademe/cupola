@@ -104,18 +104,41 @@ class QbittorrentService {
     return TransferInfo.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<void> pauseTorrents(List<String> hashes) async {
-    await _client.post(
-      '/api/v2/torrents/stop',
-      data: {'hashes': hashes.join('|')},
-    );
-  }
+  Future<void> pauseTorrents(List<String> hashes) => _postAcrossTheRename(
+    path: '/api/v2/torrents/stop',
+    legacyPath: '/api/v2/torrents/pause',
+    data: {'hashes': hashes.join('|')},
+  );
 
-  Future<void> resumeTorrents(List<String> hashes) async {
-    await _client.post(
-      '/api/v2/torrents/start',
-      data: {'hashes': hashes.join('|')},
-    );
+  Future<void> resumeTorrents(List<String> hashes) => _postAcrossTheRename(
+    path: '/api/v2/torrents/start',
+    legacyPath: '/api/v2/torrents/resume',
+    data: {'hashes': hashes.join('|')},
+  );
+
+  /// POSTs to qBittorrent 5.1's spelling of an endpoint, falling back to the
+  /// pre-5.1 one when the server has never heard of it.
+  ///
+  /// 5.1 renamed pause to stop and resume to start. A 4.x or 5.0 server answers
+  /// **404** for `/torrents/start` and `/torrents/stop`, so sending only the new
+  /// spelling makes the pause and resume buttons controls that fail on every
+  /// install older than 5.1 — and 404 is the one answer that says "this server
+  /// does not have this endpoint" rather than "this request was wrong".
+  ///
+  /// New spelling first, legacy second, deliberately: `/pause` and `/resume` are
+  /// deprecated from 5.1 on and will eventually go, and the fallback costs a
+  /// round trip only on the servers that need it.
+  Future<void> _postAcrossTheRename({
+    required String path,
+    required String legacyPath,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      await _client.post(path, data: data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 404) rethrow;
+      await _client.post(legacyPath, data: data);
+    }
   }
 
   Future<void> deleteTorrents(

@@ -475,4 +475,63 @@ void main() {
       expect(torrent.etaLabel, 'Unknown');
     });
   });
+
+  group('free-space', () {
+    TransmissionClient clientFor(ScriptedHttpAdapter adapter) =>
+        TransmissionClient(url: 'https://nas.local:9091', dio: _dio(adapter));
+
+    test('asks for the path it was given', () async {
+      final adapter = ScriptedHttpAdapter([
+        _ok({'path': '/downloads', 'size-bytes': 1024}),
+      ]);
+      final client = clientFor(adapter);
+
+      expect(await client.freeSpace('/downloads'), 1024);
+      final body = adapter.lastRequest.body as Map<String, dynamic>;
+      expect(body['method'], 'free-space');
+      expect((body['arguments'] as Map)['path'], '/downloads');
+    });
+
+    test('a daemon that reported no size answers null, not zero', () async {
+      // The defect: collapsing a missing `size-bytes` to 0 made "the daemon
+      // did not say" and "the disk is full" the same int, and the only way to
+      // recover the first was to throw the second away.
+      final client = clientFor(ScriptedHttpAdapter([_ok({})]));
+
+      expect(await client.freeSpace('/downloads'), isNull);
+    });
+
+    test('a non-numeric size is silence too', () async {
+      final client = clientFor(
+        ScriptedHttpAdapter([
+          _ok({'size-bytes': 'plenty'}),
+        ]),
+      );
+
+      expect(await client.freeSpace('/downloads'), isNull);
+    });
+
+    test('a full disk answers zero and keeps it', () async {
+      final client = clientFor(
+        ScriptedHttpAdapter([
+          _ok({'path': '/downloads', 'size-bytes': 0}),
+        ]),
+      );
+
+      expect(await client.freeSpace('/downloads'), 0);
+    });
+
+    test('a negative size is not a measurement', () async {
+      // Transmission documents `size-bytes` as a count of free bytes; a
+      // negative one is a daemon saying it could not measure, and printing it
+      // would render a size below zero.
+      final client = clientFor(
+        ScriptedHttpAdapter([
+          _ok({'size-bytes': -1}),
+        ]),
+      );
+
+      expect(await client.freeSpace('/downloads'), isNull);
+    });
+  });
 }
