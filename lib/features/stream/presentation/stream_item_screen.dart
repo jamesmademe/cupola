@@ -33,6 +33,21 @@ class StreamItemScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Checked before the item provider is read, not after. This page is now a
+    // route inside the Libraries branch and a deep link can land on it with the
+    // server never set up — and `jellyfinItemProvider` / `plexItemProvider`
+    // carry no `retry: noProviderRetry`, so the "not configured" throw would be
+    // a *failed* provider retrying on a backoff that no waiting resolves.
+    // Letting `AsyncValueWidget` catch the throw draws the same pixels and
+    // leaves that timer running.
+    if (!ref.watch(currentSettingsProvider).isServiceConfigured(service)) {
+      return AmbientScaffold(
+        accent: service.accent,
+        appBar: GlassAppBar(title: Text(service.title)),
+        body: SafeArea(child: NotConfiguredPlaceholder.forService(service)),
+      );
+    }
+
     final itemAsync = service == ServiceKey.jellyfin
         ? ref.watch(jellyfinItemProvider(itemId))
         : ref.watch(plexItemProvider(itemId));

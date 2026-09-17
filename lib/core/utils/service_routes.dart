@@ -50,19 +50,69 @@ class ServiceRoutes {
   static String forService(ServiceKey service) =>
       '$dashboard/${service.routeParam}';
 
-  // ── Stream sections ───────────────────────────────────────────────────────
+  // ── The media servers, under the tab model ────────────────────────────────
   //
-  // Both media servers share one route shape because both APIs are uniform in
-  // the way the arrs are not: a Jellyfin `BaseItemDto` and a Plex `Metadata`
-  // describe a movie, a series, a season and an episode with the same fields, so
-  // **one** recursive item route covers the whole tree where Radarr, Sonarr and
-  // Lidarr each needed their own screen.
-  static const jellyfinLibraries = '$jellyfin/library';
-  static const jellyfinItemBase = '$jellyfin/item';
-  static const plexLibraries = '$plex/library';
-  static const plexItemBase = '$plex/item';
+  // Literals, like every other service's, and tied to their tabs by a test: an
+  // enum instance's field is not a compile-time constant in Dart and these have
+  // to stay `const`, so nothing the analyzer sees ties a spelling to
+  // `ServiceTab.segment`.
+  //
+  // Jellyfin and Plex share one screen family and **not** one bar, which is why
+  // the two blocks below are spelled out separately rather than factored into a
+  // shared shape: the surfaces are written against `StreamServerClient` and take
+  // the service as a parameter, but the tabs come from what each API can answer
+  // — Jellyfin has users, devices and scheduled tasks, Plex has an on-deck hub,
+  // its own activities and playlists — and a shared spelling would have to
+  // invent a name one of them does not use.
+  //
+  // Both route shapes stay uniform in the way the arrs are not: a Jellyfin
+  // `BaseItemDto` and a Plex `Metadata` describe a movie, a series, a season and
+  // an episode with the same fields, so **one** recursive item route covers the
+  // whole tree where Radarr, Sonarr and Lidarr each needed their own screen.
+  static const jellyfinOverview = '$jellyfin/overview';
 
-  /// One library's browse route, e.g. `/services/jellyfin/library/f137a2dd`.
+  /// The Libraries tab's root, **and** the base of one library's browse under
+  /// it — one constant because they are one address, the way
+  /// [bazarrSeriesBase] is.
+  ///
+  /// This one **moved**: the browse was `/dashboard/jellyfin/library/:id`, a
+  /// sibling of nothing, and the tab's segment is the plural the bar draws. The
+  /// old spelling still resolves; `router.dart` keeps a childless tail for it.
+  static const jellyfinLibraries = '$jellyfin/libraries';
+
+  /// The item, inside the Libraries tab's branch — the same move Radarr's film
+  /// made into Library, and for the same two reasons: a detail pushed *inside*
+  /// its tab survives a switch away from the service, and the poster it flew
+  /// from is still under it on one Navigator, so the Hero still flies.
+  ///
+  /// Declared under `libraries/` and not beside it, which is also what makes
+  /// the literal-before-parameter order in `router.dart` load-bearing: `item`
+  /// competes with the library browse's `:id` in the same branch.
+  static const jellyfinItemBase = '$jellyfinLibraries/item';
+
+  static const jellyfinUsers = '$jellyfin/users';
+  static const jellyfinDevices = '$jellyfin/devices';
+  static const jellyfinTasks = '$jellyfin/tasks';
+  static const jellyfinActivity = '$jellyfin/activity';
+
+  static const plexOverview = '$plex/overview';
+
+  /// The same two roles [jellyfinLibraries] carries, and the same move: the
+  /// browse was `/dashboard/plex/library/:id` and a childless tail keeps that
+  /// spelling resolving.
+  static const plexLibraries = '$plex/libraries';
+  static const plexItemBase = '$plexLibraries/item';
+
+  /// `on-deck`, hyphenated, because that is how Plex writes it and the app does
+  /// not rename another product's furniture — `ServiceTab.onDeck.segment` is
+  /// the one tab segment that is not simply its enum name.
+  static const plexOnDeck = '$plex/on-deck';
+  static const plexActivities = '$plex/activities';
+  static const plexDevices = '$plex/devices';
+  static const plexPlaylists = '$plex/playlists';
+
+  /// One library's browse route, e.g.
+  /// `/dashboard/jellyfin/libraries/f137a2dd`.
   ///
   /// The id travels as a path segment and the display name as a query parameter,
   /// following [seerrGenre]: a deep link has to resolve from the path alone, but
@@ -347,15 +397,69 @@ class ServiceRoutes {
   static const readarrOverview = '$readarr/overview';
   static const readarrLibrary = '$readarr/library';
 
-  // ── Dockge ────────────────────────────────────────────────────────────────
-  static const dockgeStackBase = '$dockge/stack';
-  static const dockgeNewStack = '$dockge/new';
+  // ── The infrastructure three, under the tab model ─────────────────────────
+  //
+  // Literals, like every other service's, and tied to their tabs by a test: an
+  // enum instance's field is not a compile-time constant in Dart and these have
+  // to stay `const`, so nothing the analyzer sees ties a spelling to
+  // `ServiceTab.segment`. An earlier attempt at composing one shipped a path
+  // containing a literal dollar sign that no analyzer could see.
+  //
+  // Three services with nothing else in common — a Compose manager, a NAS and a
+  // reverse proxy — so there is no shared shape to factor out here and the
+  // blocks below are spelled out one at a time. What they did share was being
+  // **one page each**: every route below that is not a tab root used to hang off
+  // the service root, because a one-page service had nowhere else to hang it.
+  static const dockgeOverview = '$dockge/overview';
+  static const dockgeStacks = '$dockge/stacks';
+  static const dockgeTerminal = '$dockge/terminal';
 
-  /// Stack detail, e.g. `/services/dockge/stack/immich`.
+  /// The stack, inside the Stacks tab's branch — the move Radarr's film made
+  /// into Library, and for the same two reasons: a detail pushed *inside* its
+  /// tab survives a switch away from Dockge and back, and the row it was pushed
+  /// from is still under it on one Navigator.
+  ///
+  /// It was `/dashboard/dockge/stack/:name`, a sibling of nothing. The old
+  /// spelling still resolves; `router.dart` keeps a childless tail for it, and
+  /// a second one for the editor a segment deeper.
+  static const dockgeStackBase = '$dockgeStacks/stack';
+
+  /// The new-stack editor, inside the same branch and for the same reason: it
+  /// is reached by the New button in the Stacks list's own header, so Stacks is
+  /// the tab that owns it. It was `/dashboard/dockge/new`.
+  static const dockgeNewStack = '$dockgeStacks/new';
+
+  /// Stack detail, e.g. `/dashboard/dockge/stacks/stack/immich`.
   static String dockgeStack(String name) => '$dockgeStackBase/$name';
 
-  /// Compose editor for a stack, e.g. `/services/dockge/stack/immich/edit`.
+  /// Compose editor for a stack, e.g.
+  /// `/dashboard/dockge/stacks/stack/immich/edit`.
   static String dockgeStackEdit(String name) => '$dockgeStackBase/$name/edit';
+
+  /// Unraid's six, and not one of them moved: the service shipped exactly one
+  /// path — its bare root — so there is no pre-tab spelling to keep resolving
+  /// beyond that root, the way Transmission had none.
+  static const unraidOverview = '$unraid/overview';
+  static const unraidArray = '$unraid/array';
+  static const unraidDocker = '$unraid/docker';
+  static const unraidVms = '$unraid/vms';
+  static const unraidNotifications = '$unraid/notifications';
+  static const unraidShares = '$unraid/shares';
+
+  /// Nginx Proxy Manager's five. Spelled `npm…` rather than
+  /// `nginxProxyManager…` because that is what the whole feature is called —
+  /// `NpmScreen`, `npmClientProvider`, `lib/features/npm/` — while
+  /// [nginxProxyManager] keeps the product's full name because it is the one
+  /// constant that *names the service*.
+  ///
+  /// Three of the five segments are hyphenated where the label has a space, and
+  /// that is `ServiceTab.segment`'s job rather than a spelling invented here.
+  /// Like Unraid, NPM shipped one path and there is nothing to forward.
+  static const npmOverview = '$nginxProxyManager/overview';
+  static const npmProxyHosts = '$nginxProxyManager/proxy-hosts';
+  static const npmCertificates = '$nginxProxyManager/certificates';
+  static const npmAccessLists = '$nginxProxyManager/access-lists';
+  static const npmAuditLog = '$nginxProxyManager/audit-log';
 
   /// ## `i`: which connection a detail page belongs to
   ///

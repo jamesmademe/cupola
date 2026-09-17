@@ -10,6 +10,10 @@ import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/dockge/presentation/dockge_stack_edit_screen.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 const _existingYaml = '''services:
   immich:
@@ -68,6 +72,14 @@ Future<_RecordingClient> _pump(
       // instead of looping through retry-loading.
       retry: (retryCount, error) => null,
       overrides: [
+        // Dockge configured, because the editor now checks that before it
+        // reaches the detail provider: a deep link to it on an install that
+        // was never set up must not start a provider that throws. A stubbed
+        // client is not the same claim as a configured service, and this test
+        // is about what the editor writes, not about that gate.
+        currentSettingsProvider.overrideWith(
+          (ref) => settingsWithServices(const [ServiceKey.dockge]),
+        ),
         dockgeClientProvider.overrideWith((ref) => client),
         dockgeStackDetailProvider.overrideWith((ref, arg) => detail()),
       ],

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
@@ -764,7 +765,12 @@ void main() {
             .results
             .single;
 
-        expect(row.route, '/dashboard/jellyfin/item/id-Dune');
+        // Spelled by the constant, not by hand: the item detail lives inside the
+        // Libraries branch, and where exactly it sits is asserted in
+        // service_routes_test. What this case is about is that the row opens the
+        // item it names — a literal here only makes it break the next time the
+        // route moves, which is how it broke this time.
+        expect(row.route, ServiceRoutes.jellyfinItem('id-Dune'));
         // No plus and no "In library": every row here is already on the server
         // that listed it, and a media server is not a library this app writes to.
         expect(row.addRequest, isNull);

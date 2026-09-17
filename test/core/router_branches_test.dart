@@ -28,20 +28,119 @@ const _secondSeerr = ServiceInstance(
 
 /// The services whose home is a tab bar rather than a single page.
 ///
-/// Named here rather than derived from `serviceTabs`, and the difference is the
-/// point: that map is the *design*, this list is what the router has actually
-/// mounted, and the gap between the two is the migration's remaining work. A
-/// service added here before its shell exists fails loudly, which is what a
-/// checklist is for.
+/// Named here rather than derived from `serviceTabs`, and the difference used
+/// to be the point: that map is the *design*, this list is what the router has
+/// actually mounted, and while the migration was in flight the gap between the
+/// two was its remaining work.
+///
+/// **The gap is closed** — all sixteen are mounted — so the list is now tied to
+/// the map by its own case below, and what it guards has changed with it. A
+/// hand-kept list that silently covered eight of thirteen is exactly how these
+/// invariants stopped being asserted for five services that had landed: every
+/// case here loops over this list, so a service missing from it is a service
+/// whose branch order, nesting and detail placement nothing checks.
+///
+/// Sixteen and not seventeen because TrueNAS is the console exception by
+/// design: ten sections do not fit a bar, and `tabsFor` returns null for it.
 const List<ServiceKey> _tabbedServices = [
+  ServiceKey.seerr,
   ServiceKey.radarr,
   ServiceKey.sonarr,
   ServiceKey.lidarr,
   ServiceKey.readarr,
+  ServiceKey.bazarr,
   ServiceKey.qbittorrent,
   ServiceKey.transmission,
   ServiceKey.sabnzbd,
   ServiceKey.nzbget,
+  ServiceKey.prowlarr,
+  ServiceKey.jellyfin,
+  ServiceKey.plex,
+  ServiceKey.dockge,
+  ServiceKey.unraid,
+  ServiceKey.nginxProxyManager,
+];
+
+/// Every page pushed from inside a tab's branch, by the branch that owns it, in
+/// the order the router declares them.
+///
+/// One table for all sixteen rather than one per record type, because the rule
+/// is one rule: a page pushed *inside* its tab survives a switch away from the
+/// service and back, and a Hero still flies because the list it came from is
+/// under it on the same Navigator. Beside the branch it would be neither.
+///
+/// **Order is asserted, not just membership.** Routes match in declaration
+/// order, so a literal segment has to be declared before a `:id` that could
+/// swallow it: `item/:id` after `:id` resolves `/libraries/item/9421` as a
+/// library browse whose id is the word `item`, and the user gets a browse of
+/// nothing.
+///
+/// Spelled as the route paths the router declares, so this reads as the tree
+/// does — `':id'` where the tab's own segment already names the record type,
+/// `'<record>/:id'` where it does not.
+const List<({ServiceKey service, ServiceTab tab, String path})>
+_tabDetailPaths = [
+  // Seerr moved a whole tree in: three see-alls, the genre list and four
+  // details, every one of them reached by tapping a row of Discover. The three
+  // `.../all` literals come before `movie/:id` and `tv/:id` or
+  // `/discover/tv/all` resolves as a media detail whose id is the word `all`.
+  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'movies/all'),
+  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'tv/all'),
+  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'trending/all'),
+  (
+    service: ServiceKey.seerr,
+    tab: ServiceTab.discover,
+    path: 'genre/:mediaType/:genreId',
+  ),
+  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'movie/:id'),
+  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'tv/:id'),
+  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'person/:id'),
+  (service: ServiceKey.seerr, tab: ServiceTab.discover, path: 'collection/:id'),
+  (service: ServiceKey.radarr, tab: ServiceTab.library, path: 'movie/:id'),
+  (service: ServiceKey.sonarr, tab: ServiceTab.library, path: 'series/:id'),
+  (service: ServiceKey.lidarr, tab: ServiceTab.library, path: 'artist/:id'),
+  // Bazarr's bar names the record types themselves, so the detail is `:id`
+  // under the tab rather than `<record>/:id` under it — `series/series/42`
+  // would be a stutter nobody would type.
+  (service: ServiceKey.bazarr, tab: ServiceTab.series, path: ':id'),
+  (service: ServiceKey.bazarr, tab: ServiceTab.movies, path: ':id'),
+  (
+    service: ServiceKey.qbittorrent,
+    tab: ServiceTab.queue,
+    path: 'torrent/:hash',
+  ),
+  (service: ServiceKey.prowlarr, tab: ServiceTab.indexers, path: 'indexer/:id'),
+  (service: ServiceKey.jellyfin, tab: ServiceTab.libraries, path: 'item/:id'),
+  (service: ServiceKey.jellyfin, tab: ServiceTab.libraries, path: ':id'),
+  (service: ServiceKey.plex, tab: ServiceTab.libraries, path: 'item/:id'),
+  (service: ServiceKey.plex, tab: ServiceTab.libraries, path: ':id'),
+  // The new-stack editor is not a detail, and it is here for the reason one
+  // would be: it is reached from the Stacks list's own header and from nowhere
+  // else, so Stacks is the tab that owns it. The compose editor of an existing
+  // stack hangs off `stack/:name` a segment deeper, which is why it is not a
+  // row of its own.
+  (service: ServiceKey.dockge, tab: ServiceTab.stacks, path: 'new'),
+  (service: ServiceKey.dockge, tab: ServiceTab.stacks, path: 'stack/:name'),
+];
+
+/// The services with nothing pushed from any of their tabs, and why.
+///
+/// Named rather than left out, because "no detail" and "a detail nobody
+/// asserted" look identical in a table that only lists what exists. Each of
+/// these is a list of rows that expand in place or a service whose read layer
+/// has no second document to open:
+///
+///  * Readarr — the author list has no detail screen written yet;
+///  * Transmission, SABnzbd, NZBGet — a queue slot is one row that expands;
+///  * Unraid, NPM — both were one page, and the split produced sections rather
+///    than pages.
+const List<ServiceKey> _servicesWithoutTabDetails = [
+  ServiceKey.readarr,
+  ServiceKey.transmission,
+  ServiceKey.sabnzbd,
+  ServiceKey.nzbget,
+  ServiceKey.unraid,
+  ServiceKey.nginxProxyManager,
 ];
 
 /// The record each service's Library pushes, by the path it is mounted at.
@@ -218,6 +317,67 @@ void main() {
           isNotEmpty,
           reason: service.name,
         );
+      }
+    });
+
+    test('the checklist is the table of services that have a bar', () {
+      // The list used to be a subset on purpose, and while the migration was in
+      // flight that was right. It is a tie now: every case in this group loops
+      // over it, so a service mounted but not listed is a service whose branch
+      // order and nesting nothing here checks — which is exactly what happened
+      // to five of them in one day.
+      expect(
+        _tabbedServices.toSet(),
+        serviceTabs.keys.toSet(),
+        reason:
+            'Every service with a bar must be on the checklist, and nothing '
+            'without one may be: TrueNAS keeps its console and `tabsFor` '
+            'returns null for it.',
+      );
+      expect(
+        _tabbedServices,
+        hasLength(_tabbedServices.toSet().length),
+        reason: 'a service listed twice would hide a missing one',
+      );
+
+      // The two tables below partition the same sixteen. Without this, a
+      // service with a detail nobody listed and a service with no detail at all
+      // look identical — both simply absent.
+      expect({
+        ..._tabDetailPaths.map((entry) => entry.service),
+        ..._servicesWithoutTabDetails,
+      }, serviceTabs.keys.toSet());
+      expect(
+        _tabDetailPaths
+            .map((entry) => entry.service)
+            .toSet()
+            .intersection(_servicesWithoutTabDetails.toSet()),
+        isEmpty,
+      );
+    });
+
+    testWidgets('every branch carries exactly the pages its tab pushes, in '
+        'declaration order', (tester) async {
+      // The generalisation of the two cases below, over all sixteen services
+      // rather than the four that had a table. It asserts three things at once:
+      // that every page pushed from a tab is declared inside that tab's branch,
+      // that no branch has picked up a route nobody meant to put there, and
+      // that the literal-before-parameter order holds where a branch has both.
+      final router = await pumpRouter(tester);
+
+      for (final service in _tabbedServices) {
+        for (final tab in tabsFor(service)!) {
+          final expected = _tabDetailPaths
+              .where((entry) => entry.service == service && entry.tab == tab)
+              .map((entry) => entry.path)
+              .toList(growable: false);
+          final actual = branchRootOf(router, service, tab).routes
+              .whereType<GoRoute>()
+              .map((route) => route.path)
+              .toList(growable: false);
+
+          expect(actual, expected, reason: '${service.name} · ${tab.name}');
+        }
       }
     });
 

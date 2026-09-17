@@ -401,6 +401,250 @@ void main() {
       );
     });
 
+    test('the Jellyfin tab roots are spelled by the tabs they mount', () {
+      // Six literals tied to the six tabs the bar draws. Jellyfin and Plex
+      // share a screen family and not a bar, so the two services need two
+      // cases: a loop over both would assert a shape that is only accidentally
+      // the same and would keep passing if one bar changed.
+      expect(
+        ServiceRoutes.jellyfinOverview,
+        '${ServiceRoutes.jellyfin}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.jellyfinLibraries,
+        '${ServiceRoutes.jellyfin}/${ServiceTab.libraries.segment}',
+      );
+      expect(
+        ServiceRoutes.jellyfinUsers,
+        '${ServiceRoutes.jellyfin}/${ServiceTab.users.segment}',
+      );
+      expect(
+        ServiceRoutes.jellyfinDevices,
+        '${ServiceRoutes.jellyfin}/${ServiceTab.devices.segment}',
+      );
+      expect(
+        ServiceRoutes.jellyfinTasks,
+        '${ServiceRoutes.jellyfin}/${ServiceTab.tasks.segment}',
+      );
+      expect(
+        ServiceRoutes.jellyfinActivity,
+        '${ServiceRoutes.jellyfin}/${ServiceTab.activity.segment}',
+      );
+    });
+
+    test('the Plex tab roots are spelled by the tabs they mount', () {
+      expect(
+        ServiceRoutes.plexOverview,
+        '${ServiceRoutes.plex}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.plexLibraries,
+        '${ServiceRoutes.plex}/${ServiceTab.libraries.segment}',
+      );
+      // The one tab segment that is not simply its enum name: Plex writes it
+      // "On Deck", so the URL is hyphenated rather than camel-cased away.
+      expect(ServiceRoutes.plexOnDeck, '/dashboard/plex/on-deck');
+      expect(
+        ServiceRoutes.plexOnDeck,
+        '${ServiceRoutes.plex}/${ServiceTab.onDeck.segment}',
+      );
+      expect(
+        ServiceRoutes.plexActivities,
+        '${ServiceRoutes.plex}/${ServiceTab.activities.segment}',
+      );
+      expect(
+        ServiceRoutes.plexDevices,
+        '${ServiceRoutes.plex}/${ServiceTab.devices.segment}',
+      );
+      expect(
+        ServiceRoutes.plexPlaylists,
+        '${ServiceRoutes.plex}/${ServiceTab.playlists.segment}',
+      );
+    });
+
+    test('both media server details hang off the Libraries tab', () {
+      // Every link to a library or an item is built by these four helpers — the
+      // library row, the poster tile, the global search result and the
+      // availability slot on a Radarr or Sonarr detail — so these constants are
+      // what moved them all inside the branch at once. The browse's own base
+      // *is* the tab root, the way Bazarr's Series tab is also its series base.
+      expect(
+        ServiceRoutes.jellyfinLibrary('f137a2dd'),
+        '/dashboard/jellyfin/libraries/f137a2dd',
+      );
+      expect(
+        ServiceRoutes.jellyfinLibrary('f137a2dd', title: 'Films'),
+        '/dashboard/jellyfin/libraries/f137a2dd?title=Films',
+      );
+      expect(
+        ServiceRoutes.jellyfinItemBase,
+        startsWith('${ServiceRoutes.jellyfinLibraries}/'),
+      );
+      expect(
+        ServiceRoutes.jellyfinItem('abc-123'),
+        '/dashboard/jellyfin/libraries/item/abc-123',
+      );
+
+      expect(
+        ServiceRoutes.plexLibrary('3', title: 'TV Shows'),
+        '/dashboard/plex/libraries/3?title=TV+Shows',
+      );
+      expect(
+        ServiceRoutes.plexItemBase,
+        startsWith('${ServiceRoutes.plexLibraries}/'),
+      );
+      expect(
+        ServiceRoutes.plexItem('9421'),
+        '/dashboard/plex/libraries/item/9421',
+      );
+    });
+
+    test('the Dockge tab roots are spelled by the tabs they mount', () {
+      // The same tie every other service carries, and it has to be its own
+      // case for the same reason: these are `const` literals precisely because
+      // an enum instance's field is not a compile-time constant, so there is
+      // nothing to iterate that would not defeat the point.
+      expect(
+        ServiceRoutes.dockgeOverview,
+        '${ServiceRoutes.dockge}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.dockgeStacks,
+        '${ServiceRoutes.dockge}/${ServiceTab.stacks.segment}',
+      );
+      expect(
+        ServiceRoutes.dockgeTerminal,
+        '${ServiceRoutes.dockge}/${ServiceTab.terminal.segment}',
+      );
+    });
+
+    test('the whole stack tree hangs off the Stacks tab', () {
+      // Three routes that used to hang off the service root, because a
+      // one-page service had nowhere else to hang them. All three are reached
+      // from the Stacks list and nowhere else, so a drift here moves every
+      // stack link in the app out of the branch that owns it.
+      expect(
+        ServiceRoutes.dockgeStackBase,
+        startsWith('${ServiceRoutes.dockgeStacks}/'),
+      );
+      expect(
+        ServiceRoutes.dockgeStack('immich'),
+        '/dashboard/dockge/stacks/stack/immich',
+      );
+      expect(
+        ServiceRoutes.dockgeStackEdit('immich'),
+        '/dashboard/dockge/stacks/stack/immich/edit',
+      );
+      expect(ServiceRoutes.dockgeNewStack, '${ServiceRoutes.dockgeStacks}/new');
+    });
+
+    test('the Unraid tab roots are spelled by the tabs they mount', () {
+      // Six, and not one of them moved: the service shipped exactly one path —
+      // its bare root — so this table is the whole of Unraid's URL surface.
+      expect(
+        ServiceRoutes.unraidOverview,
+        '${ServiceRoutes.unraid}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.unraidArray,
+        '${ServiceRoutes.unraid}/${ServiceTab.array.segment}',
+      );
+      expect(
+        ServiceRoutes.unraidDocker,
+        '${ServiceRoutes.unraid}/${ServiceTab.docker.segment}',
+      );
+      expect(
+        ServiceRoutes.unraidVms,
+        '${ServiceRoutes.unraid}/${ServiceTab.vms.segment}',
+      );
+      expect(
+        ServiceRoutes.unraidNotifications,
+        '${ServiceRoutes.unraid}/${ServiceTab.notifications.segment}',
+      );
+      expect(
+        ServiceRoutes.unraidShares,
+        '${ServiceRoutes.unraid}/${ServiceTab.shares.segment}',
+      );
+      // `vms` and not `vMs`: the segment is the tab's, and the breadcrumb that
+      // title-cased whatever it found is exactly what `ServiceTab` exists to
+      // stop.
+      expect(ServiceRoutes.unraidVms, '/dashboard/unraid/vms');
+    });
+
+    test('the NPM tab roots are spelled by the tabs they mount', () {
+      // Five, three of them hyphenated where the label has a space. The
+      // spelling is `ServiceTab.segment`'s and not one invented here, which is
+      // the half of this case that a hand-written literal can silently lose:
+      // `proxyHosts` would resolve to nothing and read as a 404 on a tab the
+      // bar still draws.
+      expect(
+        ServiceRoutes.npmOverview,
+        '${ServiceRoutes.nginxProxyManager}/${ServiceTab.overview.segment}',
+      );
+      expect(
+        ServiceRoutes.npmProxyHosts,
+        '${ServiceRoutes.nginxProxyManager}/${ServiceTab.proxyHosts.segment}',
+      );
+      expect(
+        ServiceRoutes.npmCertificates,
+        '${ServiceRoutes.nginxProxyManager}/${ServiceTab.certificates.segment}',
+      );
+      expect(
+        ServiceRoutes.npmAccessLists,
+        '${ServiceRoutes.nginxProxyManager}/${ServiceTab.accessLists.segment}',
+      );
+      expect(
+        ServiceRoutes.npmAuditLog,
+        '${ServiceRoutes.nginxProxyManager}/${ServiceTab.auditLog.segment}',
+      );
+      // Written out once, because two irregularities meet here: the service
+      // segment is `npm` rather than the enum name, and three tab segments are
+      // hyphenated.
+      expect(ServiceRoutes.npmProxyHosts, '/dashboard/npm/proxy-hosts');
+      expect(ServiceRoutes.npmAccessLists, '/dashboard/npm/access-lists');
+      expect(ServiceRoutes.npmAuditLog, '/dashboard/npm/audit-log');
+    });
+
+    test('every tab of the three infrastructure services has a constant', () {
+      // The other half of the tie above: those cases prove each constant is
+      // spelled by a tab, this one proves no tab was left without one. A bar
+      // entry with no route constant is a link nobody can build.
+      const routes = {
+        ServiceKey.dockge: [
+          ServiceRoutes.dockgeOverview,
+          ServiceRoutes.dockgeStacks,
+          ServiceRoutes.dockgeTerminal,
+        ],
+        ServiceKey.unraid: [
+          ServiceRoutes.unraidOverview,
+          ServiceRoutes.unraidArray,
+          ServiceRoutes.unraidDocker,
+          ServiceRoutes.unraidVms,
+          ServiceRoutes.unraidNotifications,
+          ServiceRoutes.unraidShares,
+        ],
+        ServiceKey.nginxProxyManager: [
+          ServiceRoutes.npmOverview,
+          ServiceRoutes.npmProxyHosts,
+          ServiceRoutes.npmCertificates,
+          ServiceRoutes.npmAccessLists,
+          ServiceRoutes.npmAuditLog,
+        ],
+      };
+
+      for (final entry in routes.entries) {
+        final tabs = tabsFor(entry.key)!;
+        expect(entry.value, hasLength(tabs.length), reason: entry.key.name);
+        for (var i = 0; i < tabs.length; i++) {
+          expect(
+            entry.value[i],
+            '${ServiceRoutes.forService(entry.key)}/${tabs[i].segment}',
+            reason: '${entry.key.name} tab ${tabs[i].name}',
+          );
+        }
+      }
+    });
+
     test('Prowlarr settings is not a tab and did not move', () {
       // Decision 26: the four field-driven sections are one page, not a fifth
       // bar entry. It stays a page pushed from the service, at the address it

@@ -10,6 +10,8 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
 import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 const _defaultCompose = '''services:
   app:
@@ -132,8 +134,19 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Checked **before** the detail provider is read, and it decides whether
+    // it is read at all: this editor is reachable by deep link — the pre-tab
+    // `/dashboard/dockge/stack/:name/edit` and `/dashboard/dockge/new` both
+    // still rewrite onto it — so it can be the first Dockge thing the app
+    // builds on an install that was never set up, and `dockgeClientProvider`
+    // throws there. A provider that throws is a failed provider scheduling a
+    // retry with backoff for a condition no waiting changes.
+    final isConfigured = ref
+        .watch(currentSettingsProvider)
+        .isServiceConfigured(ServiceKey.dockge);
+
     // Prefill from the existing stack once.
-    final detailAsync = widget.isNew
+    final detailAsync = widget.isNew || !isConfigured
         ? null
         : ref.watch(dockgeStackDetailProvider(widget.name!));
     if (detailAsync != null && !_prefilled) {
@@ -153,7 +166,11 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
         // An empty editor is indistinguishable from a stack with no services,
         // and Save/Deploy would write it back as the truth. Until the real
         // compose file is in hand, show the load state instead of the editor.
-        child: (detailAsync != null && !_prefilled)
+        child: !isConfigured
+            // Nothing to edit and nowhere to save it: an editor here would
+            // take a compose file the user typed and fail on the write.
+            ? const NotConfiguredPlaceholder(serviceName: 'Dockge')
+            : (detailAsync != null && !_prefilled)
             ? _loadState(detailAsync)
             : _editor(context),
       ),

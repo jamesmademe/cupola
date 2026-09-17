@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
-import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -15,7 +15,8 @@ import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
-import 'package:cupola/features/stream/presentation/stream_dashboard_screen.dart';
+import 'package:cupola/features/stream/presentation/stream_libraries_screen.dart';
+import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_section.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_session_card.dart';
 
 import '../../test_helpers/settings_scope.dart';
@@ -60,10 +61,32 @@ const _library = StreamLibrary(
   isRefreshing: false,
 );
 
-Future<void> _pumpBoard(
+/// The Overview's session region, hosted the way the Overview will host it.
+///
+/// **A section and a screen instead of one board.** The single Stream page was
+/// split by the tab model: the libraries became the Libraries tab and the
+/// sessions became a section the Overview composes. The rules asserted below did
+/// not move with them — a transcode is still amber, an idle room is still a
+/// quiet line — so these cases pump the piece that now owns each rule rather
+/// than a page that no longer exists.
+Widget _nowPlayingHost(ServiceKey service) => Scaffold(
+  body: Consumer(
+    builder: (context, ref, _) => ListView(
+      children: [
+        StreamNowPlayingSection(
+          service: service,
+          sessions: service == ServiceKey.jellyfin
+              ? ref.watch(jellyfinSessionsProvider)
+              : ref.watch(plexSessionsProvider),
+        ),
+      ],
+    ),
+  ),
+);
+
+Future<void> _pumpNowPlaying(
   WidgetTester tester, {
   List<StreamSession> sessions = const [],
-  List<StreamLibrary> libraries = const [_library],
   SettingsModel? settings,
 }) async {
   await tester.pumpWidget(
@@ -73,11 +96,28 @@ Future<void> _pumpBoard(
           (ref) => (settings ?? _configured),
         ),
         jellyfinSessionsProvider.overrideWith((ref) async => sessions),
+      ],
+      child: MaterialApp(home: _nowPlayingHost(ServiceKey.jellyfin)),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _pumpLibraries(
+  WidgetTester tester, {
+  List<StreamLibrary> libraries = const [_library],
+  SettingsModel? settings,
+}) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        currentSettingsProvider.overrideWith(
+          (ref) => (settings ?? _configured),
+        ),
         jellyfinLibrariesProvider.overrideWith((ref) async => libraries),
-        serviceKpiProvider.overrideWith((ref, service) async => const []),
       ],
       child: const MaterialApp(
-        home: StreamDashboardScreen(service: ServiceKey.jellyfin),
+        home: StreamLibrariesScreen(service: ServiceKey.jellyfin),
       ),
     ),
   );
@@ -93,7 +133,7 @@ final _plexConfigured = settingsWith(
 ///
 /// `null` is the shape that matters most here: the sheet has not resolved yet,
 /// or the build simply does not send `myPlexSubscription`.
-Future<void> _pumpPlexBoard(
+Future<void> _pumpPlexNowPlaying(
   WidgetTester tester, {
   List<StreamSession> sessions = const [],
   PlexServerCapabilities? capabilities,
@@ -103,13 +143,9 @@ Future<void> _pumpPlexBoard(
       overrides: [
         currentSettingsProvider.overrideWith((ref) => _plexConfigured),
         plexSessionsProvider.overrideWith((ref) async => sessions),
-        plexLibrariesProvider.overrideWith((ref) async => const [_library]),
         plexCapabilitiesProvider.overrideWith((ref) async => capabilities),
-        serviceKpiProvider.overrideWith((ref, service) async => const []),
       ],
-      child: const MaterialApp(
-        home: StreamDashboardScreen(service: ServiceKey.plex),
-      ),
+      child: MaterialApp(home: _nowPlayingHost(ServiceKey.plex)),
     ),
   );
   await tester.pumpAndSettle();
@@ -165,23 +201,20 @@ void expectNoControl(String name) => expect(
 );
 
 void main() {
-  group('the Stream board', () {
+  group('Now playing', () {
     testWidgets('idle is a quiet line, not an error and not an empty state', (
       tester,
     ) async {
-      await _pumpBoard(tester);
+      await _pumpNowPlaying(tester);
 
       // Nobody watching is the majority state on a home server and the normal
       // daily condition, so it must not read as a failure.
       expect(find.text('Nobody is watching right now'), findsOneWidget);
       expect(find.textContaining('Couldn\'t load'), findsNothing);
-      // The page's weight falls to the libraries, which is the only region with
-      // content either way.
-      expect(find.text('Films'), findsOneWidget);
     });
 
     testWidgets('never prints an aggregate outbound total', (tester) async {
-      await _pumpBoard(
+      await _pumpNowPlaying(
         tester,
         sessions: [
           _session(bitrate: 8000000),
@@ -199,7 +232,7 @@ void main() {
     testWidgets('a nominal rate is hedged rather than stated as measured', (
       tester,
     ) async {
-      await _pumpBoard(tester, sessions: [_session(bitrate: 8400000)]);
+      await _pumpNowPlaying(tester, sessions: [_session(bitrate: 8400000)]);
 
       // "~" carries the same hedge the spoken form says as "about": this is the
       // file's own bitrate, not what is on the wire.
@@ -208,7 +241,7 @@ void main() {
     });
 
     testWidgets('a transcode names why, in the warning tone', (tester) async {
-      await _pumpBoard(
+      await _pumpNowPlaying(
         tester,
         sessions: [
           _session(
@@ -238,7 +271,7 @@ void main() {
     });
 
     testWidgets('a direct play is green, not merely not-amber', (tester) async {
-      await _pumpBoard(tester, sessions: [_session()]);
+      await _pumpNowPlaying(tester, sessions: [_session()]);
 
       // CHANGED from "is not painted as a problem", which passed while the
       // label sat in neutral `onSurfaceVariant` and said nothing at all. Direct
@@ -256,7 +289,7 @@ void main() {
     });
 
     testWidgets('a direct stream is not a fault', (tester) async {
-      await _pumpBoard(
+      await _pumpNowPlaying(
         tester,
         sessions: [
           _session(
@@ -279,7 +312,7 @@ void main() {
       tester,
     ) async {
       final handle = tester.ensureSemantics();
-      await _pumpBoard(tester, sessions: [_session()]);
+      await _pumpNowPlaying(tester, sessions: [_session()]);
 
       // The card wraps its four text lines in one `excludeSemantics` node so
       // they are read as a sentence rather than as fragments — and that node
@@ -296,43 +329,13 @@ void main() {
       tester,
     ) async {
       final handle = tester.ensureSemantics();
-      await _pumpBoard(tester, sessions: [_session(paused: true)]);
+      await _pumpNowPlaying(tester, sessions: [_session(paused: true)]);
 
       // "Pause" on an already-paused session is the one label that can be read
       // two ways; the control is named for the tap, not for the state.
       expectReachableControl(tester, 'Resume this playback');
       expectNoControl('Pause this playback');
       handle.dispose();
-    });
-
-    testWidgets('the Overview counts libraries, never their contents', (
-      tester,
-    ) async {
-      await _pumpBoard(
-        tester,
-        libraries: const [
-          _library,
-          StreamLibrary(
-            id: 'lib-2',
-            name: 'Shows',
-            kind: StreamLibraryKind.shows,
-            // Carried by the model and deliberately not drawn here: this is the
-            // figure decision 21 moved off the Overview.
-            itemCount: 86,
-            lastScannedAt: null,
-            isRefreshing: false,
-          ),
-        ],
-      );
-
-      // Decision 21: a per-library count is one extra round trip each, so the
-      // Overview says how many rooms there are — free out of the single
-      // `getLibraries` response — and the count is paid on the pushed Libraries
-      // page, one card at a time. The scanning half of that line is asserted on
-      // `streamLibrariesSummary` itself, because a live scan spins an indicator
-      // that never settles.
-      expect(find.text('2 libraries'), findsOneWidget);
-      expect(find.textContaining('items'), findsNothing);
     });
 
     testWidgets('the transcode reason survives an accessibility text size', (
@@ -359,14 +362,10 @@ void main() {
                 ),
               ],
             ),
-            jellyfinLibrariesProvider.overrideWith((ref) async => [_library]),
-            serviceKpiProvider.overrideWith((ref, service) async => const []),
           ],
-          child: const MediaQuery(
-            data: MediaQueryData(textScaler: TextScaler.linear(1.6)),
-            child: MaterialApp(
-              home: StreamDashboardScreen(service: ServiceKey.jellyfin),
-            ),
+          child: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(1.6)),
+            child: MaterialApp(home: _nowPlayingHost(ServiceKey.jellyfin)),
           ),
         ),
       );
@@ -379,15 +378,6 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('an unconfigured server placeholders rather than erroring', (
-      tester,
-    ) async {
-      await _pumpBoard(tester, settings: const SettingsModel());
-
-      expect(find.byType(StreamSessionCard), findsNothing);
-      expect(find.textContaining('Jellyfin'), findsWidgets);
-    });
-
     testWidgets('renders in the light theme without exception', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -396,12 +386,10 @@ void main() {
             jellyfinSessionsProvider.overrideWith(
               (ref) async => [_session(method: StreamPlayMethod.transcode)],
             ),
-            jellyfinLibrariesProvider.overrideWith((ref) async => [_library]),
-            serviceKpiProvider.overrideWith((ref, service) async => const []),
           ],
           child: MaterialApp(
             theme: AppTheme.lightTheme(),
-            home: const StreamDashboardScreen(service: ServiceKey.jellyfin),
+            home: _nowPlayingHost(ServiceKey.jellyfin),
           ),
         ),
       );
@@ -411,12 +399,59 @@ void main() {
     });
   });
 
+  group('the Libraries tab', () {
+    testWidgets('the Libraries tab counts rooms, never their contents', (
+      tester,
+    ) async {
+      await _pumpLibraries(
+        tester,
+        libraries: const [
+          _library,
+          StreamLibrary(
+            id: 'lib-2',
+            name: 'Shows',
+            kind: StreamLibraryKind.shows,
+            // Carried by the model and deliberately not drawn: nothing calls
+            // `getLibraryItemCount`, so a figure here would be invented.
+            itemCount: 86,
+            lastScannedAt: null,
+            isRefreshing: false,
+          ),
+        ],
+      );
+
+      // Decision 21: a per-library count is one extra round trip each, so what
+      // this list says is how many rooms there are — free out of the single
+      // `getLibraries` response. The count itself is unbuilt, and an unbuilt
+      // figure prints nothing rather than 0. The scanning half of that line is
+      // asserted on `streamLibrariesSummary` itself, because a live scan spins
+      // an indicator that never settles.
+      expect(find.text('2 libraries'), findsOneWidget);
+      expect(find.textContaining('items'), findsNothing);
+    });
+
+    testWidgets('an unconfigured server placeholders rather than erroring', (
+      tester,
+    ) async {
+      // A tab is arrived at routinely on a server that was never set up, and
+      // the check has to happen *before* the libraries provider is read: a
+      // `FutureProvider` that throws "not configured" is a failed provider
+      // retrying on a backoff no waiting resolves, which shows up here as a
+      // pending timer at teardown.
+      await _pumpLibraries(tester, settings: const SettingsModel());
+
+      expect(find.byType(NotConfiguredPlaceholder), findsOneWidget);
+      expect(find.text('Films'), findsNothing);
+      expect(find.textContaining('Jellyfin'), findsWidgets);
+    });
+  });
+
   group('Plex is stop-alone, and the owner\'s own', () {
     testWidgets('pause and message are absent, because Plex cannot do them', (
       tester,
     ) async {
       final handle = tester.ensureSemantics();
-      await _pumpPlexBoard(
+      await _pumpPlexNowPlaying(
         tester,
         sessions: [_session()],
         capabilities: _capabilities(subscription: true),
@@ -436,7 +471,7 @@ void main() {
       tester,
     ) async {
       final handle = tester.ensureSemantics();
-      await _pumpPlexBoard(
+      await _pumpPlexNowPlaying(
         tester,
         sessions: [_session()],
         capabilities: _capabilities(subscription: null),
@@ -455,7 +490,11 @@ void main() {
       tester,
     ) async {
       final handle = tester.ensureSemantics();
-      await _pumpPlexBoard(tester, sessions: [_session()], capabilities: null);
+      await _pumpPlexNowPlaying(
+        tester,
+        sessions: [_session()],
+        capabilities: null,
+      );
 
       // Same defect, second population: while the sheet was unresolved the
       // control was absent and then appeared a beat later, which on a live list
@@ -468,7 +507,7 @@ void main() {
       tester,
     ) async {
       final handle = tester.ensureSemantics();
-      await _pumpPlexBoard(
+      await _pumpPlexNowPlaying(
         tester,
         sessions: [_session()],
         capabilities: _capabilities(subscription: false),

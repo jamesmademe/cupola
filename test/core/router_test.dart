@@ -5,12 +5,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/dockge/presentation/dockge_screen.dart';
+import 'package:cupola/features/dockge/presentation/dockge_stack_detail_screen.dart';
+import 'package:cupola/features/dockge/presentation/dockge_stack_edit_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_screen.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/presentation/music_detail_screen.dart';
+import 'package:cupola/features/npm/presentation/npm_screen.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/prowlarr/data/prowlarr_service.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
@@ -21,9 +25,14 @@ import 'package:cupola/features/series/presentation/series_detail_screen.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
+import 'package:cupola/features/services/presentation/service_tab_placeholder.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/stream/presentation/stream_item_screen.dart';
+import 'package:cupola/features/unraid/presentation/unraid_screen.dart';
+import 'package:cupola/features/stream/presentation/stream_libraries_screen.dart';
+import 'package:cupola/features/stream/presentation/stream_library_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_appearance_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_connections_screen.dart';
 import 'package:cupola/features/settings/presentation/service_settings_screen.dart';
@@ -737,6 +746,367 @@ void main() {
         '${ServiceRoutes.lidarrArtistBase}/9?heroTag=legacy_artist',
       );
       expect(find.byType(MusicDetailScreen), findsOneWidget);
+    });
+  });
+
+  /// Jellyfin and Plex: two services, one screen family, two different bars.
+  ///
+  /// Every case here is about the move onto the tab model — the service root
+  /// that now redirects, the two spellings the single-page service shipped, and
+  /// the declaration order inside the Libraries branch. Neither server is
+  /// configured in this harness, which is deliberate: an unconfigured tab is a
+  /// destination users reach routinely, it draws its placeholder without asking
+  /// any provider for anything, and it keeps the case about routing rather than
+  /// about a fixture.
+  group('the media servers on the tab model', () {
+    testWidgets('the bare service path lands on Overview', (tester) async {
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final entry in {
+        ServiceRoutes.jellyfin: ServiceRoutes.jellyfinOverview,
+        ServiceRoutes.plex: ServiceRoutes.plexOverview,
+      }.entries) {
+        router.go(entry.key);
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.toString(), entry.value, reason: entry.key);
+        expect(find.byType(ServiceTabPlaceholder), findsOneWidget);
+      }
+    });
+
+    testWidgets('every tab on the bar has a branch that resolves', (
+      tester,
+    ) async {
+      // The bar is generated from `tabsFor`, so a tab without a branch is an
+      // index that selects nothing. Walking all twelve is what makes the
+      // wildcard's `UnsupportedError` a promise rather than a comment.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final service in [ServiceKey.jellyfin, ServiceKey.plex]) {
+        for (final tab in tabsFor(service)!) {
+          final location =
+              '${ServiceRoutes.forService(service)}/${tab.segment}';
+          router.go(location);
+          await tester.pumpAndSettle();
+
+          expect(router.state.uri.toString(), location, reason: location);
+        }
+      }
+    });
+
+    testWidgets('the Libraries tab is the library list', (tester) async {
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      router.go(ServiceRoutes.jellyfinLibraries);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(StreamLibrariesScreen), findsOneWidget);
+    });
+
+    testWidgets('the pre-tab spellings cross in ONE hop, query intact', (
+      tester,
+    ) async {
+      // `/dashboard/jellyfin/library/:id` and `/dashboard/jellyfin/item/:id`
+      // are what a one-page service could offer, and both are still in the
+      // wild: `ServiceRoutes.jellyfinItem` built the second for every poster
+      // tile, every search result and the availability slot on an arr detail.
+      // The tails rewrite them into the Libraries branch without losing the
+      // display name that spares the destination a fetch.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      router.go('${ServiceRoutes.jellyfin}/library/f137a2dd?title=Films');
+      await tester.pumpAndSettle();
+
+      expect(
+        router.state.uri.toString(),
+        '${ServiceRoutes.jellyfinLibraries}/f137a2dd?title=Films',
+      );
+      final browse = tester.widget<StreamLibraryScreen>(
+        find.byType(StreamLibraryScreen),
+      );
+      expect(browse.libraryId, 'f137a2dd');
+      expect(browse.libraryTitle, 'Films');
+
+      router.go('${ServiceRoutes.plex}/item/9421');
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.toString(), ServiceRoutes.plexItem('9421'));
+      expect(
+        tester.widget<StreamItemScreen>(find.byType(StreamItemScreen)).itemId,
+        '9421',
+      );
+    });
+
+    testWidgets('the item literal beats the library id that follows it', (
+      tester,
+    ) async {
+      // Routes match in declaration order and `item` competes with the library
+      // browse's `:id` in the same branch: declared the other way round,
+      // `/dashboard/plex/libraries/item/9421` resolves as a library whose id is
+      // the word `item`, and the user gets a browse of nothing.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      router.go(ServiceRoutes.plexItem('9421'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(StreamItemScreen), findsOneWidget);
+      expect(find.byType(StreamLibraryScreen), findsNothing);
+    });
+
+    testWidgets('an item pushed from another app tab still resolves', (
+      tester,
+    ) async {
+      // How every poster tile, every global search result and the availability
+      // slot on a Radarr or Sonarr detail reaches an item: a `push`, from
+      // wherever the user happens to be. The destination is now a page inside
+      // the Libraries branch of a nested shell rather than a sibling of the
+      // service root, so this asserts the push still builds the whole chain.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      router.go('/search');
+      await tester.pumpAndSettle();
+      router.push(ServiceRoutes.jellyfinItem('abc-123'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<StreamItemScreen>(find.byType(StreamItemScreen)).itemId,
+        'abc-123',
+      );
+    });
+
+    testWidgets('the legacy /services prefix still reaches both details', (
+      tester,
+    ) async {
+      // Three hops for the item — prefix rewrite, pre-tab tail, then the route
+      // inside the branch — and what this asserts is that the chain finishes.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      router.go('/services/jellyfin/item/abc-123');
+      await tester.pumpAndSettle();
+
+      expect(
+        router.state.uri.toString(),
+        ServiceRoutes.jellyfinItem('abc-123'),
+      );
+      expect(find.byType(StreamItemScreen), findsOneWidget);
+
+      router.go('/services/plex');
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.toString(), ServiceRoutes.plexOverview);
+    });
+  });
+
+  /// Dockge, Unraid and Nginx Proxy Manager: the three that were one page each.
+  ///
+  /// None of them is configured in this harness, which is deliberate and is
+  /// what keeps these cases about routing: every destination below gates on
+  /// `isServiceConfigured` before it reaches a provider, so an unconfigured
+  /// service draws its placeholder without asking anything for anything — and a
+  /// destination that did ask would leave a retrying provider behind and fail
+  /// this file at teardown rather than at the assertion.
+  group('the infrastructure three on the tab model', () {
+    testWidgets('the bare service path lands on Overview', (tester) async {
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final entry in {
+        ServiceRoutes.dockge: ServiceRoutes.dockgeOverview,
+        ServiceRoutes.unraid: ServiceRoutes.unraidOverview,
+        ServiceRoutes.nginxProxyManager: ServiceRoutes.npmOverview,
+      }.entries) {
+        router.go(entry.key);
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.toString(), entry.value, reason: entry.key);
+        // All three Overviews are placeholders today. Asserting it here is what
+        // makes the redirect's destination a real page rather than a location
+        // that happens to resolve.
+        expect(find.byType(ServiceTabPlaceholder), findsOneWidget);
+      }
+    });
+
+    testWidgets('every tab on the bar has a branch that resolves', (
+      tester,
+    ) async {
+      // The bar is generated from `tabsFor`, so a tab without a branch is an
+      // index that selects nothing. Walking all fourteen is what makes the
+      // wildcard's `UnsupportedError` a promise rather than a comment.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final service in [
+        ServiceKey.dockge,
+        ServiceKey.unraid,
+        ServiceKey.nginxProxyManager,
+      ]) {
+        for (final tab in tabsFor(service)!) {
+          final location =
+              '${ServiceRoutes.forService(service)}/${tab.segment}';
+          router.go(location);
+          await tester.pumpAndSettle();
+
+          expect(router.state.uri.toString(), location, reason: location);
+        }
+      }
+    });
+
+    testWidgets('a tab that draws something draws the half it names', (
+      tester,
+    ) async {
+      // Two services split a page across a bar, and a split is only as good as
+      // the wiring: `UnraidScreen.docker` mounted on the Array tab would draw a
+      // plausible screen under the wrong label, which no path assertion would
+      // notice.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      router.go(ServiceRoutes.unraidArray);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<UnraidScreen>(find.byType(UnraidScreen)).section,
+        UnraidSection.array,
+      );
+
+      router.go(ServiceRoutes.unraidDocker);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<UnraidScreen>(find.byType(UnraidScreen)).section,
+        UnraidSection.docker,
+      );
+
+      router.go(ServiceRoutes.npmProxyHosts);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<NpmScreen>(find.byType(NpmScreen)).section,
+        NpmSection.proxyHosts,
+      );
+
+      router.go(ServiceRoutes.npmCertificates);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<NpmScreen>(find.byType(NpmScreen)).section,
+        NpmSection.certificates,
+      );
+
+      // Dockge did not split: the stack list *was* the service, and it is the
+      // Stacks tab whole.
+      router.go(ServiceRoutes.dockgeStacks);
+      await tester.pumpAndSettle();
+      expect(find.byType(DockgeScreen), findsOneWidget);
+    });
+
+    testWidgets('the pre-tab Dockge spellings cross in ONE hop, query intact', (
+      tester,
+    ) async {
+      // Three routes that hung off the service root when a one-page service had
+      // nowhere else to hang them, and all three are still in the wild —
+      // `ServiceRoutes.dockgeStack` built the first for every row of the list.
+      // One hop, not two: each tail carries the deep link's own parameters
+      // straight to the page inside the Stacks branch rather than bouncing
+      // through the service root, which would land the user on Overview having
+      // lost where they were going.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      // Nothing reads `from` — Dockge links carry no query in production. It is
+      // here because the *mechanism* that would drop it is the same one that
+      // drops `?i=`, and a lens pointed at a connection this harness does not
+      // define would leave a provider retrying.
+      router.go('${ServiceRoutes.dockge}/stack/immich?from=card');
+      await tester.pumpAndSettle();
+
+      expect(
+        router.state.uri.toString(),
+        '${ServiceRoutes.dockgeStack('immich')}?from=card',
+      );
+      expect(
+        tester
+            .widget<DockgeStackDetailScreen>(
+              find.byType(DockgeStackDetailScreen),
+            )
+            .name,
+        'immich',
+      );
+
+      router.go('${ServiceRoutes.dockge}/stack/immich/edit');
+      await tester.pumpAndSettle();
+
+      expect(
+        router.state.uri.toString(),
+        ServiceRoutes.dockgeStackEdit('immich'),
+      );
+      expect(
+        tester
+            .widget<DockgeStackEditScreen>(find.byType(DockgeStackEditScreen))
+            .name,
+        'immich',
+      );
+
+      router.go('${ServiceRoutes.dockge}/new');
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.toString(), ServiceRoutes.dockgeNewStack);
+      expect(
+        tester
+            .widget<DockgeStackEditScreen>(find.byType(DockgeStackEditScreen))
+            .isNew,
+        isTrue,
+      );
+    });
+
+    testWidgets('a blank stack name falls back to the Stacks tab', (
+      tester,
+    ) async {
+      // Not to the app home: the branch is where the user still is, and sending
+      // them out of the service is a bigger move than the mistake. A Dockge
+      // stack name is a Compose project directory — a free-form string with no
+      // `safeIntParam` to run — so emptiness is the whole of what can be
+      // checked.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      router.go('${ServiceRoutes.dockgeStackBase}/%20');
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.toString(), ServiceRoutes.dockgeStacks);
+      expect(find.byType(DockgeStackDetailScreen), findsNothing);
+    });
+
+    testWidgets('the legacy /services prefix still reaches all three', (
+      tester,
+    ) async {
+      // Two hops for a service root — the prefix rewrite lands on the
+      // redirect-only node, which hands off to Overview — and three for the
+      // Dockge stack, which crosses the pre-tab tail on the way into the
+      // branch. What this asserts is that the chain finishes: a rewrite that
+      // stopped at the first hop would leave the user on a path that draws
+      // nothing.
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      for (final entry in {
+        '/services/dockge': ServiceRoutes.dockgeOverview,
+        '/services/unraid': ServiceRoutes.unraidOverview,
+        '/services/npm': ServiceRoutes.npmOverview,
+      }.entries) {
+        router.go(entry.key);
+        await tester.pumpAndSettle();
+        expect(router.state.uri.toString(), entry.value, reason: entry.key);
+      }
+
+      router.go('/services/dockge/stack/immich');
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.toString(), ServiceRoutes.dockgeStack('immich'));
+      expect(find.byType(DockgeStackDetailScreen), findsOneWidget);
     });
   });
 }

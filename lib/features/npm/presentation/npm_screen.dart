@@ -19,29 +19,121 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// Nginx Proxy Manager dashboard: what the box is fronting, what is broken, and
-/// which certificates are about to lapse.
-class NpmScreen extends ConsumerWidget {
-  const NpmScreen({super.key, this.showAppBar = true, this.topPadding = 0});
+/// Which part of the old Nginx Proxy Manager dashboard a page lists.
+///
+/// Public since the tab model: Proxy hosts and Certificates are two entries on
+/// NPM's own bar now, so the choice is made by the router rather than by
+/// scrolling past one section to reach the other. [everything] is the page as
+/// it was, for a caller that wants the whole service in one scroll.
+enum NpmSection {
+  everything('Nginx Proxy Manager'),
+  proxyHosts('Proxy hosts'),
+  certificates('Certificates');
 
+  const NpmSection(this.label);
+
+  /// The word the app bar prints when this page draws one of its own.
+  final String label;
+}
+
+/// Nginx Proxy Manager: what the box is fronting, what is broken, and which
+/// certificates are about to lapse.
+///
+/// **It used to be all of that on one page**, one section under the next at
+/// `/dashboard/npm`. NPM's bar draws Proxy hosts and Certificates as separate
+/// destinations, so the page split; each tab reads only the documents it draws.
+///
+/// Named constructors rather than a `section:` argument or a boolean, following
+/// `lib/core/widgets/AGENTS.md`: a call site says which part it wants in the
+/// constructor name.
+///
+/// **What went where, and why** — the split is a decision, not a cut:
+///
+///  * The **redirections, 404s and streams** ride the Proxy hosts tab rather
+///    than getting one of their own. NPM's own menu files all four kinds under
+///    Hosts, the bar has exactly one Hosts entry and this is it, and the list
+///    is already fetched — under Certificates it would be nonsense, and dropped
+///    it would delete a list the client answers for. On
+///    [NpmSection.everything] that keeps the two host lists adjacent, which
+///    moves them above Certificates: one grouping, drawn the same way whether
+///    it is a tab or a stretch of one page.
+///  * The **permission band and the default-admin warning are shared chrome**,
+///    drawn on every variant. The band is not decoration: it is the sentence
+///    that explains why a control is attenuated, and *both* tabs carry gated
+///    controls — the host menu's Enable/Disable on one, a certificate's Renew
+///    on the other. Leaving the controls on two tabs and the explanation on one
+///    is exactly the failure `npm_write_gate.dart` exists to prevent. The
+///    warning is a fact about the box rather than about a section, it renders
+///    at all only on an install that still ships `admin@example.com`, and on
+///    that install it outranks everything else on either tab.
+///  * The **readouts are not here**. `ServiceKpiPeek` sat on the single page
+///    because the single page was the service; under the tab model the Overview
+///    is the tab that carries the identity block and the readouts, and
+///    repeating them on a section tab would be the same figures twice in one
+///    scroll. [NpmSection.everything] keeps them, because there it still *is*
+///    the whole service.
+///  * A section tab **lists everything it names**. The single page capped
+///    certificates at eight and the other hosts at ten, which is right for a
+///    peek and wrong for a tab called Certificates: eight of twenty, with
+///    nothing saying so, is a count the reader has no way to doubt. The caps
+///    stay on [NpmSection.everything] and nowhere else.
+class NpmScreen extends ConsumerWidget {
+  /// The whole service in one scroll, as it read before the bar.
+  const NpmScreen({super.key, this.showAppBar = true, this.topPadding = 0})
+    : section = NpmSection.everything;
+
+  /// The hosts half — NPM's Proxy hosts tab.
+  const NpmScreen.proxyHosts({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  }) : section = NpmSection.proxyHosts;
+
+  /// The certificates half — NPM's Certificates tab.
+  const NpmScreen.certificates({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  }) : section = NpmSection.certificates;
+
+  final NpmSection section;
+
+  /// Whether to draw this screen's own app bar.
+  ///
+  /// False inside the tab shell, where `ServiceHomeScreen` draws the service
+  /// band and `ServiceTabScaffold` the tab bar above it: a third bar of its own
+  /// would put two titles and two back chevrons in one corner.
   final bool showAppBar;
+
+  /// Room those two glass bands take above this page, since they float over it
+  /// rather than pushing it down.
   final double topPadding;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
+    // Checked **before** any provider is read, not after: `npmClientProvider`
+    // throws when NPM is not configured, and a `FutureProvider` that throws is
+    // a failed provider — it schedules a retry with backoff for a condition no
+    // waiting changes, and surfaces in tests as a pending timer.
     final isConfigured = settings.isServiceConfigured(
       ServiceKey.nginxProxyManager,
     );
 
     return AmbientScaffold(
       accent: AppColors.nginxProxyManager,
-      appBar: showAppBar
-          ? const GlassAppBar(title: Text('Nginx Proxy Manager'))
-          : null,
+      appBar: showAppBar ? GlassAppBar(title: Text(section.label)) : null,
       body: SafeArea(
+        top: showAppBar,
         child: isConfigured
-            ? _NpmDashboard(topPadding: topPadding)
+            // Keyed by section so two variants cannot share one list state:
+            // they are separate branches of the service shell and each keeps
+            // its own scroll offset.
+            ? _NpmSection(
+                key: ValueKey(section),
+                section: section,
+                topPadding: topPadding,
+              )
             : NotConfiguredPlaceholder.forService(ServiceKey.nginxProxyManager),
       ),
     );
@@ -53,15 +145,28 @@ final _invalidateAfterAction = <ProviderOrFamily>[
   npmCertificatesProvider,
 ];
 
-void _invalidateAll(WidgetRef ref) {
-  ref.invalidate(npmProxyHostsProvider);
-  // The upstream probe rides the host list rather than being invalidated here:
-  // it awaits `npmProxyHostsProvider.future`, so one refresh re-reads and
-  // re-probes. The account probe does not, and a permission changed on the
+/// Re-reads what the section on screen draws, and nothing else.
+///
+/// A pull on Certificates no longer re-fetches the host list: the two are
+/// separate branches now, and refreshing a page the user cannot see is a round
+/// trip they did not ask for. Three things are re-read by every section — the
+/// account probe behind the permission band, the server info behind the
+/// default-admin warning, and the KPI and summary the Dashboard card reads —
+/// because all three qualify whatever is on screen.
+void _invalidate(WidgetRef ref, NpmSection section) {
+  if (section != NpmSection.certificates) {
+    ref.invalidate(npmProxyHostsProvider);
+    // The upstream probe rides the host list rather than being invalidated
+    // here: it awaits `npmProxyHostsProvider.future`, so one refresh re-reads
+    // and re-probes.
+    ref.invalidate(npmOtherHostsProvider);
+  }
+  if (section != NpmSection.proxyHosts) {
+    ref.invalidate(npmCertificatesProvider);
+  }
+  // The account probe does not ride anything, and a permission changed on the
   // server is exactly the kind of thing a person pulls to refresh for.
   ref.invalidate(npmAccountProvider);
-  ref.invalidate(npmCertificatesProvider);
-  ref.invalidate(npmOtherHostsProvider);
   ref.invalidate(npmServerInfoProvider);
   ref.invalidate(serviceKpiProvider(ServiceKey.nginxProxyManager));
   ref.invalidate(serviceSummaryProvider(ServiceKey.nginxProxyManager));
@@ -76,16 +181,18 @@ String? _proxyHostSubtitle(
   return ['${hosts.length}', ?report?.coverage].join(' · ');
 }
 
-class _NpmDashboard extends ConsumerWidget {
-  const _NpmDashboard({required this.topPadding});
+class _NpmSection extends ConsumerWidget {
+  const _NpmSection({
+    super.key,
+    required this.section,
+    required this.topPadding,
+  });
 
+  final NpmSection section;
   final double topPadding;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hostsAsync = ref.watch(npmProxyHostsProvider);
-    final certsAsync = ref.watch(npmCertificatesProvider);
-    final otherAsync = ref.watch(npmOtherHostsProvider);
     final summaryAsync = ref.watch(
       serviceSummaryProvider(ServiceKey.nginxProxyManager),
     );
@@ -98,13 +205,13 @@ class _NpmDashboard extends ConsumerWidget {
       return ServiceOfflineState(
         serviceName: ServiceKey.nginxProxyManager.title,
         accent: AppColors.nginxProxyManager,
-        onRetry: () => _invalidateAll(ref),
+        onRetry: () => _invalidate(ref, section),
       );
     }
 
     return RefreshIndicator(
       onRefresh: () async {
-        _invalidateAll(ref);
+        _invalidate(ref, section);
         await Future<void>.delayed(AppAnimation.durationMd);
       },
       child: ListView(
@@ -114,42 +221,59 @@ class _NpmDashboard extends ConsumerWidget {
         ),
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
-          ServiceKpiPeek(
-            kpis: ref.watch(serviceKpiProvider(ServiceKey.nginxProxyManager)),
-            accent: AppColors.nginxProxyManager,
-          ),
+          if (section == NpmSection.everything)
+            ServiceKpiPeek(
+              kpis: ref.watch(serviceKpiProvider(ServiceKey.nginxProxyManager)),
+              accent: AppColors.nginxProxyManager,
+            ),
           const _DefaultAdminWarning(),
           const NpmAccessBand(),
           const SizedBox(height: AppSpacing.sm),
-          SectionHeader(
-            title: 'Proxy hosts',
-            showChevron: false,
-            // "23 · reachability checked for 8 of 23" — the coverage is drawn
-            // because the Upstream column is partial by design. Without it a
-            // column that answered for eight rows and stayed blank for fifteen
-            // would read as fifteen healthy hosts.
-            subtitle: _proxyHostSubtitle(
-              hostsAsync.asData?.value,
-              ref.watch(npmUpstreamReportProvider).asData?.value,
-            ),
-          ),
-          const SizedBox(height: 2),
-          _ProxyHostList(hostsAsync: hostsAsync),
-          const SizedBox(height: AppSpacing.sm),
-          const SectionHeader(title: 'Certificates', showChevron: false),
-          const SizedBox(height: 2),
-          _CertificateList(certsAsync: certsAsync),
-          const SizedBox(height: AppSpacing.sm),
-          const SectionHeader(
-            title: 'Redirections, 404s and streams',
-            showChevron: false,
-          ),
-          const SizedBox(height: 2),
-          _SimpleHostList(hostsAsync: otherAsync),
+          if (section != NpmSection.certificates) ..._hostChildren(ref),
+          if (section != NpmSection.proxyHosts) ..._certificateChildren(ref),
         ],
       ),
     );
   }
+
+  List<Widget> _hostChildren(WidgetRef ref) {
+    final hostsAsync = ref.watch(npmProxyHostsProvider);
+    return [
+      SectionHeader(
+        title: 'Proxy hosts',
+        showChevron: false,
+        // "23 · reachability checked for 8 of 23" — the coverage is drawn
+        // because the Upstream column is partial by design. Without it a
+        // column that answered for eight rows and stayed blank for fifteen
+        // would read as fifteen healthy hosts.
+        subtitle: _proxyHostSubtitle(
+          hostsAsync.asData?.value,
+          ref.watch(npmUpstreamReportProvider).asData?.value,
+        ),
+      ),
+      const SizedBox(height: 2),
+      _ProxyHostList(hostsAsync: hostsAsync),
+      const SizedBox(height: AppSpacing.sm),
+      const SectionHeader(
+        title: 'Redirections, 404s and streams',
+        showChevron: false,
+      ),
+      const SizedBox(height: 2),
+      _SimpleHostList(
+        hostsAsync: ref.watch(npmOtherHostsProvider),
+        limit: section == NpmSection.everything ? 10 : null,
+      ),
+    ];
+  }
+
+  List<Widget> _certificateChildren(WidgetRef ref) => [
+    const SectionHeader(title: 'Certificates', showChevron: false),
+    const SizedBox(height: 2),
+    _CertificateList(
+      certsAsync: ref.watch(npmCertificatesProvider),
+      limit: section == NpmSection.everything ? 8 : null,
+    ),
+  ];
 }
 
 /// Warns when the install is old enough to still ship NPM's hard-coded default
@@ -500,9 +624,16 @@ Future<void> _confirmDisable(
 }
 
 class _CertificateList extends ConsumerWidget {
-  const _CertificateList({required this.certsAsync});
+  const _CertificateList({required this.certsAsync, required this.limit});
 
   final AsyncValue<List<NpmCertificate>> certsAsync;
+
+  /// How many rows to draw, or null for all of them.
+  ///
+  /// A peek on the whole-service page, everything on the tab that is named
+  /// after them: a list capped at eight with nothing saying so reads as a
+  /// complete answer.
+  final int? limit;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -524,9 +655,9 @@ class _CertificateList extends ConsumerWidget {
             final bDays = b.daysUntilExpiry(now) ?? 1 << 30;
             return aDays.compareTo(bDays);
           });
+        final shown = limit == null ? ordered : ordered.take(limit!);
         return Column(
-          children: ordered
-              .take(8)
+          children: shown
               .map((cert) => _CertificateTile(cert: cert, now: now))
               .toList(growable: false),
         );
@@ -650,9 +781,13 @@ class _CertificateTile extends ConsumerWidget {
 }
 
 class _SimpleHostList extends ConsumerWidget {
-  const _SimpleHostList({required this.hostsAsync});
+  const _SimpleHostList({required this.hostsAsync, required this.limit});
 
   final AsyncValue<List<NpmSimpleHost>> hostsAsync;
+
+  /// How many rows to draw, or null for all of them — [_CertificateList.limit]
+  /// carries the reasoning.
+  final int? limit;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -667,9 +802,9 @@ class _SimpleHostList extends ConsumerWidget {
             child: Text('Nothing else configured.'),
           );
         }
+        final shown = limit == null ? hosts : hosts.take(limit!);
         return Column(
-          children: hosts
-              .take(10)
+          children: shown
               .map((host) => _SimpleHostTile(host: host))
               .toList(growable: false),
         );

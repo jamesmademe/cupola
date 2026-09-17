@@ -70,12 +70,13 @@ import 'package:cupola/features/sabnzbd/presentation/sabnzbd_screen.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart';
 import 'package:cupola/features/transmission/presentation/transmission_screen.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_screen.dart';
-import 'package:cupola/features/stream/presentation/stream_dashboard_screen.dart';
+import 'package:cupola/features/stream/presentation/stream_libraries_screen.dart';
 import 'package:cupola/features/stream/presentation/stream_item_screen.dart';
 import 'package:cupola/features/stream/presentation/stream_library_screen.dart';
 import 'package:cupola/features/unraid/presentation/unraid_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_series_detail_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_wanted_screen.dart';
+import 'package:cupola/features/dockge/presentation/dockge_agent_lens_button.dart';
 import 'package:cupola/features/dockge/presentation/dockge_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_stack_detail_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_stack_edit_screen.dart';
@@ -1282,33 +1283,163 @@ GoRoute _bazarrBranchRoot(ServiceTab tab) => switch (tab) {
   ),
 };
 
-GoRoute _dockgeRoutes({required String path}) {
-  return _page(
-    path,
-    (state) => ServiceHomeScreen(
-      service: ServiceKey.dockge,
-      child: const DockgeScreen(
-        showAppBar: false,
-        topPadding: _serviceHomeTopPadding,
-      ),
-    ),
+/// Dockge: one shell, one branch per tab.
+///
+/// [_radarrRoutes] carries the reasoning for every structural choice and none
+/// of it is Radarr's — the nesting inside the Dashboard branch, the
+/// redirect-only node whose guard is on the full location, the childless
+/// compatibility tails, the wildcard that throws.
+///
+/// Two things are Dockge's own.
+///
+/// **The agent lens is on the band, not on the bar** (decision 41). An agent is
+/// not a *place*: it is which Dockge the rows on screen came off, which is what
+/// the connection lens means everywhere else in the app. So it rides as the
+/// band's `trailingAction` exactly as qBittorrent's transfer controls do —
+/// above every tab, because it qualifies all of them. It also gets it drawn at
+/// all: `DockgeScreen` put it in an app bar the service home has been hiding
+/// since this service was hosted, so the control has been in the tree and
+/// invisible.
+///
+/// **The stack tree moved inside Stacks.** The detail, its compose editor and
+/// the New button's editor all hung off the service root, because a one-page
+/// service had nowhere else to hang them; all three are reached from the Stacks
+/// list and none from anywhere else. Each old spelling keeps a childless tail.
+RouteBase _dockgeRoutes() {
+  const service = ServiceKey.dockge;
+  final tabs = tabsFor(service)!;
+
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == ServiceRoutes.dockge
+        ? _preserveQuery(state.uri, ServiceRoutes.dockgeOverview)
+        : null,
     routes: [
-      _page('new', (state) => const DockgeStackEditScreen()),
-      _page(
-        'stack/:name',
-        (state) =>
-            DockgeStackDetailScreen(name: state.pathParameters['name'] ?? ''),
-        routes: [
-          _page(
-            'edit',
-            (state) =>
-                DockgeStackEditScreen(name: state.pathParameters['name'] ?? ''),
-          ),
+      // The tab-less tails, childless on purpose: the matcher treats a prefix
+      // hit with no complete match as no match at all, so `stack/:name` here
+      // cannot shadow `stacks/stack/:name` inside the shell below.
+      //
+      // The editor is declared before the detail it hangs under. Neither can
+      // match the other's location — a childless route matches its own depth
+      // and nothing longer — but the pair reads as one rule in that order, and
+      // the order is free.
+      GoRoute(
+        path: 'stack/:name/edit',
+        redirect: (context, state) => _preserveQuery(
+          state.uri,
+          ServiceRoutes.dockgeStackEdit(state.pathParameters['name']!),
+        ),
+      ),
+      GoRoute(
+        path: 'stack/:name',
+        redirect: (context, state) => _preserveQuery(
+          state.uri,
+          ServiceRoutes.dockgeStack(state.pathParameters['name']!),
+        ),
+      ),
+      GoRoute(
+        path: 'new',
+        redirect: (context, state) =>
+            _preserveQuery(state.uri, ServiceRoutes.dockgeNewStack),
+      ),
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        // `pageBuilder`, not `builder`: without it the shell's page takes the
+        // platform default transition, and the push from the Dashboard into a
+        // service would stop matching every other service in the app.
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                trailingAction: const DockgeAgentLensButton(),
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_dockgeBranchRoot(tab)],
+            ),
         ],
       ),
     ],
   );
 }
+
+/// The route at the root of one Dockge tab.
+///
+/// Branch order is `tabsFor(ServiceKey.dockge)` and nothing else, because the
+/// bar is generated from the same list and taps it by index. The wildcard
+/// throws rather than quietly rendering a placeholder: a fourth tab added to
+/// that table with no case here is a bar and a router disagreeing.
+///
+/// **Terminal is a placeholder but not blocked.** `DockgeClient` already joins
+/// a stack's combined terminal and streams `terminalWrite` back, so the wire is
+/// there — what is missing is the screen, and a tab-level terminal has one
+/// question this pass does not get to answer: which stack it is attached to
+/// when no stack was named.
+GoRoute _dockgeBranchRoot(ServiceTab tab) => switch (tab) {
+  // The list that was the whole service. Its own app bar stays off: the band
+  // above draws the title and the lens, and the tab bar sits under it.
+  ServiceTab.stacks => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.dockge,
+      tab: ServiceTab.stacks,
+      child: DockgeScreen(showAppBar: false, topPadding: _serviceTabTopPadding),
+    ),
+    routes: [
+      // `new` before `stack/:name`, though nothing here forces it: both are
+      // literal-led, so neither can swallow the other. It is the New button's
+      // destination and it reads first.
+      _page('new', (state) => const DockgeStackEditScreen()),
+      // Pushed INSIDE the branch, so leaving Dockge for another app tab and
+      // coming back returns to the stack rather than to the top of the list.
+      //
+      // A blank name falls back to the tab this page was pushed from, not to
+      // the app home: the branch is where the user still is. Dockge stack names
+      // are free-form strings — a Compose project directory name — so there is
+      // no `safeIntParam` to run, and emptiness is the whole of what can be
+      // checked.
+      _page(
+        'stack/:name',
+        (state) => DockgeStackDetailScreen(name: state.pathParameters['name']!),
+        redirect: _rejectBlankDockgeStackName,
+        routes: [
+          // No guard of its own: a route-level redirect fires for every
+          // match under it, descendants included, so the detail's guard has
+          // already run by the time this builds.
+          _page(
+            'edit',
+            (state) =>
+                DockgeStackEditScreen(name: state.pathParameters['name']!),
+          ),
+        ],
+      ),
+    ],
+  ),
+  ServiceTab.overview || ServiceTab.terminal => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.dockge,
+      tab: tab,
+      child: ServiceTabPlaceholder(service: ServiceKey.dockge, tab: tab),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on dockge\'s bar with no branch root',
+  ),
+};
+
+String? _rejectBlankDockgeStackName(
+  BuildContext context,
+  GoRouterState state,
+) => (state.pathParameters['name']?.trim().isEmpty ?? true)
+    ? ServiceRoutes.dockgeStacks
+    : null;
 
 /// Prowlarr: one shell, one branch per tab.
 ///
@@ -1725,18 +1856,105 @@ GoRoute _nzbgetBranchRoot(ServiceTab tab) => switch (tab) {
   ),
 };
 
-GoRoute _unraidRoutes({required String path}) {
-  return _page(
-    path,
-    (state) => ServiceHomeScreen(
-      service: ServiceKey.unraid,
-      child: const UnraidScreen(
-        showAppBar: false,
-        topPadding: _serviceHomeTopPadding,
+/// Unraid: one shell, one branch per tab.
+///
+/// [_radarrRoutes] carries the reasoning for every structural choice and none
+/// of it is Radarr's — the nesting inside the Dashboard branch, the
+/// redirect-only node whose guard is on the full location, the wildcard that
+/// throws.
+///
+/// **No compatibility tail at all**, which is Unraid's own difference and the
+/// same one Transmission has: the only path it ever shipped is its bare root,
+/// because the whole service was one page with no detail to push. The root is
+/// what this node redirects and there is nothing else to forward.
+///
+/// Two of the six tabs draw something, and both were already on that page: the
+/// array's disks and the Docker containers, the two halves `UnraidScreen` split
+/// into. The other four are **blocked on the read layer rather than on work** —
+/// `UnraidClient` speaks exactly three documents (`info`, `array`, `docker`),
+/// so there is no VM list, no notification feed and no share table to draw.
+/// Nothing here is guessed: this is the one service in the stack that has never
+/// been run against a real instance.
+RouteBase _unraidRoutes() {
+  const service = ServiceKey.unraid;
+  final tabs = tabsFor(service)!;
+
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == ServiceRoutes.unraid
+        ? _preserveQuery(state.uri, ServiceRoutes.unraidOverview)
+        : null,
+    routes: [
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        // `pageBuilder`, not `builder`: without it the shell's page takes the
+        // platform default transition, and the push from the Dashboard into a
+        // service would stop matching every other service in the app.
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_unraidBranchRoot(tab)],
+            ),
+        ],
       ),
-    ),
+    ],
   );
 }
+
+/// The route at the root of one Unraid tab.
+///
+/// Branch order is `tabsFor(ServiceKey.unraid)` and nothing else, because the
+/// bar is generated from the same list and taps it by index. The wildcard
+/// throws rather than quietly rendering a placeholder: a seventh tab added to
+/// that table with no case here is a bar and a router disagreeing.
+GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.array => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.unraid,
+      tab: ServiceTab.array,
+      child: UnraidScreen.array(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.docker => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.unraid,
+      tab: ServiceTab.docker,
+      child: UnraidScreen.docker(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.overview ||
+  ServiceTab.vms ||
+  ServiceTab.notifications ||
+  ServiceTab.shares => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.unraid,
+      tab: tab,
+      child: ServiceTabPlaceholder(service: ServiceKey.unraid, tab: tab),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on unraid\'s bar with no branch root',
+  ),
+};
 
 /// Transmission: one shell, one branch per tab.
 ///
@@ -1828,71 +2046,316 @@ GoRoute _transmissionBranchRoot(ServiceTab tab) => switch (tab) {
   ),
 };
 
-GoRoute _npmRoutes({required String path}) {
-  return _page(
-    path,
-    (state) => ServiceHomeScreen(
-      service: ServiceKey.nginxProxyManager,
-      child: const NpmScreen(
-        showAppBar: false,
-        topPadding: _serviceHomeTopPadding,
-      ),
-    ),
-  );
-}
+/// Nginx Proxy Manager: one shell, one branch per tab.
+///
+/// [_radarrRoutes] carries the reasoning for every structural choice and none
+/// of it is Radarr's — the nesting inside the Dashboard branch, the
+/// redirect-only node whose guard is on the full location, the wildcard that
+/// throws. Like Unraid it needs **no compatibility tail**: the only path it
+/// ever shipped is its bare root.
+///
+/// What is NPM's own is that **becoming a tab changes nothing about who may
+/// write.** The per-control gate in `npm_write_gate.dart` travels with each
+/// control, and the permission band that explains it is drawn on *both* halves
+/// of the split rather than on the tab that has the most controls: Proxy hosts
+/// carries the host menu's Enable/Disable, Certificates carries Renew, and
+/// splitting a page across a bar must not leave a control on one tab and the
+/// sentence explaining why it is attenuated on another.
+///
+/// Two of the five tabs draw something and both were sections of that one page.
+/// **Access lists and Audit log are blocked on endpoints rather than on work**:
+/// `NpmClient` calls `/nginx/proxy-hosts`, `/nginx/redirection-hosts`,
+/// `/nginx/dead-hosts`, `/nginx/streams`, `/nginx/certificates`, `/tokens` and
+/// `/users/me`, and neither `/nginx/access-lists` nor `/audit-log` is among
+/// them, so neither tab has a client to ask.
+RouteBase _npmRoutes() {
+  const service = ServiceKey.nginxProxyManager;
+  final tabs = tabsFor(service)!;
 
-/// Dashboard, library browse and item detail for a media server.
-///
-/// One builder serves both Jellyfin and Plex: the Stream surfaces are written
-/// against `StreamServerClient`, so the only per-service input is the [service]
-/// key itself.
-///
-/// **The nested routes resolve from their path parameters alone.** `library/:id`
-/// takes the display name as an optional `?title=` query so a caller that already
-/// knows it can spare the destination a fetch, but a cold deep link works without
-/// it. `item/:id` is a single recursive route covering film, show, season, episode,
-/// album and track, because a Jellyfin `BaseItemDto` and a Plex `Metadata` describe
-/// all of them with the same fields — where the arrs needed three screens.
-///
-/// Ids travel as path segments rather than through `_libraryDetailPage`, whose
-/// `RouteUtils.safeIntParam` cannot represent a Jellyfin GUID or a Plex
-/// `ratingKey`. They are guarded for emptiness here rather than dereferenced with
-/// `!` or defaulted to `''`, which is the pattern the older string-id routes
-/// (`torrent/:hash`, `stack/:name`) left unguarded.
-GoRoute _streamRoutes({required ServiceKey service, required String path}) {
-  return _page(
-    path,
-    (state) => StreamDashboardScreen(
-      service: service,
-      showAppBar: false,
-      topPadding: _serviceHomeTopPadding,
-    ),
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) =>
+        state.uri.path == ServiceRoutes.nginxProxyManager
+        ? _preserveQuery(state.uri, ServiceRoutes.npmOverview)
+        : null,
     routes: [
-      _page(
-        'library/:id',
-        (state) => StreamLibraryScreen(
-          service: service,
-          libraryId: state.pathParameters['id']!,
-          libraryTitle: state.uri.queryParameters['title'],
-        ),
-        redirect: (context, state) =>
-            (state.pathParameters['id']?.trim().isEmpty ?? true)
-            ? ServiceRoutes.forService(service)
-            : null,
-      ),
-      _page(
-        'item/:id',
-        (state) => StreamItemScreen(
-          service: service,
-          itemId: state.pathParameters['id']!,
-        ),
-        redirect: (context, state) =>
-            (state.pathParameters['id']?.trim().isEmpty ?? true)
-            ? ServiceRoutes.forService(service)
-            : null,
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        // `pageBuilder`, not `builder`: without it the shell's page takes the
+        // platform default transition, and the push from the Dashboard into a
+        // service would stop matching every other service in the app.
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_npmBranchRoot(tab)],
+            ),
+        ],
       ),
     ],
   );
+}
+
+/// The route at the root of one NPM tab.
+///
+/// Branch order is `tabsFor(ServiceKey.nginxProxyManager)` and nothing else,
+/// because the bar is generated from the same list and taps it by index. The
+/// wildcard throws rather than quietly rendering a placeholder: a sixth tab
+/// added to that table with no case here is a bar and a router disagreeing.
+GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
+  ServiceTab.proxyHosts => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.nginxProxyManager,
+      tab: ServiceTab.proxyHosts,
+      child: NpmScreen.proxyHosts(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.certificates => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.nginxProxyManager,
+      tab: ServiceTab.certificates,
+      child: NpmScreen.certificates(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.overview || ServiceTab.accessLists || ServiceTab.auditLog => _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(
+      service: ServiceKey.nginxProxyManager,
+      tab: tab,
+      child: ServiceTabPlaceholder(
+        service: ServiceKey.nginxProxyManager,
+        tab: tab,
+      ),
+    ),
+  ),
+  _ => throw UnsupportedError(
+    'ServiceTab.${tab.name} is on npm\'s bar with no branch root',
+  ),
+};
+
+/// The route spellings of one media server, by key.
+///
+/// A switch returning the four constants rather than interpolating them from
+/// [ServiceKey.routeParam] and [ServiceTab.segment]: the constants have to stay
+/// `const` — an enum instance's field is not a compile-time constant in Dart —
+/// and an earlier attempt at composing a path here shipped one containing a
+/// literal dollar sign that no analyzer could see. The wildcard throws because
+/// this file has exactly two media servers and a third arriving silently is
+/// worse than a build that stops.
+({String root, String overview, String libraries, String itemBase})
+_streamPaths(ServiceKey service) => switch (service) {
+  ServiceKey.jellyfin => (
+    root: ServiceRoutes.jellyfin,
+    overview: ServiceRoutes.jellyfinOverview,
+    libraries: ServiceRoutes.jellyfinLibraries,
+    itemBase: ServiceRoutes.jellyfinItemBase,
+  ),
+  ServiceKey.plex => (
+    root: ServiceRoutes.plex,
+    overview: ServiceRoutes.plexOverview,
+    libraries: ServiceRoutes.plexLibraries,
+    itemBase: ServiceRoutes.plexItemBase,
+  ),
+  _ => throw UnsupportedError('${service.name} is not a media server'),
+};
+
+/// Jellyfin and Plex: one shell each, one branch per tab, one builder for both.
+///
+/// [_radarrRoutes] carries the reasoning for every structural choice and none of
+/// it is Radarr's — the nesting inside the Dashboard branch, the redirect-only
+/// node whose guard is on the full location, the childless compatibility tails,
+/// the wildcard that throws.
+///
+/// **One function for two services, because the screens are one family.** Every
+/// Stream surface is written against `StreamServerClient` and takes the service
+/// as a parameter, so there is nothing per-service to fork here. The two bars
+/// are genuinely different — Jellyfin has Users, Devices, Tasks and Activity;
+/// Plex has On deck, Activities, Devices and Playlists — and that difference
+/// lives in `tabsFor`, which this reads. Forking the routes to express it would
+/// put the same list in two places and let them drift.
+///
+/// **What the single page became.** Until now the whole service was
+/// `StreamDashboardScreen`: the sessions at the top, the libraries at its foot,
+/// and `library/:id` and `item/:id` hanging off the service root because a
+/// one-page service had nowhere else to hang them. The libraries are the
+/// Libraries tab, the sessions belong to the Overview the next pass builds, and
+/// both details moved **inside** the Libraries branch — the move Radarr's film
+/// made into Library, for the same two reasons: leaving the service for another
+/// app tab and coming back returns to the item, and the poster's Hero still
+/// flies because the grid it left and the page it lands on share one Navigator.
+RouteBase _streamRoutes(ServiceKey service) {
+  final tabs = tabsFor(service)!;
+  final paths = _streamPaths(service);
+
+  return GoRoute(
+    path: service.routeParam,
+    redirect: (context, state) => state.uri.path == paths.root
+        ? _preserveQuery(state.uri, paths.overview)
+        : null,
+    routes: [
+      // The two tab-less tails, childless on purpose: the matcher treats a
+      // prefix hit with no complete match as no match at all, so `item/:id`
+      // here cannot shadow `libraries/item/:id` inside the shell below.
+      //
+      // Both are spellings the app shipped — `ServiceRoutes.jellyfinItem` built
+      // `/dashboard/jellyfin/item/<guid>` for every poster tile, every search
+      // result and the availability slot on a Radarr or Sonarr detail — and
+      // both are also the second hop of the `/services/...` rewrite. No id
+      // validation: the canonical routes inside the branch own it, and doing it
+      // twice is two places to get it wrong.
+      GoRoute(
+        path: 'library/:id',
+        redirect: (context, state) => _preserveQuery(
+          state.uri,
+          '${paths.libraries}/${state.pathParameters['id']}',
+        ),
+      ),
+      GoRoute(
+        path: 'item/:id',
+        redirect: (context, state) => _preserveQuery(
+          state.uri,
+          '${paths.itemBase}/${state.pathParameters['id']}',
+        ),
+      ),
+      StatefulShellRoute(
+        navigatorContainerBuilder: buildBranchTransition,
+        // `pageBuilder`, not `builder`: without it the shell's page takes the
+        // platform default transition, and the push from the Dashboard into a
+        // service would stop matching every other service in the app.
+        pageBuilder: (context, state, navigationShell) =>
+            RouteUtils.cupertinoPage(
+              key: state.pageKey,
+              child: ServiceHomeScreen(
+                service: service,
+                showAppBar: isServiceTabRoot(service, state.uri.path),
+                child: navigationShell,
+              ),
+            ),
+        branches: [
+          for (final tab in tabs)
+            StatefulShellBranch(
+              navigatorKey: serviceBranchNavigatorKeyFor(service, tab),
+              routes: [_streamBranchRoot(service, tab)],
+            ),
+        ],
+      ),
+    ],
+  );
+}
+
+/// The route at the root of one media server tab.
+///
+/// Branch order is `tabsFor(service)` and nothing else, because the bar is
+/// generated from the same list and taps it by index. The wildcard throws
+/// rather than quietly rendering a placeholder: a seventh tab added to that
+/// table with no case here is a bar and a router disagreeing.
+///
+/// Every tab but Libraries is a placeholder, and the two services are
+/// placeholders for different reasons — which is the honest split given that
+/// Jellyfin has been run against a live server and Plex has not:
+///
+///  * **Jellyfin.** Users is unbuilt rather than blocked: `getViewers()` already
+///    reads `/Users` for the settings viewer picker, so the tab has a client the
+///    day someone draws it. Devices (`/Devices`), Tasks (`/ScheduledTasks`) and
+///    Activity (`/System/ActivityLog/Entries`) are blocked — `JellyfinClient`
+///    calls none of the three.
+///  * **Plex.** On deck is unbuilt rather than blocked: `getContinueWatching()`
+///    already reads `/hubs/continueWatching`. Activities (`/activities`),
+///    Devices (`/devices`) and Playlists (`/playlists`) are blocked, and on a
+///    server nobody here has ever run — so nothing is guessed about what those
+///    endpoints return.
+GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
+  final paths = _streamPaths(service);
+
+  /// Where a malformed id falls back to: the tab the page would have been
+  /// pushed from, not the app home. The branch is where the user still is, and
+  /// sending them out of the service would be a bigger move than the mistake.
+  String? rejectBlankId(BuildContext context, GoRouterState state) =>
+      (state.pathParameters['id']?.trim().isEmpty ?? true)
+      ? paths.libraries
+      : null;
+
+  return switch (tab) {
+    ServiceTab.libraries => _page(
+      tab.segment,
+      (state) => ServiceTabScaffold(
+        service: service,
+        tab: ServiceTab.libraries,
+        child: StreamLibrariesScreen(
+          service: service,
+          showAppBar: false,
+          topPadding: _serviceTabTopPadding,
+        ),
+      ),
+      routes: [
+        // `item/:id` BEFORE `:id`, and the order is load-bearing: routes match
+        // in declaration order, so the other way round
+        // `/dashboard/plex/libraries/item/9` would resolve as a library browse
+        // whose id is the word `item`.
+        //
+        // Ids travel as path segments rather than through `_libraryDetailPage`,
+        // whose `RouteUtils.safeIntParam` cannot represent a Jellyfin GUID or a
+        // Plex `ratingKey` — both opaque strings that only often look numeric.
+        // They are guarded for emptiness rather than dereferenced with `!` or
+        // defaulted to `''`.
+        _page(
+          'item/:id',
+          (state) => StreamItemScreen(
+            service: service,
+            itemId: state.pathParameters['id']!,
+          ),
+          redirect: rejectBlankId,
+        ),
+        // One library, browsed. The display name rides in `?title=` so a caller
+        // that already knows it spares the destination a fetch, but a cold deep
+        // link resolves from the path alone.
+        _page(
+          ':id',
+          (state) => StreamLibraryScreen(
+            service: service,
+            libraryId: state.pathParameters['id']!,
+            libraryTitle: state.uri.queryParameters['title'],
+          ),
+          redirect: rejectBlankId,
+        ),
+      ],
+    ),
+    ServiceTab.overview ||
+    ServiceTab.users ||
+    ServiceTab.devices ||
+    ServiceTab.tasks ||
+    ServiceTab.activity ||
+    ServiceTab.onDeck ||
+    ServiceTab.activities ||
+    ServiceTab.playlists => _page(
+      tab.segment,
+      (state) => ServiceTabScaffold(
+        service: service,
+        tab: tab,
+        child: ServiceTabPlaceholder(service: service, tab: tab),
+      ),
+    ),
+    _ => throw UnsupportedError(
+      'ServiceTab.${tab.name} is on ${service.name}\'s bar with no branch root',
+    ),
+  };
 }
 
 GoRoute _truenasRoutes({required String path}) {
@@ -2065,19 +2528,16 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       _qbittorrentRoutes(),
       _bazarrRoutes(),
       _truenasRoutes(path: ServiceKey.truenas.routeParam),
-      _dockgeRoutes(path: ServiceKey.dockge.routeParam),
+      _dockgeRoutes(),
       _prowlarrRoutes(),
       _readarrRoutes(),
       _sabnzbdRoutes(),
       _nzbgetRoutes(),
-      _unraidRoutes(path: ServiceKey.unraid.routeParam),
+      _unraidRoutes(),
       _transmissionRoutes(),
-      _npmRoutes(path: ServiceKey.nginxProxyManager.routeParam),
-      _streamRoutes(
-        service: ServiceKey.jellyfin,
-        path: ServiceKey.jellyfin.routeParam,
-      ),
-      _streamRoutes(service: ServiceKey.plex, path: ServiceKey.plex.routeParam),
+      _npmRoutes(),
+      _streamRoutes(ServiceKey.jellyfin),
+      _streamRoutes(ServiceKey.plex),
     ],
   ),
   NavTab.activity => GoRoute(

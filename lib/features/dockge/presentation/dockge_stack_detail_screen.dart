@@ -16,6 +16,8 @@ import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
 import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 class DockgeStackDetailScreen extends ConsumerWidget {
   const DockgeStackDetailScreen({super.key, required this.name});
@@ -30,29 +32,60 @@ class DockgeStackDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(dockgeStackDetailProvider(name));
+    // Checked **before** the detail provider is read. This page is reachable by
+    // deep link — `/dashboard/dockge/stacks/stack/<name>`, and every pre-tab
+    // spelling still rewrites onto it — so it can be the first Dockge thing the
+    // app builds on an install that was never set up. `dockgeClientProvider`
+    // throws there, and a provider that throws is a failed provider scheduling
+    // a retry with backoff for a condition no waiting changes.
+    final isConfigured = ref
+        .watch(currentSettingsProvider)
+        .isServiceConfigured(ServiceKey.dockge);
 
     return AmbientScaffold(
       accent: AppColors.dockge,
       appBar: GlassAppBar(
         title: Text(name),
         actions: [
-          IconButton(
-            tooltip: 'Edit compose',
-            icon: const Icon(Icons.edit_note_rounded),
-            onPressed: () => context.push(ServiceRoutes.dockgeStackEdit(name)),
-          ),
+          if (isConfigured)
+            IconButton(
+              tooltip: 'Edit compose',
+              icon: const Icon(Icons.edit_note_rounded),
+              onPressed: () =>
+                  context.push(ServiceRoutes.dockgeStackEdit(name)),
+            ),
         ],
       ),
       body: SafeArea(
-        child: detailAsync.when(
-          data: (detail) => _DetailBody(detail: detail, onRefresh: _refresh),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) =>
-              AppErrorState(error: error, onRetry: () => _refresh(ref)),
-        ),
+        child: isConfigured
+            ? _StackDetailBody(name: name, onRefresh: _refresh)
+            : const NotConfiguredPlaceholder(serviceName: 'Dockge'),
       ),
     );
+  }
+}
+
+/// The detail itself, mounted only once Dockge is configured.
+///
+/// Its own widget rather than a branch inside [DockgeStackDetailScreen.build],
+/// because `ref.watch` inside a conditional is still a watch: the provider has
+/// to be unreachable, not merely undrawn.
+class _StackDetailBody extends ConsumerWidget {
+  const _StackDetailBody({required this.name, required this.onRefresh});
+
+  final String name;
+  final void Function(WidgetRef ref) onRefresh;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref
+        .watch(dockgeStackDetailProvider(name))
+        .when(
+          data: (detail) => _DetailBody(detail: detail, onRefresh: onRefresh),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) =>
+              AppErrorState(error: error, onRetry: () => onRefresh(ref)),
+        );
   }
 }
 

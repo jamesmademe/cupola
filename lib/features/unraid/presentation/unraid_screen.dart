@@ -14,53 +14,119 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 
-/// Unraid dashboard: array status, disks and Docker containers.
+/// Which half of the old Unraid dashboard a page lists.
 ///
-/// **Read-only, and that is a data-layer fact rather than a product choice.**
-/// Decision 14 draws the guarded write set — Stop and Restart a container, Stop
-/// and Force stop a VM, each through one dialog naming the host — but the
-/// Unraid GraphQL contract this app is written against
+/// Public since the tab model: Array and Docker are two entries on Unraid's own
+/// bar now, so the choice is made by the router rather than by scrolling past
+/// one section to reach the other.
+enum UnraidSection {
+  array('Array'),
+  docker('Docker');
+
+  const UnraidSection(this.label);
+
+  /// The word the app bar prints when this page draws one of its own.
+  final String label;
+}
+
+/// One section of Unraid — the array's disks, or the Docker containers.
+///
+/// **It used to be both**, one under the other on a single page at
+/// `/dashboard/unraid`. Unraid's bar draws them as separate destinations, so
+/// the page split; the two halves still read the same two documents, and each
+/// tab asks only for the one it draws.
+///
+/// Named constructors rather than a `section:` argument or a boolean, following
+/// `lib/core/widgets/AGENTS.md`: a call site says which half it wants in the
+/// constructor name, and there is no third value to handle.
+///
+/// The readouts are **not** here. `ServiceKpiPeek` sat on the single page
+/// because the single page was the service; under the tab model the Overview is
+/// the tab that carries the identity block and the readouts, and repeating them
+/// on a section tab would be the same four figures twice in one scroll.
+///
+/// **Both halves are read-only, and that is a data-layer fact rather than a
+/// product choice.** Decision 14 draws the guarded write set — Stop and Restart
+/// a container, Stop and Force stop a VM, each through one dialog naming the
+/// host — but the Unraid GraphQL contract this app is written against
 /// (`test/fixtures/unraid/schema.graphql`) declares no `Mutation` type at all,
 /// and the release whose schema does is not the one the three read documents
 /// here match. Guessing a mutation name would ship a confirm dialog that names
-/// the user's server and then fails, which is worse than not offering it.
-/// See the notes on `UnraidDockerContainer.condition` for the half that *is*
+/// the user's server and then fails, which is worse than not offering it. See
+/// the notes on `UnraidDockerContainer.condition` for the half that *is*
 /// readable from what the API already returns.
 class UnraidScreen extends ConsumerWidget {
-  const UnraidScreen({super.key, this.showAppBar = true, this.topPadding = 0});
+  /// The array half — Unraid's Array tab.
+  const UnraidScreen.array({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  }) : section = UnraidSection.array;
 
+  /// The container half — Unraid's Docker tab.
+  const UnraidScreen.docker({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  }) : section = UnraidSection.docker;
+
+  final UnraidSection section;
+
+  /// Whether to draw this screen's own app bar.
+  ///
+  /// False inside the tab shell, where `ServiceHomeScreen` draws the service
+  /// band and `ServiceTabScaffold` the tab bar above it: a third bar of its own
+  /// would put two titles and two back chevrons in one corner.
   final bool showAppBar;
+
+  /// Room those two glass bands take above this page, since they float over it
+  /// rather than pushing it down.
   final double topPadding;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
+    // Checked **before** any provider is read, not after: `unraidClientProvider`
+    // throws when Unraid is not configured, and a `FutureProvider` that throws
+    // is a failed provider — it schedules a retry with backoff for a condition
+    // no waiting changes, and surfaces in tests as a pending timer.
     final isConfigured = settings.isServiceConfigured(ServiceKey.unraid);
 
     return AmbientScaffold(
       accent: AppColors.unraid,
-      appBar: showAppBar ? const GlassAppBar(title: Text('Unraid')) : null,
+      appBar: showAppBar ? GlassAppBar(title: Text(section.label)) : null,
       body: SafeArea(
+        top: showAppBar,
         // The shared placeholder, not a private copy: four dashboards had each
         // grown their own "this service isn't set up" card, which is the state
         // `NotConfiguredPlaceholder` exists to unify.
         child: isConfigured
-            ? _UnraidDashboard(topPadding: topPadding)
+            // Keyed by section so the two halves cannot share one list state:
+            // they are separate branches of the service shell and each keeps
+            // its own scroll offset.
+            ? _UnraidSection(
+                key: ValueKey(section),
+                section: section,
+                topPadding: topPadding,
+              )
             : NotConfiguredPlaceholder.forService(ServiceKey.unraid),
       ),
     );
   }
 }
 
-class _UnraidDashboard extends ConsumerWidget {
-  const _UnraidDashboard({required this.topPadding});
+class _UnraidSection extends ConsumerWidget {
+  const _UnraidSection({
+    super.key,
+    required this.section,
+    required this.topPadding,
+  });
 
+  final UnraidSection section;
   final double topPadding;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final arrayAsync = ref.watch(unraidArrayProvider);
-    final dockerAsync = ref.watch(unraidDockerProvider);
     final summaryAsync = ref.watch(serviceSummaryProvider(ServiceKey.unraid));
     final isOffline = summaryAsync.maybeWhen(
       data: (summary) => !summary.isOnline,
@@ -71,13 +137,13 @@ class _UnraidDashboard extends ConsumerWidget {
       return ServiceOfflineState(
         serviceName: ServiceKey.unraid.title,
         accent: AppColors.unraid,
-        onRetry: () => _invalidateAll(ref),
+        onRetry: () => _invalidate(ref, section),
       );
     }
 
     return RefreshIndicator(
       onRefresh: () async {
-        _invalidateAll(ref);
+        _invalidate(ref, section);
         await Future<void>.delayed(AppAnimation.durationMd);
       },
       child: ListView(
@@ -85,35 +151,40 @@ class _UnraidDashboard extends ConsumerWidget {
         padding: EdgeInsets.only(
           bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
-        children: [
-          if (topPadding > 0) SizedBox(height: topPadding),
-          ServiceKpiPeek(
-            kpis: ref.watch(serviceKpiProvider(ServiceKey.unraid)),
-            accent: AppColors.unraid,
+        children: switch (section) {
+          UnraidSection.array => [
+            if (topPadding > 0) SizedBox(height: topPadding),
+            const SectionHeader(title: 'Array disks', showChevron: false),
+            const SizedBox(height: 2),
+            _DiskList(arrayAsync: ref.watch(unraidArrayProvider)),
+          ],
+          UnraidSection.docker => _dockerChildren(
+            ref.watch(unraidDockerProvider),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          const SectionHeader(title: 'Array disks', showChevron: false),
-          const SizedBox(height: 2),
-          _DiskList(arrayAsync: arrayAsync),
-          const SizedBox(height: AppSpacing.sm),
-          SectionHeader(
-            title: 'Docker',
-            showChevron: false,
-            // The board heads this section with "14 containers · 12 running ·
-            // 1 stopped · 1 unhealthy". Only the arms the payload can answer
-            // are printed, and none of them before the load resolves: a header
-            // reading "0 running" while the request is still in flight states
-            // the one thing we do not yet know.
-            subtitle: dockerAsync.asData == null
-                ? null
-                : _dockerTally(dockerAsync.requireValue),
-          ),
-          const SizedBox(height: 2),
-          _DockerList(dockerAsync: dockerAsync),
-        ],
+        },
       ),
     );
   }
+
+  List<Widget> _dockerChildren(
+    AsyncValue<List<UnraidDockerContainer>> dockerAsync,
+  ) => [
+    if (topPadding > 0) SizedBox(height: topPadding),
+    SectionHeader(
+      title: 'Containers',
+      showChevron: false,
+      // The board heads this section with "14 containers · 12 running ·
+      // 1 stopped · 1 unhealthy". Only the arms the payload can answer
+      // are printed, and none of them before the load resolves: a header
+      // reading "0 running" while the request is still in flight states
+      // the one thing we do not yet know.
+      subtitle: dockerAsync.asData == null
+          ? null
+          : _dockerTally(dockerAsync.requireValue),
+    ),
+    const SizedBox(height: 2),
+    _DockerList(dockerAsync: dockerAsync),
+  ];
 }
 
 /// `14 containers · 12 running · 1 unhealthy` — only the arms that are non-zero.
@@ -141,9 +212,19 @@ String _dockerTally(List<UnraidDockerContainer> containers) {
   ].join(' · ');
 }
 
-void _invalidateAll(WidgetRef ref) {
-  ref.invalidate(unraidArrayProvider);
-  ref.invalidate(unraidDockerProvider);
+/// Re-reads what the tab on screen draws, and nothing else.
+///
+/// A pull on Array no longer re-fetches the container list: the two are
+/// separate branches now, and refreshing a page the user cannot see is a round
+/// trip they did not ask for. The KPI and summary providers are shared and are
+/// invalidated by both, because both are what the Dashboard card reads.
+void _invalidate(WidgetRef ref, UnraidSection section) {
+  switch (section) {
+    case UnraidSection.array:
+      ref.invalidate(unraidArrayProvider);
+    case UnraidSection.docker:
+      ref.invalidate(unraidDockerProvider);
+  }
   ref.invalidate(serviceKpiProvider(ServiceKey.unraid));
   ref.invalidate(serviceSummaryProvider(ServiceKey.unraid));
 }

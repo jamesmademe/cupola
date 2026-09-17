@@ -7,6 +7,8 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The agent picker, as the app-bar connection lens (decision 41).
 ///
@@ -25,6 +27,18 @@ class DockgeAgentLensButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Configuration is checked **before** the agent stream is watched, and that
+    // order matters more since this rides the service band: the band is drawn
+    // above every Dockge tab, including on an install that has never been set
+    // up, and `dockgeClientProvider` throws there. A provider that throws is a
+    // failed provider scheduling a retry with backoff for a condition no
+    // waiting changes — and a picker offering a choice between connections that
+    // do not exist has nothing to say anyway.
+    final configured = ref
+        .watch(currentSettingsProvider)
+        .isServiceConfigured(ServiceKey.dockge);
+    if (!configured) return const SizedBox.shrink();
+
     final agents = ref.watch(dockgeAgentsProvider).asData?.value ?? const [];
     if (agents.length < 2) return const SizedBox.shrink();
 

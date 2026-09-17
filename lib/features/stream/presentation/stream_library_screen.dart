@@ -219,6 +219,23 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
   Widget build(BuildContext context) {
     final accent = widget.service.accent;
 
+    // Checked before the grid is built, and therefore before the paging
+    // controller is ever asked for a page. This browse is a route inside the
+    // Libraries branch now and a deep link can land on it with the server never
+    // set up; without this the first fetch fails on a client that cannot exist,
+    // and what the user gets is a Retry that can never succeed.
+    if (!ref
+        .watch(currentSettingsProvider)
+        .isServiceConfigured(widget.service)) {
+      return AmbientScaffold(
+        accent: accent,
+        appBar: GlassAppBar(title: Text(widget.libraryTitle ?? 'Library')),
+        body: SafeArea(
+          child: NotConfiguredPlaceholder.forService(widget.service),
+        ),
+      );
+    }
+
     // Choosing a household member is the one action [_NeedsViewer] offers, and
     // it happens on another route. Nothing here reads settings otherwise — the
     // client is fetched with `ref.read` inside the fetch — so coming back landed

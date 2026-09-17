@@ -176,7 +176,20 @@ Future<void> _pumpLibrary(
 }) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [jellyfinServerProvider.overrideWithValue(server)],
+      overrides: [
+        // Both servers configured, because the browse checks that before it
+        // asks the paging controller for a page: a deep link can land here on a
+        // server that was never set up, and what that must show is the
+        // not-configured leaf rather than a Retry that can never succeed. These
+        // cases are about the pager, so they answer the question and move on.
+        currentSettingsProvider.overrideWith(
+          (ref) => settingsWithServices(const [
+            ServiceKey.jellyfin,
+            ServiceKey.plex,
+          ]),
+        ),
+        jellyfinServerProvider.overrideWithValue(server),
+      ],
       child: MaterialApp(
         home: StreamLibraryScreen(
           service: service,
