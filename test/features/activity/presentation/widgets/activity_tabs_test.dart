@@ -265,13 +265,17 @@ class _FakeRadarrActivityService extends RadarrService {
   }
 
   @override
-  Future<List<dynamic>> getAllMissing() async {
+  Future<List<dynamic>> getAllMissing({
+    Map<String, dynamic>? queryParameters,
+  }) async {
     missingCalls++;
     return missingItems;
   }
 
   @override
-  Future<List<dynamic>> getAllCutoff() async {
+  Future<List<dynamic>> getAllCutoff({
+    Map<String, dynamic>? queryParameters,
+  }) async {
     cutoffCalls++;
     return cutoffItems;
   }
@@ -304,13 +308,17 @@ class _FakeSonarrActivityService extends SonarrService {
   int cutoffCalls = 0;
 
   @override
-  Future<List<dynamic>> getAllMissing() async {
+  Future<List<dynamic>> getAllMissing({
+    Map<String, dynamic>? queryParameters,
+  }) async {
     missingCalls++;
     return missingItems;
   }
 
   @override
-  Future<List<dynamic>> getAllCutoff() async {
+  Future<List<dynamic>> getAllCutoff({
+    Map<String, dynamic>? queryParameters,
+  }) async {
     cutoffCalls++;
     return cutoffItems;
   }

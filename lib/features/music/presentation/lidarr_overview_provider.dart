@@ -436,35 +436,6 @@ class LidarrHistoryEntry {
       joinSpokenParts([spokenTitle, event, spokenFromDotted(detail)]);
 }
 
-/// The label and tone for a Lidarr history `eventType`.
-///
-/// Three of Lidarr's event types are its own and are missing from the shared
-/// \*arr vocabulary, which knows `downloadFolderImported` / `downloadImported`
-/// because that is how Radarr and Sonarr spell an import. Lidarr writes one
-/// record per **track file**, under names no other fork uses — so the most
-/// common row on a music history, a completed import, fell through to
-/// `humanizeCamelCase` and came out as a neutral "Track File Imported": the one
-/// event on the page that is unambiguously *good news* was the one drawn
-/// without the green that says so.
-///
-/// Mapped here rather than in `global_activity_status.dart` because that file
-/// is shared by every service and is not this screen's to change; the gap is
-/// reported upward, and this switch is what keeps the rows honest meanwhile.
-/// Everything it does not name — grabs, deletions, renames, failures — falls
-/// through to the shared table, which already spells and tones them correctly.
-(String, StatusTone) lidarrHistoryEventDisplay(String eventType) {
-  return switch (eventType) {
-    // Complete and on disk. Green is the arm of the tone rule for exactly this.
-    'trackFileImported' => ('Imported', StatusTone.success),
-    // A tag rewrite: Lidarr doing maintenance nobody asked to be told about.
-    'trackFileRetagged' => ('Retagged', StatusTone.neutral),
-    // A fault, and amber: the album went in with tracks missing, which is the
-    // failure mode a music library actually suffers from.
-    'albumImportIncomplete' => ('Import incomplete', StatusTone.warning),
-    _ => historyEventDisplay(eventType),
-  };
-}
-
 /// Whether [page] holds every history record the server has.
 ///
 /// The question the track count depends on. Two ways to know, and both are
@@ -562,7 +533,13 @@ List<LidarrHistoryEntry> lidarrHistoryToday(
   }
 
   final entries = groups.values.map((group) {
-    final (event, tone) = lidarrHistoryEventDisplay(group.eventType);
+    // The shared \*arr table, not a local override of it. Lidarr's three own
+    // spellings (`trackFileImported`, `trackFileRetagged`,
+    // `albumImportIncomplete`) now live in `global_activity_status.dart`
+    // beside Radarr's, Sonarr's and Readarr's. While they lived in a private
+    // switch here, this Overview and the global Activity feed — reading the
+    // same record — disagreed about the colour of a completed import.
+    final (event, tone) = historyEventDisplay(group.eventType);
     final countable = complete && group.count > 1;
     final sizeBytes = group.count == 1 || countable ? group.bytes : null;
 

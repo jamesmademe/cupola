@@ -626,8 +626,11 @@ class _QueueRadarrService extends FakeRadarrService {
 
 class _MissingRadarrService extends FakeRadarrService {
   @override
-  Future<List<dynamic>> getMissing({int page = 1, int pageSize = 20}) async =>
-      page == 1
+  Future<List<dynamic>> getMissing({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => page == 1
       ? [
           {'id': 3, 'title': 'Cool Movie', 'year': 2024, 'monitored': true},
         ]
@@ -677,24 +680,36 @@ class _ActivityRadarrService extends FakeRadarrService {
   Future<List<dynamic>> getBlocklist() async => const [];
 
   @override
-  Future<List<dynamic>> getMissing({int page = 1, int pageSize = 20}) async {
+  Future<List<dynamic>> getMissing({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async {
     expect(page, 1);
     expect(pageSize, 50);
     return missing;
   }
 
   @override
-  Future<List<dynamic>> getAllMissing() async => missing;
+  Future<List<dynamic>> getAllMissing({
+    Map<String, dynamic>? queryParameters,
+  }) async => missing;
 
   @override
-  Future<List<dynamic>> getCutoff({int page = 1, int pageSize = 20}) async {
+  Future<List<dynamic>> getCutoff({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async {
     expect(page, 1);
     expect(pageSize, 50);
     return cutoff;
   }
 
   @override
-  Future<List<dynamic>> getAllCutoff() async => cutoff;
+  Future<List<dynamic>> getAllCutoff({
+    Map<String, dynamic>? queryParameters,
+  }) async => cutoff;
 }
 
 class _ActivitySonarrService extends FakeSonarrService {

@@ -89,6 +89,28 @@ String? arrAlbumTitle(Map<String, dynamic> item) {
   return stringOrNull(mapOrNull(item['album'])?['title']);
 }
 
+String? arrBookTitle(Map<String, dynamic> item) {
+  return stringOrNull(mapOrNull(item['book'])?['title']);
+}
+
+String? arrAuthorName(Map<String, dynamic> item) {
+  return stringOrNull(mapOrNull(item['author'])?['authorName']);
+}
+
+/// The name of the thing an \*arr queue, history or blocklist record is about.
+///
+/// One lookup per fork, in the order the app's call sites want them: the
+/// subject of the record first, the person or group behind it as the fallback.
+///
+/// **The book and author arms are not optional extras.** Readarr files its
+/// records against `book` and `author` and against nothing else, so while they
+/// were missing every one of the other four lookups missed and this function
+/// answered null for *every* Readarr record. Its callers all fall back to
+/// [arrReleaseTitle] on null, which is the raw release string — so a Readarr
+/// queue row on the Dashboard read `Orbital.2023.RETAIL.EPUB-XYZ` while the
+/// row beside it from Radarr read `Dune`. One arm fixed every call site, and
+/// `readarr_overview_provider.dart` carries a local `readarrRecordTitle` whose
+/// doc comment names this gap as the reason it exists.
 String? arrPrimaryMediaTitle(
   Map<String, dynamic> item, {
   bool includeMovieYear = false,
@@ -96,7 +118,12 @@ String? arrPrimaryMediaTitle(
   return arrMovieTitle(item, includeYear: includeMovieYear) ??
       arrSeriesTitle(item) ??
       arrAlbumTitle(item) ??
-      arrArtistName(item);
+      // Book before author for the same reason album comes before artist: the
+      // book is what the record is about, and "Import failed · Samantha
+      // Harvey" names the wrong noun.
+      arrBookTitle(item) ??
+      arrArtistName(item) ??
+      arrAuthorName(item);
 }
 
 /// How badly an \*arr queue record is doing, as the service itself reports it.

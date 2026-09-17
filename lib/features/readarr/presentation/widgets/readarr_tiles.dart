@@ -3,64 +3,61 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 
 /// Visual style (icon + colour + label) for a Readarr history event type.
+///
+/// **A reader of the shared \*arr table, not a third derivation of it.** This
+/// function used to hold its own `switch`, and its default arm was
+/// `eventType.toUpperCase()` — so `bookFileRenamed`, an event the shared table
+/// has named all along, read "BOOKFILERENAMED" on the History tab while the
+/// Readarr Overview, resolving the same record through
+/// `historyEventDisplay`, read "Renamed". It also disagreed on `grabbed`,
+/// which it toned blue while the table calls it neutral: a grab is the system
+/// doing its job, on a list that is mostly grabs.
+///
+/// Only the *shape* is this file's: an uppercase badge string and an
+/// [IconData]. The label, the tone and the picture all come from the table.
 ({IconData icon, Color color, String label}) readarrEventStyle(
   String eventType,
   ColorScheme colorScheme,
 ) {
-  switch (eventType) {
-    case 'grabbed':
-      return (
-        icon: Icons.download_rounded,
-        // Walked, like the other three arms. These two were the raw palette
-        // constants: on paper `AppColors.info` measures 3.34:1 and
-        // `AppColors.success` 2.07:1, so a grab and an import — the two events
-        // this list shows most — were the only ones in it that could not be
-        // read in daylight.
-        color: statusToneColor(colorScheme, StatusTone.info),
-        label: 'GRABBED',
-      );
-    case 'bookFileImported':
-    case 'downloadFolderImported':
-      return (
-        icon: Icons.check_circle_rounded,
-        color: statusToneColor(colorScheme, StatusTone.success),
-        label: 'IMPORTED',
-      );
-    case 'bookFileDeleted':
-      return (
-        icon: Icons.delete_outline_rounded,
-        color: statusToneColor(colorScheme, StatusTone.neutral),
-        label: 'DELETED',
-      );
-    case 'downloadFailed':
-      return (
-        icon: Icons.error_outline_rounded,
-        color: statusToneColor(colorScheme, StatusTone.warning),
-        label: 'FAILED',
-      );
-    // Readarr's own import faults, and the only two events on this list a user
-    // has to act on. Without these arms they fell to the default below and
-    // drew as `onSurfaceVariant` under a camel-case shout —
-    // `BOOKIMPORTINCOMPLETE` — which is the backlog treatment given to the one
-    // row that is not backlog. Amber, not red: the service answered and told
-    // us the import went wrong.
-    case 'importFailed':
-    case 'bookImportIncomplete':
-      return (
-        icon: Icons.file_download_off_rounded,
-        color: statusToneColor(colorScheme, StatusTone.warning),
-        label: 'IMPORT FAILED',
-      );
-    default:
-      return (
-        icon: Icons.history_rounded,
-        color: colorScheme.onSurfaceVariant,
-        label: eventType.toUpperCase(),
-      );
-  }
+  final (label, tone) = historyEventDisplay(eventType);
+  return (
+    icon: _glyphIcon(historyEventGlyph(eventType)),
+    // Walked, never the raw palette constant: on paper `AppColors.info`
+    // measures 3.34:1 and `AppColors.success` 2.07:1, so a grab and an import
+    // — the two events this list shows most — were the only ones in it that
+    // could not be read in daylight.
+    color: statusToneColor(colorScheme, tone),
+    // The badge is uppercase by design; the *wording* is not this file's to
+    // choose. An event the table has not classified arrives humanised
+    // ("Author Renamed"), which uppercases to a readable "AUTHOR RENAMED"
+    // rather than the old camel-case shout.
+    label: label.toUpperCase(),
+  );
+}
+
+/// The picture for a [StatusGlyph], in this tile's own icon set.
+///
+/// Deliberately a local table rather than a reach into `status_badge.dart`:
+/// that one is sized and weighted for a badge, these are the 16pt outline
+/// icons this row's accent square has always drawn. The *choice* of glyph is
+/// shared; the drawing of it is not.
+IconData _glyphIcon(StatusGlyph? glyph) {
+  return switch (glyph) {
+    StatusGlyph.grabbed => Icons.download_rounded,
+    StatusGlyph.imported => Icons.check_circle_rounded,
+    StatusGlyph.failed => Icons.file_download_off_rounded,
+    StatusGlyph.ignored => Icons.do_not_disturb_on_rounded,
+    StatusGlyph.deleted => Icons.delete_outline_rounded,
+    StatusGlyph.renamed => Icons.drive_file_rename_outline_rounded,
+    StatusGlyph.blocked => Icons.block_rounded,
+    // A retag, or an event nobody has classified. The generic history mark is
+    // the honest picture for "something happened that has no shape".
+    null => Icons.history_rounded,
+  };
 }
 
 /// A bordered list row for a Readarr author, matching the app's service-row

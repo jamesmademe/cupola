@@ -750,11 +750,16 @@ class _ActivityRadarrService extends FakeRadarrService {
   }) async => history;
 
   @override
-  Future<List<dynamic>> getMissing({int page = 1, int pageSize = 20}) async =>
-      missing;
+  Future<List<dynamic>> getMissing({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => missing;
 
   @override
-  Future<List<dynamic>> getAllMissing() async => missing;
+  Future<List<dynamic>> getAllMissing({
+    Map<String, dynamic>? queryParameters,
+  }) async => missing;
 }
 
 /// Drives [selectActivitySearching] with a real `Ref`, the way the notification

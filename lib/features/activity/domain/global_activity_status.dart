@@ -138,6 +138,17 @@ String? historyFilePath(Map<String, dynamic> item) {
 /// an event nobody has classified and the wrong one for a fork's most common
 /// row. A per-screen override table is how that gap used to be patched, and it
 /// puts two spellings of one event on two tabs of one service.
+///
+/// **This table is the only derivation of this vocabulary.** It had been
+/// re-derived independently three times — here, in a private switch in
+/// `lidarr_overview_provider.dart`, and in `readarrEventStyle` in
+/// `readarr_tiles.dart`, whose default arm shouted the raw camel-case event
+/// name — and the three disagreed about `trackFileImported`,
+/// `albumImportIncomplete`, `bookFileRenamed` and `grabbed`. Both overrides are
+/// gone: anything needing a label, a tone or a glyph for an `eventType` reads
+/// [historyEventLabel], [historyEventTone] or [historyEventGlyph]. A screen
+/// that genuinely means something different must say in a comment what and
+/// why, because the next reader will take a silent disagreement for a bug.
 (String, StatusTone) historyEventDisplay(String eventType) {
   return (historyEventLabel(eventType), historyEventTone(eventType));
 }
@@ -152,12 +163,13 @@ StatusGlyph? historyEventGlyph(String eventType) {
     'downloadFolderImported' ||
     'downloadImported' ||
     'bookFileImported' ||
-    'authorFolderImported' => StatusGlyph.imported,
+    'authorFolderImported' ||
+    'trackFileImported' => StatusGlyph.imported,
     'downloadFailed' || 'importFailed' => StatusGlyph.failed,
-    // Readarr's own import failure. It depicts the same thing as an
+    // The forks' own import failures. Both depict the same thing as an
     // `importFailed`: a release that arrived and did not make it into the
-    // library.
-    'bookImportIncomplete' => StatusGlyph.failed,
+    // library whole.
+    'bookImportIncomplete' || 'albumImportIncomplete' => StatusGlyph.failed,
     'downloadIgnored' => StatusGlyph.ignored,
     'episodeFileDeleted' ||
     'movieFileDeleted' ||
@@ -167,8 +179,9 @@ StatusGlyph? historyEventGlyph(String eventType) {
     'movieFileRenamed' ||
     'trackFileRenamed' ||
     'bookFileRenamed' => StatusGlyph.renamed,
-    // `bookFileRetagged` deliberately has none: a metadata rewrite is not a
-    // picture, and the five glyphs above are all events with a shape.
+    // `bookFileRetagged` and `trackFileRetagged` deliberately have none: a
+    // metadata rewrite is not a picture, and the five glyphs above are all
+    // events with a shape.
     _ => null,
   };
 }
@@ -192,15 +205,22 @@ StatusTone historyEventTone(String eventType) => _historyEvent(eventType).$2;
     // `humanizeCamelCase` and came out as a neutral "Book File Imported".
     // `authorFolderImported` is the same event on an older Readarr.
     'bookFileImported' ||
-    'authorFolderImported' => ('Imported', StatusTone.success),
+    'authorFolderImported' ||
+    // Lidarr spells its own import, and writes one record per *track file*.
+    // The same gap, one fork over: before this arm the most common row on a
+    // music history — a completed import, the one event on the page that is
+    // unambiguously good news — came out a neutral "Track File Imported".
+    'trackFileImported' => ('Imported', StatusTone.success),
     // Faults, and therefore amber. Red is reserved for a connection that did
     // not answer — a failed grab means the service answered and told us so.
     'downloadFailed' => ('Failed', StatusTone.warning),
     'importFailed' => ('Import Failed', StatusTone.warning),
-    // Readarr's import fault, and the failure a book library actually suffers:
-    // the book went in with files missing. Amber for the same reason as the two
-    // above — the service answered and told us so.
-    'bookImportIncomplete' => ('Import incomplete', StatusTone.warning),
+    // The forks' own import faults, and the failure each library actually
+    // suffers: the book went in with files missing, the album with tracks
+    // missing. Amber for the same reason as the two above — the service
+    // answered and told us so.
+    'bookImportIncomplete' ||
+    'albumImportIncomplete' => ('Import incomplete', StatusTone.warning),
     // Deliberately not an error, and no longer sharing `importFailed`'s wording.
     // `downloadIgnored` is a choice somebody made — the \*arr was told to leave
     // this release alone. Rendering it as a red "Import Failed" sent the user
@@ -216,9 +236,10 @@ StatusTone historyEventTone(String eventType) => _historyEvent(eventType).$2;
     'movieFileRenamed' ||
     'trackFileRenamed' ||
     'bookFileRenamed' => ('Renamed', StatusTone.neutral),
-    // A metadata rewrite: Readarr doing maintenance nobody asked to be told
-    // about. Neutral, and not a fault.
-    'bookFileRetagged' => ('Retagged', StatusTone.neutral),
+    // A metadata rewrite: Readarr or Lidarr doing maintenance nobody asked to
+    // be told about. Neutral, and not a fault.
+    'bookFileRetagged' ||
+    'trackFileRetagged' => ('Retagged', StatusTone.neutral),
     _ => (humanizeCamelCase(eventType), StatusTone.neutral),
   };
 }

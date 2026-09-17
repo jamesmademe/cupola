@@ -109,6 +109,40 @@ void main() {
       expect(retagged.glyph, isNull);
     });
 
+    test("Lidarr's own spellings are in the table, not in one screen", () {
+      // The same gap Readarr's arms closed, one fork over. Lidarr writes one
+      // record per **track file**, under names no other fork uses, so
+      // `trackFileImported` — the most common row on a music history, and the
+      // one event on the page that is unambiguously good news — fell through to
+      // `humanizeCamelCase` and came out a neutral "Track File Imported", while
+      // `albumImportIncomplete`, a genuine fault, drew as backlog grey.
+      //
+      // `lidarr_overview_provider.dart` had the three correct arms as a
+      // per-screen override, so the Overview and the global feed disagreed
+      // about the same record.
+      final imported = resolveHistoryStatus(const {
+        'eventType': 'trackFileImported',
+      });
+      expect(imported.label, 'Imported');
+      expect(imported.tone, StatusTone.success);
+      expect(imported.glyph, StatusGlyph.imported);
+
+      final incomplete = resolveHistoryStatus(const {
+        'eventType': 'albumImportIncomplete',
+      });
+      expect(incomplete.label, 'Import incomplete');
+      expect(incomplete.tone, StatusTone.warning);
+      expect(incomplete.glyph, StatusGlyph.failed);
+
+      final retagged = resolveHistoryStatus(const {
+        'eventType': 'trackFileRetagged',
+      });
+      expect(retagged.label, 'Retagged');
+      expect(retagged.tone, StatusTone.neutral);
+      // Maintenance has no picture, exactly as `bookFileRetagged` has none.
+      expect(retagged.glyph, isNull);
+    });
+
     test('an unknown event type is humanised and stays neutral', () {
       final status = resolveHistoryStatus(const {
         'eventType': 'someFutureEvent',

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/readarr/presentation/widgets/readarr_tiles.dart';
 
 void main() {
@@ -19,9 +20,12 @@ void main() {
           // this function used to — grabbed and imported, the two events the
           // list shows most — so the Readarr history was the one place in the
           // app where the success green landed unwalked.
+          // Neutral, and deliberately the same neutral the shared table
+          // gives. This arm used to be blue on its own authority, so one
+          // Readarr record wore two colours depending on which tab drew it.
           expect(
             readarrEventStyle('grabbed', scheme).color,
-            statusToneColor(scheme, StatusTone.info),
+            statusToneColor(scheme, StatusTone.neutral),
           );
           expect(
             readarrEventStyle('bookFileImported', scheme).color,
@@ -66,17 +70,77 @@ void main() {
           final incomplete = readarrEventStyle('bookImportIncomplete', scheme);
           expect(incomplete.color, statusToneColor(scheme, StatusTone.warning));
           expect(incomplete.color, isNot(scheme.onSurfaceVariant));
-          expect(incomplete.label, 'IMPORT FAILED');
+          // The table's wording, not this tile's. These are two different
+          // events — a grab that never imported, and a book that imported with
+          // files missing — and collapsing both to "IMPORT FAILED" here made
+          // the History tab say one thing where the Overview said two.
+          expect(incomplete.label, 'IMPORT INCOMPLETE');
+          expect(
+            readarrEventStyle('importFailed', scheme).label,
+            'IMPORT FAILED',
+          );
           expect(
             readarrEventStyle('importFailed', scheme).color,
             statusToneColor(scheme, StatusTone.warning),
           );
         });
 
-        test('an event Readarr invented prints its own name', () {
+        test('a named event is spelled, never shouted camel-case', () {
+          // The defect this function was: its default arm was
+          // `eventType.toUpperCase()`, so `bookFileRenamed` — an event the
+          // shared table has named since Readarr's arms landed — read
+          // "BOOKFILERENAMED" on the History tab while the Overview, reading
+          // the same record through the same table, read "Renamed".
+          final renamed = readarrEventStyle('bookFileRenamed', scheme);
+          expect(renamed.label, 'RENAMED');
+          expect(renamed.color, statusToneColor(scheme, StatusTone.neutral));
+
+          final retagged = readarrEventStyle('bookFileRetagged', scheme);
+          expect(retagged.label, 'RETAGGED');
+          expect(retagged.color, statusToneColor(scheme, StatusTone.neutral));
+
+          final ignored = readarrEventStyle('downloadIgnored', scheme);
+          expect(ignored.label, 'IGNORED');
+        });
+
+        test('this tile and the shared table cannot disagree', () {
+          // The three surfaces derived this vocabulary independently, so the
+          // guard is not "these strings are right" but "there is one table".
+          for (final eventType in const [
+            'grabbed',
+            'bookFileImported',
+            'downloadFolderImported',
+            'authorFolderImported',
+            'downloadFailed',
+            'importFailed',
+            'bookImportIncomplete',
+            'bookFileDeleted',
+            'bookFileRenamed',
+            'bookFileRetagged',
+            'downloadIgnored',
+            'authorRenamed',
+          ]) {
+            final style = readarrEventStyle(eventType, scheme);
+            expect(
+              style.label,
+              historyEventLabel(eventType).toUpperCase(),
+              reason: 'label for $eventType',
+            );
+            expect(
+              style.color,
+              statusToneColor(scheme, historyEventTone(eventType)),
+              reason: 'tone for $eventType',
+            );
+          }
+        });
+
+        test('an event nobody has classified is humanised, not shouted', () {
+          // Still the default arm, but now the shared table's default: an
+          // unnamed event is spelled out and left neutral, which is the right
+          // answer for something nobody has classified. It is not a shout.
           final style = readarrEventStyle('authorRenamed', scheme);
-          expect(style.label, 'AUTHORRENAMED');
-          expect(style.color, scheme.onSurfaceVariant);
+          expect(style.label, 'AUTHOR RENAMED');
+          expect(style.color, statusToneColor(scheme, StatusTone.neutral));
         });
       });
     }
