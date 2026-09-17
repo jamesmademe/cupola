@@ -4,6 +4,7 @@ import 'package:cupola/core/widgets/download_queue_tile.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
+import 'package:cupola/features/transmission/domain/transmission_tone.dart';
 
 /// A Transmission torrent, on the app's one queue plate.
 ///
@@ -106,30 +107,9 @@ class TransmissionTorrentTile extends StatelessWidget {
   ///
   /// The private row had no state chip at all: it printed the status as prose
   /// and coloured only the *warning* case, in `AppColors.warning` straight from
-  /// the palette. Through [StatusTone] the same five arms apply here as
-  /// everywhere else:
-  ///
-  ///  * **amber** for anything [TransmissionTorrent.warning] names — a stall or
-  ///    a daemon-reported error. Both are faults: the client answered, and what
-  ///    it answered is that this torrent is stuck. Red would claim it never
-  ///    replied.
-  ///  * **green** for seeding, the one state that means "this one is done";
-  ///  * **blue** for a live download or a running check, which is work in
-  ///    flight;
-  ///  * **neutral** for stopped and for the three queues — backlog and
-  ///    deliberate stops are the resting state of a torrent client and must not
-  ///    compete with the states that are actually wrong.
-  StatusTone get _tone {
-    if (torrent.warning != null) return StatusTone.warning;
-    return switch (torrent.status) {
-      TransmissionStatus.seed => StatusTone.success,
-      TransmissionStatus.download ||
-      TransmissionStatus.check => StatusTone.info,
-      TransmissionStatus.stopped ||
-      TransmissionStatus.downloadWait ||
-      TransmissionStatus.seedWait ||
-      TransmissionStatus.checkWait ||
-      TransmissionStatus.unknown => StatusTone.neutral,
-    };
-  }
+  /// the palette. The mapping itself is not this widget's — it is shared with
+  /// the Overview's Finished region through [transmissionTorrentTone], because
+  /// the two surfaces draw the **same torrent** and a second copy of the switch
+  /// is how they came to disagree about it.
+  StatusTone get _tone => transmissionTorrentTone(torrent);
 }

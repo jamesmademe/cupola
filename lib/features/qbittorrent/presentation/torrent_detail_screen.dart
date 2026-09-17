@@ -16,6 +16,7 @@ import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent_file.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent_properties.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent_tracker.dart';
+import 'package:cupola/features/qbittorrent/domain/tracker_tone.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_actions.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/widgets/torrent_delete_dialog.dart';
@@ -652,12 +653,16 @@ class _StatusDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (status) {
-      2 => AppColors.success,
-      3 => AppColors.warning,
-      4 => Theme.of(context).colorScheme.error,
-      _ => Theme.of(context).colorScheme.onSurfaceVariant,
-    };
+    final colorScheme = Theme.of(context).colorScheme;
+    // Through the tone rule, never the raw palette: the walk resolves the tone
+    // against the surface this dot actually lands on, and at 6pt a mark that
+    // carries the whole meaning of the row cannot afford to be the one thing
+    // that misses contrast.
+    final color = statusToneColor(
+      colorScheme,
+      trackerStatusTone(status),
+      surface: colorScheme.surface,
+    );
 
     return Container(
       width: 6,

@@ -28,6 +28,7 @@ class SabnzbdQueue {
     required this.mb,
     required this.timeLeft,
     required this.slots,
+    this.reportedSlots,
   });
 
   final bool paused;
@@ -43,7 +44,32 @@ class SabnzbdQueue {
   final double mb;
 
   final String timeLeft;
+
+  /// The slots this page was handed, never more than the `limit` the request
+  /// asked for.
   final List<SabnzbdQueueSlot> slots;
+
+  /// The queue's true depth as `mode=queue` states it (`noofslots_total`), or
+  /// null when the server did not say.
+  ///
+  /// [slots] is one page of a queue that can be deeper, so a count taken from
+  /// its length is the size of the request rather than the size of the queue.
+  /// Read [jobCount], never `slots.length`, wherever the number is shown to
+  /// someone.
+  final int? reportedSlots;
+
+  /// How many jobs are queued: the server's own figure where it gave one, and
+  /// the page length where it did not.
+  ///
+  /// Never below the number of slots in hand — a `noofslots_total` smaller than
+  /// the page it came with describes a different queue than the one being
+  /// drawn, and the rows on screen are the floor of what can honestly be
+  /// counted.
+  int get jobCount {
+    final reported = reportedSlots;
+    if (reported == null || reported < slots.length) return slots.length;
+    return reported;
+  }
 
   String get speedLabel => formatKilobytesPerSecond(kbPerSec);
 
@@ -62,6 +88,12 @@ class SabnzbdQueue {
           .whereType<Map>()
           .map((e) => SabnzbdQueueSlot.fromJson(e.cast<String, dynamic>()))
           .toList(growable: false),
+      // `noofslots_total` is the whole queue; `noofslots` is what the current
+      // view holds after the limit and any filter. The total first, the view as
+      // a fallback, and null when the payload carries neither — a depth nobody
+      // reported is not a depth to invent.
+      reportedSlots:
+          intOrNull(json['noofslots_total']) ?? intOrNull(json['noofslots']),
     );
   }
 }
