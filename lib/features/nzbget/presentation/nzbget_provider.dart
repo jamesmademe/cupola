@@ -13,18 +13,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 final nzbgetClientProvider = Provider<NzbgetClient>((ref) {
   // Selected rather than watching the whole model: this provider closes a live
   // Dio on dispose, so an unrelated settings write must not rebuild it.
-  final transport = watchTransport(ref, ServiceKey.nzbget);
-  if (!transport.configured) {
-    throw Exception('NZBGet not configured');
-  }
-  final client = NzbgetClient(
-    url: transport.url,
-    username: transport.username.isEmpty ? null : transport.username,
-    password: transport.apiKey.isEmpty ? null : transport.apiKey,
-    certFingerprint: transport.pin,
-  );
-  ref.onDispose(() => client.close());
-  return client;
+  return _nzbgetClient(ref, instanceId: null);
 });
 
 /// NZBGet client for an explicitly named connection.
@@ -41,6 +30,20 @@ final nzbgetClientForProvider = Provider.family<NzbgetClient, String>((
     return ref.watch(nzbgetClientProvider);
   }
 
+  return _nzbgetClient(ref, instanceId: instanceId);
+});
+
+/// Builds one client against a named connection.
+///
+/// One builder rather than two copies, matching NPM, Plex, Jellyfin and Unraid
+/// which landed beside this. The construction carries `certFingerprint`, which
+/// ADR-6 makes load-bearing: two copies of it is two places to forget the pin,
+/// and a client built without one silently stops trusting the certificate the
+/// user accepted for that origin.
+NzbgetClient _nzbgetClient(Ref ref, {required String? instanceId}) {
+  // `watchTransport`, selected rather than watching the whole model: this
+  // builder registers a dispose that closes a live Dio, so an unrelated
+  // settings write must not rebuild it.
   final transport = watchTransport(
     ref,
     ServiceKey.nzbget,
@@ -57,7 +60,7 @@ final nzbgetClientForProvider = Provider.family<NzbgetClient, String>((
   );
   ref.onDispose(client.close);
   return client;
-});
+}
 
 /// Global download status.
 ///

@@ -924,20 +924,21 @@ Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
 
 Future<List<ServiceKpi>> _readarrKpisFor(Ref ref, String instanceId) async {
   final service = ref.watch(readarrServiceForProvider(instanceId));
-  List<ReadarrAuthor>? authors;
-  try {
-    authors = await service.getAuthorsOrThrow();
-  } catch (_) {
-    authors = null;
-  }
-  int? queued;
-  try {
-    queued = (await service.getQueue()).length;
-  } catch (_) {
-    queued = null;
-  }
+  // Two independent reads, started together rather than in series: the fold
+  // runs this once per configured connection, so a server that has stopped
+  // answering costs one timeout here instead of two back to back. The fallback
+  // is attached at construction, which is what keeps either failure from
+  // escaping as an unhandled async error while the other is still in flight.
+  final authorsFuture = service.getAuthorsOrThrow().then<List<ReadarrAuthor>?>(
+    (value) => value,
+    onError: (_) => null,
+  );
+  final queueFuture = service.getQueue().then<int?>(
+    (value) => value.length,
+    onError: (_) => null,
+  );
 
-  return _readarrKpisFrom(authors, queued);
+  return _readarrKpisFrom(await authorsFuture, await queueFuture);
 }
 
 List<ServiceKpi> _readarrKpisFrom(List<ReadarrAuthor>? authors, int? queued) {
@@ -993,14 +994,14 @@ Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
 
 Future<List<ServiceKpi>> _sabnzbdKpisFor(Ref ref, String instanceId) async {
   final client = ref.watch(sabnzbdClientForProvider(instanceId));
-  final queue = await client.getQueue();
-  SabnzbdServerStats? stats;
-  try {
-    stats = await client.getServerStats();
-  } catch (_) {
-    // See [_sabnzbdKpis].
-  }
-  return _sabnzbdKpisFrom(queue, stats);
+  // Independent reads, started together — see [_readarrKpisFor]. The stats call
+  // stays optional, so it carries its own fallback instead of failing the pair.
+  final queueFuture = client.getQueue();
+  final statsFuture = client.getServerStats().then<SabnzbdServerStats?>(
+    (value) => value,
+    onError: (_) => null,
+  );
+  return _sabnzbdKpisFrom(await queueFuture, await statsFuture);
 }
 
 List<ServiceKpi> _sabnzbdKpisFrom(

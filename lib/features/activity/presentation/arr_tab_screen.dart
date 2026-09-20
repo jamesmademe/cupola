@@ -7,6 +7,7 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
@@ -135,33 +136,51 @@ class _ArrTabScreenState extends ConsumerState<ArrTabScreen> {
           _reload();
           await _future;
         },
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(0, widget.topPadding, 0, 96),
-          children: [
-            if (widget.mode == ArrTabMode.wanted)
-              SelectionPills<WantedSegment>(
-                values: WantedSegment.values,
-                selected: _wantedSegment,
-                labelBuilder: (segment) => segment.label,
-                onSelected: _selectWanted,
-              ),
-            FutureBuilder<List<dynamic>>(
-              future: future,
-              builder: (context, snapshot) => _content(context, snapshot),
-            ),
-          ],
+        child: FutureBuilder<List<dynamic>>(
+          future: future,
+          builder: (context, snapshot) => _content(context, snapshot),
         ),
       ),
     );
   }
 
+  EdgeInsets _padding(BuildContext context) => EdgeInsets.fromLTRB(
+    0,
+    widget.topPadding,
+    0,
+    FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+  );
+
+  Widget _pills() => SelectionPills<WantedSegment>(
+    values: WantedSegment.values,
+    selected: _wantedSegment,
+    labelBuilder: (segment) => segment.label,
+    onSelected: _selectWanted,
+  );
+
+  /// Wraps a single non-list state in its own scroll view.
+  ///
+  /// Every branch of [_content] owns its scrollable rather than being dropped
+  /// into one shared `ListView(children:)`, for two reasons. Pull-to-refresh
+  /// needs something scrollable beneath it in *every* state, including empty
+  /// and error where there is nothing to scroll. And the data branch has to be
+  /// free to build lazily, which it cannot do from inside a parent that has
+  /// already committed to building all of its children.
+  Widget _single(BuildContext context, Widget child) => ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: _padding(context),
+    children: [if (widget.mode == ArrTabMode.wanted) _pills(), child],
+  );
+
   Widget _content(BuildContext context, AsyncSnapshot<List<dynamic>> snapshot) {
     if (snapshot.connectionState == ConnectionState.waiting) {
-      return AppSkeleton.listRows(count: 6);
+      return _single(context, AppSkeleton.listRows(count: 6));
     }
     if (snapshot.hasError) {
-      return AppErrorState(error: snapshot.error!, onRetry: _reload);
+      return _single(
+        context,
+        AppErrorState(error: snapshot.error!, onRetry: _reload),
+      );
     }
 
     final items = snapshot.data ?? const <dynamic>[];
@@ -172,14 +191,17 @@ class _ArrTabScreenState extends ConsumerState<ArrTabScreen> {
         ArrTabMode.wanted =>
           _isCutoff ? 'Everything meets its cutoff' : 'Nothing missing',
       };
-      return AppEmptyState(
-        icon: switch (widget.mode) {
-          ArrTabMode.queue => Icons.download_done_rounded,
-          ArrTabMode.history => Icons.history_rounded,
-          ArrTabMode.wanted => Icons.manage_search_rounded,
-        },
-        title: label,
-        message: 'The service returned no records for this view.',
+      return _single(
+        context,
+        AppEmptyState(
+          icon: switch (widget.mode) {
+            ArrTabMode.queue => Icons.download_done_rounded,
+            ArrTabMode.history => Icons.history_rounded,
+            ArrTabMode.wanted => Icons.manage_search_rounded,
+          },
+          title: label,
+          message: 'The service returned no records for this view.',
+        ),
       );
     }
 
@@ -190,10 +212,13 @@ class _ArrTabScreenState extends ConsumerState<ArrTabScreen> {
     // same one `/activity` uses.
     if (widget.mode == ArrTabMode.wanted &&
         widget.serviceType == ServiceType.series) {
-      return SonarrWantedHierarchy(
-        items: items,
-        service: service as SonarrService,
-        isCutoff: _isCutoff,
+      return _single(
+        context,
+        SonarrWantedHierarchy(
+          items: items,
+          service: service as SonarrService,
+          isCutoff: _isCutoff,
+        ),
       );
     }
 
@@ -225,11 +250,28 @@ class _ArrTabScreenState extends ConsumerState<ArrTabScreen> {
     ArrActivityMixin service, {
     Map<int, String> qualityProfiles = const {},
   }) {
-    return Column(
-      children: [
-        for (final item in items)
-          _row(context, item, service, qualityProfiles: qualityProfiles),
-      ],
+    // Lazy, deliberately. `_load` goes through `_fetchAllPages`, which will
+    // hand back up to 12,500 history records (250 a page, 50 pages), and a
+    // `Column` of them inside a `ListView` has no viewport culling: every row
+    // was built *and laid out* on the first frame, across nine live routes —
+    // Radarr, Sonarr and Lidarr times queue, wanted and history. The pills ride
+    // as row zero so the list stays one scrollable rather than a header glued
+    // above a second one.
+    final hasPills = widget.mode == ArrTabMode.wanted;
+    final leading = hasPills ? 1 : 0;
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: _padding(context),
+      itemCount: items.length + leading,
+      itemBuilder: (context, index) {
+        if (hasPills && index == 0) return _pills();
+        return _row(
+          context,
+          items[index - leading],
+          service,
+          qualityProfiles: qualityProfiles,
+        );
+      },
     );
   }
 

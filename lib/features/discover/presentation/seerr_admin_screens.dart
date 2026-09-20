@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
@@ -13,9 +13,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class SeerrIssuesScreen extends ConsumerStatefulWidget {
-  const SeerrIssuesScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+  const SeerrIssuesScreen({super.key, this.topPadding = 0});
 
   final double topPadding;
 
@@ -34,63 +32,45 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
       return NotConfiguredPlaceholder.forService(ServiceKey.seerr);
     }
     final issues = ref.watch(seerrIssuesProvider(_filter));
-    return AmbientScaffold(
-      accent: ServiceKey.seerr.accent,
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(seerrIssuesProvider(_filter)),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            widget.topPadding + MediaQuery.paddingOf(context).top,
-            AppSpacing.lg,
-            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-          ),
-          children: [
-            _FilterChips(
-              selected: _filter,
-              onSelected: (value) => setState(() => _filter = value),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            AsyncValueWidget<SeerrAdminResult<SeerrIssue>>(
-              value: issues,
-              serviceName: 'Seerr issues',
-              onRetry: () => ref.invalidate(seerrIssuesProvider(_filter)),
-              isEmpty: (result) => result.items.isEmpty,
-              emptyBuilder: AppEmptyStatePage(
-                emptyState: AppEmptyState(
-                  icon: Icons.report_problem_outlined,
-                  title: 'No issues',
-                  message: 'Seerr has no issues in this view.',
-                  accentColor: ServiceKey.seerr.accent,
-                ),
-              ),
-              data: (result) => Column(
-                children: [
-                  if (result.isPartial)
-                    FaultBand.section(
-                      message:
-                          'Seerr returned ${result.items.length} of '
-                          '${result.total} issues; later pages are unavailable.',
-                      onRetry: () =>
-                          ref.invalidate(seerrIssuesProvider(_filter)),
-                    ),
-                  for (final issue in result.items)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: _IssueCard(
-                        issue: issue,
-                        // The record's own status, not the filter that fetched
-                        // it: keyed on the filter, the "All" tab offered
-                        // Resolve on nothing at all, open issues included.
-                        onResolve: issue.isOpen ? () => _resolve(issue) : null,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
+    final partial = issues.asData?.value;
+    return ServiceListPage<SeerrIssue>.unsummarised(
+      service: ServiceKey.seerr,
+      value: issues.whenData((result) => result.items),
+      serviceName: 'Seerr issues',
+      onRetry: () => ref.invalidate(seerrIssuesProvider(_filter)),
+      emptyIcon: Icons.report_problem_outlined,
+      emptyTitle: 'No issues',
+      emptyMessage: 'Seerr has no issues in this view.',
+      topPadding: widget.topPadding + MediaQuery.paddingOf(context).top,
+      header: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          0,
         ),
+        child: SelectionPills<SeerrIssueFilter>(
+          values: SeerrIssueFilter.values,
+          selected: _filter,
+          labelBuilder: (filter) => filter.label,
+          onSelected: (value) => setState(() => _filter = value),
+          accent: ServiceKey.seerr.accent,
+        ),
+      ),
+      banner: partial != null && partial.isPartial
+          ? FaultBand.section(
+              message:
+                  'Seerr returned ${partial.items.length} of '
+                  '${partial.total} issues; later pages are unavailable.',
+              onRetry: () => ref.invalidate(seerrIssuesProvider(_filter)),
+            )
+          : null,
+      rowBuilder: (issue) => _IssueCard(
+        issue: issue,
+        // The record's own status, not the filter that fetched it: keyed on
+        // the filter, the "All" tab offered Resolve on nothing at all, open
+        // issues included.
+        onResolve: issue.isOpen ? () => _resolve(issue) : null,
       ),
     );
   }
@@ -104,22 +84,20 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
       await ref.read(seerrServiceProvider).resolveIssue(issue.id);
       ref.invalidate(seerrIssuesProvider(_filter));
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Issue resolved')));
+      SnackBarHelper.success(context, 'Issue resolved');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not resolve the issue: $error')),
+      SnackBarHelper.error(
+        context,
+        'Could not resolve the issue',
+        detail: error,
       );
     }
   }
 }
 
 class SeerrUsersScreen extends ConsumerWidget {
-  const SeerrUsersScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+  const SeerrUsersScreen({super.key, this.topPadding = 0});
 
   final double topPadding;
 
@@ -131,85 +109,27 @@ class SeerrUsersScreen extends ConsumerWidget {
       return NotConfiguredPlaceholder.forService(ServiceKey.seerr);
     }
     final users = ref.watch(seerrUsersProvider);
-    return AmbientScaffold(
-      accent: ServiceKey.seerr.accent,
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(seerrUsersProvider),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            topPadding + MediaQuery.paddingOf(context).top,
-            AppSpacing.lg,
-            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-          ),
-          children: [
-            AsyncValueWidget<SeerrAdminResult<SeerrUser>>(
-              value: users,
-              serviceName: 'Seerr users',
+    final partial = users.asData?.value;
+    return ServiceListPage<SeerrUser>.unsummarised(
+      service: ServiceKey.seerr,
+      value: users.whenData((result) => result.items),
+      serviceName: 'Seerr users',
+      onRetry: () => ref.invalidate(seerrUsersProvider),
+      emptyIcon: Icons.people_outline_rounded,
+      emptyTitle: 'No users',
+      emptyMessage: 'Seerr returned no users.',
+      topPadding: topPadding + MediaQuery.paddingOf(context).top,
+      banner: partial != null && partial.isPartial
+          ? FaultBand.section(
+              message:
+                  'Seerr returned ${partial.items.length} of '
+                  '${partial.total} users; later pages are unavailable.',
               onRetry: () => ref.invalidate(seerrUsersProvider),
-              isEmpty: (result) => result.items.isEmpty,
-              emptyBuilder: AppEmptyStatePage(
-                emptyState: AppEmptyState(
-                  icon: Icons.people_outline_rounded,
-                  title: 'No users',
-                  message: 'Seerr returned no users.',
-                  accentColor: ServiceKey.seerr.accent,
-                ),
-              ),
-              data: (result) => Column(
-                children: [
-                  if (result.isPartial)
-                    FaultBand.section(
-                      message:
-                          'Seerr returned ${result.items.length} of '
-                          '${result.total} users; later pages are unavailable.',
-                      onRetry: () => ref.invalidate(seerrUsersProvider),
-                    ),
-                  for (final user in result.items)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: _UserCard(user: user),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+            )
+          : null,
+      rowBuilder: (user) => _UserCard(user: user),
     );
   }
-}
-
-class _FilterChips extends StatelessWidget {
-  const _FilterChips({required this.selected, required this.onSelected});
-
-  final SeerrIssueFilter selected;
-  final ValueChanged<SeerrIssueFilter> onSelected;
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: AppSpacing.sm,
-    runSpacing: AppSpacing.sm,
-    children: [
-      for (final filter in SeerrIssueFilter.values)
-        FilterChip(
-          label: Text(filter.label),
-          selected: selected == filter,
-          showCheckmark: false,
-          onSelected: (_) => onSelected(filter),
-          selectedColor: ServiceKey.seerr.accent,
-          backgroundColor: ServiceKey.seerr.accent.withValues(alpha: 0.10),
-          labelStyle: Theme.of(context).textTheme.labelLarge
-              ?.weight(FontWeight.w700)
-              .copyWith(
-                color: selected == filter
-                    ? ServiceTheme.foregroundOn(ServiceKey.seerr.accent)
-                    : ServiceKey.seerr.accent,
-              ),
-        ),
-    ],
-  );
 }
 
 class _IssueCard extends StatelessWidget {

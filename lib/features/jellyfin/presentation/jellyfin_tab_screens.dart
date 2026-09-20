@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
@@ -58,7 +58,7 @@ class JellyfinDevicesScreen extends ConsumerWidget {
       emptyTitle: 'No devices',
       emptyMessage: 'Devices appear after a client signs in to Jellyfin.',
       onRetry: () => ref.invalidate(jellyfinDevicesProvider),
-      summary: (devices) => _countLabel(devices.length, 'device'),
+      summary: (devices) => countLabel(devices.length, 'device'),
       rowBuilder: (device) => _DeviceRow(device: device),
     );
   }
@@ -163,7 +163,7 @@ class _UserRow extends StatelessWidget {
         : user.isAdministrator
         ? StatusTone.primary
         : StatusTone.neutral;
-    return _RecordRow(
+    return ServiceRecordRow(
       icon: user.isDisabled
           ? Icons.person_off_outlined
           : Icons.person_outline_rounded,
@@ -197,7 +197,7 @@ class _DeviceRow extends StatelessWidget {
         ? 'Last seen unavailable'
         : 'Last seen ${formatRelativeDateTime(device.lastActivityAt!)}';
     final detail = [owner, if (client.isNotEmpty) client, lastSeen].join(' · ');
-    return _RecordRow(
+    return ServiceRecordRow(
       icon: Icons.devices_other_rounded,
       tone: StatusTone.neutral,
       title: name,
@@ -227,7 +227,7 @@ class _TaskRow extends StatelessWidget {
       if (task.errorMessage.trim().isNotEmpty) task.errorMessage.trim(),
     ].join(' · ');
     final name = task.name.trim().isEmpty ? 'Unnamed task' : task.name.trim();
-    return _RecordRow(
+    return ServiceRecordRow(
       icon: presentation.icon,
       tone: presentation.tone,
       title: name,
@@ -239,81 +239,10 @@ class _TaskRow extends StatelessWidget {
   }
 }
 
-class _RecordRow extends StatelessWidget {
-  const _RecordRow({
-    required this.icon,
-    required this.tone,
-    required this.title,
-    required this.detail,
-    required this.trailing,
-    required this.semanticLabel,
-  });
-
-  final IconData icon;
-  final StatusTone tone;
-  final String title;
-  final String detail;
-  final String trailing;
-  final String semanticLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = statusToneColor(theme.colorScheme, tone);
-    return Semantics(
-      container: true,
-      label: semanticLabel,
-      child: ExcludeSemantics(
-        child: AppCard.outlined(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTheme.rowTitle(theme.brightness),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      detail,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: CupolaThemeColors.of(context).dimText,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Flexible(
-                child: Text(
-                  trailing,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  style: AppTheme.data(theme.brightness).copyWith(color: color),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 String _usersSummary(List<JellyfinUserDto> users) {
   final disabled = users.where((user) => user.isDisabled).length;
   final suffix = disabled == 0 ? '' : ' · $disabled disabled';
-  return '${_countLabel(users.length, 'user')}$suffix';
+  return '${countLabel(users.length, 'user')}$suffix';
 }
 
 String _tasksSummary(List<JellyfinScheduledTask> tasks) {
@@ -321,9 +250,6 @@ String _tasksSummary(List<JellyfinScheduledTask> tasks) {
   final suffix = running == 0 ? '' : ' · $running running';
   return '${tasks.length} scheduled$suffix';
 }
-
-String _countLabel(int count, String noun) =>
-    '$count ${count == 1 ? noun : '${noun}s'}';
 
 ({String label, StatusTone tone, IconData icon}) _taskPresentation(
   JellyfinScheduledTask task,

@@ -7,6 +7,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/npm/data/npm_upstream_probe.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_access.dart';
@@ -389,7 +390,9 @@ class _AuditLogList extends ConsumerWidget {
                   final target = entry.summary.isEmpty
                       ? '${entry.objectType}${entry.objectId == null ? '' : ' #${entry.objectId}'}'
                       : entry.summary;
-                  final time = entry.createdOn?.toLocal().toIso8601String();
+                  final time = entry.createdOn == null
+                      ? null
+                      : formatRelativeDateTime(entry.createdOn!);
                   return _NpmReadOnlyTile(
                     icon: Icons.history_rounded,
                     title: '${entry.action} · $target',

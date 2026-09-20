@@ -6,6 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
@@ -65,7 +66,7 @@ class PlexDevicesScreen extends ConsumerWidget {
       emptyTitle: 'No devices',
       emptyMessage: 'Plex returned no authorized devices.',
       onRetry: () => ref.invalidate(plexDevicesProvider),
-      summary: (devices) => _countLabel(devices.length, 'device'),
+      summary: (devices) => countLabel(devices.length, 'device'),
       rowBuilder: (device) => _DeviceRow(device: device),
     );
   }
@@ -88,7 +89,7 @@ class PlexPlaylistsScreen extends ConsumerWidget {
       emptyTitle: 'No playlists',
       emptyMessage: 'Create a Plex playlist to see it here.',
       onRetry: () => ref.invalidate(plexPlaylistsProvider),
-      summary: (playlists) => _countLabel(playlists.length, 'playlist'),
+      summary: (playlists) => countLabel(playlists.length, 'playlist'),
       rowBuilder: (playlist) => _PlaylistRow(playlist: playlist),
     );
   }
@@ -297,7 +298,7 @@ class _DeviceRow extends StatelessWidget {
     final provides = device.provides.isEmpty
         ? 'Capabilities unavailable'
         : device.provides.join(', ');
-    return _RecordRow(
+    return ServiceRecordRow(
       icon: Icons.devices_other_rounded,
       tone: StatusTone.neutral,
       title: name,
@@ -329,9 +330,9 @@ class _PlaylistRow extends StatelessWidget {
     final itemCount = playlist.itemCount;
     final itemLabel = itemCount == null
         ? 'Items unavailable'
-        : _countLabel(itemCount, 'item');
+        : countLabel(itemCount, 'item');
     final detail = [media, ?duration, updated].join(' · ');
-    return _RecordRow(
+    return ServiceRecordRow(
       icon: playlist.smart
           ? Icons.auto_awesome_rounded
           : Icons.playlist_play_rounded,
@@ -343,80 +344,6 @@ class _PlaylistRow extends StatelessWidget {
     );
   }
 }
-
-class _RecordRow extends StatelessWidget {
-  const _RecordRow({
-    required this.icon,
-    required this.tone,
-    required this.title,
-    required this.detail,
-    required this.trailing,
-    required this.semanticLabel,
-  });
-
-  final IconData icon;
-  final StatusTone tone;
-  final String title;
-  final String detail;
-  final String trailing;
-  final String semanticLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = statusToneColor(theme.colorScheme, tone);
-    return Semantics(
-      container: true,
-      label: semanticLabel,
-      child: ExcludeSemantics(
-        child: AppCard.outlined(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTheme.rowTitle(theme.brightness),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      detail,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: CupolaThemeColors.of(context).dimText,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Flexible(
-                child: Text(
-                  trailing,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  style: AppTheme.data(theme.brightness).copyWith(color: color),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-String _countLabel(int count, String noun) =>
-    '$count ${count == 1 ? noun : '${noun}s'}';
 
 String? _durationLabel(int? milliseconds) {
   if (milliseconds == null || milliseconds < 0) return null;

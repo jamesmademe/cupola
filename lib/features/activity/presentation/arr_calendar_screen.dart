@@ -10,6 +10,7 @@ import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
@@ -156,7 +157,7 @@ class _ArrCalendarScreenState extends ConsumerState<ArrCalendarScreen> {
                 AppSpacing.lg,
                 widget.topPadding + AppSpacing.md,
                 AppSpacing.lg,
-                AppSpacing.xxl,
+                FloatingNavBarMetrics.getScrollViewBottomPadding(context),
               ),
               itemCount: records.length,
               separatorBuilder: (context, index) =>

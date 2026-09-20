@@ -156,10 +156,22 @@ class DockgeClient {
     Iterable<String>? protocols,
     Map<String, String>? headers,
   }) async {
+    // Bound to the endpoint *Cupola* resolved, not to the URI socket_io hands
+    // back. That URI is re-parsed from a string socket_io built, and its
+    // `Transport._port()` omits the port whenever it equals the scheme default
+    // — after which `Uri.port` is **0**, because Dart maps a default port for
+    // `http`/`https` but not for `ws`/`wss`. The handshake still happens on
+    // 443, so `pinnedCertificateIsTrusted` compared 443 against 0 and refused
+    // a fingerprint that matched exactly: every Dockge behind a reverse proxy
+    // on the standard port silently lost the certificate its user had
+    // explicitly trusted, and the trust prompt would not offer it again.
+    // `TrueNasWsClient._connect` binds its own resolved endpoint for the same
+    // reason; this is that shape.
+    final endpoint = resolveEndpoint();
     final httpClient = buildPinnedHttpClient(
       pinnedFingerprint: certFingerprint,
-      pinnedHost: uri.host,
-      pinnedPort: uri.port,
+      pinnedHost: endpoint.host,
+      pinnedPort: endpoint.port,
     );
     final socket = await io.WebSocket.connect(
       uri.toString(),

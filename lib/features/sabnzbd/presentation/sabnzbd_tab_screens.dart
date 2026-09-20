@@ -6,6 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -110,11 +111,11 @@ class _SabnzbdHistoryScreenState extends ConsumerState<SabnzbdHistoryScreen> {
       },
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.lg,
           AppSpacing.sm,
           AppSpacing.lg,
-          AppSpacing.xxl,
+          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
         itemCount: visible.length,
         separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
@@ -148,7 +149,7 @@ class _SabnzbdHistoryRow extends StatelessWidget {
     final category = item.category.trim().isEmpty
         ? 'No category'
         : item.category.trim();
-    final when = _sabnzbdTimestamp(item.completed);
+    final when = formatDateTimeStamp(item.completed);
     final size = formatBytes(item.bytes);
     final failure = item.failMessage?.trim();
     final detail = [
@@ -274,7 +275,12 @@ class SabnzbdServersScreen extends ConsumerWidget {
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(0, topPadding, 0, AppSpacing.xxl),
+          padding: EdgeInsets.fromLTRB(
+            0,
+            topPadding,
+            0,
+            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+          ),
           children: [
             const SectionHeader(
               title: 'Transfer volume',
@@ -577,12 +583,4 @@ class _ServerConfigRow extends StatelessWidget {
       ),
     );
   }
-}
-
-String _sabnzbdTimestamp(DateTime? value) {
-  if (value == null) return '—';
-  final local = value.toLocal();
-  String two(int number) => number.toString().padLeft(2, '0');
-  return '${local.year}-${two(local.month)}-${two(local.day)} '
-      '${two(local.hour)}:${two(local.minute)}';
 }

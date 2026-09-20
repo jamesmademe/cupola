@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
@@ -122,14 +123,14 @@ class BazarrProvidersScreen extends ConsumerWidget {
       await ref.read(bazarrServiceProvider).resetProviderStatuses();
       ref.invalidate(bazarrProviderStatusesProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Provider throttles reset')),
-        );
+        SnackBarHelper.success(context, 'Provider throttles reset');
       }
-    } catch (_) {
+    } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to reset provider throttles')),
+        SnackBarHelper.error(
+          context,
+          'Failed to reset provider throttles',
+          detail: error,
         );
       }
     }

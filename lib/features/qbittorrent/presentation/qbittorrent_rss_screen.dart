@@ -54,7 +54,7 @@ class QbittorrentRssScreen extends ConsumerWidget {
             AppSpacing.lg,
             topPadding + AppSpacing.md,
             AppSpacing.lg,
-            AppSpacing.xxl,
+            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
             SectionHeader(

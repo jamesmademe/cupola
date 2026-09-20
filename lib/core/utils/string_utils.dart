@@ -146,3 +146,13 @@ String humanizeCamelCase(String value) {
       .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
       .join(' ');
 }
+
+/// `1 device` / `3 devices` — a count and its noun, pluralised the naive way.
+///
+/// Naive on purpose: every noun it is given is an English API noun the app
+/// chose itself (device, user, item, playlist), never a translated or
+/// user-supplied one, so the `s` is correct for all of them and an
+/// irregular-plural table would be machinery for a case that cannot arrive.
+/// It was written twice verbatim, in the Plex and Jellyfin tab screens.
+String countLabel(int count, String noun) =>
+    '$count ${count == 1 ? noun : '${noun}s'}';

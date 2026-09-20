@@ -13,17 +13,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 final sabnzbdClientProvider = Provider<SabnzbdClient>((ref) {
   // Selected rather than watching the whole model: this provider closes a live
   // Dio on dispose, so an unrelated settings write must not rebuild it.
-  final transport = watchTransport(ref, ServiceKey.sabnzbd);
-  if (!transport.configured) {
-    throw Exception('SABnzbd not configured');
-  }
-  final client = SabnzbdClient(
-    url: transport.url,
-    apiKey: transport.apiKey,
-    certFingerprint: transport.pin,
-  );
-  ref.onDispose(() => client.close());
-  return client;
+  return _sabnzbdClient(ref, instanceId: null);
 });
 
 /// SABnzbd client for an explicitly named connection.
@@ -40,6 +30,20 @@ final sabnzbdClientForProvider = Provider.family<SabnzbdClient, String>((
     return ref.watch(sabnzbdClientProvider);
   }
 
+  return _sabnzbdClient(ref, instanceId: instanceId);
+});
+
+/// Builds one client against a named connection.
+///
+/// One builder rather than two copies, matching NPM, Plex, Jellyfin and Unraid
+/// which landed beside this. The construction carries `certFingerprint`, which
+/// ADR-6 makes load-bearing: two copies of it is two places to forget the pin,
+/// and a client built without one silently stops trusting the certificate the
+/// user accepted for that origin.
+SabnzbdClient _sabnzbdClient(Ref ref, {required String? instanceId}) {
+  // `watchTransport`, selected rather than watching the whole model: this
+  // builder registers a dispose that closes a live Dio, so an unrelated
+  // settings write must not rebuild it.
   final transport = watchTransport(
     ref,
     ServiceKey.sabnzbd,
@@ -55,7 +59,7 @@ final sabnzbdClientForProvider = Provider.family<SabnzbdClient, String>((
   );
   ref.onDispose(client.close);
   return client;
-});
+}
 
 /// The current download queue.
 ///

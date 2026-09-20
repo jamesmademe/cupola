@@ -109,11 +109,11 @@ class _StatsBody extends StatelessWidget {
       onRefresh: onRefresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.lg,
           AppSpacing.sm,
           AppSpacing.lg,
-          AppSpacing.xl,
+          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
         children: [
           _Totals(stats: stats),

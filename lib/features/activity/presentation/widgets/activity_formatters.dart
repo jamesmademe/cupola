@@ -101,16 +101,21 @@ String formatRelativeDateTime(DateTime date, {DateTime? now}) {
 
 String formatActivityDateTime(String? isoDate) {
   if (isoDate == null || isoDate.trim().isEmpty) return '—';
+  final parsed = DateTime.tryParse(isoDate);
+  return parsed == null ? isoDate : formatDateTimeStamp(parsed);
+}
 
-  try {
-    final date = DateTime.parse(isoDate).toLocal();
-    final datePart = formatIsoDate(date.toIso8601String());
-    final timePart =
-        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    return '$datePart $timePart';
-  } catch (_) {
-    return isoDate;
-  }
+/// `2026-09-20 14:03` — the same stamp from an already-parsed timestamp.
+///
+/// The [DateTime] sibling of [formatActivityDateTime], which now delegates to
+/// it. Two byte-identical private copies of this body were written in one pass
+/// (NZBGet and SABnzbd), which is the point at which it belongs here instead:
+/// a clock that disagrees with the rest of the app by one surface reads as a
+/// different kind of timestamp rather than as a bug.
+String formatDateTimeStamp(DateTime? value) {
+  if (value == null) return '—';
+  final local = value.toLocal();
+  return '${formatIsoDate(local.toIso8601String())} ${formatTimeOnly(local)}';
 }
 
 /// `08:12` — the clock and nothing else.

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/dockge/data/dockge_client.dart';
@@ -184,7 +185,7 @@ final dockgeTerminalTextProvider = StreamProvider.autoDispose
       // An empty string is the honest first answer — joined, nothing said yet.
       yield '';
 
-      final tail = _TerminalTail();
+      final tail = TerminalTail();
       await for (final output in client.terminalOutput) {
         if (output.terminalName != terminalName) continue;
         yield tail.append(output.data);
@@ -198,7 +199,8 @@ final dockgeTerminalTextProvider = StreamProvider.autoDispose
 /// chunk costs its own length and nothing more. Re-scanning the whole 64 KiB
 /// buffer with `allMatches` on every chunk — which is what this replaces — is
 /// quadratic work on the UI isolate for output nobody can read that fast.
-class _TerminalTail {
+@visibleForTesting
+class TerminalTail {
   static const int _maxChars = 64 * 1024;
   static const int _maxLines = 2000;
 
@@ -206,6 +208,11 @@ class _TerminalTail {
   int _lines = 0;
 
   String append(String chunk) {
+    // A single frame longer than the whole buffer cannot be useful, and
+    // concatenating it before measuring is what makes the cost quadratic.
+    if (chunk.length > _maxChars) {
+      chunk = chunk.substring(chunk.length - _maxChars);
+    }
     _text += chunk;
     _lines += _newlinesIn(chunk);
     if (_text.length <= _maxChars && _lines <= _maxLines) return _text;
@@ -227,6 +234,17 @@ class _TerminalTail {
       if (next < 0) break;
       cut = next + 1;
       lines--;
+    }
+    // The newline walk is a preference, not the cap. A stream carrying no
+    // `\n` at all left `cut` at zero and the buffer grew without bound — and
+    // that is not only the hostile case: `docker compose pull` draws its
+    // progress with `\r`. Whatever follows the last newline was equally
+    // untrimmable once the caps were already met. The sibling implementation
+    // in `dockge_stack_detail_screen.dart` still has this hard cut; this class
+    // lost it, so the 64 KiB the dartdoc above promises was not enforced.
+    if (_text.length - cut > _maxChars) {
+      cut = _text.length - _maxChars;
+      lines = _newlinesIn(_text.substring(cut));
     }
     if (cut == 0) return;
     _text = _text.substring(cut);

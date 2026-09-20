@@ -200,7 +200,7 @@ class _BazarrHistoryScreenState extends ConsumerState<BazarrHistoryScreen> {
   Widget _body() {
     final items = _visibleItems;
     final failedSources = _sources.where((source) => _errors[source] != null);
-    if (_loading && items.isEmpty) return const _BazarrHistorySkeleton();
+    if (_loading && items.isEmpty) return const ShimmerList.page(itemCount: 6);
     if (failedSources.length == _sources.length && items.isEmpty) {
       return AppErrorState(
         error: _errors[failedSources.first]!,
@@ -222,23 +222,25 @@ class _BazarrHistoryScreenState extends ConsumerState<BazarrHistoryScreen> {
       onRefresh: _reload,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.lg,
           AppSpacing.sm,
           AppSpacing.lg,
-          AppSpacing.xl,
+          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
         itemCount: items.length + 1,
         separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) {
-          if (index == items.length) return _footer(failedSources.toList());
+          if (index == items.length) {
+            return _footer(failedSources.toList(), items.length);
+          }
           return _BazarrHistoryRow(item: items[index]);
         },
       ),
     );
   }
 
-  Widget _footer(List<BazarrHistorySource> failedSources) {
+  Widget _footer(List<BazarrHistorySource> failedSources, int shownCount) {
     final canLoadMore = _sources.any(_hasMore);
     final total = _sources.fold<int?>(0, (sum, source) {
       final sourceTotal = _totals[source];
@@ -257,8 +259,8 @@ class _BazarrHistoryScreenState extends ConsumerState<BazarrHistoryScreen> {
             ),
           Text(
             total == null
-                ? '${_visibleItems.length} shown'
-                : 'Showing ${_visibleItems.length} of $total',
+                ? '$shownCount shown'
+                : 'Showing $shownCount of $total',
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: CupolaThemeColors.of(context).dimText,
             ),
@@ -359,20 +361,6 @@ class _BazarrHistoryRow extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _BazarrHistorySkeleton extends StatelessWidget {
-  const _BazarrHistorySkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      itemCount: 6,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, _) => ShimmerPlaceholder.card(height: 72),
     );
   }
 }

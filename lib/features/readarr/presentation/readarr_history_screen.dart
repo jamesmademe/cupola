@@ -6,6 +6,7 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
@@ -54,6 +55,17 @@ class _ReadarrHistoryScreenState extends ConsumerState<ReadarrHistoryScreen> {
 
   void _reload() => setState(() => _future = _load());
 
+  Future<void> _refresh() async {
+    _reload();
+    final future = _future!;
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder owns the error state; RefreshIndicator only needs the
+      // same request to settle before it releases its progress affordance.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final configured = ref
@@ -67,7 +79,7 @@ class _ReadarrHistoryScreenState extends ConsumerState<ReadarrHistoryScreen> {
     return AmbientScaffold(
       accent: ServiceKey.readarr.accent,
       body: RefreshIndicator(
-        onRefresh: () async => _reload(),
+        onRefresh: _refresh,
         child: FutureBuilder<List<ReadarrHistoryItem>>(
           future: future,
           builder: (context, snapshot) {
@@ -111,7 +123,7 @@ class _ReadarrHistoryScreenState extends ConsumerState<ReadarrHistoryScreen> {
                 0,
                 widget.topPadding + AppSpacing.md,
                 0,
-                AppSpacing.xxl,
+                FloatingNavBarMetrics.getScrollViewBottomPadding(context),
               ),
               itemCount: items.length,
               separatorBuilder: (context, index) =>
