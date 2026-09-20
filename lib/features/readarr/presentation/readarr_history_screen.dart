@@ -6,6 +6,7 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
@@ -111,7 +112,7 @@ class _ReadarrHistoryScreenState extends ConsumerState<ReadarrHistoryScreen> {
                 0,
                 widget.topPadding + AppSpacing.md,
                 0,
-                AppSpacing.xxl,
+                FloatingNavBarMetrics.getScrollViewBottomPadding(context),
               ),
               itemCount: items.length,
               separatorBuilder: (context, index) =>

@@ -38,6 +38,8 @@ class ServiceListPage<T> extends StatelessWidget {
     required this.onRetry,
     required String Function(List<T> items) summary,
     required this.rowBuilder,
+    this.header,
+    this.banner,
     this.topPadding = 0,
     this.skeletonRowHeight = 72,
   }) : _summary = summary;
@@ -54,6 +56,8 @@ class ServiceListPage<T> extends StatelessWidget {
     required this.emptyMessage,
     required this.onRetry,
     required this.rowBuilder,
+    this.header,
+    this.banner,
     this.topPadding = 0,
     this.skeletonRowHeight = 72,
   }) : _summary = null;
@@ -75,6 +79,23 @@ class ServiceListPage<T> extends StatelessWidget {
 
   final Widget Function(T item) rowBuilder;
 
+  /// A control that sits above the list and outside the state ladder.
+  ///
+  /// Deliberately outside it: a filter is the one thing that must stay
+  /// reachable when the list is **empty** or has **failed**, which is exactly
+  /// when a control living in the data branch has disappeared. A tab whose
+  /// filter vanishes on the empty state leaves the reader with nothing to do
+  /// but go back — and the filter they need is the one that would have found
+  /// records. It does not scroll away with the rows for the same reason.
+  final Widget? header;
+
+  /// A band above the rows, inside the list, in the data state only.
+  ///
+  /// For a claim about the records themselves — a partially fetched page, a
+  /// capability the answer was missing. It scrolls with them because it
+  /// qualifies them; [header] does not, because it acts on them.
+  final Widget? banner;
+
   /// Room the floating service band and tab bar take above this page, since
   /// they hover over it rather than pushing it down.
   final double topPadding;
@@ -86,65 +107,78 @@ class ServiceListPage<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final summary = _summary;
+    final leading = (banner == null ? 0 : 1) + (summary == null ? 0 : 1);
 
     return AmbientScaffold(
       accent: service.accent,
       body: Padding(
         padding: EdgeInsets.only(top: topPadding),
-        child: AsyncValueWidget<List<T>>(
-          value: value,
-          serviceName: serviceName,
-          onRetry: onRetry,
-          isEmpty: (items) => items.isEmpty,
-          emptyBuilder: AppEmptyStatePage(
-            emptyState: AppEmptyState(
-              icon: emptyIcon,
-              title: emptyTitle,
-              message: emptyMessage,
-              accentColor: service.accent,
+        child: _withHeader(
+          AsyncValueWidget<List<T>>(
+            value: value,
+            serviceName: serviceName,
+            onRetry: onRetry,
+            isEmpty: (items) => items.isEmpty,
+            emptyBuilder: AppEmptyStatePage(
+              emptyState: AppEmptyState(
+                icon: emptyIcon,
+                title: emptyTitle,
+                message: emptyMessage,
+                accentColor: service.accent,
+              ),
             ),
-          ),
-          skeleton: ListRowsShimmer(count: 6, rowHeight: skeletonRowHeight),
-          data: (items) => RefreshIndicator(
-            // `onRetry` invalidates the provider, and `AsyncValueWidget` is
-            // watching it — so the rows are replaced when the answer arrives.
-            // The indicator only has to stay down until the request is away.
-            onRefresh: () async => onRetry(),
-            child: ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                // Not `AppSpacing.xxl`: the nav bar floats, so the last row
-                // needs its measured height cleared or it sits underneath.
-                FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-              ),
-              itemCount: items.length + (summary == null ? 0 : 1),
-              separatorBuilder: (_, index) => SizedBox(
-                height: summary != null && index == 0
-                    ? AppSpacing.md
-                    : AppSpacing.sm,
-              ),
-              itemBuilder: (context, index) {
-                if (summary != null) {
-                  if (index == 0) return _SummaryLine(label: summary(items));
+            skeleton: ListRowsShimmer(count: 6, rowHeight: skeletonRowHeight),
+            data: (items) => RefreshIndicator(
+              // `onRetry` invalidates the provider, and `AsyncValueWidget` is
+              // watching it — so the rows are replaced when the answer arrives.
+              // The indicator only has to stay down until the request is away.
+              onRefresh: () async => onRetry(),
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  // Not `AppSpacing.xxl`: the nav bar floats, so the last row
+                  // needs its measured height cleared or it sits underneath.
+                  FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+                ),
+                itemCount: items.length + leading,
+                separatorBuilder: (_, index) => SizedBox(
+                  height: index < leading ? AppSpacing.md : AppSpacing.sm,
+                ),
+                itemBuilder: (context, index) {
+                  var offset = index;
+                  if (banner != null) {
+                    if (offset == 0) return banner!;
+                    offset -= 1;
+                  }
+                  if (summary != null) {
+                    if (offset == 0) return _SummaryLine(label: summary(items));
+                    offset -= 1;
+                  }
                   return StaggeredEntrance(
-                    index: index - 1,
-                    child: rowBuilder(items[index - 1]),
+                    index: offset,
+                    child: rowBuilder(items[offset]),
                   );
-                }
-                return StaggeredEntrance(
-                  index: index,
-                  child: rowBuilder(items[index]),
-                );
-              },
+                },
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
+  Widget _withHeader(Widget child) => header == null
+      ? child
+      : Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            header!,
+            Expanded(child: child),
+          ],
+        );
 }
 
 /// The list's one-line claim about itself.

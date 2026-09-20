@@ -19,7 +19,7 @@ services:
       - PGID=1000
       - TZ=Etc/UTC
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       # sabnzbd.ini pre-seeded with `api_key=test-key` and a host_whitelist.
       - ./test/e2e/seed/sabnzbd:/config
@@ -33,7 +33,7 @@ services:
       - NZBGET_USER=nzbget
       - NZBGET_PASS=tegbzn6789
     ports:
-      - "6789:6789"
+      - "127.0.0.1:6789:6789"
 
   readarr:
     # The floating LinuxServer tag was retired; keep the E2E lab on the last
@@ -44,7 +44,7 @@ services:
       - PGID=1000
       - TZ=Etc/UTC
     ports:
-      - "8787:8787"
+      - "127.0.0.1:8787:8787"
     healthcheck:
       # Keep readiness on the service's authenticated API path: a running
       # process is not enough for the E2E tier, and a bad API key must be

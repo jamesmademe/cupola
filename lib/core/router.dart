@@ -2576,18 +2576,29 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
     ServiceTab.activity ||
     ServiceTab.onDeck ||
     ServiceTab.activities ||
-    ServiceTab.playlists => _page(
-      tab.segment,
-      (state) => ServiceTabScaffold(
-        service: service,
-        tab: tab,
-        child: _streamCapabilityScreen(service, tab),
-      ),
-    ),
+    ServiceTab.playlists => _streamCapabilityRoute(service, tab),
     _ => throw UnsupportedError(
       'ServiceTab.${tab.name} is on ${service.name}\'s bar with no branch root',
     ),
   };
+}
+
+/// The branch root for a stream capability tab.
+///
+/// The screen is resolved **here**, not inside the page builder: this one arm
+/// accepts the union of seven tabs across two services, so a pair that is on
+/// neither bar — `(plex, users)`, or a stream tab added to `serviceTabs` before
+/// its screen exists — would otherwise build a perfectly valid route and throw
+/// `UnsupportedError` only when the user taps it. Every other branch root fails
+/// while the router is being built, which is what makes a bar and a router
+/// disagreeing loud at startup and in every test that constructs one. See
+/// `_radarrBranchRoot`, which is the shape this follows.
+GoRoute _streamCapabilityRoute(ServiceKey service, ServiceTab tab) {
+  final child = _streamCapabilityScreen(service, tab);
+  return _page(
+    tab.segment,
+    (state) => ServiceTabScaffold(service: service, tab: tab, child: child),
+  );
 }
 
 Widget _streamCapabilityScreen(ServiceKey service, ServiceTab tab) {

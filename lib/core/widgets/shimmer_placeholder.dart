@@ -139,7 +139,24 @@ class ShimmerList extends StatelessWidget {
     this.itemCount = 5,
     this.itemHeight = 72,
     this.spacing = 8,
-  });
+  }) : _scrolls = false;
+
+  /// The same skeleton standing on its own as a whole page.
+  ///
+  /// The default constructor shrink-wraps and refuses to scroll so it can be
+  /// nested inside another scroll view. A skeleton that *is* the page needs the
+  /// opposite: given a bounded box shorter than six 72pt rows — which is any
+  /// phone once a filter bar is above it — a shrink-wrapped column overflows,
+  /// where a scroll view simply clips. Two screens had written their own copy
+  /// of this class to get that, byte for byte.
+  const ShimmerList.page({
+    super.key,
+    this.itemCount = 5,
+    this.itemHeight = 72,
+    this.spacing = 8,
+  }) : _scrolls = true;
+
+  final bool _scrolls;
 
   @override
   Widget build(BuildContext context) {
@@ -147,8 +164,8 @@ class ShimmerList extends StatelessWidget {
       // Non-scrolling and shrink-wrapped so the skeleton can be nested inside
       // another scroll view (e.g. a loading state inside a ListView) without a
       // "viewport given unbounded height" error.
-      physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
+      physics: _scrolls ? null : const NeverScrollableScrollPhysics(),
+      shrinkWrap: !_scrolls,
       padding: const EdgeInsets.all(16),
       itemCount: itemCount,
       separatorBuilder: (context, index) => SizedBox(height: spacing),

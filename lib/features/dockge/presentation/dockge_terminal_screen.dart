@@ -34,7 +34,7 @@ class _DockgeTerminalScreenState extends ConsumerState<DockgeTerminalScreen> {
         .watch(currentSettingsProvider)
         .isServiceConfigured(ServiceKey.dockge);
     return AmbientScaffold(
-      accent: AppColors.dockge,
+      accent: ServiceKey.dockge.accent,
       appBar: widget.showAppBar
           ? const GlassAppBar(title: Text('Terminal'))
           : null,
@@ -93,21 +93,18 @@ class _StackPicker extends ConsumerWidget {
             padding: EdgeInsets.all(AppSpacing.lg),
             child: Text('No stacks reported by this Dockge instance.'),
           )
-        : Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: stacks
-                  .map(
-                    (stack) => ChoiceChip(
-                      label: Text(stack.name),
-                      selected: selected == stack.name,
-                      onSelected: (_) => onSelected(stack.name),
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
+        // `SelectionPills`, not a `Wrap` of `ChoiceChip`: the shared control
+        // is where the press animation, the haptic, the Reduce Motion check
+        // and — the part that matters here — the button role live together. A
+        // bare chip row has no semantics node at all, so a screen reader got
+        // no role, no accessible name and no selected state for the one
+        // control that chooses which stack the terminal is showing.
+        : SelectionPills<String?>(
+            values: stacks.map((stack) => stack.name).toList(growable: false),
+            selected: selected,
+            labelBuilder: (name) => name ?? '',
+            onSelected: (name) => onSelected(name!),
+            accent: ServiceKey.dockge.accent,
           ),
     loading: () => const ListRowsShimmer(count: 3),
     error: (_, _) => InlineErrorRetry(

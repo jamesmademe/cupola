@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -98,7 +99,7 @@ class _HistoryRow extends StatelessWidget {
     final category = item.category.trim().isEmpty
         ? 'No category'
         : item.category;
-    final when = _timestamp(item.time);
+    final when = formatDateTimeStamp(item.time);
     return _NzbgetRow(
       icon: item.failed
           ? Icons.error_outline_rounded
@@ -154,7 +155,7 @@ class _MessageRow extends StatelessWidget {
     final tone = message.isFault ? StatusTone.warning : StatusTone.neutral;
     final color = statusToneColor(theme.colorScheme, tone);
     final kind = message.kind.trim().isEmpty ? 'Message' : message.kind.trim();
-    final when = _timestamp(message.time);
+    final when = formatDateTimeStamp(message.time);
     return _NzbgetRow(
       icon: message.isFault ? Icons.warning_amber_rounded : Icons.notes_rounded,
       color: color,
@@ -235,12 +236,4 @@ class _NzbgetRow extends StatelessWidget {
       ),
     );
   }
-}
-
-String _timestamp(DateTime? value) {
-  if (value == null) return '—';
-  final local = value.toLocal();
-  String two(int number) => number.toString().padLeft(2, '0');
-  return '${local.year}-${two(local.month)}-${two(local.day)} '
-      '${two(local.hour)}:${two(local.minute)}';
 }

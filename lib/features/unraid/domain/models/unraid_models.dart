@@ -45,19 +45,15 @@ class UnraidCapabilities {
       )) {
         continue;
       }
-      switch (permission['resource']?.toString().toUpperCase()) {
-        case 'VMS':
-          writable.add(UnraidResource.vms);
-          break;
-        case 'NOTIFICATIONS':
-          writable.add(UnraidResource.notifications);
-          break;
-        case 'SHARE':
-          writable.add(UnraidResource.share);
-          break;
-        default:
-          break;
-      }
+      final resource = switch (permission['resource']
+          ?.toString()
+          .toUpperCase()) {
+        'VMS' => UnraidResource.vms,
+        'NOTIFICATIONS' => UnraidResource.notifications,
+        'SHARE' => UnraidResource.share,
+        _ => null,
+      };
+      if (resource != null) writable.add(resource);
     }
     return UnraidCapabilities(
       isAdmin: roles.any((r) => r.toString().toUpperCase() == 'ADMIN'),

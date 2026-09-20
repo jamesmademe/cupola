@@ -87,3 +87,6 @@ export 'media_search_popup_menu.dart';
 // Navigation
 export 'floating_bottom_nav_bar.dart';
 export 'selection_pills.dart';
+
+// Service tabs
+export 'service_record_row.dart';

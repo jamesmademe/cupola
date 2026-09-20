@@ -170,11 +170,11 @@ class _UnraidSection extends ConsumerWidget {
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(
+          top: topPadding,
           bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
         children: switch (section) {
           UnraidSection.array => [
-            if (topPadding > 0) SizedBox(height: topPadding),
             const SectionHeader(title: 'Array disks', showChevron: false),
             const SizedBox(height: 2),
             _DiskList(arrayAsync: ref.watch(unraidArrayProvider)),
@@ -183,14 +183,12 @@ class _UnraidSection extends ConsumerWidget {
             ref.watch(unraidDockerProvider),
           ),
           UnraidSection.vms => [
-            if (topPadding > 0) SizedBox(height: topPadding),
             const _UnraidPermissionBand(resource: UnraidResource.vms),
             const SectionHeader(title: 'Virtual machines', showChevron: false),
             const SizedBox(height: 2),
             _VmList(vmsAsync: ref.watch(unraidVmsProvider)),
           ],
           UnraidSection.notifications => [
-            if (topPadding > 0) SizedBox(height: topPadding),
             const _UnraidPermissionBand(resource: UnraidResource.notifications),
             const SectionHeader(
               title: 'Unread notifications',
@@ -202,7 +200,6 @@ class _UnraidSection extends ConsumerWidget {
             ),
           ],
           UnraidSection.shares => [
-            if (topPadding > 0) SizedBox(height: topPadding),
             const SectionHeader(title: 'Shares', showChevron: false),
             const SizedBox(height: 2),
             _ShareList(sharesAsync: ref.watch(unraidSharesProvider)),
@@ -215,7 +212,6 @@ class _UnraidSection extends ConsumerWidget {
   List<Widget> _dockerChildren(
     AsyncValue<List<UnraidDockerContainer>> dockerAsync,
   ) => [
-    if (topPadding > 0) SizedBox(height: topPadding),
     SectionHeader(
       title: 'Containers',
       showChevron: false,

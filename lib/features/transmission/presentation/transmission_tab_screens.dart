@@ -106,66 +106,79 @@ class _TransmissionLabelsScreenState
         ref.invalidate(transmissionLabelsProvider);
         await Future<void>.delayed(AppAnimation.durationMd);
       },
-      child: ListView(
+      // A `CustomScrollView`, not a `ListView(children:)`: the torrent rows are
+      // the whole of `transmissionTorrentsProvider` and the default filter is
+      // "All", so on a seedbox this section is one or two thousand outlined
+      // cards. Inside a plain `ListView` they are every one built and laid out
+      // per rebuild — and `setState` fires on every pill tap. The headers stay
+      // eager because there are six of them; only the rows go lazy.
+      child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
-        children: [
-          if (session.hasError)
-            InlineErrorRetry(
-              message:
-                  'Labels loaded, but the daemon capability did not. Editing is withheld.',
-              onRetry: () => ref.invalidate(transmissionSessionProvider),
-            )
-          else if (rpcVersion != null && rpcVersion < _labelsRpcVersion)
-            const _LabelsCapabilityNote(),
-          SectionHeader(
-            title: 'Labels',
-            subtitle: tallies.isEmpty
-                ? 'None in use'
-                : '${tallies.length} in use',
-            showChevron: false,
+        slivers: [
+          SliverList.list(
+            children: [
+              if (session.hasError)
+                InlineErrorRetry(
+                  message:
+                      'Labels loaded, but the daemon capability did not. Editing is withheld.',
+                  onRetry: () => ref.invalidate(transmissionSessionProvider),
+                )
+              else if (rpcVersion != null && rpcVersion < _labelsRpcVersion)
+                const _LabelsCapabilityNote(),
+              SectionHeader(
+                title: 'Labels',
+                subtitle: tallies.isEmpty
+                    ? 'None in use'
+                    : '${tallies.length} in use',
+                showChevron: false,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SelectionPills<String?>(
+                values: [null, ...labels],
+                selected: selected,
+                labelBuilder: (label) {
+                  if (label == null) return 'All · ${torrents.length}';
+                  final count = tallies
+                      .firstWhere((item) => item.label == label)
+                      .count;
+                  return '$label · $count';
+                },
+                onSelected: (label) => setState(() => _selectedLabel = label),
+                accent: ServiceKey.transmission.accent,
+              ),
+              SectionHeader(
+                title: 'Torrents',
+                subtitle: selected == null
+                    ? '${torrents.length}'
+                    : '${visible.length} of ${torrents.length}',
+                showChevron: false,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          SelectionPills<String?>(
-            values: [null, ...labels],
-            selected: selected,
-            labelBuilder: (label) {
-              if (label == null) return 'All · ${torrents.length}';
-              final count = tallies
-                  .firstWhere((item) => item.label == label)
-                  .count;
-              return '$label · $count';
-            },
-            onSelected: (label) => setState(() => _selectedLabel = label),
-            accent: ServiceKey.transmission.accent,
-          ),
-          SectionHeader(
-            title: 'Torrents',
-            subtitle: selected == null
-                ? '${torrents.length}'
-                : '${visible.length} of ${torrents.length}',
-            showChevron: false,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: visible.isEmpty
-                ? const AppEmptyState.inline(
-                    icon: Icons.filter_alt_off_rounded,
-                    title: 'No matching torrents',
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              0,
+              AppSpacing.lg,
+              FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+            ),
+            sliver: visible.isEmpty
+                ? const SliverToBoxAdapter(
+                    child: AppEmptyState.inline(
+                      icon: Icons.filter_alt_off_rounded,
+                      title: 'No matching torrents',
+                    ),
                   )
-                : Column(
-                    children: [
-                      for (var index = 0; index < visible.length; index++) ...[
-                        _TorrentLabelsRow(
-                          torrent: visible[index],
-                          canEdit: canEdit,
-                          onEdit: () => _editLabels(visible[index]),
-                        ),
-                        if (index != visible.length - 1)
-                          const SizedBox(height: AppSpacing.sm),
-                      ],
-                    ],
+                : SliverList.separated(
+                    itemCount: visible.length,
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppSpacing.sm),
+                    itemBuilder: (context, index) => _TorrentLabelsRow(
+                      torrent: visible[index],
+                      canEdit: canEdit,
+                      onEdit: () => _editLabels(visible[index]),
+                    ),
                   ),
           ),
         ],
@@ -450,11 +463,11 @@ class _TransmissionSessionBodyState
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.lg,
           AppSpacing.sm,
           AppSpacing.lg,
-          AppSpacing.xxl,
+          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
         children: [
           _DaemonCard(session: session),

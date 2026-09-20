@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
@@ -8,6 +9,7 @@ import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
@@ -114,7 +116,12 @@ class _ReadarrActivityScreenState extends ConsumerState<ReadarrActivityScreen> {
             }
             return ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(0, widget.topPadding + 12, 0, 96),
+              padding: EdgeInsets.fromLTRB(
+                0,
+                widget.topPadding + AppSpacing.md,
+                0,
+                FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+              ),
               itemCount: items.length,
               separatorBuilder: (context, index) => const SizedBox(height: 4),
               itemBuilder: (context, index) => _ReadarrRecordTile(

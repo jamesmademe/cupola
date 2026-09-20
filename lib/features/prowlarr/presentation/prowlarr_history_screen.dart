@@ -152,7 +152,7 @@ class _ProwlarrHistoryScreenState extends ConsumerState<ProwlarrHistoryScreen> {
 
   Widget _body() {
     if (_loading && _items.isEmpty) {
-      return const _ProwlarrHistorySkeleton();
+      return const ShimmerList.page(itemCount: 6);
     }
     if (_error != null && _items.isEmpty) {
       return AppErrorState(
@@ -175,11 +175,11 @@ class _ProwlarrHistoryScreenState extends ConsumerState<ProwlarrHistoryScreen> {
       onRefresh: _reload,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.lg,
           AppSpacing.sm,
           AppSpacing.lg,
-          AppSpacing.xl,
+          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
         itemCount: _items.length + 1,
         separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
@@ -294,20 +294,6 @@ class _ProwlarrHistoryRow extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ProwlarrHistorySkeleton extends StatelessWidget {
-  const _ProwlarrHistorySkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      itemCount: 6,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, _) => ShimmerPlaceholder.card(height: 72),
     );
   }
 }
