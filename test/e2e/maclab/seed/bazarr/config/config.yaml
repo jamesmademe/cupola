@@ -1,0 +1,10 @@
+auth:
+  apikey: test-key
+  password: ''
+  type: null
+  username: ''
+general:
+  api_key: test-key
+  ip: 0.0.0.0
+  no_update: true
+  port: 6767

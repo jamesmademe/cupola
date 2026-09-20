@@ -1,0 +1,317 @@
+# Full macOS/OrbStack laboratory for Cupola.
+#
+# The host application talks to 127.0.0.1. Every bind mount and port in this
+# file is disposable and local to the current run. Keep the state directory
+# under .ai/scratch/zz_maclab (or pass CUPOLA_MACLAB_STATE_DIR explicitly).
+#
+# Start the complete lab with:
+#   docker compose -p "${CUPOLA_MACLAB_PROJECT:-cupola-maclab}" \
+#     -f docker-compose.maclab.yml \
+#     --profile core --profile downloads --profile media --profile infra \
+#     --profile protocol-mocks up -d --wait
+services:
+  seerr:
+    # Seerr v3.4.1, linux/arm64 manifest pinned for a reproducible lab.
+    image: ghcr.io/seerr-team/seerr@sha256:f4768de5f616248d723e05891f3345a1402123775d03bf0890dbfedc0831bda1
+    profiles: [core, media]
+    environment:
+      TZ: ${TZ:-Europe/Rome}
+    ports:
+      - "127.0.0.1:5055:5055"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/seerr:/app/config"
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O /dev/null http://127.0.0.1:5055/api/v1/status || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  radarr:
+    # Radarr 5.27.5.10198-ls285.
+    image: lscr.io/linuxserver/radarr@sha256:af03fa6a993ee7efb65f6121ebd8c89de4a47aa1181cec03832e292a1446111f
+    profiles: [core, media]
+    environment: &linuxserver-env
+      PUID: 1000
+      PGID: 1000
+      TZ: ${TZ:-Europe/Rome}
+    ports:
+      - "127.0.0.1:7878:7878"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/radarr:/config"
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media"
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:7878/api/v3/system/status >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  sonarr:
+    # Sonarr 4.0.15.2941-ls296.
+    image: lscr.io/linuxserver/sonarr@sha256:fbe67c25693dc5f3de220c5691f374576ae265df782c16918cc071b630490bd7
+    profiles: [core, media]
+    environment: *linuxserver-env
+    ports:
+      - "127.0.0.1:8989:8989"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/sonarr:/config"
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media"
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:8989/api/v3/system/status >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  lidarr:
+    # Lidarr 3.1.0.4875-ls41.
+    image: lscr.io/linuxserver/lidarr@sha256:8ab0fd370b604ae034d9a9c261a9d8d873bece33d9736852e7ce4f3566e4a35d
+    profiles: [core, media]
+    environment: *linuxserver-env
+    ports:
+      - "127.0.0.1:8686:8686"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/lidarr:/config"
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media"
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:8686/api/v1/system/status >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  readarr:
+    # Readarr develop 0.4.18.2805-ls157.
+    image: ghcr.io/linuxserver/readarr@sha256:baf471a7101b58f361ef960de91cd15f23bae82d0126df6a9edbeaf5c5aa4392
+    profiles: [core, media]
+    environment: *linuxserver-env
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/readarr:/config"
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media"
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:8787/api/v1/system/status >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  prowlarr:
+    # Prowlarr 2.3.0.5236-ls140.
+    image: lscr.io/linuxserver/prowlarr@sha256:e50f3b188a7d1771b61f395c4203e35476bd3047683508740305e830e15bacf7
+    profiles: [core, downloads]
+    environment: *linuxserver-env
+    ports:
+      - "127.0.0.1:9696:9696"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/prowlarr:/config"
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:9696/api/v1/system/status >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  bazarr:
+    # Bazarr 1.5.2-ls318.
+    image: lscr.io/linuxserver/bazarr@sha256:e1f05f60dada5f7bc83c52037e222a34c26ad04339c22ea685de680ddcd58487
+    profiles: [core, media]
+    environment: *linuxserver-env
+    ports:
+      - "127.0.0.1:6767:6767"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/bazarr:/config"
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media"
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS -H 'X-API-KEY: test-key' http://127.0.0.1:6767/api/badges >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  qbittorrent:
+    # qBittorrent 5.1.2-r4-ls426.
+    image: lscr.io/linuxserver/qbittorrent@sha256:7034f73a3c6fa4ea40fd67df462939d1665d765231b572523921c98c2db5362e
+    profiles: [core, downloads]
+    environment: *linuxserver-env
+    ports:
+      # qBittorrent 5.1 validates the WebUI Host/Origin port. Keep its
+      # conventional port on the host so the client can send the same origin
+      # it uses inside the container; SABnzbd uses 8082 below.
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/qbittorrent:/config"
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/downloads:/downloads"
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://127.0.0.1:8080 >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  transmission:
+    # Transmission 4.1.3-r0-ls362.
+    image: lscr.io/linuxserver/transmission@sha256:1a12fef3c89eca48b7be9e7d36b17b4eb4e1bcf5e1ee7fbf372e3a38b562939d
+    profiles: [core, downloads]
+    environment:
+      <<: *linuxserver-env
+      # LinuxServer's image consumes USER/PASS, not TRANSMISSION_RPC_*.
+      USER: transmission
+      PASS: transmission
+      WHITELIST: ""
+    ports:
+      - "127.0.0.1:9091:9091"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/transmission:/config"
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/downloads:/downloads"
+    healthcheck:
+      test: [CMD-SHELL, "auth=$$(printf '%s:%s' \"$$USER\" \"$$PASS\" | base64); code=$$(curl -sS -o /dev/null -w '%{http_code}' -H \"Authorization: Basic $$auth\" -X POST http://127.0.0.1:9091/transmission/rpc); test \"$$code\" = 200 || test \"$$code\" = 409"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  sabnzbd:
+    # SABnzbd 5.1.3-ls273.
+    image: lscr.io/linuxserver/sabnzbd@sha256:948ea3dc45d68943ec14b33ba37ffa1488da3e9837bf3ca0f75621e971614d85
+    profiles: [core, downloads]
+    environment: *linuxserver-env
+    ports:
+      - "127.0.0.1:8082:8080"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/sabnzbd:/config"
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/downloads:/downloads"
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS 'http://127.0.0.1:8080/api?mode=version&output=json&apikey=test-key' >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  nzbget:
+    # NZBGet v26.3-ls263.
+    image: lscr.io/linuxserver/nzbget@sha256:24951ff9689ddbc0843e309ed16db74409a077541a8aeaecca606ae3565768f2
+    profiles: [core, downloads]
+    environment:
+      <<: *linuxserver-env
+      NZBGET_USER: nzbget
+      NZBGET_PASS: tegbzn6789
+    ports:
+      - "127.0.0.1:6789:6789"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/nzbget:/config"
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/downloads:/downloads"
+    healthcheck:
+      test: [CMD-SHELL, "auth=$$(printf '%s:%s' \"$$NZBGET_USER\" \"$$NZBGET_PASS\" | base64); curl -fsS -H \"Authorization: Basic $$auth\" http://127.0.0.1:6789/jsonrpc >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  jellyfin:
+    # Jellyfin 12.1ubu2604-ls50 (server 12.1.0).
+    image: lscr.io/linuxserver/jellyfin@sha256:51252e7a416e703cdc3cd91e8a54673a2430cc80409be8a38abe511411577b95
+    profiles: [core, media]
+    environment: *linuxserver-env
+    ports:
+      - "127.0.0.1:8096:8096"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/jellyfin:/config"
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media:ro"
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://127.0.0.1:8096/System/Info/Public >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  plex:
+    # Plex 1.43.4.10903-e5521bd8c-ls324.
+    image: lscr.io/linuxserver/plex@sha256:1f6f97d76e7bdb013789e94c838f2d9133b01ee4b2d4194148e492c4e4f12d90
+    profiles: [core, media]
+    environment:
+      <<: *linuxserver-env
+      VERSION: docker
+    ports:
+      - "127.0.0.1:32400:32400"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/plex:/config"
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media:ro"
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://127.0.0.1:32400/identity >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  dockge:
+    # Dockge 1.5.0.
+    image: louislam/dockge@sha256:335c6368b880ecc203236ed89e6e5232e0d6578e8ef5920e4a502390451502bf
+    profiles: [core, infra]
+    environment:
+      DOCKGE_STACKS_DIR: /opt/stacks
+      TZ: ${TZ:-Europe/Rome}
+    ports:
+      - "127.0.0.1:5001:5001"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/dockge:/app/data"
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/stacks:/opt/stacks"
+    healthcheck:
+      test: [CMD-SHELL, "node -e \"fetch('http://127.0.0.1:5001').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  nginx-proxy-manager:
+    # Nginx Proxy Manager 2.12.3.
+    image: jc21/nginx-proxy-manager@sha256:e5eecad9bf040f1e7ddc9db6bbc812d690503aa119005e3aa0c24803746b49ea
+    profiles: [core, infra]
+    environment:
+      TZ: ${TZ:-Europe/Rome}
+      DISABLE_IPV6: "true"
+    ports:
+      - "127.0.0.1:8181:81"
+      - "127.0.0.1:8088:80"
+      - "127.0.0.1:8443:443"
+    volumes:
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/npm/data:/data"
+      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/npm/letsencrypt:/etc/letsencrypt"
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://127.0.0.1:81/api/ >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  truenas-mock:
+    build:
+      context: test/e2e/maclab/mock
+    profiles: [core, infra, protocol-mocks]
+    environment:
+      MOCK_MODE: truenas
+      MOCK_API_KEY: test-key
+    ports:
+      - "127.0.0.1:8460:8460"
+    healthcheck:
+      test: [CMD-SHELL, "python3 -c 'import socket; s=socket.create_connection((\"127.0.0.1\",8460), 1); s.close()'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  unraid-mock:
+    build:
+      context: test/e2e/maclab/mock
+    profiles: [core, infra, protocol-mocks]
+    environment:
+      MOCK_MODE: unraid
+      MOCK_API_KEY: test-key
+    ports:
+      - "127.0.0.1:8480:8480"
+    healthcheck:
+      test: [CMD-SHELL, "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8480/graphql\", timeout=1)' "]
+      interval: 5s
+      timeout: 5s
+      retries: 20

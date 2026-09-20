@@ -129,21 +129,27 @@ class _SystemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final serviceTheme = serviceThemeFor(ServiceKey.truenas);
+    final compact = MediaQuery.sizeOf(context).width < 600;
     return PressableScale(
       onTap: () =>
           context.push(ServiceRoutes.truenasSystemSection(entry.section)),
       child: AppCard.surfaceOutlined(
+        padding: EdgeInsets.all(compact ? AppSpacing.md : AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: compact ? 32 : 38,
+              height: compact ? 32 : 38,
               decoration: BoxDecoration(
                 color: serviceTheme.softContainer,
-                borderRadius: BorderRadius.circular(11),
+                borderRadius: BorderRadius.circular(compact ? 10 : 11),
               ),
-              child: Icon(entry.icon, size: 19, color: serviceTheme.accent),
+              child: Icon(
+                entry.icon,
+                size: compact ? 17 : 19,
+                color: serviceTheme.accent,
+              ),
             ),
             const Spacer(),
             Text(

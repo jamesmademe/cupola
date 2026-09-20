@@ -76,6 +76,7 @@ class WindowChrome extends ConsumerWidget {
                   _ChromeChip(
                     compact: compact,
                     label: 'Lens: ${lens.label}',
+                    icon: Icons.dns_outlined,
                     accent: lens.service.accent,
                     tooltip:
                         'Showing ${lens.service.title} · ${lens.label}. '
@@ -241,10 +242,13 @@ class _Breadcrumb extends StatelessWidget {
       final isLast = i == crumbs.length - 1;
       if (i > 0) {
         children.add(
-          Icon(
-            Icons.chevron_right_rounded,
-            size: 13,
-            color: CupolaThemeColors.of(context).dimText,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Icon(
+              Icons.chevron_right_rounded,
+              size: 13,
+              color: CupolaThemeColors.of(context).dimText,
+            ),
           ),
         );
       }
@@ -262,9 +266,14 @@ class _Breadcrumb extends StatelessWidget {
         ),
       );
       children.add(
-        crumb.location == null || isLast
-            ? text
-            : _CrumbLink(location: crumb.location!, child: text),
+        Flexible(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: crumb.location == null || isLast
+                ? text
+                : _CrumbLink(location: crumb.location!, child: text),
+          ),
+        ),
       );
     }
     return Semantics(
@@ -272,16 +281,7 @@ class _Breadcrumb extends StatelessWidget {
       // between them is four announcements for one place.
       label: crumbs.map((c) => c.label).join(', '),
       excludeSemantics: true,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final child in children)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: child,
-            ),
-        ],
-      ),
+      child: Row(children: children),
     );
   }
 }

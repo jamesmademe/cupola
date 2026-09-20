@@ -106,40 +106,50 @@ class _ActiveChip extends ConsumerWidget {
         : ref.watch(activeInstanceProvider(service));
     final label = instance?.label.trim() ?? '';
 
-    return Semantics(
-      label: service == null
-          ? 'All services'
-          : 'Viewing ${service.title}${label.isEmpty ? '' : ', $label'}',
-      excludeSemantics: true,
-      child: Container(
-        height: compact ? 26 : 32,
-        padding: EdgeInsets.only(
-          left: AppSpacing.sm,
-          right: compact ? AppSpacing.sm + 3 : AppSpacing.md - 1,
-        ),
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.13),
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: accent.withValues(alpha: 0.4)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              service?.icon ?? Icons.grid_view_rounded,
-              size: 16,
-              color: ServiceTheme.onTint(
-                accent,
-                surface: colorScheme.surface,
-                tintAlpha: 0.13,
-              ),
+    final chip = Container(
+      height: compact ? 26 : 32,
+      padding: EdgeInsets.only(
+        left: AppSpacing.sm,
+        right: compact ? AppSpacing.sm + 3 : AppSpacing.md - 1,
+      ),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: accent.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            service?.icon ?? Icons.grid_view_rounded,
+            size: 16,
+            color: ServiceTheme.onTint(
+              accent,
+              surface: colorScheme.surface,
+              tintAlpha: 0.13,
             ),
-            const SizedBox(width: AppSpacing.sm),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          if (compact)
+            Flexible(
+              child: Text(
+                service?.title ?? 'All services',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTheme.chrome(
+                  context,
+                  size: 12,
+                  weight: FontWeight.w700,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            )
+          else ...[
             Text(
               service?.title ?? 'All services',
               style: AppTheme.chrome(
                 context,
-                size: compact ? 12 : 13,
+                size: 13,
                 weight: FontWeight.w700,
                 color: colorScheme.onSurface,
               ),
@@ -160,8 +170,21 @@ class _ActiveChip extends ConsumerWidget {
               ),
             ],
           ],
-        ),
+        ],
       ),
+    );
+
+    return Semantics(
+      label: service == null
+          ? 'All services'
+          : 'Viewing ${service.title}${label.isEmpty ? '' : ', $label'}',
+      excludeSemantics: true,
+      child: compact
+          ? ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 120),
+              child: chip,
+            )
+          : chip,
     );
   }
 }
@@ -443,7 +466,9 @@ class _JumpPillState extends State<_JumpPill> {
           onTap: widget.onPressed,
           child: Container(
             height: widget.compact ? 26 : 30,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.compact ? AppSpacing.sm : AppSpacing.md,
+            ),
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHighest.withValues(
                 alpha: _hovered ? 0.8 : 0.55,

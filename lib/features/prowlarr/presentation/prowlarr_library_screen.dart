@@ -470,27 +470,45 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
             child: indexersAsync.when(
               data: (indexers) {
                 if (filtered.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.xl),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            indexers.isEmpty
-                                ? 'No indexers configured yet.'
-                                : 'No indexers match the current filters.',
-                            textAlign: TextAlign.center,
-                          ),
-                          if (indexers.isEmpty) ...[
-                            const SizedBox(height: AppSpacing.md),
-                            FilledButton.icon(
-                              onPressed: () => addIndexerFlow(context, ref),
-                              icon: const Icon(Icons.add_rounded, size: 18),
-                              label: const Text('Add indexer'),
+                  return LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      // The compact desktop shell can leave this body one
+                      // pixel shorter than the empty message plus its action.
+                      // Let the page own a scroll extent so a centered empty
+                      // state grows past that transient constraint instead of
+                      // painting a bottom overflow marker.
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.xl),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  indexers.isEmpty
+                                      ? 'No indexers configured yet.'
+                                      : 'No indexers match the current filters.',
+                                  textAlign: TextAlign.center,
+                                ),
+                                if (indexers.isEmpty) ...[
+                                  const SizedBox(height: AppSpacing.md),
+                                  FilledButton.icon(
+                                    onPressed: () =>
+                                        addIndexerFlow(context, ref),
+                                    icon: const Icon(
+                                      Icons.add_rounded,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Add indexer'),
+                                  ),
+                                ],
+                              ],
                             ),
-                          ],
-                        ],
+                          ),
+                        ),
                       ),
                     ),
                   );
