@@ -1,2 +1,7 @@
 #include "../../Flutter/Flutter-Release.xcconfig"
 #include "Warnings.xcconfig"
+
+// Flutter 3.38.7 invokes lipo with multiple architectures, which Xcode 27
+// rejects during release packaging. This Mac is Apple Silicon, so keep the
+// release/profile artifact arm64 until the Flutter toolchain is upgraded.
+ARCHS = arm64
