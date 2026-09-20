@@ -55,6 +55,17 @@ class _ReadarrHistoryScreenState extends ConsumerState<ReadarrHistoryScreen> {
 
   void _reload() => setState(() => _future = _load());
 
+  Future<void> _refresh() async {
+    _reload();
+    final future = _future!;
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder owns the error state; RefreshIndicator only needs the
+      // same request to settle before it releases its progress affordance.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final configured = ref
@@ -68,7 +79,7 @@ class _ReadarrHistoryScreenState extends ConsumerState<ReadarrHistoryScreen> {
     return AmbientScaffold(
       accent: ServiceKey.readarr.accent,
       body: RefreshIndicator(
-        onRefresh: () async => _reload(),
+        onRefresh: _refresh,
         child: FutureBuilder<List<ReadarrHistoryItem>>(
           future: future,
           builder: (context, snapshot) {
