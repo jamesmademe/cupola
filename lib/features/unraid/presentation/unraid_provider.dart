@@ -26,6 +26,40 @@ final unraidClientProvider = Provider<UnraidClient>((ref) {
   return client;
 });
 
+/// Unraid client bound to one configured connection id.
+///
+/// Empty and active ids collapse to the lens client. Explicit non-active ids
+/// resolve their own transport and own their Dio lifecycle independently.
+final unraidClientForProvider = Provider.family<UnraidClient, String>((
+  ref,
+  instanceId,
+) {
+  final activeId =
+      ref.read(activeInstanceProvider(ServiceKey.unraid))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == activeId) {
+    return ref.watch(unraidClientProvider);
+  }
+  return _unraidClient(ref, instanceId: instanceId);
+});
+
+UnraidClient _unraidClient(Ref ref, {required String? instanceId}) {
+  final transport = watchTransport(
+    ref,
+    ServiceKey.unraid,
+    instanceId: instanceId,
+  );
+  if (!transport.configured) {
+    throw Exception('Unraid not configured');
+  }
+  final client = UnraidClient(
+    url: transport.url,
+    apiKey: transport.apiKey,
+    certFingerprint: transport.pin,
+  );
+  ref.onDispose(client.close);
+  return client;
+}
+
 /// Storage array status.
 ///
 /// `retry: noProviderRetry`, like every other document this service reads.
@@ -51,4 +85,24 @@ final unraidDockerProvider = FutureProvider<List<UnraidDockerContainer>>((
   ref,
 ) async {
   return ref.watch(unraidClientProvider).getDockerContainers();
+}, retry: noProviderRetry);
+
+final unraidCapabilitiesProvider = FutureProvider<UnraidCapabilities>((
+  ref,
+) async {
+  return ref.watch(unraidClientProvider).getCapabilities();
+}, retry: noProviderRetry);
+
+final unraidVmsProvider = FutureProvider<List<UnraidVm>>((ref) async {
+  return ref.watch(unraidClientProvider).getVms();
+}, retry: noProviderRetry);
+
+final unraidNotificationsProvider = FutureProvider<UnraidNotifications>((
+  ref,
+) async {
+  return ref.watch(unraidClientProvider).getNotifications();
+}, retry: noProviderRetry);
+
+final unraidSharesProvider = FutureProvider<List<UnraidShare>>((ref) async {
+  return ref.watch(unraidClientProvider).getShares();
 }, retry: noProviderRetry);

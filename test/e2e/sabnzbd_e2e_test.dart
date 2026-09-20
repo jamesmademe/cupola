@@ -7,7 +7,7 @@ import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 
 /// Tier-6 E2E (plan §7.6). Exercises the real [SabnzbdClient] transport against
 /// the Docker instance from docker-compose.e2e.yml. Auto-skipped by dart_test.yaml
-/// unless `flutter test --tags e2e` is used. Connects via 127.0.0.1 so SABnzbd's
+/// unless `flutter test --tags e2e --run-skipped` is used. Connects via 127.0.0.1 so SABnzbd's
 /// hostname verification passes (see the seed .ini host_whitelist).
 void main() {
   late SabnzbdClient client;

@@ -91,4 +91,48 @@ void main() {
       expect(slot.progress, closeTo(0.72, 0.001));
     });
   });
+
+  group('SABnzbd server surfaces', () {
+    test('parses rollups and per-server failure counts', () {
+      final stats = SabnzbdServerStats.fromJson(const {
+        'total': 1000,
+        'month': 400,
+        'week': 200,
+        'day': 50,
+        'servers': {
+          'news.example.test': {
+            'total': 800,
+            'articles_tried': 120,
+            'articles_success': 115,
+          },
+        },
+      });
+
+      expect(stats.month, 400);
+      expect(stats.week, 200);
+      expect(stats.day, 50);
+      expect(stats.servers.single.articlesFailed, 5);
+      expect(stats.servers.single.name, 'news.example.test');
+    });
+
+    test('server config accepts SAB booleans without exposing credentials', () {
+      final server = SabnzbdServerConfig.fromJson(const {
+        'displayname': 'Primary',
+        'host': 'news.example.test',
+        'port': '563',
+        'connections': '12',
+        'enable': 1,
+        'ssl': 'true',
+        'optional': false,
+        'priority': '0',
+        'password': 'secret',
+      });
+
+      expect(server.name, 'Primary');
+      expect(server.port, 563);
+      expect(server.connections, 12);
+      expect(server.enabled, isTrue);
+      expect(server.ssl, isTrue);
+    });
+  });
 }

@@ -7,7 +7,8 @@ import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 
 /// Tier-6 E2E (plan §7.6). Drives the real [NzbgetClient] against the Docker
 /// instance from docker-compose.e2e.yml, validating Basic auth, positional
-/// JSON-RPC and Hi/Lo parsing end-to-end. Auto-skipped unless `--tags e2e`.
+/// JSON-RPC and Hi/Lo parsing end-to-end. Auto-skipped unless
+/// `--tags e2e --run-skipped`.
 void main() {
   late NzbgetClient client;
 

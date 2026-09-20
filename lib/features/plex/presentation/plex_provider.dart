@@ -35,7 +35,33 @@ import 'package:cupola/core/providers/provider_retry.dart';
 /// invalidation through every Stream surface. Watching the whole settings object
 /// meant a theme-mode toggle did that.
 final plexClientProvider = Provider<PlexClient>((ref) {
-  final transport = watchTransport(ref, ServiceKey.plex);
+  return _plexClient(ref, instanceId: null);
+});
+
+/// Plex bound to one named connection, whatever the lens is pointing at.
+///
+/// The dashboard's folded matrix has to ask a second Plex for its own figures;
+/// reading [plexClientProvider] there would silently answer with the lens's
+/// server under the other connection's label. The lens's own id collapses back
+/// onto the plain provider so tests and screens keep one client per active
+/// connection.
+final plexClientForProvider = Provider.family<PlexClient, String>((
+  ref,
+  instanceId,
+) {
+  final lens = ref.read(activeInstanceProvider(ServiceKey.plex))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == lens) {
+    return ref.watch(plexClientProvider);
+  }
+  return _plexClient(ref, instanceId: instanceId);
+});
+
+PlexClient _plexClient(Ref ref, {required String? instanceId}) {
+  final transport = watchTransport(
+    ref,
+    ServiceKey.plex,
+    instanceId: instanceId,
+  );
   final clientId = ref.watch(
     currentSettingsProvider.select((s) => s.plexClientId),
   );
@@ -50,7 +76,7 @@ final plexClientProvider = Provider<PlexClient>((ref) {
   );
   ref.onDispose(client.close);
   return client;
-});
+}
 
 /// The same client, seen through the interface the Stream surfaces are written
 /// against.
@@ -102,3 +128,42 @@ final plexChildrenProvider = FutureProvider.autoDispose
     .family<List<StreamItem>, String>((ref, ratingKey) async {
       return ref.watch(plexClientProvider).getChildren(ratingKey);
     }, retry: noProviderRetry);
+
+/// Sessions with the transport failure preserved, for the surfaces that state
+/// a **figure** rather than draw a board.
+///
+/// `getSessions()` answers an unreachable server with `const []`, which is
+/// right for a browse — a dark server is a quiet empty board — and wrong for a
+/// counter, where `0 streams` is a claim nobody made. The KPI rail and the
+/// reachability signal read this instead.
+///
+/// It is a provider and not a call the KPI layer makes on the client itself,
+/// which is the part worth keeping: read straight off the client, every rebuild
+/// of an `autoDispose` rail was a fresh `/status/sessions` on the wire, the Overview's
+/// own copy of the same request could not be shared with it, and a fake client
+/// was the only thing a test could substitute. A provider caches, invalidates
+/// with everything else, and can be overridden by name.
+final plexStrictSessionsProvider = FutureProvider<List<StreamSession>>(
+  (ref) => ref.watch(plexClientProvider).getSessionsOrThrow(),
+  retry: noProviderRetry,
+);
+
+/// The libraries, with the failure preserved. See
+/// [plexStrictSessionsProvider] for why this exists beside
+/// [plexLibrariesProvider] rather than replacing it.
+final plexStrictLibrariesProvider = FutureProvider<List<StreamLibrary>>(
+  (ref) => ref.watch(plexClientProvider).getLibrariesOrThrow(),
+  retry: noProviderRetry,
+);
+
+final plexOnDeckTabProvider = FutureProvider<List<StreamItem>>((ref) async {
+  return ref.watch(plexClientProvider).getContinueWatching(count: 100);
+}, retry: noProviderRetry);
+
+final plexDevicesProvider = FutureProvider<List<PlexDevice>>((ref) async {
+  return ref.watch(plexClientProvider).getDevices();
+}, retry: noProviderRetry);
+
+final plexPlaylistsProvider = FutureProvider<List<PlexPlaylist>>((ref) async {
+  return ref.watch(plexClientProvider).getPlaylists();
+}, retry: noProviderRetry);

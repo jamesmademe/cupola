@@ -280,12 +280,9 @@ class _QueueTile extends ConsumerWidget {
       // simply not drawn — which is the fix: the old `0` default computed a
       // full bar for a job nobody measured.
       progress: group.progress,
-      // `DownloadQueueTile.percentage` is a non-nullable `int` and always
-      // prints, so an unmeasurable job still renders `0%` here. `0%` is at
-      // least not a claim that the job finished, and the subtitle says the
-      // progress is unknown — but the plate wants a nullable percentage, the
-      // way it already has a nullable `progress`.
-      percentage: group.percentage ?? 0,
+      // Preserve the distinction between a real zero and a percentage NZBGet
+      // could not compute. The shared plate renders the latter as an em dash.
+      percentage: group.percentage,
       accent: AppColors.nzbget,
       actions: DownloadQueueActionsMenu(
         paused: _paused,

@@ -21,7 +21,10 @@ import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 /// one section to reach the other.
 enum UnraidSection {
   array('Array'),
-  docker('Docker');
+  docker('Docker'),
+  vms('VMs'),
+  notifications('Notifications'),
+  shares('Shares');
 
   const UnraidSection(this.label);
 
@@ -70,6 +73,24 @@ class UnraidScreen extends ConsumerWidget {
     this.topPadding = 0,
   }) : section = UnraidSection.docker;
 
+  const UnraidScreen.vms({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  }) : section = UnraidSection.vms;
+
+  const UnraidScreen.notifications({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  }) : section = UnraidSection.notifications;
+
+  const UnraidScreen.shares({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  }) : section = UnraidSection.shares;
+
   final UnraidSection section;
 
   /// Whether to draw this screen's own app bar.
@@ -101,9 +122,9 @@ class UnraidScreen extends ConsumerWidget {
         // grown their own "this service isn't set up" card, which is the state
         // `NotConfiguredPlaceholder` exists to unify.
         child: isConfigured
-            // Keyed by section so the two halves cannot share one list state:
-            // they are separate branches of the service shell and each keeps
-            // its own scroll offset.
+            // Keyed by section so the five cannot share one list state:
+            // each is a separate branch of the service shell and keeps its own
+            // scroll offset.
             ? _UnraidSection(
                 key: ValueKey(section),
                 section: section,
@@ -161,6 +182,31 @@ class _UnraidSection extends ConsumerWidget {
           UnraidSection.docker => _dockerChildren(
             ref.watch(unraidDockerProvider),
           ),
+          UnraidSection.vms => [
+            if (topPadding > 0) SizedBox(height: topPadding),
+            const _UnraidPermissionBand(resource: UnraidResource.vms),
+            const SectionHeader(title: 'Virtual machines', showChevron: false),
+            const SizedBox(height: 2),
+            _VmList(vmsAsync: ref.watch(unraidVmsProvider)),
+          ],
+          UnraidSection.notifications => [
+            if (topPadding > 0) SizedBox(height: topPadding),
+            const _UnraidPermissionBand(resource: UnraidResource.notifications),
+            const SectionHeader(
+              title: 'Unread notifications',
+              showChevron: false,
+            ),
+            const SizedBox(height: 2),
+            _NotificationList(
+              notificationsAsync: ref.watch(unraidNotificationsProvider),
+            ),
+          ],
+          UnraidSection.shares => [
+            if (topPadding > 0) SizedBox(height: topPadding),
+            const SectionHeader(title: 'Shares', showChevron: false),
+            const SizedBox(height: 2),
+            _ShareList(sharesAsync: ref.watch(unraidSharesProvider)),
+          ],
         },
       ),
     );
@@ -224,9 +270,358 @@ void _invalidate(WidgetRef ref, UnraidSection section) {
       ref.invalidate(unraidArrayProvider);
     case UnraidSection.docker:
       ref.invalidate(unraidDockerProvider);
+    case UnraidSection.vms:
+      ref.invalidate(unraidVmsProvider);
+      ref.invalidate(unraidCapabilitiesProvider);
+    case UnraidSection.notifications:
+      ref.invalidate(unraidNotificationsProvider);
+      ref.invalidate(unraidCapabilitiesProvider);
+    case UnraidSection.shares:
+      ref.invalidate(unraidSharesProvider);
+      // Capabilities too, for the same reason the other two write-capable
+      // sections do it: a refresh is the moment to find out the key was given
+      // permissions it did not have when the page opened.
+      ref.invalidate(unraidCapabilitiesProvider);
   }
   ref.invalidate(serviceKpiProvider(ServiceKey.unraid));
   ref.invalidate(serviceSummaryProvider(ServiceKey.unraid));
+}
+
+class _UnraidPermissionBand extends ConsumerWidget {
+  const _UnraidPermissionBand({required this.resource});
+  final UnraidResource resource;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final capability = ref.watch(unraidCapabilitiesProvider).asData?.value;
+    if (capability == null || capability.canWrite(resource)) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Text(
+        'This API key is read-only. Readouts stay available; actions require write permission.',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+class _VmList extends ConsumerWidget {
+  const _VmList({required this.vmsAsync});
+  final AsyncValue<List<UnraidVm>> vmsAsync;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => vmsAsync.when(
+    data: (vms) => vms.isEmpty
+        ? const _UnraidEmpty(message: 'No virtual machines reported.')
+        : Column(
+            children: vms.map((vm) => _VmTile(vm: vm)).toList(growable: false),
+          ),
+    loading: () => const ListRowsShimmer(count: 3),
+    error: (_, _) => InlineErrorRetry(
+      message: 'Failed to load virtual machines',
+      onRetry: () => ref.invalidate(unraidVmsProvider),
+    ),
+  );
+}
+
+class _VmTile extends ConsumerWidget {
+  const _VmTile({required this.vm});
+  final UnraidVm vm;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final color = statusToneColor(
+      Theme.of(context).colorScheme,
+      vm.tone,
+      surface: Theme.of(context).colorScheme.surface,
+    );
+    final action = vm.isRunning
+        ? UnraidVmAction.stop
+        : (vm.isPaused ? UnraidVmAction.resume : UnraidVmAction.start);
+    return _UnraidTile(
+      icon: Icons.computer_rounded,
+      iconColor: color,
+      title: vm.name,
+      // `PMSUSPENDED` and `SHUTOFF` are libvirt's words, not anyone else's.
+      detail: _vmStateLabel(vm.state),
+      trailing: IconButton(
+        // `_actionVerb`, not `action.graphQl`: the mutation's field name is a
+        // wire detail and "forceStop Kodi" is not a sentence.
+        tooltip: '${_actionVerb(action)} ${vm.name}',
+        onPressed: () => _run(context, ref, action),
+        icon: Icon(
+          action == UnraidVmAction.start || action == UnraidVmAction.resume
+              ? Icons.play_arrow_rounded
+              : Icons.stop_rounded,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _run(
+    BuildContext context,
+    WidgetRef ref,
+    UnraidVmAction action,
+  ) async {
+    final capability = ref.read(unraidCapabilitiesProvider).asData?.value;
+    if (capability?.canWrite(UnraidResource.vms) != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This action requires a read-write Unraid key.'),
+        ),
+      );
+      return;
+    }
+    if (action == UnraidVmAction.stop) {
+      final host =
+          ref
+              .read(serviceSummaryProvider(ServiceKey.unraid))
+              .asData
+              ?.value
+              .host ??
+          'this Unraid host';
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text('Stop ${vm.name}?'),
+          content: Text('This stops the VM on $host.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Stop'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+    }
+    try {
+      // **The boolean is the answer, not the absence of a throw.** Unraid
+      // answers 200 with `{"vm":{"stop":false}}` when it ran the mutation and
+      // refused it — the VM is already stopping, libvirt is busy, the key has
+      // a privilege the coarse capability check cannot see. Ignoring it
+      // refreshed the list and told the user nothing, which reads exactly like
+      // a tap that did not register.
+      final accepted = await ref
+          .read(unraidClientProvider)
+          .runVmAction(vm.id, action);
+      ref.invalidate(unraidVmsProvider);
+      if (accepted || !context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${vm.name} did not accept ${_actionVerb(action)}. '
+            'It may already be changing state.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('VM action failed: $error')));
+    }
+  }
+}
+
+/// A libvirt domain state as a reader would say it.
+///
+/// Unknown states fall back to the lower-cased wire value rather than to a
+/// guess: a state this app has not been taught is still better shown than
+/// hidden behind "unknown".
+String _vmStateLabel(String state) => switch (state.toUpperCase()) {
+  'RUNNING' => 'running',
+  'PAUSED' => 'paused',
+  'SHUTOFF' || 'SHUTDOWN' => 'stopped',
+  'CRASHED' => 'crashed',
+  'PMSUSPENDED' => 'suspended',
+  'IDLE' => 'idle',
+  'NOSTATE' => 'state unknown',
+  _ => state.toLowerCase(),
+};
+
+/// The action as a user would name it, rather than as GraphQL spells it.
+String _actionVerb(UnraidVmAction action) => switch (action) {
+  UnraidVmAction.start => 'start',
+  UnraidVmAction.stop => 'stop',
+  UnraidVmAction.pause => 'pause',
+  UnraidVmAction.resume => 'resume',
+  UnraidVmAction.forceStop => 'force stop',
+  UnraidVmAction.reboot => 'reboot',
+};
+
+class _NotificationList extends ConsumerWidget {
+  const _NotificationList({required this.notificationsAsync});
+  final AsyncValue<UnraidNotifications> notificationsAsync;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => notificationsAsync.when(
+    data: (value) => value.items.isEmpty
+        ? const _UnraidEmpty(message: 'No unread notifications.')
+        : Column(
+            children: value.items
+                .map((item) => _NotificationTile(item: item))
+                .toList(growable: false),
+          ),
+    loading: () => const ListRowsShimmer(count: 4),
+    error: (_, _) => InlineErrorRetry(
+      message: 'Failed to load notifications',
+      onRetry: () => ref.invalidate(unraidNotificationsProvider),
+    ),
+  );
+}
+
+class _NotificationTile extends ConsumerWidget {
+  const _NotificationTile({required this.item});
+  final UnraidNotification item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final color = statusToneColor(
+      Theme.of(context).colorScheme,
+      item.tone,
+      surface: Theme.of(context).colorScheme.surface,
+    );
+    return _UnraidTile(
+      icon: Icons.notifications_outlined,
+      iconColor: color,
+      title: item.title.isEmpty ? item.subject : item.title,
+      detail: item.description.isEmpty ? item.subject : item.description,
+      trailing: IconButton(
+        tooltip: 'Archive notification',
+        onPressed: () async {
+          final capability = ref.read(unraidCapabilitiesProvider).asData?.value;
+          if (capability?.canWrite(UnraidResource.notifications) != true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Archiving requires a read-write Unraid key.'),
+              ),
+            );
+            return;
+          }
+          try {
+            await ref.read(unraidClientProvider).archiveNotification(item.id);
+            ref.invalidate(unraidNotificationsProvider);
+          } catch (error) {
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not archive: $error')),
+            );
+          }
+        },
+        icon: const Icon(Icons.archive_outlined),
+      ),
+    );
+  }
+}
+
+class _ShareList extends ConsumerWidget {
+  const _ShareList({required this.sharesAsync});
+  final AsyncValue<List<UnraidShare>> sharesAsync;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => sharesAsync.when(
+    data: (shares) => shares.isEmpty
+        ? const _UnraidEmpty(message: 'No shares reported.')
+        : Column(
+            children: shares
+                .map((share) {
+                  final used = share.usedFraction == null
+                      ? '—'
+                      : '${(share.usedFraction! * 100).round()}% used';
+                  final detail = [
+                    used,
+                    if (share.cached != null)
+                      share.cached! ? 'cached' : 'array',
+                    if (share.comment.isNotEmpty) share.comment,
+                  ].join(' · ');
+                  return _UnraidTile(
+                    icon: Icons.folder_outlined,
+                    // The accent walked for contrast against the surface it
+                    // lands on, not the raw brand orange: Unraid's is one of
+                    // the seven that fails the check on a light ground.
+                    iconColor: ServiceTheme.onTint(
+                      AppColors.unraid,
+                      surface: Theme.of(context).colorScheme.surface,
+                      tintAlpha: 0,
+                    ),
+                    title: share.name,
+                    detail: detail,
+                  );
+                })
+                .toList(growable: false),
+          ),
+    loading: () => const ListRowsShimmer(count: 4),
+    error: (_, _) => InlineErrorRetry(
+      message: 'Failed to load shares',
+      onRetry: () => ref.invalidate(unraidSharesProvider),
+    ),
+  );
+}
+
+class _UnraidEmpty extends StatelessWidget {
+  const _UnraidEmpty({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(AppSpacing.lg),
+    child: Text(message),
+  );
+}
+
+class _UnraidTile extends StatelessWidget {
+  const _UnraidTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.detail,
+    this.trailing,
+  });
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String detail;
+  final Widget? trailing;
+
+  // One sentence for the row, and the parts it is made of silenced — but only
+  // the parts, not the trailing control. `ExcludeSemantics` around the whole
+  // `ListTile` would take the Archive and start/stop buttons with it, and a
+  // bare `container: true` leaves the title and detail as their own stops, so
+  // the row read as three. The icon, title and subtitle are excluded
+  // individually; `trailing` stays outside that and keeps its own node.
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    explicitChildNodes: true,
+    label: '$title, $detail',
+    child: Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
+      child: ListTile(
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.borderRadiusMd,
+          side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+        leading: ExcludeSemantics(child: Icon(icon, color: iconColor)),
+        title: ExcludeSemantics(child: Text(title)),
+        subtitle: ExcludeSemantics(
+          child: Text(detail, maxLines: 2, overflow: TextOverflow.ellipsis),
+        ),
+        trailing: trailing,
+      ),
+    ),
+  );
 }
 
 class _DiskList extends ConsumerWidget {

@@ -37,13 +37,12 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// appears in both: `stalledDL`, `error` and `missingFiles` all fail the active
 /// test that builds the queue rows.
 ///
-/// **Three regions of the board are absent rather than stubbed**, because the
-/// client makes no call that could fill them and a section given a fake zero is
-/// worse than a section that was never promised:
-///
-///  * **RSS** — feeds, rules and their match counts need `GET /api/v2/rss/items`
-///    and `GET /api/v2/rss/rules`. `QbittorrentService` calls neither. The RSS
-///    tab exists on the bar and is where that work belongs.
+/// **The Overview keeps three board regions out of its compact summary**:
+/// RSS is now a dedicated endpoint-backed tab; the disk-free figure, DHT
+/// nodes, listen port and all-time ratio remain absent because this client does
+/// not request trustworthy values for them. An em dash is reserved for a
+/// requested figure whose source did not answer, not for an endpoint we never
+/// asked for.
 ///  * **Disk free** — the board's fourth readout, `4.1 TB /downloads`, lives in
 ///    `server_state.free_space_on_disk` on `GET /api/v2/sync/maindata`, which
 ///    this client never calls. It is left out of the Session list rather than

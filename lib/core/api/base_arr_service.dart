@@ -15,12 +15,25 @@ class ArrServiceConfig {
   /// Extra query parameters required for cutoff endpoints.
   final Map<String, dynamic> cutoffParams;
 
+  /// Embedded **parents** requested by the calendar endpoint.
+  ///
+  /// The calendar record is always the dated entity itself — a movie, an
+  /// episode, an album, a book — so there is never anything to ask for that
+  /// names the record's own type. What a service may need is the thing above
+  /// it: Sonarr's series, Lidarr's artist, Readarr's author.
+  final Map<String, dynamic> calendarParams;
+
   const ArrServiceConfig({
     required this.apiVersion,
     required this.sortKey,
     this.cutoffParams = const {},
+    this.calendarParams = const {},
   });
 
+  // No calendar params: `/api/v3/calendar` returns the movies themselves, so
+  // there is nothing to embed. `includeMovie` is a *queue* parameter and was
+  // dead weight here — with the matching `record['movie']` lookup that never
+  // found anything on the presentation side.
   static const radarr = ArrServiceConfig(
     apiVersion: 'v3',
     sortKey: 'airDateUtc',
@@ -29,14 +42,19 @@ class ArrServiceConfig {
     apiVersion: 'v3',
     sortKey: 'airDateUtc',
     cutoffParams: {'includeEpisodeFile': true},
+    calendarParams: {'includeSeries': true, 'includeEpisodeFile': true},
   );
   static const lidarr = ArrServiceConfig(
     apiVersion: 'v1',
     sortKey: 'releaseDate',
+    calendarParams: {'includeArtist': true},
   );
+  // The record *is* the book, so only the author is worth embedding —
+  // `includeBook` was the same mistake as Radarr's `includeMovie`.
   static const readarr = ArrServiceConfig(
     apiVersion: 'v1',
     sortKey: 'releaseDate',
+    calendarParams: {'includeAuthor': true},
   );
 }
 
@@ -141,6 +159,32 @@ mixin ArrActivityMixin {
       extraParams: queryParameters ?? const {},
       pageSize: 200,
     );
+  }
+
+  /// Fetches calendar records for the requested local date range.
+  ///
+  /// Calendar is a first-class tab for all four *arr clients. The response
+  /// shape differs by product (movies, episodes, albums or books), so the
+  /// shared transport intentionally preserves the raw maps and lets the
+  /// presentation layer name the embedded record without inventing a model
+  /// that only fits one product.
+  Future<List<dynamic>> getCalendar({
+    DateTime? start,
+    DateTime? end,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final response = await client.get(
+      '/api/${config.apiVersion}/calendar',
+      queryParameters: {
+        if (start != null) 'start': _calendarDate(start),
+        if (end != null) 'end': _calendarDate(end),
+        ...config.calendarParams,
+        ...?queryParameters,
+      },
+    );
+    return response.data is List
+        ? List<dynamic>.from(response.data as List)
+        : const [];
   }
 
   /// Fetches one page of history, **with the envelope's total**.
@@ -651,4 +695,14 @@ mixin ArrActivityMixin {
   Future<void> deleteBlocklistItem(int id) async {
     await client.delete('/api/${config.apiVersion}/blocklist/$id');
   }
+}
+
+/// A bare `YYYY-MM-DD` in the caller's **local** date, which is what the *arr
+/// calendars expect: the server parses it in its own timezone, and a user
+/// asking about today means their today.
+String _calendarDate(DateTime value) {
+  final local = value.toLocal();
+  return '${local.year.toString().padLeft(4, '0')}-'
+      '${local.month.toString().padLeft(2, '0')}-'
+      '${local.day.toString().padLeft(2, '0')}';
 }

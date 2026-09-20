@@ -36,7 +36,42 @@ const _containers = [
   ),
 ];
 
-Future<void> _pump(WidgetTester tester, Widget screen) async {
+const _capabilities = UnraidCapabilities(
+  isAdmin: true,
+  writable: {UnraidResource.vms, UnraidResource.notifications},
+);
+
+const _vms = [UnraidVm(id: 'vm:1', name: 'Home Assistant', state: 'RUNNING')];
+
+const _notifications = UnraidNotifications(
+  unread: UnraidNotificationCounts(info: 0, warning: 1, alert: 0, total: 1),
+  archived: UnraidNotificationCounts(info: 0, warning: 0, alert: 0, total: 0),
+  items: [
+    UnraidNotification(
+      id: 'notification:1',
+      title: 'Disk warm',
+      subject: 'disk1',
+      description: 'disk1 reached 47 C',
+      importance: 'WARNING',
+      type: 'UNREAD',
+    ),
+  ],
+);
+
+const _shares = [
+  UnraidShare(
+    id: 'share:1',
+    name: 'media',
+    usedKilobytes: 400,
+    sizeKilobytes: 1000,
+  ),
+];
+
+Future<void> _pump(
+  WidgetTester tester,
+  Widget screen, {
+  UnraidSection? failingSection,
+}) async {
   tester.view.physicalSize = const Size(1000, 2400);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -50,6 +85,23 @@ Future<void> _pump(WidgetTester tester, Widget screen) async {
         // than as an error state.
         unraidArrayProvider.overrideWith((ref) async => _array),
         unraidDockerProvider.overrideWith((ref) async => _containers),
+        unraidCapabilitiesProvider.overrideWith((ref) async => _capabilities),
+        unraidVmsProvider.overrideWith((ref) async {
+          if (failingSection == UnraidSection.vms) throw Exception('offline');
+          return _vms;
+        }),
+        unraidNotificationsProvider.overrideWith((ref) async {
+          if (failingSection == UnraidSection.notifications) {
+            throw Exception('offline');
+          }
+          return _notifications;
+        }),
+        unraidSharesProvider.overrideWith((ref) async {
+          if (failingSection == UnraidSection.shares) {
+            throw Exception('offline');
+          }
+          return _shares;
+        }),
         serviceKpiProvider(ServiceKey.unraid).overrideWith(
           (ref) async => const [
             ServiceKpi(label: 'Used', value: '42%', icon: Icons.storage),
@@ -112,6 +164,47 @@ void main() {
     }
   });
 
+  testWidgets('VMs, Notifications and Shares render separate documents', (
+    tester,
+  ) async {
+    await _pump(tester, const UnraidScreen.vms(showAppBar: false));
+    expect(find.text('Home Assistant'), findsOneWidget);
+    expect(find.text('Disk warm'), findsNothing);
+
+    await _pump(tester, const UnraidScreen.notifications(showAppBar: false));
+    expect(find.text('Disk warm'), findsOneWidget);
+    expect(find.text('media'), findsNothing);
+
+    await _pump(tester, const UnraidScreen.shares(showAppBar: false));
+    expect(find.text('media'), findsOneWidget);
+    expect(find.text('40% used'), findsOneWidget);
+  });
+
+  testWidgets('each new document owns an explicit remote-error state', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const UnraidScreen.vms(showAppBar: false),
+      failingSection: UnraidSection.vms,
+    );
+    expect(find.text('Failed to load virtual machines'), findsOneWidget);
+
+    await _pump(
+      tester,
+      const UnraidScreen.notifications(showAppBar: false),
+      failingSection: UnraidSection.notifications,
+    );
+    expect(find.text('Failed to load notifications'), findsOneWidget);
+
+    await _pump(
+      tester,
+      const UnraidScreen.shares(showAppBar: false),
+      failingSection: UnraidSection.shares,
+    );
+    expect(find.text('Failed to load shares'), findsOneWidget);
+  });
+
   testWidgets('a spun-down slot says so instead of reading 0 °C', (
     tester,
   ) async {
@@ -134,6 +227,9 @@ void main() {
     for (final screen in const [
       UnraidScreen.array(showAppBar: false),
       UnraidScreen.docker(showAppBar: false),
+      UnraidScreen.vms(showAppBar: false),
+      UnraidScreen.notifications(showAppBar: false),
+      UnraidScreen.shares(showAppBar: false),
     ]) {
       await tester.pumpWidget(
         ProviderScope(

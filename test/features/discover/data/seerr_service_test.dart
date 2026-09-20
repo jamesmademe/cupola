@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
 
@@ -372,6 +373,69 @@ void main() {
       client.getException = Exception('offline');
       expect(service.getRequests(), throwsA(isA<Exception>()));
     });
+  });
+
+  group('admin endpoints', () {
+    test('gets open issues with the documented query contract', () async {
+      client.getResponseData = {
+        'pageInfo': {'results': 1},
+        'results': [
+          {
+            'id': 21,
+            'issueType': 2,
+            'media': {'title': 'Fight Club'},
+            'createdBy': {'username': 'matt'},
+          },
+        ],
+      };
+
+      final issues = (await service.getIssuesResult()).items;
+
+      expect(issues.single.media?.title, 'Fight Club');
+      expect(client.lastGetPath, '/api/v1/issue');
+      expect(client.lastGetQueryParameters, {
+        'take': 50,
+        'skip': 0,
+        'sort': 'modified',
+        'filter': 'open',
+      });
+    });
+
+    test(
+      'gets users and resolves an issue through verified endpoints',
+      () async {
+        client.getResponseData = {
+          'pageInfo': {'results': 1},
+          'results': [
+            {'id': 4, 'email': 'matt@example.com', 'requestCount': 3},
+          ],
+        };
+
+        final users = (await service.getUsersResult()).items;
+        await service.resolveIssue(21);
+
+        expect(users.single.id, 4);
+        expect(client.lastGetPath, '/api/v1/user');
+        expect(client.lastPostPath, '/api/v1/issue/21/resolved');
+      },
+    );
+
+    test(
+      'does not fail on a bare list response from older instances',
+      () async {
+        client.getResponseData = [
+          {'id': 21, 'issueType': 99},
+          'malformed',
+        ];
+
+        final issues = (await service.getIssuesResult(
+          filter: SeerrIssueFilter.all,
+        )).items;
+
+        expect(issues, hasLength(1));
+        expect(issues.single.issueTypeLabel, 'Issue');
+      },
+    );
   });
 
   group('media endpoints', () {

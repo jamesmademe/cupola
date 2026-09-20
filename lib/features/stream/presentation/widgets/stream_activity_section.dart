@@ -47,6 +47,11 @@ class StreamActivitySection extends ConsumerWidget {
       child: AsyncValueWidget<List<StreamActivityRow>>(
         value: rowsAsync,
         serviceName: 'your media servers',
+        onRetry: () {
+          ref.invalidate(streamActivityProvider);
+          ref.invalidate(jellyfinSessionsProvider);
+          ref.invalidate(plexSessionsProvider);
+        },
         isEmpty: (rows) => rows.isEmpty,
         emptyBuilder: _IdleFeed(offline: offline, bottomPadding: bottomPadding),
         data: (rows) => ListView.separated(

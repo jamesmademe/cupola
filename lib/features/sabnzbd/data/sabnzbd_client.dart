@@ -156,6 +156,23 @@ class SabnzbdClient {
     return SabnzbdServerStats.fromJson(data);
   }
 
+  /// Configured news servers. Passwords are deliberately not represented by
+  /// the model even though SABnzbd masks them in this response.
+  Future<List<SabnzbdServerConfig>> getServers() async {
+    final data = await _call('get_config', extra: {'section': 'servers'});
+    final config = data['config'];
+    final root = config is Map ? config : data;
+    final rawServers = root['servers'];
+    if (rawServers is! List) return const [];
+    return rawServers
+        .whereType<Map>()
+        .map(
+          (server) =>
+              SabnzbdServerConfig.fromJson(server.cast<String, dynamic>()),
+        )
+        .toList(growable: false);
+  }
+
   /// The configured categories, always including the `*` default first.
   Future<List<String>> getCategories() async {
     final data = await _call('get_cats');

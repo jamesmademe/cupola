@@ -12,6 +12,229 @@ library;
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
+/// The three `Resource` values the Unraid SDL declares that Cupola can write.
+///
+/// [share] is parsed and carried even though nothing writes a share yet: this
+/// mirrors the server's own enum, and dropping a value the schema declares
+/// would mean re-deriving it the day a Shares write lands. `canWrite(share)`
+/// having no caller is the honest state, not a gap.
+enum UnraidResource { vms, notifications, share }
+
+class UnraidCapabilities {
+  const UnraidCapabilities({required this.isAdmin, required this.writable});
+
+  final bool isAdmin;
+  final Set<UnraidResource> writable;
+
+  bool canWrite(UnraidResource resource) =>
+      isAdmin || writable.contains(resource);
+
+  factory UnraidCapabilities.fromJson(Map<String, dynamic> json) {
+    final roles = (json['roles'] as List?) ?? const [];
+    final writable = <UnraidResource>{};
+    for (final raw in (json['permissions'] as List?) ?? const []) {
+      if (raw is! Map) continue;
+      final permission = raw.cast<String, dynamic>();
+      final actions =
+          (permission['actions'] as List?)
+              ?.map((e) => e.toString().toUpperCase())
+              .toSet() ??
+          const <String>{};
+      if (!actions.any(
+        (a) => a.startsWith('UPDATE_') || a.startsWith('DELETE_'),
+      )) {
+        continue;
+      }
+      switch (permission['resource']?.toString().toUpperCase()) {
+        case 'VMS':
+          writable.add(UnraidResource.vms);
+          break;
+        case 'NOTIFICATIONS':
+          writable.add(UnraidResource.notifications);
+          break;
+        case 'SHARE':
+          writable.add(UnraidResource.share);
+          break;
+        default:
+          break;
+      }
+    }
+    return UnraidCapabilities(
+      isAdmin: roles.any((r) => r.toString().toUpperCase() == 'ADMIN'),
+      writable: Set.unmodifiable(writable),
+    );
+  }
+}
+
+enum UnraidVmAction {
+  start('start'),
+  stop('stop'),
+  pause('pause'),
+  resume('resume'),
+  forceStop('forceStop'),
+  reboot('reboot');
+
+  const UnraidVmAction(this.graphQl);
+  final String graphQl;
+}
+
+class UnraidVm {
+  const UnraidVm({required this.id, required this.name, required this.state});
+  final String id;
+  final String name;
+  final String state;
+
+  bool get isRunning => state.toUpperCase() == 'RUNNING';
+  bool get isPaused => state.toUpperCase() == 'PAUSED';
+  bool get isFaulted => state.toUpperCase() == 'CRASHED';
+  StatusTone get tone => isFaulted
+      ? StatusTone.warning
+      : (isRunning ? StatusTone.success : StatusTone.neutral);
+
+  factory UnraidVm.fromJson(Map<String, dynamic> json) => UnraidVm(
+    id: json['id']?.toString() ?? '',
+    // `stringOrNull` trims and folds empty to null in one step; the older
+    // spelling tested the trimmed value and then stored the untrimmed one.
+    name: stringOrNull(json['name']) ?? 'Unnamed VM',
+    state: json['state']?.toString() ?? 'NOSTATE',
+  );
+}
+
+enum UnraidNotificationType {
+  unread('UNREAD'),
+  archive('ARCHIVE');
+
+  const UnraidNotificationType(this.graphQl);
+  final String graphQl;
+}
+
+class UnraidNotificationCounts {
+  const UnraidNotificationCounts({
+    required this.info,
+    required this.warning,
+    required this.alert,
+    required this.total,
+  });
+  final int? info;
+  final int? warning;
+  final int? alert;
+  final int? total;
+
+  factory UnraidNotificationCounts.fromJson(Map<String, dynamic>? json) =>
+      UnraidNotificationCounts(
+        info: intOrNull(json?['info']),
+        warning: intOrNull(json?['warning']),
+        alert: intOrNull(json?['alert']),
+        total: intOrNull(json?['total']),
+      );
+}
+
+class UnraidNotification {
+  const UnraidNotification({
+    required this.id,
+    required this.title,
+    required this.subject,
+    required this.description,
+    required this.importance,
+    required this.type,
+    this.timestamp,
+    this.link,
+  });
+  final String id;
+  final String title;
+  final String subject;
+  final String description;
+  final String importance;
+  final String type;
+  final DateTime? timestamp;
+  final String? link;
+
+  StatusTone get tone => switch (importance.toUpperCase()) {
+    'ALERT' || 'WARNING' => StatusTone.warning,
+    'INFO' => StatusTone.info,
+    _ => StatusTone.neutral,
+  };
+
+  factory UnraidNotification.fromJson(Map<String, dynamic> json) =>
+      UnraidNotification(
+        id: json['id']?.toString() ?? '',
+        title: json['title']?.toString() ?? '',
+        subject: json['subject']?.toString() ?? '',
+        description: json['description']?.toString() ?? '',
+        importance: json['importance']?.toString() ?? '',
+        type: json['type']?.toString() ?? '',
+        // `??` only covers a *missing* `timestamp`. Unraid also sends one it
+        // cannot format, so the fallback has to be on the parse rather than on
+        // the key, or a notification with a junk timestamp reads as undated
+        // while `formattedTimestamp` was sitting right there.
+        timestamp:
+            DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
+            DateTime.tryParse(json['formattedTimestamp']?.toString() ?? ''),
+        link: json['link']?.toString(),
+      );
+}
+
+class UnraidNotifications {
+  const UnraidNotifications({
+    required this.unread,
+    required this.archived,
+    required this.items,
+  });
+  final UnraidNotificationCounts unread;
+  final UnraidNotificationCounts archived;
+  final List<UnraidNotification> items;
+
+  factory UnraidNotifications.fromJson(Map<String, dynamic> json) {
+    final overview = (json['overview'] as Map?)?.cast<String, dynamic>();
+    return UnraidNotifications(
+      unread: UnraidNotificationCounts.fromJson(
+        (overview?['unread'] as Map?)?.cast<String, dynamic>(),
+      ),
+      archived: UnraidNotificationCounts.fromJson(
+        (overview?['archive'] as Map?)?.cast<String, dynamic>(),
+      ),
+      items: ((json['list'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((e) => UnraidNotification.fromJson(e.cast<String, dynamic>()))
+          .toList(growable: false),
+    );
+  }
+}
+
+class UnraidShare {
+  const UnraidShare({
+    required this.id,
+    required this.name,
+    this.usedKilobytes,
+    this.sizeKilobytes,
+    this.comment = '',
+    this.cached,
+    this.luksStatus = '',
+  });
+  final String id;
+  final String name;
+  final int? usedKilobytes;
+  final int? sizeKilobytes;
+  final String comment;
+  final bool? cached;
+  final String luksStatus;
+
+  double? get usedFraction =>
+      usedKilobytes != null && sizeKilobytes != null && sizeKilobytes! > 0
+      ? (usedKilobytes! / sizeKilobytes!).clamp(0, 1).toDouble()
+      : null;
+
+  factory UnraidShare.fromJson(Map<String, dynamic> json) => UnraidShare(
+    id: json['id']?.toString() ?? '',
+    name: stringOrNull(json['name']) ?? 'Unnamed share',
+    usedKilobytes: intOrNull(json['used']),
+    sizeKilobytes: intOrNull(json['size']),
+    comment: json['comment']?.toString() ?? '',
+    cached: json['cache'] is bool ? json['cache'] as bool : null,
+    luksStatus: json['luksStatus']?.toString() ?? '',
+  );
+}
+
 /// System information (`info`).
 class UnraidInfo {
   const UnraidInfo({required this.distro, required this.version, this.uptime});

@@ -1,3 +1,4 @@
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 
 /// Transmission's `status` field.
@@ -265,6 +266,25 @@ class TransmissionSession {
     required this.speedLimitDownEnabled,
     required this.speedLimitUpKbPerSec,
     required this.speedLimitUpEnabled,
+    required this.peerPort,
+    required this.peerPortRandomOnStart,
+    required this.portForwardingEnabled,
+    required this.encryption,
+    required this.peerLimitGlobal,
+    required this.peerLimitPerTorrent,
+    required this.seedRatioLimit,
+    required this.seedRatioLimited,
+    required this.idleSeedingLimitMinutes,
+    required this.idleSeedingLimitEnabled,
+    required this.blocklistEnabled,
+    required this.blocklistSize,
+    required this.downloadQueueEnabled,
+    required this.downloadQueueSize,
+    required this.seedQueueEnabled,
+    required this.seedQueueSize,
+    required this.startAddedTorrents,
+    required this.renamePartialFiles,
+    required this.cacheSizeMb,
   });
 
   final String version;
@@ -275,7 +295,9 @@ class TransmissionSession {
   /// for an unknown field by omitting it from the response rather than
   /// erroring. Without checking this, a client written against 4.x degrades
   /// silently on 3.x.
-  final int rpcVersion;
+  /// Nullable for the reason the figures below are: a daemon that did not say
+  /// which RPC revision it speaks has not said it speaks revision zero.
+  final int? rpcVersion;
 
   /// Where a finished download ends up.
   final String downloadDir;
@@ -319,10 +341,42 @@ class TransmissionSession {
   final int speedLimitUpKbPerSec;
   final bool speedLimitUpEnabled;
 
+  /// **Nullable on purpose, all of them: `parseInt` answers a missing field
+  /// with 0, and 0 is a value several of these can legitimately hold.**
+  ///
+  /// A daemon that does not send `cache-size-mb` and a daemon with its cache
+  /// switched off are different facts, and the Session tab has to be able to
+  /// tell them apart — one reads an em dash, the other reads `0 MB`. Only
+  /// `peerPort` used to be guarded, with a `> 0` test at the call site, which
+  /// left the other eight asserting a figure nobody sent.
+  ///
+  /// The flags stay non-nullable: `parseBool` cannot distinguish absent from
+  /// false either, but a switch has to be drawn in one position or the other,
+  /// and off is the safe one to show for a setting the daemon never mentioned.
+  final int? peerPort;
+  final bool peerPortRandomOnStart;
+  final bool portForwardingEnabled;
+  final String encryption;
+  final int? peerLimitGlobal;
+  final int? peerLimitPerTorrent;
+  final double? seedRatioLimit;
+  final bool seedRatioLimited;
+  final int? idleSeedingLimitMinutes;
+  final bool idleSeedingLimitEnabled;
+  final bool blocklistEnabled;
+  final int? blocklistSize;
+  final bool downloadQueueEnabled;
+  final int? downloadQueueSize;
+  final bool seedQueueEnabled;
+  final int? seedQueueSize;
+  final bool startAddedTorrents;
+  final bool renamePartialFiles;
+  final int? cacheSizeMb;
+
   factory TransmissionSession.fromJson(Map<String, dynamic> json) {
     return TransmissionSession(
       version: json['version']?.toString() ?? '',
-      rpcVersion: parseInt(json['rpc-version']),
+      rpcVersion: intOrNull(json['rpc-version']),
       downloadDir: json['download-dir']?.toString() ?? '',
       incompleteDir: json['incomplete-dir']?.toString() ?? '',
       incompleteDirEnabled: parseBool(json['incomplete-dir-enabled']),
@@ -331,6 +385,25 @@ class TransmissionSession {
       speedLimitDownEnabled: parseBool(json['speed-limit-down-enabled']),
       speedLimitUpKbPerSec: parseInt(json['speed-limit-up']),
       speedLimitUpEnabled: parseBool(json['speed-limit-up-enabled']),
+      peerPort: intOrNull(json['peer-port']),
+      peerPortRandomOnStart: parseBool(json['peer-port-random-on-start']),
+      portForwardingEnabled: parseBool(json['port-forwarding-enabled']),
+      encryption: json['encryption']?.toString() ?? '',
+      peerLimitGlobal: intOrNull(json['peer-limit-global']),
+      peerLimitPerTorrent: intOrNull(json['peer-limit-per-torrent']),
+      seedRatioLimit: doubleOrNull(json['seedRatioLimit']),
+      seedRatioLimited: parseBool(json['seedRatioLimited']),
+      idleSeedingLimitMinutes: intOrNull(json['idle-seeding-limit']),
+      idleSeedingLimitEnabled: parseBool(json['idle-seeding-limit-enabled']),
+      blocklistEnabled: parseBool(json['blocklist-enabled']),
+      blocklistSize: intOrNull(json['blocklist-size']),
+      downloadQueueEnabled: parseBool(json['download-queue-enabled']),
+      downloadQueueSize: intOrNull(json['download-queue-size']),
+      seedQueueEnabled: parseBool(json['seed-queue-enabled']),
+      seedQueueSize: intOrNull(json['seed-queue-size']),
+      startAddedTorrents: parseBool(json['start-added-torrents']),
+      renamePartialFiles: parseBool(json['rename-partial-files']),
+      cacheSizeMb: intOrNull(json['cache-size-mb']),
     );
   }
 }

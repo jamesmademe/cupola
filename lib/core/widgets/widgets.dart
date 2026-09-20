@@ -72,6 +72,7 @@ export 'file_info_section.dart';
 
 // Async handling
 export 'async_value_widget.dart';
+export 'service_list_page.dart';
 export 'not_configured_placeholder.dart';
 
 // Dialogs & Sheets

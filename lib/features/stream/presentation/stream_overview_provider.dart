@@ -9,14 +9,14 @@
 /// an hour-old scan against a day-old one — is tested without a clock and
 /// without a container.
 ///
-/// ## What the board asks for that no client call can fill
+/// ## What the board asks for that this Overview does not draw
 ///
 /// The four artboards (`HomeJellyfin`, `HomeJellyfinMobile`, `HomePlex`,
 /// `HomePlexMobile`) were drawn against an ideal server. What is built here is
 /// the intersection of that drawing and what `JellyfinClient` / `PlexClient`
-/// genuinely fetch. Everything below is **absent rather than stubbed**, because
-/// a section given a fabricated figure is worse than a section that was never
-/// promised:
+/// genuinely fetch. Overview stays intentionally compact; dedicated tabs own
+/// the records that do not belong on the landing page, and unsupported figures
+/// remain absent rather than fabricated:
 ///
 ///  * **Bandwidth / egress** (`8.4 Mb/s`, `18 GB · 24 h`) — neither server
 ///    reports measured outbound throughput. Jellyfin carries a bitrate only
@@ -36,10 +36,12 @@
 ///    Plex has `/hubs/continueWatching` and therefore gets the rail; Jellyfin's
 ///    equivalent is unbuilt, and the per-library `continueWatching` lens is not
 ///    a substitute for the same two reasons as above.
-///  * **Scheduled tasks and the activity log** (Jellyfin) —
-///    `GET /ScheduledTasks` and `GET /System/ActivityLog/Entries`.
-///  * **Activities, devices and playlists** (Plex) — `GET /activities`,
-///    `GET /devices`, `GET /playlists`.
+///  * **Scheduled tasks and the activity log** (Jellyfin) belong to the Tasks
+///    and Activity tabs. The Activity tab uses live sessions because the
+///    historical activity-log endpoint is not part of this client.
+///  * **Activities, devices and playlists** (Plex) belong to their dedicated
+///    tabs. Activities uses live sessions because Plex has no supported
+///    historical activity endpoint here.
 ///  * **`idle 4 h · last: nadia · 18:40`** (Plex) — the idle line needs watch
 ///    history, `GET /status/sessions/history/all`.
 ///  * **Remote access, mapped port, transcoder hardware, cache size, uptime**

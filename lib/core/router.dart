@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
-import 'package:cupola/features/services/presentation/service_tab_placeholder.dart';
 import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -19,9 +18,12 @@ import 'package:cupola/features/shell/presentation/branch_transition.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_screen.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
+import 'package:cupola/features/discover/presentation/seerr_admin_screens.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_screen.dart';
 import 'package:cupola/features/activity/presentation/global_activity_screen.dart';
+import 'package:cupola/features/activity/presentation/arr_tab_screen.dart';
+import 'package:cupola/features/activity/presentation/arr_calendar_screen.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
 import 'package:cupola/features/series/presentation/series_screen.dart';
@@ -55,11 +57,14 @@ import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/torrent_detail_screen.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/widgets/qbittorrent_actions_bar.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_library_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_movie_detail_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_overview_screen.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_history_screen.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_providers_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_overview_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_library_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_detail_screen.dart';
@@ -67,20 +72,29 @@ import 'package:cupola/features/prowlarr/presentation/prowlarr_settings_screen.d
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider_list_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_app_profiles_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_tags_screen.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_history_screen.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_stats_screen.dart';
 import 'package:cupola/features/readarr/presentation/readarr_overview_screen.dart';
 import 'package:cupola/features/readarr/presentation/readarr_library_screen.dart';
+import 'package:cupola/features/readarr/presentation/readarr_activity_screen.dart';
+import 'package:cupola/features/readarr/presentation/readarr_history_screen.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_screen.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_screen.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_tab_screens.dart';
 import 'package:cupola/features/npm/presentation/npm_overview_screen.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart';
 import 'package:cupola/features/transmission/presentation/transmission_overview_screen.dart';
 import 'package:cupola/features/transmission/presentation/transmission_screen.dart';
+import 'package:cupola/features/transmission/presentation/transmission_tab_screens.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_overview_screen.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_screen.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_tab_screens.dart';
 import 'package:cupola/features/stream/presentation/stream_libraries_screen.dart';
 import 'package:cupola/features/stream/presentation/stream_overview_screen.dart';
 import 'package:cupola/features/stream/presentation/stream_item_screen.dart';
 import 'package:cupola/features/stream/presentation/stream_library_screen.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_tab_screens.dart';
+import 'package:cupola/features/plex/presentation/plex_tab_screens.dart';
 import 'package:cupola/features/unraid/presentation/unraid_overview_screen.dart';
 import 'package:cupola/features/unraid/presentation/unraid_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_series_detail_screen.dart';
@@ -90,6 +104,7 @@ import 'package:cupola/features/dockge/presentation/dockge_overview_screen.dart'
 import 'package:cupola/features/dockge/presentation/dockge_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_stack_detail_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_stack_edit_screen.dart';
+import 'package:cupola/features/dockge/presentation/dockge_terminal_screen.dart';
 import 'package:cupola/features/truenas/presentation/truenas_hub_screen.dart';
 import 'package:cupola/features/truenas/presentation/dashboard/truenas_dashboard_screen.dart';
 import 'package:cupola/features/truenas/presentation/storage/truenas_storage_screen.dart';
@@ -510,17 +525,20 @@ GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  // Both blocked, and on endpoints rather than on work. `SeerrService` calls
-  // `/api/v1/discover/*`, `/api/v1/request`, `/api/v1/search` and
-  // `/api/v1/service/{radarr,sonarr}` and nothing else: there is no
-  // `/api/v1/issue` behind Issues and no `/api/v1/user` behind Users, so
-  // neither tab has a client to ask.
-  ServiceTab.issues || ServiceTab.users => _page(
+  ServiceTab.issues => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.seerr,
-      tab: tab,
-      child: ServiceTabPlaceholder(service: ServiceKey.seerr, tab: tab),
+      tab: ServiceTab.issues,
+      child: SeerrIssuesScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
+  ServiceTab.users => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.seerr,
+      tab: ServiceTab.users,
+      child: SeerrUsersScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -685,18 +703,51 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  // The four whose data the client cannot fetch yet. The branch is declared
-  // from day one because the bar draws all six labels off `tabsFor`; a missing
-  // branch would be a tab that 404s rather than one that says it is not built.
-  ServiceTab.calendar ||
-  ServiceTab.queue ||
-  ServiceTab.wanted ||
+  ServiceTab.calendar => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.radarr,
+      tab: ServiceTab.calendar,
+      child: ArrCalendarScreen(
+        service: ServiceKey.radarr,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.queue => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.radarr,
+      tab: ServiceTab.queue,
+      child: ArrTabScreen(
+        serviceType: ServiceType.movies,
+        mode: ArrTabMode.queue,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.wanted => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.radarr,
+      tab: ServiceTab.wanted,
+      child: ArrTabScreen(
+        serviceType: ServiceType.movies,
+        mode: ArrTabMode.wanted,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
   ServiceTab.history => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.radarr,
-      tab: tab,
-      child: ServiceTabPlaceholder(service: ServiceKey.radarr, tab: tab),
+      tab: ServiceTab.history,
+      child: ArrTabScreen(
+        serviceType: ServiceType.movies,
+        mode: ArrTabMode.history,
+        topPadding: _serviceTabTopPadding,
+      ),
     ),
   ),
   _ => throw UnsupportedError(
@@ -858,22 +909,51 @@ GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  // Calendar is not a missing screen but a missing call, and it is the one tab
-  // Radarr could build and Sonarr cannot: a film's dates are on the film, so
-  // Radarr's calendar is derivable from the library list it already holds,
-  // while episodes are not in `GET /api/v3/series` at all. Sonarr's needs
-  // `GET /api/v3/calendar`, which `SonarrService` has never called. Queue,
-  // Wanted and History are the same shape as Radarr's and wait on the same
-  // work.
-  ServiceTab.calendar ||
-  ServiceTab.queue ||
-  ServiceTab.wanted ||
+  ServiceTab.calendar => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.sonarr,
+      tab: ServiceTab.calendar,
+      child: ArrCalendarScreen(
+        service: ServiceKey.sonarr,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.queue => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.sonarr,
+      tab: ServiceTab.queue,
+      child: ArrTabScreen(
+        serviceType: ServiceType.series,
+        mode: ArrTabMode.queue,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.wanted => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.sonarr,
+      tab: ServiceTab.wanted,
+      child: ArrTabScreen(
+        serviceType: ServiceType.series,
+        mode: ArrTabMode.wanted,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
   ServiceTab.history => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.sonarr,
-      tab: tab,
-      child: ServiceTabPlaceholder(service: ServiceKey.sonarr, tab: tab),
+      tab: ServiceTab.history,
+      child: ArrTabScreen(
+        serviceType: ServiceType.series,
+        mode: ArrTabMode.history,
+        topPadding: _serviceTabTopPadding,
+      ),
     ),
   ),
   _ => throw UnsupportedError(
@@ -1007,19 +1087,51 @@ GoRoute _lidarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  // Calendar is blocked the same way Sonarr's is, one level further down: a
-  // release date belongs to an *album*, and `GET /api/v1/artist` does not carry
-  // the albums. It needs `GET /api/v1/calendar`, which `LidarrService` has
-  // never called.
-  ServiceTab.calendar ||
-  ServiceTab.queue ||
-  ServiceTab.wanted ||
+  ServiceTab.calendar => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.lidarr,
+      tab: ServiceTab.calendar,
+      child: ArrCalendarScreen(
+        service: ServiceKey.lidarr,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.queue => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.lidarr,
+      tab: ServiceTab.queue,
+      child: ArrTabScreen(
+        serviceType: ServiceType.music,
+        mode: ArrTabMode.queue,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.wanted => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.lidarr,
+      tab: ServiceTab.wanted,
+      child: ArrTabScreen(
+        serviceType: ServiceType.music,
+        mode: ArrTabMode.wanted,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
   ServiceTab.history => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.lidarr,
-      tab: tab,
-      child: ServiceTabPlaceholder(service: ServiceKey.lidarr, tab: tab),
+      tab: ServiceTab.history,
+      child: ArrTabScreen(
+        serviceType: ServiceType.music,
+        mode: ArrTabMode.history,
+        topPadding: _serviceTabTopPadding,
+      ),
     ),
   ),
   _ => throw UnsupportedError(
@@ -1119,16 +1231,12 @@ GoRoute _qbittorrentBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  // RSS is blocked, and on endpoints rather than on work: `QbittorrentService`
-  // calls nothing under `/api/v2/rss/` at all, so the feed tree
-  // (`GET /api/v2/rss/items`), the auto-download rules (`GET /api/v2/rss/rules`)
-  // and everything that writes them have no client to call.
   ServiceTab.rss => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.qbittorrent,
-      tab: tab,
-      child: ServiceTabPlaceholder(service: ServiceKey.qbittorrent, tab: tab),
+      tab: ServiceTab.rss,
+      child: QbittorrentRssScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -1288,22 +1396,20 @@ GoRoute _bazarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  // History is a placeholder but **not blocked**: `BazarrService` already calls
-  // `/api/episodes/history` and `/api/movies/history`, and the Overview reads
-  // both. The tab is a screen away, and the Blacklist pill it is drawn with
-  // (decision 22) is the part that still needs a client.
-  //
-  // **Providers is blocked**, and on an endpoint rather than on work: Bazarr's
-  // `/api/providers` — the configured provider list, their status and the
-  // reset action — is called nowhere in `BazarrService`, which speaks only
-  // `badges`, `series`, `movies`, the two `wanted` lists and the two `history`
-  // lists. There is nothing to draw.
-  ServiceTab.history || ServiceTab.providers => _page(
+  ServiceTab.history => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.bazarr,
-      tab: tab,
-      child: ServiceTabPlaceholder(service: ServiceKey.bazarr, tab: tab),
+      tab: ServiceTab.history,
+      child: BazarrHistoryScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
+  ServiceTab.providers => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.bazarr,
+      tab: ServiceTab.providers,
+      child: BazarrProvidersScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -1404,14 +1510,6 @@ RouteBase _dockgeRoutes() {
 /// throws rather than quietly rendering a placeholder: a fourth tab added to
 /// that table with no case here is a bar and a router disagreeing.
 ///
-/// **Terminal is a placeholder but not blocked.** `DockgeClient` already joins
-/// a stack's combined terminal and streams `terminalWrite` back, so the wire is
-/// there — what is missing is the screen, and a tab-level terminal has one
-/// question this pass does not get to answer: which stack it is attached to
-/// when no stack was named. `DockgeOverviewScreen` answers it sideways rather
-/// than pretending to: every stack row it draws opens that stack's detail,
-/// which already carries the live combined terminal for a stack the user has
-/// just named by tapping it.
 GoRoute _dockgeBranchRoot(ServiceTab tab) => switch (tab) {
   ServiceTab.overview => _page(
     tab.segment,
@@ -1462,10 +1560,13 @@ GoRoute _dockgeBranchRoot(ServiceTab tab) => switch (tab) {
   ),
   ServiceTab.terminal => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.dockge,
-      tab: tab,
-      child: ServiceTabPlaceholder(service: ServiceKey.dockge, tab: tab),
+      tab: ServiceTab.terminal,
+      child: DockgeTerminalScreen(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
     ),
   ),
   _ => throw UnsupportedError(
@@ -1611,26 +1712,20 @@ GoRoute _prowlarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ],
   ),
-  // Neither is blocked, and saying so matters: both tabs are a screen away, not
-  // an endpoint away.
-  //
-  // History has `GET /api/v1/history` behind it — paged, sortable, filterable
-  // by event type — and `prowlarrRecentHistoryProvider` already reads page one
-  // for the Overview. A full tab needs paging and the event filter on top of
-  // it, and nothing else.
-  //
-  // Stats has `GET /api/v1/indexerstats`, which `prowlarrIndexerStatsProvider`
-  // already calls over a fixed 24-hour window: per-indexer queries, grabs and
-  // failures, with the totals derived in `ProwlarrIndexerStats`. What the tab
-  // adds over the Overview's three KPIs is the per-indexer table and a window
-  // the user can choose — the client has accepted `startDate`/`endDate` all
-  // along.
-  ServiceTab.history || ServiceTab.stats => _page(
+  ServiceTab.history => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.prowlarr,
-      tab: tab,
-      child: ServiceTabPlaceholder(service: ServiceKey.prowlarr, tab: tab),
+      tab: ServiceTab.history,
+      child: ProwlarrHistoryScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
+  ServiceTab.stats => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.prowlarr,
+      tab: ServiceTab.stats,
+      child: ProwlarrStatsScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -1712,20 +1807,45 @@ GoRoute _readarrBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  // Calendar is blocked exactly as Sonarr's and Lidarr's are — a book's release
-  // date is not on the author — and needs `GET /api/v1/calendar`, which
-  // `ReadarrService` has never called. Queue, Wanted and History wait on the
-  // same work as the other three; upstream being archived at least makes that
-  // a frozen target (decision 13).
-  ServiceTab.calendar ||
-  ServiceTab.queue ||
-  ServiceTab.wanted ||
+  ServiceTab.calendar => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.readarr,
+      tab: ServiceTab.calendar,
+      child: ArrCalendarScreen(
+        service: ServiceKey.readarr,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.queue => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.readarr,
+      tab: ServiceTab.queue,
+      child: ReadarrActivityScreen(
+        mode: ReadarrActivityMode.queue,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.wanted => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.readarr,
+      tab: ServiceTab.wanted,
+      child: ReadarrActivityScreen(
+        mode: ReadarrActivityMode.wanted,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
   ServiceTab.history => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.readarr,
-      tab: tab,
-      child: ServiceTabPlaceholder(service: ServiceKey.readarr, tab: tab),
+      tab: ServiceTab.history,
+      child: ReadarrHistoryScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -1799,22 +1919,20 @@ GoRoute _sabnzbdBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  // History is a placeholder but not blocked: `mode=history` is already called,
-  // so the tab is a screen away.
-  //
-  // **Servers is blocked**, and on a narrower thing than a missing call.
-  // `mode=server_stats` is called, but `SabnzbdServerStats.fromJson` keeps one
-  // field of it — the all-time `total` — and throws away the per-server object
-  // the tab exists to show. The live half has nothing at all behind it:
-  // `mode=status`, which carries each server's connection count, its article
-  // errors and whether it is active, is never called, and neither is
-  // `mode=get_config&section=servers` for the configured list.
-  ServiceTab.history || ServiceTab.servers => _page(
+  ServiceTab.history => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.sabnzbd,
-      tab: tab,
-      child: ServiceTabPlaceholder(service: ServiceKey.sabnzbd, tab: tab),
+      tab: ServiceTab.history,
+      child: SabnzbdHistoryScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
+  ServiceTab.servers => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.sabnzbd,
+      tab: ServiceTab.servers,
+      child: SabnzbdServersScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -1887,20 +2005,28 @@ GoRoute _nzbgetBranchRoot(ServiceTab tab) => switch (tab) {
       child: NzbgetScreen(showAppBar: false, topPadding: _serviceTabTopPadding),
     ),
   ),
-  // History is a screen away, not an endpoint away: `history` is already
-  // called.
-  //
-  // **Feeds and Messages are blocked**, and on whole RPC methods rather than on
-  // fields. `NzbgetClient` calls thirteen methods and none of them is a feed
-  // one — no `listfeeds` for the configured feeds, no `viewfeed`/`fetchfeed`
-  // for their contents — and none is a log one: `log` and `loadlog` are what
-  // the Messages tab is, and neither has ever been sent.
-  ServiceTab.history || ServiceTab.feeds || ServiceTab.messages => _page(
+  ServiceTab.history => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.nzbget,
-      tab: tab,
-      child: ServiceTabPlaceholder(service: ServiceKey.nzbget, tab: tab),
+      tab: ServiceTab.history,
+      child: NzbgetHistoryScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
+  ServiceTab.feeds => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.nzbget,
+      tab: ServiceTab.feeds,
+      child: NzbgetFeedsScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
+  ServiceTab.messages => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.nzbget,
+      tab: ServiceTab.messages,
+      child: NzbgetMessagesScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -1920,13 +2046,12 @@ GoRoute _nzbgetBranchRoot(ServiceTab tab) => switch (tab) {
 /// because the whole service was one page with no detail to push. The root is
 /// what this node redirects and there is nothing else to forward.
 ///
-/// Two of the six tabs draw something, and both were already on that page: the
-/// array's disks and the Docker containers, the two halves `UnraidScreen` split
-/// into. The other four are **blocked on the read layer rather than on work** —
-/// `UnraidClient` speaks exactly three documents (`info`, `array`, `docker`),
-/// so there is no VM list, no notification feed and no share table to draw.
-/// Nothing here is guessed: this is the one service in the stack that has never
-/// been run against a real instance.
+/// Every tab now has a concrete read surface. Array and Docker retain the
+/// original split, while VMs, Notifications and Shares use the corresponding
+/// GraphQL documents exposed by `UnraidClient`; write affordances remain gated
+/// by the schema capabilities returned by the instance. The screens are honest
+/// about fields the contract does not provide (for example SMART history), but
+/// no branch is left as an endpoint-blocked route.
 RouteBase _unraidRoutes() {
   const service = ServiceKey.unraid;
   final tabs = tabsFor(service)!;
@@ -1970,12 +2095,6 @@ RouteBase _unraidRoutes() {
 /// throws rather than quietly rendering a placeholder: a seventh tab added to
 /// that table with no case here is a bar and a router disagreeing.
 ///
-/// **VMs, Notifications and Shares stay placeholders, and are blocked rather
-/// than unbuilt.** `UnraidClient` speaks three documents — `info`, `array`,
-/// `dockerContainers` — and the committed SDL declares no `vms`, no
-/// `notifications` and no `shares` query, so there is nothing for a screen to
-/// read. `UnraidOverviewScreen` leaves those regions out for the same reason
-/// instead of drawing them as zeroes.
 GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
   ServiceTab.overview => _page(
     tab.segment,
@@ -2007,12 +2126,37 @@ GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  ServiceTab.vms || ServiceTab.notifications || ServiceTab.shares => _page(
+  ServiceTab.vms => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.unraid,
-      tab: tab,
-      child: ServiceTabPlaceholder(service: ServiceKey.unraid, tab: tab),
+      tab: ServiceTab.vms,
+      child: UnraidScreen.vms(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.notifications => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.unraid,
+      tab: ServiceTab.notifications,
+      child: UnraidScreen.notifications(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.shares => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.unraid,
+      tab: ServiceTab.shares,
+      child: UnraidScreen.shares(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
     ),
   ),
   _ => throw UnsupportedError(
@@ -2087,27 +2231,20 @@ GoRoute _transmissionBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  // Two placeholders, and they are blocked different distances away — which is
-  // why each is named rather than waved at as "not built".
-  //
-  // **Labels** can be *read* today — `labels` is parsed off every torrent by
-  // `TransmissionTorrent.fromJson` — but a Labels tab that cannot assign one is
-  // a filter, not a tab, and the write has no client method: `torrent-set` is
-  // called in exactly one place, with the four speed keys, and never with
-  // `labels`.
-  //
-  // **Session** is the furthest. `session-get` is called, but
-  // `TransmissionSession` keeps eight fields of the sixty the daemon returns —
-  // no peer port, encryption, port forwarding, peer limits, seed ratio,
-  // incomplete directory, blocklist or queue sizes — and `session-set` is
-  // called with `alt-speed-enabled` and nothing else. The tab needs both halves
-  // widened, not a new RPC method.
-  ServiceTab.labels || ServiceTab.session => _page(
+  ServiceTab.labels => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.transmission,
-      tab: tab,
-      child: ServiceTabPlaceholder(service: ServiceKey.transmission, tab: tab),
+      tab: ServiceTab.labels,
+      child: TransmissionLabelsScreen(topPadding: _serviceTabTopPadding),
+    ),
+  ),
+  ServiceTab.session => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.transmission,
+      tab: ServiceTab.session,
+      child: TransmissionSessionScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -2131,12 +2268,11 @@ GoRoute _transmissionBranchRoot(ServiceTab tab) => switch (tab) {
 /// splitting a page across a bar must not leave a control on one tab and the
 /// sentence explaining why it is attenuated on another.
 ///
-/// Two of the five tabs draw something and both were sections of that one page.
-/// **Access lists and Audit log are blocked on endpoints rather than on work**:
-/// `NpmClient` calls `/nginx/proxy-hosts`, `/nginx/redirection-hosts`,
-/// `/nginx/dead-hosts`, `/nginx/streams`, `/nginx/certificates`, `/tokens` and
-/// `/users/me`, and neither `/nginx/access-lists` nor `/audit-log` is among
-/// them, so neither tab has a client to ask.
+/// Every tab has a concrete read surface. Proxy hosts and Certificates retain
+/// the original page sections, while Access lists and Audit log use dedicated
+/// `NpmClient` queries. The per-control permission band still travels with the
+/// tab that owns the write, so adding read coverage does not weaken mutation
+/// gating.
 RouteBase _npmRoutes() {
   const service = ServiceKey.nginxProxyManager;
   final tabs = tabsFor(service)!;
@@ -2181,12 +2317,6 @@ RouteBase _npmRoutes() {
 /// wildcard throws rather than quietly rendering a placeholder: a sixth tab
 /// added to that table with no case here is a bar and a router disagreeing.
 ///
-/// **Access lists and Audit log stay placeholders, and both are blocked on an
-/// endpoint rather than on work**: `NpmClient` calls neither
-/// `GET /api/nginx/access-lists` nor `GET /api/audit-log`.
-/// `NpmOverviewScreen` omits the two regions the board draws from them for that
-/// same reason — the tabs are where the work belongs the day the client can
-/// read them.
 GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
   ServiceTab.overview => _page(
     tab.segment,
@@ -2218,14 +2348,25 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
       ),
     ),
   ),
-  ServiceTab.accessLists || ServiceTab.auditLog => _page(
+  ServiceTab.accessLists => _page(
     tab.segment,
-    (state) => ServiceTabScaffold(
+    (state) => const ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
-      tab: tab,
-      child: ServiceTabPlaceholder(
-        service: ServiceKey.nginxProxyManager,
-        tab: tab,
+      tab: ServiceTab.accessLists,
+      child: NpmScreen.accessLists(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
+      ),
+    ),
+  ),
+  ServiceTab.auditLog => _page(
+    tab.segment,
+    (state) => const ServiceTabScaffold(
+      service: ServiceKey.nginxProxyManager,
+      tab: ServiceTab.auditLog,
+      child: NpmScreen.auditLog(
+        showAppBar: false,
+        topPadding: _serviceTabTopPadding,
       ),
     ),
   ),
@@ -2356,20 +2497,12 @@ RouteBase _streamRoutes(ServiceKey service) {
 /// folder has, where the only per-service input is the [ServiceKey] and the
 /// difference between the two servers lives in what their clients can answer.
 ///
-/// The rest are placeholders, and the two services are placeholders for
-/// different reasons — which is the honest split given that Jellyfin has been
-/// run against a live server and Plex has not:
-///
-///  * **Jellyfin.** Users is unbuilt rather than blocked: `getViewers()` already
-///    reads `/Users` for the settings viewer picker, so the tab has a client the
-///    day someone draws it. Devices (`/Devices`), Tasks (`/ScheduledTasks`) and
-///    Activity (`/System/ActivityLog/Entries`) are blocked — `JellyfinClient`
-///    calls none of the three.
-///  * **Plex.** On deck is unbuilt rather than blocked: `getContinueWatching()`
-///    already reads `/hubs/continueWatching`. Activities (`/activities`),
-///    Devices (`/devices`) and Playlists (`/playlists`) are blocked, and on a
-///    server nobody here has ever run — so nothing is guessed about what those
-///    endpoints return.
+/// Every branch has a concrete screen. Jellyfin Users, Devices and Tasks use
+/// their corresponding client reads; its Activity tab deliberately presents
+/// live sessions because the historical activity-log contract is not exposed
+/// by this client. Plex On deck uses the continue-watching hub, Devices and
+/// Playlists use their client reads, and Activities likewise presents live
+/// sessions because Plex has no supported historical activity endpoint here.
 GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
   final paths = _streamPaths(service);
 
@@ -2448,11 +2581,44 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
       (state) => ServiceTabScaffold(
         service: service,
         tab: tab,
-        child: ServiceTabPlaceholder(service: service, tab: tab),
+        child: _streamCapabilityScreen(service, tab),
       ),
     ),
     _ => throw UnsupportedError(
       'ServiceTab.${tab.name} is on ${service.name}\'s bar with no branch root',
+    ),
+  };
+}
+
+Widget _streamCapabilityScreen(ServiceKey service, ServiceTab tab) {
+  return switch ((service, tab)) {
+    (ServiceKey.jellyfin, ServiceTab.users) => const JellyfinUsersScreen(
+      topPadding: _serviceTabTopPadding,
+    ),
+    (ServiceKey.jellyfin, ServiceTab.devices) => const JellyfinDevicesScreen(
+      topPadding: _serviceTabTopPadding,
+    ),
+    (ServiceKey.jellyfin, ServiceTab.tasks) => const JellyfinTasksScreen(
+      topPadding: _serviceTabTopPadding,
+    ),
+    (ServiceKey.jellyfin, ServiceTab.activity) => const JellyfinActivityScreen(
+      topPadding: _serviceTabTopPadding,
+    ),
+    (ServiceKey.plex, ServiceTab.onDeck) => const PlexOnDeckScreen(
+      topPadding: _serviceTabTopPadding,
+    ),
+    (ServiceKey.plex, ServiceTab.activities) => const PlexActivitiesScreen(
+      topPadding: _serviceTabTopPadding,
+    ),
+    (ServiceKey.plex, ServiceTab.devices) => const PlexDevicesScreen(
+      topPadding: _serviceTabTopPadding,
+    ),
+    (ServiceKey.plex, ServiceTab.playlists) => const PlexPlaylistsScreen(
+      topPadding: _serviceTabTopPadding,
+    ),
+    _ => throw UnsupportedError(
+      'ServiceTab.${tab.name} is not a stream capability tab for '
+      '${service.name}',
     ),
   };
 }

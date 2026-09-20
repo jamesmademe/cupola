@@ -22,6 +22,13 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 /// Two states, not one. A service that is not set up answers first, because
 /// "the Calendar is empty" would be a claim about a server this app has never
 /// spoken to — the emptiness of a thing you cannot see is not a fact.
+///
+/// **No route reaches this today.** Every tab on every bar now resolves to a
+/// screen, so the only callers left are the tests that keep this honest. It is
+/// kept rather than deleted because the invariant it serves has not gone away:
+/// `tabsFor` is the bar, the router's wildcard throws on a tab it does not
+/// know, and the day a tab is added to that table before its screen exists,
+/// this is what the branch points at for the one commit in between.
 class ServiceTabPlaceholder extends ConsumerWidget {
   final ServiceKey service;
   final ServiceTab tab;

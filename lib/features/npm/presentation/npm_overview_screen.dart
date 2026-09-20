@@ -51,26 +51,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///    that they cannot fix from here. Better to delete a promise than to build
 ///    a control that has to be defended.
 ///
-/// ## What the board asks for that this page does not draw, and why
+/// ## What this page intentionally does not duplicate
 ///
-/// Three things, absent rather than stubbed, because `NpmClient` makes no call
-/// that could fill them and a section given a fake zero is worse than a section
-/// that was never promised:
-///
-///  * **Audit log today** — the board's fourth region, `matt enabled
-///    radarr.example.net · 10 min ago`. It needs `GET /api/audit-log`, which
-///    this client does not call. The tab exists on the bar and is where that
-///    work belongs.
-///  * **The Access lists readout** — `Lists 3 · public · family · lan only`.
-///    It needs `GET /api/nginx/access-lists`. The proxy hosts carry an
-///    `access_list_id`, so a count of the lists *in use* could be derived, but
-///    the board's figure is the number of lists that **exist** and the names
-///    are not derivable at all. A number that silently means something narrower
-///    than its label is the defect, not the fix.
-///  * **`since 14:02` on a dead upstream** — the probe is a single pass with no
-///    history, so there is no first-seen-down moment to print. What it can say
-///    honestly is where the measurement was taken, and the row says that
-///    instead.
+/// Access lists and Audit log now have dedicated endpoint-backed tabs. The
+/// Overview keeps its focus on proxy health, fronted hosts and certificates;
+/// it does not repeat those records or imply that a one-shot reachability
+/// probe can provide a historical `since` timestamp. The probe reports its
+/// actual coverage instead, and the detailed tabs own their own loading and
+/// failure states.
 ///
 /// ## The coverage figure, which is the one thing that must never disappear
 ///

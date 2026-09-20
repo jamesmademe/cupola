@@ -41,8 +41,56 @@ final truenasClientProvider = Provider<TrueNasWsClient>((ref) {
   return client;
 });
 
+/// TrueNAS client bound to one configured connection id.
+///
+/// Empty and active ids collapse to the lens client so callers do not open a
+/// second WebSocket for the same NAS. A non-active id bypasses the lens and is
+/// disposed with its own WebSocket when the family entry is released.
+final truenasClientForProvider = Provider.family<TrueNasWsClient, String>((
+  ref,
+  instanceId,
+) {
+  final activeId =
+      ref.read(activeInstanceProvider(ServiceKey.truenas))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == activeId) {
+    return ref.watch(truenasClientProvider);
+  }
+  return _truenasClient(ref, instanceId: instanceId);
+});
+
+TrueNasWsClient _truenasClient(Ref ref, {required String? instanceId}) {
+  final transport = watchTransport(
+    ref,
+    ServiceKey.truenas,
+    instanceId: instanceId,
+  );
+  if (!transport.configured) {
+    throw const TrueNasException('TrueNAS not configured');
+  }
+  final client = TrueNasWsClient(
+    baseUrl: transport.url,
+    apiKey: transport.apiKey,
+    certFingerprint: transport.pin,
+  );
+  ref.onDispose(client.close);
+  return client;
+}
+
 final truenasServiceProvider = Provider<TrueNasService>((ref) {
   return TrueNasService(ref.watch(truenasClientProvider));
+});
+
+/// Dashboard facade bound to one configured TrueNAS connection id.
+final truenasServiceForProvider = Provider.family<TrueNasService, String>((
+  ref,
+  instanceId,
+) {
+  final activeId =
+      ref.read(activeInstanceProvider(ServiceKey.truenas))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == activeId) {
+    return ref.watch(truenasServiceProvider);
+  }
+  return TrueNasService(ref.watch(truenasClientForProvider(instanceId)));
 });
 
 // ── Domain-grouped API providers ───────────────────────────────────────────

@@ -64,8 +64,9 @@ class DownloadQueueTile extends StatelessWidget {
 
   /// The same value as a whole number, for the label. Taken separately because
   /// SABnzbd reports it directly while NZBGet derives it from sizes, and
-  /// re-deriving one from the other would round twice.
-  final int percentage;
+  /// re-deriving one from the other would round twice. Null means the server
+  /// did not report enough information to compute a percentage.
+  final int? percentage;
 
   final Color accent;
 
@@ -228,7 +229,7 @@ class DownloadQueueTile extends StatelessWidget {
                               ],
                               const SizedBox(width: AppSpacing.sm),
                               Text(
-                                '$percentage%',
+                                percentage == null ? '—' : '$percentage%',
                                 style: theme.textTheme.labelMedium!
                                     .weight(FontWeight.w700)
                                     .tabular
@@ -327,7 +328,7 @@ class DownloadQueueTile extends StatelessWidget {
   String get _spokenLabel => [
     title,
     ?statusLabel,
-    '$percentage per cent',
+    percentage == null ? 'progress unavailable' : '$percentage per cent',
     _subtitleLine,
     for (final metric in metrics) metric.spoken ?? metric.label,
   ].join(', ');

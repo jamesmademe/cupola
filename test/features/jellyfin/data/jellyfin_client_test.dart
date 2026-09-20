@@ -532,6 +532,28 @@ void main() {
     });
   });
 
+  group('KPI reads', () {
+    test(
+      'preserve a remote failure while browse reads still degrade',
+      () async {
+        final adapter = CapturingHttpAdapter(response: '', statusCode: 500);
+        final client = _client(adapter);
+
+        expect(await client.getSessions(), isEmpty);
+        await expectLater(
+          client.getSessionsOrThrow(),
+          throwsA(isA<DioException>()),
+        );
+
+        expect(await client.getLibraries(), isEmpty);
+        await expectLater(
+          client.getLibrariesOrThrow(),
+          throwsA(isA<DioException>()),
+        );
+      },
+    );
+  });
+
   group('refreshLibrary', () {
     test('passes both refresh modes, which default to None', () async {
       final adapter = CapturingHttpAdapter(response: '', statusCode: 204);
@@ -1088,6 +1110,93 @@ void main() {
       expect(
         _client(CapturingHttpAdapter(response: const {})).imageFor('  '),
         isNull,
+      );
+    });
+  });
+
+  group('administration surfaces', () {
+    test('users retain policy and last-activity fields', () async {
+      final adapter = CapturingHttpAdapter(
+        response: const [
+          {
+            'Id': 'user-1',
+            'Name': 'Matt',
+            'LastActivityDate': '2026-09-17T20:15:00Z',
+            'Policy': {'IsAdministrator': true, 'IsDisabled': false},
+          },
+        ],
+      );
+
+      final users = await _client(adapter).getUsers();
+
+      expect(adapter.lastUri!.path, '/Users');
+      expect(users.single.name, 'Matt');
+      expect(users.single.isAdministrator, isTrue);
+      expect(users.single.isDisabled, isFalse);
+      expect(users.single.lastActivityAt, DateTime.utc(2026, 9, 17, 20, 15));
+    });
+
+    test('devices read the paged Items envelope', () async {
+      final adapter = CapturingHttpAdapter(
+        response: const {
+          'Items': [
+            {
+              'Id': 'device-1',
+              'Name': 'Living room',
+              'AppName': 'Jellyfin Web',
+              'AppVersion': '10.11.0',
+              'LastUserName': 'Matt',
+              'DateLastActivity': '2026-09-17T21:00:00Z',
+            },
+          ],
+          'TotalRecordCount': 1,
+        },
+      );
+
+      final devices = await _client(adapter).getDevices();
+
+      expect(adapter.lastUri!.path, '/Devices');
+      expect(devices.single.name, 'Living room');
+      expect(devices.single.appName, 'Jellyfin Web');
+      expect(devices.single.lastUserName, 'Matt');
+    });
+
+    test('scheduled tasks preserve live progress and last failure', () async {
+      final adapter = CapturingHttpAdapter(
+        response: const [
+          {
+            'Id': 'task-1',
+            'Name': 'Scan Media Library',
+            'State': 'Running',
+            'CurrentProgressPercentage': 42.5,
+            'LastExecutionResult': {
+              'Status': 'Failed',
+              'StartTimeUtc': '2026-09-17T19:00:00Z',
+              'EndTimeUtc': '2026-09-17T19:01:00Z',
+              'ErrorMessage': 'Disk unavailable',
+            },
+          },
+        ],
+      );
+
+      final tasks = await _client(adapter).getScheduledTasks();
+
+      expect(adapter.lastUri!.path, '/ScheduledTasks');
+      expect(tasks.single.isRunning, isTrue);
+      expect(tasks.single.progress, 42.5);
+      expect(tasks.single.failed, isTrue);
+      expect(tasks.single.errorMessage, 'Disk unavailable');
+    });
+
+    test('administration reads surface transport failures', () async {
+      final adapter = CapturingHttpAdapter(response: '', statusCode: 500);
+      final client = _client(adapter);
+
+      await expectLater(client.getUsers(), throwsA(isA<DioException>()));
+      await expectLater(client.getDevices(), throwsA(isA<DioException>()));
+      await expectLater(
+        client.getScheduledTasks(),
+        throwsA(isA<DioException>()),
       );
     });
   });

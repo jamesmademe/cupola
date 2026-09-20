@@ -32,26 +32,19 @@ import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 ///
 /// ## Where this departs from the board, and why
 ///
-/// **Three of the six tabs on Unraid's bar have no section here, and are absent
-/// rather than stubbed.** `UnraidClient` speaks exactly three documents —
-/// `info`, `array`, `dockerContainers` — and the committed SDL declares nothing
-/// else. So:
-///
-///  * **VMs** — the board's `1 of 2 running · Home Assistant` needs a `vms`
-///    query. There is none, in the client or in the schema this app is written
-///    against.
-///  * **Notifications** — `3 · 1 warning`, with an Archive action, needs a
-///    `notifications` query and a mutation to archive. Neither exists.
-///  * **Shares** — same: no `shares` query.
+/// VMs, Notifications and Shares now have dedicated tab screens backed by the
+/// current GraphQL contract. They are intentionally not duplicated in this
+/// Overview, which remains the server summary; mutation controls on those
+/// tabs are shown only when the instance advertises the matching capability.
 ///  * **Parity** — `valid · checked 12 days ago · 0 errors` needs the parity
 ///    history the `array` document does not carry.
 ///  * **The System strip** — `CPU 12% · RAM 41% · Net 84 Mb/s` needs live
 ///    metrics. `info { os }` answers a distro, a release and a boot time, which
 ///    is what the System section below actually draws.
 ///
-/// Every one of those would have been a section of zeroes, and a zero is a
-/// claim. The tab bar keeps their placeholders, which is where the work belongs
-/// when a read layer exists for them.
+/// Fields the contract still does not provide remain absent rather than being
+/// represented by invented zeroes. That distinction keeps the dashboard's
+/// figures honest while the tab bar still offers complete navigation.
 ///
 /// **Per-disk device and size are absent** (`sdc · 6 TB` on the board): the
 /// `ArrayDisk` type this app queries carries `name`, `status` and `temp`, and

@@ -114,7 +114,7 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
               ),
               tooltip: 'Back to Dashboard',
               padding: const EdgeInsets.only(right: AppSpacing.xs),
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 40),
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             ),
             Container(
               width: 8,

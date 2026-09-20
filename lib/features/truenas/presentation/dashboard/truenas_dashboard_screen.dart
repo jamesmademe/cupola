@@ -10,6 +10,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/truenas/domain/models/truenas_models.dart';
@@ -34,11 +35,16 @@ class TrueNasDashboardMetrics {
   /// rebuilds on a timer.
   final List<double> networkSeries;
 
+  /// Whether the reporting RPC answered. A successful response with no
+  /// matching graph is still an answer; a transport failure is not.
+  final bool answered;
+
   const TrueNasDashboardMetrics({
     this.cpu,
     this.memory,
     this.network,
     this.networkSeries = const [],
+    this.answered = true,
   });
 
   /// CPU busy fraction from the last sample: `(total - idle) / total`, where
@@ -110,10 +116,12 @@ final truenasDashboardMetricsProvider =
       // One WS round-trip for all three graphs, over the shortest window that
       // still feeds a sparkline — the gauges only ever read the last sample.
       List<TrueNasReportingGraph> graphs;
+      var answered = true;
       try {
         graphs = await reporting.getLiveGraphs(['cpu', 'memory', 'interface']);
       } catch (_) {
         graphs = const [];
+        answered = false;
       }
 
       TrueNasReportingGraph? byName(String name) {
@@ -131,6 +139,7 @@ final truenasDashboardMetricsProvider =
         networkSeries: (network == null || network.seriesLabels.isEmpty)
             ? const []
             : network.series(0).map((p) => p.v ?? 0).toList(growable: false),
+        answered: answered,
       );
     });
 
@@ -194,19 +203,57 @@ class _TrueNasDashboardScreenState
       clock: ref.read(pollClockProvider),
     )).setLive(watchPageActivity(context, ref).isLive);
 
+    // **The clock is stamped on an arrival, and only on an arrival.**
+    //
+    // `noteSuccess()` also used to be called from the body of `build`, off the
+    // last *cached* value — which is precisely the case the band exists for.
+    // When the metrics socket dies the provider keeps its final
+    // `AsyncData(answered: true)`, so every incidental rebuild (a theme
+    // change, the tick below, this listener's own `setState`) re-read that
+    // stale value and pushed `lastSuccessAt` forward. `isStaleAt` was then
+    // measured against a timestamp the same frame had just reset, so it could
+    // never be true and the band could never appear. A rebuild is not news.
+    ref.listen<AsyncValue<TrueNasDashboardMetrics>>(
+      truenasDashboardMetricsProvider,
+      (_, next) {
+        if (next.asData?.value.answered == true) {
+          _live?.noteSuccess();
+        }
+        if (mounted) setState(() {});
+      },
+    );
+
+    final now = DateTime.now();
+    final lastSuccessAt = _live?.lastSuccessAt;
+    final staleAge = lastSuccessAt != null && _live!.isStaleAt(now)
+        ? now.difference(lastSuccessAt)
+        : null;
+
     final dashboard = ref.watch(truenasDashboardProvider);
 
     return TrueNasSectionScaffold(
       title: 'Dashboard',
       body: TrueNasConsoleShell(
-        child: TrueNasAsyncBody(
-          value: dashboard,
-          onRetry: _refresh,
-          skeleton: ListView(
-            padding: const EdgeInsets.only(top: AppSpacing.md),
-            children: [AppSkeleton.listRows()],
-          ),
-          data: (data) => _DashboardBody(data: data),
+        child: Column(
+          children: [
+            if (staleAge != null)
+              FaultBand.stale(
+                age: staleAge,
+                detail: 'TrueNAS live metrics have not returned.',
+                onRefresh: _refresh,
+              ),
+            Expanded(
+              child: TrueNasAsyncBody(
+                value: dashboard,
+                onRetry: _refresh,
+                skeleton: ListView(
+                  padding: const EdgeInsets.only(top: AppSpacing.md),
+                  children: [AppSkeleton.listRows()],
+                ),
+                data: (data) => _DashboardBody(data: data),
+              ),
+            ),
+          ],
         ),
       ),
     );

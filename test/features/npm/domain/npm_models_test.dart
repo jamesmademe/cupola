@@ -3,6 +3,34 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 
 void main() {
+  test(
+    'access-list parsing keeps IP rules and omits absent credential items',
+    () {
+      final list = NpmAccessList.fromJson({
+        'id': 1,
+        'name': 'LAN',
+        'proxy_host_count': 3,
+        'clients': [
+          {'address': '10.0.0.0/8', 'directive': 'allow'},
+        ],
+      });
+
+      expect(list.proxyHostCount, 3);
+      expect(list.clients.single.directive, 'allow');
+    },
+  );
+
+  test('audit parsing tolerates incomplete metadata', () {
+    final entry = NpmAuditEntry.fromJson({
+      'id': 2,
+      'object_type': 'certificate',
+      'action': 'deleted',
+    });
+    expect(entry.summary, isEmpty);
+    expect(entry.objectId, isNull);
+    expect(entry.createdOn, isNull);
+  });
+
   group('NpmProxyHost — the advanced block', () {
     test('an absent block is empty and zero lines, not one blank line', () {
       final host = NpmProxyHost.fromJson({

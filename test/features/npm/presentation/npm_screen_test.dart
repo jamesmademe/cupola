@@ -60,6 +60,8 @@ const _viewOnly = NpmAccount(
   permissions: {},
 );
 
+const _admin = NpmAccount(id: 1, name: 'admin', isAdmin: true, permissions: {});
+
 /// Nine certificates and nine other hosts, because the caps under test are
 /// eight and ten: a section tab has to draw all nine and the whole-service page
 /// has to stop at eight.
@@ -68,6 +70,7 @@ Future<void> _pump(
   required Widget screen,
   NpmAccount? account,
   int certificates = 9,
+  NpmSection? failingSection,
 }) async {
   // Tall, so a list of nine rows is laid out rather than being cut off — the
   // counts below are the whole point of two of these cases.
@@ -93,6 +96,37 @@ Future<void> _pump(
         npmOtherHostsProvider.overrideWith(
           (ref) async => [for (var i = 1; i <= 9; i++) _other(i)],
         ),
+        npmAccessListsProvider.overrideWith((ref) async {
+          if (failingSection == NpmSection.accessLists) {
+            throw Exception('offline');
+          }
+          return const [
+            NpmAccessList(
+              id: 1,
+              name: 'LAN only',
+              satisfyAny: false,
+              passAuth: false,
+              proxyHostCount: 2,
+              clients: [
+                NpmAccessClient(address: '192.168.1.0/24', directive: 'allow'),
+              ],
+            ),
+          ];
+        }),
+        npmAuditLogProvider.overrideWith((ref) async {
+          if (failingSection == NpmSection.auditLog) {
+            throw Exception('offline');
+          }
+          return const [
+            NpmAuditEntry(
+              id: 1,
+              objectType: 'proxy-host',
+              objectId: 2,
+              action: 'updated',
+              summary: 'photos.example.net',
+            ),
+          ];
+        }),
         // Nothing probed. The column it feeds reads "unchecked" rather than
         // claiming every upstream is up, which is the one thing a fabricated
         // report here could quietly assert.
@@ -168,6 +202,56 @@ void main() {
     expect(find.text('Redirections, 404s and streams'), findsNothing);
   });
 
+  testWidgets('Access lists and Audit log draw their real documents', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      screen: const NpmScreen.accessLists(showAppBar: false),
+      account: _admin,
+    );
+    expect(find.text('LAN only'), findsOneWidget);
+    expect(find.textContaining('2 hosts'), findsOneWidget);
+
+    await _pump(
+      tester,
+      screen: const NpmScreen.auditLog(showAppBar: false),
+      account: _admin,
+    );
+    expect(find.textContaining('photos.example.net'), findsOneWidget);
+  });
+
+  testWidgets('Audit log explains the server-side admin capability', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      screen: const NpmScreen.auditLog(showAppBar: false),
+      account: _viewOnly,
+    );
+    expect(find.textContaining('administrators only'), findsOneWidget);
+    expect(find.textContaining('photos.example.net'), findsNothing);
+  });
+
+  testWidgets('Access lists and Audit log expose remote-error states', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      screen: const NpmScreen.accessLists(showAppBar: false),
+      failingSection: NpmSection.accessLists,
+    );
+    expect(find.text('Failed to load access lists'), findsOneWidget);
+
+    await _pump(
+      tester,
+      screen: const NpmScreen.auditLog(showAppBar: false),
+      account: _admin,
+      failingSection: NpmSection.auditLog,
+    );
+    expect(find.text('Failed to load the audit log'), findsOneWidget);
+  });
+
   testWidgets('a section tab lists every row it names', (tester) async {
     // Nine certificates, all nine drawn. The single page capped them at eight,
     // which is right for a peek and wrong for a tab called Certificates: eight
@@ -218,6 +302,8 @@ void main() {
     for (final screen in const [
       NpmScreen.proxyHosts(showAppBar: false),
       NpmScreen.certificates(showAppBar: false),
+      NpmScreen.accessLists(showAppBar: false),
+      NpmScreen.auditLog(showAppBar: false),
     ]) {
       await _pump(tester, screen: screen, account: _viewOnly);
       expect(
@@ -241,6 +327,8 @@ void main() {
       NpmScreen(showAppBar: false),
       NpmScreen.proxyHosts(showAppBar: false),
       NpmScreen.certificates(showAppBar: false),
+      NpmScreen.accessLists(showAppBar: false),
+      NpmScreen.auditLog(showAppBar: false),
     ]) {
       await _pump(tester, screen: screen);
       expect(

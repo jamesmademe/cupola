@@ -1,0 +1,12 @@
+{
+  "pageInfo": { "results": 1, "pages": 1, "page": 1 },
+  "results": [
+    {
+      "id": 21,
+      "issueType": 2,
+      "media": { "id": 81, "tmdbId": 550, "title": "Fight Club", "mediaType": "movie" },
+      "createdBy": { "id": 4, "username": "matt", "email": "matt@example.com", "requestCount": 3 },
+      "comments": [{ "id": 1, "message": "Audio is out of sync" }]
+    }
+  ]
+}

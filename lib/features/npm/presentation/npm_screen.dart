@@ -28,7 +28,9 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 enum NpmSection {
   everything('Nginx Proxy Manager'),
   proxyHosts('Proxy hosts'),
-  certificates('Certificates');
+  certificates('Certificates'),
+  accessLists('Access lists'),
+  auditLog('Audit log');
 
   const NpmSection(this.label);
 
@@ -96,6 +98,18 @@ class NpmScreen extends ConsumerWidget {
     this.topPadding = 0,
   }) : section = NpmSection.certificates;
 
+  const NpmScreen.accessLists({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  }) : section = NpmSection.accessLists;
+
+  const NpmScreen.auditLog({
+    super.key,
+    this.showAppBar = true,
+    this.topPadding = 0,
+  }) : section = NpmSection.auditLog;
+
   final NpmSection section;
 
   /// Whether to draw this screen's own app bar.
@@ -154,15 +168,20 @@ final _invalidateAfterAction = <ProviderOrFamily>[
 /// default-admin warning, and the KPI and summary the Dashboard card reads —
 /// because all three qualify whatever is on screen.
 void _invalidate(WidgetRef ref, NpmSection section) {
-  if (section != NpmSection.certificates) {
-    ref.invalidate(npmProxyHostsProvider);
-    // The upstream probe rides the host list rather than being invalidated
-    // here: it awaits `npmProxyHostsProvider.future`, so one refresh re-reads
-    // and re-probes.
-    ref.invalidate(npmOtherHostsProvider);
-  }
-  if (section != NpmSection.proxyHosts) {
-    ref.invalidate(npmCertificatesProvider);
+  switch (section) {
+    case NpmSection.everything:
+      ref.invalidate(npmProxyHostsProvider);
+      ref.invalidate(npmOtherHostsProvider);
+      ref.invalidate(npmCertificatesProvider);
+    case NpmSection.proxyHosts:
+      ref.invalidate(npmProxyHostsProvider);
+      ref.invalidate(npmOtherHostsProvider);
+    case NpmSection.certificates:
+      ref.invalidate(npmCertificatesProvider);
+    case NpmSection.accessLists:
+      ref.invalidate(npmAccessListsProvider);
+    case NpmSection.auditLog:
+      ref.invalidate(npmAuditLogProvider);
   }
   // The account probe does not ride anything, and a permission changed on the
   // server is exactly the kind of thing a person pulls to refresh for.
@@ -230,8 +249,16 @@ class _NpmSection extends ConsumerWidget {
           const NpmDefaultAdminWarning(),
           const NpmAccessBand(),
           const SizedBox(height: AppSpacing.sm),
-          if (section != NpmSection.certificates) ..._hostChildren(ref),
-          if (section != NpmSection.proxyHosts) ..._certificateChildren(ref),
+          ...switch (section) {
+            NpmSection.everything => [
+              ..._hostChildren(ref),
+              ..._certificateChildren(ref),
+            ],
+            NpmSection.proxyHosts => _hostChildren(ref),
+            NpmSection.certificates => _certificateChildren(ref),
+            NpmSection.accessLists => _accessListChildren(ref),
+            NpmSection.auditLog => _auditChildren(ref),
+          },
         ],
       ),
     );
@@ -275,6 +302,144 @@ class _NpmSection extends ConsumerWidget {
       limit: section == NpmSection.everything ? 8 : null,
     ),
   ];
+
+  List<Widget> _accessListChildren(WidgetRef ref) => [
+    const SectionHeader(title: 'Access lists', showChevron: false),
+    const SizedBox(height: 2),
+    _AccessListList(listsAsync: ref.watch(npmAccessListsProvider)),
+  ];
+
+  List<Widget> _auditChildren(WidgetRef ref) {
+    final account = ref.watch(npmAccountProvider).asData?.value;
+    return [
+      const SectionHeader(title: 'Audit log', showChevron: false),
+      const SizedBox(height: 2),
+      if (account != null && !account.isAdmin)
+        const _NpmCapabilityNote(
+          message:
+              'Nginx Proxy Manager exposes its audit log to administrators only.',
+        )
+      else
+        _AuditLogList(entriesAsync: ref.watch(npmAuditLogProvider)),
+    ];
+  }
+}
+
+class _NpmCapabilityNote extends StatelessWidget {
+  const _NpmCapabilityNote({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(AppSpacing.lg),
+    child: Text(
+      message,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    ),
+  );
+}
+
+class _AccessListList extends ConsumerWidget {
+  const _AccessListList({required this.listsAsync});
+  final AsyncValue<List<NpmAccessList>> listsAsync;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => listsAsync.when(
+    data: (lists) => lists.isEmpty
+        ? const _NpmCapabilityNote(message: 'No access lists configured.')
+        : Column(
+            children: lists
+                .map((list) {
+                  final hosts = list.proxyHostCount;
+                  final detail = [
+                    if (hosts != null)
+                      '$hosts ${hosts == 1 ? 'host' : 'hosts'}',
+                    '${list.clients.length} IP ${list.clients.length == 1 ? 'rule' : 'rules'}',
+                    if (list.passAuth) 'basic auth',
+                  ].join(' · ');
+                  return _NpmReadOnlyTile(
+                    icon: Icons.shield_outlined,
+                    title: list.name,
+                    detail: detail,
+                  );
+                })
+                .toList(growable: false),
+          ),
+    loading: () => const ListRowsShimmer(count: 3),
+    error: (_, _) => InlineErrorRetry(
+      message: 'Failed to load access lists',
+      onRetry: () => ref.invalidate(npmAccessListsProvider),
+    ),
+  );
+}
+
+class _AuditLogList extends ConsumerWidget {
+  const _AuditLogList({required this.entriesAsync});
+  final AsyncValue<List<NpmAuditEntry>> entriesAsync;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => entriesAsync.when(
+    data: (entries) => entries.isEmpty
+        ? const _NpmCapabilityNote(message: 'No audit entries reported.')
+        : Column(
+            children: entries
+                .map((entry) {
+                  final target = entry.summary.isEmpty
+                      ? '${entry.objectType}${entry.objectId == null ? '' : ' #${entry.objectId}'}'
+                      : entry.summary;
+                  final time = entry.createdOn?.toLocal().toIso8601String();
+                  return _NpmReadOnlyTile(
+                    icon: Icons.history_rounded,
+                    title: '${entry.action} · $target',
+                    detail: [entry.objectType, ?time].join(' · '),
+                  );
+                })
+                .toList(growable: false),
+          ),
+    loading: () => const ListRowsShimmer(count: 4),
+    error: (_, _) => InlineErrorRetry(
+      message: 'Failed to load the audit log',
+      onRetry: () => ref.invalidate(npmAuditLogProvider),
+    ),
+  );
+}
+
+class _NpmReadOnlyTile extends StatelessWidget {
+  const _NpmReadOnlyTile({
+    required this.icon,
+    required this.title,
+    required this.detail,
+  });
+  final IconData icon;
+  final String title;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    label: '$title, $detail',
+    child: ExcludeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.xs,
+        ),
+        child: ListTile(
+          shape: RoundedRectangleBorder(
+            borderRadius: AppRadius.borderRadiusMd,
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ),
+          leading: Icon(icon, color: AppColors.nginxProxyManager),
+          title: Text(title),
+          subtitle: Text(detail),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Warns when the install is old enough to still ship NPM's hard-coded default

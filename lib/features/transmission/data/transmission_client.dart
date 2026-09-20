@@ -551,6 +551,72 @@ class TransmissionClient {
     });
   }
 
+  /// Replaces the labels on the selected torrents.
+  ///
+  /// `labels` arrived in Transmission 3.00 — **rpc-version 16** — and arrived
+  /// on both halves of the protocol at once: the revision that puts `labels`
+  /// on `torrent-get` is the one that accepts it on `torrent-set`. So a daemon
+  /// whose torrents report labels can assign them, and there is no version
+  /// window where the read works and the write does not. Older daemons omit
+  /// the field on reads and reject this write; the Session surface exposes
+  /// `rpcVersion` so callers can withhold the editor instead of shipping a
+  /// control that fails.
+  Future<void> setLabels(List<String> ids, List<String> labels) async {
+    await _call('torrent-set', {
+      ..._idsArgument(ids),
+      'labels': labels
+          .map((label) => label.trim())
+          .where((label) => label.isNotEmpty)
+          .toList(growable: false),
+    });
+  }
+
+  /// Writes the subset of `session-set` exposed by Cupola's Session tab.
+  /// Null means leave the daemon setting untouched.
+  Future<void> setSessionPreferences({
+    int? peerPort,
+    bool? peerPortRandomOnStart,
+    bool? portForwardingEnabled,
+    String? encryption,
+    int? peerLimitGlobal,
+    int? peerLimitPerTorrent,
+    double? seedRatioLimit,
+    bool? seedRatioLimited,
+    int? idleSeedingLimitMinutes,
+    bool? idleSeedingLimitEnabled,
+    bool? blocklistEnabled,
+    bool? downloadQueueEnabled,
+    int? downloadQueueSize,
+    bool? seedQueueEnabled,
+    int? seedQueueSize,
+    bool? startAddedTorrents,
+    bool? renamePartialFiles,
+    int? cacheSizeMb,
+  }) async {
+    final values = <String, dynamic>{
+      'peer-port': ?peerPort,
+      'peer-port-random-on-start': ?peerPortRandomOnStart,
+      'port-forwarding-enabled': ?portForwardingEnabled,
+      'encryption': ?encryption,
+      'peer-limit-global': ?peerLimitGlobal,
+      'peer-limit-per-torrent': ?peerLimitPerTorrent,
+      'seedRatioLimit': ?seedRatioLimit,
+      'seedRatioLimited': ?seedRatioLimited,
+      'idle-seeding-limit': ?idleSeedingLimitMinutes,
+      'idle-seeding-limit-enabled': ?idleSeedingLimitEnabled,
+      'blocklist-enabled': ?blocklistEnabled,
+      'download-queue-enabled': ?downloadQueueEnabled,
+      'download-queue-size': ?downloadQueueSize,
+      'seed-queue-enabled': ?seedQueueEnabled,
+      'seed-queue-size': ?seedQueueSize,
+      'start-added-torrents': ?startAddedTorrents,
+      'rename-partial-files': ?renamePartialFiles,
+      'cache-size-mb': ?cacheSizeMb,
+    };
+    if (values.isEmpty) return;
+    await _call('session-set', values);
+  }
+
   /// Moves torrents within the queue.
   Future<void> queueMove(List<String> ids, TransmissionQueueMove move) async {
     await _call(move.method, _idsArgument(ids));

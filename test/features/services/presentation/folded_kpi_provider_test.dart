@@ -6,6 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -33,8 +37,8 @@ const _hd = ServiceInstance(
   credential: 'k',
 );
 
-/// Two qBittorrent, to stand for the thirteen services with no per-connection
-/// client provider to build a second client from.
+/// Two qBittorrent connections, used to verify that a named KPI reader does
+/// not silently fall back to the active lens.
 const _qbLens = ServiceInstance(
   id: 'qbittorrent',
   service: ServiceKey.qbittorrent,
@@ -61,6 +65,21 @@ class _Movies extends FakeRadarrService {
   Future<List<RadarrMovie>> getMovies() async => movies;
 }
 
+class _Torrents extends QbittorrentService {
+  _Torrents(this.torrents) : super(QbittorrentClient(url: 'https://qbit.test'));
+
+  final List<Torrent> torrents;
+
+  @override
+  Future<List<Torrent>> getTorrents({
+    String? filter,
+    String? category,
+    String? sort,
+    bool? reverse,
+    String? hashes,
+  }) async => torrents;
+}
+
 ServiceSummary _summary(ServiceKey service, {required bool online}) =>
     ServiceSummary(
       service: service,
@@ -76,6 +95,7 @@ ProviderContainer _container({
   Set<String> dark = const {},
   List<RadarrMovie> lensMovies = const [],
   List<RadarrMovie> otherMovies = const [],
+  QbittorrentService? qbittorrentService,
 }) {
   final container = ProviderContainer(
     overrides: [
@@ -92,6 +112,10 @@ ProviderContainer _container({
       // The named leg builds its own client from the id. This family is the
       // whole reason Radarr can answer per connection at all.
       radarrServiceForProvider.overrideWith((ref, id) => _Movies(otherMovies)),
+      if (qbittorrentService != null)
+        qbittorrentServiceForProvider.overrideWith(
+          (ref, id) => qbittorrentService,
+        ),
     ],
   );
   addTearDown(container.dispose);
@@ -179,23 +203,23 @@ void main() {
       expect(kpis!.firstWhere((kpi) => kpi.label == 'Movies').value, '2');
     });
 
-    test('a service with no per-connection reader says so, and does not '
-        'answer with the lens', () async {
-      // qBittorrent's client provider resolves the lens itself and takes no id,
-      // so there is nothing to ask the second server with. Null says that;
-      // returning the lens's figures under another connection's key would be
-      // the fiction this provider exists to end.
-      final container = _container(instances: const [_qbLens, _qbOther]);
-
-      expect(
-        await container.read(
-          serviceKpiForProvider((
-            service: ServiceKey.qbittorrent,
-            instanceId: _qbOther.id,
-          )).future,
-        ),
-        isNull,
+    test('a named qBittorrent connection does not read the lens', () async {
+      final container = _container(
+        instances: const [_qbLens, _qbOther],
+        qbittorrentService: _Torrents([
+          Torrent.fromJson({'state': 'downloading', 'dlspeed': 128}),
+        ]),
       );
+
+      final kpis = await container.read(
+        serviceKpiForProvider((
+          service: ServiceKey.qbittorrent,
+          instanceId: _qbOther.id,
+        )).future,
+      );
+
+      expect(kpis, isNotNull);
+      expect(kpis!.firstWhere((kpi) => kpi.label == 'Active').value, '1');
     });
   });
 }

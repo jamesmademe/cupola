@@ -120,14 +120,14 @@ class _LibrariesBody extends ConsumerWidget {
 /// free is how many rooms there are and which one is scanning, and that is what
 /// this draws. The count itself is still unbuilt — see the class comment on
 /// [StreamLibrariesScreen].
-class _LibrariesSection extends StatelessWidget {
+class _LibrariesSection extends ConsumerWidget {
   const _LibrariesSection({required this.service, required this.libraries});
 
   final ServiceKey service;
   final AsyncValue<List<StreamLibrary>> libraries;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -147,6 +147,13 @@ class _LibrariesSection extends StatelessWidget {
           child: AsyncValueWidget<List<StreamLibrary>>(
             value: libraries,
             serviceName: service.title,
+            onRetry: () {
+              if (service == ServiceKey.jellyfin) {
+                ref.invalidate(jellyfinLibrariesProvider);
+              } else {
+                ref.invalidate(plexLibrariesProvider);
+              }
+            },
             isEmpty: (list) => list.isEmpty,
             emptyBuilder: const AppEmptyState.compact(
               icon: Icons.video_library_outlined,

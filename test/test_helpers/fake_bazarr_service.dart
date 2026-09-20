@@ -16,6 +16,11 @@ class FakeBazarrService extends BazarrService {
     radarrSignalR: false,
     announcements: 0,
   );
+  BazarrProviderSummary providerSummary = const BazarrProviderSummary(
+    configuredCount: 0,
+  );
+  List<BazarrProviderStatus> providerStatuses = const [];
+  bool resetProviderStatusesCalled = false;
   BazarrPagedResult<BazarrSeries> seriesResult = const BazarrPagedResult(
     data: [],
     total: 0,
@@ -56,6 +61,24 @@ class FakeBazarrService extends BazarrService {
   Future<BazarrBadges> getBadges() async {
     if (throwOnCall != null) throw throwOnCall!;
     return badges;
+  }
+
+  @override
+  Future<BazarrProviderSummary> getProviderSummary() async {
+    if (throwOnCall != null) throw throwOnCall!;
+    return providerSummary;
+  }
+
+  @override
+  Future<List<BazarrProviderStatus>> getProviderStatuses() async {
+    if (throwOnCall != null) throw throwOnCall!;
+    return providerStatuses;
+  }
+
+  @override
+  Future<void> resetProviderStatuses() async {
+    if (throwOnCall != null) throw throwOnCall!;
+    resetProviderStatusesCalled = true;
   }
 
   @override

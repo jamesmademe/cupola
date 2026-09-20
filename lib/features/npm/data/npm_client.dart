@@ -243,6 +243,33 @@ class NpmClient {
         .toList(growable: false);
   }
 
+  /// Access lists without their basic-auth items.
+  ///
+  /// `items` is deliberately **not** expanded: those are the stored per-site
+  /// usernames and passwords, and a read-only list has no reason to pull
+  /// credentials into memory. `owner` is not expanded either, for the duller
+  /// reason that `NpmAccessList` does not read it — an expansion nothing
+  /// consumes is payload and an account record travelling for nothing.
+  Future<List<NpmAccessList>> accessLists() async {
+    final data = await _request<List<dynamic>>(
+      'GET',
+      '/api/nginx/access-lists',
+      query: const {'expand': 'clients,proxy_hosts'},
+    );
+    return data
+        .whereType<Map>()
+        .map((e) => NpmAccessList.fromJson(e.cast<String, dynamic>()))
+        .toList(growable: false);
+  }
+
+  Future<List<NpmAuditEntry>> auditLog() async {
+    final data = await _request<List<dynamic>>('GET', '/api/audit-log');
+    return data
+        .whereType<Map>()
+        .map((e) => NpmAuditEntry.fromJson(e.cast<String, dynamic>()))
+        .toList(growable: false);
+  }
+
   Future<List<NpmSimpleHost>> redirectionHosts() async {
     return _simpleHosts(
       '/api/nginx/redirection-hosts',

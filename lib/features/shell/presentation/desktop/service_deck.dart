@@ -137,9 +137,10 @@ class _ActiveChip extends ConsumerWidget {
             const SizedBox(width: AppSpacing.sm),
             Text(
               service?.title ?? 'All services',
-              style: TextStyle(
-                fontSize: compact ? 12 : 13,
-                fontWeight: FontWeight.w700,
+              style: AppTheme.chrome(
+                context,
+                size: compact ? 12 : 13,
+                weight: FontWeight.w700,
                 color: colorScheme.onSurface,
               ),
             ),

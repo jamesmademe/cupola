@@ -215,6 +215,67 @@ void main() {
     });
   });
 
+  group('access lists and audit log', () {
+    test(
+      'uses the documented endpoints and never expands basic-auth items',
+      () async {
+        final adapter = ScriptedHttpAdapter([
+          _token,
+          const ScriptedReply(
+            body: [
+              {
+                'id': 4,
+                'name': 'LAN only',
+                'satisfy_any': false,
+                'pass_auth': false,
+                'proxy_host_count': 2,
+                'clients': [
+                  {'address': '192.168.1.0/24', 'directive': 'allow'},
+                ],
+              },
+            ],
+          ),
+        ]);
+
+        final lists = await _client(adapter).accessLists();
+
+        expect(lists.single.name, 'LAN only');
+        expect(lists.single.clients.single.address, '192.168.1.0/24');
+        expect(adapter.lastRequest.uri.path, '/api/nginx/access-lists');
+        expect(
+          adapter.lastRequest.uri.queryParameters['expand'],
+          isNot(contains('items')),
+        );
+      },
+    );
+
+    test('parses the documented audit-log response', () async {
+      final adapter = ScriptedHttpAdapter([
+        _token,
+        const ScriptedReply(
+          body: [
+            {
+              'id': 7,
+              'created_on': '2026-09-17T13:09:54.000Z',
+              'object_type': 'proxy-host',
+              'object_id': 3,
+              'action': 'updated',
+              'meta': {
+                'domain_names': ['photos.example.net'],
+              },
+            },
+          ],
+        ),
+      ]);
+
+      final entries = await _client(adapter).auditLog();
+
+      expect(entries.single.summary, 'photos.example.net');
+      expect(entries.single.createdOn, DateTime.utc(2026, 9, 17, 13, 9, 54));
+      expect(adapter.lastRequest.uri.path, '/api/audit-log');
+    });
+  });
+
   group('who this token belongs to (decision 34)', () {
     test('asks for the permission map, because the record omits it', () async {
       final adapter = ScriptedHttpAdapter([

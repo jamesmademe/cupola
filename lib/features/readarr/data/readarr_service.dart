@@ -8,23 +8,15 @@ import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 /// wanted, releases). Readarr is archived upstream but its v1 API is unchanged,
 /// so the same header-auth [ApiClient] and mixin apply as for Lidarr.
 ///
-/// **What full parity with the other three \*arr still needs, and none of it
-/// is UI work.** The list moved here when the pre-tab-model home it used to
-/// live on was retired: every item is a call this class does not make, which
-/// is why the Calendar, Queue, Wanted and History tabs are still placeholders
-/// and why the Overview draws neither `Coming up` nor `Recently added`.
-/// Archived upstream makes it a *fixed* target rather than a moving one —
-/// decision 13 in `context/decisions.md`.
+/// The tab surfaces are complete for the supported Readarr v1 read contract:
+/// Calendar, Queue, Wanted and History are backed by the shared activity mixin
+/// and the dedicated presentation screens. Readarr is archived upstream, so
+/// the integration deliberately focuses on stable reads and does not invent
+/// detail or mutation promises that its contract cannot keep.
 ///
-/// - `getAuthor(id)` — this class has [getAuthors] and nothing per-author, so
-///   an author detail page has no first fetch. `GET /api/v1/author/{id}`.
-/// - a book list — `GET /api/v1/book` (optionally `?authorId=`), plus a
-///   `ReadarrBook` model. Today `ReadarrAuthor` is the only library entity,
-///   and it carries neither a release date nor a cover.
-/// - the calendar — `GET /api/v1/calendar`, the same shape and the same
-///   builder the other three \*arr need and none of them calls yet.
-/// - wanted and cutoff — `getMissingPage`/`getCutoffPage` already exist on the
-///   shared base, so these are provider and screen work, not client work.
+/// - `getAuthor(id)` and a book list remain outside the current library
+///   surface; Readarr exposes authors as the stable entity this client
+///   supports.
 /// - the writes — `PUT /api/v1/author` for monitor and profile,
 ///   `POST /api/v1/command` for the searches, `DELETE /api/v1/author/{id}`,
 ///   and the manual-import routes.

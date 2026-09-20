@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
@@ -45,6 +46,59 @@ void main() {
         expect(badges.status, isFalse);
       },
     );
+  });
+
+  group('BazarrService.getProviderSummary', () {
+    test('reads the supported aggregate provider count from badges', () async {
+      final client = FakeApiClient()..getResponseData = {'providers': 5};
+
+      final summary = await BazarrService(client).getProviderSummary();
+
+      expect(client.lastGetPath, '/api/badges');
+      expect(summary.configuredCount, 5);
+    });
+
+    test('keeps the count unavailable when badges omit it', () async {
+      final client = FakeApiClient()..getResponseData = <String, dynamic>{};
+
+      final summary = await BazarrService(client).getProviderSummary();
+
+      expect(summary.configuredCount, isNull);
+    });
+  });
+
+  group('BazarrService provider status', () {
+    test('parses the official provider status envelope', () async {
+      final client = FakeApiClient()
+        ..getResponseData = {
+          'data': [
+            {
+              'name': 'OpenSubtitles',
+              'status': 'Too many requests',
+              'retry': '2026-09-18 15:00',
+            },
+            {'name': 'Subscene', 'status': 'Good', 'retry': '-'},
+          ],
+        };
+
+      final providers = await BazarrService(client).getProviderStatuses();
+
+      expect(client.lastGetPath, '/api/providers');
+      expect(providers, hasLength(2));
+      expect(providers.first.name, 'OpenSubtitles');
+      expect(providers.first.status, 'Too many requests');
+      expect(providers.first.retryLabel, '2026-09-18 15:00');
+      expect(providers.last.tone, StatusTone.success);
+    });
+
+    test('resets provider throttles through the official action', () async {
+      final client = FakeApiClient();
+
+      await BazarrService(client).resetProviderStatuses();
+
+      expect(client.lastPostPath, '/api/providers');
+      expect(client.lastPostQueryParameters, {'action': 'reset'});
+    });
   });
 
   group('BazarrService paged endpoints', () {

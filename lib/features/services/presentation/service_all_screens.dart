@@ -21,6 +21,7 @@ import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/services/domain/seerr_request_filter.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -101,6 +102,7 @@ class _ServiceAllRequestsScreenState
               child: AsyncValueWidget<List<SeerrRequest>>(
                 value: requests,
                 serviceName: 'Seerr requests',
+                onRetry: () => ref.invalidate(requestsProvider),
                 data: (items) {
                   final visible = _filter.apply(items);
                   if (visible.isEmpty) {

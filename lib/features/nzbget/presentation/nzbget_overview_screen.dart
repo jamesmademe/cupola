@@ -29,15 +29,11 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// own "failed first" instruction inside the History region is that rule one
 /// level down; this applies it one level up.
 ///
-/// **Three regions the desktop board draws are absent rather than stubbed** —
-/// Servers, Feeds and Messages. `NzbgetClient` sends `status`, `listgroups`,
-/// `history`, `version`, `append`, `editqueue` and `rate`, and nothing else:
-/// there is no `config` for the news servers, no `listfeeds` for the RSS feeds
-/// and no `log` for the messages. The same goes for the Disk free tile, whose
-/// figure `NzbgetStatus` drops. A section rendered from nothing is a section
-/// that lies, and the em dash is only honest for a figure the app actually
-/// asked for. See the blocked list at the head of
-/// `nzbget_overview_provider.dart`.
+/// Feeds and Messages now have dedicated tab screens backed by the client.
+/// They are intentionally not duplicated in this Overview, which stays a
+/// compact queue/history summary. The Servers readout and Disk free figure
+/// remain unavailable where the current NZBGet contract does not provide a
+/// trustworthy value; the UI uses an em dash rather than manufacturing zero.
 ///
 /// **It draws neither the app bar nor the tab bar.** The host owns both as
 /// glass bands floated above this page so the ambient gradient reads

@@ -181,5 +181,55 @@ void main() {
       expect(body['method'], 'rate');
       expect(body['params'], [2048]);
     });
+
+    test('feeds enumerates documented FeedN options through config', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {
+          'jsonrpc': '2.0',
+          'result': [
+            {'Name': 'Feed1.Name', 'Value': 'Linux'},
+            {'Name': 'Feed1.URL', 'Value': 'https://example.test/feed.xml'},
+            {'Name': 'Feed1.Interval', 'Value': '15'},
+            {'Name': 'Feed1.Backlog', 'Value': 'yes'},
+          ],
+          'id': 1,
+        },
+      );
+
+      final feeds = await _client(adapter).feeds();
+
+      final body = adapter.lastBody as Map<String, dynamic>;
+      expect(body['method'], 'config');
+      expect(body['params'], isEmpty);
+      expect(feeds.single.name, 'Linux');
+      expect(feeds.single.intervalMinutes, 15);
+      expect(feeds.single.backlog, isTrue);
+    });
+
+    test('messages calls log with positional id and limit', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {
+          'jsonrpc': '2.0',
+          'result': [
+            {
+              'ID': 42,
+              'Kind': 'WARNING',
+              'Time': 1700000000,
+              'Text': 'Article missing',
+            },
+          ],
+          'id': 1,
+        },
+      );
+
+      final messages = await _client(adapter).messages(limit: 75);
+
+      final body = adapter.lastBody as Map<String, dynamic>;
+      expect(body['method'], 'log');
+      expect(body['params'], [0, 75]);
+      expect(messages.single.id, 42);
+      expect(messages.single.isFault, isTrue);
+      expect(messages.single.text, 'Article missing');
+    });
   });
 }

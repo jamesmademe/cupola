@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
@@ -23,9 +24,16 @@ class UnraidException implements Exception, HasFailureReason {
 
 /// Client for the Unraid GraphQL API.
 ///
-/// Authenticates with the `x-api-key` header (security §10.2 #10). All query
-/// documents are static and any dynamic value is passed through the GraphQL
-/// `variables` map — never string-interpolated into the query (§10.2 #11).
+/// Authenticates with the `x-api-key` header (security §10.2 #10). Every
+/// dynamic *value* is passed through the GraphQL `variables` map — never
+/// string-interpolated into the query (§10.2 #11).
+///
+/// The one document that is not a compile-time constant is [runVmAction]'s,
+/// because the thing that varies there is a **field name** and GraphQL has no
+/// variable for that. It is built from `UnraidVmAction.graphQl`, a closed enum
+/// whose six values are spelled in this file, so nothing a server or a user
+/// says can reach the document. That is the whole of the exception; a field
+/// name that came from outside the enum would be an injection.
 ///
 /// The Unraid API must be enabled server-side (Settings → Management Access →
 /// Developer Options → GraphQL Sandbox) and an API key created before this can
@@ -124,6 +132,60 @@ class UnraidClient {
       'disks { name status temp } } }';
   static const _dockerQuery =
       'query { dockerContainers { id names state status autoStart } }';
+  static const _capabilitiesQuery =
+      'query { me { roles permissions { resource actions } } }';
+  static const _vmsQuery = 'query { vms { domains { id name state } } }';
+  static const _notificationsQuery =
+      r'query Notifications($filter: NotificationFilter!) { '
+      r'notifications { overview { unread { info warning alert total } '
+      r'archive { info warning alert total } } list(filter: $filter) { '
+      'id title subject description importance link type timestamp '
+      'formattedTimestamp } } }';
+  // Only the fields the committed SDL declares AND `UnraidShare` reads. A
+  // GraphQL server does not null out an unknown field, it rejects the whole
+  // document: one speculative field here takes the Shares tab down entirely,
+  // which is how `allocator`, `splitLevel`, `floor`, `cow` and `color` — none
+  // of them in the SDL, none of them parsed — got removed again.
+  static const _sharesQuery =
+      'query { shares { id name used size cache comment luksStatus } }';
+
+  /// The document [runVmAction] sends for [action].
+  ///
+  /// Public because the field name is the thing that varies and GraphQL has no
+  /// variable for a field name, so the contract test has to be able to ask for
+  /// every spelling this client can emit rather than trusting that six enum
+  /// values match six mutations.
+  @visibleForTesting
+  static String vmActionDocument(UnraidVmAction action) =>
+      r'mutation VmAction($id: PrefixedID!) { vm { '
+      '${action.graphQl}(id: \$id) } }';
+
+  static const _archiveNotificationMutation =
+      r'mutation ArchiveNotification($id: PrefixedID!) { '
+      r'archiveNotification(id: $id) { id title subject description '
+      'importance link type timestamp formattedTimestamp } }';
+
+  /// Every document this client can send, keyed by the call that sends it.
+  ///
+  /// The contract test walks these and asserts each selected field against the
+  /// committed SDL. A hand-maintained list of needles cannot do that — it only
+  /// proves the fields somebody remembered to list are still there, which is
+  /// how a `shares` selection of five fields nobody had written down shipped
+  /// past a green test and would have taken the whole tab down on the first
+  /// real instance.
+  @visibleForTesting
+  static Map<String, String> get graphQlDocuments => {
+    'getInfo': _infoQuery,
+    'getArray': _arrayQuery,
+    'getDockerContainers': _dockerQuery,
+    'getCapabilities': _capabilitiesQuery,
+    'getVms': _vmsQuery,
+    'getNotifications': _notificationsQuery,
+    'getShares': _sharesQuery,
+    'archiveNotification': _archiveNotificationMutation,
+    for (final action in UnraidVmAction.values)
+      'runVmAction(${action.name})': vmActionDocument(action),
+  };
 
   Future<UnraidInfo> getInfo() async {
     final data = await _query(_infoQuery);
@@ -146,6 +208,68 @@ class UnraidClient {
         .whereType<Map>()
         .map((e) => UnraidDockerContainer.fromJson(e.cast<String, dynamic>()))
         .toList(growable: false);
+  }
+
+  Future<UnraidCapabilities> getCapabilities() async {
+    final data = await _query(_capabilitiesQuery);
+    return UnraidCapabilities.fromJson(
+      (data['me'] as Map?)?.cast<String, dynamic>() ?? const {},
+    );
+  }
+
+  Future<List<UnraidVm>> getVms() async {
+    final data = await _query(_vmsQuery);
+    final vms = (data['vms'] as Map?)?.cast<String, dynamic>();
+    final list = (vms?['domains'] as List?) ?? const [];
+    return list
+        .whereType<Map>()
+        .map((e) => UnraidVm.fromJson(e.cast<String, dynamic>()))
+        .toList(growable: false);
+  }
+
+  Future<UnraidNotifications> getNotifications({
+    UnraidNotificationType type = UnraidNotificationType.unread,
+    int offset = 0,
+    int limit = 100,
+  }) async {
+    final data = await _query(
+      _notificationsQuery,
+      variables: {
+        'filter': {'type': type.graphQl, 'offset': offset, 'limit': limit},
+      },
+    );
+    return UnraidNotifications.fromJson(
+      (data['notifications'] as Map?)?.cast<String, dynamic>() ?? const {},
+    );
+  }
+
+  Future<List<UnraidShare>> getShares() async {
+    final data = await _query(_sharesQuery);
+    final list = (data['shares'] as List?) ?? const [];
+    return list
+        .whereType<Map>()
+        .map((e) => UnraidShare.fromJson(e.cast<String, dynamic>()))
+        .toList(growable: false);
+  }
+
+  /// Runs [action] on one VM. **False means the daemon ran the mutation and
+  /// refused it** — already stopping, libvirt busy, a privilege the coarse
+  /// capability check cannot see. Callers must report that; it never throws.
+  Future<bool> runVmAction(String id, UnraidVmAction action) async {
+    final data = await _query(vmActionDocument(action), variables: {'id': id});
+    final vm = (data['vm'] as Map?)?.cast<String, dynamic>();
+    return vm?[action.graphQl] == true;
+  }
+
+  Future<UnraidNotification> archiveNotification(String id) async {
+    final data = await _query(
+      _archiveNotificationMutation,
+      variables: {'id': id},
+    );
+    return UnraidNotification.fromJson(
+      (data['archiveNotification'] as Map?)?.cast<String, dynamic>() ??
+          const {},
+    );
   }
 
   /// Unraid release string.

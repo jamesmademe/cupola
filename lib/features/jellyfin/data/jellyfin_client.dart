@@ -184,14 +184,24 @@ class JellyfinClient implements StreamServerClient {
   @override
   Future<List<StreamSession>> getSessions() async {
     try {
-      final response = await _api.get(
-        '/Sessions',
-        queryParameters: {'activeWithinSeconds': kActiveWithinSeconds},
-      );
-      return _mapInIsolate(response.data, jellyfinStreamSessionsFromJson);
+      return await getSessionsOrThrow();
     } catch (_) {
       return const [];
     }
+  }
+
+  /// The same session read with its transport failure preserved.
+  ///
+  /// Browse screens intentionally use [getSessions], where a dark server is a
+  /// quiet empty board. KPI and reachability consumers must use this variant:
+  /// `0 streams` is a real answer only when `/Sessions` answered with no active
+  /// sessions.
+  Future<List<StreamSession>> getSessionsOrThrow() async {
+    final response = await _api.get(
+      '/Sessions',
+      queryParameters: {'activeWithinSeconds': kActiveWithinSeconds},
+    );
+    return _mapInIsolate(response.data, jellyfinStreamSessionsFromJson);
   }
 
   @override
@@ -248,22 +258,31 @@ class JellyfinClient implements StreamServerClient {
   @override
   Future<List<StreamLibrary>> getLibraries() async {
     try {
-      final response = await _api.get('/Library/VirtualFolders');
-      final folders = jellyfinVirtualFoldersFromJson(response.data);
-      final libraries = <StreamLibrary>[];
-      for (final folder in folders) {
-        // A library with no `ItemId` cannot be browsed or rescanned — there is
-        // nothing to pass as `parentId` — so listing it would only offer a dead
-        // end. This happens on a folder added to the config but never scanned.
-        if (folder.itemId.isEmpty) continue;
-        final library = folder.toStreamLibrary();
-        _libraryKinds[library.id] = library.kind;
-        libraries.add(library);
-      }
-      return libraries;
+      return await getLibrariesOrThrow();
     } catch (_) {
       return const [];
     }
+  }
+
+  /// The same library read with its transport or parse failure preserved.
+  ///
+  /// The ordinary [getLibraries] contract is kept for the browse surface; KPI
+  /// consumers use this method so an unreachable server cannot become
+  /// `Libraries 0`.
+  Future<List<StreamLibrary>> getLibrariesOrThrow() async {
+    final response = await _api.get('/Library/VirtualFolders');
+    final folders = jellyfinVirtualFoldersFromJson(response.data);
+    final libraries = <StreamLibrary>[];
+    for (final folder in folders) {
+      // A library with no `ItemId` cannot be browsed or rescanned — there is
+      // nothing to pass as `parentId` — so listing it would only offer a dead
+      // end. This happens on a folder added to the config but never scanned.
+      if (folder.itemId.isEmpty) continue;
+      final library = folder.toStreamLibrary();
+      _libraryKinds[library.id] = library.kind;
+      libraries.add(library);
+    }
+    return libraries;
   }
 
   @override
@@ -695,6 +714,33 @@ class JellyfinClient implements StreamServerClient {
     } catch (_) {
       return const [];
     }
+  }
+
+  /// Household users with policy and last-activity fields intact.
+  Future<List<JellyfinUserDto>> getUsers() async {
+    final response = await _api.get('/Users');
+    return _mapInIsolate(response.data, jellyfinUsersFromJson);
+  }
+
+  /// Authorized devices known by this server.
+  ///
+  /// `/Devices` is the one administration read that comes back paged, and the
+  /// envelope has to come off **here**: `_mapInIsolate` answers anything that
+  /// is not a `List` with `const []`, so handing it the `Items` map would lose
+  /// every row silently. `jellyfinDevicesFromJson` takes the rows.
+  Future<List<JellyfinDevice>> getDevices() async {
+    final response = await _api.get('/Devices');
+    final raw = response.data;
+    return _mapInIsolate(
+      raw is Map ? raw['Items'] : raw,
+      jellyfinDevicesFromJson,
+    );
+  }
+
+  /// Server maintenance jobs and their last execution result.
+  Future<List<JellyfinScheduledTask>> getScheduledTasks() async {
+    final response = await _api.get('/ScheduledTasks');
+    return _mapInIsolate(response.data, jellyfinTasksFromJson);
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
+import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -183,3 +184,48 @@ final jellyfinItemChildrenProvider = FutureProvider.autoDispose
       ref.onDispose(cancelToken.cancel);
       return client.getChildren(itemId, cancelToken: cancelToken);
     }, retry: noProviderRetry);
+
+/// Sessions with the transport failure preserved, for the surfaces that state
+/// a **figure** rather than draw a board.
+///
+/// `getSessions()` answers an unreachable server with `const []`, which is
+/// right for a browse — a dark server is a quiet empty board — and wrong for a
+/// counter, where `0 streams` is a claim nobody made. The KPI rail and the
+/// reachability signal read this instead.
+///
+/// It is a provider and not a call the KPI layer makes on the client itself,
+/// which is the part worth keeping: read straight off the client, every rebuild
+/// of an `autoDispose` rail was a fresh `/Sessions` on the wire, the Overview's
+/// own copy of the same request could not be shared with it, and a fake client
+/// was the only thing a test could substitute. A provider caches, invalidates
+/// with everything else, and can be overridden by name.
+final jellyfinStrictSessionsProvider = FutureProvider<List<StreamSession>>(
+  (ref) => ref.watch(jellyfinClientProvider).getSessionsOrThrow(),
+  retry: noProviderRetry,
+);
+
+/// The libraries, with the failure preserved. See
+/// [jellyfinStrictSessionsProvider] for why this exists beside
+/// [jellyfinLibrariesProvider] rather than replacing it.
+final jellyfinStrictLibrariesProvider = FutureProvider<List<StreamLibrary>>(
+  (ref) => ref.watch(jellyfinClientProvider).getLibrariesOrThrow(),
+  retry: noProviderRetry,
+);
+
+final jellyfinUsersProvider = FutureProvider<List<JellyfinUserDto>>((
+  ref,
+) async {
+  return ref.watch(jellyfinClientProvider).getUsers();
+}, retry: noProviderRetry);
+
+final jellyfinDevicesProvider = FutureProvider<List<JellyfinDevice>>((
+  ref,
+) async {
+  return ref.watch(jellyfinClientProvider).getDevices();
+}, retry: noProviderRetry);
+
+final jellyfinTasksProvider = FutureProvider<List<JellyfinScheduledTask>>((
+  ref,
+) async {
+  return ref.watch(jellyfinClientProvider).getScheduledTasks();
+}, retry: noProviderRetry);

@@ -207,15 +207,106 @@ class SabnzbdQueueSlot {
 /// field that is parsed but never read is one more thing to keep in step with
 /// the API for no one's benefit.
 class SabnzbdServerStats {
-  const SabnzbdServerStats({required this.total});
+  const SabnzbdServerStats({
+    required this.total,
+    required this.month,
+    required this.week,
+    required this.day,
+    required this.servers,
+  });
 
   /// Total bytes downloaded over all time.
   final int total;
+  final int month;
+  final int week;
+  final int day;
+  final List<SabnzbdServerUsage> servers;
 
   String get totalLabel => formatBytes(total);
+  String get monthLabel => formatBytes(month);
+  String get weekLabel => formatBytes(week);
+  String get dayLabel => formatBytes(day);
 
   factory SabnzbdServerStats.fromJson(Map<String, dynamic> json) {
-    return SabnzbdServerStats(total: _asDouble(json['total']).round());
+    final rawServers = json['servers'];
+    return SabnzbdServerStats(
+      total: _asDouble(json['total']).round(),
+      month: _asDouble(json['month']).round(),
+      week: _asDouble(json['week']).round(),
+      day: _asDouble(json['day']).round(),
+      servers: rawServers is Map
+          ? [
+              for (final entry in rawServers.entries)
+                if (entry.value is Map)
+                  SabnzbdServerUsage.fromJson(
+                    entry.key.toString(),
+                    (entry.value as Map).cast<String, dynamic>(),
+                  ),
+            ]
+          : const [],
+    );
+  }
+}
+
+class SabnzbdServerUsage {
+  const SabnzbdServerUsage({
+    required this.name,
+    required this.totalBytes,
+    required this.articlesTried,
+    required this.articlesSucceeded,
+  });
+
+  final String name;
+  final int totalBytes;
+  final int articlesTried;
+  final int articlesSucceeded;
+
+  int get articlesFailed =>
+      (articlesTried - articlesSucceeded).clamp(0, articlesTried);
+  String get totalLabel => formatBytes(totalBytes);
+
+  factory SabnzbdServerUsage.fromJson(String name, Map<String, dynamic> json) =>
+      SabnzbdServerUsage(
+        name: name,
+        totalBytes: _asDouble(json['total']).round(),
+        articlesTried: _asDouble(json['articles_tried']).round(),
+        articlesSucceeded: _asDouble(json['articles_success']).round(),
+      );
+}
+
+/// One configured news server from `mode=get_config&section=servers`.
+class SabnzbdServerConfig {
+  const SabnzbdServerConfig({
+    required this.name,
+    required this.host,
+    required this.port,
+    required this.connections,
+    required this.enabled,
+    required this.ssl,
+    required this.optional,
+    required this.priority,
+  });
+
+  final String name;
+  final String host;
+  final int port;
+  final int connections;
+  final bool enabled;
+  final bool ssl;
+  final bool optional;
+  final int priority;
+
+  factory SabnzbdServerConfig.fromJson(Map<String, dynamic> json) {
+    return SabnzbdServerConfig(
+      name: (json['displayname'] ?? json['name'] ?? '').toString(),
+      host: (json['host'] ?? '').toString(),
+      port: intOrNull(json['port']) ?? 0,
+      connections: intOrNull(json['connections']) ?? 0,
+      enabled: boolOrFalse(json['enable']),
+      ssl: boolOrFalse(json['ssl']),
+      optional: boolOrFalse(json['optional']),
+      priority: intOrNull(json['priority']) ?? 0,
+    );
   }
 }
 

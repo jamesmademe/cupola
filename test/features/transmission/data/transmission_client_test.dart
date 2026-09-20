@@ -436,6 +436,69 @@ void main() {
       expect(args['downloadLimited'], isFalse);
       expect(args.containsKey('uploadLimit'), isFalse);
     });
+
+    test('labels are trimmed and replaced through torrent-set', () async {
+      final adapter = ScriptedHttpAdapter([_ok(const {})]);
+      final client = TransmissionClient(
+        url: 'https://nas.local:9091',
+        dio: _dio(adapter),
+      );
+
+      await client.setLabels(['abc'], [' movies ', '', '4k']);
+
+      final body = adapter.lastRequest.body as Map<String, dynamic>;
+      expect(body['method'], 'torrent-set');
+      expect(body['arguments'], {
+        'ids': ['abc'],
+        'labels': ['movies', '4k'],
+      });
+    });
+
+    test(
+      'session preferences use Transmission session-set field names',
+      () async {
+        final adapter = ScriptedHttpAdapter([_ok(const {})]);
+        final client = TransmissionClient(
+          url: 'https://nas.local:9091',
+          dio: _dio(adapter),
+        );
+
+        await client.setSessionPreferences(
+          peerPort: 51413,
+          encryption: 'required',
+          seedRatioLimit: 2.5,
+          seedRatioLimited: true,
+          downloadQueueEnabled: true,
+          downloadQueueSize: 8,
+        );
+
+        final body = adapter.lastRequest.body as Map<String, dynamic>;
+        expect(body['method'], 'session-set');
+        expect(body['arguments'], {
+          'peer-port': 51413,
+          'encryption': 'required',
+          'seedRatioLimit': 2.5,
+          'seedRatioLimited': true,
+          'download-queue-enabled': true,
+          'download-queue-size': 8,
+        });
+      },
+    );
+
+    test(
+      'an empty session preference write never reaches the daemon',
+      () async {
+        final adapter = ScriptedHttpAdapter(const []);
+        final client = TransmissionClient(
+          url: 'https://nas.local:9091',
+          dio: _dio(adapter),
+        );
+
+        await client.setSessionPreferences();
+
+        expect(adapter.callCount, 0);
+      },
+    );
   });
 
   group('model parsing', () {

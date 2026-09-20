@@ -1,0 +1,14 @@
+{
+  "pageInfo": { "results": 1, "pages": 1, "page": 1 },
+  "results": [
+    {
+      "id": 4,
+      "email": "matt@example.com",
+      "username": "matt",
+      "userType": 1,
+      "permissions": 1023,
+      "requestCount": 3,
+      "createdAt": "2026-01-02T03:04:05.000Z"
+    }
+  ]
+}

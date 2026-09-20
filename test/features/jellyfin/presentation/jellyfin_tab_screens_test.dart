@@ -1,0 +1,269 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_tab_screens.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
+
+final _configured = const SettingsModel().copyWithService(
+  ServiceKey.jellyfin,
+  url: 'https://jellyfin.test',
+  apiKey: 'key',
+);
+
+void main() {
+  testWidgets('all tabs stop before their providers when not configured', (
+    tester,
+  ) async {
+    var reads = 0;
+    final providerOverrides = <Override>[
+      jellyfinUsersProvider.overrideWith((ref) async {
+        reads++;
+        return const [];
+      }),
+      jellyfinDevicesProvider.overrideWith((ref) async {
+        reads++;
+        return const [];
+      }),
+      jellyfinTasksProvider.overrideWith((ref) async {
+        reads++;
+        return const [];
+      }),
+      jellyfinSessionsProvider.overrideWith((ref) async {
+        reads++;
+        return const [];
+      }),
+    ];
+
+    for (final screen in const <Widget>[
+      JellyfinUsersScreen(),
+      JellyfinDevicesScreen(),
+      JellyfinTasksScreen(),
+      JellyfinActivityScreen(),
+    ]) {
+      await _pump(
+        tester,
+        screen: screen,
+        settings: const SettingsModel(),
+        overrides: providerOverrides,
+      );
+      expect(find.byType(NotConfiguredPlaceholder), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+
+    expect(reads, 0);
+  });
+
+  testWidgets('users preserve roles, disabled state and missing activity', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      screen: const JellyfinUsersScreen(),
+      overrides: [
+        jellyfinUsersProvider.overrideWith(
+          (ref) async => const [
+            JellyfinUserDto(
+              id: 'admin',
+              name: 'nadia',
+              isAdministrator: true,
+              isDisabled: false,
+              lastActivityAt: null,
+            ),
+            JellyfinUserDto(
+              id: 'guest',
+              name: 'guest',
+              isAdministrator: false,
+              isDisabled: true,
+              lastActivityAt: null,
+            ),
+          ],
+        ),
+      ],
+    );
+
+    expect(find.text('2 users · 1 disabled'), findsOneWidget);
+    expect(find.text('Administrator'), findsOneWidget);
+    expect(find.text('Disabled'), findsOneWidget);
+    expect(find.text('Last activity unavailable'), findsNWidgets(2));
+    expect(
+      find.semantics.byLabel('guest, Disabled, Last activity unavailable'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('devices speak one complete inventory sentence', (tester) async {
+    await _pump(
+      tester,
+      screen: const JellyfinDevicesScreen(),
+      overrides: [
+        jellyfinDevicesProvider.overrideWith(
+          (ref) async => const [
+            JellyfinDevice(
+              id: 'tv',
+              name: 'Apple TV 4K',
+              appName: 'Jellyfin for tvOS',
+              appVersion: '1.4',
+              lastUserName: 'nadia',
+              lastActivityAt: null,
+            ),
+          ],
+        ),
+      ],
+    );
+
+    expect(find.text('1 device'), findsOneWidget);
+    expect(
+      find.semantics.byLabel(
+        'Apple TV 4K, nadia, Jellyfin for tvOS 1.4, Last seen unavailable',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('tasks use blue for running and amber for a failed last run', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      screen: const JellyfinTasksScreen(),
+      overrides: [
+        jellyfinTasksProvider.overrideWith(
+          (ref) async => const [
+            JellyfinScheduledTask(
+              id: 'scan',
+              name: 'Extract chapter images',
+              state: 'Running',
+              progress: 38,
+              lastStatus: '',
+              lastStartedAt: null,
+              lastEndedAt: null,
+              errorMessage: '',
+            ),
+            JellyfinScheduledTask(
+              id: 'people',
+              name: 'Refresh people',
+              state: 'Idle',
+              progress: null,
+              lastStatus: 'Failed',
+              lastStartedAt: null,
+              lastEndedAt: null,
+              errorMessage: 'timeout after 30 min',
+            ),
+          ],
+        ),
+      ],
+    );
+
+    expect(find.text('2 scheduled · 1 running'), findsOneWidget);
+    expect(find.text('Running · 38%'), findsOneWidget);
+    expect(find.text('Failed'), findsOneWidget);
+    expect(find.textContaining('timeout after 30 min'), findsOneWidget);
+    expect(find.text('0 s'), findsNothing);
+
+    final failedText = tester.widget<Text>(find.text('Failed'));
+    final context = tester.element(find.text('Failed'));
+    expect(
+      failedText.style?.color,
+      statusToneColor(Theme.of(context).colorScheme, StatusTone.warning),
+    );
+  });
+
+  testWidgets('activity reuses the live-session idle state', (tester) async {
+    await _pump(
+      tester,
+      screen: const JellyfinActivityScreen(),
+      overrides: [
+        jellyfinSessionsProvider.overrideWith((ref) async => const []),
+      ],
+    );
+
+    expect(find.text('Now playing'), findsOneWidget);
+    expect(find.text('Nobody is watching right now'), findsOneWidget);
+  });
+
+  testWidgets('a provider failure exposes retryable error state', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      screen: const JellyfinUsersScreen(),
+      overrides: [
+        jellyfinUsersProvider.overrideWith(
+          (ref) => Future.error(Exception('users unavailable')),
+        ),
+      ],
+    );
+
+    expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('long device fields survive accessibility text size', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      screen: const JellyfinDevicesScreen(),
+      textScaleFactor: 3,
+      theme: AppTheme.lightTheme(),
+      overrides: [
+        jellyfinDevicesProvider.overrideWith(
+          (ref) async => const [
+            JellyfinDevice(
+              id: 'long',
+              name: 'Living Room Television With A Very Long Custom Name',
+              appName: 'Jellyfin for an unusually verbose television client',
+              appVersion: '2026.9.18-build-extended',
+              lastUserName: 'A household member with a long display name',
+              lastActivityAt: null,
+            ),
+          ],
+        ),
+      ],
+    );
+
+    expect(tester.takeException(), isNull);
+  });
+}
+
+Future<void> _pump(
+  WidgetTester tester, {
+  required Widget screen,
+  SettingsModel? settings,
+  List<Override> overrides = const [],
+  double textScaleFactor = 1,
+  ThemeData? theme,
+}) async {
+  await tester.binding.setSurfaceSize(const Size(420, 900));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+
+  await tester.pumpWidget(
+    ProviderScope(
+      retry: (_, _) => null,
+      overrides: [
+        currentSettingsProvider.overrideWith((ref) => settings ?? _configured),
+        ...overrides,
+      ],
+      child: MaterialApp(
+        theme: theme ?? AppTheme.darkTheme(),
+        themeAnimationDuration: Duration.zero,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScaleFactor)),
+          child: child!,
+        ),
+        home: screen,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}

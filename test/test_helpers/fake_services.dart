@@ -13,6 +13,7 @@ import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
@@ -387,6 +388,9 @@ class FakeSeerrService extends SeerrService {
 
   final Map<String, dynamic> _movieDetails;
   final Map<String, dynamic> _tvDetails;
+  List<SeerrIssue> issues = const [];
+  List<SeerrUser> users = const [];
+  bool resolveIssueCalled = false;
 
   @override
   Future<List<MediaPreview>> getDiscoverMovies({
@@ -430,6 +434,33 @@ class FakeSeerrService extends SeerrService {
 
   @override
   Future<List<SeerrRequest>> getRequests() async => const [];
+
+  // Filters on the issue's own `status`, the way the server does: the filter
+  // is what is *asked for*, and a record carries what it is.
+  @override
+  Future<SeerrAdminResult<SeerrIssue>> getIssuesResult({
+    SeerrIssueFilter filter = SeerrIssueFilter.open,
+  }) async {
+    final items = issues
+        .where(
+          (issue) => switch (filter) {
+            SeerrIssueFilter.all => true,
+            SeerrIssueFilter.open => issue.isOpen,
+            SeerrIssueFilter.resolved => issue.isResolved,
+          },
+        )
+        .toList();
+    return SeerrAdminResult(items: items, total: items.length);
+  }
+
+  @override
+  Future<SeerrAdminResult<SeerrUser>> getUsersResult() async =>
+      SeerrAdminResult(items: users, total: users.length);
+
+  @override
+  Future<void> resolveIssue(int issueId) async {
+    resolveIssueCalled = true;
+  }
 
   @override
   Future<Map<String, dynamic>> getMovie(int movieId) async => _movieDetails;

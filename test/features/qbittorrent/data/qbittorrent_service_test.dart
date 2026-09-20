@@ -531,5 +531,55 @@ void main() {
       expect(adapter.requests.last.path, '/api/v2/torrents/reannounce');
       expect(adapter.requestBodies.last, {'hashes': 'a|b'});
     });
+
+    test(
+      'getRssFeeds requests the documented tree with article data',
+      () async {
+        final adapter = _StubAdapter()
+          ..setJson('/api/v2/rss/items', {
+            'Linux': {
+              'Ubuntu': {
+                'url': 'https://example.test/ubuntu.xml',
+                'title': 'Ubuntu releases',
+                'isLoading': false,
+                'hasError': false,
+                'articles': {
+                  'one': {'isRead': false},
+                  'two': {'isRead': true},
+                },
+              },
+            },
+          });
+
+        final feeds = await _service(adapter).getRssFeeds();
+
+        expect(adapter.requests.last.path, '/api/v2/rss/items');
+        expect(adapter.requests.last.queryParameters['withData'], isTrue);
+        expect(feeds, hasLength(1));
+        expect(feeds.single.path, r'Linux\Ubuntu');
+        expect(feeds.single.displayName, 'Ubuntu releases');
+        expect(feeds.single.unreadCount, 1);
+      },
+    );
+
+    test('getRssRules preserves disabled rules and affected feeds', () async {
+      final adapter = _StubAdapter()
+        ..setJson('/api/v2/rss/rules', {
+          'Linux ISOs': {
+            'enabled': false,
+            'mustContain': 'ubuntu',
+            'affectedFeeds': [r'Linux\Ubuntu'],
+            'assignedCategory': 'software',
+          },
+        });
+
+      final rules = await _service(adapter).getRssRules();
+
+      expect(adapter.requests.last.path, '/api/v2/rss/rules');
+      expect(rules.single.name, 'Linux ISOs');
+      expect(rules.single.enabled, isFalse);
+      expect(rules.single.affectedFeeds, [r'Linux\Ubuntu']);
+      expect(rules.single.assignedCategory, 'software');
+    });
   });
 }

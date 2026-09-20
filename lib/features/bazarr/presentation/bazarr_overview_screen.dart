@@ -34,10 +34,10 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// glass bands floated above this page, and this screen reserves the room with
 /// [topPadding] instead.
 ///
-/// The Providers region the board draws is **absent rather than stubbed**: the
-/// client has no `GET /api/providers`, so it can report neither the throttle
-/// state nor the per-provider quota that region is made of, and a section that
-/// renders a lie is worse than one that is missing.
+/// The Providers region is a count plus a link to the dedicated Providers tab.
+/// Bazarr exposes the configured count through badges and throttled-provider
+/// status through `/api/providers`; it does not expose per-provider quota data,
+/// so that unsupported detail is never implied by the overview.
 class BazarrOverviewScreen extends ConsumerWidget {
   const BazarrOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
 

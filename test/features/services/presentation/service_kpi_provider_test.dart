@@ -6,8 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
+import 'package:cupola/features/plex/data/plex_client.dart';
+import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/readarr/data/readarr_service.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
@@ -15,9 +19,13 @@ import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
+import '../../../test_helpers/capturing_http_adapter.dart';
 
 SeerrRequest _request({
   required int id,
@@ -212,6 +220,176 @@ void main() {
 
       expect(kpis['Series']!.value, '0');
       expect(kpis['Series']!.note, isNull);
+    });
+  });
+
+  group('stream server KPIs preserve reachability', () {
+    test(
+      'an answered empty Jellyfin server still reports real zeroes',
+      () async {
+        final client = JellyfinClient(
+          baseUrl: 'https://jellyfin.test',
+          apiKey: 'key',
+          deviceName: 'test',
+          deviceId: 'test-device',
+        );
+        client.dio.httpClientAdapter = CapturingHttpAdapter(response: const []);
+        addTearDown(client.close);
+
+        final container = ProviderContainer(
+          overrides: [jellyfinClientProvider.overrideWithValue(client)],
+        );
+        addTearDown(container.dispose);
+
+        final kpis = _byLabel(
+          await container.read(serviceKpiProvider(ServiceKey.jellyfin).future),
+        );
+        expect(kpis['Streams']!.value, '0');
+        expect(kpis['Transcodes']!.value, '0');
+        expect(kpis['Libraries']!.value, '0');
+      },
+    );
+
+    test('Jellyfin transport failure reaches the KPI provider', () async {
+      final client = JellyfinClient(
+        baseUrl: 'https://jellyfin.test',
+        apiKey: 'key',
+        deviceName: 'test',
+        deviceId: 'test-device',
+      );
+      client.dio.httpClientAdapter = CapturingHttpAdapter(
+        response: '',
+        statusCode: 500,
+      );
+      addTearDown(client.close);
+
+      final container = ProviderContainer(
+        overrides: [jellyfinClientProvider.overrideWithValue(client)],
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container.read(serviceKpiProvider(ServiceKey.jellyfin).future),
+        throwsA(isA<DioException>()),
+      );
+    });
+
+    test('an answered empty Plex server still reports real zeroes', () async {
+      final client = PlexClient(
+        url: 'https://plex.test:32400',
+        token: 'token',
+        clientIdentifier: 'test-client',
+        platform: 'macOS',
+      );
+      client.api.dio.httpClientAdapter = CapturingHttpAdapter(
+        response: const {
+          'MediaContainer': {'size': 0},
+        },
+      );
+      addTearDown(client.close);
+
+      final container = ProviderContainer(
+        overrides: [plexClientProvider.overrideWithValue(client)],
+      );
+      addTearDown(container.dispose);
+
+      final kpis = _byLabel(
+        await container.read(serviceKpiProvider(ServiceKey.plex).future),
+      );
+      expect(kpis['Streams']!.value, '0');
+      expect(kpis['Transcodes']!.value, '0');
+      expect(kpis['Libraries']!.value, '0');
+    });
+
+    test('Plex transport failure reaches the KPI provider', () async {
+      final client = PlexClient(
+        url: 'https://plex.test:32400',
+        token: 'token',
+        clientIdentifier: 'test-client',
+        platform: 'macOS',
+      );
+      client.api.dio.httpClientAdapter = CapturingHttpAdapter(
+        response: '',
+        statusCode: 500,
+      );
+      addTearDown(client.close);
+
+      final container = ProviderContainer(
+        overrides: [plexClientProvider.overrideWithValue(client)],
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container.read(serviceKpiProvider(ServiceKey.plex).future),
+        throwsA(isA<PlexException>()),
+      );
+    });
+
+    test('a named Plex connection reads its own KPI source', () async {
+      const lens = ServiceInstance(
+        id: 'plex',
+        service: ServiceKey.plex,
+        label: 'Home',
+        url: 'https://plex-home.test',
+        credential: 'home-token',
+      );
+      const other = ServiceInstance(
+        id: 'plex-away',
+        service: ServiceKey.plex,
+        label: 'Away',
+        url: 'https://plex-away.test',
+        credential: 'away-token',
+      );
+
+      PlexClient client({required int libraryCount}) {
+        final value = PlexClient(
+          url: 'https://plex.test:32400',
+          token: 'token',
+          clientIdentifier: 'test-client',
+          platform: 'macOS',
+        );
+        value.api.dio.httpClientAdapter = CapturingHttpAdapter(
+          byPath: {
+            '/status/sessions': const {
+              'MediaContainer': {'size': 0, 'Metadata': []},
+            },
+            '/library/sections': {
+              'MediaContainer': {
+                'size': libraryCount,
+                'Directory': [
+                  for (var i = 0; i < libraryCount; i++)
+                    {'key': '$i', 'type': 'movie', 'title': 'Library $i'},
+                ],
+              },
+            },
+          },
+        );
+        addTearDown(value.close);
+        return value;
+      }
+
+      final homeClient = client(libraryCount: 1);
+      final awayClient = client(libraryCount: 3);
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWithValue(
+            const SettingsModel(instances: [lens, other]),
+          ),
+          plexClientProvider.overrideWithValue(homeClient),
+          plexClientForProvider.overrideWith((ref, instanceId) => awayClient),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final kpis = await container.read(
+        serviceKpiForProvider((
+          service: ServiceKey.plex,
+          instanceId: other.id,
+        )).future,
+      );
+
+      expect(kpis, isNotNull);
+      expect(kpis!.firstWhere((kpi) => kpi.label == 'Libraries').value, '3');
     });
   });
 

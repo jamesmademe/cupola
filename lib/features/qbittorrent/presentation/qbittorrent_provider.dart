@@ -33,6 +33,41 @@ final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
   return QbittorrentService(client);
 });
 
+/// The qBittorrent service for a route or background job that names a
+/// connection explicitly.
+///
+/// Empty ids and the active id deliberately collapse onto the ordinary
+/// provider. That preserves one long-lived WebUI client — and therefore one
+/// SID/cookie jar — for the connection currently under the lens. A different
+/// id gets its own equally long-lived client and is disposed with this family
+/// entry.
+final qbittorrentServiceForProvider =
+    Provider.family<QbittorrentService, String>((ref, instanceId) {
+      final activeId = ref
+          .read(activeInstanceProvider(ServiceKey.qbittorrent))
+          ?.id;
+      if (instanceId.isEmpty || instanceId == activeId) {
+        return ref.watch(qbittorrentServiceProvider);
+      }
+
+      final transport = watchTransport(
+        ref,
+        ServiceKey.qbittorrent,
+        instanceId: instanceId,
+      );
+      if (!transport.configured) {
+        throw Exception('qBittorrent not configured');
+      }
+      final client = QbittorrentClient(
+        url: transport.url,
+        username: transport.username.isNotEmpty ? transport.username : null,
+        password: transport.apiKey.isNotEmpty ? transport.apiKey : null,
+        certFingerprint: transport.pin,
+      );
+      ref.onDispose(client.close);
+      return QbittorrentService(client);
+    });
+
 enum TorrentFilter { all, downloading, seeding, completed, paused, queued }
 
 enum TorrentSort {

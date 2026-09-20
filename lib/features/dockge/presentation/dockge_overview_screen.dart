@@ -52,13 +52,9 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///    this protocol is dated, and nothing carries a container exit code. See
 ///    `dockge_overview_provider.dart` for the long form.
 ///  * **The terminal card.** `DockgeClient` streams `terminalWrite` only after
-///    joining a *named* stack's combined terminal, and an Overview-level card
-///    has no stack to name — which is the exact question the Terminal tab is
-///    blocked on, and not one this page gets to answer. What it can do instead
-///    is offer a way *in*: every stack row here opens that stack, whose detail
-///    already carries the live combined terminal and the lifecycle controls the
-///    board draws on the card. Naming the stack is the whole of what was
-///    missing, and a row the user tapped has named it.
+///    joining a *named* stack's combined terminal, so the Overview offers a
+///    way in through each stack row while the dedicated Terminal tab owns the
+///    live session for the selected stack.
 ///
 /// Sections load and fail independently. A Dockge that pushes a stack list but
 /// no agent list still draws two regions, and the third simply is not there.

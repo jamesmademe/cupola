@@ -27,6 +27,38 @@ final nzbgetClientProvider = Provider<NzbgetClient>((ref) {
   return client;
 });
 
+/// NZBGet client for an explicitly named connection.
+///
+/// Empty and active ids collapse to the ordinary lens-bound provider. Other
+/// ids create one client that remains alive — including its request counter
+/// and Dio transport — until Riverpod disposes this family entry.
+final nzbgetClientForProvider = Provider.family<NzbgetClient, String>((
+  ref,
+  instanceId,
+) {
+  final activeId = ref.read(activeInstanceProvider(ServiceKey.nzbget))?.id;
+  if (instanceId.isEmpty || instanceId == activeId) {
+    return ref.watch(nzbgetClientProvider);
+  }
+
+  final transport = watchTransport(
+    ref,
+    ServiceKey.nzbget,
+    instanceId: instanceId,
+  );
+  if (!transport.configured) {
+    throw Exception('NZBGet not configured');
+  }
+  final client = NzbgetClient(
+    url: transport.url,
+    username: transport.username.isEmpty ? null : transport.username,
+    password: transport.apiKey.isEmpty ? null : transport.apiKey,
+    certFingerprint: transport.pin,
+  );
+  ref.onDispose(client.close);
+  return client;
+});
+
 /// Global download status.
 ///
 /// The three reads below carry `retry: noProviderRetry`, and the reason is the
@@ -50,4 +82,12 @@ final nzbgetHistoryProvider = FutureProvider<List<NzbgetHistoryItem>>((
   ref,
 ) async {
   return ref.watch(nzbgetClientProvider).history();
+}, retry: noProviderRetry);
+
+final nzbgetFeedsProvider = FutureProvider<List<NzbgetFeed>>((ref) async {
+  return ref.watch(nzbgetClientProvider).feeds();
+}, retry: noProviderRetry);
+
+final nzbgetMessagesProvider = FutureProvider<List<NzbgetMessage>>((ref) async {
+  return ref.watch(nzbgetClientProvider).messages();
 }, retry: noProviderRetry);

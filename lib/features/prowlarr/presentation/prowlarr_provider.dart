@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
+
 import 'package:cupola/features/prowlarr/data/prowlarr_service.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -7,13 +9,53 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 const int _defaultHistoryPageSize = 20;
 
+/// One server-side page of the History tab.
+///
+/// A record key keeps page and event filter together, so switching the filter
+/// cannot accidentally reuse a page fetched for another event family.
+typedef ProwlarrHistoryQuery = ({int page, int pageSize, String? eventType});
+
+/// A bounded statistics window ending at the moment the request starts.
+enum ProwlarrStatsWindow {
+  day('24 hours', Duration(hours: 24)),
+  week('7 days', Duration(days: 7)),
+  month('30 days', Duration(days: 30));
+
+  const ProwlarrStatsWindow(this.label, this.duration);
+
+  final String label;
+  final Duration duration;
+}
+
 /// Dashboard-ready alias for the underlying Prowlarr service.
 ///
 /// Throws if Prowlarr is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.prowlarr)` before reading.
 final prowlarrServiceProvider = Provider<ProwlarrService>((ref) {
-  return ProwlarrService(watchApiClient(ref, ServiceKey.prowlarr));
+  return _prowlarrService(ref, instanceId: null);
 });
+
+/// Prowlarr service bound to one named connection, independent of the lens.
+///
+/// Empty and active-lens ids reuse [prowlarrServiceProvider], preserving one
+/// client and its overrides for the ordinary path. A different id is resolved
+/// explicitly so folded surfaces cannot read the lens under another label.
+final prowlarrServiceForProvider = Provider.family<ProwlarrService, String>((
+  ref,
+  instanceId,
+) {
+  final lens = ref.read(activeInstanceProvider(ServiceKey.prowlarr))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == lens) {
+    return ref.watch(prowlarrServiceProvider);
+  }
+  return _prowlarrService(ref, instanceId: instanceId);
+});
+
+ProwlarrService _prowlarrService(Ref ref, {required String? instanceId}) {
+  return ProwlarrService(
+    watchApiClient(ref, ServiceKey.prowlarr, instanceId: instanceId),
+  );
+}
 
 /// Configured indexers.
 final prowlarrIndexersProvider = FutureProvider<List<ProwlarrIndexer>>((
@@ -71,6 +113,35 @@ final prowlarrRecentHistoryProvider = FutureProvider<ProwlarrHistoryPage>((
       .watch(prowlarrServiceProvider)
       .getHistory(page: 1, pageSize: _defaultHistoryPageSize);
 });
+
+/// Paged, optionally filtered history for the full History tab.
+///
+/// `noProviderRetry`, which the older providers in this file predate: a dark
+/// Prowlarr held behind ten backing-off attempts is a spinner for most of a
+/// minute before the page can say "unreachable" and offer the Retry it already
+/// draws.
+final prowlarrHistoryPageProvider = FutureProvider.autoDispose
+    .family<ProwlarrHistoryPage, ProwlarrHistoryQuery>((ref, query) async {
+      return ref
+          .watch(prowlarrServiceProvider)
+          .getHistory(
+            page: query.page,
+            pageSize: query.pageSize,
+            eventType: query.eventType,
+          );
+    }, retry: noProviderRetry);
+
+/// Per-indexer statistics for a user-selected bounded window.
+final prowlarrIndexerStatsForWindowProvider = FutureProvider.autoDispose
+    .family<ProwlarrIndexerStats, ProwlarrStatsWindow>((ref, window) async {
+      final now = DateTime.now().toUtc();
+      return ref
+          .watch(prowlarrServiceProvider)
+          .getIndexerStats(
+            startDate: now.subtract(window.duration).toIso8601String(),
+            endDate: now.toIso8601String(),
+          );
+    }, retry: noProviderRetry);
 
 /// A single indexer resolved from [prowlarrIndexersProvider], or null if the id
 /// is unknown. Reuses the list fetch so the detail screen adds no extra call.

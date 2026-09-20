@@ -4,9 +4,9 @@
 # unless explicitly requested:
 #
 #   docker compose -f docker-compose.e2e.yml up -d
-#   flutter test --tags e2e
+#   flutter test --tags e2e --run-skipped
 #
 # Everything else (tiers 0-5) stays offline and runs normally.
 tags:
   e2e:
-    skip: "requires Docker instances: run with `flutter test --tags e2e`"
+    skip: "requires Docker instances: run with `flutter test --tags e2e --run-skipped`"

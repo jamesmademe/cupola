@@ -4,6 +4,7 @@ import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
+import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,6 +28,9 @@ class SeerrRequestConflict implements Exception {
   @override
   String toString() => message;
 }
+
+int? _asInt(Object? value) =>
+    value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
 
 /// Row count above which a discover page is mapped off the main isolate.
 ///
@@ -125,6 +129,136 @@ class SeerrService {
   _mediaCache = {};
 
   SeerrService(this._client);
+
+  static const _adminPageSize = 50;
+
+  /// Reads every admin page while preserving the distinction between a complete
+  /// empty list and a first page followed by a failed later page.
+  ///
+  /// The first page is awaited alone because it carries `pageInfo.results` —
+  /// there is no way to know how many pages exist before asking for one. Once
+  /// that number is in hand the rest are **fetched together**: the old serial
+  /// loop turned a 500-user server into ten round trips in single file for no
+  /// reason, since none of them depends on the one before it.
+  Future<SeerrAdminResult<SeerrIssue>> getIssuesResult({
+    SeerrIssueFilter filter = SeerrIssueFilter.open,
+  }) async {
+    final first = await _issuePage(0, filter: filter);
+    return _collect(
+      first,
+      (skip) async => (await _issuePage(skip, filter: filter)).items,
+    );
+  }
+
+  /// Folds the remaining pages of an admin list onto its first one.
+  ///
+  /// A later page that fails does not take the rows already in hand with it,
+  /// but it does set [SeerrAdminResult.isPartial]: the caller must keep the
+  /// rows and must not present them as the whole list. `eagerError: false` is
+  /// the point of `Future.wait` here — every page is observed, so one refusal
+  /// cannot leave the others as unhandled errors.
+  Future<SeerrAdminResult<T>> _collect<T>(
+    ({List<T> items, int total}) first,
+    Future<List<T>> Function(int skip) page,
+  ) async {
+    final skips = [
+      for (
+        var skip = _adminPageSize;
+        skip < first.total;
+        skip += _adminPageSize
+      )
+        skip,
+    ];
+    final rest = await Future.wait(
+      skips.map((skip) async {
+        try {
+          return await page(skip);
+        } catch (_) {
+          return null;
+        }
+      }),
+    );
+    return SeerrAdminResult(
+      items: List.unmodifiable([
+        ...first.items,
+        for (final chunk in rest) ...?chunk,
+      ]),
+      total: first.total,
+      isPartial: rest.any((chunk) => chunk == null),
+    );
+  }
+
+  Future<({List<SeerrIssue> items, int total})> _issuePage(
+    int skip, {
+    required SeerrIssueFilter filter,
+  }) async {
+    final response = await _client.get(
+      '/api/v1/issue',
+      queryParameters: {
+        'take': _adminPageSize,
+        'skip': skip,
+        'sort': 'modified',
+        'filter': filter.apiValue,
+      },
+    );
+    final data = response.data;
+    final results = data is Map ? data['results'] : data;
+    final pageInfo = data is Map ? data['pageInfo'] : null;
+    final total = pageInfo is Map
+        ? (_asInt(pageInfo['results']) ?? _asInt(pageInfo['total']) ?? 0)
+        : results is List
+        ? results.length
+        : 0;
+    final items = results is List
+        ? results
+              .map(SeerrIssue.fromJson)
+              .where((issue) => issue.id > 0)
+              .toList(growable: false)
+        : const <SeerrIssue>[];
+    return (items: items, total: total);
+  }
+
+  Future<void> resolveIssue(int issueId) async {
+    await _client.post('/api/v1/issue/$issueId/resolved');
+  }
+
+  /// Every user this server holds, with the same partial-page contract as
+  /// [getIssuesResult].
+  ///
+  /// There is deliberately no `getUsers()` returning a bare list: it existed,
+  /// it threw `isPartial` away, and a caller holding 50 of 300 users with no
+  /// way to know it is exactly the failure `SeerrAdminResult` was added for.
+  Future<SeerrAdminResult<SeerrUser>> getUsersResult() async {
+    final first = await _userPage(0);
+    return _collect(first, (skip) async => (await _userPage(skip)).items);
+  }
+
+  Future<({List<SeerrUser> items, int total})> _userPage(int skip) async {
+    final response = await _client.get(
+      '/api/v1/user',
+      queryParameters: {
+        'take': _adminPageSize,
+        'skip': skip,
+        'sort': 'displayname',
+        'sortDirection': 'asc',
+      },
+    );
+    final data = response.data;
+    final results = data is Map ? data['results'] : data;
+    final pageInfo = data is Map ? data['pageInfo'] : null;
+    final total = pageInfo is Map
+        ? (_asInt(pageInfo['results']) ?? _asInt(pageInfo['total']) ?? 0)
+        : results is List
+        ? results.length
+        : 0;
+    final items = results is List
+        ? results
+              .map(SeerrUser.fromJson)
+              .where((user) => user.id > 0)
+              .toList(growable: false)
+        : const <SeerrUser>[];
+    return (items: items, total: total);
+  }
 
   /// Every request this server holds, hydrated.
   ///

@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
+
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
@@ -37,23 +39,56 @@ final transmissionClientProvider = Provider<TransmissionClient>((ref) {
   return client;
 });
 
+/// Transmission client for an explicitly named connection.
+///
+/// Empty and active ids reuse the lens-bound provider, preserving the existing
+/// session id and anti-bruteforce state. A different id gets one long-lived
+/// client, so those same pieces of state survive polling and are disposed only
+/// with the family entry.
+final transmissionClientForProvider =
+    Provider.family<TransmissionClient, String>((ref, instanceId) {
+      final activeId = ref
+          .read(activeInstanceProvider(ServiceKey.transmission))
+          ?.id;
+      if (instanceId.isEmpty || instanceId == activeId) {
+        return ref.watch(transmissionClientProvider);
+      }
+
+      final transport = watchTransport(
+        ref,
+        ServiceKey.transmission,
+        instanceId: instanceId,
+      );
+      if (!transport.configured) {
+        throw Exception('Transmission not configured');
+      }
+      final client = TransmissionClient(
+        url: transport.url,
+        username: transport.username.isEmpty ? null : transport.username,
+        password: transport.apiKey.isEmpty ? null : transport.apiKey,
+        certFingerprint: transport.pin,
+      );
+      ref.onDispose(client.close);
+      return client;
+    });
+
 /// Every torrent the daemon knows about.
 final transmissionTorrentsProvider = FutureProvider<List<TransmissionTorrent>>((
   ref,
 ) async {
   return ref.watch(transmissionClientProvider).torrents();
-});
+}, retry: noProviderRetry);
 
 /// Aggregate counters — speeds and torrent counts.
 final transmissionStatsProvider = FutureProvider<TransmissionStats>((
   ref,
 ) async {
   return ref.watch(transmissionClientProvider).stats();
-});
+}, retry: noProviderRetry);
 
 /// Daemon settings: version, global limits, turtle mode.
 final transmissionSessionProvider = FutureProvider<TransmissionSession>((
   ref,
 ) async {
   return ref.watch(transmissionClientProvider).session();
-});
+}, retry: noProviderRetry);

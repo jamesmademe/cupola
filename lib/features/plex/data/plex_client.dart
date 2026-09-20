@@ -429,34 +429,46 @@ class PlexClient implements StreamServerClient {
   @override
   Future<List<StreamSession>> getSessions({CancelToken? cancelToken}) async {
     try {
-      final container = await _container(
-        '/status/sessions',
-        cancelToken: cancelToken,
-      );
-      // An idle Plex server sends `{"size": 0}` with **no `Metadata` key at
-      // all** — not an empty array, the way Jellyfin does. `container['Metadata']
-      // as List` throws here, and this is the single most common shape trap in
-      // the API because the happy path never exercises it.
-      final metadata = container['Metadata'];
-      if (metadata is! List) return const [];
-
-      final sessions = metadata
-          .whereType<Map>()
-          .map((raw) => plexSessionFromJson(raw.cast<String, dynamic>()))
-          .nonNulls
-          .toList();
-
-      // Cost order, so the session actually charging the box for something is at
-      // the top. Bitrate breaks ties within a method.
-      sessions.sort((a, b) {
-        final byMethod = b.playMethod.index.compareTo(a.playMethod.index);
-        if (byMethod != 0) return byMethod;
-        return (b.bitrate ?? 0).compareTo(a.bitrate ?? 0);
-      });
-      return sessions;
+      return await getSessionsOrThrow(cancelToken: cancelToken);
     } catch (_) {
       return const [];
     }
+  }
+
+  /// The same session read with its transport or parse failure preserved.
+  ///
+  /// Browse screens intentionally use [getSessions], where a dark server is a
+  /// quiet empty board. KPI and reachability consumers must use this variant:
+  /// `0 streams` is a real answer only when `/status/sessions` answered with no
+  /// active sessions.
+  Future<List<StreamSession>> getSessionsOrThrow({
+    CancelToken? cancelToken,
+  }) async {
+    final container = await _container(
+      '/status/sessions',
+      cancelToken: cancelToken,
+    );
+    // An idle Plex server sends `{"size": 0}` with **no `Metadata` key at
+    // all** — not an empty array, the way Jellyfin does. `container['Metadata']
+    // as List` throws here, and this is the single most common shape trap in
+    // the API because the happy path never exercises it.
+    final metadata = container['Metadata'];
+    if (metadata is! List) return const [];
+
+    final sessions = metadata
+        .whereType<Map>()
+        .map((raw) => plexSessionFromJson(raw.cast<String, dynamic>()))
+        .nonNulls
+        .toList();
+
+    // Cost order, so the session actually charging the box for something is at
+    // the top. Bitrate breaks ties within a method.
+    sessions.sort((a, b) {
+      final byMethod = b.playMethod.index.compareTo(a.playMethod.index);
+      if (byMethod != 0) return byMethod;
+      return (b.bitrate ?? 0).compareTo(a.bitrate ?? 0);
+    });
+    return sessions;
   }
 
   /// `POST /status/sessions/terminate`.
@@ -543,24 +555,35 @@ class PlexClient implements StreamServerClient {
   @override
   Future<List<StreamLibrary>> getLibraries({CancelToken? cancelToken}) async {
     try {
-      final container = await _container(
-        '/library/sections',
-        cancelToken: cancelToken,
-      );
-      final directories = container['Directory'];
-      if (directories is! List) return const [];
-
-      final libraries = <StreamLibrary>[];
-      for (final raw in directories.whereType<Map>()) {
-        final library = plexLibraryFromJson(raw.cast<String, dynamic>());
-        if (library == null) continue;
-        _sectionKinds[library.id] = library.kind;
-        libraries.add(library);
-      }
-      return libraries;
+      return await getLibrariesOrThrow(cancelToken: cancelToken);
     } catch (_) {
       return const [];
     }
+  }
+
+  /// The same library read with its transport or parse failure preserved.
+  ///
+  /// The ordinary [getLibraries] contract is kept for the browse surface; KPI
+  /// consumers use this method so an unreachable server cannot become
+  /// `Libraries 0`.
+  Future<List<StreamLibrary>> getLibrariesOrThrow({
+    CancelToken? cancelToken,
+  }) async {
+    final container = await _container(
+      '/library/sections',
+      cancelToken: cancelToken,
+    );
+    final directories = container['Directory'];
+    if (directories is! List) return const [];
+
+    final libraries = <StreamLibrary>[];
+    for (final raw in directories.whereType<Map>()) {
+      final library = plexLibraryFromJson(raw.cast<String, dynamic>());
+      if (library == null) continue;
+      _sectionKinds[library.id] = library.kind;
+      libraries.add(library);
+    }
+    return libraries;
   }
 
   /// Queues a scan. `GET`, not `POST` — Plex's refresh is a GET.
@@ -861,6 +884,20 @@ class PlexClient implements StreamServerClient {
     } catch (_) {
       return const [];
     }
+  }
+
+  /// Devices registered on this Plex Media Server (`com.plexapp.system.devices`).
+  /// Tokens returned by the endpoint are intentionally discarded by
+  /// [PlexDevice]; a read-only inventory has no reason to retain credentials.
+  Future<List<PlexDevice>> getDevices() async {
+    final container = await _container('/devices');
+    return plexDevicesFromJson(container['Device']);
+  }
+
+  /// Regular and smart playlists owned by the token's user.
+  Future<List<PlexPlaylist>> getPlaylists() async {
+    final container = await _container('/playlists');
+    return plexPlaylistsFromJson(container['Metadata']);
   }
 
   /// `GET /hubs/search` — the library search, in the server's own bands.

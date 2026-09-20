@@ -34,6 +34,34 @@ import 'package:cupola/features/search/presentation/search_screen.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/presentation/series_detail_screen.dart';
 import 'package:cupola/features/series/presentation/sonarr_overview_screen.dart';
+import 'package:cupola/features/activity/domain/service_type.dart';
+import 'package:cupola/features/activity/presentation/arr_calendar_screen.dart';
+import 'package:cupola/features/activity/presentation/arr_tab_screen.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_history_screen.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_library_screen.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_providers_screen.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_wanted_screen.dart';
+import 'package:cupola/features/discover/presentation/discover_screen.dart';
+import 'package:cupola/features/discover/presentation/seerr_admin_screens.dart';
+import 'package:cupola/features/dockge/presentation/dockge_terminal_screen.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_tab_screens.dart';
+import 'package:cupola/features/music/presentation/music_screen.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_screen.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_tab_screens.dart';
+import 'package:cupola/features/plex/presentation/plex_tab_screens.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_history_screen.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_library_screen.dart';
+import 'package:cupola/features/prowlarr/presentation/prowlarr_stats_screen.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_screen.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_screen.dart';
+import 'package:cupola/features/readarr/presentation/readarr_activity_screen.dart';
+import 'package:cupola/features/readarr/presentation/readarr_history_screen.dart';
+import 'package:cupola/features/readarr/presentation/readarr_library_screen.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_screen.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_tab_screens.dart';
+import 'package:cupola/features/series/presentation/series_screen.dart';
+import 'package:cupola/features/transmission/presentation/transmission_screen.dart';
+import 'package:cupola/features/transmission/presentation/transmission_tab_screens.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
@@ -765,9 +793,9 @@ void main() {
       expect(find.byType(DashboardScreen), findsNothing);
     });
 
-   testWidgets('legacy top-level routes redirect to services', (tester) async {
-     final container = await _pumpRouter(tester);
-     final router = container.read(routerProvider);
+    testWidgets('legacy top-level routes redirect to services', (tester) async {
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
 
       const routes = {
         '/discover': ServiceRoutes.dashboard,
@@ -777,7 +805,7 @@ void main() {
       };
       for (final entry in routes.entries) {
         router.go(entry.key);
-       await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
         expect(router.state.uri.toString(), entry.value);
         if (entry.key == '/discover') {
@@ -785,8 +813,8 @@ void main() {
         } else {
           expect(find.byType(DashboardScreen), findsNothing);
         }
-     }
-   });
+      }
+    });
 
     testWidgets('legacy detail routes redirect to equivalent services routes', (
       tester,
@@ -1232,6 +1260,267 @@ void main() {
       expect(router.state.uri.toString(), ServiceRoutes.dockgeStack('immich'));
       expect(find.byType(DockgeStackDetailScreen), findsOneWidget);
     });
+  });
+
+  // ── What each tab actually draws ────────────────────────────────────────
+  //
+  // The tables above this one assert *locations*, and a location is not a
+  // page: for months every tab on every bar resolved to `ServiceTabPlaceholder`
+  // — a legitimate destination — so the path assertions stayed green while the
+  // screens behind them were unreachable. The Overview table was written to
+  // close that for the sixteen Overviews. This one closes it for the other
+  // seventy tabs.
+  //
+  // Two properties, and the second is the load-bearing one:
+  //
+  //  * every tab draws the widget the router names for it, **and** where one
+  //    widget serves several tabs — `ArrTabScreen` is queue, wanted and
+  //    history; `UnraidScreen` is five sections; `NpmScreen` is four — the
+  //    entry asserts the *discriminator* too. A type-only check would pass
+  //    with Queue mounted on History, which is a plausible page under the
+  //    wrong label and the failure no path assertion can see.
+  //  * the table is **complete by construction**. It is walked from
+  //    `tabsFor`, not from its own keys, so a tab added to `serviceTabs`
+  //    without an entry here fails rather than going unchecked. That is the
+  //    same shape as the router's own wildcard `throw`, in the test.
+  //
+  // TrueNAS is absent because it has no bar at all — `tabsFor` returns null
+  // for it by design, ten sections not fitting on one.
+  //
+  // No fake is needed: the harness leaves every service unconfigured and each
+  // of these screens checks `isServiceConfigured` before it reaches a
+  // provider, so nothing is requested and no retry timer outlives the case.
+  group('every tab draws the screen it names', () {
+    Finder drawsArrTab(ServiceType serviceType, ArrTabMode mode) =>
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is ArrTabScreen &&
+              widget.serviceType == serviceType &&
+              widget.mode == mode,
+          description: 'ArrTabScreen(${serviceType.name}, ${mode.name})',
+        );
+
+    Finder drawsCalendar(ServiceKey service) => find.byWidgetPredicate(
+      (widget) => widget is ArrCalendarScreen && widget.service == service,
+      description: 'ArrCalendarScreen(${service.name})',
+    );
+
+    final expected = <ServiceKey, Map<ServiceTab, Finder>>{
+      ServiceKey.seerr: {
+        ServiceTab.overview: find.byType(SeerrOverviewScreen),
+        ServiceTab.requests: find.byType(ServiceAllRequestsScreen),
+        ServiceTab.discover: find.byType(DiscoverScreen),
+        ServiceTab.issues: find.byType(SeerrIssuesScreen),
+        ServiceTab.users: find.byType(SeerrUsersScreen),
+      },
+      ServiceKey.radarr: {
+        ServiceTab.overview: find.byType(RadarrOverviewScreen),
+        ServiceTab.library: find.byType(MoviesScreen),
+        ServiceTab.calendar: drawsCalendar(ServiceKey.radarr),
+        ServiceTab.queue: drawsArrTab(ServiceType.movies, ArrTabMode.queue),
+        ServiceTab.wanted: drawsArrTab(ServiceType.movies, ArrTabMode.wanted),
+        ServiceTab.history: drawsArrTab(ServiceType.movies, ArrTabMode.history),
+      },
+      ServiceKey.sonarr: {
+        ServiceTab.overview: find.byType(SonarrOverviewScreen),
+        ServiceTab.library: find.byType(SeriesScreen),
+        ServiceTab.calendar: drawsCalendar(ServiceKey.sonarr),
+        ServiceTab.queue: drawsArrTab(ServiceType.series, ArrTabMode.queue),
+        ServiceTab.wanted: drawsArrTab(ServiceType.series, ArrTabMode.wanted),
+        ServiceTab.history: drawsArrTab(ServiceType.series, ArrTabMode.history),
+      },
+      ServiceKey.lidarr: {
+        ServiceTab.overview: find.byType(LidarrOverviewScreen),
+        ServiceTab.library: find.byType(MusicScreen),
+        ServiceTab.calendar: drawsCalendar(ServiceKey.lidarr),
+        ServiceTab.queue: drawsArrTab(ServiceType.music, ArrTabMode.queue),
+        ServiceTab.wanted: drawsArrTab(ServiceType.music, ArrTabMode.wanted),
+        ServiceTab.history: drawsArrTab(ServiceType.music, ArrTabMode.history),
+      },
+      ServiceKey.readarr: {
+        ServiceTab.overview: find.byType(ReadarrOverviewScreen),
+        ServiceTab.library: find.byType(ReadarrLibraryScreen),
+        ServiceTab.calendar: drawsCalendar(ServiceKey.readarr),
+        ServiceTab.queue: find.byWidgetPredicate(
+          (widget) =>
+              widget is ReadarrActivityScreen &&
+              widget.mode == ReadarrActivityMode.queue,
+          description: 'ReadarrActivityScreen(queue)',
+        ),
+        ServiceTab.wanted: find.byWidgetPredicate(
+          (widget) =>
+              widget is ReadarrActivityScreen &&
+              widget.mode == ReadarrActivityMode.wanted,
+          description: 'ReadarrActivityScreen(wanted)',
+        ),
+        ServiceTab.history: find.byType(ReadarrHistoryScreen),
+      },
+      ServiceKey.qbittorrent: {
+        ServiceTab.overview: find.byType(QbittorrentOverviewScreen),
+        ServiceTab.queue: find.byType(QbittorrentScreen),
+        ServiceTab.rss: find.byType(QbittorrentRssScreen),
+      },
+      ServiceKey.transmission: {
+        ServiceTab.overview: find.byType(TransmissionOverviewScreen),
+        ServiceTab.queue: find.byType(TransmissionScreen),
+        ServiceTab.labels: find.byType(TransmissionLabelsScreen),
+        ServiceTab.session: find.byType(TransmissionSessionScreen),
+      },
+      ServiceKey.sabnzbd: {
+        ServiceTab.overview: find.byType(SabnzbdOverviewScreen),
+        ServiceTab.queue: find.byType(SabnzbdScreen),
+        ServiceTab.history: find.byType(SabnzbdHistoryScreen),
+        ServiceTab.servers: find.byType(SabnzbdServersScreen),
+      },
+      ServiceKey.nzbget: {
+        ServiceTab.overview: find.byType(NzbgetOverviewScreen),
+        ServiceTab.queue: find.byType(NzbgetScreen),
+        ServiceTab.history: find.byType(NzbgetHistoryScreen),
+        ServiceTab.feeds: find.byType(NzbgetFeedsScreen),
+        ServiceTab.messages: find.byType(NzbgetMessagesScreen),
+      },
+      ServiceKey.bazarr: {
+        ServiceTab.overview: find.byType(BazarrOverviewScreen),
+        ServiceTab.wanted: find.byType(BazarrWantedScreen),
+        ServiceTab.series: find.byWidgetPredicate(
+          (widget) =>
+              widget is BazarrLibraryScreen &&
+              widget.kind == BazarrLibraryKind.series,
+          description: 'BazarrLibraryScreen(series)',
+        ),
+        ServiceTab.movies: find.byWidgetPredicate(
+          (widget) =>
+              widget is BazarrLibraryScreen &&
+              widget.kind == BazarrLibraryKind.movies,
+          description: 'BazarrLibraryScreen(movies)',
+        ),
+        ServiceTab.history: find.byType(BazarrHistoryScreen),
+        ServiceTab.providers: find.byType(BazarrProvidersScreen),
+      },
+      ServiceKey.prowlarr: {
+        ServiceTab.overview: find.byType(ProwlarrOverviewScreen),
+        ServiceTab.indexers: find.byType(ProwlarrLibraryScreen),
+        ServiceTab.history: find.byType(ProwlarrHistoryScreen),
+        ServiceTab.stats: find.byType(ProwlarrStatsScreen),
+      },
+      ServiceKey.dockge: {
+        ServiceTab.overview: find.byType(DockgeOverviewScreen),
+        ServiceTab.stacks: find.byType(DockgeScreen),
+        ServiceTab.terminal: find.byType(DockgeTerminalScreen),
+      },
+      ServiceKey.unraid: {
+        ServiceTab.overview: find.byType(UnraidOverviewScreen),
+        for (final entry in const {
+          ServiceTab.array: UnraidSection.array,
+          ServiceTab.docker: UnraidSection.docker,
+          ServiceTab.vms: UnraidSection.vms,
+          ServiceTab.notifications: UnraidSection.notifications,
+          ServiceTab.shares: UnraidSection.shares,
+        }.entries)
+          entry.key: find.byWidgetPredicate(
+            (widget) => widget is UnraidScreen && widget.section == entry.value,
+            description: 'UnraidScreen(${entry.value.name})',
+          ),
+      },
+      ServiceKey.nginxProxyManager: {
+        ServiceTab.overview: find.byType(NpmOverviewScreen),
+        for (final entry in const {
+          ServiceTab.proxyHosts: NpmSection.proxyHosts,
+          ServiceTab.certificates: NpmSection.certificates,
+          ServiceTab.accessLists: NpmSection.accessLists,
+          ServiceTab.auditLog: NpmSection.auditLog,
+        }.entries)
+          entry.key: find.byWidgetPredicate(
+            (widget) => widget is NpmScreen && widget.section == entry.value,
+            description: 'NpmScreen(${entry.value.name})',
+          ),
+      },
+      ServiceKey.jellyfin: {
+        ServiceTab.overview: find.byWidgetPredicate(
+          (widget) =>
+              widget is StreamOverviewScreen &&
+              widget.service == ServiceKey.jellyfin,
+          description: 'StreamOverviewScreen(jellyfin)',
+        ),
+        ServiceTab.libraries: find.byWidgetPredicate(
+          (widget) =>
+              widget is StreamLibrariesScreen &&
+              widget.service == ServiceKey.jellyfin,
+          description: 'StreamLibrariesScreen(jellyfin)',
+        ),
+        ServiceTab.users: find.byType(JellyfinUsersScreen),
+        ServiceTab.devices: find.byType(JellyfinDevicesScreen),
+        ServiceTab.tasks: find.byType(JellyfinTasksScreen),
+        ServiceTab.activity: find.byType(JellyfinActivityScreen),
+      },
+      ServiceKey.plex: {
+        ServiceTab.overview: find.byWidgetPredicate(
+          (widget) =>
+              widget is StreamOverviewScreen &&
+              widget.service == ServiceKey.plex,
+          description: 'StreamOverviewScreen(plex)',
+        ),
+        ServiceTab.libraries: find.byWidgetPredicate(
+          (widget) =>
+              widget is StreamLibrariesScreen &&
+              widget.service == ServiceKey.plex,
+          description: 'StreamLibrariesScreen(plex)',
+        ),
+        ServiceTab.onDeck: find.byType(PlexOnDeckScreen),
+        ServiceTab.activities: find.byType(PlexActivitiesScreen),
+        ServiceTab.devices: find.byType(PlexDevicesScreen),
+        ServiceTab.playlists: find.byType(PlexPlaylistsScreen),
+      },
+    };
+
+    for (final service in ServiceKey.values) {
+      final tabs = tabsFor(service);
+      if (tabs == null) continue;
+
+      testWidgets(service.name, (tester) async {
+        final table = expected[service];
+        expect(
+          table,
+          isNotNull,
+          reason:
+              '${service.name} is on the tab model but has no row in this '
+              'table. Add one naming the widget each of its tabs draws.',
+        );
+
+        final container = await _pumpRouter(tester);
+        final router = container.read(routerProvider);
+
+        for (final tab in tabs) {
+          final finder = table![tab];
+          expect(
+            finder,
+            isNotNull,
+            reason:
+                '${service.name}/${tab.name} has a branch but no entry here, '
+                'so nothing checks what it draws.',
+          );
+
+          final location =
+              '${ServiceRoutes.forService(service)}/${tab.segment}';
+          router.go(location);
+          await tester.pumpAndSettle();
+
+          expect(router.state.uri.toString(), location, reason: location);
+          expect(
+            finder,
+            findsOneWidget,
+            reason: '$location must draw the screen its row names',
+          );
+          expect(
+            find.byType(ServiceTabPlaceholder),
+            findsNothing,
+            reason:
+                '$location has a real screen, so a placeholder there is the '
+                'screen having been unmounted rather than a tab not built.',
+          );
+        }
+      });
+    }
   });
 }
 

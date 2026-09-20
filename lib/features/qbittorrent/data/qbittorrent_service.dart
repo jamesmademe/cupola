@@ -7,6 +7,7 @@ import 'package:cupola/features/qbittorrent/domain/models/torrent_file.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent_properties.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent_tracker.dart';
 import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
+import 'package:cupola/features/qbittorrent/domain/models/rss.dart';
 
 List<Torrent> _parseTorrentList(List<dynamic> json) {
   return json
@@ -102,6 +103,21 @@ class QbittorrentService {
   Future<TransferInfo> getTransferInfo() async {
     final response = await _client.get('/api/v2/transfer/info');
     return TransferInfo.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// The configured RSS feed tree, including article state when available.
+  Future<List<QbittorrentRssFeed>> getRssFeeds() async {
+    final response = await _client.get(
+      '/api/v2/rss/items',
+      queryParameters: const {'withData': true},
+    );
+    return qbittorrentRssFeedsFromJson(response.data);
+  }
+
+  /// RSS auto-download rules keyed by their server-owned names.
+  Future<List<QbittorrentRssRule>> getRssRules() async {
+    final response = await _client.get('/api/v2/rss/rules');
+    return qbittorrentRssRulesFromJson(response.data);
   }
 
   Future<void> pauseTorrents(List<String> hashes) => _postAcrossTheRename(

@@ -1,5 +1,88 @@
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 
+class NpmAccessClient {
+  const NpmAccessClient({required this.address, required this.directive});
+  final String address;
+  final String directive;
+
+  factory NpmAccessClient.fromJson(Map<String, dynamic> json) =>
+      NpmAccessClient(
+        address: json['address']?.toString() ?? '',
+        directive: json['directive']?.toString() ?? '',
+      );
+}
+
+class NpmAccessList {
+  const NpmAccessList({
+    required this.id,
+    required this.name,
+    required this.satisfyAny,
+    required this.passAuth,
+    required this.proxyHostCount,
+    required this.clients,
+  });
+  final int id;
+  final String name;
+  final bool satisfyAny;
+  final bool passAuth;
+  final int? proxyHostCount;
+  final List<NpmAccessClient> clients;
+
+  factory NpmAccessList.fromJson(Map<String, dynamic> json) => NpmAccessList(
+    id: parseInt(json['id']),
+    name: json['name']?.toString().trim().isNotEmpty == true
+        ? json['name'].toString()
+        : 'Unnamed access list',
+    satisfyAny: parseBool(json['satisfy_any']),
+    passAuth: parseBool(json['pass_auth']),
+    proxyHostCount: int.tryParse(json['proxy_host_count']?.toString() ?? ''),
+    clients: ((json['clients'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((e) => NpmAccessClient.fromJson(e.cast<String, dynamic>()))
+        .toList(growable: false),
+  );
+}
+
+class NpmAuditEntry {
+  const NpmAuditEntry({
+    required this.id,
+    required this.objectType,
+    required this.objectId,
+    required this.action,
+    required this.summary,
+    this.createdOn,
+  });
+  final int id;
+  final String objectType;
+  final int? objectId;
+  final String action;
+  final String summary;
+  final DateTime? createdOn;
+
+  factory NpmAuditEntry.fromJson(Map<String, dynamic> json) {
+    final meta = (json['meta'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final candidate =
+        [
+              meta['name'],
+              meta['domain_names'] is List
+                  ? (meta['domain_names'] as List).join(', ')
+                  : null,
+              meta['email'],
+            ]
+            .whereType<Object>()
+            .map((e) => e.toString())
+            .firstWhere((e) => e.trim().isNotEmpty, orElse: () => '');
+    return NpmAuditEntry(
+      id: parseInt(json['id']),
+      objectType: json['object_type']?.toString() ?? 'object',
+      objectId: int.tryParse(json['object_id']?.toString() ?? ''),
+      action: json['action']?.toString() ?? 'changed',
+      summary: candidate,
+      createdOn: DateTime.tryParse(json['created_on']?.toString() ?? ''),
+    );
+  }
+}
+
 /// `GET /api/` — the unauthenticated health document.
 ///
 /// The only response that proves an Nginx Proxy Manager backend is at the other

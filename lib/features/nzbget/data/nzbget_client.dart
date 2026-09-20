@@ -156,6 +156,33 @@ class NzbgetClient {
         .toList(growable: false);
   }
 
+  /// Configured RSS feeds.
+  ///
+  /// The public RPC API exposes feeds as numbered `config` options; it does not
+  /// expose the `listfeeds` / `viewfeed` methods older planning notes assumed.
+  ///
+  /// `config` is the whole settings document, which includes `ControlPassword`
+  /// and every `ServerN.Password`. There is no narrower call — NZBGet has no
+  /// per-section read — so the mitigation is downstream instead:
+  /// [nzbgetFeedsFromConfig] keeps only `FeedN.*` options and the rest is
+  /// dropped on the floor with the response. Nothing here logs the body, and
+  /// nothing but the feed records leaves this method.
+  Future<List<NzbgetFeed>> feeds() async {
+    return nzbgetFeedsFromConfig(await _call('config'));
+  }
+
+  /// Recent screen-log entries. `log` accepts positional `(IDFrom, count)` and
+  /// requires one of the two values to be zero; using a count asks for the most
+  /// recent [limit] records without maintaining a client-side cursor.
+  Future<List<NzbgetMessage>> messages({int limit = 200}) async {
+    final result = await _call('log', [0, limit]);
+    if (result is! List) return const [];
+    return result
+        .whereType<Map>()
+        .map((entry) => NzbgetMessage.fromJson(entry.cast<String, dynamic>()))
+        .toList(growable: false);
+  }
+
   /// Verifies the configured URL + credentials. Returns true on success.
   Future<bool> testConnection() async {
     await version();

@@ -116,6 +116,11 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
     return AsyncValueWidget<List<Torrent>>(
       value: torrentsAsync,
       serviceName: 'qBittorrent',
+      onRetry: () {
+        ref.invalidate(allTorrentsProvider);
+        ref.invalidate(torrentsProvider);
+        ref.invalidate(transferInfoProvider);
+      },
       data: (torrents) {
         if (torrents.isEmpty) {
           return _EmptyTorrents(colorScheme: Theme.of(context).colorScheme);

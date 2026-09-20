@@ -31,6 +31,44 @@ final dockgeClientProvider = Provider<DockgeClient>((ref) {
   return client;
 });
 
+/// Dockge client bound to one configured connection.
+///
+/// Empty and active ids intentionally collapse to [dockgeClientProvider], so
+/// the ordinary lens remains the single owner of the live connection. A
+/// non-active id is built directly from its transport and never reads the
+/// agent lens: agent selection belongs to the Dockge login, not to the
+/// settings connection id.
+final dockgeClientForProvider = Provider.family<DockgeClient, String>((
+  ref,
+  instanceId,
+) {
+  final activeId =
+      ref.read(activeInstanceProvider(ServiceKey.dockge))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == activeId) {
+    return ref.watch(dockgeClientProvider);
+  }
+  return _dockgeClient(ref, instanceId: instanceId);
+});
+
+DockgeClient _dockgeClient(Ref ref, {required String? instanceId}) {
+  final transport = watchTransport(
+    ref,
+    ServiceKey.dockge,
+    instanceId: instanceId,
+  );
+  if (!transport.configured) {
+    throw const DockgeException('Dockge not configured');
+  }
+  final client = DockgeClient(
+    baseUrl: transport.url,
+    username: transport.username.isEmpty ? null : transport.username,
+    password: transport.apiKey.isEmpty ? null : transport.apiKey,
+    certFingerprint: transport.pin,
+  );
+  ref.onDispose(client.close);
+  return client;
+}
+
 /// Which Dockge instance the app is looking through: the empty string for the
 /// hub this login belongs to, an agent's `host:port` otherwise.
 ///
@@ -83,6 +121,22 @@ final dockgeServiceProvider = Provider<DockgeService>((ref) {
   return DockgeService(ref.watch(dockgeLensedClientProvider));
 });
 
+/// One-shot Dockge facade keyed by configured connection id.
+///
+/// Unlike the live lens facade, this path is suitable for cross-instance KPI
+/// reads: an explicit id never uses [dockgeSelectedAgentProvider].
+final dockgeServiceForProvider = Provider.family<DockgeService, String>((
+  ref,
+  instanceId,
+) {
+  final activeId =
+      ref.read(activeInstanceProvider(ServiceKey.dockge))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == activeId) {
+    return ref.watch(dockgeServiceProvider);
+  }
+  return DockgeService(ref.watch(dockgeClientForProvider(instanceId)));
+});
+
 /// Live stack list — connects, requests a refresh, then streams every push
 /// Dockge sends (`stackList` / `stackStatusList`).
 final dockgeStackListProvider = StreamProvider.autoDispose<List<DockgeStack>>((
@@ -108,3 +162,82 @@ final dockgeServiceStatusProvider = FutureProvider.autoDispose
     .family<List<DockgeServiceStatus>, String>((ref, name) async {
       return ref.watch(dockgeServiceProvider).getServiceStatusList(name);
     });
+
+/// Combined stack terminal, accumulated as a bounded tail. Dockge exposes this
+/// as output only; there is no shell-input event in its public Socket.IO flow.
+///
+/// The join is not released when this provider is disposed, because
+/// `DockgeClient` has no leave call and inventing a socket event name for one
+/// would be guessing at a protocol. Cancelling the subscription stops the app
+/// reading the stream; the server keeps sending it until the socket closes.
+final dockgeTerminalTextProvider = StreamProvider.autoDispose
+    .family<String, String>((ref, stackName) async* {
+      final client = ref.watch(dockgeLensedClientProvider);
+      await client.ensureConnected();
+      final terminalName = client.combinedTerminalName(stackName);
+      await client.joinCombinedTerminal(stackName);
+
+      // **Emitted before the loop**, and that is the whole of the fix: a
+      // stack whose combined log is quiet sends nothing, so a stream that only
+      // yielded from inside `await for` never left `AsyncLoading` and the pane
+      // spun forever. Its own "Waiting for output…" branch was unreachable.
+      // An empty string is the honest first answer — joined, nothing said yet.
+      yield '';
+
+      final tail = _TerminalTail();
+      await for (final output in client.terminalOutput) {
+        if (output.terminalName != terminalName) continue;
+        yield tail.append(output.data);
+      }
+    });
+
+/// A bounded tail of terminal output.
+///
+/// Terminal chunks arrive small and often. The line count is kept as a running
+/// total and the trim only runs when a cap is actually crossed, so an ordinary
+/// chunk costs its own length and nothing more. Re-scanning the whole 64 KiB
+/// buffer with `allMatches` on every chunk — which is what this replaces — is
+/// quadratic work on the UI isolate for output nobody can read that fast.
+class _TerminalTail {
+  static const int _maxChars = 64 * 1024;
+  static const int _maxLines = 2000;
+
+  String _text = '';
+  int _lines = 0;
+
+  String append(String chunk) {
+    _text += chunk;
+    _lines += _newlinesIn(chunk);
+    if (_text.length <= _maxChars && _lines <= _maxLines) return _text;
+    _trim();
+    return _text;
+  }
+
+  /// Drops whole lines off the front until both caps are met.
+  ///
+  /// Cutting on a line boundary rather than mid-character keeps the first
+  /// visible row readable, and doing both caps in one walk means the character
+  /// limit does not cost a second pass.
+  void _trim() {
+    var cut = 0;
+    var lines = _lines;
+    while (cut < _text.length &&
+        (lines > _maxLines || _text.length - cut > _maxChars)) {
+      final next = _text.indexOf('\n', cut);
+      if (next < 0) break;
+      cut = next + 1;
+      lines--;
+    }
+    if (cut == 0) return;
+    _text = _text.substring(cut);
+    _lines = lines;
+  }
+
+  static int _newlinesIn(String chunk) {
+    var count = 0;
+    for (var i = 0; i < chunk.length; i++) {
+      if (chunk.codeUnitAt(i) == 0x0A) count++;
+    }
+    return count;
+  }
+}

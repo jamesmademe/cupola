@@ -27,12 +27,11 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// described that as the board's order; it is not, and the description was the
 /// worse half of the mistake.
 ///
-/// **Servers and Warnings are absent rather than stubbed.** Both are drawn on
-/// the board, and `SabnzbdClient` calls neither `mode=status` (per-server
-/// connections, SSL, rate) nor `mode=warnings` (the disk-space notice). The
-/// exact endpoints are named in `sabnzbd_overview_provider.dart`; a section
-/// with invented rows, or with a section header over a fabricated zero, is the
-/// promise this codebase would rather delete than keep badly.
+/// **Servers now live on a dedicated tab**, backed by the configured server
+/// reads and their independent volume report. The Overview does not duplicate
+/// that table. Warnings remain absent because the current client does not ask
+/// SABnzbd for the warning document; a fabricated disk-space alert would be
+/// worse than an explicit omission.
 ///
 /// **It draws neither the app bar nor the tab bar.** `ServiceHomeScreen` owns
 /// the first and `ServiceTabScaffold` the second, both floated above this page

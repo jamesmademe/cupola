@@ -1,5 +1,6 @@
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/services/domain/request_ordering.dart';
@@ -24,6 +25,19 @@ final requestsProvider = FutureProvider<List<SeerrRequest>>((ref) async {
   final service = ref.watch(seerrServiceProvider);
   return service.getRequests();
 }, retry: noProviderRetry);
+
+final seerrIssuesProvider = FutureProvider.autoDispose
+    .family<SeerrAdminResult<SeerrIssue>, SeerrIssueFilter>((
+      ref,
+      filter,
+    ) async {
+      return ref.watch(seerrServiceProvider).getIssuesResult(filter: filter);
+    }, retry: noProviderRetry);
+
+final seerrUsersProvider =
+    FutureProvider.autoDispose<SeerrAdminResult<SeerrUser>>((ref) async {
+      return ref.watch(seerrServiceProvider).getUsersResult();
+    }, retry: noProviderRetry);
 
 /// The request history of **one named connection**, whatever the lens is on.
 ///

@@ -46,14 +46,14 @@ import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_s
 ///
 /// ## What the board asks for and this page does not draw
 ///
-/// The full list, with the exact endpoint missing from each, is in the library
+/// The full list, with the exact endpoint boundary for each, is in the library
 /// comment of `stream_overview_provider.dart`. The short of it: no bandwidth
 /// figure (neither server measures egress), no Recently added rail (no
 /// server-wide recent endpoint, and `StreamItem` has no `addedAt` to sort by),
-/// no Jellyfin Continue watching (`/Users/{id}/Items/Resume` is unbuilt), no
-/// scheduled tasks, activity log, activities, devices or playlists. Each is
-/// absent rather than stubbed: a region given a fabricated figure is worse than
-/// a region that was never promised.
+/// and no Jellyfin Continue watching (`/Users/{id}/Items/Resume` is not part
+/// of the current client). Tasks, Users, Devices, Playlists and the supported
+/// live-session activity views are dedicated tabs rather than duplicate
+/// Overview regions. Unsupported figures remain absent rather than fabricated.
 ///
 /// Sections load and fail independently. A server answering `/Sessions` but not
 /// its library list still draws the rest, and the one that could not load says

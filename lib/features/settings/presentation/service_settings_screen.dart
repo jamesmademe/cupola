@@ -1134,7 +1134,12 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             helperMaxLines: 3,
             helperStyle: warning == null
                 ? null
-                : const TextStyle(color: AppColors.warning),
+                : Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: statusToneColor(
+                      Theme.of(context).colorScheme,
+                      StatusTone.warning,
+                    ),
+                  ),
           ),
           keyboardType: TextInputType.url,
           textInputAction: TextInputAction.next,

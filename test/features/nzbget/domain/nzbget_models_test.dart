@@ -75,4 +75,34 @@ void main() {
       expect(group.percentage, isNull);
     });
   });
+
+  group('NZBGet RSS and messages', () {
+    test('groups numbered feed settings, sorts them, and skips blank URLs', () {
+      final feeds = nzbgetFeedsFromConfig(const [
+        {'Name': 'Feed2.URL', 'Value': 'https://two.test/rss'},
+        {'Name': 'Feed2.Name', 'Value': 'Two'},
+        {'Name': 'Feed1.URL', 'Value': ''},
+        {'Name': 'Feed2.PauseNzb', 'Value': 'yes'},
+        {'Name': 'Feed2.Priority', 'Value': '50'},
+        {'Name': 'ControlIP', 'Value': '0.0.0.0'},
+      ]);
+
+      expect(feeds, hasLength(1));
+      expect(feeds.single.index, 2);
+      expect(feeds.single.pauseNzb, isTrue);
+      expect(feeds.single.priority, 50);
+    });
+
+    test('a message without time keeps the timestamp unavailable', () {
+      final message = NzbgetMessage.fromJson(const {
+        'ID': '7',
+        'Kind': 'INFO',
+        'Text': 'Queue loaded',
+      });
+
+      expect(message.id, 7);
+      expect(message.time, isNull);
+      expect(message.isFault, isFalse);
+    });
+  });
 }

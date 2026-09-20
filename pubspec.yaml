@@ -102,6 +102,8 @@ dependency_overrides:
   path_provider_foundation: 2.4.2
 
 dev_dependencies:
+  integration_test:
+    sdk: flutter
   flutter_test:
     sdk: flutter
 

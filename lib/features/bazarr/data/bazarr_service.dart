@@ -34,6 +34,44 @@ class BazarrService {
     );
   }
 
+  /// Returns the aggregate configured-provider count exposed by `/api/badges`.
+  ///
+  /// This is intentionally separate from [getProviderStatuses]: Bazarr's
+  /// `/api/providers` response reports providers currently carrying throttle
+  /// or degraded status, not a complete configured-provider registry. Healthy
+  /// provider names, quotas and throttle windows therefore remain unavailable
+  /// rather than guessed.
+  Future<BazarrProviderSummary> getProviderSummary() async {
+    final response = await client.get('/api/badges');
+    final raw = response.data;
+    if (raw is Map<String, dynamic>) {
+      return BazarrProviderSummary.fromJson(raw);
+    }
+    return const BazarrProviderSummary();
+  }
+
+  /// Returns the providers Bazarr currently reports as throttled or degraded.
+  ///
+  /// The upstream endpoint intentionally does not return every configured
+  /// provider on the default request; the configured count still comes from
+  /// `/api/badges`. Keeping these as two contracts lets the UI distinguish
+  /// "no provider needs attention" from "the status request failed".
+  Future<List<BazarrProviderStatus>> getProviderStatuses() async {
+    final response = await client.get('/api/providers');
+    final raw = response.data;
+    final data = raw is Map ? raw['data'] : raw;
+    if (data is! List) return const [];
+    return data
+        .map(BazarrProviderStatus.fromJson)
+        .where((provider) => provider.name != null)
+        .toList(growable: false);
+  }
+
+  /// Clears Bazarr's provider throttle state.
+  Future<void> resetProviderStatuses() async {
+    await client.post('/api/providers', queryParameters: {'action': 'reset'});
+  }
+
   /// Paged list of series known to Bazarr.
   Future<BazarrPagedResult<BazarrSeries>> getSeries({
     int start = 0,
@@ -204,6 +242,40 @@ class BazarrService {
       queryParameters: {'start': start, 'length': length},
     );
     return _parsePaged(response.data, (m) => m, start: start);
+  }
+
+  /// Typed episode history used by the full History tab.
+  ///
+  /// The raw spelling stays available for older callers and test doubles; this
+  /// wrapper is deliberately expressed through it so those overrides keep
+  /// working while new UI never has to cast Bazarr's maps itself.
+  Future<BazarrPagedResult<BazarrHistoryItem>> getEpisodeHistoryItems({
+    int start = 0,
+    int length = 50,
+  }) async {
+    final page = await getEpisodesHistory(start: start, length: length);
+    return BazarrPagedResult(
+      data: page.data
+          .map(BazarrHistoryItem.fromEpisodeMap)
+          .toList(growable: false),
+      total: page.total,
+      start: page.start,
+    );
+  }
+
+  /// Typed movie history used by the full History tab.
+  Future<BazarrPagedResult<BazarrHistoryItem>> getMovieHistoryItems({
+    int start = 0,
+    int length = 50,
+  }) async {
+    final page = await getMoviesHistory(start: start, length: length);
+    return BazarrPagedResult(
+      data: page.data
+          .map(BazarrHistoryItem.fromMovieMap)
+          .toList(growable: false),
+      total: page.total,
+      start: page.start,
+    );
   }
 
   // Bazarr's write layer does not exist here, and two commissioned decisions

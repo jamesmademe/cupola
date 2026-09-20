@@ -2,8 +2,8 @@
 # instances with pre-seeded, deterministic credentials so the tagged tests under
 # test/e2e/ can exercise the actual transport (HTTP, auth, real envelopes).
 #
-#   docker compose -f docker-compose.e2e.yml up -d
-#   flutter test --tags e2e
+#   docker compose -f docker-compose.e2e.yml up -d --wait
+#   flutter test --tags e2e --run-skipped
 #   docker compose -f docker-compose.e2e.yml down -v
 #
 # Notes:
@@ -13,7 +13,7 @@
 #  - Unraid has no OS container; it stays schema-only (tiers 2-3). See §7.6.
 services:
   sabnzbd:
-    image: lscr.io/linuxserver/sabnzbd:latest
+    image: lscr.io/linuxserver/sabnzbd:5.1.3-ls273
     environment:
       - PUID=1000
       - PGID=1000
@@ -25,7 +25,7 @@ services:
       - ./test/e2e/seed/sabnzbd:/config
 
   nzbget:
-    image: lscr.io/linuxserver/nzbget:latest
+    image: lscr.io/linuxserver/nzbget:v26.3-ls263
     environment:
       - PUID=1000
       - PGID=1000
@@ -36,13 +36,32 @@ services:
       - "6789:6789"
 
   readarr:
-    image: lscr.io/linuxserver/readarr:develop
+    # The floating LinuxServer tag was retired; keep the E2E lab on the last
+    # published multi-arch develop image so the harness remains reproducible.
+    image: ghcr.io/linuxserver/readarr:develop-0.4.18.2805-ls157
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
     ports:
       - "8787:8787"
+    healthcheck:
+      # Keep readiness on the service's authenticated API path: a running
+      # process is not enough for the E2E tier, and a bad API key must be
+      # reported as unhealthy as well.
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - --show-error
+        - --header
+        - "X-Api-Key: test-key"
+        - http://127.0.0.1:8787/api/v1/system/status
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
     volumes:
       # config.xml pre-seeded with <ApiKey>test-key</ApiKey>.
       - ./test/e2e/seed/readarr:/config

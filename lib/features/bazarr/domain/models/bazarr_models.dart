@@ -1,4 +1,5 @@
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/status/media_status.dart';
 
 class BazarrSubtitleLanguage {
   final String? name;
@@ -232,6 +233,63 @@ class BazarrBadges {
       radarrSignalR: json['radarr_signalr'] == true,
       announcements: intOrNull(json['announcements']) ?? 0,
     );
+  }
+}
+
+/// The provider data Bazarr exposes through its supported badges endpoint.
+///
+/// Bazarr's local API contract does not expose provider names, quotas, or
+/// throttle windows. Keep this model deliberately aggregate-only so the UI
+/// cannot accidentally manufacture a provider table from unrelated fields.
+class BazarrProviderSummary {
+  final int? configuredCount;
+
+  const BazarrProviderSummary({this.configuredCount});
+
+  factory BazarrProviderSummary.fromJson(Map<String, dynamic> json) {
+    return BazarrProviderSummary(configuredCount: intOrNull(json['providers']));
+  }
+}
+
+/// A provider currently returned by Bazarr's provider-status endpoint.
+///
+/// Bazarr returns throttled providers by default, rather than a complete
+/// configured-provider registry. Missing fields therefore stay nullable and
+/// the UI must not turn the response into a fabricated healthy list.
+class BazarrProviderStatus {
+  final String? name;
+  final String? status;
+  final String? retry;
+
+  const BazarrProviderStatus({this.name, this.status, this.retry});
+
+  factory BazarrProviderStatus.fromJson(Object? value) {
+    final json = value is Map
+        ? Map<String, dynamic>.from(value)
+        : const <String, dynamic>{};
+    return BazarrProviderStatus(
+      name: stringOrNull(json['name']),
+      status: stringOrNull(json['status']),
+      retry: stringOrNull(json['retry']),
+    );
+  }
+
+  StatusTone get tone => switch (status?.trim().toLowerCase()) {
+    null || '' => StatusTone.neutral,
+    'good' => StatusTone.success,
+    'history' => StatusTone.neutral,
+    _ => StatusTone.warning,
+  };
+
+  String get displayName =>
+      name?.trim().isNotEmpty == true ? name!.trim() : 'Unnamed provider';
+
+  String get statusLabel =>
+      status?.trim().isNotEmpty == true ? status!.trim() : '—';
+
+  String get retryLabel {
+    final value = retry?.trim();
+    return value == null || value.isEmpty || value == '-' ? '—' : value;
   }
 }
 

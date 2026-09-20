@@ -26,6 +26,37 @@ final sabnzbdClientProvider = Provider<SabnzbdClient>((ref) {
   return client;
 });
 
+/// SABnzbd client for an explicitly named connection.
+///
+/// The empty and active ids reuse [sabnzbdClientProvider], keeping the legacy
+/// lens path on one live Dio. A non-active id owns one client for the lifetime
+/// of this family entry and is closed when that entry is disposed.
+final sabnzbdClientForProvider = Provider.family<SabnzbdClient, String>((
+  ref,
+  instanceId,
+) {
+  final activeId = ref.read(activeInstanceProvider(ServiceKey.sabnzbd))?.id;
+  if (instanceId.isEmpty || instanceId == activeId) {
+    return ref.watch(sabnzbdClientProvider);
+  }
+
+  final transport = watchTransport(
+    ref,
+    ServiceKey.sabnzbd,
+    instanceId: instanceId,
+  );
+  if (!transport.configured) {
+    throw Exception('SABnzbd not configured');
+  }
+  final client = SabnzbdClient(
+    url: transport.url,
+    apiKey: transport.apiKey,
+    certFingerprint: transport.pin,
+  );
+  ref.onDispose(client.close);
+  return client;
+});
+
 /// The current download queue.
 ///
 /// All four reads below carry `retry: noProviderRetry`, for the reason
@@ -48,6 +79,12 @@ final sabnzbdServerStatsProvider = FutureProvider<SabnzbdServerStats>((
   ref,
 ) async {
   return ref.watch(sabnzbdClientProvider).getServerStats();
+}, retry: noProviderRetry);
+
+final sabnzbdServersProvider = FutureProvider<List<SabnzbdServerConfig>>((
+  ref,
+) async {
+  return ref.watch(sabnzbdClientProvider).getServers();
 }, retry: noProviderRetry);
 
 /// The configured categories, for the add-NZB dialog.

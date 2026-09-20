@@ -139,6 +139,38 @@ void main() {
       expect(stats.totalLabel, '5.0 TB');
     });
 
+    test('getServers reads only the servers config section', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {
+          'config': {
+            'servers': [
+              {
+                'name': 'primary',
+                'displayname': 'Primary news',
+                'host': 'news.example.test',
+                'port': 563,
+                'connections': 20,
+                'enable': true,
+                'ssl': true,
+                'optional': false,
+                'priority': 0,
+                'password': 'must-not-escape',
+              },
+            ],
+          },
+        },
+      );
+
+      final servers = await _client(adapter).getServers();
+
+      final query = adapter.lastUri!.queryParameters;
+      expect(query['mode'], 'get_config');
+      expect(query['section'], 'servers');
+      expect(servers.single.name, 'Primary news');
+      expect(servers.single.host, 'news.example.test');
+      expect(servers.single.ssl, isTrue);
+    });
+
     test('getCategories returns the category list', () async {
       final adapter = CapturingHttpAdapter(
         response: jsonFixtureMap('sabnzbd/get_cats.json'),

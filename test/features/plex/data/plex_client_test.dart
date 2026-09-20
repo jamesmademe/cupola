@@ -1518,6 +1518,80 @@ void main() {
     });
   });
 
+  group('devices and playlists', () {
+    test(
+      'devices are read from the local server and tokens are discarded',
+      () async {
+        final adapter = CapturingHttpAdapter(
+          response: const {
+            'MediaContainer': {
+              'Device': [
+                {
+                  'id': 7,
+                  'name': 'Living room',
+                  'clientIdentifier': 'client-1',
+                  'product': 'Plex for Apple TV',
+                  'platform': 'tvOS',
+                  'provides': 'player,controller',
+                  'createdAt': 1700000000,
+                  'lastSeenAt': 1700003600,
+                  'token': 'must-not-escape',
+                },
+              ],
+            },
+          },
+        );
+
+        final devices = await _client(adapter).getDevices();
+
+        expect(adapter.lastUri!.path, '/devices');
+        expect(devices.single.name, 'Living room');
+        expect(devices.single.provides, ['player', 'controller']);
+        expect(
+          devices.single.lastSeenAt,
+          DateTime.utc(2023, 11, 14, 23, 13, 20),
+        );
+      },
+    );
+
+    test('playlists preserve unknown counts as null', () async {
+      final adapter = CapturingHttpAdapter(
+        response: const {
+          'MediaContainer': {
+            'Metadata': [
+              {
+                'ratingKey': '55',
+                'title': 'Friday night',
+                'playlistType': 'video',
+                'smart': 1,
+                'duration': 7200000,
+                'addedAt': 1700000000,
+              },
+            ],
+          },
+        },
+      );
+
+      final playlists = await _client(adapter).getPlaylists();
+
+      expect(adapter.lastUri!.path, '/playlists');
+      expect(playlists.single.title, 'Friday night');
+      expect(playlists.single.smart, isTrue);
+      expect(playlists.single.itemCount, isNull);
+      expect(playlists.single.durationMs, 7200000);
+    });
+
+    test(
+      'device and playlist failures remain visible to their providers',
+      () async {
+        final client = _client(_FailingAdapter());
+
+        await expectLater(client.getDevices(), throwsA(isA<PlexException>()));
+        await expectLater(client.getPlaylists(), throwsA(isA<PlexException>()));
+      },
+    );
+  });
+
   group('remote failure', () {
     test('reads degrade to [] / null and writes surface', () async {
       final client = _client(_FailingAdapter());
@@ -1527,6 +1601,14 @@ void main() {
       expect(await client.getCapabilities(), isNull);
       expect(await client.getSessions(), isEmpty);
       expect(await client.getLibraries(), isEmpty);
+      await expectLater(
+        client.getSessionsOrThrow(),
+        throwsA(isA<PlexException>()),
+      );
+      await expectLater(
+        client.getLibrariesOrThrow(),
+        throwsA(isA<PlexException>()),
+      );
       expect(await client.getViewers(), isEmpty);
       expect(await client.getChildren('41000'), isEmpty);
       expect(await client.getItem('20418'), isNull);

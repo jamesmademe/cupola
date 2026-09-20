@@ -5,6 +5,7 @@ import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -27,6 +28,7 @@ import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
+import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
@@ -40,6 +42,7 @@ import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
+import 'package:cupola/features/truenas/domain/models/dashboard.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 
@@ -80,18 +83,22 @@ final serviceKpiProvider = FutureProvider.autoDispose
           return _transmissionKpis(ref);
         case ServiceKey.nginxProxyManager:
           return _npmKpis(ref);
+        // The **strict** providers, not the clients directly: the figures need
+        // a failure that survives the fetch, and the provider layer is what
+        // makes that shareable with the Overview, invalidatable with the rest
+        // and overridable by name in a test.
         case ServiceKey.jellyfin:
           return _streamKpis(
-            ref.watch(jellyfinSessionsProvider.future),
-            ref.watch(jellyfinLibrariesProvider.future),
+            ref.watch(jellyfinStrictSessionsProvider.future),
+            ref.watch(jellyfinStrictLibrariesProvider.future),
           );
         case ServiceKey.plex:
           return _streamKpis(
-            ref.watch(plexSessionsProvider.future),
-            ref.watch(plexLibrariesProvider.future),
+            ref.watch(plexStrictSessionsProvider.future),
+            ref.watch(plexStrictLibrariesProvider.future),
           );
       }
-    });
+    }, retry: noProviderRetry);
 
 /// The same KPIs, for one **named connection** rather than for the lens.
 ///
@@ -108,15 +115,11 @@ final serviceKpiProvider = FutureProvider.autoDispose
 /// override of the plain provider from being bypassed in tests.
 ///
 /// **Null means this connection cannot be read on its own yet**, which is not
-/// the same as having no figures. Four services can answer per connection today
-/// — Radarr, Sonarr, Lidarr and Seerr, the four with a `*ServiceForProvider` to
-/// build a client from an id. The other thirteen (qBittorrent, SABnzbd, NZBGet,
-/// Transmission, Prowlarr, Bazarr, Readarr, Dockge, TrueNAS, Unraid, NPM,
-/// Jellyfin, Plex) have no per-connection client provider at all: their client
-/// providers read `activeInstanceProvider` themselves and take no id, so there
-/// is nothing to ask a second server with. That is the missing piece, named
-/// rather than stubbed — a fold that guessed would print the lens's rate as the
-/// fleet's, which is the bug this provider exists to end.
+/// the same as having no figures. Every currently registered service has a
+/// keyed reader; keeping the nullable result makes the contract explicit for
+/// a future service whose KPI set cannot be addressed per connection. A fold
+/// that guessed would print the lens's rate as the fleet's, which is the bug
+/// this provider exists to end.
 final serviceKpiForProvider = FutureProvider.autoDispose
     .family<List<ServiceKpi>?, InstanceRef>((ref, key) async {
       final lens = ref.watch(activeInstanceProvider(key.service))?.id ?? '';
@@ -128,9 +131,32 @@ final serviceKpiForProvider = FutureProvider.autoDispose
         ServiceKey.sonarr => await _sonarrKpisFor(ref, key.instanceId),
         ServiceKey.lidarr => await _lidarrKpisFor(ref, key.instanceId),
         ServiceKey.seerr => await _seerrKpisFor(ref, key.instanceId),
-        _ => null,
+        ServiceKey.qbittorrent => await _qbittorrentKpisFor(
+          ref,
+          key.instanceId,
+        ),
+        ServiceKey.bazarr => await _bazarrKpisFor(ref, key.instanceId),
+        ServiceKey.truenas => await _truenasKpisFor(ref, key.instanceId),
+        ServiceKey.dockge => await _dockgeKpisFor(ref, key.instanceId),
+        ServiceKey.prowlarr => await _prowlarrKpisFor(ref, key.instanceId),
+        ServiceKey.readarr => await _readarrKpisFor(ref, key.instanceId),
+        ServiceKey.sabnzbd => await _sabnzbdKpisFor(ref, key.instanceId),
+        ServiceKey.nzbget => await _nzbgetKpisFor(ref, key.instanceId),
+        ServiceKey.unraid => await _unraidKpisFor(ref, key.instanceId),
+        ServiceKey.transmission => await _transmissionKpisFor(
+          ref,
+          key.instanceId,
+        ),
+        ServiceKey.nginxProxyManager => await _npmKpisFor(ref, key.instanceId),
+        ServiceKey.jellyfin => await _jellyfinKpisFor(ref, key.instanceId),
+        ServiceKey.plex => await _plexKpisFor(ref, key.instanceId),
       };
-    });
+      // `noProviderRetry`, like the provider above it. The lens path awaits
+      // `serviceKpiProvider(...).future`, which settles into a stable error
+      // and stops; retrying *here* re-ran it behind an exponential backoff and
+      // put the whole storm back one level up, with pending timers that
+      // outlive a widget test.
+    }, retry: noProviderRetry);
 
 /// The whole service's figures, folded across every connection it has.
 ///
@@ -190,7 +216,9 @@ final foldedServiceKpisProvider = FutureProvider.autoDispose
           ),
       ]);
       return aggregateServiceKpis(perConnection);
-    });
+      // Derived from [serviceKpiForProvider], so it carries the flag for the
+      // reason that one does.
+    }, retry: noProviderRetry);
 
 /// Whether one connection answered, with a probe that threw counted as a no.
 ///
@@ -295,8 +323,14 @@ Future<List<ServiceKpi>> _streamKpis(
   Future<List<StreamSession>> sessionsFuture,
   Future<List<StreamLibrary>> librariesFuture,
 ) async {
-  final sessions = await sessionsFuture;
-  final libraries = await librariesFuture;
+  // Both reads are started by the caller so the rail does not wait for one
+  // endpoint before asking the other. `Future.wait` is important here rather
+  // than two sequential awaits: when an unreachable server rejects both
+  // requests, it observes both failures while still propagating the first one
+  // to `serviceKpiProvider` and `serviceSignalProvider`.
+  final results = await Future.wait<Object>([sessionsFuture, librariesFuture]);
+  final sessions = results[0] as List<StreamSession>;
+  final libraries = results[1] as List<StreamLibrary>;
   final transcodes = sessions.where((s) => s.playMethod.isTranscode).length;
 
   return [
@@ -318,6 +352,16 @@ Future<List<ServiceKpi>> _streamKpis(
       icon: Icons.video_library_outlined,
     ),
   ];
+}
+
+Future<List<ServiceKpi>> _jellyfinKpisFor(Ref ref, String instanceId) {
+  final client = ref.watch(jellyfinClientForProvider(instanceId));
+  return _streamKpis(client.getSessionsOrThrow(), client.getLibrariesOrThrow());
+}
+
+Future<List<ServiceKpi>> _plexKpisFor(Ref ref, String instanceId) {
+  final client = ref.watch(plexClientForProvider(instanceId));
+  return _streamKpis(client.getSessionsOrThrow(), client.getLibrariesOrThrow());
 }
 
 /// The Radarr library, read so that a failure survives the fetch.
@@ -556,7 +600,17 @@ List<ServiceKpi> _lidarrKpisFrom(List<LidarrArtist>? artists, {String? note}) {
 }
 
 Future<List<ServiceKpi>> _qbittorrentKpis(Ref ref) async {
-  final torrents = await ref.watch(allTorrentsProvider.future);
+  return _qbittorrentKpisFrom(await ref.watch(allTorrentsProvider.future));
+}
+
+Future<List<ServiceKpi>> _qbittorrentKpisFor(Ref ref, String instanceId) async {
+  final torrents = await ref
+      .watch(qbittorrentServiceForProvider(instanceId))
+      .getTorrents(sort: 'added_on', reverse: true);
+  return _qbittorrentKpisFrom(torrents);
+}
+
+List<ServiceKpi> _qbittorrentKpisFrom(List<Torrent> torrents) {
   var active = 0;
   var downloading = 0;
   var seeding = 0;
@@ -658,11 +712,25 @@ List<ServiceKpi> _seerrKpisFrom(List<SeerrRequest> requests) {
 }
 
 Future<List<ServiceKpi>> _truenasKpis(Ref ref) async {
-  final dashboard = await ref.watch(truenasDashboardProvider.future);
+  return _truenasKpisFrom(await ref.watch(truenasDashboardProvider.future));
+}
+
+Future<List<ServiceKpi>> _truenasKpisFor(Ref ref, String instanceId) async {
+  final dashboard = await ref
+      .watch(truenasServiceForProvider(instanceId))
+      .loadDashboard();
+  return _truenasKpisFrom(dashboard);
+}
+
+List<ServiceKpi> _truenasKpisFrom(TrueNasDashboard dashboard) {
   final pools = dashboard.pools;
-  final maxUsed = pools
-      .map((p) => p.usedFraction ?? 0)
-      .fold<double>(0, (max, v) => v > max ? v : max);
+  final usedFractions = pools
+      .map((p) => p.usedFraction)
+      .whereType<double>()
+      .toList(growable: false);
+  final maxUsed = usedFractions.isEmpty
+      ? null
+      : usedFractions.fold<double>(0, (max, v) => v > max ? v : max);
   final activeAlerts = dashboard.activeAlerts.length;
   final running = dashboard.services.where((s) => s.running).length;
   return [
@@ -671,12 +739,19 @@ Future<List<ServiceKpi>> _truenasKpis(Ref ref) async {
       value: '${pools.length}',
       icon: Icons.dns_rounded,
     ),
-    ServiceKpi(
-      label: 'Used',
-      value: '${(maxUsed * 100).round()}%',
-      icon: Icons.pie_chart_rounded,
-      tone: _faultIf(maxUsed >= 0.8),
-    ),
+    if (maxUsed == null)
+      const ServiceKpi.unavailable(
+        label: 'Used',
+        icon: Icons.pie_chart_rounded,
+        note: 'pool capacity unavailable',
+      )
+    else
+      ServiceKpi(
+        label: 'Used',
+        value: '${(maxUsed * 100).round()}%',
+        icon: Icons.pie_chart_rounded,
+        tone: _faultIf(maxUsed >= 0.8),
+      ),
     ServiceKpi(
       label: 'Alerts',
       value: '$activeAlerts',
@@ -688,7 +763,17 @@ Future<List<ServiceKpi>> _truenasKpis(Ref ref) async {
 }
 
 Future<List<ServiceKpi>> _dockgeKpis(Ref ref) async {
-  final stacks = await ref.watch(dockgeStackListProvider.future);
+  return _dockgeKpisFrom(await ref.watch(dockgeStackListProvider.future));
+}
+
+Future<List<ServiceKpi>> _dockgeKpisFor(Ref ref, String instanceId) async {
+  final stacks = await ref
+      .watch(dockgeServiceForProvider(instanceId))
+      .fetchStacks();
+  return _dockgeKpisFrom(stacks);
+}
+
+List<ServiceKpi> _dockgeKpisFrom(List<DockgeStack> stacks) {
   final running = stacks
       .where((s) => s.status == DockgeStackStatus.running)
       .length;
@@ -722,7 +807,17 @@ Future<List<ServiceKpi>> _dockgeKpis(Ref ref) async {
 }
 
 Future<List<ServiceKpi>> _bazarrKpis(Ref ref) async {
-  final b = await ref.watch(bazarrBadgesProvider.future);
+  return _bazarrKpisFrom(await ref.watch(bazarrBadgesProvider.future));
+}
+
+Future<List<ServiceKpi>> _bazarrKpisFor(Ref ref, String instanceId) async {
+  final badges = await ref
+      .watch(bazarrServiceForProvider(instanceId))
+      .getBadges();
+  return _bazarrKpisFrom(badges);
+}
+
+List<ServiceKpi> _bazarrKpisFrom(BazarrBadges b) {
   return [
     ServiceKpi(
       label: 'Wanted',
@@ -754,8 +849,32 @@ Future<List<ServiceKpi>> _prowlarrKpis(Ref ref) async {
     ref.watch(prowlarrIndexersProvider.future),
     ref.watch(prowlarrIndexerStatsProvider.future),
   ]);
-  final indexers = results[0] as List<ProwlarrIndexer>;
-  final stats = results[1] as ProwlarrIndexerStats;
+  return _prowlarrKpisFrom(
+    results[0] as List<ProwlarrIndexer>,
+    results[1] as ProwlarrIndexerStats,
+  );
+}
+
+Future<List<ServiceKpi>> _prowlarrKpisFor(Ref ref, String instanceId) async {
+  final service = ref.watch(prowlarrServiceForProvider(instanceId));
+  final now = DateTime.now().toUtc();
+  final results = await Future.wait([
+    service.getIndexers(),
+    service.getIndexerStats(
+      startDate: now.subtract(prowlarrStatsWindow).toIso8601String(),
+      endDate: now.toIso8601String(),
+    ),
+  ]);
+  return _prowlarrKpisFrom(
+    results[0] as List<ProwlarrIndexer>,
+    results[1] as ProwlarrIndexerStats,
+  );
+}
+
+List<ServiceKpi> _prowlarrKpisFrom(
+  List<ProwlarrIndexer> indexers,
+  ProwlarrIndexerStats stats,
+) {
   final active = indexers.where((i) => i.enable).length;
   return [
     ServiceKpi(
@@ -800,6 +919,28 @@ Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
     queued = null;
   }
 
+  return _readarrKpisFrom(authors, queued);
+}
+
+Future<List<ServiceKpi>> _readarrKpisFor(Ref ref, String instanceId) async {
+  final service = ref.watch(readarrServiceForProvider(instanceId));
+  List<ReadarrAuthor>? authors;
+  try {
+    authors = await service.getAuthorsOrThrow();
+  } catch (_) {
+    authors = null;
+  }
+  int? queued;
+  try {
+    queued = (await service.getQueue()).length;
+  } catch (_) {
+    queued = null;
+  }
+
+  return _readarrKpisFrom(authors, queued);
+}
+
+List<ServiceKpi> _readarrKpisFrom(List<ReadarrAuthor>? authors, int? queued) {
   var books = 0;
   var have = 0;
   for (final a in authors ?? const <ReadarrAuthor>[]) {
@@ -840,7 +981,33 @@ Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
 
 Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
   final queue = await ref.watch(sabnzbdQueueProvider.future);
-  final kpis = [
+  SabnzbdServerStats? stats;
+  try {
+    stats = await ref.watch(sabnzbdServerStatsProvider.future);
+  } catch (_) {
+    // Ignore — the queue KPIs are still useful when the optional stats call
+    // fails.
+  }
+  return _sabnzbdKpisFrom(queue, stats);
+}
+
+Future<List<ServiceKpi>> _sabnzbdKpisFor(Ref ref, String instanceId) async {
+  final client = ref.watch(sabnzbdClientForProvider(instanceId));
+  final queue = await client.getQueue();
+  SabnzbdServerStats? stats;
+  try {
+    stats = await client.getServerStats();
+  } catch (_) {
+    // See [_sabnzbdKpis].
+  }
+  return _sabnzbdKpisFrom(queue, stats);
+}
+
+List<ServiceKpi> _sabnzbdKpisFrom(
+  SabnzbdQueue queue,
+  SabnzbdServerStats? stats,
+) {
+  final kpis = <ServiceKpi>[
     ServiceKpi(
       label: 'Down',
       value: queue.speedLabel,
@@ -876,8 +1043,7 @@ Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
   ];
   // Lifetime total is a nice-to-have; a stats failure must not drop the whole
   // KPI row, so it is fetched defensively and simply omitted on error.
-  try {
-    final stats = await ref.watch(sabnzbdServerStatsProvider.future);
+  if (stats != null) {
     kpis.add(
       ServiceKpi(
         label: 'Total',
@@ -885,8 +1051,6 @@ Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
         icon: Icons.download_done_rounded,
       ),
     );
-  } catch (_) {
-    // Ignore — the four queue KPIs above are enough.
   }
   return kpis;
 }
@@ -896,8 +1060,25 @@ Future<List<ServiceKpi>> _nzbgetKpis(Ref ref) async {
     ref.watch(nzbgetStatusProvider.future),
     ref.watch(nzbgetQueueProvider.future),
   ]);
-  final status = results[0] as NzbgetStatus;
-  final groups = results[1] as List<NzbgetGroup>;
+  return _nzbgetKpisFrom(
+    results[0] as NzbgetStatus,
+    results[1] as List<NzbgetGroup>,
+  );
+}
+
+Future<List<ServiceKpi>> _nzbgetKpisFor(Ref ref, String instanceId) async {
+  final client = ref.watch(nzbgetClientForProvider(instanceId));
+  final results = await Future.wait([client.status(), client.listGroups()]);
+  return _nzbgetKpisFrom(
+    results[0] as NzbgetStatus,
+    results[1] as List<NzbgetGroup>,
+  );
+}
+
+List<ServiceKpi> _nzbgetKpisFrom(
+  NzbgetStatus status,
+  List<NzbgetGroup> groups,
+) {
   return [
     ServiceKpi(
       label: 'Down',
@@ -935,8 +1116,28 @@ Future<List<ServiceKpi>> _transmissionKpis(Ref ref) async {
     ref.watch(transmissionStatsProvider.future),
     ref.watch(transmissionTorrentsProvider.future),
   ]);
-  final stats = results[0] as TransmissionStats;
-  final torrents = results[1] as List<TransmissionTorrent>;
+  return _transmissionKpisFrom(
+    results[0] as TransmissionStats,
+    results[1] as List<TransmissionTorrent>,
+  );
+}
+
+Future<List<ServiceKpi>> _transmissionKpisFor(
+  Ref ref,
+  String instanceId,
+) async {
+  final client = ref.watch(transmissionClientForProvider(instanceId));
+  final results = await Future.wait([client.stats(), client.torrents()]);
+  return _transmissionKpisFrom(
+    results[0] as TransmissionStats,
+    results[1] as List<TransmissionTorrent>,
+  );
+}
+
+List<ServiceKpi> _transmissionKpisFrom(
+  TransmissionStats stats,
+  List<TransmissionTorrent> torrents,
+) {
   final downloading = torrents.where((t) => t.status.isIncoming).length;
   final stalled = torrents.where((t) => t.warning != null).length;
 
@@ -983,9 +1184,31 @@ Future<List<ServiceKpi>> _npmKpis(Ref ref) async {
     ref.watch(npmProxyHostsProvider.future),
     ref.watch(npmCertificatesProvider.future),
   ]);
-  final hosts = results[0] as List<NpmProxyHost>;
-  final certificates = results[1] as List<NpmCertificate>;
-  final now = DateTime.now();
+  return _npmKpisFrom(
+    results[0] as List<NpmProxyHost>,
+    results[1] as List<NpmCertificate>,
+    DateTime.now(),
+  );
+}
+
+Future<List<ServiceKpi>> _npmKpisFor(Ref ref, String instanceId) async {
+  final client = ref.watch(npmClientForProvider(instanceId));
+  final results = await Future.wait([
+    client.proxyHosts(),
+    client.certificates(),
+  ]);
+  return _npmKpisFrom(
+    results[0] as List<NpmProxyHost>,
+    results[1] as List<NpmCertificate>,
+    DateTime.now(),
+  );
+}
+
+List<ServiceKpi> _npmKpisFrom(
+  List<NpmProxyHost> hosts,
+  List<NpmCertificate> certificates,
+  DateTime now,
+) {
   final broken = hosts.where((h) => h.hasConfigError).length;
   final disabled = hosts.where((h) => !h.enabled).length;
   final expiring = certificates.where((c) => c.isExpiringSoon(now)).length;
@@ -1026,8 +1249,28 @@ Future<List<ServiceKpi>> _unraidKpis(Ref ref) async {
     ref.watch(unraidArrayProvider.future),
     ref.watch(unraidDockerProvider.future),
   ]);
-  final array = results[0] as UnraidArray;
-  final containers = results[1] as List<UnraidDockerContainer>;
+  return _unraidKpisFrom(
+    results[0] as UnraidArray,
+    results[1] as List<UnraidDockerContainer>,
+  );
+}
+
+Future<List<ServiceKpi>> _unraidKpisFor(Ref ref, String instanceId) async {
+  final client = ref.watch(unraidClientForProvider(instanceId));
+  final results = await Future.wait([
+    client.getArray(),
+    client.getDockerContainers(),
+  ]);
+  return _unraidKpisFrom(
+    results[0] as UnraidArray,
+    results[1] as List<UnraidDockerContainer>,
+  );
+}
+
+List<ServiceKpi> _unraidKpisFrom(
+  UnraidArray array,
+  List<UnraidDockerContainer> containers,
+) {
   final running = containers.where((c) => c.running).length;
   // Null when the array answered with no capacity block, which is nullable in
   // the committed SDL. `Used 0%` would read as an empty array — the one

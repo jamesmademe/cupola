@@ -59,6 +59,13 @@ class StreamItemScreen extends ConsumerWidget {
         child: AsyncValueWidget<StreamItem?>(
           value: itemAsync,
           serviceName: service.title,
+          onRetry: () {
+            if (service == ServiceKey.jellyfin) {
+              ref.invalidate(jellyfinItemProvider(itemId));
+            } else {
+              ref.invalidate(plexItemProvider(itemId));
+            }
+          },
           isEmpty: (item) => item == null,
           emptyBuilder: const AppEmptyState(
             icon: Icons.help_outline_rounded,
@@ -290,6 +297,13 @@ class _Children extends ConsumerWidget {
         AsyncValueWidget<List<StreamItem>>(
           value: childrenAsync,
           serviceName: service.title,
+          onRetry: () {
+            if (service == ServiceKey.jellyfin) {
+              ref.invalidate(jellyfinItemChildrenProvider(itemId));
+            } else {
+              ref.invalidate(plexChildrenProvider(itemId));
+            }
+          },
           isEmpty: (list) => list.isEmpty,
           emptyBuilder: const AppEmptyState.compact(
             icon: Icons.inbox_outlined,

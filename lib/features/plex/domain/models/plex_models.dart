@@ -279,3 +279,92 @@ class PlexPage<T> {
     totalSize: totalSize,
   );
 }
+
+@immutable
+class PlexDevice {
+  const PlexDevice({
+    required this.id,
+    required this.name,
+    required this.clientIdentifier,
+    required this.product,
+    required this.platform,
+    required this.provides,
+    required this.createdAt,
+    required this.lastSeenAt,
+  });
+
+  final int? id;
+  final String name;
+  final String clientIdentifier;
+  final String product;
+  final String platform;
+  final List<String> provides;
+  final DateTime? createdAt;
+  final DateTime? lastSeenAt;
+
+  factory PlexDevice.fromJson(Map<String, dynamic> json) => PlexDevice(
+    id: plexInt(json['id']),
+    name: plexString(json['name']) ?? '',
+    clientIdentifier: plexString(json['clientIdentifier']) ?? '',
+    product: plexString(json['product']) ?? '',
+    platform: plexString(json['platform']) ?? '',
+    provides: (plexString(json['provides']) ?? '')
+        .split(',')
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false),
+    createdAt: plexEpochSeconds(json['createdAt']),
+    lastSeenAt: plexEpochSeconds(json['lastSeenAt']),
+  );
+}
+
+@immutable
+class PlexPlaylist {
+  const PlexPlaylist({
+    required this.ratingKey,
+    required this.title,
+    required this.playlistType,
+    required this.smart,
+    required this.itemCount,
+    required this.durationMs,
+    required this.addedAt,
+    required this.updatedAt,
+  });
+
+  final String ratingKey;
+  final String title;
+  final String playlistType;
+  final bool smart;
+  final int? itemCount;
+  final int? durationMs;
+  final DateTime? addedAt;
+  final DateTime? updatedAt;
+
+  factory PlexPlaylist.fromJson(Map<String, dynamic> json) => PlexPlaylist(
+    ratingKey: plexString(json['ratingKey']) ?? '',
+    title: plexString(json['title']) ?? '',
+    playlistType: plexString(json['playlistType']) ?? '',
+    smart: plexBool(json['smart']) ?? false,
+    itemCount: plexInt(json['leafCount']),
+    durationMs: plexInt(json['duration']),
+    addedAt: plexEpochSeconds(json['addedAt']),
+    updatedAt: plexEpochSeconds(json['updatedAt']),
+  );
+}
+
+List<PlexDevice> plexDevicesFromJson(Object? raw) {
+  if (raw is! List) return const [];
+  return raw
+      .whereType<Map>()
+      .map((value) => PlexDevice.fromJson(value.cast<String, dynamic>()))
+      .toList(growable: false);
+}
+
+List<PlexPlaylist> plexPlaylistsFromJson(Object? raw) {
+  if (raw is! List) return const [];
+  return raw
+      .whereType<Map>()
+      .map((value) => PlexPlaylist.fromJson(value.cast<String, dynamic>()))
+      .where((playlist) => playlist.ratingKey.isNotEmpty)
+      .toList(growable: false);
+}

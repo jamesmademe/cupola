@@ -162,3 +162,98 @@ class NzbgetHistoryItem {
     );
   }
 }
+
+/// One configured RSS feed, reconstructed from NZBGet's `config` option list.
+///
+/// NZBGet has no public `listfeeds` JSON-RPC method. Feeds are numbered config
+/// groups (`Feed1.Name`, `Feed1.URL`, ...), so reading `config` is the protocol
+/// supported way to enumerate them without pretending a private WebUI call is
+/// an RPC endpoint.
+class NzbgetFeed {
+  const NzbgetFeed({
+    required this.index,
+    required this.name,
+    required this.url,
+    required this.intervalMinutes,
+    required this.category,
+    required this.priority,
+    required this.backlog,
+    required this.pauseNzb,
+  });
+
+  final int index;
+  final String name;
+  final String url;
+  final int intervalMinutes;
+  final String category;
+  final int priority;
+  final bool backlog;
+  final bool pauseNzb;
+}
+
+/// One line from the screen log returned by `log`.
+class NzbgetMessage {
+  const NzbgetMessage({
+    required this.id,
+    required this.kind,
+    required this.time,
+    required this.text,
+  });
+
+  final int id;
+  final String kind;
+  final DateTime? time;
+  final String text;
+
+  bool get isFault {
+    final normalized = kind.toUpperCase();
+    return normalized == 'WARNING' || normalized == 'ERROR';
+  }
+
+  factory NzbgetMessage.fromJson(Map<String, dynamic> json) {
+    final seconds = intOrNull(json['Time']) ?? 0;
+    return NzbgetMessage(
+      id: intOrNull(json['ID']) ?? 0,
+      kind: json['Kind']?.toString() ?? '',
+      time: seconds > 0
+          ? DateTime.fromMillisecondsSinceEpoch(seconds * 1000)
+          : null,
+      text: json['Text']?.toString() ?? '',
+    );
+  }
+}
+
+/// Converts the `config` array (`{Name, Value}`) into numbered feed records.
+List<NzbgetFeed> nzbgetFeedsFromConfig(Object? raw) {
+  if (raw is! List) return const [];
+  final grouped = <int, Map<String, String>>{};
+  final pattern = RegExp(r'^Feed(\d+)\.(.+)$', caseSensitive: false);
+  for (final option in raw.whereType<Map>()) {
+    final name = option['Name']?.toString() ?? '';
+    final match = pattern.firstMatch(name);
+    if (match == null) continue;
+    final index = int.tryParse(match.group(1) ?? '');
+    final key = match.group(2);
+    if (index == null || key == null) continue;
+    grouped.putIfAbsent(index, () => <String, String>{})[key.toLowerCase()] =
+        option['Value']?.toString() ?? '';
+  }
+
+  bool yes(String? value) => value?.trim().toLowerCase() == 'yes';
+
+  final indexes = grouped.keys.toList()..sort();
+  return List.unmodifiable([
+    for (final index in indexes)
+      if ((grouped[index]!['url'] ?? '').trim().isNotEmpty)
+        NzbgetFeed(
+          index: index,
+          name: (grouped[index]!['name'] ?? '').trim(),
+          url: grouped[index]!['url']!.trim(),
+          intervalMinutes: int.tryParse(grouped[index]!['interval'] ?? '') ?? 0,
+          category: (grouped[index]!['category'] ?? '').trim(),
+          priority: int.tryParse(grouped[index]!['priority'] ?? '') ?? 0,
+          backlog: yes(grouped[index]!['backlog']),
+          pauseNzb: yes(grouped[index]!['pausenzb']),
+        ),
+  ]);
+}

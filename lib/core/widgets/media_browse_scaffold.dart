@@ -514,6 +514,10 @@ class _MediaBrowseScaffoldState<T>
       child: AsyncValueWidget<List<T>>(
         value: libraryAsync,
         serviceName: widget.serviceName,
+        onRetry: () {
+          ref.invalidate(widget.libraryProvider);
+          widget.onRefresh?.call(ref);
+        },
         data: (items) => _buildBrowseContent(
           context: context,
           items: items,

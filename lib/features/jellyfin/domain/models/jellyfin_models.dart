@@ -226,3 +226,89 @@ List<JellyfinUserDto> jellyfinUsersFromJson(Object? raw) =>
 
 List<JellyfinVirtualFolder> jellyfinVirtualFoldersFromJson(Object? raw) =>
     jsonObjects(raw, JellyfinVirtualFolder.fromJson);
+
+@immutable
+class JellyfinDevice {
+  const JellyfinDevice({
+    required this.id,
+    required this.name,
+    required this.appName,
+    required this.appVersion,
+    required this.lastUserName,
+    required this.lastActivityAt,
+  });
+
+  final String id;
+  final String name;
+  final String appName;
+  final String appVersion;
+  final String lastUserName;
+  final DateTime? lastActivityAt;
+
+  factory JellyfinDevice.fromJson(Map<String, dynamic> json) => JellyfinDevice(
+    id: json['Id']?.toString() ?? '',
+    name: json['Name']?.toString() ?? '',
+    appName: json['AppName']?.toString() ?? '',
+    appVersion: json['AppVersion']?.toString() ?? '',
+    lastUserName: json['LastUserName']?.toString() ?? '',
+    lastActivityAt: _parseDate(json['DateLastActivity']),
+  );
+}
+
+@immutable
+class JellyfinScheduledTask {
+  const JellyfinScheduledTask({
+    required this.id,
+    required this.name,
+    required this.state,
+    required this.progress,
+    required this.lastStatus,
+    required this.lastStartedAt,
+    required this.lastEndedAt,
+    required this.errorMessage,
+  });
+
+  final String id;
+  final String name;
+  final String state;
+  final double? progress;
+  final String lastStatus;
+  final DateTime? lastStartedAt;
+  final DateTime? lastEndedAt;
+  final String errorMessage;
+
+  bool get isRunning => state.toLowerCase() == 'running';
+  bool get failed => lastStatus.toLowerCase() == 'failed';
+
+  factory JellyfinScheduledTask.fromJson(Map<String, dynamic> json) {
+    final last = json['LastExecutionResult'];
+    final result = last is Map
+        ? last.cast<String, dynamic>()
+        : const <String, dynamic>{};
+    final rawProgress = json['CurrentProgressPercentage'];
+    return JellyfinScheduledTask(
+      id: json['Id']?.toString() ?? '',
+      name: json['Name']?.toString() ?? '',
+      state: json['State']?.toString() ?? '',
+      progress: rawProgress is num
+          ? rawProgress.toDouble()
+          : double.tryParse(rawProgress?.toString() ?? ''),
+      lastStatus: result['Status']?.toString() ?? '',
+      lastStartedAt: _parseDate(result['StartTimeUtc']),
+      lastEndedAt: _parseDate(result['EndTimeUtc']),
+      errorMessage: result['ErrorMessage']?.toString() ?? '',
+    );
+  }
+}
+
+/// The device rows, already out of their `Items` envelope.
+///
+/// Shaped like every other mapper in this file — rows in, models out — so it
+/// stays pure and top-level-safe for `Isolate.run`. `JellyfinClient.getDevices`
+/// strips the envelope before calling it, and did so already: unwrapping in
+/// both places left one response shape with two owners.
+List<JellyfinDevice> jellyfinDevicesFromJson(Object? raw) =>
+    jsonObjects(raw, JellyfinDevice.fromJson);
+
+List<JellyfinScheduledTask> jellyfinTasksFromJson(Object? raw) =>
+    jsonObjects(raw, JellyfinScheduledTask.fromJson);

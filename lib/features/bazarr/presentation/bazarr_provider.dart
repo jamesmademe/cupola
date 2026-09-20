@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -9,18 +10,57 @@ const int _lookupPageSize = 500;
 
 const int _defaultDashboardPageSize = 20;
 
+enum BazarrHistorySource { episodes, movies }
+
+typedef BazarrHistoryQuery = ({
+  BazarrHistorySource source,
+  int start,
+  int length,
+});
+
 /// Dashboard-ready alias for the underlying Bazarr service.
 ///
 /// Throws if Bazarr is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.bazarr)` before reading.
 final bazarrServiceProvider = Provider<BazarrService>((ref) {
-  return BazarrService(watchApiClient(ref, ServiceKey.bazarr));
+  return _bazarrService(ref, instanceId: null);
 });
+
+/// Bazarr service bound to one named connection, independent of the lens.
+final bazarrServiceForProvider = Provider.family<BazarrService, String>((
+  ref,
+  instanceId,
+) {
+  final lens = ref.read(activeInstanceProvider(ServiceKey.bazarr))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == lens) {
+    return ref.watch(bazarrServiceProvider);
+  }
+  return _bazarrService(ref, instanceId: instanceId);
+});
+
+BazarrService _bazarrService(Ref ref, {required String? instanceId}) {
+  return BazarrService(
+    watchApiClient(ref, ServiceKey.bazarr, instanceId: instanceId),
+  );
+}
 
 /// Aggregated counts for the Bazarr dashboard stat row.
 final bazarrBadgesProvider = FutureProvider<BazarrBadges>((ref) async {
   return ref.watch(bazarrServiceProvider).getBadges();
 });
+
+/// Aggregate provider data supported by Bazarr's badges endpoint.
+final bazarrProviderSummaryProvider = FutureProvider<BazarrProviderSummary>(
+  (ref) async => ref.watch(bazarrServiceProvider).getProviderSummary(),
+  retry: noProviderRetry,
+);
+
+/// Providers that Bazarr currently reports as throttled or degraded.
+final bazarrProviderStatusesProvider =
+    FutureProvider<List<BazarrProviderStatus>>(
+      (ref) async => ref.watch(bazarrServiceProvider).getProviderStatuses(),
+      retry: noProviderRetry,
+    );
 
 /// Merged first page of wanted episodes + movies for the dashboard.
 final bazarrDashboardWantedProvider = FutureProvider<List<BazarrWantedItem>>((
@@ -40,13 +80,10 @@ final bazarrDashboardHistoryProvider = FutureProvider<List<BazarrHistoryItem>>((
 ) async {
   final service = ref.watch(bazarrServiceProvider);
   final results = await Future.wait([
-    service.getEpisodesHistory(start: 0, length: _defaultDashboardPageSize),
-    service.getMoviesHistory(start: 0, length: _defaultDashboardPageSize),
+    service.getEpisodeHistoryItems(start: 0, length: _defaultDashboardPageSize),
+    service.getMovieHistoryItems(start: 0, length: _defaultDashboardPageSize),
   ]);
-  final items = <BazarrHistoryItem>[
-    ...results[0].data.map(BazarrHistoryItem.fromEpisodeMap),
-    ...results[1].data.map(BazarrHistoryItem.fromMovieMap),
-  ];
+  final items = <BazarrHistoryItem>[...results[0].data, ...results[1].data];
   items.sort((a, b) {
     final ta = a.parsedTimestamp;
     final tb = b.parsedTimestamp;
@@ -57,6 +94,29 @@ final bazarrDashboardHistoryProvider = FutureProvider<List<BazarrHistoryItem>>((
   });
   return items;
 });
+
+/// One typed page from either half of Bazarr history.
+final bazarrHistoryPageProvider = FutureProvider.autoDispose
+    .family<BazarrPagedResult<BazarrHistoryItem>, BazarrHistoryQuery>((
+      ref,
+      query,
+    ) async {
+      final service = ref.watch(bazarrServiceProvider);
+      return switch (query.source) {
+        BazarrHistorySource.episodes => service.getEpisodeHistoryItems(
+          start: query.start,
+          length: query.length,
+        ),
+        BazarrHistorySource.movies => service.getMovieHistoryItems(
+          start: query.start,
+          length: query.length,
+        ),
+      };
+      // `noProviderRetry`, like the two providers above: the History screen
+      // reads this through `ref.read(...future)` inside its own try, and a
+      // backing-off retry underneath that turns one failed page into a minute
+      // of silence before the band it already draws can appear.
+    }, retry: noProviderRetry);
 
 /// Fetch a single [BazarrSeries] by Sonarr series id.
 ///

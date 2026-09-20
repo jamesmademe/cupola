@@ -10,9 +10,9 @@
 /// taking an explicit `now`, so the boundaries are unit-testable without a
 /// clock or a container.
 ///
-/// **What the board asks for and this file cannot serve**, named here rather
-/// than stubbed, because a section that renders a lie is worse than one that is
-/// missing:
+/// **What the board asks for and this Overview does not serve**, named here
+/// rather than duplicated, because a section that renders a lie is worse than
+/// one that is missing:
 ///
 ///  * **Disk free** — NZBGet's `status` result carries `FreeDiskSpaceMB` /
 ///    `FreeDiskSpaceHi` / `FreeDiskSpaceLo`, but [NzbgetStatus] parses only the
@@ -21,10 +21,10 @@
 ///  * **The speed limit** ("no limit" under the Speed tile) — same call, same
 ///    gap: `DownloadLimit` is dropped by the model. The client can *set* a rate
 ///    (`rate`) and cannot read the one in force.
-///  * **Servers** — needs `status`'s `NewsServers` array plus the `config`
-///    method for the host names and SSL flags. The client calls neither.
-///  * **Feeds** — needs `listfeeds` / `viewfeed`. The client calls neither.
-///  * **Messages** — needs `log` / `loadlog`. The client calls neither.
+///  * **Servers** — rendered on the dedicated Servers tab from the client
+///    configuration response, not repeated in this Overview.
+///  * **Feeds** and **Messages** — rendered on their dedicated tabs from the
+///    corresponding NZBGet configuration/log reads.
 ///
 ///  * **Retry / Delete on a failed history row** — NZBGet does those through
 ///    `editqueue` with the `History*` command family, which `NzbgetClient`

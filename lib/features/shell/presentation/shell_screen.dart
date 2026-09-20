@@ -85,6 +85,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     if (!mounted) return;
     if (MediaQuery.sizeOf(context).width >= AppBreakpoints.touchRail) return;
     if (MediaQuery.accessibleNavigationOf(context)) return;
+    if (MediaQuery.disableAnimationsOf(context)) return;
     if (!ref.read(portalHintsProvider).demoBouncePending) return;
     // A breath after the first frame: the bounce has to read as a gesture of
     // the bar, not as a startup glitch.

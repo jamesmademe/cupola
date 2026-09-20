@@ -1596,24 +1596,62 @@ class _PromotedRowAction extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SizedBox(
-      height: 28,
-      child: OutlinedButton.icon(
-        onPressed: () => _runRowAction(context, ref, item, action),
-        icon: Icon(action.icon, size: 14),
-        label: Text(action.label),
-        style: OutlinedButton.styleFrom(
-          visualDensity: VisualDensity.compact,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          textStyle: AppTheme.chrome(
-            context,
-            size: 11,
-            weight: FontWeight.w600,
+    final colorScheme = Theme.of(context).colorScheme;
+    void onTap() => _runRowAction(context, ref, item, action);
+    return Semantics(
+      container: true,
+      button: true,
+      label: action.label,
+      onTap: onTap,
+      child: SizedBox(
+        height: 44,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            excludeFromSemantics: true,
+            borderRadius: AppRadius.borderRadiusXs,
+            child: Center(
+              child: ExcludeSemantics(
+                child: DecoratedBox(
+                  decoration: ShapeDecoration(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.borderRadiusXs,
+                      side: BorderSide(color: colorScheme.outline),
+                    ),
+                  ),
+                  child: SizedBox(
+                    height: 28,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            action.icon,
+                            size: 14,
+                            color: colorScheme.primary,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Text(
+                            action.label,
+                            style: AppTheme.chrome(
+                              context,
+                              size: 11,
+                              weight: FontWeight.w600,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-          // The 44pt target the 28pt plate sits inside, so a pointer that is a
-          // few pixels high of the drawing still lands on the control.
-          tapTargetSize: MaterialTapTargetSize.padded,
-          minimumSize: const Size(0, 28),
         ),
       ),
     );

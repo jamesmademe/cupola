@@ -9,17 +9,27 @@ import 'package:cupola/features/readarr/data/readarr_service.dart';
 /// Tier-6 E2E (plan §7.6). Runs the real [ReadarrService] over [ApiClient]
 /// against the Docker instance from docker-compose.e2e.yml, validating the
 /// X-Api-Key header auth and the *arr v1 contract end-to-end. Auto-skipped
-/// unless `--tags e2e`.
+/// unless `--tags e2e --run-skipped`.
 void main() {
   late ApiClient client;
   late ReadarrService service;
 
-  setUp(() {
+  setUpAll(() async {
     client = ApiClient(baseUrl: 'http://127.0.0.1:8787', apiKey: 'test-key');
     service = ReadarrService(client);
+
+    // The browse methods intentionally degrade transport failures to empty
+    // lists. Probe the real status endpoint first so an unavailable or
+    // unauthenticated container cannot make the tests pass with [] values.
+    final response = await service.probeHeaders();
+    expect(response.statusCode, 200);
+    expect(response.data, isA<Map>());
+    final version = (response.data as Map)['version'];
+    expect(version, isA<String>());
+    expect((version as String).trim(), isNotEmpty);
   });
 
-  tearDown(() => client.close());
+  tearDownAll(() => client.close());
 
   test('getAuthors round-trips the real /api/v1/author endpoint', () async {
     // A fresh Readarr has no authors; the call succeeding proves auth + parsing.

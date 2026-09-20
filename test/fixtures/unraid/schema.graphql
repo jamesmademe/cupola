@@ -1,12 +1,95 @@
-# Subset of the Unraid GraphQL SDL (sourced from the documented schema / Apollo
-# introspection, marked doc until captured from a live instance). Only the types
-# and fields Cupola queries are kept; the contract test asserts each still
-# exists so an upstream rename fails loudly instead of silently returning nulls.
+# Subset of the Unraid GraphQL SDL. Only the types and fields Cupola queries
+# are kept; the contract test asserts each still exists so an upstream rename
+# fails loudly instead of silently returning nulls.
+#
+# **This file is documentation, not a capture, and the distinction is the whole
+# value of the test.** Unraid is the one service in the stack that has never
+# been run against a real instance, so every type below was written from the
+# published schema reference — which means the contract test proves that the
+# client and this file agree with each other, and nothing more. That is not
+# nothing: a GraphQL server rejects the whole document over one unknown field,
+# so a selection nobody wrote down here takes a whole tab down, and the test
+# catches exactly that. What it cannot catch is a field upstream spells
+# differently from the reference, because nothing here came from upstream.
+# Replace this file with an introspection capture from a live instance and
+# delete this paragraph the day one exists.
 
 type Query {
   info: Info
   array: Array
   dockerContainers: [DockerContainer!]
+  me: UserAccount!
+  notifications: Notifications!
+  shares: [Share!]!
+  vms: Vms!
+}
+
+type Mutation {
+  archiveNotification(id: PrefixedID!): Notification!
+  vm: VmMutations!
+}
+
+scalar PrefixedID
+
+type UserAccount {
+  roles: [Role!]!
+  permissions: [Permission!]
+}
+
+type Permission {
+  resource: Resource!
+  actions: [AuthAction!]!
+}
+
+enum Role { ADMIN VIEWER }
+enum Resource { VMS NOTIFICATIONS SHARE }
+enum AuthAction { READ_ANY UPDATE_ANY DELETE_ANY }
+
+type VmDomain { id: PrefixedID! name: String state: VmState! }
+type Vms { domains: [VmDomain!] domain: [VmDomain!] }
+enum VmState { NOSTATE RUNNING IDLE PAUSED SHUTDOWN SHUTOFF CRASHED PMSUSPENDED }
+type VmMutations {
+  start(id: PrefixedID!): Boolean!
+  stop(id: PrefixedID!): Boolean!
+  pause(id: PrefixedID!): Boolean!
+  resume(id: PrefixedID!): Boolean!
+  forceStop(id: PrefixedID!): Boolean!
+  reboot(id: PrefixedID!): Boolean!
+}
+
+type NotificationCounts { info: Int! warning: Int! alert: Int! total: Int! }
+type NotificationOverview { unread: NotificationCounts! archive: NotificationCounts! }
+type Notification {
+  id: PrefixedID!
+  title: String!
+  subject: String!
+  description: String!
+  importance: NotificationImportance!
+  link: String
+  type: NotificationType!
+  timestamp: String
+  formattedTimestamp: String
+}
+enum NotificationImportance { ALERT INFO WARNING }
+enum NotificationType { UNREAD ARCHIVE }
+input NotificationFilter { importance: NotificationImportance type: NotificationType! offset: Int! limit: Int! }
+type Notifications {
+  overview: NotificationOverview!
+  list(filter: NotificationFilter!): [Notification!]!
+  warningsAndAlerts: [Notification!]!
+}
+
+type Share {
+  id: PrefixedID!
+  name: String
+  free: String
+  used: String
+  size: String
+  include: [String!]
+  exclude: [String!]
+  cache: Boolean
+  comment: String
+  luksStatus: String
 }
 
 type Info {

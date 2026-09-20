@@ -66,6 +66,13 @@ class StreamNowPlayingSection extends ConsumerWidget {
           child: AsyncValueWidget<List<StreamSession>>(
             value: sessions,
             serviceName: service.title,
+            onRetry: () {
+              if (service == ServiceKey.jellyfin) {
+                ref.invalidate(jellyfinSessionsProvider);
+              } else {
+                ref.invalidate(plexSessionsProvider);
+              }
+            },
             isEmpty: (list) => list.isEmpty,
             emptyBuilder: const _IdleRoom(),
             data: (list) => Column(

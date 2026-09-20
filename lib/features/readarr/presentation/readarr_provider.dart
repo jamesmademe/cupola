@@ -11,8 +11,26 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Throws if Readarr is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.readarr)` before reading.
 final readarrServiceProvider = Provider<ReadarrService>((ref) {
-  return ReadarrService(watchApiClient(ref, ServiceKey.readarr));
+  return _readarrService(ref, instanceId: null);
 });
+
+/// Readarr service bound to one named connection, independent of the lens.
+final readarrServiceForProvider = Provider.family<ReadarrService, String>((
+  ref,
+  instanceId,
+) {
+  final lens = ref.read(activeInstanceProvider(ServiceKey.readarr))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == lens) {
+    return ref.watch(readarrServiceProvider);
+  }
+  return _readarrService(ref, instanceId: instanceId);
+});
+
+ReadarrService _readarrService(Ref ref, {required String? instanceId}) {
+  return ReadarrService(
+    watchApiClient(ref, ServiceKey.readarr, instanceId: instanceId),
+  );
+}
 
 /// All authors in the library.
 final readarrAuthorsProvider = FutureProvider<List<ReadarrAuthor>>((ref) async {

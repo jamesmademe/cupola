@@ -220,4 +220,31 @@ void main() {
       expect(empty.disks, isEmpty);
     });
   });
+
+  test('capabilities preserve per-resource write scope', () {
+    final capabilities = UnraidCapabilities.fromJson({
+      'roles': ['VIEWER'],
+      'permissions': [
+        {
+          'resource': 'VMS',
+          'actions': ['READ_ANY', 'UPDATE_ANY'],
+        },
+        {
+          'resource': 'SHARE',
+          'actions': ['READ_ANY'],
+        },
+      ],
+    });
+
+    expect(capabilities.canWrite(UnraidResource.vms), isTrue);
+    expect(capabilities.canWrite(UnraidResource.share), isFalse);
+    expect(capabilities.canWrite(UnraidResource.notifications), isFalse);
+  });
+
+  test('incomplete share capacity stays unknown instead of becoming zero', () {
+    final share = UnraidShare.fromJson({'id': 'share:1', 'name': 'media'});
+    expect(share.usedKilobytes, isNull);
+    expect(share.sizeKilobytes, isNull);
+    expect(share.usedFraction, isNull);
+  });
 }
