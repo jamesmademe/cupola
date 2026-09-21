@@ -33,6 +33,38 @@ class _ProwlarrStatsScreenState extends ConsumerState<ProwlarrStatsScreen> {
     }
 
     final stats = ref.watch(prowlarrIndexerStatsForWindowProvider(_window));
+    final page = AsyncValueWidget<ProwlarrIndexerStats>(
+      value: stats,
+      serviceName: 'Prowlarr stats',
+      onRetry: () =>
+          ref.invalidate(prowlarrIndexerStatsForWindowProvider(_window)),
+      isEmpty: (value) => value.indexers.isEmpty,
+      emptyBuilder: const AppEmptyStatePage(
+        emptyState: AppEmptyState(
+          icon: Icons.query_stats_rounded,
+          title: 'No indexer activity',
+          message: 'Prowlarr reported no indexer statistics for this window.',
+        ),
+      ),
+      data: (value) => _StatsBody(
+        stats: value,
+        // The await is what keeps the indicator down until the answer
+        // is in, and the catch is what stops a dark Prowlarr turning
+        // that into an unhandled rejection inside `RefreshIndicator`.
+        // The failure is not swallowed: `AsyncValueWidget` above is
+        // watching the same provider and draws the band.
+        onRefresh: () async {
+          ref.invalidate(prowlarrIndexerStatsForWindowProvider(_window));
+          try {
+            await ref.read(
+              prowlarrIndexerStatsForWindowProvider(_window).future,
+            );
+          } catch (_) {
+            // Reported by the widget watching the provider.
+          }
+        },
+      ),
+    );
     return Scaffold(
       body: Column(
         children: [
@@ -45,43 +77,9 @@ class _ProwlarrStatsScreenState extends ConsumerState<ProwlarrStatsScreen> {
             accent: ServiceKey.prowlarr.accent,
           ),
           Expanded(
-            child: AsyncValueWidget<ProwlarrIndexerStats>(
-              value: stats,
-              serviceName: 'Prowlarr stats',
-              onRetry: () => ref.invalidate(
-                prowlarrIndexerStatsForWindowProvider(_window),
-              ),
-              isEmpty: (value) => value.indexers.isEmpty,
-              emptyBuilder: const AppEmptyStatePage(
-                emptyState: AppEmptyState(
-                  icon: Icons.query_stats_rounded,
-                  title: 'No indexer activity',
-                  message:
-                      'Prowlarr reported no indexer statistics for this '
-                      'window.',
-                ),
-              ),
-              data: (value) => _StatsBody(
-                stats: value,
-                // The await is what keeps the indicator down until the answer
-                // is in, and the catch is what stops a dark Prowlarr turning
-                // that into an unhandled rejection inside `RefreshIndicator`.
-                // The failure is not swallowed: `AsyncValueWidget` above is
-                // watching the same provider and draws the band.
-                onRefresh: () async {
-                  ref.invalidate(
-                    prowlarrIndexerStatsForWindowProvider(_window),
-                  );
-                  try {
-                    await ref.read(
-                      prowlarrIndexerStatsForWindowProvider(_window).future,
-                    );
-                  } catch (_) {
-                    // Reported by the widget watching the provider.
-                  }
-                },
-              ),
-            ),
+            child: stats.hasError && !stats.hasValue
+                ? AppScrollablePage(child: page)
+                : page,
           ),
         ],
       ),

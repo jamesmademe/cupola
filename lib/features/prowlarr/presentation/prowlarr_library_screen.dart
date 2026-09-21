@@ -8,6 +8,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
@@ -556,24 +557,28 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
                   ),
                 );
               },
-              loading: () => const ProwlarrListShimmer(
-                count: 6,
-                verticalPadding: AppSpacing.sm,
+              loading: () => const AppScrollablePage(
+                child: ProwlarrListShimmer(
+                  count: 6,
+                  verticalPadding: AppSpacing.sm,
+                ),
               ),
-              error: (error, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Failed to load indexers'),
-                      const SizedBox(height: AppSpacing.md),
-                      FilledButton(
-                        onPressed: () =>
-                            ref.invalidate(prowlarrIndexersProvider),
-                        child: const Text('Retry'),
-                      ),
-                    ],
+              error: (error, _) => AppScrollablePage(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Failed to load indexers'),
+                        const SizedBox(height: AppSpacing.md),
+                        FilledButton(
+                          onPressed: () =>
+                              ref.invalidate(prowlarrIndexersProvider),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

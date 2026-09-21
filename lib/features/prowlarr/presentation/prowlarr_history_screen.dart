@@ -155,10 +155,12 @@ class _ProwlarrHistoryScreenState extends ConsumerState<ProwlarrHistoryScreen> {
       return const ShimmerList.page(itemCount: 6);
     }
     if (_error != null && _items.isEmpty) {
-      return AppErrorState(
-        error: _error!,
-        serviceName: 'Prowlarr history',
-        onRetry: _reload,
+      return AppScrollablePage(
+        child: AppErrorState(
+          error: _error!,
+          serviceName: 'Prowlarr history',
+          onRetry: _reload,
+        ),
       );
     }
     if (_items.isEmpty) {

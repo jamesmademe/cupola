@@ -57,23 +57,36 @@ class ServiceDeck extends ConsumerWidget {
           ),
         ),
       ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? AppSpacing.md : AppSpacing.lg,
-        ),
-        child: Row(
-          children: [
-            _ActiveChip(service: current, compact: compact),
-            SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
-            if (compact)
-              const _HealthReadout()
-            else
-              Expanded(child: _GlyphBands(current: current)),
-            if (compact) const Spacer(),
-            SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
-            _JumpPill(compact: compact, onPressed: onCommandDeck),
-          ],
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // The 390pt desktop specimen still carries the desktop shell after
+          // the 56pt rail is taken out. Keep the deck's health signal and its
+          // command entry point, but let the latter use its icon/key form so
+          // the compact row remains a row instead of overflowing horizontally.
+          final narrow = constraints.maxWidth < 500;
+          return Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? AppSpacing.md : AppSpacing.lg,
+            ),
+            child: Row(
+              children: [
+                _ActiveChip(service: current, compact: compact),
+                SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
+                if (compact)
+                  _HealthReadout(narrow: narrow)
+                else
+                  Expanded(child: _GlyphBands(current: current)),
+                if (compact) const Spacer(),
+                SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
+                _JumpPill(
+                  compact: compact,
+                  narrow: narrow,
+                  onPressed: onCommandDeck,
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -354,7 +367,9 @@ class _GlyphCellState extends ConsumerState<_GlyphCell> {
 
 /// The compact deck's replacement for the bands: the figure they added up to.
 class _HealthReadout extends ConsumerWidget {
-  const _HealthReadout();
+  const _HealthReadout({required this.narrow});
+
+  final bool narrow;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -400,7 +415,7 @@ class _HealthReadout extends ConsumerWidget {
                 color: CupolaThemeColors.of(context).dimText,
               ),
             ),
-            if (health.unreachable > 0) ...[
+            if (health.unreachable > 0 && !narrow) ...[
               const SizedBox(width: 5),
               Text(
                 '· ${health.unreachable} down',
@@ -439,9 +454,14 @@ class _Dot extends StatelessWidget {
 /// panel it opens is a search, and a control shaped like its own result is how
 /// a command palette teaches itself.
 class _JumpPill extends StatefulWidget {
-  const _JumpPill({required this.compact, required this.onPressed});
+  const _JumpPill({
+    required this.compact,
+    required this.narrow,
+    required this.onPressed,
+  });
 
   final bool compact;
+  final bool narrow;
   final VoidCallback onPressed;
 
   @override
@@ -484,17 +504,20 @@ class _JumpPillState extends State<_JumpPill> {
                   size: 14,
                   color: CupolaThemeColors.of(context).dimText,
                 ),
-                const SizedBox(width: 9),
-                Text(
-                  widget.compact ? 'Jump' : 'Jump to anything',
-                  style: AppTheme.chrome(
-                    context,
-                    size: 11,
-                    weight: FontWeight.w500,
-                    color: CupolaThemeColors.of(context).dimText,
+                if (!widget.narrow) ...[
+                  const SizedBox(width: 9),
+                  Text(
+                    widget.compact ? 'Jump' : 'Jump to anything',
+                    style: AppTheme.chrome(
+                      context,
+                      size: 11,
+                      weight: FontWeight.w500,
+                      color: CupolaThemeColors.of(context).dimText,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 9),
+                  const SizedBox(width: 9),
+                ] else
+                  const SizedBox(width: 6),
                 Text(
                   ShellShortcuts.commandDeck,
                   style: AppTheme.chrome(

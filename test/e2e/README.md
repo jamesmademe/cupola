@@ -46,9 +46,12 @@ test/e2e/maclab/bootstrap.sh
 ~~~
 
 The script pins vendor images by digest, copies tracked seeds into
-.ai/scratch/zz_maclab/state, waits for all healthchecks, bootstraps Jellyfin
-and Seerr, and writes generated credentials to a chmod-600 file. Run the
-full Dart transport harness without putting credentials in the command line:
+.ai/scratch/zz_maclab/state, waits for all healthchecks, bootstraps Jellyfin,
+Seerr and the first Dockge account, and writes generated credentials to a
+chmod-600 file. `--reset` includes every Compose profile, so it really stops
+and recreates this disposable project rather than silently leaving profiled
+containers running. Run the full Dart transport harness without putting
+credentials in the command line:
 
 ~~~bash
 export CUPOLA_MACLAB_CREDENTIALS_FILE="$PWD/.ai/scratch/zz_maclab/state/credentials.env"
@@ -82,7 +85,7 @@ server for the token-rejection check.
 | NZBGet | http://127.0.0.1:6789 | nzbget / tegbzn6789 | JSON-RPC + Basic |
 | Jellyfin | http://127.0.0.1:8096 | generated token + user id | REST |
 | Plex | http://127.0.0.1:32400 | local auth disabled in the disposable image | REST/XML-or-JSON |
-| Dockge | http://127.0.0.1:5001 | disposable account created once in UI | Socket.IO |
+| Dockge | http://127.0.0.1:5001 | disposable account provisioned by bootstrap | Socket.IO |
 | Nginx Proxy Manager | http://127.0.0.1:8181 | admin@example.com / changeme | REST + JWT |
 | TrueNAS fixture | ws://127.0.0.1:8460 | test-key | WebSocket JSON-RPC |
 | Unraid fixture | http://127.0.0.1:8480/graphql | test-key | GraphQL |
@@ -104,6 +107,16 @@ TrueNAS and Unraid are deterministic transport fixtures, not vendor-certified
 servers. They reproduce the JSON shapes, authentication and framing used by
 Cupola. Certification against a real TrueNAS/Unraid host remains a separate
 environmental test.
+
+The seed is deliberately small and offline: Radarr, Sonarr and Lidarr receive
+one resolved media record each; Jellyfin and Plex receive a `Films` library;
+qBittorrent and Transmission receive paused zero-data magnets; SABnzbd and
+NZBGet receive a disposable NZB; and NPM receives `cupola.test`. Readarr gets
+its Books root but no author because metadata lookup would depend on the
+public internet. Prowlarr remains an empty indexer registry. Bazarr is
+configured for the two arr services but has no subtitle records without a
+real media/subtitle provider. These are capability limits of the lab, not
+claims that the corresponding Cupola screens are unreachable.
 
 ## Native macOS test plan
 
@@ -136,11 +149,14 @@ Docker endpoint cannot be mistaken for a UI placeholder:
    wanted/history, Jellyfin/Plex library/session views, TrueNAS queries,
    Unraid GraphQL reads, and NPM account/proxy/audit reads. Dockge mutations
    are conditional on the separately isolated socket profile.
-7. Visual matrix: repeat the route/state pass at 1440px desktop, 720px compact
+7. Write pass: run the safe mutations below. Every specimen is disposable;
+   qBittorrent and Transmission are deleted, SABnzbd is restored paused,
+   NZBGet is deleted from either queue or history, and the NPM flag is restored.
+8. Visual matrix: repeat the route/state pass at 1440px desktop, 720px compact
    desktop and 390px portrait, each in dark and light theme. Record screenshots
    by route, state, width and theme. Phone landscape is out of contract.
    Include onboarding, deep links, retry/refresh, semantics and long text.
-8. Cleanup and ledger: keep only aggregate results and screenshots under
+9. Cleanup and ledger: keep only aggregate results and screenshots under
    disposable .ai/scratch/zz_ paths, run Compose down -v --remove-orphans, and
    record branch, image digests, commands, failures and fixes in the ledger.
 
@@ -211,13 +227,47 @@ slices (or omit them for a no-screenshot smoke pass). Set
 `CUPOLA_MACLAB_SIZE=390x844`, `720x450` or `1440x900` to isolate one viewport.
 The 17-service transport harness must pass before starting the visual matrix.
 
+The matrix has five explicit scenarios selected with
+`CUPOLA_MACLAB_SCENARIO`: `healthy` (the default seeded lab),
+`not-configured`, `degraded` (Radarr/Sonarr fail), `unreachable` (all endpoints
+fail) and `invalid-auth` (valid URLs with rejected credentials). The latter is
+bounded by the disposable qBittorrent seed's high failed-login threshold so a
+negative-auth sweep cannot lock the lab out. `CUPOLA_MACLAB_SETTLE_MS` controls
+the provider settle window; keep the default 2000ms for evidence and use a
+smaller value only for focused diagnostics.
+
+### Verified macOS run
+
+On 2026-09-21 the native macOS runner completed all 160 routes at 1440x900,
+720x450 and 390x844 in both themes for `healthy`, `not-configured`, `degraded`,
+`unreachable` and `invalid-auth`. The healthy run has 960 PNGs of evidence
+(160 routes x 3 sizes x 2 themes). The transport pass reported 18 passing
+checks and one explicit Plex skip because the disposable Plex image has local
+authentication disabled. The write-safe pass reported five passing mutations;
+all specimens were removed or restored.
+
+The write-safe mutation tier is separate from the read-only transport and UI
+passes:
+
+~~~bash
+export CUPOLA_MACLAB_CREDENTIALS_FILE="$PWD/.ai/scratch/zz_maclab/state/credentials.env"
+flutter test test/e2e/maclab_mutation_e2e_test.dart \
+  --tags e2e --run-skipped
+~~~
+
+It intentionally does not mount the Docker socket into Dockge. Login,
+Socket.IO and read-only stack discovery are tested; terminal and stack
+deployment require an explicitly isolated socket/proxy profile.
+
 ## Cleanup
 
 Keep the project name used by the run, then clean only that disposable project:
 
 ~~~bash
 docker compose -p "$CUPOLA_MACLAB_PROJECT" \
-  -f docker-compose.maclab.yml down -v --remove-orphans
+  -f docker-compose.maclab.yml \
+  --profile core --profile downloads --profile media --profile infra \
+  --profile protocol-mocks down -v --remove-orphans
 ~~~
 
 The bootstrap's --reset performs the same project cleanup and removes only the

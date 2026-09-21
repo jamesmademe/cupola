@@ -53,9 +53,16 @@ if [[ "$(docker context show)" != "orbstack" ]]; then
 fi
 
 compose=(docker compose -p "$project" -f "$compose_file")
+profiles=(
+  --profile core
+  --profile downloads
+  --profile media
+  --profile infra
+  --profile protocol-mocks
+)
 
 if [[ "$reset" == true ]]; then
-  "${compose[@]}" down -v --remove-orphans || true
+  "${compose[@]}" "${profiles[@]}" down -v --remove-orphans || true
   rm -rf "$state_dir"
 fi
 
@@ -85,15 +92,15 @@ install_seed \
 install_seed \
   "$repo_root/test/e2e/seed/sabnzbd/sabnzbd.ini" \
   "$state_dir/sabnzbd/sabnzbd.ini"
+install_seed \
+  "$script_dir/seed/stacks/immich/docker-compose.yml" \
+  "$state_dir/stacks/immich/docker-compose.yml"
+install_seed \
+  "$script_dir/seed/downloads/cupola-test.nzb" \
+  "$state_dir/cupola-test.nzb"
 
 printf 'Starting Compose project %s...\n' "$project"
-"${compose[@]}" \
-  --profile core \
-  --profile downloads \
-  --profile media \
-  --profile infra \
-  --profile protocol-mocks \
-  up -d --wait
+"${compose[@]}" "${profiles[@]}" up -d --wait
 
 curl_bin="$(command -v curl)"
 python_bin="$(command -v python3)"
@@ -154,6 +161,9 @@ if [[ "$(json_get "$jellyfin_info" StartupWizardCompleted 2>/dev/null || true)" 
   post_json "$jellyfin_url/Startup/Configuration" \
     '{"ServerName":"Cupola Lab","UICulture":"en-US","MetadataCountryCode":"US","PreferredMetadataLanguage":"en"}' \
     >/dev/null
+  # Jellyfin 12.x exposes the first-user route lazily. Read it once before
+  # posting the startup user, otherwise a fresh server can answer 404.
+  "$curl_bin" -fsS "$jellyfin_url/Startup/User" >/dev/null
   post_json "$jellyfin_url/Startup/User" \
     '{"Name":"cupola-admin","Password":"cupola-pass"}' \
     >/dev/null
@@ -226,6 +236,17 @@ umask 077
   printf 'CUPOLA_MACLAB_PLEX_TOKEN=test-token\n'
 } >"$credentials"
 chmod 600 "$credentials"
+
+# Dockge has no REST setup endpoint; provision its first disposable account
+# through the same Socket.IO setup event used by its web UI. The helper treats
+# an existing account as success, so normal reruns remain idempotent.
+DOCKGE_SETUP_USERNAME=cupola \
+DOCKGE_SETUP_PASSWORD=cupola-pass \
+  "${compose[@]}" exec -T dockge node - <"$script_dir/dockge_setup.js"
+
+printf '\nSeeding deterministic media and queue specimens...\n'
+python3 "$script_dir/seed_lab.py" --state-dir "$state_dir"
+
 rm -f "$jellyfin_info" "$jellyfin_auth" "$seerr_public" "$seerr_cookie" "$seerr_response"
 
 printf '\nCupola macOS lab is ready.\n'

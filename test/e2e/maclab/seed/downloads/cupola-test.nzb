@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nzb PUBLIC "-//newzBin//DTD NZB 1.1//EN" "http://www.newzbin.com/DTD/nzb/nzb-1.1.dtd">
+<nzb xmlns="http://www.newzbin.com/DTD/2003/nzb">
+  <head>
+    <meta type="title">Cupola Test NZB</meta>
+  </head>
+  <file poster="cupola@example.test" date="1700000000" subject="Cupola Test NZB">
+    <groups>
+      <group>alt.binaries.test</group>
+    </groups>
+    <segments>
+      <segment bytes="1" number="1">cupola-test@example.test</segment>
+    </segments>
+  </file>
+</nzb>

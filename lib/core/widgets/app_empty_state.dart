@@ -161,20 +161,34 @@ class AppEmptyState extends StatelessWidget {
 ///
 /// Centred while it fits, scrollable once it does not, which is also what keeps
 /// it usable at an accessibility reading size.
-class AppEmptyStatePage extends StatelessWidget {
-  const AppEmptyStatePage({super.key, required this.emptyState});
+/// A bounded, always-scrollable viewport for a cold page state.
+///
+/// Error and not-configured leaves are deliberately small widgets that do not
+/// know whether their caller owns a viewport. Page-level callers use this
+/// wrapper so a short desktop pane or a larger reading size can scroll the
+/// complete message and action instead of clipping or overflowing it.
+class AppScrollablePage extends StatelessWidget {
+  const AppScrollablePage({super.key, required this.child});
 
-  final AppEmptyState emptyState;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) => SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: constraints.maxHeight),
-        child: emptyState,
+        child: child,
       ),
     ),
   );
+}
+
+class AppEmptyStatePage extends AppScrollablePage {
+  const AppEmptyStatePage({super.key, required this.emptyState})
+    : super(child: emptyState);
+
+  final AppEmptyState emptyState;
 }
 
 /// How much room an [AppEmptyState] is allowed to take.

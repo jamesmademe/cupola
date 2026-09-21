@@ -47,7 +47,10 @@ void main() {
   testWidgets(
     'Cupola macOS lab route matrix: every tab, size and theme',
     (tester) async {
-      final credentials = _loadCredentials();
+      final scenario = _scenario;
+      final credentials = _loadCredentials(
+        mustExist: scenario != 'not-configured',
+      );
       final allRoutes = _routes();
       final routeOffset =
           int.tryParse(
@@ -94,13 +97,13 @@ void main() {
                   '.ai/scratch/zz_maclab/screenshots',
             )..createSync(recursive: true));
       debugPrint(
-        '[maclab] capture=$capture cwd=${Directory.current.path} '
+        '[maclab] scenario=$scenario capture=$capture cwd=${Directory.current.path} '
         'screenshots=${screenshotDirectory?.absolute.path ?? 'driver'} '
         'routes=${routes.length}/${allRoutes.length} offset=$routeOffset',
       );
 
       for (final theme in themes) {
-        final settings = _labSettings(credentials, theme.mode);
+        final settings = _labSettings(credentials, theme.mode, scenario);
         final container = ProviderContainer(
           overrides: [
             ...await settingsScopeOverrides(customize: (_) => settings),
@@ -127,8 +130,17 @@ void main() {
             addTearDown(tester.view.resetPhysicalSize);
             addTearDown(tester.view.resetDevicePixelRatio);
             await tester.pump();
+            final resizeException = tester.takeException();
+            if (resizeException != null &&
+                Platform.environment['CUPOLA_MACLAB_VERBOSE'] == 'true') {
+              debugPrint(
+                resizeException is FlutterError
+                    ? resizeException.toStringDeep()
+                    : resizeException.toString(),
+              );
+            }
             expect(
-              tester.takeException(),
+              resizeException,
               isNull,
               reason: '${theme.name} · ${frame.name} · resize',
             );
@@ -211,7 +223,14 @@ Future<void> _pumpRoute(WidgetTester tester) async {
   // about settled layout and route construction, so it disables authored
   // motion and gives network-backed providers a bounded window to paint.
   await tester.pump(const Duration(milliseconds: 250));
-  await tester.pump(const Duration(seconds: 2));
+  await tester.pump(_settleDuration);
+}
+
+Duration get _settleDuration {
+  final milliseconds =
+      int.tryParse(Platform.environment['CUPOLA_MACLAB_SETTLE_MS'] ?? '') ??
+      2000;
+  return Duration(milliseconds: milliseconds.clamp(0, 10000));
 }
 
 List<String> _routes() {
@@ -291,66 +310,100 @@ List<String> _routes() {
 SettingsModel _labSettings(
   Map<String, String> credentials,
   AppThemeMode theme,
+  String scenario,
 ) {
+  if (scenario == 'not-configured') {
+    return settingsWith(themeMode: theme);
+  }
+
+  final unreachable = scenario == 'unreachable';
+  final invalidAuth = scenario == 'invalid-auth';
+  final degraded = scenario == 'degraded';
+  final apiKey = invalidAuth ? 'wrong-key' : 'test-key';
+  String endpoint(String value, {bool broken = false}) {
+    if (unreachable || (degraded && broken)) return 'http://127.0.0.1:1';
+    return value;
+  }
+
+  String websocketEndpoint(String value, {bool broken = false}) {
+    if (unreachable || (degraded && broken)) return 'ws://127.0.0.1:1';
+    return value;
+  }
+
+  String username(String key) =>
+      invalidAuth ? 'wrong-user' : _required(credentials, key);
+
+  String password(String key) =>
+      invalidAuth ? 'wrong-password' : _required(credentials, key);
+
   return settingsWith(
     themeMode: theme,
     plexClientId: 'cupola-maclab-ui-matrix',
-    seerrUrl: 'http://127.0.0.1:5055',
-    seerrApiKey: _required(credentials, 'CUPOLA_MACLAB_SEERR_API_KEY'),
-    radarrUrl: 'http://127.0.0.1:7878',
-    radarrApiKey: 'test-key',
-    sonarrUrl: 'http://127.0.0.1:8989',
-    sonarrApiKey: 'test-key',
-    lidarrUrl: 'http://127.0.0.1:8686',
-    lidarrApiKey: 'test-key',
-    readarrUrl: 'http://127.0.0.1:8787',
-    readarrApiKey: 'test-key',
-    prowlarrUrl: 'http://127.0.0.1:9696',
-    prowlarrApiKey: 'test-key',
-    bazarrUrl: 'http://127.0.0.1:6767',
-    bazarrApiKey: 'test-key',
-    qbittorrentUrl: 'http://127.0.0.1:8080',
-    qbittorrentUsername: _required(
-      credentials,
-      'CUPOLA_MACLAB_QBITTORRENT_USERNAME',
-    ),
-    qbittorrentPassword: _required(
-      credentials,
-      'CUPOLA_MACLAB_QBITTORRENT_PASSWORD',
-    ),
-    transmissionUrl: 'http://127.0.0.1:9091',
-    transmissionUsername: _required(
-      credentials,
-      'CUPOLA_MACLAB_TRANSMISSION_USERNAME',
-    ),
-    transmissionPassword: _required(
-      credentials,
-      'CUPOLA_MACLAB_TRANSMISSION_PASSWORD',
-    ),
-    sabnzbdUrl: 'http://127.0.0.1:8082',
-    sabnzbdApiKey: 'test-key',
-    nzbgetUrl: 'http://127.0.0.1:6789',
-    nzbgetUsername: _required(credentials, 'CUPOLA_MACLAB_NZBGET_USERNAME'),
-    nzbgetPassword: _required(credentials, 'CUPOLA_MACLAB_NZBGET_PASSWORD'),
-    jellyfinUrl: 'http://127.0.0.1:8096',
-    jellyfinApiKey: _required(credentials, 'CUPOLA_MACLAB_JELLYFIN_TOKEN'),
+    seerrUrl: endpoint('http://127.0.0.1:5055'),
+    seerrApiKey: invalidAuth
+        ? 'wrong-key'
+        : _required(credentials, 'CUPOLA_MACLAB_SEERR_API_KEY'),
+    radarrUrl: endpoint('http://127.0.0.1:7878', broken: true),
+    radarrApiKey: apiKey,
+    sonarrUrl: endpoint('http://127.0.0.1:8989', broken: true),
+    sonarrApiKey: apiKey,
+    lidarrUrl: endpoint('http://127.0.0.1:8686'),
+    lidarrApiKey: apiKey,
+    readarrUrl: endpoint('http://127.0.0.1:8787'),
+    readarrApiKey: apiKey,
+    prowlarrUrl: endpoint('http://127.0.0.1:9696'),
+    prowlarrApiKey: apiKey,
+    bazarrUrl: endpoint('http://127.0.0.1:6767'),
+    bazarrApiKey: apiKey,
+    qbittorrentUrl: endpoint('http://127.0.0.1:8080'),
+    qbittorrentUsername: username('CUPOLA_MACLAB_QBITTORRENT_USERNAME'),
+    qbittorrentPassword: password('CUPOLA_MACLAB_QBITTORRENT_PASSWORD'),
+    transmissionUrl: endpoint('http://127.0.0.1:9091'),
+    transmissionUsername: username('CUPOLA_MACLAB_TRANSMISSION_USERNAME'),
+    transmissionPassword: password('CUPOLA_MACLAB_TRANSMISSION_PASSWORD'),
+    sabnzbdUrl: endpoint('http://127.0.0.1:8082'),
+    sabnzbdApiKey: apiKey,
+    nzbgetUrl: endpoint('http://127.0.0.1:6789'),
+    nzbgetUsername: username('CUPOLA_MACLAB_NZBGET_USERNAME'),
+    nzbgetPassword: password('CUPOLA_MACLAB_NZBGET_PASSWORD'),
+    jellyfinUrl: endpoint('http://127.0.0.1:8096'),
+    jellyfinApiKey: invalidAuth
+        ? 'wrong-token'
+        : _required(credentials, 'CUPOLA_MACLAB_JELLYFIN_TOKEN'),
     jellyfinUserId: _required(credentials, 'CUPOLA_MACLAB_JELLYFIN_USER_ID'),
-    plexUrl: 'http://127.0.0.1:32400',
-    plexToken: _required(credentials, 'CUPOLA_MACLAB_PLEX_TOKEN'),
-    dockgeUrl: 'http://127.0.0.1:5001',
-    dockgeUsername: _required(credentials, 'CUPOLA_MACLAB_DOCKGE_USERNAME'),
-    dockgePassword: _required(credentials, 'CUPOLA_MACLAB_DOCKGE_PASSWORD'),
-    npmUrl: 'http://127.0.0.1:8181',
-    npmUsername: _required(credentials, 'CUPOLA_MACLAB_NPM_USERNAME'),
-    npmPassword: _required(credentials, 'CUPOLA_MACLAB_NPM_PASSWORD'),
-    truenasUrl: 'ws://127.0.0.1:8460',
-    truenasApiKey: 'test-key',
-    unraidUrl: 'http://127.0.0.1:8480',
-    unraidApiKey: 'test-key',
+    plexUrl: endpoint('http://127.0.0.1:32400'),
+    plexToken: invalidAuth
+        ? 'wrong-token'
+        : _required(credentials, 'CUPOLA_MACLAB_PLEX_TOKEN'),
+    dockgeUrl: endpoint('http://127.0.0.1:5001'),
+    dockgeUsername: username('CUPOLA_MACLAB_DOCKGE_USERNAME'),
+    dockgePassword: password('CUPOLA_MACLAB_DOCKGE_PASSWORD'),
+    npmUrl: endpoint('http://127.0.0.1:8181'),
+    npmUsername: username('CUPOLA_MACLAB_NPM_USERNAME'),
+    npmPassword: password('CUPOLA_MACLAB_NPM_PASSWORD'),
+    truenasUrl: websocketEndpoint('ws://127.0.0.1:8460'),
+    truenasApiKey: apiKey,
+    unraidUrl: endpoint('http://127.0.0.1:8480'),
+    unraidApiKey: apiKey,
   );
 }
 
-Map<String, String> _loadCredentials() {
+String get _scenario {
+  const allowed = {
+    'healthy',
+    'not-configured',
+    'degraded',
+    'unreachable',
+    'invalid-auth',
+  };
+  final value = Platform.environment['CUPOLA_MACLAB_SCENARIO'] ?? 'healthy';
+  if (!allowed.contains(value)) {
+    fail('CUPOLA_MACLAB_SCENARIO must be one of: ${allowed.join(', ')}');
+  }
+  return value;
+}
+
+Map<String, String> _loadCredentials({required bool mustExist}) {
   final path = Platform.environment['CUPOLA_MACLAB_CREDENTIALS_FILE'];
   final values = <String, String>{};
   // A native macOS integration-test runner is sandboxed away from the
@@ -378,7 +431,7 @@ Map<String, String> _loadCredentials() {
       values.putIfAbsent(entry.key, () => entry.value);
     }
   }
-  if (values.isEmpty) {
+  if (mustExist && values.isEmpty) {
     fail(
       'Provide CUPOLA_MACLAB_* environment variables from the bootstrap '
       'credentials.env, or a readable CUPOLA_MACLAB_CREDENTIALS_FILE',

@@ -52,6 +52,14 @@ class _SabnzbdHistoryScreenState extends ConsumerState<SabnzbdHistoryScreen> {
     }
 
     final history = ref.watch(sabnzbdHistoryProvider);
+    final page = AsyncValueWidget<List<SabnzbdHistorySlot>>(
+      value: history,
+      serviceName: 'SABnzbd history',
+      loadingLabel: 'Loading recent SABnzbd history',
+      onRetry: () => ref.invalidate(sabnzbdHistoryProvider),
+      skeleton: const ListRowsShimmer(count: 6),
+      data: _historyBody,
+    );
     return AmbientScaffold(
       accent: ServiceKey.sabnzbd.accent,
       body: Column(
@@ -65,14 +73,7 @@ class _SabnzbdHistoryScreenState extends ConsumerState<SabnzbdHistoryScreen> {
             accent: ServiceKey.sabnzbd.accent,
           ),
           Expanded(
-            child: AsyncValueWidget<List<SabnzbdHistorySlot>>(
-              value: history,
-              serviceName: 'SABnzbd history',
-              loadingLabel: 'Loading recent SABnzbd history',
-              onRetry: () => ref.invalidate(sabnzbdHistoryProvider),
-              skeleton: const ListRowsShimmer(count: 6),
-              data: _historyBody,
-            ),
+            child: history.hasValue ? page : AppScrollablePage(child: page),
           ),
         ],
       ),

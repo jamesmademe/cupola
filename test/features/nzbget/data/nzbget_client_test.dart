@@ -126,11 +126,15 @@ void main() {
       final body = adapter.lastBody as Map<String, dynamic>;
       expect(body['method'], 'append');
       final params = body['params'] as List<dynamic>;
-      // (NZBFilename, NZBContent, Category, Priority, AddToTop, AddPaused)
+      // (NZBFilename, NZBContent, Category, Priority, AddToTop, AddPaused,
+      //  DupeKey, DupeScore, DupeMode)
       expect(params[0], 'linux.nzb');
       expect(params[1], 'https://indexer.local/get/linux.nzb');
       expect(params[2], 'software');
       expect(params[3], 1);
+      expect(params[6], '');
+      expect(params[7], 0);
+      expect(params[8], 'SCORE');
       expect(params.every((p) => p is! Map), isTrue); // never named params
     });
 
@@ -145,6 +149,20 @@ void main() {
       expect(body['method'], 'editqueue');
       final params = body['params'] as List<dynamic>;
       expect(params[0], 'GroupDelete');
+      expect(params.last, [5]);
+    });
+
+    test('deleteHistory issues a HistoryDelete editqueue command', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {'jsonrpc': '2.0', 'result': true, 'id': 1},
+      );
+      final client = _client(adapter);
+
+      expect(await client.deleteHistory(5), isTrue);
+      final body = adapter.lastBody as Map<String, dynamic>;
+      expect(body['method'], 'editqueue');
+      final params = body['params'] as List<dynamic>;
+      expect(params[0], 'HistoryDelete');
       expect(params.last, [5]);
     });
 

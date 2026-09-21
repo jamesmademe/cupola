@@ -203,11 +203,10 @@ class NzbgetClient {
     await _call('rate', [kilobytesPerSec]);
   }
 
-  /// Queues an NZB from a URL. NZBGet's `append` takes positional params; when
-  /// [content] is a URL, NZBGet fetches it server-side. Signature follows the
-  /// documented order: (NZBFilename, NZBContent, Category, Priority, AddToTop,
-  /// AddPaused). Confirm against the target version before relying on the tail
-  /// params (plan §2.1 `◦`).
+  /// Queues an NZB from a URL or inline content. NZBGet's `append` takes
+  /// positional params; when [content] is a URL, NZBGet fetches it
+  /// server-side. The duplicate-handling tail is part of the live API
+  /// contract, including on current NZBGet v26 servers.
   Future<int> append(
     String name,
     String content, {
@@ -215,6 +214,9 @@ class NzbgetClient {
     int priority = 0,
     bool addToTop = false,
     bool addPaused = false,
+    String dupeKey = '',
+    int dupeScore = 0,
+    String dupeMode = 'SCORE',
   }) async {
     final result = await _call('append', [
       name,
@@ -223,6 +225,9 @@ class NzbgetClient {
       priority,
       addToTop,
       addPaused,
+      dupeKey,
+      dupeScore,
+      dupeMode,
     ]);
     // Returns the new NZBID (>0) on success, 0/false on failure.
     if (result is num) return result.toInt();
@@ -244,6 +249,7 @@ class NzbgetClient {
   Future<bool> pauseGroup(int nzbId) => editQueue('GroupPause', [nzbId]);
   Future<bool> resumeGroup(int nzbId) => editQueue('GroupResume', [nzbId]);
   Future<bool> deleteGroup(int nzbId) => editQueue('GroupDelete', [nzbId]);
+  Future<bool> deleteHistory(int nzbId) => editQueue('HistoryDelete', [nzbId]);
 
   void close({bool force = false}) => _dio.close(force: force);
 }

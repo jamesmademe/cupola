@@ -47,6 +47,27 @@ void main() {
       expect(find.byType(AppErrorState), findsNothing);
     });
 
+    testWidgets('a cold state scrolls inside a short desktop pane', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 240);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await _pump(
+        tester,
+        AsyncValue.error(
+          const TrueNasException('TrueNAS not configured'),
+          StackTrace.empty,
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(Scrollable), findsOneWidget);
+    });
+
     testWidgets('a host that did not answer reads as offline', (tester) async {
       await _pump(
         tester,

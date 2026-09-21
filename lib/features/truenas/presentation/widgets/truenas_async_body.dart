@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
@@ -109,11 +110,22 @@ class TrueNasAsyncBody<T> extends StatelessWidget {
     }
 
     if (_inline) return well;
+
+    // A cold error state is a page, not a fixed-height leaf. TrueNAS keeps its
+    // console shell on desktop, so the compact 720pt frame can leave only a
+    // short pane below the chrome; the full not-configured copy (icon, two
+    // lines and action) must be able to scroll instead of overflowing. Do not
+    // wrap a retained-value error: that branch deliberately returns a bounded
+    // FaultBand + live body column, and the body owns its own scroll view.
+    final pageWell = value.hasError && !value.hasValue && !value.isLoading
+        ? AppScrollablePage(child: well)
+        : well;
+
     // The refresh gesture only fires over a scrollable, and the two state wells
     // are centred columns. That is deliberate: both of them carry their own
     // button (Settings, Retry), and a pull on a page that says "not set up"
     // would re-run a query that cannot answer.
-    return RefreshIndicator(onRefresh: () async => onRetry(), child: well);
+    return RefreshIndicator(onRefresh: () async => onRetry(), child: pageWell);
   }
 
   Widget get _defaultSkeleton => _inline

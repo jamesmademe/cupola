@@ -48,6 +48,8 @@ void main() {
     final service = SeerrService(client);
     final me = await client.get('/api/v1/auth/me');
     expect(me.data, isA<Map>());
+    expect(await service.getRadarrServers(), isNotEmpty);
+    expect(await service.getSonarrServers(), isNotEmpty);
     expect((await service.getRequests()), isA<List>());
   });
 
@@ -57,7 +59,7 @@ void main() {
     final service = RadarrService(client);
     final status = await client.get('/api/v3/system/status');
     expect(status.data, isA<Map>());
-    expect(await service.getMoviesOrThrow(), isA<List>());
+    expect(await service.getMoviesOrThrow(), isNotEmpty);
     expect(await service.getQueue(), isA<List>());
   });
 
@@ -67,7 +69,7 @@ void main() {
     final service = SonarrService(client);
     final status = await client.get('/api/v3/system/status');
     expect(status.data, isA<Map>());
-    expect(await service.getSeriesOrThrow(), isA<List>());
+    expect(await service.getSeriesOrThrow(), isNotEmpty);
     expect(await service.getQueue(), isA<List>());
   });
 
@@ -77,7 +79,7 @@ void main() {
     final service = LidarrService(client);
     final status = await client.get('/api/v1/system/status');
     expect(status.data, isA<Map>());
-    expect(await service.getArtistsOrThrow(), isA<List>());
+    expect(await service.getArtistsOrThrow(), isNotEmpty);
     expect(await service.getQueue(), isA<List>());
   });
 
@@ -121,7 +123,7 @@ void main() {
     final service = QbittorrentService(client);
     expect(await service.authenticate(), isTrue);
     expect(await service.getVersion(), isNotEmpty);
-    expect(await service.getTorrents(), isA<List>());
+    expect(await service.getTorrents(), isNotEmpty);
     expect((await service.getTransferInfo()).dlSpeed, greaterThanOrEqualTo(0));
   });
 
@@ -134,7 +136,7 @@ void main() {
     addTearDown(client.close);
     expect(await client.testConnection(), isTrue);
     expect(await client.version(), isNotEmpty);
-    expect(await client.torrents(), isA<List>());
+    expect(await client.torrents(), isNotEmpty);
   });
 
   test('SABnzbd query auth + queue parser', () async {
@@ -144,7 +146,16 @@ void main() {
     );
     addTearDown(client.close);
     expect(await client.getVersion(), isNotEmpty);
-    expect((await client.getQueue()).slots, isA<List>());
+    final queue = await client.getQueue();
+    final history = await client.getHistory();
+    expect(
+      [
+        ...queue.slots.map((slot) => slot.filename),
+        ...history.map((slot) => slot.name),
+      ].any((name) => name.toLowerCase().contains('cupola-test')),
+      isTrue,
+      reason: 'SABnzbd seed specimen',
+    );
     expect((await client.getServerStats()).total, greaterThanOrEqualTo(0));
   });
 
@@ -158,7 +169,16 @@ void main() {
     expect(await client.testConnection(), isTrue);
     expect(await client.version(), isNotEmpty);
     expect(await client.status(), isNotNull);
-    expect(await client.listGroups(), isA<List>());
+    final groups = await client.listGroups();
+    final history = await client.history();
+    expect(
+      [
+        ...groups.map((item) => item.name),
+        ...history.map((item) => item.name),
+      ].any((name) => name.toLowerCase().contains('cupola-test')),
+      isTrue,
+      reason: 'NZBGet seed specimen',
+    );
   });
 
   test('Jellyfin token auth + library parser', () async {
@@ -172,7 +192,7 @@ void main() {
     addTearDown(client.close);
     expect(await client.verifyCredential(), isTrue);
     expect(await client.probeVersion(), isNotEmpty);
-    expect(await client.getLibraries(), isA<List>());
+    expect(await client.getLibraries(), isNotEmpty);
     expect(await client.getSessions(), isA<List>());
   });
 
@@ -186,7 +206,7 @@ void main() {
     expect(await client.verifyCredential(), isTrue);
     expect(await client.probeVersion(), isNotEmpty);
     expect(await client.getIdentity(), isNotNull);
-    expect(await client.getLibraries(), isA<List>());
+    expect(await client.getLibraries(), isNotEmpty);
   });
 
   test('Dockge Socket.IO login + stack list', () async {
@@ -212,7 +232,7 @@ void main() {
     addTearDown(client.close);
     expect(await client.testConnection(), isTrue);
     expect(await client.version(), isNotEmpty);
-    expect(await client.proxyHosts(), isA<List>());
+    expect(await client.proxyHosts(), isNotEmpty);
     expect(await client.auditLog(), isA<List>());
   });
 

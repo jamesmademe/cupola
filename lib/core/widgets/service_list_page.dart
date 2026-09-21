@@ -109,63 +109,66 @@ class ServiceListPage<T> extends StatelessWidget {
     final summary = _summary;
     final leading = (banner == null ? 0 : 1) + (summary == null ? 0 : 1);
 
+    final page = AsyncValueWidget<List<T>>(
+      value: value,
+      serviceName: serviceName,
+      onRetry: onRetry,
+      isEmpty: (items) => items.isEmpty,
+      emptyBuilder: AppEmptyStatePage(
+        emptyState: AppEmptyState(
+          icon: emptyIcon,
+          title: emptyTitle,
+          message: emptyMessage,
+          accentColor: service.accent,
+        ),
+      ),
+      skeleton: ListRowsShimmer(count: 6, rowHeight: skeletonRowHeight),
+      data: (items) => RefreshIndicator(
+        // `onRetry` invalidates the provider, and `AsyncValueWidget` is
+        // watching it — so the rows are replaced when the answer arrives.
+        // The indicator only has to stay down until the request is away.
+        onRefresh: () async => onRetry(),
+        child: ListView.separated(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            // Not `AppSpacing.xxl`: the nav bar floats, so the last row
+            // needs its measured height cleared or it sits underneath.
+            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+          ),
+          itemCount: items.length + leading,
+          separatorBuilder: (_, index) =>
+              SizedBox(height: index < leading ? AppSpacing.md : AppSpacing.sm),
+          itemBuilder: (context, index) {
+            var offset = index;
+            if (banner != null) {
+              if (offset == 0) return banner!;
+              offset -= 1;
+            }
+            if (summary != null) {
+              if (offset == 0) return _SummaryLine(label: summary(items));
+              offset -= 1;
+            }
+            return StaggeredEntrance(
+              index: offset,
+              child: rowBuilder(items[offset]),
+            );
+          },
+        ),
+      ),
+    );
+
+    final coldPage = value.hasError && !value.hasValue
+        ? AppScrollablePage(child: page)
+        : page;
+
     return AmbientScaffold(
       accent: service.accent,
       body: Padding(
         padding: EdgeInsets.only(top: topPadding),
-        child: _withHeader(
-          AsyncValueWidget<List<T>>(
-            value: value,
-            serviceName: serviceName,
-            onRetry: onRetry,
-            isEmpty: (items) => items.isEmpty,
-            emptyBuilder: AppEmptyStatePage(
-              emptyState: AppEmptyState(
-                icon: emptyIcon,
-                title: emptyTitle,
-                message: emptyMessage,
-                accentColor: service.accent,
-              ),
-            ),
-            skeleton: ListRowsShimmer(count: 6, rowHeight: skeletonRowHeight),
-            data: (items) => RefreshIndicator(
-              // `onRetry` invalidates the provider, and `AsyncValueWidget` is
-              // watching it — so the rows are replaced when the answer arrives.
-              // The indicator only has to stay down until the request is away.
-              onRefresh: () async => onRetry(),
-              child: ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.md,
-                  AppSpacing.lg,
-                  // Not `AppSpacing.xxl`: the nav bar floats, so the last row
-                  // needs its measured height cleared or it sits underneath.
-                  FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-                ),
-                itemCount: items.length + leading,
-                separatorBuilder: (_, index) => SizedBox(
-                  height: index < leading ? AppSpacing.md : AppSpacing.sm,
-                ),
-                itemBuilder: (context, index) {
-                  var offset = index;
-                  if (banner != null) {
-                    if (offset == 0) return banner!;
-                    offset -= 1;
-                  }
-                  if (summary != null) {
-                    if (offset == 0) return _SummaryLine(label: summary(items));
-                    offset -= 1;
-                  }
-                  return StaggeredEntrance(
-                    index: offset,
-                    child: rowBuilder(items[offset]),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
+        child: _withHeader(coldPage),
       ),
     );
   }

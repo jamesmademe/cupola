@@ -202,10 +202,12 @@ class _BazarrHistoryScreenState extends ConsumerState<BazarrHistoryScreen> {
     final failedSources = _sources.where((source) => _errors[source] != null);
     if (_loading && items.isEmpty) return const ShimmerList.page(itemCount: 6);
     if (failedSources.length == _sources.length && items.isEmpty) {
-      return AppErrorState(
-        error: _errors[failedSources.first]!,
-        serviceName: 'Bazarr history',
-        onRetry: _reload,
+      return AppScrollablePage(
+        child: AppErrorState(
+          error: _errors[failedSources.first]!,
+          serviceName: 'Bazarr history',
+          onRetry: _reload,
+        ),
       );
     }
     if (items.isEmpty) {
