@@ -202,60 +202,66 @@ class _SectionRowState extends State<_SectionRow> {
     final selected = widget.selected;
     return Semantics(
       button: true,
+      container: true,
+      enabled: true,
       selected: selected,
       label: widget.section.label,
-      excludeSemantics: true,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: () => GoRouter.of(context).go(widget.section.location),
-          child: Container(
-            height: 46,
-            margin: const EdgeInsets.only(bottom: 2),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md - 1),
-            decoration: BoxDecoration(
-              // The tab's own accent, not `colorScheme.primary`. Primary is the
-              // brand indigo (it is Seerr's accent), so the selected row was
-              // painted in the colour of one of the services listed two rows
-              // below it — on the one surface where indigo means "Seerr".
-              color: selected
-                  ? _accent.withValues(alpha: 0.14)
-                  : (_hovered
-                        ? colorScheme.onSurface.withValues(alpha: 0.05)
-                        : null),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: selected
-                  ? Border.all(color: _accent.withValues(alpha: 0.36))
-                  : null,
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  widget.section.icon,
-                  size: 17,
-                  color: selected
-                      ? colorScheme.onSurface
-                      : colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: AppSpacing.md - 1),
-                Expanded(
-                  child: Text(
-                    widget.section.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTheme.chrome(
-                      context,
-                      size: 13,
-                      weight: selected ? FontWeight.w700 : FontWeight.w500,
-                      color: selected
-                          ? colorScheme.onSurface
-                          : CupolaThemeColors.of(context).dimText,
+      onTap: () => GoRouter.of(context).go(widget.section.location),
+      child: ExcludeSemantics(
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: GestureDetector(
+            onTap: () => GoRouter.of(context).go(widget.section.location),
+            child: Container(
+              height: 46,
+              margin: const EdgeInsets.only(bottom: 2),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md - 1,
+              ),
+              decoration: BoxDecoration(
+                // The tab's own accent, not `colorScheme.primary`. Primary is the
+                // brand indigo (it is Seerr's accent), so the selected row was
+                // painted in the colour of one of the services listed two rows
+                // below it — on the one surface where indigo means "Seerr".
+                color: selected
+                    ? _accent.withValues(alpha: 0.14)
+                    : (_hovered
+                          ? colorScheme.onSurface.withValues(alpha: 0.05)
+                          : null),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: selected
+                    ? Border.all(color: _accent.withValues(alpha: 0.36))
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    widget.section.icon,
+                    size: 17,
+                    color: selected
+                        ? colorScheme.onSurface
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: AppSpacing.md - 1),
+                  Expanded(
+                    child: Text(
+                      widget.section.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTheme.chrome(
+                        context,
+                        size: 13,
+                        weight: selected ? FontWeight.w700 : FontWeight.w500,
+                        color: selected
+                            ? colorScheme.onSurface
+                            : CupolaThemeColors.of(context).dimText,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

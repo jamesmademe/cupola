@@ -58,7 +58,6 @@ class DockgeAgentLensButton extends ConsumerWidget {
       button: true,
       label: 'Dockge instance: ${selected.name}',
       hint: 'Choose which Dockge instance to show',
-      excludeSemantics: true,
       child: PopupMenuButton<String>(
         tooltip: 'Dockge instance',
         onSelected: (endpoint) =>

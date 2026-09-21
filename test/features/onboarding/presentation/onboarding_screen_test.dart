@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -47,6 +49,35 @@ void main() {
       expect(_button('Enter Cupola'), findsOneWidget);
     });
 
+    testWidgets('service choices expose their tap action to accessibility', (
+      tester,
+    ) async {
+      await _pumpOnboarding(tester);
+      await _tap(tester, 'Set up my stack');
+
+      final handle = tester.ensureSemantics();
+      expect(
+        find.semantics.byLabel('Radarr'),
+        containsSemantics(
+          isButton: true,
+          isSelected: false,
+          hasTapAction: true,
+        ),
+      );
+      expect(
+        tester
+            .getSemantics(_semantics('Radarr'))
+            .getSemanticsData()
+            .hasAction(SemanticsAction.tap),
+        isTrue,
+      );
+      handle.dispose();
+
+      await tester.tap(find.text('Radarr'));
+      await tester.pumpAndSettle();
+      expect(_button('Continue with 1'), findsOneWidget);
+    });
+
     testWidgets('picking every service walks all of them in registry order', (
       tester,
     ) async {
@@ -81,6 +112,45 @@ void main() {
         findsOneWidget,
       );
       expect(findLine('Where does ${first.title} live?'), findsOneWidget);
+    });
+
+    testWidgets('compact desktop keeps long-form actions reachable', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        final settings = const SettingsModel().copyWithService(
+          ServiceKey.readarr,
+          url: 'http://127.0.0.1:8787',
+          apiKey: 'test-key',
+        );
+        await _pumpOnboarding(
+          tester,
+          settings: settings,
+          viewport: const Size(720, 450),
+        );
+        await _tap(tester, 'Set up my stack');
+        await _tap(tester, 'Continue with 1');
+
+        // Notes on the long-form services used to push the footer below the
+        // compact desktop window. The form may scroll, but the decision cannot
+        // require a user to discover an invisible primary action first.
+        expect(
+          find.textContaining('Readarr development has stopped'),
+          findsOneWidget,
+        );
+        final testButton = tester.getRect(_button('Test connection').first);
+        expect(testButton.bottom, lessThanOrEqualTo(450));
+        expect(
+          tester
+              .getRect(find.widgetWithText(OutlinedButton, 'Skip Readarr'))
+              .bottom,
+          lessThanOrEqualTo(450),
+        );
+      } finally {
+        // Cleared before the test binding checks its foundation invariants.
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
 
     testWidgets('one service: fill it in, test, and finish', (tester) async {
@@ -324,14 +394,14 @@ void main() {
       await _pick(tester, 'Sonarr');
       await _tap(tester, 'Continue with 2');
 
-      await _fill(tester, url: 'https://nas.local:7878', key: 'abcdef1234');
+      await _fill(tester, url: 'http://nas.local:7878', key: 'abcdef1234');
       await _tap(tester, 'Skip Radarr');
 
       // Sonarr inherits the host and gets its own default port, so the second
       // service is a tap plus a pasted key rather than a retyped address.
       expect(findLine('Where does Sonarr live?'), findsOneWidget);
       final field = tester.widget<TextField>(find.byType(TextField).first);
-      expect(field.controller!.text, 'https://nas.local:8989');
+      expect(field.controller!.text, 'http://nas.local:8989');
     });
 
     testWidgets('the credential breadcrumb names where the key lives', (

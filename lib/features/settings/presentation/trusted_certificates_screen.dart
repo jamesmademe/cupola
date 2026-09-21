@@ -43,8 +43,8 @@ class TrustedCertificatesScreen extends ConsumerWidget {
                 icon: Icons.verified_user_outlined,
                 title: 'Nothing trusted yet',
                 message:
-                    'A self-signed certificate you choose to trust — for a '
-                    'service behind a home-made reverse proxy, say — shows up '
+                    'A self-signed certificate you choose to trust, for a '
+                    'service behind a home-made reverse proxy, say, shows up '
                     'here, and can be revoked from here even after every '
                     'service that used it is gone.',
               )
@@ -102,7 +102,7 @@ class _PinnedOriginsHeader extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'A self-signed certificate you choose to trust — for a host, not '
+            'A self-signed certificate you choose to trust, for a host, not '
             'for one service. It is pinned by TLS origin (ADR-6), so every '
             'service reached through that origin shares it, and it can be '
             'revoked from here even after every service that used it is gone.',

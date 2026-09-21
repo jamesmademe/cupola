@@ -475,7 +475,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
         const SizedBox(height: AppSpacing.md),
         Text(
           widget.affectedServices.length > 1
-              ? "You trusted this server's own certificate — it also covers "
+              ? "You trusted this server's own certificate, it also covers "
                     '${widget.affectedServices.where((s) => s != service).map((s) => s.title).join(', ')}.'
               : "You trusted this server's own certificate.",
           style: theme.textTheme.bodySmall!.copyWith(
@@ -598,7 +598,7 @@ class _Outcome extends StatelessWidget {
       // press with the sentence the user is already looking at. What the press
       // actually found is that there is nothing to send.
       ServiceConnectionStatus.notConfigured =>
-        'Nothing to send yet — ${walkInstruction(service).toLowerCase()}',
+        'Nothing to send yet, ${walkInstruction(service).toLowerCase()}',
       // The detail when the failure carried one, the reason-derived sentence
       // otherwise — the same rule `ServiceDiagnosis.messageFor` applies on the
       // settings screen, so the two surfaces cannot describe one test
@@ -780,35 +780,38 @@ class _PortChip extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return Semantics(
+      container: true,
       button: true,
       label: 'Use port $port',
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        borderRadius: AppRadius.borderRadiusSm,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 32),
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: scheme.primary.withValues(alpha: 0.14),
-            borderRadius: AppRadius.borderRadiusSm,
-          ),
-          child: Text(
-            ':$port',
-            style: theme.textTheme.labelSmall!
-                .weight(FontWeight.w600)
-                .tabular
-                .copyWith(
-                  color: ServiceTheme.onTint(
-                    scheme.primary,
-                    surface: scheme.surface,
-                    tintAlpha: 0.14,
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          borderRadius: AppRadius.borderRadiusSm,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 32),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: 0.14),
+              borderRadius: AppRadius.borderRadiusSm,
+            ),
+            child: Text(
+              ':$port',
+              style: theme.textTheme.labelSmall!
+                  .weight(FontWeight.w600)
+                  .tabular
+                  .copyWith(
+                    color: ServiceTheme.onTint(
+                      scheme.primary,
+                      surface: scheme.surface,
+                      tintAlpha: 0.14,
+                    ),
                   ),
-                ),
+            ),
           ),
         ),
       ),

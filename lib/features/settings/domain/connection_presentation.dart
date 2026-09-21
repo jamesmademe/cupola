@@ -181,7 +181,7 @@ ServerVersionNote? describeServerVersion(ServiceKey service, String? version) {
     if (parsed != null && !parsed.isSupported) {
       return ServerVersionNote(
         'Running $reported. Cupola supports SCALE $kTrueNasMinVersion or '
-        'newer — some sections will be unavailable.',
+        'newer, some sections will be unavailable.',
         isWarning: true,
       );
     }

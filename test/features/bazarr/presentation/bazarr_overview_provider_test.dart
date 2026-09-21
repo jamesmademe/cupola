@@ -147,12 +147,12 @@ void main() {
       ]);
 
       final row = rows.single;
-      expect(row.headline, 'Severance — S02E03 · Italian downloaded');
+      expect(row.headline, 'Severance, S02E03 · Italian downloaded');
       expect(row.detail, 'OpenSubtitles · score 94 · 20 minutes ago');
       // Spoken as a sentence: the layout's dots come back as pauses.
       expect(
         row.spoken,
-        'Severance — S02E03, Italian downloaded, OpenSubtitles, '
+        'Severance, S02E03, Italian downloaded, OpenSubtitles, '
         'score 94, 20 minutes ago',
       );
     });

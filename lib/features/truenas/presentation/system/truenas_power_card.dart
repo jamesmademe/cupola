@@ -115,10 +115,10 @@ class TrueNasPowerCard extends ConsumerWidget {
       message: reboot
           ? 'Everything on this host stops while it restarts: apps, instances, '
                 'the SMB · NFS · iSCSI shares and this connection. Cupola will '
-                'not know when it is back — reopen this page to find out.'
+                'not know when it is back, reopen this page to find out.'
           : 'Everything on this host stops: apps, instances, the SMB · NFS · '
                 'iSCSI shares and this connection. Nothing in Cupola can bring '
-                'it back — only the power button or IPMI can.',
+                'it back, only the power button or IPMI can.',
       phrase: phrase,
       confirmLabel: reboot ? 'Reboot' : 'Shut down',
     );

@@ -1,7 +1,11 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/features/import/presentation/manual_import_widgets.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
   group('formatImportBytes', () {
@@ -94,5 +98,27 @@ void main() {
     test('nothing selected carries no size at all', () {
       expect(summary(selected: 0, selectedBytes: 0), isNot(contains('size')));
     });
+  });
+
+  testWidgets('manual import back control has a named action', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.darkTheme(),
+        home: ManualImportFrame(
+          service: ServiceKey.radarr,
+          title: manualImportTitle,
+          subtitle: 'Locate',
+          child: const SizedBox.shrink(),
+        ),
+      ),
+    );
+
+    final semanticsHandle = tester.ensureSemantics();
+    final back = find.bySemanticsLabel('Back');
+    expect(back, findsOneWidget);
+    final semantics = tester.getSemantics(back).getSemanticsData();
+    expect(semantics.flagsCollection.isButton, isTrue);
+    expect(semantics.hasAction(SemanticsAction.tap), isTrue);
+    semanticsHandle.dispose();
   });
 }

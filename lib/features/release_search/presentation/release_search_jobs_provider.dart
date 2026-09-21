@@ -268,7 +268,7 @@ class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
           finishedAt: _now(),
           failure: ReleaseSearchFailure(
             kind: ReleaseSearchFailureKind.cancelled,
-            headline: 'Cancelled — ${service.title}\'s connection changed.',
+            headline: 'Cancelled, ${service.title}\'s connection changed.',
             diagnosis: 'Searching again will use the settings you just saved.',
           ),
         ),
@@ -347,7 +347,7 @@ class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
             finishedAt: now,
             failure: const ReleaseSearchFailure(
               kind: ReleaseSearchFailureKind.cancelled,
-              headline: 'Not started — queued too long ago.',
+              headline: 'Not started, queued too long ago.',
               diagnosis:
                   'Results found now would expire almost immediately, so the '
                   'search was dropped rather than run.',

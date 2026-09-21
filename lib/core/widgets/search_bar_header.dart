@@ -116,44 +116,58 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
       tintAlpha: 0,
     );
 
-    final field = Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        AppSpacing.lg,
-      ),
-      child: SearchBar(
-        controller: _controller,
-        focusNode: _focusNode,
-        hintText: widget.hintText,
-        autoFocus: widget.autofocus,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: AppSpacing.sm),
-          child: Icon(Icons.search_rounded, color: glyph),
+    final field = Semantics(
+      label: 'Search',
+      hint: 'Type ${widget.hintText}',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.sm,
+          AppSpacing.lg,
+          AppSpacing.lg,
         ),
-        trailing: [
-          if (_hasText)
-            IconButton(
-              icon: Icon(
-                Icons.close_rounded,
-                color: colorScheme.onSurfaceVariant,
-              ),
-              onPressed: _clearQuery,
-              tooltip: 'Clear',
-            ),
-        ],
-        elevation: WidgetStateProperty.all(0),
-        backgroundColor: WidgetStateProperty.all(colorScheme.surfaceContainer),
-        shape: WidgetStateProperty.all(
-          RoundedRectangleBorder(
-            borderRadius: AppRadius.borderRadiusXl,
-            side: BorderSide(color: colorScheme.outlineVariant),
+        child: SearchBar(
+          controller: _controller,
+          focusNode: _focusNode,
+          hintText: widget.hintText,
+          autoFocus: widget.autofocus,
+          leading: Padding(
+            padding: const EdgeInsets.only(left: AppSpacing.sm),
+            child: Icon(Icons.search_rounded, color: glyph),
           ),
-        ),
-        constraints: const BoxConstraints(minHeight: 52),
-        padding: WidgetStateProperty.all(
-          const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          trailing: [
+            if (_hasText)
+              Semantics(
+                button: true,
+                label: 'Clear search',
+                hint: 'Remove the current search query',
+                onTap: _clearQuery,
+                child: ExcludeSemantics(
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    onPressed: _clearQuery,
+                    tooltip: 'Clear search',
+                  ),
+                ),
+              ),
+          ],
+          elevation: WidgetStateProperty.all(0),
+          backgroundColor: WidgetStateProperty.all(
+            colorScheme.surfaceContainer,
+          ),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: AppRadius.borderRadiusXl,
+              side: BorderSide(color: colorScheme.outlineVariant),
+            ),
+          ),
+          constraints: const BoxConstraints(minHeight: 52),
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          ),
         ),
       ),
     );

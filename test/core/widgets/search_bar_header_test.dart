@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
@@ -74,5 +75,27 @@ void main() {
       HSLColor.fromColor(painted).hue,
       closeTo(HSLColor.fromColor(AppColors.lidarr).hue, 1.0),
     );
+  });
+
+  testWidgets('the clear action has an explicit accessible name', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.darkTheme(),
+        home: Scaffold(
+          body: SearchBarHeader(
+            initialQuery: 'Fight Club',
+            onQueryChanged: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    final clear = find.bySemanticsLabel('Clear search');
+    expect(clear, findsOneWidget);
+    final semantics = tester.getSemantics(clear);
+    expect(semantics.flagsCollection.isButton, isTrue);
+    expect(semantics.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
   });
 }

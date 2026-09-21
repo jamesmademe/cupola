@@ -142,7 +142,7 @@ String manualImportUnsupportedReason(
     ServiceKey.lidarr => 'an audio file',
     _ => 'a video file',
   };
-  return 'Not $kind — ${service.title} cannot import ${item.extension} files.';
+  return 'Not $kind, ${service.title} cannot import ${item.extension} files.';
 }
 
 /// The title a file is grouped under: its matched media, or "Unmatched".

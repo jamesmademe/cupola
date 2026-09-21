@@ -43,43 +43,47 @@ class InstanceLensBadge extends ConsumerWidget {
 
     return Semantics(
       button: true,
+      container: true,
+      enabled: true,
       label: 'Lens: $label',
       hint: 'changes which ${service.title} this screen reads',
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: () => _showLensSheet(context, ref, service),
-        borderRadius: AppRadius.borderRadiusPill,
-        child: ConstrainedBox(
-          // The pill is 24pt so it sits inside a 22pt title without pushing the
-          // bar around; the tap target is the full bar height regardless.
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-            child: Center(
-              widthFactor: 1,
-              child: Container(
-                height: 24,
-                padding: const EdgeInsets.only(left: 10, right: 6),
-                decoration: BoxDecoration(
-                  color: service.accent.withValues(alpha: 0.15),
-                  borderRadius: AppRadius.borderRadiusPill,
-                  border: Border.all(
-                    color: service.accent.withValues(alpha: 0.40),
+      onTap: () => _showLensSheet(context, ref, service),
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: () => _showLensSheet(context, ref, service),
+          borderRadius: AppRadius.borderRadiusPill,
+          child: ConstrainedBox(
+            // The pill is 24pt so it sits inside a 22pt title without pushing the
+            // bar around; the tap target is the full bar height regardless.
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              child: Center(
+                widthFactor: 1,
+                child: Container(
+                  height: 24,
+                  padding: const EdgeInsets.only(left: 10, right: 6),
+                  decoration: BoxDecoration(
+                    color: service.accent.withValues(alpha: 0.15),
+                    borderRadius: AppRadius.borderRadiusPill,
+                    border: Border.all(
+                      color: service.accent.withValues(alpha: 0.40),
+                    ),
                   ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      label.toUpperCase(),
-                      style: AppTheme.eyebrow(service.accent),
-                    ),
-                    Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: 14,
-                      color: service.accent,
-                    ),
-                  ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label.toUpperCase(),
+                        style: AppTheme.eyebrow(service.accent),
+                      ),
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 14,
+                        color: service.accent,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

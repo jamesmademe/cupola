@@ -13,6 +13,7 @@ import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/plex/data/plex_client.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -275,6 +276,24 @@ Future<ServiceDiagnosis> diagnoseCredentials(
 
   if (urlTrimmed.isEmpty || apiKey.trim().isEmpty) {
     return const ServiceDiagnosis.notConfigured();
+  }
+
+  if (service == ServiceKey.seerr) {
+    final client = ApiClient(
+      baseUrl: urlTrimmed,
+      apiKey: apiKey.trim(),
+      pinnedCertFingerprint: pin,
+    );
+    try {
+      await SeerrService(
+        client,
+      ).testConnection().timeout(const Duration(seconds: 5));
+      return const ServiceDiagnosis.connected();
+    } catch (e) {
+      return ServiceDiagnosis.failed(e);
+    } finally {
+      client.close();
+    }
   }
 
   if (service == ServiceKey.sabnzbd) {
@@ -725,7 +744,7 @@ String connectionFailureMessage(
       // explain itself.
       return 'Reached the server, but it answered with a redirect Cupola '
           'will not follow. A reverse proxy in front of ${service.title} is '
-          'the usual cause — point Cupola at the address the proxy sends '
+          'the usual cause, point Cupola at the address the proxy sends '
           'the request to, or stop it redirecting the API.';
     case ServiceFailureReason.serverError:
       return '${service.title} answered with a server error. Check the '

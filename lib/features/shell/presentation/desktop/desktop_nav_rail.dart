@@ -40,36 +40,45 @@ class DesktopNavRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      width: width,
-      decoration: BoxDecoration(
-        border: Border(
-          right: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+    return Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: 'Section navigation',
+      child: Container(
+        width: width,
+        decoration: BoxDecoration(
+          border: Border(
+            right: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+            ),
           ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        child: Column(
-          children: [
-            for (var i = 0; i < destinations.length; i++)
-              Padding(
-                padding: EdgeInsets.only(
-                  bottom: i == destinations.length - 1 ? 0 : AppSpacing.sm,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+          child: Column(
+            children: [
+              for (var i = 0; i < destinations.length; i++)
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: i == destinations.length - 1 ? 0 : AppSpacing.sm,
+                  ),
+                  child: _RailItem(
+                    destination: destinations[i],
+                    selected: i == selectedIndex,
+                    shortcut: ShellShortcuts.section(i),
+                    onPressed: () => onDestinationSelected(i),
+                  ),
                 ),
-                child: _RailItem(
-                  destination: destinations[i],
-                  selected: i == selectedIndex,
-                  shortcut: ShellShortcuts.section(i),
-                  onPressed: () => onDestinationSelected(i),
-                ),
+              const Spacer(),
+              Container(
+                width: 26,
+                height: 1,
+                color: colorScheme.outlineVariant,
               ),
-            const Spacer(),
-            Container(width: 26, height: 1, color: colorScheme.outlineVariant),
-            const SizedBox(height: AppSpacing.sm + 2),
-            _DeckKeyHint(onPressed: onCommandDeck),
-          ],
+              const SizedBox(height: AppSpacing.sm + 2),
+              _DeckKeyHint(onPressed: onCommandDeck),
+            ],
+          ),
         ),
       ),
     );
@@ -112,53 +121,72 @@ class _RailItemState extends State<_RailItem> {
           : (_hovered ? colorScheme.onSurface : colorScheme.onSurfaceVariant),
     );
 
-    return Tooltip(
-      message: destination.badgeSemanticLabel == null
-          ? '${destination.label}  ${widget.shortcut}'
-          : '${destination.label} · ${destination.badgeSemanticLabel}  ${widget.shortcut}',
-      waitDuration: const Duration(milliseconds: 500),
-      child: Semantics(
-        button: true,
-        selected: widget.selected,
-        label: destination.badgeSemanticLabel == null
-            ? destination.label
-            : '${destination.label}, ${destination.badgeSemanticLabel}',
-        excludeSemantics: true,
+    final semanticLabel = destination.badgeSemanticLabel == null
+        ? destination.label
+        : '${destination.label}, ${destination.badgeSemanticLabel}';
+    final tooltip = '$semanticLabel  ${widget.shortcut}';
+    final icon = destination.badgeCount <= 0
+        ? glyph
+        : Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              glyph,
+              Positioned(
+                top: -2,
+                right: -2,
+                child: _RailBadge(destination: destination),
+              ),
+            ],
+          );
+
+    // This is intentionally a real Material button, rather than a painted
+    // GestureDetector wrapped in Semantics. The latter works in Flutter's
+    // widget tree but disappears from the native macOS AX tree in the shell,
+    // which makes the control clickable by coordinate yet unreachable to
+    // keyboard and assistive input. The target remains 40pt; only the control
+    // semantics implementation changes.
+    return Semantics(
+      button: true,
+      container: true,
+      enabled: true,
+      selected: widget.selected,
+      label: semanticLabel,
+      onTap: widget.onPressed,
+      child: ExcludeSemantics(
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           onEnter: (_) => setState(() => _hovered = true),
           onExit: (_) => setState(() => _hovered = false),
-          child: GestureDetector(
-            onTap: widget.onPressed,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: widget.selected
+          child: IconButton(
+            tooltip: tooltip,
+            onPressed: widget.onPressed,
+            isSelected: widget.selected,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+            style: ButtonStyle(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+              shape: WidgetStatePropertyAll(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+              ),
+              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+              backgroundColor: WidgetStatePropertyAll(
+                widget.selected
                     ? primary.withValues(alpha: 0.16)
                     : (_hovered
                           ? colorScheme.onSurface.withValues(alpha: 0.06)
-                          : null),
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                border: widget.selected
-                    ? Border.all(color: primary.withValues(alpha: 0.42))
-                    : null,
+                          : Colors.transparent),
               ),
-              child: destination.badgeCount <= 0
-                  ? Center(child: glyph)
-                  : Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
-                      children: [
-                        glyph,
-                        Positioned(
-                          top: -2,
-                          right: -2,
-                          child: _RailBadge(destination: destination),
-                        ),
-                      ],
-                    ),
+              side: WidgetStatePropertyAll(
+                widget.selected
+                    ? BorderSide(color: primary.withValues(alpha: 0.42))
+                    : BorderSide.none,
+              ),
             ),
+            icon: icon,
           ),
         ),
       ),
@@ -226,25 +254,35 @@ class _DeckKeyHintState extends State<_DeckKeyHint> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Tooltip(
-      message: 'Jump to anything  ${ShellShortcuts.commandDeck}',
-      waitDuration: const Duration(milliseconds: 500),
-      child: Semantics(
-        button: true,
-        label: 'Jump to anything, ${ShellShortcuts.commandDeck}',
-        excludeSemantics: true,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _hovered = true),
-          onExit: (_) => setState(() => _hovered = false),
-          child: GestureDetector(
-            onTap: widget.onPressed,
-            child: Padding(
+    return Semantics(
+      button: true,
+      container: true,
+      enabled: true,
+      label: 'Jump to anything, ${ShellShortcuts.commandDeck}',
+      hint: 'Open the command deck',
+      onTap: widget.onPressed,
+      child: ExcludeSemantics(
+        child: Tooltip(
+          message: 'Jump to anything  ${ShellShortcuts.commandDeck}',
+          waitDuration: const Duration(milliseconds: 500),
+          excludeFromSemantics: true,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            onEnter: (_) => setState(() => _hovered = true),
+            onExit: (_) => setState(() => _hovered = false),
+            child: IconButton(
+              tooltip: 'Jump to anything, ${ShellShortcuts.commandDeck}',
+              onPressed: widget.onPressed,
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.xs,
                 vertical: AppSpacing.xs,
               ),
-              child: Text(
+              constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+              style: const ButtonStyle(
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                overlayColor: WidgetStatePropertyAll(Colors.transparent),
+              ),
+              icon: Text(
                 ShellShortcuts.commandDeck,
                 style: AppTheme.chrome(
                   context,

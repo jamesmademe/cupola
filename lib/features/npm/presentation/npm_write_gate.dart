@@ -157,7 +157,7 @@ bool npmWriteAllowed(
   if (access.canManage(resource)) return true;
   SnackBarHelper.info(context, switch (access.state) {
     NpmWriteAccessState.viewOnly =>
-      'This Nginx Proxy Manager account is view-only — sign in as an admin in '
+      'This Nginx Proxy Manager account is view-only, sign in as an admin in '
           'Settings › Connections to change this.',
     NpmWriteAccessState.checking =>
       'Still checking what this account is allowed to change.',

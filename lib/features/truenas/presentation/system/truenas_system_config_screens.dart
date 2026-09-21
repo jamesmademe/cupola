@@ -480,29 +480,36 @@ class TrueNasNtpScreen extends ConsumerWidget {
       title: 'NTP Servers',
       value: servers,
       onRefresh: () => ref.invalidate(truenasNtpServersProvider),
-      builder: (list) => Column(
-        children: [
-          for (final server in list)
-            AppCard.surfaceOutlined(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
+      builder: (list) => list.isEmpty
+          ? _infoCard([
+              const TrueNasInfoRow(
+                label: 'NTP servers',
+                value: 'None configured',
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.schedule_rounded, size: 16),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      stringOrNull(server['address']) ?? '—',
-                      style: Theme.of(context).textTheme.bodyMedium,
+            ])
+          : Column(
+              children: [
+                for (final server in list)
+                  AppCard.surfaceOutlined(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.schedule_rounded, size: 16),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            stringOrNull(server['address']) ?? '—',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
-        ],
-      ),
     );
   }
 }

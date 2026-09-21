@@ -286,28 +286,38 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return Semantics(
+      button: true,
+      selected: active,
+      label: label,
       onTap: onTap,
-      borderRadius: AppRadius.borderRadiusFull,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md + 1,
-          vertical: AppSpacing.xs + 1,
-        ),
-        decoration: BoxDecoration(
-          color: active
-              ? accent.withValues(alpha: 0.15)
-              : colorScheme.surfaceContainer,
-          border: Border.all(
-            color: active ? accent : colorScheme.outlineVariant,
-          ),
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onTap,
           borderRadius: AppRadius.borderRadiusFull,
-        ),
-        child: Text(
-          label,
-          style: textTheme.labelSmall!
-              .weight(FontWeight.w700)
-              .copyWith(color: active ? accent : colorScheme.onSurfaceVariant),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md + 1,
+              vertical: AppSpacing.xs + 1,
+            ),
+            decoration: BoxDecoration(
+              color: active
+                  ? accent.withValues(alpha: 0.15)
+                  : colorScheme.surfaceContainer,
+              border: Border.all(
+                color: active ? accent : colorScheme.outlineVariant,
+              ),
+              borderRadius: AppRadius.borderRadiusFull,
+            ),
+            child: Text(
+              label,
+              style: textTheme.labelSmall!
+                  .weight(FontWeight.w700)
+                  .copyWith(
+                    color: active ? accent : colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ),
         ),
       ),
     );

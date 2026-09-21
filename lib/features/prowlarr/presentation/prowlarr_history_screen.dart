@@ -52,6 +52,14 @@ class _ProwlarrHistoryScreenState extends ConsumerState<ProwlarrHistoryScreen> {
 
   bool get _hasMore => _total != null && _items.length < _total!;
 
+  String get _emptyLabel => switch (_filter) {
+    _HistoryFilter.all => 'history entries',
+    _HistoryFilter.queries => 'queries',
+    _HistoryFilter.grabs => 'grabs',
+    _HistoryFilter.rss => 'RSS entries',
+    _HistoryFilter.auth => 'authentication events',
+  };
+
   Future<ProwlarrHistoryPage> _readPage(int page) {
     return ref.read(
       prowlarrHistoryPageProvider((
@@ -168,7 +176,7 @@ class _ProwlarrHistoryScreenState extends ConsumerState<ProwlarrHistoryScreen> {
         emptyState: AppEmptyState(
           icon: Icons.history_toggle_off_rounded,
           title: 'No history in this view',
-          message: 'Prowlarr has no ${_filter.label.toLowerCase()} to show.',
+          message: 'Prowlarr has no $_emptyLabel to show.',
         ),
       );
     }

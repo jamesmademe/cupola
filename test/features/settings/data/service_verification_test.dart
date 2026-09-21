@@ -183,6 +183,47 @@ void main() {
   });
 
   group('the API-key services still verify through the shared client', () {
+    test(
+      'Seerr verifies the API key against an authenticated endpoint',
+      () async {
+        final server = _FakeServer({
+          '/api/v1/request': _Reply(
+            200,
+            body: '{"pageInfo":{"results":0},"results":[]}',
+          ),
+        });
+
+        final diagnosis = await server.run(
+          () => diagnoseCredentials(
+            ServiceKey.seerr,
+            url: 'https://seerr.local:5055',
+            apiKey: 'seerr-key',
+          ),
+        );
+
+        expect(diagnosis.status, ServiceConnectionStatus.connected);
+        final request = server.requestFor('/api/v1/request')!;
+        expect(request.headers['x-api-key'], 'seerr-key');
+        expect(request.uri.queryParameters['take'], '1');
+        expect(request.uri.queryParameters['filter'], 'all');
+      },
+    );
+
+    test('Seerr rejects a wrong API key instead of reporting green', () async {
+      final server = _FakeServer({'/api/v1/request': _Reply(403)});
+
+      final diagnosis = await server.run(
+        () => diagnoseCredentials(
+          ServiceKey.seerr,
+          url: 'https://seerr.local:5055',
+          apiKey: 'wrong',
+        ),
+      );
+
+      expect(diagnosis.status, ServiceConnectionStatus.disconnected);
+      expect(diagnosis.reason, ServiceFailureReason.unauthorized);
+    });
+
     test('Radarr sends X-Api-Key to its status endpoint', () async {
       final server = _FakeServer({
         '/api/v3/system/status': _Reply(200, body: '{"version":"5.0.0"}'),

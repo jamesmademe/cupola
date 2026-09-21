@@ -530,7 +530,7 @@ class PlexClient implements StreamServerClient {
       }
       return const PlexException(
         'This server refused to stop the stream. Session termination has to be '
-        'enabled on the server — the token is not the problem.',
+        'enabled on the server, the token is not the problem.',
         reason: ServiceFailureReason.unauthorized,
       );
     }

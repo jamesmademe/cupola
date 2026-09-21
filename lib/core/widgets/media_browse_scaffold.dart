@@ -949,25 +949,35 @@ class _MediaBrowseFilterChip extends StatelessWidget {
       // `media_child_list.dart` was deliberately unified onto this chip's
       // vocabulary, so the two were pixel-identical by coincidence rather than by
       // construction — a change to the token would have silently split them.
-      child: InkWell(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
         onTap: onTap,
-        borderRadius: AppRadius.borderRadiusPill,
-        child: Container(
-          decoration: BoxDecoration(
-            color: selected ? color : color.withValues(alpha: 0.12),
+        child: ExcludeSemantics(
+          child: InkWell(
+            onTap: onTap,
             borderRadius: AppRadius.borderRadiusPill,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium!
-                .weight(FontWeight.w700)
-                .copyWith(
-                  color: selected ? ServiceTheme.foregroundOn(color) : color,
-                ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: selected ? color : color.withValues(alpha: 0.12),
+                borderRadius: AppRadius.borderRadiusPill,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium!
+                    .weight(FontWeight.w700)
+                    .copyWith(
+                      color: selected
+                          ? ServiceTheme.foregroundOn(color)
+                          : color,
+                    ),
+              ),
+            ),
           ),
         ),
       ),

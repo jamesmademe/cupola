@@ -457,13 +457,13 @@ void main() {
         'video HEVC → H.264',
         'audio TrueHD → AAC',
         'subtitle burn-in',
-        'software encode — hardware not used',
+        'software encode, hardware not used',
         'falling behind at 0.8× realtime',
       ]);
       expect(
         session.transcodeReasonLabel,
         'video HEVC → H.264 · audio TrueHD → AAC · subtitle burn-in · '
-        'software encode — hardware not used · falling behind at 0.8× realtime',
+        'software encode, hardware not used · falling behind at 0.8× realtime',
       );
 
       // An episode leads with the series and carries the episode below it.

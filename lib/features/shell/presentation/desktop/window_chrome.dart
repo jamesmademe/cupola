@@ -52,61 +52,66 @@ class WindowChrome extends ConsumerWidget {
     final crumbs = ShellBreadcrumb.of(location);
     final lens = _lensFor(ref, location);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+    return Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: 'Window chrome',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+            ),
           ),
         ),
-      ),
-      child: SizedBox(
-        height: heightFor(compact: compact),
-        // The whole strip is a drag region, and the buttons inside it still
-        // win: they are hit-tested first, so the drag only starts on the
-        // background between them.
-        child: DragToMoveArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Row(
-              children: [
-                SizedBox(width: DesktopWindow.leadingButtonGutter),
-                Expanded(child: _Breadcrumb(crumbs: crumbs)),
-                if (lens != null) ...[
+        child: SizedBox(
+          height: heightFor(compact: compact),
+          // The whole strip is a drag region, and the buttons inside it still
+          // win: they are hit-tested first, so the drag only starts on the
+          // background between them.
+          child: DragToMoveArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Row(
+                children: [
+                  SizedBox(width: DesktopWindow.leadingButtonGutter),
+                  Expanded(child: _Breadcrumb(crumbs: crumbs)),
+                  if (lens != null) ...[
+                    _ChromeChip(
+                      compact: compact,
+                      label: 'Lens: ${lens.label}',
+                      icon: Icons.dns_outlined,
+                      accent: lens.service.accent,
+                      tooltip:
+                          'Showing ${lens.service.title} · ${lens.label}. '
+                          'Change it from the deck.',
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                  ],
                   _ChromeChip(
                     compact: compact,
-                    label: 'Lens: ${lens.label}',
-                    icon: Icons.dns_outlined,
-                    accent: lens.service.accent,
-                    tooltip:
-                        'Showing ${lens.service.title} · ${lens.label}. '
-                        'Change it from the deck.',
+                    label: 'Refresh all',
+                    shortcut: ShellShortcuts.refreshAll,
+                    icon: Icons.refresh_rounded,
+                    onPressed: () =>
+                        Actions.invoke(context, const RefreshAllIntent()),
                   ),
                   const SizedBox(width: AppSpacing.sm),
+                  _ChromeChip(
+                    compact: compact,
+                    label: 'Inspector',
+                    shortcut: ShellShortcuts.inspector,
+                    icon: Icons.insights_rounded,
+                    accent: inspectorOpen ? AppColors.navActivity : null,
+                    onPressed: () =>
+                        Actions.invoke(context, const ToggleInspectorIntent()),
+                  ),
+                  if (DesktopWindow.drawsOwnButtons) ...[
+                    const SizedBox(width: AppSpacing.md),
+                    const _CaptionButtons(),
+                  ],
                 ],
-                _ChromeChip(
-                  compact: compact,
-                  label: 'Refresh all',
-                  shortcut: ShellShortcuts.refreshAll,
-                  icon: Icons.refresh_rounded,
-                  onPressed: () =>
-                      Actions.invoke(context, const RefreshAllIntent()),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                _ChromeChip(
-                  compact: compact,
-                  label: 'Inspector',
-                  shortcut: ShellShortcuts.inspector,
-                  icon: Icons.insights_rounded,
-                  accent: inspectorOpen ? AppColors.navActivity : null,
-                  onPressed: () =>
-                      Actions.invoke(context, const ToggleInspectorIntent()),
-                ),
-                if (DesktopWindow.drawsOwnButtons) ...[
-                  const SizedBox(width: AppSpacing.md),
-                  const _CaptionButtons(),
-                ],
-              ],
+              ),
             ),
           ),
         ),
@@ -415,21 +420,40 @@ class _ChromeChipState extends State<_ChromeChip> {
     final semanticLabel = widget.shortcut == null
         ? widget.label
         : '${widget.label}, ${widget.shortcut}';
+    final control = widget.onPressed == null
+        ? Semantics(label: semanticLabel, excludeSemantics: true, child: chip)
+        : TextButton(
+            onPressed: widget.onPressed,
+            style: ButtonStyle(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+              minimumSize: WidgetStatePropertyAll(
+                Size(
+                  0,
+                  widget.compact
+                      ? WindowChrome.compactHeight
+                      : WindowChrome.height,
+                ),
+              ),
+              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+            ),
+            child: chip,
+          );
+
+    // The actionable chips use a native button so Refresh, Inspector and the
+    // platform caption controls are present in the macOS AX tree. The lens is
+    // intentionally still a readout, not a fake action.
     return Tooltip(
       message: widget.tooltip ?? semanticLabel,
       waitDuration: const Duration(milliseconds: 500),
+      excludeFromSemantics: widget.onPressed == null,
       child: MouseRegion(
         cursor: widget.onPressed == null
             ? SystemMouseCursors.basic
             : SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
-        child: Semantics(
-          button: widget.onPressed != null,
-          label: semanticLabel,
-          excludeSemantics: true,
-          child: GestureDetector(onTap: widget.onPressed, child: chip),
-        ),
+        child: control,
       ),
     );
   }
@@ -514,34 +538,47 @@ class _CaptionButtonState extends State<_CaptionButton> {
     final hoverColor = widget.danger
         ? AppColors.error.withValues(alpha: widget.gnome ? 0.24 : 1.0)
         : colorScheme.onSurface.withValues(alpha: 0.08);
-    return Semantics(
-      button: true,
-      label: widget.label,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onPressed,
-          child: Container(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Semantics(
+        button: true,
+        enabled: true,
+        label: widget.label,
+        child: IconButton(
+          tooltip: widget.label,
+          onPressed: widget.onPressed,
+          padding: EdgeInsets.zero,
+          constraints: BoxConstraints.tightFor(
             width: size,
             height: widget.gnome ? size : WindowChrome.height,
-            decoration: BoxDecoration(
-              color: _hovered
+          ),
+          style: ButtonStyle(
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+            overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(widget.gnome ? size : 0),
+              ),
+            ),
+            backgroundColor: WidgetStatePropertyAll(
+              _hovered
                   ? hoverColor
                   : (widget.gnome
                         ? colorScheme.surfaceContainerHighest.withValues(
                             alpha: 0.6,
                           )
-                        : null),
-              shape: widget.gnome ? BoxShape.circle : BoxShape.rectangle,
+                        : Colors.transparent),
             ),
-            child: Icon(
-              widget.icon,
-              size: widget.gnome ? 13 : 15,
-              color: _hovered && widget.danger && !widget.gnome
-                  ? colorScheme.onError
-                  : colorScheme.onSurfaceVariant,
-            ),
+          ),
+          icon: Icon(
+            widget.icon,
+            size: widget.gnome ? 13 : 15,
+            color: _hovered && widget.danger && !widget.gnome
+                ? colorScheme.onError
+                : colorScheme.onSurfaceVariant,
           ),
         ),
       ),

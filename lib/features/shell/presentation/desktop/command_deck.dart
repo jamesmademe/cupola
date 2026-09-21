@@ -264,69 +264,85 @@ class _EntryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final accent = entry.service?.accent ?? colorScheme.primary;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => onHover(),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          height: 38,
-          margin: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: 1,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md - 1),
-          decoration: BoxDecoration(
-            color: selected
-                ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
-                : null,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: selected
-                ? Border.all(color: colorScheme.primary.withValues(alpha: 0.5))
-                : null,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                entry.icon ??
-                    switch (entry.kind) {
-                      CommandDeckKind.recent => Icons.history_rounded,
-                      CommandDeckKind.screen => Icons.article_outlined,
-                      CommandDeckKind.connection => Icons.dns_outlined,
-                    },
-                size: 15,
-                color: entry.kind == CommandDeckKind.connection
-                    ? accent
-                    : CupolaThemeColors.of(context).dimText,
+    final spokenLabel = entry.detail == null
+        ? entry.label
+        : '${entry.label}, ${entry.detail}';
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: spokenLabel,
+      hint: 'Open ${entry.label}',
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => onHover(),
+          child: GestureDetector(
+            onTap: onTap,
+            child: Container(
+              height: 38,
+              margin: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: 1,
               ),
-              const SizedBox(width: AppSpacing.md - 1),
-              Expanded(
-                child: Text(
-                  entry.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTheme.chrome(
-                    context,
-                    size: 12,
-                    weight: FontWeight.w500,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md - 1,
               ),
-              if (entry.detail != null) ...[
-                const SizedBox(width: AppSpacing.sm),
-                Text(
-                  entry.detail!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTheme.chrome(
-                    context,
-                    size: 11,
-                    color: CupolaThemeColors.of(context).dimText,
+              decoration: BoxDecoration(
+                color: selected
+                    ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
+                    : null,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: selected
+                    ? Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.5),
+                      )
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    entry.icon ??
+                        switch (entry.kind) {
+                          CommandDeckKind.recent => Icons.history_rounded,
+                          CommandDeckKind.screen => Icons.article_outlined,
+                          CommandDeckKind.connection => Icons.dns_outlined,
+                        },
+                    size: 15,
+                    color: entry.kind == CommandDeckKind.connection
+                        ? accent
+                        : CupolaThemeColors.of(context).dimText,
                   ),
-                ),
-              ],
-            ],
+                  const SizedBox(width: AppSpacing.md - 1),
+                  Expanded(
+                    child: Text(
+                      entry.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTheme.chrome(
+                        context,
+                        size: 12,
+                        weight: FontWeight.w500,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  if (entry.detail != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      entry.detail!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTheme.chrome(
+                        context,
+                        size: 11,
+                        color: CupolaThemeColors.of(context).dimText,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       ),

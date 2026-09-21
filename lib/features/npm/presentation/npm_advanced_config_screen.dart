@@ -84,7 +84,7 @@ class _NpmAdvancedConfigScreenState
       title: 'Save the advanced config?',
       message:
           'This goes live the moment nginx reloads. If the block does not '
-          'parse, $domain stops answering until you come back and fix it — no '
+          'parse, $domain stops answering until you come back and fix it, no '
           'other host is affected. Cupola does not check Nginx syntax. Type the '
           'domain to save.',
       phrase: domain,
@@ -265,7 +265,7 @@ class _NginxVerdict extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'nginx refused this block — $domain reads as config refused '
+                'nginx refused this block, $domain reads as config refused '
                 'until a reload succeeds. The text is saved exactly as typed.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurface,

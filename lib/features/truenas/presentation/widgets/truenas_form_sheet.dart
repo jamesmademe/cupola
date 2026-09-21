@@ -46,6 +46,7 @@ Future<Map<String, dynamic>?> showTrueNasFormSheet({
     title: title,
     subtitle: subtitle,
     accent: ServiceKey.truenas.accent,
+    showClose: true,
     initialSize: 0.7,
     builder: (context, controller) => _FormBody(
       controller: controller,

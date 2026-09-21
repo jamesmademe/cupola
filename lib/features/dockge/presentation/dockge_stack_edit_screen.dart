@@ -100,7 +100,7 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
     if (!widget.isNew && _yamlCtrl.text.trim().isEmpty) {
       SnackBarHelper.error(
         context,
-        'compose.yaml is empty — that would wipe the stack',
+        'compose.yaml is empty, that would wipe the stack',
       );
       return;
     }

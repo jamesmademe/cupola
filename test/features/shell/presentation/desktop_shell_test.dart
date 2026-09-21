@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -58,6 +59,29 @@ void main() {
       // And none of the touch navigation, at the same size.
       expect(find.byType(FloatingBottomNavBar), findsNothing);
       expect(find.byType(NavigationRail), findsNothing);
+    });
+  });
+
+  testWidgets('desktop navigation controls expose semantic actions', (
+    tester,
+  ) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      final semantics = tester.ensureSemantics();
+      try {
+        await _pumpShell(tester, overrides: await _world());
+
+        final activity = find.bySemanticsLabel('Activity');
+        expect(activity, findsOneWidget);
+        final activitySemantics = tester
+            .getSemantics(activity)
+            .getSemanticsData();
+        expect(activitySemantics.flagsCollection.isButton, isTrue);
+        expect(activitySemantics.hasAction(SemanticsAction.tap), isTrue);
+        expect(find.bySemanticsLabel('Jump to anything, ⌘K'), findsNWidgets(2));
+        expect(find.bySemanticsLabel('Seerr · not set up'), findsOneWidget);
+      } finally {
+        semantics.dispose();
+      }
     });
   });
 
@@ -147,6 +171,11 @@ void main() {
       // The deck offers its own connections by name, so a service with a labelled
       // connection is reachable without knowing where it lives.
       expect(find.text('Radarr · 4K'), findsOneWidget);
+      final radarr = find.bySemanticsLabel('Radarr · 4K, four-k.lan');
+      expect(radarr, findsOneWidget);
+      final semantics = tester.getSemantics(radarr).getSemanticsData();
+      expect(semantics.flagsCollection.isButton, isTrue);
+      expect(semantics.hasAction(SemanticsAction.tap), isTrue);
 
       await _press(tester, LogicalKeyboardKey.escape);
       expect(find.byType(CommandDeck), findsNothing);

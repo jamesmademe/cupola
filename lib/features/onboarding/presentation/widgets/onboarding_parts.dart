@@ -372,8 +372,15 @@ class OnboardingBeat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Whether the actions ride with the content instead of being pinned.
-    final followsContent = actions != null && onboardingSideBySide(context);
+    // Whether the actions ride with the content instead of being pinned. The
+    // wide desktop board has room to keep the answer and its actions together;
+    // the 720x450 board does not. There, notes on services such as Readarr and
+    // TrueNAS used to push the footer below the window, leaving the primary
+    // action visibly clipped even though it remained in the semantics tree.
+    final followsContent =
+        actions != null &&
+        onboardingSideBySide(context) &&
+        !AppBreakpoints.isCompactDesktop(context);
     return Padding(
       // The generous top and bottom gutters are for a beat sitting against the
       // screen edge. With the keyboard up there is no edge below — the key rows
@@ -507,8 +514,8 @@ class OnboardingDoor extends StatelessWidget {
         const OnePunchline(),
         const SizedBox(height: AppSpacing.lg),
         Text(
-          '${ServiceKey.values.length} self-hosted services — media, '
-          'downloads, storage — on one screen, talking straight to your own '
+          '${ServiceKey.values.length} self-hosted services: media, downloads '
+          'and storage, all on one screen, talking straight to your own '
           'boxes. No cloud in the middle.',
           style: theme.textTheme.bodyLarge!.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
@@ -611,7 +618,7 @@ class OnboardingPick extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          'Pick what you actually run. Nothing here is permanent — services '
+          'Pick what you actually run. Nothing here is permanent. Services '
           'can be added or dropped any time in Settings.',
           style: theme.textTheme.bodyMedium!.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
@@ -688,31 +695,34 @@ class _PickChip extends StatelessWidget {
     final still = MediaQuery.disableAnimationsOf(context);
 
     return Semantics(
+      container: true,
       button: true,
       selected: selected,
       label: service.title,
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        borderRadius: AppRadius.borderRadiusMd,
-        child: still
-            ? Container(
-                constraints: constraints,
-                padding: padding,
-                decoration: decoration,
-                child: _label(theme, labelColor),
-              )
-            : AnimatedContainer(
-                duration: AppAnimation.durationSm,
-                curve: AppAnimation.emphasizedCurve,
-                constraints: constraints,
-                padding: padding,
-                decoration: decoration,
-                child: _label(theme, labelColor),
-              ),
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          borderRadius: AppRadius.borderRadiusMd,
+          child: still
+              ? Container(
+                  constraints: constraints,
+                  padding: padding,
+                  decoration: decoration,
+                  child: _label(theme, labelColor),
+                )
+              : AnimatedContainer(
+                  duration: AppAnimation.durationSm,
+                  curve: AppAnimation.emphasizedCurve,
+                  constraints: constraints,
+                  padding: padding,
+                  decoration: decoration,
+                  child: _label(theme, labelColor),
+                ),
+        ),
       ),
     );
   }
@@ -818,7 +828,7 @@ class OnboardingClose extends StatelessWidget {
     if (connected.isEmpty && silent.isEmpty) {
       // Dashboard, not Services: the home is `/dashboard` and the cards the
       // sentence points at are the ones on it.
-      return 'Cupola will stay empty until you add a service — you can do '
+      return 'Cupola will stay empty until you add a service, you can do '
           'that any time in Settings, or from any dark card on the Dashboard.';
     }
     if (silent.isEmpty) {
@@ -839,7 +849,7 @@ class OnboardingClose extends StatelessWidget {
     final names = silent.map((s) => s.title).join(', ');
     final verb = silent.length == 1 ? 'is' : 'are';
     return '$names $verb configured but nothing came back. Cupola will keep '
-        'trying — or you can look at it now.';
+        'trying, or you can look at it now.';
   }
 
   @override
@@ -1090,48 +1100,54 @@ class _OnboardingFieldState extends State<OnboardingField> {
           child: Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: widget.controller,
-                  focusNode: widget.focusNode,
-                  onSubmitted: widget.onSubmitted,
-                  obscureText: widget.isSecret && !_revealed,
-                  keyboardType: widget.isUrl
-                      ? TextInputType.url
-                      : TextInputType.text,
-                  textInputAction:
-                      widget.action ??
-                      (widget.isUrl
-                          ? TextInputAction.next
-                          : TextInputAction.done),
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  // Smart substitutions off as well as autocorrect: iOS
-                  // otherwise rewrites `--` and quotes inside a typed address.
-                  smartDashesType: SmartDashesType.disabled,
-                  smartQuotesType: SmartQuotesType.disabled,
-                  style: theme.textTheme.bodyMedium!.copyWith(
-                    color: scheme.onSurface,
-                  ),
-                  decoration: InputDecoration(
-                    // https by default: the clients normalise a scheme-less
-                    // host to TLS, and an http:// placeholder taught the
-                    // opposite.
-                    hintText: widget.isUrl
-                        ? 'https://your-server:port'
-                        : widget.hint,
-                    hintStyle: theme.textTheme.bodyMedium!.copyWith(
-                      color: scheme.onSurfaceVariant,
+                child: Semantics(
+                  label: widget.label,
+                  hint: widget.isUrl
+                      ? 'Enter the ${widget.label.toLowerCase()}'
+                      : (widget.hint ?? 'Enter ${widget.label.toLowerCase()}'),
+                  child: TextField(
+                    controller: widget.controller,
+                    focusNode: widget.focusNode,
+                    onSubmitted: widget.onSubmitted,
+                    obscureText: widget.isSecret && !_revealed,
+                    keyboardType: widget.isUrl
+                        ? TextInputType.url
+                        : TextInputType.text,
+                    textInputAction:
+                        widget.action ??
+                        (widget.isUrl
+                            ? TextInputAction.next
+                            : TextInputAction.done),
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    // Smart substitutions off as well as autocorrect: iOS
+                    // otherwise rewrites `--` and quotes inside a typed address.
+                    smartDashesType: SmartDashesType.disabled,
+                    smartQuotesType: SmartQuotesType.disabled,
+                    style: theme.textTheme.bodyMedium!.copyWith(
+                      color: scheme.onSurface,
                     ),
-                    isDense: true,
-                    // Every state is borderless: the container draws the frame,
-                    // and the app-wide focused border would paint a second box
-                    // inside this one.
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: InputDecoration(
+                      // https by default: the clients normalise a scheme-less
+                      // host to TLS, and an http:// placeholder taught the
+                      // opposite.
+                      hintText: widget.isUrl
+                          ? 'https://your-server:port'
+                          : widget.hint,
+                      hintStyle: theme.textTheme.bodyMedium!.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      isDense: true,
+                      // Every state is borderless: the container draws the frame,
+                      // and the app-wide focused border would paint a second box
+                      // inside this one.
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      focusedErrorBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
                 ),
               ),

@@ -6,6 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/features/truenas/domain/models/service_item.dart';
 import 'package:cupola/features/truenas/presentation/shares/truenas_shares_providers.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
@@ -27,22 +28,33 @@ class TrueNasServicesScreen extends ConsumerWidget {
         child: TrueNasAsyncBody(
           value: services,
           onRetry: () => ref.invalidate(truenasServicesProvider),
-          data: (list) => ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-            ),
-            children: [
-              for (final item in list)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: _ServiceTile(item: item),
+          data: (list) {
+            if (list.isEmpty) {
+              return const AppEmptyStatePage(
+                emptyState: AppEmptyState(
+                  icon: Icons.miscellaneous_services_rounded,
+                  title: 'No services reported',
+                  message: 'TrueNAS returned no system services.',
                 ),
-            ],
-          ),
+              );
+            }
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+              ),
+              children: [
+                for (final item in list)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: _ServiceTile(item: item),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );

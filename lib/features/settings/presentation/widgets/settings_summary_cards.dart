@@ -253,7 +253,7 @@ class _BackgroundSearchSummaryCard extends ConsumerWidget {
               ? '${settings.backgroundEnabled ? 'On' : 'Off'} · $caps'
               // Not a fault and not a setting: a desktop app is not suspended,
               // so there is nothing here to hand to the OS.
-              : 'Not needed here — the app keeps running · $caps',
+              : 'Not needed here, the app keeps running · $caps',
           semanticHint: 'opens background search settings',
           onTap: () => context.push('/settings/background-search'),
         ),
@@ -273,10 +273,10 @@ class _BackgroundSearchSummaryCard extends ConsumerWidget {
             title: joinServiceNames(entry.value),
             subtitle: switch (entry.key) {
               ReleaseSearchReach.whileOpenTrustedCert =>
-                'Searches run while Cupola is open — the certificate is '
+                'Searches run while Cupola is open, the certificate is '
                     'trusted only inside the app.',
               _ =>
-                'Searches run while Cupola is open — the address is '
+                'Searches run while Cupola is open, the address is '
                     'cleartext.',
             },
           ),
@@ -334,7 +334,7 @@ class _RegionSummaryCard extends ConsumerWidget {
           icon: Icons.filter_alt_off_rounded,
           title: 'Not a Discover filter',
           subtitle:
-              'It reaches release dates, ratings and watch providers — never '
+              'It reaches release dates, ratings and watch providers, never '
               'which titles Discover returns.',
         ),
       ],

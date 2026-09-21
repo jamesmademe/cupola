@@ -258,6 +258,10 @@ services:
     volumes:
       - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/dockge:/app/data"
       - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/stacks:/opt/stacks"
+      # Dockge shells out to Docker to discover stack and service state. Without
+      # the daemon socket it authenticates successfully but its stackList never
+      # becomes available, leaving clients in an endless loading state.
+      - "/var/run/docker.sock:/var/run/docker.sock"
     healthcheck:
       test: [CMD-SHELL, "node -e \"fetch('http://127.0.0.1:5001').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
       interval: 5s

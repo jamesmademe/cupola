@@ -248,12 +248,12 @@ class GlobalSearchServiceResults {
   /// not press while the rest of the page is still useful.
   String get faultSentence => switch (state) {
     SearchLaneState.timedOut =>
-      'No $laneTitle results — the query timed out. Retry is per lane.',
+      'No $laneTitle results, the query timed out. Retry is per lane.',
     SearchLaneState.unreachable =>
-      'No $laneTitle results — that connection did not answer at all. '
+      'No $laneTitle results, that connection did not answer at all. '
           'Retry is per lane.',
     _ =>
-      'No $laneTitle results — $_failureWord. '
+      'No $laneTitle results, $_failureWord. '
           'Retry is per lane.',
   };
 

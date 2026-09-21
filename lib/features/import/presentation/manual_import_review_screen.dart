@@ -1068,7 +1068,7 @@ class _ScanningState extends StatelessWidget {
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
-                          'Every file gets parsed and probed on the server — '
+                          'Every file gets parsed and probed on the server, '
                           'large folders can take a few minutes.',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,

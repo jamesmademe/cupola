@@ -1119,38 +1119,42 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       valueListenable: _urlController,
       builder: (context, value, _) {
         final warning = UrlUtils.cleartextWarning(value.text);
-        return TextFormField(
-          controller: _urlController,
-          decoration: InputDecoration(
-            labelText: 'Server URL',
-            hintText: 'https://your-server:${service.defaultPort}',
-            // The default port comes from the registry, so this screen and
-            // onboarding cannot disagree about it. The cleartext warning wins
-            // the helper slot when it fires — a live problem outranks a hint.
-            helperText:
-                warning ??
-                "${service.title}'s default port is "
-                    '${service.defaultPort}.',
-            helperMaxLines: 3,
-            helperStyle: warning == null
-                ? null
-                : Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: statusToneColor(
-                      Theme.of(context).colorScheme,
-                      StatusTone.warning,
+        return Semantics(
+          label: 'Server URL',
+          hint: 'Enter the ${service.title} server address',
+          child: TextFormField(
+            controller: _urlController,
+            decoration: InputDecoration(
+              labelText: 'Server URL',
+              hintText: 'https://your-server:${service.defaultPort}',
+              // The default port comes from the registry, so this screen and
+              // onboarding cannot disagree about it. The cleartext warning wins
+              // the helper slot when it fires — a live problem outranks a hint.
+              helperText:
+                  warning ??
+                  "${service.title}'s default port is "
+                      '${service.defaultPort}.',
+              helperMaxLines: 3,
+              helperStyle: warning == null
+                  ? null
+                  : Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: statusToneColor(
+                        Theme.of(context).colorScheme,
+                        StatusTone.warning,
+                      ),
                     ),
-                  ),
+            ),
+            keyboardType: TextInputType.url,
+            textInputAction: TextInputAction.next,
+            autocorrect: false,
+            // iOS otherwise rewrites `--` and quotes inside a typed address.
+            smartDashesType: SmartDashesType.disabled,
+            smartQuotesType: SmartQuotesType.disabled,
+            // Same rule as onboarding: a bare host is accepted here too and
+            // normalised to HTTPS on save. Two rules for one field meant an
+            // address typed during setup was rejected when reopened here.
+            validator: UrlUtils.validateServiceHost,
           ),
-          keyboardType: TextInputType.url,
-          textInputAction: TextInputAction.next,
-          autocorrect: false,
-          // iOS otherwise rewrites `--` and quotes inside a typed address.
-          smartDashesType: SmartDashesType.disabled,
-          smartQuotesType: SmartQuotesType.disabled,
-          // Same rule as onboarding: a bare host is accepted here too and
-          // normalised to HTTPS on save. Two rules for one field meant an
-          // address typed during setup was rejected when reopened here.
-          validator: UrlUtils.validateServiceHost,
         );
       },
     );
@@ -1198,7 +1202,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                 child: Text(
                   sharedWith.isEmpty
                       ? 'Trusted self-signed certificate for $origin.'
-                      : 'Trusted self-signed certificate for $origin — also '
+                      : 'Trusted self-signed certificate for $origin, also '
                             'covers ${sharedWith.map((s) => s.title).join(', ')}.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
@@ -1239,7 +1243,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
           ? 'The next connection to this address will need to be trusted '
                 'again.'
           : 'This also affects ${sharedWith.map((s) => s.title).join(', ')} '
-                '— the next connection from any of them will need to be '
+                'the next connection from any of them will need to be '
                 'trusted again.',
       confirmLabel: 'Forget',
       destructive: true,
@@ -1260,85 +1264,99 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   Widget _buildApiKeyField() {
     final credentialPath = service.credentialPath;
-    return TextFormField(
-      controller: _apiKeyController,
-      decoration: InputDecoration(
-        labelText: service.credentialLabel,
-        hintText: isPlex ? 'X-Plex-Token' : 'Enter your API key',
-        // Where the credential lives inside the service's own interface. Same
-        // registry fact onboarding shows under the same field, so someone who
-        // set this up once recognises the breadcrumb when they come back to fix
-        // it.
-        helperText: credentialPath == null
-            ? null
-            : '${service.title} → $credentialPath',
-        helperMaxLines: 2,
-        suffixIcon: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Reveal is offered alongside copy: checking a pasted key by eye
-            // should not require putting it on the system clipboard, where any
-            // other app can read it.
-            IconButton(
-              icon: Icon(
-                _revealApiKey
-                    ? Icons.visibility_off_rounded
-                    : Icons.visibility_rounded,
+    return Semantics(
+      label: service.credentialLabel,
+      hint: isPlex ? 'Enter a Plex device token' : 'Enter the API key',
+      child: TextFormField(
+        controller: _apiKeyController,
+        decoration: InputDecoration(
+          labelText: service.credentialLabel,
+          hintText: isPlex ? 'X-Plex-Token' : 'Enter your API key',
+          // Where the credential lives inside the service's own interface. Same
+          // registry fact onboarding shows under the same field, so someone who
+          // set this up once recognises the breadcrumb when they come back to fix
+          // it.
+          helperText: credentialPath == null
+              ? null
+              : '${service.title} → $credentialPath',
+          helperMaxLines: 2,
+          suffixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Reveal is offered alongside copy: checking a pasted key by eye
+              // should not require putting it on the system clipboard, where any
+              // other app can read it.
+              IconButton(
+                icon: Icon(
+                  _revealApiKey
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
+                ),
+                onPressed: () => setState(() => _revealApiKey = !_revealApiKey),
+                tooltip: _revealApiKey ? 'Hide API key' : 'Show API key',
               ),
-              onPressed: () => setState(() => _revealApiKey = !_revealApiKey),
-              tooltip: _revealApiKey ? 'Hide API key' : 'Show API key',
-            ),
-            IconButton(
-              icon: const Icon(Icons.copy),
-              onPressed: _copyApiKey,
-              tooltip: 'Copy API key',
-            ),
-          ],
+              IconButton(
+                icon: const Icon(Icons.copy),
+                onPressed: _copyApiKey,
+                tooltip: 'Copy API key',
+              ),
+            ],
+          ),
         ),
+        keyboardType: TextInputType.visiblePassword,
+        textInputAction: TextInputAction.done,
+        // The last field ends the form by *checking* it, not by committing it:
+        // saving an address that was never tried is how a wrong key ends up
+        // persisted, and the test is one step short of the save anyway.
+        onFieldSubmitted: (_) => _testConnection(),
+        obscureText: !_revealApiKey,
+        validator: _validateApiKey,
       ),
-      keyboardType: TextInputType.visiblePassword,
-      textInputAction: TextInputAction.done,
-      // The last field ends the form by *checking* it, not by committing it:
-      // saving an address that was never tried is how a wrong key ends up
-      // persisted, and the test is one step short of the save anyway.
-      onFieldSubmitted: (_) => _testConnection(),
-      obscureText: !_revealApiKey,
-      validator: _validateApiKey,
     );
   }
 
   Widget _buildUsernameField() {
-    return TextFormField(
-      controller: _usernameController,
-      decoration: InputDecoration(
-        labelText: service.usernameLabel,
-        // Optional for the download clients, which commonly run without auth
-        // behind a reverse proxy. Nginx Proxy Manager is the exception: there
-        // is no anonymous mode, and its login needs an email address.
-        hintText: service == ServiceKey.nginxProxyManager
-            ? 'The email you sign in with'
-            : 'Optional',
+    return Semantics(
+      label: service.usernameLabel,
+      hint: service == ServiceKey.nginxProxyManager
+          ? 'Enter the email you sign in with'
+          : 'Optional',
+      child: TextFormField(
+        controller: _usernameController,
+        decoration: InputDecoration(
+          labelText: service.usernameLabel,
+          // Optional for the download clients, which commonly run without auth
+          // behind a reverse proxy. Nginx Proxy Manager is the exception: there
+          // is no anonymous mode, and its login needs an email address.
+          hintText: service == ServiceKey.nginxProxyManager
+              ? 'The email you sign in with'
+              : 'Optional',
+        ),
+        keyboardType: service == ServiceKey.nginxProxyManager
+            ? TextInputType.emailAddress
+            : TextInputType.text,
+        textInputAction: TextInputAction.next,
+        autocorrect: false,
       ),
-      keyboardType: service == ServiceKey.nginxProxyManager
-          ? TextInputType.emailAddress
-          : TextInputType.text,
-      textInputAction: TextInputAction.next,
-      autocorrect: false,
     );
   }
 
   Widget _buildPasswordField() {
-    return TextFormField(
-      controller: _passwordController,
-      decoration: const InputDecoration(
-        labelText: 'Password',
-        hintText: 'Optional',
+    return Semantics(
+      label: 'Password',
+      hint: 'Optional',
+      child: TextFormField(
+        controller: _passwordController,
+        decoration: const InputDecoration(
+          labelText: 'Password',
+          hintText: 'Optional',
+        ),
+        keyboardType: TextInputType.visiblePassword,
+        textInputAction: TextInputAction.done,
+        // Same as the API-key field: the return key tests, it does not save.
+        onFieldSubmitted: (_) => _testConnection(),
+        obscureText: true,
       ),
-      keyboardType: TextInputType.visiblePassword,
-      textInputAction: TextInputAction.done,
-      // Same as the API-key field: the return key tests, it does not save.
-      onFieldSubmitted: (_) => _testConnection(),
-      obscureText: true,
     );
   }
 
@@ -1354,7 +1372,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // way to interpret — so it is refused at the point of paste, where the
     // message can still say what to paste instead.
     if (isPlex && trimmed.startsWith('eyJ')) {
-      return 'That is a temporary token — it expires in 7 days and Cupola '
+      return 'That is a temporary token, it expires in 7 days and Cupola '
           'cannot renew it. Paste a device token instead.';
     }
 
@@ -1392,7 +1410,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // the app and when it will be taken back.
     SnackBarHelper.info(
       context,
-      'API key copied — the clipboard is cleared in '
+      'API key copied, the clipboard is cleared in '
       '${_copiedCredentialLifetime.inSeconds} seconds',
     );
     unawaited(_expireCopiedCredential(apiKey));

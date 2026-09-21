@@ -25,7 +25,7 @@ class _Probe {
 const _probes = <_Probe>[
   // The now-correct call: batch `reporting.get_data` with page >= 1. Shows the
   // real cpu/memory legend + data so parsing can be confirmed.
-  _Probe('reporting.get_data — cpu + memory (page 1)', 'reporting.get_data', [
+  _Probe('reporting.get_data, cpu + memory (page 1)', 'reporting.get_data', [
     [
       {'name': 'cpu'},
       {'name': 'memory'},

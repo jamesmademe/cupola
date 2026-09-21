@@ -89,7 +89,7 @@ class _ProwlarrTagSelectorState extends ConsumerState<ProwlarrTagSelector> {
           Text(
             tagsAsync.isLoading
                 ? 'Loading tags…'
-                : 'No tags yet — type one below to create it.',
+                : 'No tags yet, type one below to create it.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),

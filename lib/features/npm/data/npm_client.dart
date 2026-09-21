@@ -172,7 +172,7 @@ class NpmClient {
     if (!info.isHealthy) {
       throw const NpmException(
         'That address answered, but it is not an Nginx Proxy Manager API. '
-        'Check the port — the admin interface is on 81 by default, not the '
+        'Check the port, the admin interface is on 81 by default, not the '
         'port the proxy itself serves.',
         reason: ServiceFailureReason.notFound,
       );
@@ -247,14 +247,14 @@ class NpmClient {
   ///
   /// `items` is deliberately **not** expanded: those are the stored per-site
   /// usernames and passwords, and a read-only list has no reason to pull
-  /// credentials into memory. `owner` is not expanded either, for the duller
-  /// reason that `NpmAccessList` does not read it — an expansion nothing
-  /// consumes is payload and an account record travelling for nothing.
+  /// credentials into memory. `proxy_hosts` is not expanded either: NPM
+  /// 2.12.x returns a 500 for that expansion, while the access-list payload
+  /// already carries `proxy_host_count` when the server provides it.
   Future<List<NpmAccessList>> accessLists() async {
     final data = await _request<List<dynamic>>(
       'GET',
       '/api/nginx/access-lists',
-      query: const {'expand': 'clients,proxy_hosts'},
+      query: const {'expand': 'clients'},
     );
     return data
         .whereType<Map>()

@@ -167,7 +167,7 @@ void main() {
 
     expect(client.writes, isEmpty);
     expect(
-      find.text('compose.yaml is empty — that would wipe the stack'),
+      find.text('compose.yaml is empty, that would wipe the stack'),
       findsOneWidget,
     );
   });

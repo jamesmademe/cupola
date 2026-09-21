@@ -86,7 +86,7 @@ String lidarrCountLabel(int? count, {required String noun, String? plural}) {
 String lidarrRecordTitle(Map<String, dynamic> record) {
   final artist = arrArtistName(record);
   final album = arrAlbumTitle(record);
-  if (artist != null && album != null) return '$artist — $album';
+  if (artist != null && album != null) return '$artist, $album';
   return album ?? artist ?? arrReleaseTitle(record) ?? 'Unknown release';
 }
 

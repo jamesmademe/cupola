@@ -49,7 +49,7 @@ void main() {
       expect(find.text('Available'), findsOneWidget);
       expect(find.text('Requested'), findsNothing);
       expect(
-        find.text('Already in your library — nothing to request.'),
+        find.text('Already in your library, nothing to request.'),
         findsOneWidget,
       );
       expect(tester.widget<FilledButton>(_request).onPressed, isNull);

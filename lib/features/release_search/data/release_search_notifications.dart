@@ -44,7 +44,7 @@ ReleaseSearchNotice? noticeFor(
       job.releaseCount == 0
           ? ReleaseSearchNotice(
               title: 'No releases found for $label',
-              body: 'Your indexers answered — nothing matched.',
+              body: 'Your indexers answered, nothing matched.',
             )
           : ReleaseSearchNotice(
               title:
@@ -59,7 +59,7 @@ ReleaseSearchNotice? noticeFor(
           // Nobody needs telling about something they did on purpose.
           ? null
           : ReleaseSearchNotice(
-              title: 'Search stopped — $label',
+              title: 'Search stopped, $label',
               body: job.failure?.headline ?? 'It did not finish.',
             ),
     _ => null,

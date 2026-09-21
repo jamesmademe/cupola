@@ -12,7 +12,7 @@ String mapImportError(Object error, ServiceKey service) {
     // the wrong problem.
     if (error.type == DioExceptionType.receiveTimeout) {
       return '$title took too long to answer. Scanning a large folder, or one '
-          'on a slow or spun-down drive, can outlast the request — try a '
+          'on a slow or spun-down drive, can outlast the request, try a '
           'narrower subfolder, or check $title → Activity → Queue in case the '
           'scan is still running.';
     }
@@ -65,7 +65,7 @@ String mapImportError(Object error, ServiceKey service) {
 
 String? libraryGuardError(ServiceKey service, ManualImportFixAssignment a) {
   if (a.match.id <= 0) {
-    return 'This title isn\'t in your ${service.title} library — add it '
+    return 'This title isn\'t in your ${service.title} library, add it '
         'from the ${_libraryTabLabel(service)} tab first.';
   }
   switch (service) {

@@ -161,7 +161,7 @@ String bazarrHistoryHeadline(BazarrHistoryItem item) {
     item.action.label.toLowerCase(),
   ], separator: ' ');
   return joinDisplayParts([
-    joinDisplayParts([subject, episode], separator: ' — '),
+    joinDisplayParts([subject, episode], separator: ', '),
     event,
   ]);
 }

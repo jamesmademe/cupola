@@ -144,18 +144,18 @@ class CertTrustContent extends StatelessWidget {
         'that origin will trust the same one.';
     final sharedClause = sharedWith.isEmpty
         ? ''
-        : ' This address is shared with ${sharedWith.map((s) => s.title).join(', ')} — trusting or forgetting it applies to all of them.';
+        : ' This address is shared with ${sharedWith.map((s) => s.title).join(', ')}, trusting or forgetting it applies to all of them.';
 
     if (rotated) {
       return 'The certificate this address presents is not the one you '
-          'trusted before. That can happen after a legitimate renewal — or it '
+          'trusted before. That can happen after a legitimate renewal, or it '
           'can mean something between you and the server is intercepting the '
           'connection. Only continue if you can confirm this exact '
           'fingerprint with the server directly.$hostClause$sharedClause';
     }
     return 'This address presented a certificate that is not trusted by your '
         'device. That is normal for a self-signed certificate on a home '
-        'install, but it also means the connection cannot be authenticated — '
+        'install, but it also means the connection cannot be authenticated, '
         'only trust it if you recognise this server.$hostClause$sharedClause';
   }
 

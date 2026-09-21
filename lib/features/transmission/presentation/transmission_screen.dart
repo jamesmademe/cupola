@@ -286,7 +286,7 @@ class _TorrentMenu extends ConsumerWidget {
               // Deliberately not "Verified": `torrent-verify` returns as soon
               // as the daemon accepts the job, while the re-check itself runs
               // for minutes or hours. Claiming completion here would be false.
-              successMessage: 'Verifying — this runs in the background',
+              successMessage: 'Verifying, this runs in the background',
               failureMessage: 'Failed to start verification',
               invalidate: _invalidateAfterAction,
             );

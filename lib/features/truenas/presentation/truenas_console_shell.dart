@@ -249,47 +249,51 @@ class _AreaChip extends StatelessWidget {
     final accent = AppColors.truenas;
     return Semantics(
       button: true,
+      container: true,
+      enabled: true,
       selected: selected,
       label: section.title,
-      excludeSemantics: true,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: () => GoRouter.of(context).go(section.route),
-          child: Container(
-            height: 28,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            decoration: BoxDecoration(
-              color: selected
-                  ? accent.withValues(alpha: 0.16)
-                  : colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(AppRadius.full),
-              border: Border.all(
+      onTap: () => GoRouter.of(context).go(section.route),
+      child: ExcludeSemantics(
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () => GoRouter.of(context).go(section.route),
+            child: Container(
+              height: 28,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              decoration: BoxDecoration(
                 color: selected
-                    ? accent.withValues(alpha: 0.45)
-                    : colorScheme.outlineVariant,
+                    ? accent.withValues(alpha: 0.16)
+                    : colorScheme.surfaceContainer,
+                borderRadius: BorderRadius.circular(AppRadius.full),
+                border: Border.all(
+                  color: selected
+                      ? accent.withValues(alpha: 0.45)
+                      : colorScheme.outlineVariant,
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  section.icon,
-                  size: 14,
-                  color: selected ? accent : colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  section.title,
-                  style: AppTheme.chrome(
-                    context,
-                    size: 11,
-                    weight: FontWeight.w600,
-                    color: selected
-                        ? colorScheme.onSurface
-                        : colorScheme.onSurfaceVariant,
+              child: Row(
+                children: [
+                  Icon(
+                    section.icon,
+                    size: 14,
+                    color: selected ? accent : colorScheme.onSurfaceVariant,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Text(
+                    section.title,
+                    style: AppTheme.chrome(
+                      context,
+                      size: 11,
+                      weight: FontWeight.w600,
+                      color: selected
+                          ? colorScheme.onSurface
+                          : colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -318,75 +322,81 @@ class _AreaRowState extends State<_AreaRow> {
     final accent = AppColors.truenas;
     return Semantics(
       button: true,
+      container: true,
+      enabled: true,
       selected: selected,
       label: widget.section.title,
-      excludeSemantics: true,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: () => GoRouter.of(context).go(widget.section.route),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md - 1,
-              vertical: AppSpacing.sm,
-            ),
-            margin: const EdgeInsets.only(bottom: 2),
-            decoration: BoxDecoration(
-              color: selected
-                  ? accent.withValues(alpha: 0.14)
-                  : (_hovered
-                        ? colorScheme.onSurface.withValues(alpha: 0.05)
-                        : null),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: selected
-                  ? Border.all(color: accent.withValues(alpha: 0.4))
-                  : null,
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  widget.section.icon,
-                  size: 17,
-                  color: selected ? accent : colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: AppSpacing.md - 1),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.section.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTheme.chrome(
-                          context,
-                          size: 12,
-                          weight: selected ? FontWeight.w700 : FontWeight.w500,
-                          color: selected
-                              ? colorScheme.onSurface
-                              : CupolaThemeColors.of(context).dimText,
-                        ),
-                      ),
-                      // The subtitle earns its place here in a way it does not
-                      // on a phone card: this list is read once and then only
-                      // glanced at, so the second line is what makes `Datasets`
-                      // and `Data Protection` tell themselves apart.
-                      Text(
-                        widget.section.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTheme.chrome(
-                          context,
-                          size: 11,
-                          color: CupolaThemeColors.of(context).dimText,
-                        ),
-                      ),
-                    ],
+      onTap: () => GoRouter.of(context).go(widget.section.route),
+      child: ExcludeSemantics(
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: GestureDetector(
+            onTap: () => GoRouter.of(context).go(widget.section.route),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md - 1,
+                vertical: AppSpacing.sm,
+              ),
+              margin: const EdgeInsets.only(bottom: 2),
+              decoration: BoxDecoration(
+                color: selected
+                    ? accent.withValues(alpha: 0.14)
+                    : (_hovered
+                          ? colorScheme.onSurface.withValues(alpha: 0.05)
+                          : null),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: selected
+                    ? Border.all(color: accent.withValues(alpha: 0.4))
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    widget.section.icon,
+                    size: 17,
+                    color: selected ? accent : colorScheme.onSurfaceVariant,
                   ),
-                ),
-              ],
+                  const SizedBox(width: AppSpacing.md - 1),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.section.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTheme.chrome(
+                            context,
+                            size: 12,
+                            weight: selected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: selected
+                                ? colorScheme.onSurface
+                                : CupolaThemeColors.of(context).dimText,
+                          ),
+                        ),
+                        // The subtitle earns its place here in a way it does not
+                        // on a phone card: this list is read once and then only
+                        // glanced at, so the second line is what makes `Datasets`
+                        // and `Data Protection` tell themselves apart.
+                        Text(
+                          widget.section.subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTheme.chrome(
+                            context,
+                            size: 11,
+                            color: CupolaThemeColors.of(context).dimText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

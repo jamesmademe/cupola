@@ -22,13 +22,13 @@ void main() {
         seerrRequestHeadline(
           _request(id: 2, title: 'Severance', type: 'tv', seasons: [2]),
         ),
-        'Severance — Season 2',
+        'Severance, Season 2',
       );
       expect(
         seerrRequestHeadline(
           _request(id: 3, title: 'The Bear', type: 'tv', seasons: [2, 3, 4]),
         ),
-        'The Bear — 3 seasons',
+        'The Bear, 3 seasons',
       );
     });
 

@@ -31,6 +31,7 @@ import 'package:cupola/features/import/presentation/import_service_picker_sheet.
 import 'package:cupola/features/stream/presentation/widgets/stream_activity_section.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_searches_body.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The three top-level activity buckets. Each bucket exposes a contextual
@@ -282,6 +283,16 @@ class _GlobalActivityScreenState extends ConsumerState<GlobalActivityScreen>
       previous,
       next,
     ) {
+      _invalidateRequests(ref);
+      ref.read(activityRefreshVersionProvider.notifier).state++;
+    });
+
+    // A connection fix made in Settings changes the client underneath the
+    // feed, but the feed itself is a cached aggregate and does not watch the
+    // settings model. Without this edge, returning here keeps the old 403 or
+    // timeout until the user discovers Retry. The same invalidation used by a
+    // deliberate refresh makes the correction visible immediately.
+    ref.listen(settingsProvider, (previous, next) {
       _invalidateRequests(ref);
       ref.read(activityRefreshVersionProvider.notifier).state++;
     });
@@ -1341,7 +1352,7 @@ class _StackHealthStrip extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     failed.length == 1
-                        ? 'This list is incomplete — anything from $names is '
+                        ? 'This list is incomplete, anything from $names is '
                               'missing from it.'
                         : 'This list is incomplete. No response from $names.',
                     style: theme.textTheme.bodySmall?.copyWith(

@@ -782,7 +782,7 @@ Future<void> _confirmDisable(
     title: 'Take ${host.primaryDomain} offline?',
     message:
         'Disabling this proxy host stops Nginx Proxy Manager serving that '
-        'hostname. Anyone using it — not just this device — gets a connection '
+        'hostname. Anyone using it, not just this device, gets a connection '
         'error immediately, and nothing on the server warns them.',
     phrase: host.primaryDomain,
     confirmLabel: 'Disable',
@@ -883,7 +883,7 @@ class _CertificateTile extends ConsumerWidget {
       else
         'Expires in $days days',
       if (cert.renewalNotCompleting(now))
-        'renewal has not run — Let\'s Encrypt renews from 30 days out',
+        'renewal has not run, Let\'s Encrypt renews from 30 days out',
     ].join(' · ');
 
     return Padding(

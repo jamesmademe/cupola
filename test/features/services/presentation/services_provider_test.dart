@@ -97,6 +97,25 @@ void main() {
       expect(summary.versionLabel, 'v5.4.6');
     });
 
+    test(
+      'Seerr health checks the API key before the public status endpoint',
+      () async {
+        final container = _container(
+          settings: settingsWith(
+            seerrUrl: 'http://seerr.local:5055',
+            seerrApiKey: 'wrong',
+          ),
+          statusClient: _SeerrRejectingStatusClient(),
+        );
+
+        final summary = await container.read(
+          serviceSummaryProvider(ServiceKey.seerr).future,
+        );
+
+        expect(summary.status, ServiceSummaryStatus.offline);
+      },
+    );
+
     // What this provider watches decides how much of the network it touches:
     // one family entry per service, each opening a connection and waiting out a
     // multi-second timeout. Watching the whole SettingsModel meant every write —
@@ -876,6 +895,38 @@ class _ThrowingStatusClient extends ApiClient {
     Duration? receiveTimeout,
   }) async {
     throw Exception('status failed');
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+class _SeerrRejectingStatusClient extends ApiClient {
+  _SeerrRejectingStatusClient()
+    : super(baseUrl: 'https://status.example.com', apiKey: 'key');
+
+  @override
+  Future<Response> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
+    Duration? receiveTimeout,
+  }) async {
+    if (path == '/api/v1/request') {
+      throw DioException(
+        requestOptions: RequestOptions(path: path),
+        response: Response(
+          requestOptions: RequestOptions(path: path),
+          statusCode: 403,
+          data: const {},
+        ),
+      );
+    }
+    return Response(
+      requestOptions: RequestOptions(path: path),
+      statusCode: 200,
+      data: const {'version': '3.4.1'},
+    );
   }
 
   @override

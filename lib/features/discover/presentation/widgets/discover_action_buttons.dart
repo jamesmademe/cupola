@@ -81,7 +81,7 @@ class DiscoverActionButtons extends ConsumerWidget {
     if (isAvailable) {
       requestLabel = 'Available';
       requestIcon = Icons.check_circle_outline_rounded;
-      disabledReason = 'Already in your library — nothing to request.';
+      disabledReason = 'Already in your library, nothing to request.';
     } else if (isRequested) {
       requestLabel = 'Requested';
       requestIcon = Icons.check_circle_outline_rounded;

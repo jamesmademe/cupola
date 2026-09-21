@@ -209,7 +209,7 @@ class _AddIndexerBodyState extends ConsumerState<_AddIndexerBody> {
                     vertical: AppSpacing.sm,
                   ),
                   child: Text(
-                    'Loading every indexer definition — this one is a big '
+                    'Loading every indexer definition, this one is a big '
                     'download.',
                   ),
                 ),

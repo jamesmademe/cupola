@@ -246,6 +246,10 @@ void main() {
           adapter.lastRequest.uri.queryParameters['expand'],
           isNot(contains('items')),
         );
+        expect(
+          adapter.lastRequest.uri.queryParameters['expand'],
+          isNot(contains('proxy_hosts')),
+        );
       },
     );
 

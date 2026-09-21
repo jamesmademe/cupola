@@ -73,7 +73,7 @@ void main() {
 
       expect(items, hasLength(1));
       expect(items.single.kind, LidarrAttentionKind.stalled);
-      expect(items.single.headline, 'Stalled · Alvvays — Blue Rev');
+      expect(items.single.headline, 'Stalled · Alvvays, Blue Rev');
       expect(items.single.detail, contains('qBittorrent'));
     });
 
@@ -268,7 +268,7 @@ void main() {
         complete: true,
       );
 
-      expect(entries.map((e) => e.title), ['Alvvays — Today']);
+      expect(entries.map((e) => e.title), ['Alvvays, Today']);
     });
 
     test('an album imported track by track is one row, not fourteen', () {
@@ -432,9 +432,9 @@ void main() {
       );
 
       expect(entries.map((e) => e.title), [
-        'Alvvays — Album 5',
-        'Alvvays — Album 4',
-        'Alvvays — Album 3',
+        'Alvvays, Album 5',
+        'Alvvays, Album 4',
+        'Alvvays, Album 3',
       ]);
     });
   });

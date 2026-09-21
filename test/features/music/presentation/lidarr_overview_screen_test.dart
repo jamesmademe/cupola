@@ -176,7 +176,7 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('Cindy Lee — Diamond Jubilee'), findsOneWidget);
+    expect(find.textContaining('Cindy Lee, Diamond Jubilee'), findsOneWidget);
     expect(find.textContaining('3 tracks'), findsOneWidget);
   });
 

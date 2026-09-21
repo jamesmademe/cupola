@@ -319,31 +319,39 @@ class _FilterChip extends StatelessWidget {
         : AppRadius.borderRadiusMd;
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
-      child: InkWell(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
         onTap: onTap,
-        borderRadius: radius,
-        child: Container(
-          decoration: BoxDecoration(
-            color: selected
-                ? effectiveColor
-                : effectiveColor.withValues(alpha: 0.12),
+        child: ExcludeSemantics(
+          child: InkWell(
+            onTap: onTap,
             borderRadius: radius,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium
-                ?.weight(FontWeight.w700)
-                .copyWith(
-                  // Foreground picked from the fill's luminance: white on the
-                  // Radarr amber measures 2.15:1, well below AA.
-                  color: selected
-                      ? ServiceTheme.foregroundOn(effectiveColor)
-                      : effectiveColor,
-                ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: selected
+                    ? effectiveColor
+                    : effectiveColor.withValues(alpha: 0.12),
+                borderRadius: radius,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium
+                    ?.weight(FontWeight.w700)
+                    .copyWith(
+                      // Foreground picked from the fill's luminance: white on
+                      // the Radarr amber measures 2.15:1, well below AA.
+                      color: selected
+                          ? ServiceTheme.foregroundOn(effectiveColor)
+                          : effectiveColor,
+                    ),
+              ),
+            ),
           ),
         ),
       ),

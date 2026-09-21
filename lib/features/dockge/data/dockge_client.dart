@@ -281,6 +281,14 @@ class DockgeClient {
     });
 
     socket.on('agent', _onAgentEvent);
+    // A direct Dockge instance emits its full list at the socket root. The
+    // `agent` envelope is only used when the hub routes a command to a remote
+    // agent; listening to that envelope alone leaves the Overview skeleton
+    // spinning forever on the ordinary single-instance setup.
+    socket.on('stackList', (dynamic data) {
+      final payload = mapOrNull(data);
+      if (payload != null) _handleStackList(payload);
+    });
     socket.on('stackStatusList', _onStackStatusList);
     // Dockge pushes these at the top level rather than inside the `agent`
     // envelope — the envelope is for commands *to* an agent, and this is the

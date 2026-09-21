@@ -126,7 +126,7 @@ class ProwlarrAppProfilesScreen extends ConsumerWidget {
       context: context,
       title: 'Delete ${profile.name ?? 'this profile'}?',
       message:
-          'Prowlarr refuses to delete a profile that indexers still use — '
+          'Prowlarr refuses to delete a profile that indexers still use, '
           'move them to another profile first.',
       confirmLabel: 'Delete',
       destructive: true,

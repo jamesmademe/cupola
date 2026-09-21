@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/dockge/data/dockge_client.dart';
 import 'package:cupola/features/dockge/data/dockge_service.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
@@ -149,8 +150,21 @@ final dockgeStackListProvider = StreamProvider.autoDispose<List<DockgeStack>>((
     yield client.latestStacks;
   }
   unawaited(client.requestStackList());
-  yield* client.stackListStream;
-});
+  // A broken Dockge can acknowledge `requestStackList` without publishing a
+  // list (for example when its Docker daemon socket is missing). Do not leave
+  // the Overview skeleton spinning forever while waiting for an event that
+  // cannot arrive. A real empty installation publishes an empty list too, so
+  // a timeout is an honest transport error rather than an empty-state claim.
+  yield* client.stackListStream.timeout(
+    const Duration(seconds: 10),
+    onTimeout: (sink) {
+      sink.addError(
+        const DockgeException('Dockge did not return its stack list'),
+      );
+      sink.close();
+    },
+  );
+}, retry: noProviderRetry);
 
 /// Full detail (compose YAML/ENV) for a single stack.
 final dockgeStackDetailProvider = FutureProvider.autoDispose

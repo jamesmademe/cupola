@@ -13,7 +13,7 @@ void main() {
   late SabnzbdClient client;
 
   setUp(() {
-    client = SabnzbdClient(url: 'http://127.0.0.1:8080', apiKey: 'test-key');
+    client = SabnzbdClient(url: 'http://127.0.0.1:8082', apiKey: 'test-key');
   });
 
   tearDown(() => client.close());

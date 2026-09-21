@@ -69,6 +69,12 @@ class _BazarrHistoryScreenState extends ConsumerState<BazarrHistoryScreen> {
     _HistoryFilter.movies => const [BazarrHistorySource.movies],
   };
 
+  String get _emptyLabel => switch (_filter) {
+    _HistoryFilter.all => 'subtitle history',
+    _HistoryFilter.episodes => 'episodes',
+    _HistoryFilter.movies => 'movies',
+  };
+
   List<BazarrHistoryItem> get _visibleItems {
     final merged = [for (final source in _sources) ..._items[source]!];
     merged.sort((a, b) {
@@ -215,7 +221,7 @@ class _BazarrHistoryScreenState extends ConsumerState<BazarrHistoryScreen> {
         emptyState: AppEmptyState(
           icon: Icons.subtitles_off_rounded,
           title: 'No subtitle history',
-          message: 'Bazarr has no ${_filter.label.toLowerCase()} to show.',
+          message: 'Bazarr has no $_emptyLabel to show.',
         ),
       );
     }

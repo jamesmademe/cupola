@@ -270,7 +270,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     if (_urlCtrl[service]!.text.trim().isNotEmpty) return;
     final host = _lastKnownHost(exclude: service);
     if (host == null) return;
-    _urlCtrl[service]!.text = 'https://$host:${service.defaultPort}';
+    final scheme = _lastKnownScheme(exclude: service) ?? 'https';
+    _urlCtrl[service]!.text = '$scheme://$host:${service.defaultPort}';
   }
 
   String? _lastKnownHost({required ServiceKey exclude}) {
@@ -284,15 +285,33 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     return null;
   }
 
+  String? _lastKnownScheme({required ServiceKey exclude}) {
+    for (final k in _walk.reversed) {
+      if (k == exclude) continue;
+      final raw = _urlCtrl[k]!.text.trim();
+      if (raw.isEmpty) continue;
+      final uri = Uri.tryParse(UrlUtils.normalizeBaseUrl(raw));
+      if (uri == null || uri.scheme.isEmpty) continue;
+      return uri.scheme.toLowerCase() == 'http' ? 'http' : 'https';
+    }
+    return null;
+  }
+
   /// Puts this service's default port on whatever host is already typed.
   void _suggestPort(ServiceKey service) {
     final controller = _urlCtrl[service]!;
-    final host =
-        Uri.tryParse(UrlUtils.normalizeBaseUrl(controller.text))?.host ?? '';
+    final normalized = UrlUtils.normalizeBaseUrl(controller.text);
+    final uri = Uri.tryParse(normalized);
+    final host = uri?.host ?? '';
     final target = host.isEmpty ? _lastKnownHost(exclude: service) ?? '' : host;
     if (target.isEmpty) return;
+    final scheme = host.isEmpty
+        ? _lastKnownScheme(exclude: service) ?? 'https'
+        : uri?.scheme.toLowerCase() == 'http'
+        ? 'http'
+        : 'https';
     setState(() {
-      controller.text = 'https://$target:${service.defaultPort}';
+      controller.text = '$scheme://$target:${service.defaultPort}';
     });
   }
 

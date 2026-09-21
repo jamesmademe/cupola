@@ -73,10 +73,18 @@ class ManualImportFrame extends StatelessWidget {
     return AmbientScaffold(
       accent: service.accent,
       appBar: GlassAppBar(
-        leading: IconButton(
-          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          icon: const Icon(Icons.chevron_left_rounded),
-          onPressed: () => context.pop(),
+        leading: Semantics(
+          button: true,
+          label: MaterialLocalizations.of(context).backButtonTooltip,
+          hint: 'Return to the previous screen',
+          onTap: () => context.pop(),
+          child: ExcludeSemantics(
+            child: IconButton(
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              icon: const Icon(Icons.chevron_left_rounded),
+              onPressed: () => context.pop(),
+            ),
+          ),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -39,7 +39,7 @@ class ReleaseSearchStatusCard extends ConsumerWidget {
     final (headline, consequence) = switch (job.status) {
       ReleaseSearchJobStatus.queued => (
         'Queued',
-        'Waiting for a slot — nothing has been sent to your indexers yet.',
+        'Waiting for a slot, nothing has been sent to your indexers yet.',
       ),
       ReleaseSearchJobStatus.running => (
         'Searching · ${formatElapsed(job.elapsedAt(now))}',
@@ -54,14 +54,14 @@ class ReleaseSearchStatusCard extends ConsumerWidget {
         job.releaseCount == 0
             ? (
                 'No releases found',
-                'Your indexers answered — nothing matched. Searching again is '
+                'Your indexers answered, nothing matched. Searching again is '
                     'safe.',
               )
             : (
                 '${job.releaseCount} release'
                     '${job.releaseCount == 1 ? '' : 's'}'
                     '${remaining == null ? '' : ' · ${formatWindowRemaining(remaining)}'}',
-                'Found earlier and still grabbable. Tap to pick one — no new '
+                'Found earlier and still grabbable. Tap to pick one, no new '
                     'search needed.',
               ),
       ReleaseSearchJobStatus.failed => (

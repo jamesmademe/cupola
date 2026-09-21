@@ -61,7 +61,7 @@ class UrlUtils {
   static const _invalidUrl =
       'Enter a valid URL (e.g. https://192.168.1.100:7878)';
   static const _credentialsInUrl =
-      'Remove the username:password from the URL — enter credentials in their '
+      'Remove the username:password from the URL, enter credentials in their '
       'own fields';
 
   /// Validates a service URL that may omit the scheme.

@@ -57,7 +57,7 @@ class TrueNasVersionBanner extends ConsumerWidget {
             Expanded(
               child: Text(
                 'TrueNAS $parsed detected. Cupola supports SCALE '
-                '$kTrueNasMinVersion or newer — some sections may be '
+                '$kTrueNasMinVersion or newer, some sections may be '
                 'unavailable.',
                 style: theme.textTheme.bodySmall,
               ),

@@ -6,6 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/features/truenas/domain/models/credentials.dart';
 import 'package:cupola/features/truenas/presentation/system/truenas_system_providers.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
@@ -99,8 +100,14 @@ class _UsersTab extends ConsumerWidget {
       child: TrueNasAsyncBody.inline(
         value: users,
         onRetry: () => ref.invalidate(truenasUsersProvider),
-        data: (list) =>
-            Column(children: [for (final user in list) _UserTile(user: user)]),
+        data: (list) => list.isEmpty
+            ? const AppEmptyState.inline(
+                icon: Icons.person_off_outlined,
+                title: 'No users configured.',
+              )
+            : Column(
+                children: [for (final user in list) _UserTile(user: user)],
+              ),
       ),
     );
   }
@@ -207,9 +214,14 @@ class _GroupsTab extends ConsumerWidget {
       child: TrueNasAsyncBody.inline(
         value: groups,
         onRetry: () => ref.invalidate(truenasGroupsProvider),
-        data: (list) => Column(
-          children: [for (final group in list) _GroupTile(group: group)],
-        ),
+        data: (list) => list.isEmpty
+            ? const AppEmptyState.inline(
+                icon: Icons.group_off_outlined,
+                title: 'No groups configured.',
+              )
+            : Column(
+                children: [for (final group in list) _GroupTile(group: group)],
+              ),
       ),
     );
   }

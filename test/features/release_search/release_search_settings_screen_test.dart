@@ -294,11 +294,19 @@ void main() {
       expect(find.text('At the same time'), findsOneWidget);
       expect(find.text('Give up after'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('More').first);
+      await tester.tap(find.bySemanticsLabel('Increase At the same time'));
       await tester.pumpAndSettle();
       expect(
         container.read(releaseSearchSettingsProvider).concurrency,
         kDefaultSearchConcurrency + 1,
+      );
+      expect(
+        find.bySemanticsLabel('Decrease At the same time'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Increase At the same time'),
+        findsOneWidget,
       );
     });
 

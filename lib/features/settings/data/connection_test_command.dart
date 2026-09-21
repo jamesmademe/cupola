@@ -44,7 +44,7 @@ int testAllConnections(WidgetRef ref) {
 /// vocabulary lives in one place: the button and the shortcut must not announce
 /// the same command two different ways.
 String testAllConnectionsAnnouncement(int connections) => switch (connections) {
-  0 => 'Nothing to test yet — no connection is set up.',
+  0 => 'Nothing to test yet, no connection is set up.',
   1 => 'Testing the one connection…',
   _ => 'Testing all $connections connections…',
 };

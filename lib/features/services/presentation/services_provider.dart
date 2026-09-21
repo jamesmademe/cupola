@@ -15,6 +15,7 @@ import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
@@ -411,6 +412,14 @@ Future<String?> _loadVersion(
   );
 
   try {
+    if (service == ServiceKey.seerr) {
+      // Seerr's status endpoint is public. Probe one authenticated request
+      // first, otherwise a wrong API key paints the dashboard green while
+      // Activity and Overview fail with 403 later.
+      await SeerrService(
+        client,
+      ).testConnection().timeout(const Duration(seconds: 5));
+    }
     final response = await client
         .get(service.statusEndpoint)
         .timeout(const Duration(seconds: 5));

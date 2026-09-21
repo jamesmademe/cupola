@@ -48,45 +48,50 @@ class ServiceDeck extends ConsumerWidget {
     final location = GoRouterState.of(context).uri.path;
     final current = _serviceOf(location);
 
-    return Container(
-      height: heightFor(compact: compact),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+    return Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: 'Service deck',
+      child: Container(
+        height: heightFor(compact: compact),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+            ),
           ),
         ),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          // The 390pt desktop specimen still carries the desktop shell after
-          // the 56pt rail is taken out. Keep the deck's health signal and its
-          // command entry point, but let the latter use its icon/key form so
-          // the compact row remains a row instead of overflowing horizontally.
-          final narrow = constraints.maxWidth < 500;
-          return Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: compact ? AppSpacing.md : AppSpacing.lg,
-            ),
-            child: Row(
-              children: [
-                _ActiveChip(service: current, compact: compact),
-                SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
-                if (compact)
-                  _HealthReadout(narrow: narrow)
-                else
-                  Expanded(child: _GlyphBands(current: current)),
-                if (compact) const Spacer(),
-                SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
-                _JumpPill(
-                  compact: compact,
-                  narrow: narrow,
-                  onPressed: onCommandDeck,
-                ),
-              ],
-            ),
-          );
-        },
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // The 390pt desktop specimen still carries the desktop shell after
+            // the 56pt rail is taken out. Keep the deck's health signal and its
+            // command entry point, but let the latter use its icon/key form so
+            // the compact row remains a row instead of overflowing horizontally.
+            final narrow = constraints.maxWidth < 500;
+            return Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? AppSpacing.md : AppSpacing.lg,
+              ),
+              child: Row(
+                children: [
+                  _ActiveChip(service: current, compact: compact),
+                  SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
+                  if (compact)
+                    _HealthReadout(narrow: narrow)
+                  else
+                    Expanded(child: _GlyphBands(current: current)),
+                  if (compact) const Spacer(),
+                  SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
+                  _JumpPill(
+                    compact: compact,
+                    narrow: narrow,
+                    onPressed: onCommandDeck,
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -322,27 +327,42 @@ class _GlyphCellState extends ConsumerState<_GlyphCell> {
       state,
     ].join(' · ');
 
-    return Tooltip(
-      message: tooltip,
-      waitDuration: const Duration(milliseconds: 500),
-      child: Semantics(
-        button: true,
-        selected: widget.selected,
-        label: tooltip,
-        excludeSemantics: true,
+    void openService() => GoRouter.of(context).go(
+      configured
+          ? '${NavTab.dashboard.routePath}/${service.routeParam}'
+          // An unset service is still a door: it leads to the form that sets it
+          // up, which is the only useful thing it can do.
+          : '${NavTab.settings.routePath}/connections',
+    );
+
+    // Keep the visible service mark at 22pt, but give it a native 40pt button
+    // target. A painted GestureDetector plus a hand-authored Semantics node is
+    // not reliably exported by the macOS Flutter embedder, so it can respond to
+    // a coordinate click while being absent from the native AX tree.
+    return Semantics(
+      button: true,
+      container: true,
+      enabled: true,
+      selected: widget.selected,
+      label: tooltip,
+      onTap: openService,
+      child: ExcludeSemantics(
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           onEnter: (_) => setState(() => _hovered = true),
           onExit: (_) => setState(() => _hovered = false),
-          child: GestureDetector(
-            onTap: () => GoRouter.of(context).go(
-              configured
-                  ? '${NavTab.dashboard.routePath}/${service.routeParam}'
-                  // An unset service is still a door: it leads to the form that
-                  // sets it up, which is the only useful thing it can do.
-                  : '${NavTab.settings.routePath}/connections',
+          child: IconButton(
+            tooltip: tooltip,
+            onPressed: openService,
+            isSelected: widget.selected,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+            style: ButtonStyle(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
             ),
-            child: Container(
+            icon: Container(
               width: 22,
               height: 22,
               decoration: BoxDecoration(
@@ -476,57 +496,75 @@ class _JumpPillState extends State<_JumpPill> {
     final colorScheme = Theme.of(context).colorScheme;
     return Semantics(
       button: true,
+      container: true,
+      enabled: true,
       label: 'Jump to anything, ${ShellShortcuts.commandDeck}',
-      excludeSemantics: true,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onPressed,
-          child: Container(
-            height: widget.compact ? 26 : 30,
-            padding: EdgeInsets.symmetric(
-              horizontal: widget.compact ? AppSpacing.sm : AppSpacing.md,
-            ),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(
-                alpha: _hovered ? 0.8 : 0.55,
-              ),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: colorScheme.outlineVariant),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.search_rounded,
-                  size: 14,
-                  color: CupolaThemeColors.of(context).dimText,
+      hint: 'Open the command deck',
+      onTap: widget.onPressed,
+      child: ExcludeSemantics(
+        child: Tooltip(
+          message: 'Jump to anything  ${ShellShortcuts.commandDeck}',
+          waitDuration: const Duration(milliseconds: 500),
+          excludeFromSemantics: true,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            onEnter: (_) => setState(() => _hovered = true),
+            onExit: (_) => setState(() => _hovered = false),
+            child: TextButton(
+              onPressed: widget.onPressed,
+              style: ButtonStyle(
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+                minimumSize: WidgetStatePropertyAll(
+                  Size(44, widget.compact ? 40 : 44),
                 ),
-                if (!widget.narrow) ...[
-                  const SizedBox(width: 9),
-                  Text(
-                    widget.compact ? 'Jump' : 'Jump to anything',
-                    style: AppTheme.chrome(
-                      context,
-                      size: 11,
-                      weight: FontWeight.w500,
+                overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+              ),
+              child: Container(
+                height: widget.compact ? 26 : 30,
+                padding: EdgeInsets.symmetric(
+                  horizontal: widget.compact ? AppSpacing.sm : AppSpacing.md,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: _hovered ? 0.8 : 0.55,
+                  ),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: colorScheme.outlineVariant),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.search_rounded,
+                      size: 14,
                       color: CupolaThemeColors.of(context).dimText,
                     ),
-                  ),
-                  const SizedBox(width: 9),
-                ] else
-                  const SizedBox(width: 6),
-                Text(
-                  ShellShortcuts.commandDeck,
-                  style: AppTheme.chrome(
-                    context,
-                    size: 11,
-                    color: CupolaThemeColors.of(context).dimText,
-                  ).mono.tabular,
+                    if (!widget.narrow) ...[
+                      const SizedBox(width: 9),
+                      Text(
+                        widget.compact ? 'Jump' : 'Jump to anything',
+                        style: AppTheme.chrome(
+                          context,
+                          size: 11,
+                          weight: FontWeight.w500,
+                          color: CupolaThemeColors.of(context).dimText,
+                        ),
+                      ),
+                      const SizedBox(width: 9),
+                    ] else
+                      const SizedBox(width: 6),
+                    Text(
+                      ShellShortcuts.commandDeck,
+                      style: AppTheme.chrome(
+                        context,
+                        size: 11,
+                        color: CupolaThemeColors.of(context).dimText,
+                      ).mono.tabular,
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

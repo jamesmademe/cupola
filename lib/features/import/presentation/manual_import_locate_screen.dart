@@ -96,7 +96,7 @@ class _ManualImportLocateScreenState
           // decision is while the user is still choosing the folder.
           const ImportFooterNote(
             text:
-                'Scanning parses and probes every file on the server — '
+                'Scanning parses and probes every file on the server, '
                 'large folders take minutes.',
           ),
           Padding(
@@ -462,31 +462,45 @@ class _PathFieldState extends ConsumerState<_PathField> {
         AppSpacing.lg,
         AppSpacing.md,
       ),
-      child: TextField(
-        controller: _controller,
-        onSubmitted: (_) => _submit(),
-        textInputAction: TextInputAction.go,
-        autocorrect: false,
-        enableSuggestions: false,
-        decoration: InputDecoration(
-          isDense: true,
-          // Doubles as the field's accessible name: it is what a screen reader
-          // announces for an empty text field, and the field has no room for a
-          // label above it.
-          hintText: 'Type a path…',
-          prefixIcon: Icon(
-            Icons.folder_open_rounded,
-            size: 18,
-            color: colorScheme.onSurfaceVariant,
-          ),
-          suffixIcon: IconButton(
-            tooltip: 'Go to this folder',
-            onPressed: _submit,
-            icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-          ),
-          border: OutlineInputBorder(
-            borderRadius: AppRadius.borderRadiusMd,
-            borderSide: BorderSide(color: colorScheme.outlineVariant),
+      child: Semantics(
+        container: true,
+        label: 'Folder path',
+        hint: 'Type a folder path and press Return to navigate',
+        child: TextField(
+          controller: _controller,
+          onSubmitted: (_) => _submit(),
+          textInputAction: TextInputAction.go,
+          autocorrect: false,
+          enableSuggestions: false,
+          decoration: InputDecoration(
+            isDense: true,
+            // The visible label is also the field's accessible name. A hint
+            // alone was not exposed by the macOS Flutter bridge while the
+            // field was empty, leaving VoiceOver with an unnamed control.
+            labelText: 'Folder path',
+            hintText: 'Type a path…',
+            prefixIcon: Icon(
+              Icons.folder_open_rounded,
+              size: 18,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            suffixIcon: Semantics(
+              button: true,
+              label: 'Go to this folder',
+              hint: 'Open the folder path',
+              onTap: _submit,
+              child: ExcludeSemantics(
+                child: IconButton(
+                  tooltip: 'Go to this folder',
+                  onPressed: _submit,
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                ),
+              ),
+            ),
+            border: OutlineInputBorder(
+              borderRadius: AppRadius.borderRadiusMd,
+              borderSide: BorderSide(color: colorScheme.outlineVariant),
+            ),
           ),
         ),
       ),

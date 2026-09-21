@@ -77,8 +77,8 @@ class RequestsList extends ConsumerWidget {
                   icon: Icons.person_add_alt_1_rounded,
                   title: 'No requests yet',
                   message:
-                      'Requests made in Seerr — by you or anyone you share it '
-                      'with — will appear here.',
+                      'Requests made in Seerr, by you or anyone you share it '
+                      'with, will appear here.',
                 ),
               ],
             );

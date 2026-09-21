@@ -291,7 +291,7 @@ class PlexTranscodeSession {
     }
 
     if (transcodeHwRequested && !transcodeHwEncoding) {
-      reasons.add('software encode — hardware not used');
+      reasons.add('software encode, hardware not used');
     } else if (transcodeHwEncoding) {
       reasons.add('hardware encoder');
     }

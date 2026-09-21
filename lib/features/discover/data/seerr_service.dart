@@ -105,6 +105,20 @@ final seerrServiceForProvider = Provider.family<SeerrService, String>((
 class SeerrService {
   final ApiClient _client;
 
+  /// The cheapest authenticated Seerr read.
+  ///
+  /// `/api/v1/status` is a reachability endpoint and is public on Seerr. It
+  /// cannot prove that the API key the user pasted will work for the requests
+  /// and discover surfaces that follow. A one-row request query is enough to
+  /// exercise the actual API-key boundary while remaining cheap on an empty
+  /// server.
+  static const Map<String, dynamic> authProbeQuery = {
+    'take': 1,
+    'skip': 0,
+    'sort': 'added',
+    'filter': 'all',
+  };
+
   /// Page size for the request list.
   ///
   /// Seerr puts no cap on `take` and answers with `pageInfo.results`, so pages
@@ -129,6 +143,14 @@ class SeerrService {
   _mediaCache = {};
 
   SeerrService(this._client);
+
+  /// Proves that Seerr accepts the configured API key.
+  ///
+  /// This deliberately does not call [getRequests], which hydrates every row
+  /// and is far too expensive for a connection test or a health poll.
+  Future<void> testConnection() async {
+    await _client.get('/api/v1/request', queryParameters: authProbeQuery);
+  }
 
   static const _adminPageSize = 50;
 

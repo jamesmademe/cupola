@@ -82,9 +82,9 @@ String seerrRequestHeadline(SeerrRequest request) {
   final seasons = request.seasons;
   if (request.type != 'tv' || seasons == null || seasons.isEmpty) return name;
   if (seasons.length == 1) {
-    return '$name — Season ${seasons.single.seasonNumber}';
+    return '$name, Season ${seasons.single.seasonNumber}';
   }
-  return '$name — ${seasons.length} seasons';
+  return '$name, ${seasons.length} seasons';
 }
 
 /// `nadia · 4 h ago · TV · 4K`.

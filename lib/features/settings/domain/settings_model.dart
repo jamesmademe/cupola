@@ -307,7 +307,7 @@ class SettingsModel {
   }) {
     assert(
       !service.usesApiKey,
-      '${service.name} authenticates with an API key — use copyWithService.',
+      '${service.name} authenticates with an API key, use copyWithService.',
     );
     return _upsertPrimary(
       service,

@@ -410,7 +410,7 @@ extension ServiceKeyExtension on ServiceKey {
     ServiceKey.plex =>
       'Open any item in Plex Web, choose Get Info → View XML, and copy '
           'the X-Plex-Token from the address bar. Cupola never contacts '
-          'plex.tv, so it needs a long-lived device token — not a temporary '
+          'plex.tv, so it needs a long-lived device token, not a temporary '
           'one beginning "eyJ".',
     // The single most common reason a Transmission daemon is reachable in a
     // browser and not from a phone, and it is worth saying before the address
@@ -421,13 +421,13 @@ extension ServiceKeyExtension on ServiceKey {
           '`rpc-whitelist` defaults to 127.0.0.1 only, so a phone on the same '
           'network is refused until the range is widened. Note that '
           'Transmission has one all-or-nothing credential and it can set the '
-          'script it runs when a download finishes — treat it as a login to '
+          'script it runs when a download finishes, treat it as a login to '
           'the machine itself, and do not reuse a password from anywhere '
           'else.',
     // Says the uncomfortable thing plainly, because the user cannot choose
     // otherwise and deserves to know what they are handing over.
     ServiceKey.nginxProxyManager =>
-      'Nginx Proxy Manager issues no API key — the only credential it '
+      'Nginx Proxy Manager issues no API key, the only credential it '
           'accepts is an account login, which Cupola exchanges for a '
           'short-lived token it keeps in memory and never writes to disk. '
           'Create a dedicated user for Cupola rather than using your admin '
@@ -483,7 +483,7 @@ extension ServiceKeyExtension on ServiceKey {
     // phone, so they are worth a line here too.
     ServiceKey.transmission =>
       'Use the same login the Transmission web interface asks for, and widen '
-          '`rpc-whitelist` — it defaults to 127.0.0.1, so this device is '
+          '`rpc-whitelist`, it defaults to 127.0.0.1, so this device is '
           'refused until it is listed.',
     ServiceKey.nginxProxyManager =>
       'Point this at the admin interface (port 81 by default), not at a '

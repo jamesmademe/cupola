@@ -116,56 +116,61 @@ class _Tab extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Semantics(
+      container: true,
       selected: selected,
       button: true,
       // The label alone: "Library" reads as the destination, and a screen
       // reader already announces the selected state from the flag above.
       label: tab.label,
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: selected ? null : onTap,
-        borderRadius: AppRadius.borderRadiusPill,
-        child: ConstrainedBox(
-          // The floor for a touch target, even for a two-letter label.
-          constraints: const BoxConstraints(minWidth: 44),
-          // A Stack rather than a Column so the rule can span exactly the
-          // label's own width: inside a horizontally scrolling list there is no
-          // width to inherit, so a rule asking for one would be asking for
-          // infinity.
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm,
-                ),
-                child: Text(
-                  tab.label,
-                  style: theme.textTheme.labelLarge!
-                      .weight(selected ? FontWeight.w700 : FontWeight.w500)
-                      .copyWith(
-                        color: selected ? accent : colorScheme.onSurfaceVariant,
-                      ),
-                  maxLines: 1,
-                ),
-              ),
-              // Drawn only when selected, and nothing shifts when it appears:
-              // the rule is positioned rather than laid out in flow.
-              if (selected)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    height: 2,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      borderRadius: AppRadius.borderRadiusPill,
-                    ),
+      onTap: selected ? null : onTap,
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: selected ? null : onTap,
+          borderRadius: AppRadius.borderRadiusPill,
+          child: ConstrainedBox(
+            // The floor for a touch target, even for a two-letter label.
+            constraints: const BoxConstraints(minWidth: 44),
+            // A Stack rather than a Column so the rule can span exactly the
+            // label's own width: inside a horizontally scrolling list there is no
+            // width to inherit, so a rule asking for one would be asking for
+            // infinity.
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: Text(
+                    tab.label,
+                    style: theme.textTheme.labelLarge!
+                        .weight(selected ? FontWeight.w700 : FontWeight.w500)
+                        .copyWith(
+                          color: selected
+                              ? accent
+                              : colorScheme.onSurfaceVariant,
+                        ),
+                    maxLines: 1,
                   ),
                 ),
-            ],
+                // Drawn only when selected, and nothing shifts when it appears:
+                // the rule is positioned rather than laid out in flow.
+                if (selected)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      height: 2,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: AppRadius.borderRadiusPill,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

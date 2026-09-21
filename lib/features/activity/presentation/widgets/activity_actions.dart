@@ -128,7 +128,7 @@ class ActivityActions {
       action: () => ref
           .read(connectionArrServiceProvider((serviceType, instanceId)))
           .removeFromQueue(recordId, removeFromClient: true, blocklist: true),
-      successMessage: 'Blocklisted — searching for another release',
+      successMessage: 'Blocklisted, searching for another release',
       failureMessage: 'Could not blocklist this release',
     );
   }

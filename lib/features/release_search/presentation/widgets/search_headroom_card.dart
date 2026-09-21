@@ -161,7 +161,7 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
     final reach = ref.watch(releaseSearchLensReachProvider(widget.service));
     final title = widget.service.title;
     final noCeiling = defaultTargetPlatform == TargetPlatform.android
-        ? " — there's no minute ceiling either way, since that only applies to "
+        ? ", there's no minute ceiling either way, since that only applies to "
               'the background path this instance cannot use'
         : '';
 
@@ -198,13 +198,13 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
         'Run the check to see what sits between Cupola and '
             '${widget.service.title}, and what it allows.',
       SearchGateway.direct =>
-        'Direct connection — nothing between you and '
+        'Direct connection, nothing between you and '
             '${widget.service.title}, so no gateway timeout applies.',
       SearchGateway.cloudflare =>
         'This path goes through Cloudflare, which cuts a request off at 100 '
             'seconds.',
       SearchGateway.nginx =>
-        'This path goes through nginx — Nginx Proxy Manager is built on it — '
+        'This path goes through nginx, Nginx Proxy Manager is built on it, '
             'which allows 60 seconds by default.',
       SearchGateway.other =>
         'Something answers in front of ${widget.service.title}'
@@ -221,7 +221,7 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
       SearchGateway.nginx =>
         'You can raise it per proxy host, in that host\'s advanced settings.',
       SearchGateway.other =>
-        'If long searches keep getting cut off, raise its read timeout — or '
+        'If long searches keep getting cut off, raise its read timeout, or '
             'reach the instance directly.',
       _ => null,
     };

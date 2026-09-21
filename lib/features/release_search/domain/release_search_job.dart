@@ -281,7 +281,7 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
     return ReleaseSearchFailure(
       kind: ReleaseSearchFailureKind.unknown,
       headline: 'The search stopped unexpectedly.',
-      diagnosis: 'Searching again is safe — nothing was grabbed.',
+      diagnosis: 'Searching again is safe, nothing was grabbed.',
       detail: error.toString(),
     );
   }
@@ -314,7 +314,7 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
           '${_readable(elapsed)}.',
       diagnosis:
           '${_serviceWord(gateway)} is probably still searching. Starting again '
-          'now would put a second search on the same indexers — raise the read '
+          'now would put a second search on the same indexers, raise the read '
           'timeout for this proxy host first.',
       detail: gateway == null ? 'HTTP $status' : 'HTTP $status · $gateway',
       gateway: gateway,
@@ -355,7 +355,7 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
               'Searching again asks your indexers a second time.',
         ReleaseSearchReach.whileOpenTrustedCert =>
           'This instance uses a certificate trusted only inside Cupola, and '
-              'background search cannot see that trust — it needs the app '
+              'background search cannot see that trust, it needs the app '
               'open. Installing the certificate on this device would '
               'restore it. Searching again asks your indexers a second '
               'time.',

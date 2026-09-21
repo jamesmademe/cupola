@@ -323,7 +323,7 @@ class _DisclosureBlock extends StatelessWidget {
 
   /// The same sentence on both platforms, because the fact is the same one.
   static const headline =
-      'While Cupola is suspended, the system runs the search on its behalf — '
+      'While Cupola is suspended, the system runs the search on its behalf, '
       'so the request, including this service\'s admin API key, sits in system '
       'storage while the task runs.';
 
@@ -333,17 +333,17 @@ class _DisclosureBlock extends StatelessWidget {
   static String detailsFor({required bool isIOS}) {
     if (isIOS) {
       return "The system's working copy never leaves this device and is deleted "
-          'when the search ends — after '
+          'when the search ends, after '
           '${kBackgroundSearchResourceTimeout.inMinutes} minutes at the latest. '
           'If iOS closes Cupola before it can collect a result, that result '
-          'waits — key included — in the app\'s preferences until the next '
+          'waits, key included, in the app\'s preferences until the next '
           'launch, and preferences are part of device backups: an encrypted '
           'Finder backup, or iCloud with Advanced Data Protection, covers that '
           'copy. Turning this off cancels running background searches and '
           'clears the stored records.';
     }
     return "The system's copies live in app-private storage that is excluded "
-        'from every backup — reading them takes a rooted device. Cupola clears '
+        'from every backup, reading them takes a rooted device. Cupola clears '
         'finished records at every launch. Turning this off cancels running '
         'background searches and clears the stored records right away.';
   }
@@ -411,7 +411,7 @@ class _DesktopStatusCard extends StatelessWidget {
   const _DesktopStatusCard();
 
   static const message =
-      'Searches keep running while Cupola is open — desktop never suspends the '
+      'Searches keep running while Cupola is open, desktop never suspends the '
       'app, so nothing is handed to the system and nothing is written to '
       'system storage.';
 
@@ -497,17 +497,17 @@ class _NotifyRow extends StatelessWidget {
 
   String get _subtitle {
     if (!available) {
-      return 'Needs Background search — a search that ends with the app has '
+      return 'Needs Background search, a search that ends with the app has '
           'nothing to announce';
     }
     if (!backgroundCapable) {
-      return 'Not needed here — the app keeps running';
+      return 'Not needed here, the app keeps running';
     }
     if (foregroundOnlyServices.isEmpty) {
       return 'Only when Cupola is not in front of you';
     }
     final names = foregroundOnlyServices.map((s) => s.title).join(', ');
-    return 'Only when Cupola is not in front of you — for $names, that '
+    return 'Only when Cupola is not in front of you, for $names, that '
         "includes a search stopping because it couldn't keep running in the "
         'background';
   }
@@ -664,11 +664,11 @@ class _LimitsCard extends StatelessWidget {
           line(
             'Found releases stay grabbable for '
             '${kGrabWindow.inMinutes} minutes. That is the service\'s own limit, '
-            'not a setting here — after it, grabbing needs a fresh search.',
+            'not a setting here, after it, grabbing needs a fresh search.',
           ),
           line(
             backgroundActive
-                ? 'A search keeps going when you switch apps — but if Cupola is '
+                ? 'A search keeps going when you switch apps, but if Cupola is '
                       'closed while it waits, by you or by the system reclaiming '
                       'memory, the outcome is lost: no notification, and nothing '
                       'under Activity. Searching again is the only recovery.'
@@ -687,7 +687,7 @@ class _LimitsCard extends StatelessWidget {
               '${pinnedServices.map((s) => s.title).join(', ')} '
               '${pinnedServices.length == 1 ? 'uses' : 'use'} a certificate '
               "trusted only inside Cupola, so ${pinnedServices.length == 1 ? 'its' : 'their'} "
-              'searches run in the foreground instead of the background — see '
+              'searches run in the foreground instead of the background, see '
               "that service's connection in Settings for how to restore it.",
             ),
           if (cleartextServices.isNotEmpty)
@@ -701,7 +701,7 @@ class _LimitsCard extends StatelessWidget {
               'Switching to https restores it.',
             ),
           line(
-            'Nothing is searched on a server of ours — there is not one. Your '
+            'Nothing is searched on a server of ours, there is not one. Your '
             'own instances do the work, and what Cupola measures about them '
             'never leaves this device.',
           ),
@@ -783,17 +783,31 @@ class _StepperRow extends StatelessWidget {
               ),
             ),
           ),
-          IconButton(
-            onPressed: onDecrement == null ? null : () => tap(onDecrement),
-            icon: const Icon(Icons.remove_rounded, size: 18),
-            tooltip: 'Less',
+          Semantics(
+            button: true,
+            enabled: onDecrement != null,
+            label: 'Decrease $title',
+            onTap: onDecrement == null ? null : () => tap(onDecrement),
+            excludeSemantics: true,
+            child: IconButton(
+              onPressed: onDecrement == null ? null : () => tap(onDecrement),
+              icon: const Icon(Icons.remove_rounded, size: 18),
+              tooltip: 'Decrease $title',
+            ),
           ),
           // Tabular so the row does not shift as the figure changes width.
           Text(value, style: theme.textTheme.titleSmall?.tabular),
-          IconButton(
-            onPressed: onIncrement == null ? null : () => tap(onIncrement),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            tooltip: 'More',
+          Semantics(
+            button: true,
+            enabled: onIncrement != null,
+            label: 'Increase $title',
+            onTap: onIncrement == null ? null : () => tap(onIncrement),
+            excludeSemantics: true,
+            child: IconButton(
+              onPressed: onIncrement == null ? null : () => tap(onIncrement),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              tooltip: 'Increase $title',
+            ),
           ),
         ],
       ),

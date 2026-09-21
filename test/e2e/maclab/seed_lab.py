@@ -18,6 +18,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -54,6 +55,7 @@ def request(
     payload: Any | None = None,
     headers: dict[str, str] | None = None,
     opener: urllib.request.OpenerDirector | None = None,
+    timeout: float = 8,
 ) -> tuple[int, bytes]:
     body: bytes | None
     request_headers = dict(headers or {})
@@ -73,7 +75,7 @@ def request(
         method=method,
     )
     client = opener or urllib.request.build_opener()
-    with client.open(request_object, timeout=8) as response:
+    with client.open(request_object, timeout=timeout) as response:
         return response.status, response.read()
 
 
@@ -84,6 +86,7 @@ def json_request(
     payload: Any | None = None,
     headers: dict[str, str] | None = None,
     opener: urllib.request.OpenerDirector | None = None,
+    timeout: float = 8,
 ) -> Any:
     _, body = request(
         url,
@@ -91,6 +94,7 @@ def json_request(
         payload=payload,
         headers=headers,
         opener=opener,
+        timeout=timeout,
     )
     return json.loads(body) if body else None
 
@@ -397,6 +401,7 @@ def seed_media_servers(state_dir: Path, env: dict[str, str]) -> None:
         _, body = request(
             f"{ROOT}:32400/library/sections",
             headers=headers,
+            timeout=30,
         )
         sections = ET.fromstring(body)
         if not any(section.attrib.get("title") == "Films" for section in sections):
@@ -414,7 +419,24 @@ def seed_media_servers(state_dir: Path, env: dict[str, str]) -> None:
                 f"{ROOT}:32400/library/sections?{query}",
                 method="POST",
                 headers=headers,
+                timeout=30,
             )
+            # Plex accepts the write before its library manager exposes the
+            # section to the read endpoint. Poll the same endpoint so the
+            # fixture never reports a successful seed while the transport
+            # harness still sees an empty library.
+            for _ in range(20):
+                time.sleep(0.5)
+                _, body = request(
+                    f"{ROOT}:32400/library/sections",
+                    headers=headers,
+                    timeout=15,
+                )
+                sections = ET.fromstring(body)
+                if any(
+                    section.attrib.get("title") == "Films" for section in sections
+                ):
+                    break
             print("[maclab-seed] Plex: Films library")
     except Exception as error:
         warn("Plex library", error)

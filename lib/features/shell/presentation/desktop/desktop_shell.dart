@@ -159,6 +159,8 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final compact = AppBreakpoints.isCompactDesktop(context);
+    final chromeHeight = WindowChrome.heightFor(compact: compact);
+    final deckHeight = ServiceDeck.heightFor(compact: compact);
     final inspector = ref.watch(inspectorStateProvider);
 
     // Recents for the deck, recorded here because this is the one widget that
@@ -227,68 +229,93 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
             },
           ),
         },
-        child: Scaffold(
-          body: Column(
-            children: [
-              WindowChrome(inspectorOpen: inspector.open),
-              Expanded(
-                child: Row(
-                  children: [
-                    DesktopNavRail(
-                      selectedIndex: widget.selectedIndex,
-                      destinations: widget.destinations,
-                      onDestinationSelected: widget.onDestinationSelected,
-                      onCommandDeck: _openDeck,
-                    ),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: Stack(
-                              children: [
-                                Column(
-                                  children: [
-                                    ServiceDeck(
-                                      compact: compact,
-                                      onCommandDeck: _openDeck,
-                                    ),
-                                    Expanded(
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: widget.navigationShell,
-                                          ),
-                                          if (inspector.open && !compact) ...[
-                                            const InspectorSplitHandle(),
-                                            SizedBox(
-                                              width: inspector.width,
-                                              child: const InspectorPane(),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (_deckOpen)
-                                  Positioned.fill(
-                                    child: _DeckOverlay(
-                                      animation: _deck,
-                                      onClose: _closeDeck,
-                                      scrim: colorScheme.surfaceContainerLowest,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          const ShellStatusBar(),
-                        ],
+        child: Semantics(
+          // The desktop shell is a composite control surface. Without an
+          // explicit semantic boundary Flutter is free to merge its chrome
+          // into the route's surrounding container; on macOS that collapses
+          // the rail and deck out of the native AX hierarchy even though they
+          // remain painted and hit-testable. The page navigator keeps its own
+          // route semantics below this boundary.
+          container: true,
+          explicitChildNodes: true,
+          child: Scaffold(
+            // The route navigator publishes a scopesRoute semantics node. In
+            // a Column that node sits after the desktop chrome and macOS drops
+            // the earlier siblings from its AX hierarchy. The base route is
+            // therefore painted first and the chrome is overlaid afterwards;
+            // the screen does not move, but every desktop control is now after
+            // the active route in semantics order as well as on screen.
+            body: Stack(
+              fit: StackFit.expand,
+              children: [
+                Positioned(
+                  top: chromeHeight + deckHeight,
+                  left: DesktopNavRail.width,
+                  right: 0,
+                  bottom: 0,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(child: widget.navigationShell),
+                            if (inspector.open && !compact) ...[
+                              const InspectorSplitHandle(),
+                              SizedBox(
+                                width: inspector.width,
+                                child: const InspectorPane(),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      const ShellStatusBar(),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: chromeHeight,
+                  child: WindowChrome(inspectorOpen: inspector.open),
+                ),
+                Positioned(
+                  top: chromeHeight,
+                  left: 0,
+                  width: DesktopNavRail.width,
+                  bottom: 0,
+                  child: DesktopNavRail(
+                    selectedIndex: widget.selectedIndex,
+                    destinations: widget.destinations,
+                    onDestinationSelected: widget.onDestinationSelected,
+                    onCommandDeck: _openDeck,
+                  ),
+                ),
+                Positioned(
+                  top: chromeHeight,
+                  left: DesktopNavRail.width,
+                  right: 0,
+                  height: deckHeight,
+                  child: ServiceDeck(
+                    compact: compact,
+                    onCommandDeck: _openDeck,
+                  ),
+                ),
+                if (_deckOpen)
+                  Positioned(
+                    top: chromeHeight,
+                    left: DesktopNavRail.width,
+                    right: 0,
+                    bottom: 0,
+                    child: _DeckOverlay(
+                      animation: _deck,
+                      onClose: _closeDeck,
+                      scrim: colorScheme.surfaceContainerLowest,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
