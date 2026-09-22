@@ -32,7 +32,7 @@ void main() {
   const uiClocks = {
     'lib/core/widgets/interactive_search_sheet.dart',
     'lib/features/release_search/presentation/release_search_sheet.dart',
-    'lib/features/shell/presentation/desktop/shell_status_bar.dart',
+    'lib/features/shell/presentation/desktop/shell_freshness.dart',
   };
 
   final libFiles = Directory('lib')

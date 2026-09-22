@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/widgets/instance_lens_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -57,9 +59,22 @@ class ServiceHomeScreen extends StatelessWidget {
   static double bandHeightOf(BuildContext context) =>
       kToolbarHeight + MediaQuery.paddingOf(context).top;
 
+  /// Whether this service's screens are drawn under the band at all.
+  ///
+  /// Not in the desktop shell, for a service on the tab model. The window
+  /// chrome already names the room — its breadcrumb is the URL — and the deck
+  /// carries the fleet, so a band holding back, name and one action was the
+  /// phone's app bar drawn inside a shell that had said all of it: 222pt of
+  /// chrome over a 900pt window, 45% of a 720×450 one. The tab row becomes the
+  /// header instead ([ServiceTabBar.header]). TrueNAS has no tab row, so it
+  /// keeps its band everywhere; a desktop window narrowed into the phone layout
+  /// gets the band back with it.
+  static bool drawsBand(BuildContext context, ServiceKey service) =>
+      !AppBreakpoints.isDesktopShell(context) || tabsFor(service) == null;
+
   @override
   Widget build(BuildContext context) {
-    if (!showAppBar) return child;
+    if (!showAppBar || !drawsBand(context, service)) return child;
 
     return Stack(
       children: [

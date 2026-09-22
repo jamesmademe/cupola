@@ -19,7 +19,7 @@ import 'package:cupola/features/shell/presentation/desktop/command_deck.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
 import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
 import 'package:cupola/features/shell/presentation/desktop/service_deck.dart';
-import 'package:cupola/features/shell/presentation/desktop/shell_status_bar.dart';
+import 'package:cupola/features/shell/presentation/desktop/shell_freshness.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 
 /// The window: chrome, rail, deck, content, inspector, status.
@@ -253,23 +253,19 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
                   left: DesktopNavRail.width,
                   right: 0,
                   bottom: 0,
-                  child: Column(
+                  // No status bar at the foot: everything it printed is on
+                  // screen elsewhere, and its one fact of its own — how fresh
+                  // the sample is — lives in the deck (ShellFreshness).
+                  child: Row(
                     children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Expanded(child: widget.navigationShell),
-                            if (inspector.open && !compact) ...[
-                              const InspectorSplitHandle(),
-                              SizedBox(
-                                width: inspector.width,
-                                child: const InspectorPane(),
-                              ),
-                            ],
-                          ],
+                      Expanded(child: widget.navigationShell),
+                      if (inspector.open && !compact) ...[
+                        const InspectorSplitHandle(),
+                        SizedBox(
+                          width: inspector.width,
+                          child: const InspectorPane(),
                         ),
-                      ),
-                      const ShellStatusBar(),
+                      ],
                     ],
                   ),
                 ),

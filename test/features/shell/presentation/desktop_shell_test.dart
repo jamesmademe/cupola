@@ -22,7 +22,7 @@ import 'package:cupola/features/shell/presentation/desktop/command_deck.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
 import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
 import 'package:cupola/features/shell/presentation/desktop/service_deck.dart';
-import 'package:cupola/features/shell/presentation/desktop/shell_status_bar.dart';
+import 'package:cupola/features/shell/presentation/desktop/shell_freshness.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
 
@@ -45,7 +45,7 @@ void main() {
         .setMockMethodCallHandler(SystemChannels.platform, null);
   });
 
-  testWidgets('a desktop window gets chrome, rail, deck and status bar', (
+  testWidgets('a desktop window gets chrome, rail and deck — no status bar', (
     tester,
   ) async {
     await onPlatform(TargetPlatform.macOS, () async {
@@ -54,7 +54,14 @@ void main() {
       expect(find.byType(WindowChrome), findsOneWidget);
       expect(find.byType(DesktopNavRail), findsOneWidget);
       expect(find.byType(ServiceDeck), findsOneWidget);
-      expect(find.byType(ShellStatusBar), findsOneWidget);
+      // The foot of the window is the page's: the status bar's one fact of its
+      // own, the sample's age, lives in the deck.
+      expect(find.byType(ShellFreshness), findsOneWidget);
+      expect(
+        tester.getBottomLeft(find.byType(Placeholder).first).dy,
+        900,
+        reason: 'the content reaches the bottom edge of the window',
+      );
 
       // And none of the touch navigation, at the same size.
       expect(find.byType(FloatingBottomNavBar), findsNothing);
@@ -209,6 +216,73 @@ void main() {
     });
   });
 
+  testWidgets('⌘R dates the sample in the deck', (tester) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      await _pumpShell(tester, overrides: await _world());
+      expect(find.textContaining('Refreshed'), findsNothing);
+
+      await _press(tester, LogicalKeyboardKey.keyR, meta: true);
+
+      expect(find.text('Refreshed just now'), findsOneWidget);
+    });
+  });
+
+  group('the deck names the room only when the page does not', () {
+    testWidgets('a service tab root: the tab row names it, the deck does not', (
+      tester,
+    ) async {
+      await onPlatform(TargetPlatform.macOS, () async {
+        final semantics = tester.ensureSemantics();
+        try {
+          await _pumpShell(
+            tester,
+            initialLocation: '/dashboard/radarr/library',
+            overrides: await _world(),
+          );
+          expect(find.bySemanticsLabel('Viewing Radarr, 4K'), findsNothing);
+        } finally {
+          semantics.dispose();
+        }
+      });
+    });
+
+    testWidgets('a pushed page has no tab row, so the deck keeps the chip', (
+      tester,
+    ) async {
+      await onPlatform(TargetPlatform.macOS, () async {
+        final semantics = tester.ensureSemantics();
+        try {
+          await _pumpShell(
+            tester,
+            initialLocation: '/dashboard/radarr/library/item/42',
+            overrides: await _world(),
+          );
+          expect(find.bySemanticsLabel('Viewing Radarr, 4K'), findsOneWidget);
+        } finally {
+          semantics.dispose();
+        }
+      });
+    });
+
+    testWidgets('TrueNAS keeps its band, so the deck keeps the chip', (
+      tester,
+    ) async {
+      await onPlatform(TargetPlatform.macOS, () async {
+        final semantics = tester.ensureSemantics();
+        try {
+          await _pumpShell(
+            tester,
+            initialLocation: '/dashboard/truenas',
+            overrides: await _world(),
+          );
+          expect(find.bySemanticsLabel('Viewing TrueNAS'), findsOneWidget);
+        } finally {
+          semantics.dispose();
+        }
+      });
+    });
+  });
+
   testWidgets('⌘2 crosses to another section', (tester) async {
     await onPlatform(TargetPlatform.macOS, () async {
       final harness = await _pumpShell(tester, overrides: await _world());
@@ -321,6 +395,18 @@ Future<_Harness> _pumpShell(
                   GoRoute(
                     path: ':service',
                     builder: (_, _) => const Placeholder(),
+                    routes: [
+                      GoRoute(
+                        path: ':tab',
+                        builder: (_, _) => const Placeholder(),
+                        routes: [
+                          GoRoute(
+                            path: 'item/:id',
+                            builder: (_, _) => const Placeholder(),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),

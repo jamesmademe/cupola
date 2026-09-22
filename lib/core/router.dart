@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/services/presentation/service_bar_action.dart';
 import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -58,7 +59,6 @@ import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_sc
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/torrent_detail_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_screen.dart';
-import 'package:cupola/features/qbittorrent/presentation/widgets/qbittorrent_actions_bar.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_library_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_movie_detail_screen.dart';
@@ -99,7 +99,6 @@ import 'package:cupola/features/unraid/presentation/unraid_overview_screen.dart'
 import 'package:cupola/features/unraid/presentation/unraid_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_series_detail_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_wanted_screen.dart';
-import 'package:cupola/features/dockge/presentation/dockge_agent_lens_button.dart';
 import 'package:cupola/features/dockge/presentation/dockge_overview_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_screen.dart';
 import 'package:cupola/features/dockge/presentation/dockge_stack_detail_screen.dart';
@@ -1181,7 +1180,7 @@ RouteBase _qbittorrentRoutes() {
               key: state.pageKey,
               child: ServiceHomeScreen(
                 service: service,
-                trailingAction: const QbittorrentActionsBar(),
+                trailingAction: serviceBarAction(service),
                 showAppBar: isServiceTabRoot(service, state.uri.path),
                 child: navigationShell,
               ),
@@ -1486,7 +1485,7 @@ RouteBase _dockgeRoutes() {
               key: state.pageKey,
               child: ServiceHomeScreen(
                 service: service,
-                trailingAction: const DockgeAgentLensButton(),
+                trailingAction: serviceBarAction(service),
                 showAppBar: isServiceTabRoot(service, state.uri.path),
                 child: navigationShell,
               ),

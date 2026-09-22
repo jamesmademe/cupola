@@ -7,12 +7,15 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
+import 'package:cupola/features/shell/presentation/desktop/shell_freshness.dart';
 
 /// The deck: where you are, what else there is, and the way to anything.
 ///
@@ -47,6 +50,14 @@ class ServiceDeck extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final location = GoRouterState.of(context).uri.path;
     final current = _serviceOf(location);
+    // The deck names the room only when the page does not. On a service's tab
+    // root the tab row is the header and already carries glyph, name and lens
+    // (ServiceTabBar.header); a pushed page has no tab row, so it keeps the
+    // chip, and so do the canonical tabs.
+    final namedByPage =
+        current != null &&
+        !ServiceHomeScreen.drawsBand(context, current) &&
+        isServiceTabRoot(current, location);
 
     return Semantics(
       container: true,
@@ -74,13 +85,19 @@ class ServiceDeck extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  _ActiveChip(service: current, compact: compact),
-                  SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
+                  if (!namedByPage) ...[
+                    _ActiveChip(service: current, compact: compact),
+                    SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
+                  ],
                   if (compact)
                     _HealthReadout(narrow: narrow)
                   else
                     Expanded(child: _GlyphBands(current: current)),
                   if (compact) const Spacer(),
+                  if (!narrow) ...[
+                    SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
+                    const ShellFreshness(),
+                  ],
                   SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
                   _JumpPill(
                     compact: compact,

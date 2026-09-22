@@ -8,7 +8,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The one-line answer to "is my stack all right", derived once.
 ///
 /// Every surface that prints an aggregate — the Dashboard's header, the deck's
-/// compact readout, the status bar, the services alert band's own headline —
+/// compact readout, the services alert band's own headline —
 /// reads this, so they cannot disagree about how many services are answering.
 /// Four widgets each counting for themselves is how a window ends up saying
 /// `14 of 16` in one corner and `2 unreachable` next to `all clear` in another.

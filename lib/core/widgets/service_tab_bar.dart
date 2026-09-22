@@ -33,6 +33,14 @@ class ServiceTabBar extends StatelessWidget {
   /// Navigate to [tab]. The caller owns the route shape.
   final ValueChanged<ServiceTab> onSelected;
 
+  /// The connection lens, drawn after the name. Header variant only.
+  final Widget? lens;
+
+  /// The service's own instruments, at the end of the row. Header variant only.
+  final List<Widget> actions;
+
+  final bool _header;
+
   /// Height of the bar, so a hosted scroll view can reserve it.
   static const double height = 44;
 
@@ -41,7 +49,26 @@ class ServiceTabBar extends StatelessWidget {
     required this.service,
     required this.current,
     required this.onSelected,
-  });
+  }) : lens = null,
+       actions = const [],
+       _header = false;
+
+  /// The bar as the service's whole header — the desktop window's variant.
+  ///
+  /// On a desktop window the chrome already names the room (the breadcrumb is
+  /// the URL) and the deck carries the fleet, so the phone's band above this
+  /// bar — back, name, one action — would be a third strip saying what two
+  /// have said. This row takes over what the band had that nobody else says:
+  /// the service's glyph and name, its [lens], and its [actions]. One 44pt row
+  /// instead of 100pt of band and bar.
+  const ServiceTabBar.header({
+    super.key,
+    required this.service,
+    required this.current,
+    required this.onSelected,
+    this.lens,
+    this.actions = const [],
+  }) : _header = true;
 
   @override
   Widget build(BuildContext context) {
@@ -62,37 +89,118 @@ class ServiceTabBar extends StatelessWidget {
       tintAlpha: 0,
     );
 
+    // Scrollable, always, and aligned to the start. Eight of the sixteen
+    // label sets are wider than the narrowest frame the app draws, so a bar
+    // that distributed its tabs would silently squeeze them — and a bar that
+    // centred them would put Overview somewhere different on every service.
+    //
+    // Every tab is built, rather than a lazy list: six children is nothing to
+    // lay out, and a tab that has not been built is a tab a screen reader
+    // cannot reach. Laziness here would buy no frame time and cost the one
+    // audience that cannot scroll the bar to find out what is on it.
+    final strip = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: EdgeInsets.symmetric(
+        horizontal: _header ? AppSpacing.sm : AppSpacing.lg,
+      ),
+      child: Row(
+        // Stretch, so every cell is the bar's full height and the whole
+        // 44pt strip above a label is part of its target.
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final tab in tabs) ...[
+            if (tab != tabs.first) const SizedBox(width: AppSpacing.xs),
+            _Tab(
+              tab: tab,
+              selected: tab == current,
+              accent: accent,
+              onTap: () => onSelected(tab),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    if (!_header) return SizedBox(height: height, child: strip);
+
     return SizedBox(
       height: height,
-      // Scrollable, always, and aligned to the start. Eight of the sixteen
-      // label sets are wider than the narrowest frame the app draws, so a bar
-      // that distributed its tabs would silently squeeze them — and a bar that
-      // centred them would put Overview somewhere different on every service.
-      //
-      // Every tab is built, rather than a lazy list: six children is nothing to
-      // lay out, and a tab that has not been built is a tab a screen reader
-      // cannot reach. Laziness here would buy no frame time and cost the one
-      // audience that cannot scroll the bar to find out what is on it.
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: Row(
-          // Stretch, so every cell is the bar's full height and the whole
-          // 44pt strip above a label is part of its target.
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final tab in tabs) ...[
-              if (tab != tabs.first) const SizedBox(width: AppSpacing.xs),
-              _Tab(
-                tab: tab,
-                selected: tab == current,
-                accent: accent,
-                onTap: () => onSelected(tab),
-              ),
-            ],
-          ],
-        ),
+      child: Row(
+        children: [
+          const SizedBox(width: AppSpacing.lg),
+          _Identity(service: service),
+          ?lens,
+          const SizedBox(width: AppSpacing.sm),
+          Container(width: 1, height: 20, color: colorScheme.outlineVariant),
+          // The tabs give way before the identity or the instruments do: they
+          // scroll, and a clipped name or a missing action does not.
+          Expanded(child: strip),
+          ...actions,
+          const SizedBox(width: AppSpacing.sm),
+        ],
       ),
+    );
+  }
+}
+
+/// The service's glyph and name at the start of the header row.
+///
+/// The name is the page's heading — on a desktop window it is the only place
+/// the service's name is set as one, since the band that carried it is gone.
+class _Identity extends StatelessWidget {
+  const _Identity({required this.service});
+
+  final ServiceKey service;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    const tintAlpha = 0.14;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ExcludeSemantics(
+          child: Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: service.accent.withValues(alpha: tintAlpha),
+              borderRadius: BorderRadius.circular(AppRadius.sm - 1),
+              border: Border.all(color: service.accent.withValues(alpha: 0.4)),
+            ),
+            child: Icon(
+              service.icon,
+              size: 14,
+              color: ServiceTheme.onTint(
+                service.accent,
+                surface: colorScheme.surface,
+                tintAlpha: tintAlpha,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm + 2),
+        // Capped rather than flexible: a flexible name would take a share of
+        // the row's free space and strand the actions short of its end. Past
+        // the cap the name ellipsizes and the tabs keep scrolling.
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 220),
+          child: Semantics(
+            header: true,
+            child: Text(
+              service.title,
+              key: ValueKey('service-bar-title-${service.routeParam}'),
+              style: AppTheme.rowTitle(
+                theme.brightness,
+              ).copyWith(color: colorScheme.onSurface),
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

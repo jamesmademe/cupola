@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/services/presentation/service_bar_action.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
+import 'package:cupola/features/services/presentation/widgets/instance_lens_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The root page of one of a service's tabs: the bar, and the tab's own content
@@ -21,6 +23,10 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The band is glass for the same reason the service app bar above it is: the
 /// hosted screen's ambient gradient has to read continuously behind both, and a
 /// scrolling list has to frost under them rather than stop at a hard edge.
+///
+/// On a desktop window there is no band above it: the bar is drawn as
+/// [ServiceTabBar.header] and is the service's whole header, flush with the
+/// deck. See [ServiceHomeScreen.drawsBand].
 class ServiceTabScaffold extends StatelessWidget {
   final ServiceKey service;
   final ServiceTab tab;
@@ -38,6 +44,43 @@ class ServiceTabScaffold extends StatelessWidget {
     // TrueNAS keeps its console, so it has no bar to draw and no branch to
     // switch. Nothing is drawn rather than an empty strip.
     if (tabsFor(service) == null) return child;
+
+    if (!ServiceHomeScreen.drawsBand(context, service)) {
+      final action = serviceBarAction(service);
+      return Stack(
+        clipBehavior: Clip.hardEdge,
+        children: [
+          // Every hosted screen reserves the phone's band and bar at its top:
+          // the router hands it one constant when the route is built, and the
+          // route is not rebuilt when a resize moves the window across
+          // [AppBreakpoints.desktopMobile]. So the screen keeps that layout and
+          // is lifted by the band this window does not draw — its reserved band
+          // falls above the edge instead of standing as a 56pt gap. Decided
+          // here, per build, because only here is there a context to ask.
+          Positioned(
+            top: -kToolbarHeight,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: child,
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: GlassSurface(
+              child: ServiceTabBar.header(
+                service: service,
+                current: tab,
+                onSelected: (next) => _go(context, next),
+                lens: InstanceLensBadge(service: service),
+                actions: [?action],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
 
     return Stack(
       children: [

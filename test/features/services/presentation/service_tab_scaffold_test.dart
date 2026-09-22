@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +12,7 @@ import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/services/presentation/service_tab_placeholder.dart';
 import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
+import 'package:cupola/features/qbittorrent/presentation/widgets/qbittorrent_actions_bar.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -290,4 +292,181 @@ void main() {
       expect(find.byType(AppEmptyStatePage), findsOneWidget);
     });
   });
+
+  group('on a desktop window the tab row is the header', () {
+    Future<void> pumpDesktop(
+      WidgetTester tester,
+      ServiceKey service, {
+      ServiceTab tab = ServiceTab.overview,
+    }) => tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: Scaffold(
+            body: ServiceHomeScreen(
+              service: service,
+              child: ServiceTabScaffold(
+                service: service,
+                tab: tab,
+                // Full-size, like every hosted screen: the shell's Stack takes
+                // the size of this child.
+                child: const SizedBox.expand(child: Text('tab content')),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    testWidgets('no band: the bar sits at the top and names the service', (
+      tester,
+    ) async {
+      await _onPlatform(TargetPlatform.macOS, () async {
+        await pumpDesktop(tester, ServiceKey.radarr);
+
+        expect(
+          find.byKey(const ValueKey('service-home-title-radarr')),
+          findsNothing,
+        );
+        expect(tester.getTopLeft(find.byType(ServiceTabBar)).dy, 0);
+        expect(
+          find.byKey(const ValueKey('service-bar-title-radarr')),
+          findsOneWidget,
+        );
+      });
+    });
+
+    testWidgets('the service name is the page heading', (tester) async {
+      await _onPlatform(TargetPlatform.macOS, () async {
+        final semantics = tester.ensureSemantics();
+        try {
+          await pumpDesktop(tester, ServiceKey.radarr);
+          final data = tester
+              .getSemantics(
+                find.byKey(const ValueKey('service-bar-title-radarr')),
+              )
+              .getSemanticsData();
+          expect(data.flagsCollection.isHeader, isTrue);
+        } finally {
+          semantics.dispose();
+        }
+      });
+    });
+
+    testWidgets('a service\'s own instrument moves into the row', (
+      tester,
+    ) async {
+      await _onPlatform(TargetPlatform.macOS, () async {
+        await pumpDesktop(tester, ServiceKey.qbittorrent);
+
+        expect(
+          find.descendant(
+            of: find.byType(ServiceTabBar),
+            matching: find.byType(QbittorrentActionsBar),
+          ),
+          findsOneWidget,
+        );
+      });
+    });
+
+    testWidgets('TrueNAS has no tab row, so it keeps its band', (tester) async {
+      await _onPlatform(TargetPlatform.macOS, () async {
+        await pumpDesktop(tester, ServiceKey.truenas);
+
+        expect(
+          find.byKey(const ValueKey('service-home-title-truenas')),
+          findsOneWidget,
+        );
+      });
+    });
+
+    testWidgets('the hosted screen\'s first line sits right under the bar', (
+      tester,
+    ) async {
+      // A hosted screen reserves the phone's band and bar, whatever window it
+      // is in. On the desktop the band is not drawn, so the first line must
+      // land flush under the bar — not 56pt lower, where the band would be.
+      await _onPlatform(TargetPlatform.macOS, () async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              currentSettingsProvider.overrideWith(
+                (ref) => const SettingsModel(),
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.darkTheme(),
+              home: const Scaffold(
+                body: ServiceTabScaffold(
+                  service: ServiceKey.radarr,
+                  tab: ServiceTab.overview,
+                  child: SizedBox.expand(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: kToolbarHeight + ServiceTabBar.height),
+                        Text('first line'),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          tester.getTopLeft(find.text('first line')).dy,
+          ServiceTabBar.height,
+        );
+      });
+    });
+
+    testWidgets('narrowed into the phone layout, the band comes back', (
+      tester,
+    ) async {
+      await _onPlatform(TargetPlatform.macOS, () async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(1200, 800);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await pumpDesktop(tester, ServiceKey.radarr);
+        expect(
+          find.byKey(const ValueKey('service-home-title-radarr')),
+          findsNothing,
+        );
+
+        tester.view.physicalSize = const Size(600, 800);
+        await tester.pump();
+
+        expect(
+          find.byKey(const ValueKey('service-home-title-radarr')),
+          findsOneWidget,
+        );
+        expect(
+          tester.getTopLeft(find.byType(ServiceTabBar)).dy,
+          kToolbarHeight,
+        );
+      });
+    });
+  });
+}
+
+/// Runs [body] as if the app were on [platform], and always puts it back —
+/// inside the body, since the binding checks foundation debug variables before
+/// any tear-down runs.
+Future<void> _onPlatform(
+  TargetPlatform platform,
+  Future<void> Function() body,
+) async {
+  debugDefaultTargetPlatformOverride = platform;
+  try {
+    await body();
+  } finally {
+    debugDefaultTargetPlatformOverride = null;
+  }
 }

@@ -1,7 +1,7 @@
 /// How old a reading is, in the one vocabulary the whole app uses to say it.
 ///
 /// Five surfaces had already answered this question privately and none of them
-/// agreed: the desktop status bar bucketed to `just now / N min ago / N h ago`,
+/// agreed: the desktop status bar (now the deck's freshness label) bucketed to `just now / N min ago / N h ago`,
 /// the Activity feed spelled out seconds, the Prowlarr history rounded
 /// differently again, and two more rolled their own on the spot. A figure whose
 /// age is printed in four vocabularies on four screens is a figure the user
