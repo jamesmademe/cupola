@@ -387,7 +387,9 @@ void main() {
       expect(field.controller!.text, 'https://nas.local:8989');
     });
 
-    testWidgets('the address carries over to the next service', (tester) async {
+    testWidgets('the next service starts with an empty address', (
+      tester,
+    ) async {
       await _pumpOnboarding(tester);
       await _tap(tester, 'Set up my stack');
       await _pick(tester, 'Radarr');
@@ -397,10 +399,17 @@ void main() {
       await _fill(tester, url: 'http://nas.local:7878', key: 'abcdef1234');
       await _tap(tester, 'Skip Radarr');
 
-      // Sonarr inherits the host and gets its own default port, so the second
-      // service is a tap plus a pasted key rather than a retyped address.
+      // Nothing is guessed on arrival. Carrying Radarr's host over on Sonarr's
+      // default port was wrong for every reverse-proxied lab, where each
+      // service has its own subdomain on 443, and cost a delete before the real
+      // address could be typed. The guess survives as the port chip, a tap the
+      // user chooses to make.
       expect(findLine('Where does Sonarr live?'), findsOneWidget);
       final field = tester.widget<TextField>(find.byType(TextField).first);
+      expect(field.controller!.text, isEmpty);
+
+      await tester.tap(find.text(':8989'));
+      await tester.pumpAndSettle();
       expect(field.controller!.text, 'http://nas.local:8989');
     });
 

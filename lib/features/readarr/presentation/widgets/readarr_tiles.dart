@@ -228,7 +228,7 @@ class ReadarrHistoryTile extends StatelessWidget {
                 child: Text(
                   event.label,
                   style: Theme.of(context).textTheme.labelSmall!
-                      .weight(FontWeight.w800)
+                      .weight(FontWeight.w600)
                       .copyWith(color: event.color),
                 ),
               ),

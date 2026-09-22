@@ -144,7 +144,7 @@ class _SectionTile extends StatelessWidget {
             const Spacer(),
             Text(
               section.title,
-              style: theme.textTheme.titleSmall!.weight(FontWeight.w700),
+              style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
             ),
             const SizedBox(height: 2),
             Text(

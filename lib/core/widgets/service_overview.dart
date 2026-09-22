@@ -163,7 +163,7 @@ class _TabLink extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: Theme.of(
         context,
-      ).textTheme.labelMedium?.weight(FontWeight.w700).copyWith(color: color),
+      ).textTheme.labelMedium?.weight(FontWeight.w600).copyWith(color: color),
     );
   }
 }
@@ -259,7 +259,7 @@ class ServiceOverviewRow extends StatelessWidget {
                   style: AppTheme.chrome(
                     context,
                     size: 11,
-                    weight: FontWeight.w700,
+                    weight: FontWeight.w600,
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -434,7 +434,7 @@ class _StatusWord extends StatelessWidget {
           style: AppTheme.chrome(
             context,
             size: 12,
-            weight: FontWeight.w700,
+            weight: FontWeight.w600,
             color: color,
           ),
         ),
@@ -468,7 +468,7 @@ class _LensChip extends StatelessWidget {
         style: AppTheme.chrome(
           context,
           size: 11,
-          weight: FontWeight.w700,
+          weight: FontWeight.w600,
           color: serviceOverviewInk(service, colorScheme),
         ),
       ),

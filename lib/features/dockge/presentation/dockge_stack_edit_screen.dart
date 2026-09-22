@@ -271,7 +271,7 @@ class _Label extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: Theme.of(context).textTheme.labelLarge!.weight(FontWeight.w700),
+      style: Theme.of(context).textTheme.labelLarge!.weight(FontWeight.w600),
     );
   }
 }

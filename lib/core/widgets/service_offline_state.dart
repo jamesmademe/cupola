@@ -94,7 +94,7 @@ class ServiceOfflineState extends StatelessWidget {
               ExcludeSemantics(
                 child: Text(
                   '$serviceName did not answer',
-                  style: theme.textTheme.titleMedium!.weight(FontWeight.w700),
+                  style: theme.textTheme.titleMedium!.weight(FontWeight.w600),
                   textAlign: TextAlign.center,
                 ),
               ),

@@ -1057,7 +1057,7 @@ class _CellLiveLine extends StatelessWidget {
     // One tier above the name is the whole hierarchy: the figure is the only
     // thing on the cell allowed to be larger and bolder than the service's own
     // name, and only just.
-    final figureStyle = theme.textTheme.bodyLarge?.weight(FontWeight.w700);
+    final figureStyle = theme.textTheme.bodyLarge?.weight(FontWeight.w600);
 
     if (reachability != ServiceReachability.online) {
       return Text(

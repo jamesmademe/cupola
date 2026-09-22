@@ -146,7 +146,7 @@ class _SettingsRow extends StatelessWidget {
                         title,
                         style: Theme.of(
                           context,
-                        ).textTheme.titleSmall!.weight(FontWeight.w700),
+                        ).textTheme.titleSmall!.weight(FontWeight.w600),
                       ),
                       Text(
                         subtitle,
@@ -164,7 +164,7 @@ class _SettingsRow extends StatelessWidget {
                     child: Text(
                       '$count',
                       style: Theme.of(context).textTheme.titleSmall!
-                          .weight(FontWeight.w800)
+                          .weight(FontWeight.w600)
                           .tabular
                           .copyWith(color: colorScheme.onSurfaceVariant),
                     ),

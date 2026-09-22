@@ -176,7 +176,7 @@ class _InfoGridCell extends StatelessWidget {
           // metadata label, not a region kicker, so it keeps the role's own
           // derived tracking rather than an authored overline.
           style: theme.textTheme.labelSmall!
-              .weight(FontWeight.w700)
+              .weight(FontWeight.w600)
               .copyWith(color: colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 2),

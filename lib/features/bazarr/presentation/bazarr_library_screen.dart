@@ -370,7 +370,7 @@ class _BazarrLibraryRow extends StatelessWidget {
                       entry.title,
                       style: Theme.of(
                         context,
-                      ).textTheme.titleSmall!.weight(FontWeight.w700),
+                      ).textTheme.titleSmall!.weight(FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

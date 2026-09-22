@@ -1249,14 +1249,14 @@ class _ServiceGroupHeader extends StatelessWidget {
                     child: Text(
                       service.title,
                       style: theme.textTheme.titleLarge?.weight(
-                        FontWeight.bold,
+                        FontWeight.w600,
                       ),
                     ),
                   ),
                   Text(
                     '$count',
                     style: theme.textTheme.labelMedium
-                        ?.weight(FontWeight.w800)
+                        ?.weight(FontWeight.w600)
                         .tabular
                         .copyWith(color: service.accent),
                   ),
@@ -1347,7 +1347,7 @@ class _StackHealthStrip extends StatelessWidget {
                     failed.length == 1
                         ? '$names did not respond'
                         : '${failed.length} $noun did not respond',
-                    style: theme.textTheme.titleSmall?.weight(FontWeight.w700),
+                    style: theme.textTheme.titleSmall?.weight(FontWeight.w600),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
@@ -1559,7 +1559,7 @@ class _ServiceTile extends StatelessWidget {
                           // on a label inside a 84pt chip, where that buys
                           // nothing and costs the chip's height.
                           style: theme.textTheme.titleMedium
-                              ?.weight(FontWeight.w800)
+                              ?.weight(FontWeight.w600)
                               .tabular
                               .copyWith(
                                 color: colorScheme.onSurface,
@@ -1578,7 +1578,7 @@ class _ServiceTile extends StatelessWidget {
                       // times across one scroll is not introducing anything. The
                       // selected/unselected tone is unchanged.
                       style: theme.textTheme.labelSmall
-                          ?.weight(FontWeight.w700)
+                          ?.weight(FontWeight.w600)
                           .copyWith(
                             color: selected
                                 ? tone

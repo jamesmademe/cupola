@@ -753,7 +753,7 @@ class _DiskTile extends StatelessWidget {
                   Text(
                     tempLabel,
                     style: Theme.of(context).textTheme.labelMedium!
-                        .weight(FontWeight.w700)
+                        .weight(FontWeight.w600)
                         .tabular
                         .copyWith(
                           color: disk.warm

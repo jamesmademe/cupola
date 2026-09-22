@@ -909,7 +909,7 @@ class _LastImportBanner extends StatelessWidget {
             Text(
               'View progress',
               style: theme.textTheme.labelMedium!
-                  .weight(FontWeight.w700)
+                  .weight(FontWeight.w600)
                   .copyWith(color: theme.colorScheme.primary),
             ),
           ],
@@ -1063,7 +1063,7 @@ class _ScanningState extends StatelessWidget {
                         Text(
                           '${service.title} is scanning $folderName',
                           style: theme.textTheme.titleSmall!.weight(
-                            FontWeight.w700,
+                            FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: AppSpacing.xs),
@@ -1158,7 +1158,7 @@ class _ScannedFolderLine extends StatelessWidget {
               style: TextButton.styleFrom(
                 minimumSize: const Size(44, 44),
                 foregroundColor: service.accent,
-                textStyle: theme.textTheme.labelMedium!.weight(FontWeight.w700),
+                textStyle: theme.textTheme.labelMedium!.weight(FontWeight.w600),
               ),
               child: const Text('Choose another folder'),
             ),

@@ -41,7 +41,7 @@ class RadialGauge extends StatelessWidget {
               Text(
                 valueLabel,
                 style: theme.textTheme.titleLarge!
-                    .weight(FontWeight.w700)
+                    .weight(FontWeight.w600)
                     .tabular,
               ),
               Text(

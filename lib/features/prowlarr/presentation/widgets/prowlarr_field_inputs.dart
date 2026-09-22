@@ -282,7 +282,7 @@ class _FieldInfo extends StatelessWidget {
             field.displayLabel,
             style: Theme.of(
               context,
-            ).textTheme.labelLarge!.weight(FontWeight.w800),
+            ).textTheme.labelLarge!.weight(FontWeight.w600),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -309,7 +309,7 @@ class ProwlarrSectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.titleSmall!.weight(FontWeight.w800),
+        style: Theme.of(context).textTheme.titleSmall!.weight(FontWeight.w600),
       ),
     );
   }

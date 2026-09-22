@@ -686,7 +686,7 @@ class _SectionLabel extends StatelessWidget {
     return Text(
       label,
       style: Theme.of(context).textTheme.labelSmall!
-          .weight(FontWeight.w700)
+          .weight(FontWeight.w600)
           .copyWith(color: colorScheme.onSurfaceVariant),
     );
   }

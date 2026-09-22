@@ -215,7 +215,7 @@ class _CalendarCard extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(
                 context,
-              ).textTheme.labelMedium?.weight(FontWeight.w700),
+              ).textTheme.labelMedium?.weight(FontWeight.w600),
             ),
           ),
           const SizedBox(width: AppSpacing.md),
@@ -229,7 +229,7 @@ class _CalendarCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(
                     context,
-                  ).textTheme.titleSmall?.weight(FontWeight.w700),
+                  ).textTheme.titleSmall?.weight(FontWeight.w600),
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: AppSpacing.xs),

@@ -94,7 +94,7 @@ class _MessagePromptState extends State<_MessagePrompt> {
               'Message ${widget.userName}',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleLarge!.weight(FontWeight.w700),
+              style: theme.textTheme.titleLarge!.weight(FontWeight.w600),
             ),
           ),
         ],

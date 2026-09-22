@@ -291,7 +291,7 @@ class _TriStateField extends StatelessWidget {
           label,
           style: Theme.of(
             context,
-          ).textTheme.labelLarge!.weight(FontWeight.w700),
+          ).textTheme.labelLarge!.weight(FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.xs),
         SegmentedButton<int>(

@@ -274,7 +274,7 @@ class _TagRow extends StatelessWidget {
                         tag.label,
                         style: Theme.of(
                           context,
-                        ).textTheme.titleSmall!.weight(FontWeight.w700),
+                        ).textTheme.titleSmall!.weight(FontWeight.w600),
                       ),
                       Text(
                         tag.isUnused

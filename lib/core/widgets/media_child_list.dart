@@ -189,7 +189,7 @@ class MediaChildTile extends StatelessWidget {
                   // A fixed-width column of ordinals: tabular figures are what
                   // keep 09 and 10 aligned down the list.
                   style: theme.textTheme.labelSmall!
-                      .weight(FontWeight.w700)
+                      .weight(FontWeight.w600)
                       .tabular
                       .copyWith(color: colorScheme.onSurfaceVariant),
                 ),
@@ -611,7 +611,7 @@ class _GroupSelector extends StatelessWidget {
           children: [
             Text(
               selected.label,
-              style: theme.textTheme.titleSmall!.weight(FontWeight.w700),
+              style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
             ),
             if (selected.summary != null) ...[
               const SizedBox(height: AppSpacing.xs),

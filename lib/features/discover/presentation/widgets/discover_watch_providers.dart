@@ -168,7 +168,7 @@ class _ProviderGroupLabel extends StatelessWidget {
       // has its own header, so they are sub-group labels rather than eyebrows —
       // they stay on the label ramp with the tracking it derives.
       style: Theme.of(context).textTheme.labelSmall
-          ?.weight(FontWeight.w700)
+          ?.weight(FontWeight.w600)
           .copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
     );
   }

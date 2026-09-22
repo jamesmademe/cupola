@@ -84,7 +84,7 @@ class CertTrustContent extends StatelessWidget {
                     ? 'This certificate has changed'
                     : 'Self-signed certificate',
                 style: theme.textTheme.titleMedium!
-                    .weight(FontWeight.w700)
+                    .weight(FontWeight.w600)
                     .copyWith(color: rotated ? scheme.error : null),
               ),
             ),

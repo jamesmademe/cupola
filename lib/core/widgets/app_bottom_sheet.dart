@@ -79,7 +79,7 @@ class AppSheetHeader extends StatelessWidget {
                 title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleLarge!.weight(FontWeight.w700),
+                style: theme.textTheme.titleLarge!.weight(FontWeight.w600),
               ),
               if (subtitle != null && subtitle!.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.xs),

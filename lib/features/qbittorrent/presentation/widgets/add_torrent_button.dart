@@ -244,7 +244,7 @@ class AddTorrentButton extends ConsumerWidget {
                         'Add Torrent',
                         style: Theme.of(
                           ctx2,
-                        ).textTheme.labelLarge!.weight(FontWeight.w800),
+                        ).textTheme.labelLarge!.weight(FontWeight.w600),
                       ),
                     ],
                   ),

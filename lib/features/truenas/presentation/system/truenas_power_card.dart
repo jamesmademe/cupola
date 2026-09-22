@@ -50,7 +50,7 @@ class TrueNasPowerCard extends ConsumerWidget {
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'Power',
-                style: theme.textTheme.titleSmall!.weight(FontWeight.w700),
+                style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
               ),
             ],
           ),
@@ -196,7 +196,7 @@ Future<bool> _confirmByTypingHostname(
                 phrase,
                 style: Theme.of(
                   context,
-                ).textTheme.bodyMedium?.weight(FontWeight.w700),
+                ).textTheme.bodyMedium?.weight(FontWeight.w600),
               ),
             ),
             const SizedBox(height: AppSpacing.md),

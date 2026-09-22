@@ -121,7 +121,7 @@ class _DetailBody extends ConsumerWidget {
             'Services',
             style: Theme.of(
               context,
-            ).textTheme.titleSmall!.weight(FontWeight.w700),
+            ).textTheme.titleSmall!.weight(FontWeight.w600),
           ),
           const SizedBox(height: AppSpacing.sm),
           servicesAsync.when(
@@ -158,7 +158,7 @@ class _StatusHeader extends StatelessWidget {
         Text(
           status.label,
           style: Theme.of(context).textTheme.titleMedium!
-              .weight(FontWeight.w700)
+              .weight(FontWeight.w600)
               .copyWith(color: statusColor),
         ),
       ],
@@ -343,7 +343,7 @@ class _ActionChip extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelMedium!
-                    .weight(FontWeight.w800)
+                    .weight(FontWeight.w600)
                     .copyWith(color: color),
               ),
             ],
@@ -410,7 +410,7 @@ class _ServiceStatusList extends StatelessWidget {
                   child: Text(
                     service.statusLabel,
                     style: Theme.of(context).textTheme.labelSmall!
-                        .weight(FontWeight.w800)
+                        .weight(FontWeight.w600)
                         .copyWith(color: color),
                   ),
                 ),
@@ -533,7 +533,7 @@ class _TerminalLogState extends ConsumerState<_TerminalLog> {
           'Terminal',
           style: Theme.of(
             context,
-          ).textTheme.titleSmall!.weight(FontWeight.w700),
+          ).textTheme.titleSmall!.weight(FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.sm),
         Container(

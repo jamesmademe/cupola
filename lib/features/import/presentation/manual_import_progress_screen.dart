@@ -145,7 +145,7 @@ class _CommandCard extends StatelessWidget {
                       child: Text(
                         'Manual import',
                         style: theme.textTheme.titleMedium!.weight(
-                          FontWeight.w700,
+                          FontWeight.w600,
                         ),
                       ),
                     ),
@@ -241,7 +241,7 @@ class _Metric extends StatelessWidget {
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleSmall!.weight(FontWeight.w700).tabular,
+          style: theme.textTheme.titleSmall!.weight(FontWeight.w600).tabular,
         ),
       ],
     );

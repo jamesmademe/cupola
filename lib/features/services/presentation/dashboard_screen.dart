@@ -224,7 +224,7 @@ class _ServicesEmptyState extends StatelessWidget {
           Text(
             'Nothing answers yet.',
             style: theme.textTheme.titleLarge!
-                .weight(FontWeight.w700)
+                .weight(FontWeight.w600)
                 .copyWith(color: scheme.onSurface),
             textAlign: TextAlign.center,
           ),

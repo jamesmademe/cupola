@@ -62,7 +62,7 @@ class BazarrSubtitleLanguageWrap extends StatelessWidget {
                   Text(
                     (lang.code2 ?? lang.name ?? '?').toUpperCase(),
                     style: Theme.of(context).textTheme.titleSmall!
-                        .weight(FontWeight.w800)
+                        .weight(FontWeight.w600)
                         .copyWith(color: accentText),
                   ),
                   if (lang.name != null && lang.code2 != null)

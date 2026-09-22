@@ -285,7 +285,7 @@ class _ImplementationRow extends StatelessWidget {
                         item.implementationName ?? item.name ?? 'Unknown',
                         style: Theme.of(
                           context,
-                        ).textTheme.titleSmall!.weight(FontWeight.w700),
+                        ).textTheme.titleSmall!.weight(FontWeight.w600),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

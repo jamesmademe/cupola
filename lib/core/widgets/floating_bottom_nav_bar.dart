@@ -780,7 +780,7 @@ class _NavBarItem extends StatelessWidget {
   /// overflows, so the geometry reads its size and leading off the role rather
   /// than off a private literal that could drift from the ramp.
   static TextStyle labelStyleOf(BuildContext context) =>
-      Theme.of(context).textTheme.labelMedium!.weight(FontWeight.w700);
+      Theme.of(context).textTheme.labelMedium!.weight(FontWeight.w600);
 
   /// Height of the selection pill at the current reading size.
   static double pillHeightFor(TextScaler scaler, TextStyle labelStyle) {
@@ -992,7 +992,7 @@ class _BadgedIcon extends StatelessWidget {
               child: Text(
                 count > 9 ? '9+' : '$count',
                 style: Theme.of(context).textTheme.labelSmall
-                    ?.weight(FontWeight.w800)
+                    ?.weight(FontWeight.w600)
                     .tabular
                     .copyWith(
                       // Measured against the fill rather than assumed: white on

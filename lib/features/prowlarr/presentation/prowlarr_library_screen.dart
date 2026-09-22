@@ -788,7 +788,7 @@ class _FilterBar extends StatelessWidget {
                   Text(
                     sortKey.label,
                     style: Theme.of(context).textTheme.labelMedium!
-                        .weight(FontWeight.w700)
+                        .weight(FontWeight.w600)
                         .copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -857,7 +857,7 @@ class _FilterChip extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.labelMedium!
-                  .weight(FontWeight.w700)
+                  .weight(FontWeight.w600)
                   .copyWith(
                     color: selected
                         ? AppColors.prowlarr

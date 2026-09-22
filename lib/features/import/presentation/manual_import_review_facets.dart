@@ -168,7 +168,7 @@ class _FacetChip extends StatelessWidget {
                         info.label,
                         maxLines: 1,
                         style: theme.textTheme.labelSmall!
-                            .weight(FontWeight.w700)
+                            .weight(FontWeight.w600)
                             .tabular
                             .copyWith(color: foreground),
                       ),

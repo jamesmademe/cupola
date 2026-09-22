@@ -113,9 +113,14 @@ class _RailItemState extends State<_RailItem> {
     // accents, which belong to service surfaces. See `NavTab`.
     final primary = colorScheme.primary;
 
+    // The outline in both states, never the filled `selectedIcon`. The pill
+    // behind the glyph already says which section is current; filling the glyph
+    // too said it twice, and on a rail of four the one solid shape outweighed
+    // everything else in the shell. The phone's bar keeps the fill — there the
+    // label and the fill are the whole of the selected state.
     final glyph = Icon(
-      widget.selected ? destination.selectedIcon : destination.icon,
-      size: 21,
+      destination.icon,
+      size: 20,
       color: widget.selected
           ? colorScheme.onSurface
           : (_hovered ? colorScheme.onSurface : colorScheme.onSurfaceVariant),
@@ -224,7 +229,7 @@ class _RailBadge extends StatelessWidget {
           style: AppTheme.chrome(
             context,
             size: 11,
-            weight: FontWeight.w700,
+            weight: FontWeight.w600,
             color: ServiceTheme.foregroundOn(destination.accentColor),
             height: 1,
           ).mono.tabular,

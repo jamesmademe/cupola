@@ -71,7 +71,7 @@ class _BazarrWantedScreenState extends ConsumerState<BazarrWantedScreen>
       unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
       labelStyle: Theme.of(
         context,
-      ).textTheme.titleSmall!.weight(FontWeight.w800),
+      ).textTheme.titleSmall!.weight(FontWeight.w600),
       tabs: const [
         Tab(text: 'Episodes'),
         Tab(text: 'Movies'),
@@ -332,7 +332,7 @@ class _BazarrWantedRow extends StatelessWidget {
                       title ?? 'Unknown',
                       style: Theme.of(
                         context,
-                      ).textTheme.titleSmall!.weight(FontWeight.w700),
+                      ).textTheme.titleSmall!.weight(FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -361,7 +361,7 @@ class _BazarrWantedRow extends StatelessWidget {
                 child: Text(
                   langCodes.isNotEmpty ? langCodes : 'WANTED',
                   style: Theme.of(context).textTheme.labelSmall!
-                      .weight(FontWeight.w800)
+                      .weight(FontWeight.w600)
                       .copyWith(color: AppColors.bazarr),
                 ),
               ),
@@ -512,7 +512,7 @@ class _BazarrDetailAppBar extends StatelessWidget
       ),
       title: Text(
         title,
-        style: Theme.of(context).textTheme.titleMedium!.weight(FontWeight.w700),
+        style: Theme.of(context).textTheme.titleMedium!.weight(FontWeight.w600),
       ),
       bottom: bottom,
     );

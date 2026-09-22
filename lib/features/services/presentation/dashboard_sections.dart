@@ -523,7 +523,7 @@ class _FailedChip extends StatelessWidget {
       child: Text(
         'failed',
         style: Theme.of(context).textTheme.labelSmall
-            ?.weight(FontWeight.w700)
+            ?.weight(FontWeight.w600)
             .copyWith(color: ServiceTheme.foregroundOn(tone)),
       ),
     );
@@ -886,7 +886,7 @@ class _DecisionActionButton extends StatelessWidget {
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.labelLarge?.weight(FontWeight.w700),
+          style: theme.textTheme.labelLarge?.weight(FontWeight.w600),
         ),
       ),
     );
@@ -1005,7 +1005,7 @@ class _InFlightRow extends StatelessWidget {
           : Text(
               '$percent%',
               style: Theme.of(context).textTheme.labelSmall
-                  ?.weight(FontWeight.w800)
+                  ?.weight(FontWeight.w600)
                   .tabular
                   .copyWith(color: accent),
             ),
@@ -1197,7 +1197,7 @@ class _SectionAction extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               semanticsLabel: label,
               style: Theme.of(context).textTheme.labelMedium
-                  ?.weight(FontWeight.w700)
+                  ?.weight(FontWeight.w600)
                   .copyWith(color: color),
             ),
           ),

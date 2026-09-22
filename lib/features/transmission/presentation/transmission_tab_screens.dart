@@ -912,7 +912,7 @@ class _DaemonCard extends StatelessWidget {
                 'RPC $rpc',
                 style: Theme.of(
                   context,
-                ).textTheme.labelLarge?.weight(FontWeight.w700),
+                ).textTheme.labelLarge?.weight(FontWeight.w600),
               ),
             ],
           ),
@@ -971,7 +971,7 @@ class _SessionValueRow extends StatelessWidget {
             textAlign: TextAlign.end,
             style: Theme.of(
               context,
-            ).textTheme.labelLarge?.weight(FontWeight.w700),
+            ).textTheme.labelLarge?.weight(FontWeight.w600),
           ),
           onTap: onTap,
           accentColor: ServiceKey.transmission.accent,

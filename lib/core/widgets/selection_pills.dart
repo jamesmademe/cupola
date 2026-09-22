@@ -154,7 +154,7 @@ class _Pill extends StatelessWidget {
               label,
               maxLines: 1,
               style: theme.textTheme.labelMedium!
-                  .weight(FontWeight.w700)
+                  .weight(FontWeight.w600)
                   .copyWith(color: labelColor),
             ),
           ),

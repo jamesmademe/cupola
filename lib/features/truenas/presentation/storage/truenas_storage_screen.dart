@@ -98,7 +98,7 @@ class _PoolCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     pool.name,
-                    style: theme.textTheme.titleSmall!.weight(FontWeight.w700),
+                    style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
                   ),
                 ),
                 Text(

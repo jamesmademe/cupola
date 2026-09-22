@@ -125,7 +125,7 @@ class _CastTile extends StatelessWidget {
             maxLines: 1,
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.weight(FontWeight.w700),
+            style: theme.textTheme.labelSmall?.weight(FontWeight.w600),
           ),
           Text(
             member.character,

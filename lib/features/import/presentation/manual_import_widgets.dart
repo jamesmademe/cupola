@@ -93,7 +93,7 @@ class ManualImportFrame extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleMedium!.weight(FontWeight.w800),
+              style: theme.textTheme.titleMedium!.weight(FontWeight.w600),
             ),
             Text(
               subtitle,
@@ -238,7 +238,7 @@ class ImportStationBar extends StatelessWidget {
                           Text(
                             '${index + 1}',
                             style: theme.textTheme.labelMedium!
-                                .weight(FontWeight.w700)
+                                .weight(FontWeight.w600)
                                 .tabular
                                 .copyWith(
                                   color: index == activeIndex

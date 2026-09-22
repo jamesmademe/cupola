@@ -241,7 +241,7 @@ class _TitleRow extends StatelessWidget {
                 session.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall!.weight(FontWeight.w700),
+                style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
               ),
               if (subtitle != null && subtitle.isNotEmpty)
                 Text(

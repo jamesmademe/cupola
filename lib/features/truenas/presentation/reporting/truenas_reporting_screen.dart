@@ -156,7 +156,7 @@ class _GraphCard extends StatelessWidget {
               graph.name.toUpperCase(),
               style: Theme.of(
                 context,
-              ).textTheme.labelMedium!.weight(FontWeight.w700),
+              ).textTheme.labelMedium!.weight(FontWeight.w600),
             ),
             const SizedBox(height: AppSpacing.sm),
             LineAreaChart(series: series),

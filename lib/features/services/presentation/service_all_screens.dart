@@ -192,7 +192,7 @@ class _FilterChipRow extends StatelessWidget {
             showCheckmark: false,
             onSelected: (_) => onSelected(filter),
             labelStyle: Theme.of(context).textTheme.labelMedium
-                ?.weight(FontWeight.w700)
+                ?.weight(FontWeight.w600)
                 .copyWith(
                   color: isSelected
                       ? ServiceTheme.foregroundOn(accent)
@@ -284,7 +284,7 @@ class _RequestListRow extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(
                       context,
-                    ).textTheme.bodyMedium?.weight(FontWeight.w700),
+                    ).textTheme.bodyMedium?.weight(FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -438,7 +438,7 @@ class _RequesterAvatar extends StatelessWidget {
       child: Text(
         initials.isEmpty ? '?' : initials,
         style: Theme.of(context).textTheme.labelSmall
-            ?.weight(FontWeight.w800)
+            ?.weight(FontWeight.w600)
             .copyWith(color: ServiceKey.seerr.accent),
       ),
     );
@@ -467,7 +467,7 @@ class _SmallPill extends StatelessWidget {
         // tracking the ramp derives for 11pt.
         style: Theme.of(
           context,
-        ).textTheme.labelSmall?.weight(FontWeight.w800).copyWith(color: color),
+        ).textTheme.labelSmall?.weight(FontWeight.w600).copyWith(color: color),
       ),
     );
   }

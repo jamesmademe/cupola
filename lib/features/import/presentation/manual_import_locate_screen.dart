@@ -321,7 +321,7 @@ class _RootFolderChip extends StatelessWidget {
                 Text(
                   folder.displayName,
                   style: theme.textTheme.labelMedium!
-                      .weight(FontWeight.w700)
+                      .weight(FontWeight.w600)
                       .copyWith(color: labelColor),
                 ),
                 if (subtitle != null)

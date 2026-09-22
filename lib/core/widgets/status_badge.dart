@@ -162,7 +162,7 @@ class StatusBadge extends StatelessWidget {
           Text(
             percentText,
             style: theme.textTheme.labelSmall!
-                .weight(FontWeight.w700)
+                .weight(FontWeight.w600)
                 .tabular
                 .copyWith(color: textColor),
           ),

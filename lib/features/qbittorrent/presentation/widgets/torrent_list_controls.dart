@@ -312,7 +312,7 @@ class _FilterChip extends StatelessWidget {
             child: Text(
               label,
               style: textTheme.labelSmall!
-                  .weight(FontWeight.w700)
+                  .weight(FontWeight.w600)
                   .copyWith(
                     color: active ? accent : colorScheme.onSurfaceVariant,
                   ),

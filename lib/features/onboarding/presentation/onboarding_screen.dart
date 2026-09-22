@@ -261,18 +261,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   // ── Address help ──────────────────────────────────────────────────────────
 
-  /// Fills the address from the host of whichever service was configured before
-  /// this one, on this service's own default port.
-  ///
-  /// On a home lab one box usually runs everything, so after the first service
-  /// the rest are a tap plus a pasted key. Never overwrites a typed value.
-  void _prefillAddress(ServiceKey service) {
-    if (_urlCtrl[service]!.text.trim().isNotEmpty) return;
-    final host = _lastKnownHost(exclude: service);
-    if (host == null) return;
-    final scheme = _lastKnownScheme(exclude: service) ?? 'https';
-    _urlCtrl[service]!.text = '$scheme://$host:${service.defaultPort}';
-  }
+  // The address is never filled in on arrival. The walk used to carry the
+  // previous service's host over on this one's default port, which assumed one
+  // box answering on bare ports. Behind a reverse proxy — one subdomain per
+  // service, TLS on 443 — that guess was wrong every time and had to be
+  // deleted before typing the real one. The port chip below ([_suggestPort])
+  // still offers the same guess, as a tap the user chooses to make.
 
   String? _lastKnownHost({required ServiceKey exclude}) {
     for (final k in _walk.reversed) {
@@ -557,7 +551,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       _goTo(_closePage);
       return;
     }
-    setState(() => _prefillAddress(_walk.first));
     _goTo(_firstWalkPage);
   }
 
@@ -568,8 +561,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     await _save();
     if (!mounted) return;
     if (index >= 0 && index + 1 < _walk.length) {
-      final next = _walk[index + 1];
-      setState(() => _prefillAddress(next));
       _goTo(_firstWalkPage + index + 1);
       return;
     }

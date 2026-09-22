@@ -114,7 +114,7 @@ class _SeriesExpansionTile extends StatelessWidget {
           leading: Icon(Icons.tv_rounded, color: colorScheme.tertiary),
           title: Text(
             seriesTitle,
-            style: textTheme.titleMedium?.weight(FontWeight.w700),
+            style: textTheme.titleMedium?.weight(FontWeight.w600),
           ),
           subtitle: Text(
             '$totalEpisodes episode${totalEpisodes == 1 ? '' : 's'}',
@@ -178,7 +178,7 @@ class _SeasonExpansionTile extends StatelessWidget {
         child: Text(
           '$seasonNumber',
           style: textTheme.labelSmall
-              ?.weight(FontWeight.w700)
+              ?.weight(FontWeight.w600)
               .copyWith(color: colorScheme.onTertiaryContainer),
         ),
       ),

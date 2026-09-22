@@ -46,7 +46,7 @@ class MediaDetailHeroSummary extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.titleLarge!
-                  .weight(FontWeight.w800)
+                  .weight(FontWeight.w600)
                   .copyWith(height: 1.15),
             ),
           ),

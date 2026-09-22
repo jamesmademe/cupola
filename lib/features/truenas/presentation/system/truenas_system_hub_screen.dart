@@ -154,7 +154,7 @@ class _SystemTile extends StatelessWidget {
             const Spacer(),
             Text(
               entry.title,
-              style: theme.textTheme.titleSmall!.weight(FontWeight.w700),
+              style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
             ),
             const SizedBox(height: 2),
             Text(

@@ -292,7 +292,7 @@ class _DonationSheetState extends State<DonationSheet> {
           const SizedBox(height: AppSpacing.md),
           Text(
             'Thank you!',
-            style: textTheme.titleLarge!.weight(FontWeight.w700),
+            style: textTheme.titleLarge!.weight(FontWeight.w600),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(

@@ -202,7 +202,7 @@ class _KpiCard extends StatelessWidget {
                 kpi.value,
                 options: ReelMotion.figure,
                 style: theme.textTheme.titleMedium!
-                    .weight(FontWeight.w800)
+                    .weight(FontWeight.w700)
                     .tabular
                     .copyWith(
                       // The em dash demotes to the secondary ink: it is a

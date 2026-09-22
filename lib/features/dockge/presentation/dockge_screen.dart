@@ -180,7 +180,7 @@ class _StackTile extends ConsumerWidget {
                         stack.name,
                         style: Theme.of(
                           context,
-                        ).textTheme.bodyMedium!.weight(FontWeight.w700),
+                        ).textTheme.bodyMedium!.weight(FontWeight.w600),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

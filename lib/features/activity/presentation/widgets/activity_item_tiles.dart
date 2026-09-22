@@ -72,7 +72,7 @@ class QueueItemTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall?.weight(
-                        FontWeight.w700,
+                        FontWeight.w600,
                       ),
                     ),
                     if (subtitle != null) _SubtitleText(text: subtitle),
@@ -163,7 +163,7 @@ class HistoryItemTile extends StatelessWidget {
                     Text(
                       title,
                       style: theme.textTheme.titleSmall?.weight(
-                        FontWeight.w700,
+                        FontWeight.w600,
                       ),
                     ),
                   ],
@@ -212,7 +212,7 @@ class BlocklistItemTile extends StatelessWidget {
         children: [
           _TitleRow(
             title: blocklistTitle(item, serviceType),
-            titleStyle: theme.textTheme.titleSmall?.weight(FontWeight.w700),
+            titleStyle: theme.textTheme.titleSmall?.weight(FontWeight.w600),
             trailing: StatusBadge(info: status),
           ),
           if (subtitle != null) _SubtitleText(text: subtitle),
@@ -284,7 +284,7 @@ class WantedItemTile extends StatelessWidget {
         children: [
           _TitleRow(
             title: title,
-            titleStyle: theme.textTheme.titleSmall?.weight(FontWeight.w700),
+            titleStyle: theme.textTheme.titleSmall?.weight(FontWeight.w600),
             maxLines: isCutoff ? 1 : null,
             trailing: canSearch
                 ? MediaSearchPopupMenu(
@@ -437,7 +437,7 @@ class GlobalActivityItemTile extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(
                       context,
-                    ).textTheme.bodyMedium?.weight(FontWeight.w700),
+                    ).textTheme.bodyMedium?.weight(FontWeight.w600),
                   ),
                   if (item.subtitle.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.xs),

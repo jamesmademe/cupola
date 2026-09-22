@@ -226,7 +226,7 @@ class _NzbgetRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.end,
                   style: theme.textTheme.labelSmall
-                      ?.weight(FontWeight.w800)
+                      ?.weight(FontWeight.w600)
                       .copyWith(color: color),
                 ),
               ),

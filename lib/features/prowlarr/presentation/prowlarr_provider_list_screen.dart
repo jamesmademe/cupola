@@ -253,7 +253,7 @@ class _ProviderRow extends StatelessWidget {
                         resource.name ?? resource.displayImplementation,
                         style: Theme.of(
                           context,
-                        ).textTheme.titleSmall!.weight(FontWeight.w700),
+                        ).textTheme.titleSmall!.weight(FontWeight.w600),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

@@ -196,7 +196,7 @@ class _ProfileRow extends StatelessWidget {
                         profile.name ?? 'Profile ${profile.id}',
                         style: Theme.of(
                           context,
-                        ).textTheme.titleSmall!.weight(FontWeight.w700),
+                        ).textTheme.titleSmall!.weight(FontWeight.w600),
                       ),
                       Text(
                         summary,

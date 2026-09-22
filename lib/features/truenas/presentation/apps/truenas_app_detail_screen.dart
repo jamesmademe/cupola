@@ -114,7 +114,7 @@ class _AppDetailBody extends ConsumerWidget {
                       app.title,
                       style: Theme.of(
                         context,
-                      ).textTheme.titleMedium!.weight(FontWeight.w700),
+                      ).textTheme.titleMedium!.weight(FontWeight.w600),
                     ),
                     const SizedBox(height: 2),
                     AppStateLabel(state: app.state, version: app.humanVersion),

@@ -150,7 +150,7 @@ class IdentityCodeChip extends StatelessWidget {
       child: Text(
         code,
         style: theme.textTheme.labelSmall!
-            .weight(FontWeight.w700)
+            .weight(FontWeight.w600)
             .tabular
             .copyWith(
               color: ServiceTheme.onTint(
@@ -271,7 +271,7 @@ class ReadyGroupHeader extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.titleSmall!.weight(
-                                FontWeight.w700,
+                                FontWeight.w600,
                               ),
                             ),
                             Text(

@@ -535,7 +535,7 @@ class AppTheme {
   static TextStyle eyebrow(Color color) => _inter(
     color: color,
     fontSize: 11,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w600,
     height: 1.2,
     letterSpacing: 1.4,
     brightness: Brightness.dark,
@@ -554,43 +554,43 @@ class AppTheme {
   /// Each takes a [brightness] because Inter's tracking is walked per theme:
   /// the dark delta is why a dark surface traced from light tracking is wrong.
   ///
-  /// **Subtitle** (700, 20, -0.3 tracking) — a service's own name in its app
+  /// **Subtitle** (600, 20, -0.3 tracking) — a service's own name in its app
   /// bar. One step under Title because it names the surface the app bar already
   /// put you on, not the surface itself.
   static TextStyle subtitle(Brightness brightness) => _inter(
     fontSize: 20,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w600,
     height: 1.26,
     letterSpacing: -0.3,
     brightness: brightness,
   );
 
-  /// **Panel header** (700, 18) — an `h2` inside a page: a Dockge stack, an NPM
+  /// **Panel header** (600, 18) — an `h2` inside a page: a Dockge stack, an NPM
   /// host, a TrueNAS console section. It heads a region, not the whole screen.
   static TextStyle panelHeader(Brightness brightness) => _inter(
     fontSize: 18,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w600,
     height: 1.28,
     brightness: brightness,
   );
 
-  /// **Row title** (700, 15) — the primary line of a list row that is a *name*
+  /// **Row title** (600, 15) — the primary line of a list row that is a *name*
   /// rather than a sentence: a device, a now-playing session, a proxy host.
   static TextStyle rowTitle(Brightness brightness) => _inter(
     fontSize: 15,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w600,
     height: 1.30,
     brightness: brightness,
   );
 
-  /// **Data** (600, 13, 1.30) — the answer in a row: the title of an attention
+  /// **Data** (500, 13, 1.30) — the answer in a row: the title of an attention
   /// item, a queue entry, a table cell.
   ///
   /// It sits *above* Label on purpose. The thing that needs a human must never
   /// be smaller than the word describing it.
   static TextStyle data(Brightness brightness) => _inter(
     fontSize: 13,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w500,
     height: 1.30,
     brightness: brightness,
   );
@@ -694,7 +694,7 @@ class AppTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: textTheme.titleLarge!
-            .weight(FontWeight.w800)
+            .weight(FontWeight.w700)
             .copyWith(color: colorScheme.onSurface),
         iconTheme: IconThemeData(color: colorScheme.onSurface),
       ),
@@ -739,7 +739,7 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
-          textStyle: labelLarge.weight(FontWeight.w700),
+          textStyle: labelLarge.weight(FontWeight.w600),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         ),
@@ -1018,7 +1018,7 @@ class AppTheme {
           displayMedium: style(size: 45, weight: FontWeight.w800, height: 1.10),
           displaySmall: style(size: 36, weight: FontWeight.w700, height: 1.10),
           // Headline — screen-level headings.
-          headlineLarge: style(size: 32, weight: FontWeight.w800, height: 1.15),
+          headlineLarge: style(size: 32, weight: FontWeight.w700, height: 1.15),
           headlineMedium: style(
             size: 28,
             weight: FontWeight.w700,
@@ -1026,9 +1026,9 @@ class AppTheme {
           ),
           headlineSmall: style(size: 24, weight: FontWeight.w700, height: 1.20),
           // Title — section headers, card titles, row primaries, KPI values.
-          titleLarge: style(size: 22, weight: FontWeight.w700, height: 1.25),
+          titleLarge: style(size: 22, weight: FontWeight.w600, height: 1.25),
           titleMedium: style(size: 16, weight: FontWeight.w600, height: 1.32),
-          titleSmall: style(size: 14, weight: FontWeight.w600, height: 1.34),
+          titleSmall: style(size: 14, weight: FontWeight.w500, height: 1.34),
           // Body — running text. The only roles set for reading, not for chrome.
           bodyLarge: style(size: 16, weight: FontWeight.w400, height: 1.55),
           bodyMedium: style(size: 14, weight: FontWeight.w400, height: 1.45),

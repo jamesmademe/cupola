@@ -108,7 +108,7 @@ class SectionHeader extends StatelessWidget {
           children: [
             Text(
               title,
-              style: theme.textTheme.titleLarge!.weight(FontWeight.bold),
+              style: theme.textTheme.titleLarge!.weight(FontWeight.w600),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 2),

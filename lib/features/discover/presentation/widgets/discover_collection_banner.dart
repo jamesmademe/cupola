@@ -106,7 +106,7 @@ class DiscoverCollectionBanner extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall
-                          ?.weight(FontWeight.w700)
+                          ?.weight(FontWeight.w600)
                           .copyWith(color: colorScheme.onSurface),
                     ),
                   ),

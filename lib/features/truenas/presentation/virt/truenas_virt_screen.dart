@@ -317,7 +317,7 @@ class _InstanceCard extends ConsumerWidget {
                         child: Text(
                           instance.name,
                           style: theme.textTheme.titleSmall!.weight(
-                            FontWeight.w700,
+                            FontWeight.w600,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -376,7 +376,7 @@ class _AutostartBadge extends StatelessWidget {
           Text(
             'AUTOSTART',
             style: theme.textTheme.labelSmall!
-                .weight(FontWeight.w800)
+                .weight(FontWeight.w600)
                 .copyWith(
                   color: ServiceTheme.onTint(
                     AppColors.truenas,

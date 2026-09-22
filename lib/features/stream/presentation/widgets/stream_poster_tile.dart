@@ -139,7 +139,7 @@ class _UnplayedBadge extends StatelessWidget {
       child: Text(
         '$count',
         style: Theme.of(context).textTheme.labelSmall!
-            .weight(FontWeight.w700)
+            .weight(FontWeight.w600)
             .copyWith(color: colorScheme.onPrimary),
       ),
     );

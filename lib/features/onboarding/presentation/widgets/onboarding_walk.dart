@@ -316,7 +316,13 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
   @override
   Widget build(BuildContext context) {
     return OnboardingBeat(
+      besideRing: MainAxisAlignment.start,
       actions: Column(
+        // Beside the ring the footer keeps its own width, so Back lines up
+        // under it at the column's edge rather than floating in the middle.
+        crossAxisAlignment: onboardingSideBySide(context)
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
         children: [
           OnboardingFooter(
             secondary: OutlinedButton(

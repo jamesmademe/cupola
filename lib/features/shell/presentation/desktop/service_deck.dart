@@ -157,7 +157,7 @@ class _ActiveChip extends ConsumerWidget {
                 style: AppTheme.chrome(
                   context,
                   size: 12,
-                  weight: FontWeight.w700,
+                  weight: FontWeight.w600,
                   color: colorScheme.onSurface,
                 ),
               ),
@@ -168,7 +168,7 @@ class _ActiveChip extends ConsumerWidget {
               style: AppTheme.chrome(
                 context,
                 size: 13,
-                weight: FontWeight.w700,
+                weight: FontWeight.w600,
                 color: colorScheme.onSurface,
               ),
             ),

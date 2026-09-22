@@ -136,7 +136,7 @@ class _RequestCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     heading,
-                    style: theme.textTheme.titleSmall?.weight(FontWeight.w700),
+                    style: theme.textTheme.titleSmall?.weight(FontWeight.w600),
                   ),
                 ),
                 if (request.is4k) ...[

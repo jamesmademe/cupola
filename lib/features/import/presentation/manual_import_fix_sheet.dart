@@ -606,7 +606,7 @@ class _SheetHeader extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: theme.textTheme.titleMedium!.weight(FontWeight.w800),
+                  style: theme.textTheme.titleMedium!.weight(FontWeight.w600),
                 ),
                 // Wraps in full. Assigning an identity means reading the file
                 // name for the clues the service could not parse — the year,
@@ -669,7 +669,7 @@ class _AppliesToStrip extends StatelessWidget {
               Text(
                 '+${items.length - visible} more',
                 style: theme.textTheme.labelSmall!
-                    .weight(FontWeight.w700)
+                    .weight(FontWeight.w600)
                     .tabular
                     .copyWith(color: colorScheme.onSurfaceVariant),
               ),
@@ -874,7 +874,7 @@ class _BulkMap<T> extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(
                   context,
-                ).textTheme.titleSmall!.weight(FontWeight.w700),
+                ).textTheme.titleSmall!.weight(FontWeight.w600),
               ),
               const SizedBox(height: AppSpacing.sm),
               DropdownButtonFormField<T>(
@@ -962,7 +962,7 @@ class _ResultTile extends StatelessWidget {
           title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleSmall!.weight(FontWeight.w700),
+          style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
         ),
         subtitle: subtitle == null
             ? null

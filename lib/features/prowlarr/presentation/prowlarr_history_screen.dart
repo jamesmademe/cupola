@@ -297,7 +297,7 @@ class _ProwlarrHistoryRow extends StatelessWidget {
               Text(
                 style.label,
                 style: theme.textTheme.labelSmall
-                    ?.weight(FontWeight.w800)
+                    ?.weight(FontWeight.w600)
                     .copyWith(color: style.color),
               ),
             ],

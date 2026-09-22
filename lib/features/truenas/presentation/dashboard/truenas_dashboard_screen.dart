@@ -557,7 +557,7 @@ class _PoolHealthCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     pool.name,
-                    style: theme.textTheme.labelMedium!.weight(FontWeight.w700),
+                    style: theme.textTheme.labelMedium!.weight(FontWeight.w600),
                   ),
                   if (pool.usedFraction != null) ...[
                     const SizedBox(width: 6),

@@ -26,7 +26,7 @@ class RequestsSection extends StatelessWidget {
       children: [
         Text(
           'Requests',
-          style: theme.textTheme.titleMedium?.weight(FontWeight.bold),
+          style: theme.textTheme.titleMedium?.weight(FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.md),
         if (requests.isEmpty)
@@ -217,7 +217,7 @@ class _Badge extends StatelessWidget {
         // rather than asserted. Black was right for the ambers and wrong for
         // every dark fill that ever reached this widget.
         style: theme.textTheme.labelSmall
-            ?.weight(FontWeight.bold)
+            ?.weight(FontWeight.w600)
             .copyWith(color: ServiceTheme.foregroundOn(color)),
       ),
     );
@@ -271,7 +271,7 @@ class _StatusBadge extends StatelessWidget {
       child: Text(
         displayStatus.label,
         style: theme.textTheme.labelSmall
-            ?.weight(FontWeight.bold)
+            ?.weight(FontWeight.w600)
             .copyWith(color: ServiceTheme.foregroundOn(color)),
       ),
     );
@@ -305,7 +305,7 @@ class MediaSection extends StatelessWidget {
       children: [
         Text(
           'Media',
-          style: theme.textTheme.titleMedium?.weight(FontWeight.bold),
+          style: theme.textTheme.titleMedium?.weight(FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.md),
         SizedBox(
@@ -369,7 +369,7 @@ class AdvancedSection extends StatelessWidget {
       children: [
         Text(
           'Advanced',
-          style: theme.textTheme.titleMedium?.weight(FontWeight.bold),
+          style: theme.textTheme.titleMedium?.weight(FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.md),
         SizedBox(

@@ -233,7 +233,7 @@ class _AlertBandBody extends StatelessWidget {
               child: Text(
                 servicesRetryLabel(services.length),
                 style: theme.textTheme.labelLarge
-                    ?.weight(FontWeight.w700)
+                    ?.weight(FontWeight.w600)
                     .copyWith(color: colorScheme.primary),
               ),
             ),
@@ -254,7 +254,7 @@ class _AlertBandBody extends StatelessWidget {
               child: Text(
                 'Settings',
                 style: theme.textTheme.labelLarge
-                    ?.weight(FontWeight.w700)
+                    ?.weight(FontWeight.w600)
                     .copyWith(color: colorScheme.primary),
               ),
             ),

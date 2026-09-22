@@ -238,7 +238,7 @@ class _IndexerFormState extends ConsumerState<_IndexerForm> {
             'Tags',
             style: Theme.of(
               context,
-            ).textTheme.titleSmall!.weight(FontWeight.w800),
+            ).textTheme.titleSmall!.weight(FontWeight.w600),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(

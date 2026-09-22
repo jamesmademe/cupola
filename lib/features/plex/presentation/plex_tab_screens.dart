@@ -260,7 +260,7 @@ class _OnDeckTile extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelSmall
-                ?.weight(FontWeight.w700)
+                ?.weight(FontWeight.w600)
                 .copyWith(color: theme.colorScheme.onSurface),
           ),
           if (caption.isNotEmpty)

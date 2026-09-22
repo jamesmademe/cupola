@@ -534,7 +534,7 @@ class _SectionHeader extends StatelessWidget {
           // card (and twice in one when a release is both scored and
           // rejected), so it is a dense label, not a region kicker.
           style: theme.textTheme.labelSmall!
-              .weight(FontWeight.w700)
+              .weight(FontWeight.w600)
               .copyWith(
                 color: isError
                     ? AppColors.error
@@ -600,7 +600,7 @@ class ScoreBadge extends StatelessWidget {
             _signed(score),
             // Scores stack down a release list and are read against each other.
             style: theme.textTheme.labelSmall!
-                .weight(FontWeight.w700)
+                .weight(FontWeight.w600)
                 .tabular
                 .copyWith(color: ink),
           ),
@@ -661,7 +661,7 @@ class CustomFormatChip extends StatelessWidget {
           Text(
             _signed(score),
             style: theme.textTheme.labelSmall!
-                .weight(FontWeight.w700)
+                .weight(FontWeight.w600)
                 .tabular
                 .copyWith(color: color),
           ),

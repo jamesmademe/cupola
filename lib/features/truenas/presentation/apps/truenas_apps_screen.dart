@@ -98,7 +98,7 @@ class _AppCard extends ConsumerWidget {
                           app.title,
                           style: Theme.of(
                             context,
-                          ).textTheme.titleSmall!.weight(FontWeight.w700),
+                          ).textTheme.titleSmall!.weight(FontWeight.w600),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -206,7 +206,7 @@ class _UpgradeBadge extends StatelessWidget {
       child: Text(
         'UPDATE',
         style: Theme.of(context).textTheme.labelSmall!
-            .weight(FontWeight.w700)
+            .weight(FontWeight.w600)
             // The ink walks against the tint it sits on, not against the page.
             .copyWith(
               color: statusToneColor(

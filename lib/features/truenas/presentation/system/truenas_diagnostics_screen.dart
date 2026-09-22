@@ -194,7 +194,7 @@ class _ProbeCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   result.probe.label,
-                  style: theme.textTheme.labelLarge!.weight(FontWeight.w700),
+                  style: theme.textTheme.labelLarge!.weight(FontWeight.w600),
                 ),
               ),
               IconButton(

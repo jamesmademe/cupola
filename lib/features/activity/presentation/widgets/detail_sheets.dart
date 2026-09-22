@@ -321,7 +321,7 @@ class _SectionContent extends StatelessWidget {
           ),
           child: Text(
             section.title,
-            style: theme.textTheme.titleMedium?.weight(FontWeight.w700),
+            style: theme.textTheme.titleMedium?.weight(FontWeight.w600),
           ),
         ),
         if (section.fields.isNotEmpty || section.messages.isNotEmpty)

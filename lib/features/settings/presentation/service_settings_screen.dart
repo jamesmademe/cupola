@@ -666,7 +666,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               children: [
                 Text(
                   service.title,
-                  style: theme.textTheme.titleMedium!.weight(FontWeight.w700),
+                  style: theme.textTheme.titleMedium!.weight(FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
                 Text(

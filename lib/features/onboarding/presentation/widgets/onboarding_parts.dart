@@ -356,6 +356,7 @@ class OnboardingBeat extends StatelessWidget {
     required this.children,
     this.actions,
     this.alignment = MainAxisAlignment.start,
+    this.besideRing = MainAxisAlignment.center,
   });
 
   final List<Widget> children;
@@ -370,17 +371,18 @@ class OnboardingBeat extends StatelessWidget {
   /// it opened a hole under it on every beat.
   final MainAxisAlignment alignment;
 
+  /// The same choice beside the ring, where [alignment]'s phone reasoning has
+  /// nothing to hold on to.
+  ///
+  /// `center` by default: with no ring above and no thumb below, the step
+  /// centres on the instrument it is paired with. `start` only for the walk,
+  /// whose subject line is hoisted above the pager — centring the form under it
+  /// would open a hole between the sentence and the field it introduces.
+  final MainAxisAlignment besideRing;
+
   @override
   Widget build(BuildContext context) {
-    // Whether the actions ride with the content instead of being pinned. The
-    // wide desktop board has room to keep the answer and its actions together;
-    // the 720x450 board does not. There, notes on services such as Readarr and
-    // TrueNAS used to push the footer below the window, leaving the primary
-    // action visibly clipped even though it remained in the semantics tree.
-    final followsContent =
-        actions != null &&
-        onboardingSideBySide(context) &&
-        !AppBreakpoints.isCompactDesktop(context);
+    if (onboardingSideBySide(context)) return _besideRing(context);
     return Padding(
       // The generous top and bottom gutters are for a beat sitting against the
       // screen edge. With the keyboard up there is no edge below — the key rows
@@ -407,35 +409,53 @@ class OnboardingBeat extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     // `end` means "sit under the ring, close to the thumb" — a
-                    // phone answer to a phone layout. Beside the ring there is
-                    // nothing above to sit under and no thumb to be near, so the
-                    // step centres on the instrument it is paired with. Resolved
-                    // here rather than at each beat so no step can disagree.
-                    mainAxisAlignment:
-                        onboardingSideBySide(context) &&
-                            alignment == MainAxisAlignment.end
-                        ? MainAxisAlignment.center
-                        : alignment,
-                    children: [
-                      ...children,
-                      // Beside the ring the actions travel with the copy they
-                      // belong to. Pinned to the foot of the column they would
-                      // sit a hand's width below the sentence that argues for
-                      // them, with nothing in between — which is the right answer
-                      // on a phone, where the foot of the screen is where the
-                      // thumb already is, and the wrong one in a window.
-                      if (followsContent) ...[
-                        const SizedBox(height: AppSpacing.xl),
-                        actions!,
-                      ],
-                    ],
+                    // phone answer to a phone layout.
+                    mainAxisAlignment: alignment,
+                    children: children,
                   ),
                 ),
               ),
             ),
           ),
-          if (actions != null && !followsContent) ...[
+          if (actions != null) ...[
             const SizedBox(height: AppSpacing.lg),
+            actions!,
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// The window arrangement: copy and actions as one group, centred on the ring.
+  ///
+  /// Pinned to the foot of the column the actions sat a hand's width below the
+  /// sentence that argues for them, with nothing in between — the right answer
+  /// on a phone, where the foot of the screen is where the thumb already is, and
+  /// the wrong one in a window. Riding inside the scrollable instead is what
+  /// clipped the primary action on the 720x450 board, where notes on services
+  /// such as Readarr and TrueNAS pushed it below the window.
+  ///
+  /// A loose [Flexible] answers both. While the copy fits it takes only its own
+  /// height, so copy and actions travel together and the group centres; once it
+  /// does not, the copy is capped at what is left and scrolls, and the actions
+  /// stay on screen under it.
+  Widget _besideRing(BuildContext context) {
+    return Padding(
+      padding: onboardingPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: besideRing,
+        children: [
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children,
+              ),
+            ),
+          ),
+          if (actions != null) ...[
+            const SizedBox(height: AppSpacing.xl),
             actions!,
           ],
         ],
@@ -446,6 +466,11 @@ class OnboardingBeat extends StatelessWidget {
 
 /// Two actions side by side, stacking once the reading size stops letting them
 /// share a line. Past roughly 1.4x the labels overlap rather than elide.
+///
+/// Full width on a phone, where the pair spans the thumb's reach. Beside the
+/// ring the buttons keep their own width instead: stretched across a 600pt
+/// column, "Continue" became a banner rather than a button, and the eye had to
+/// travel the whole bar to find its label.
 class OnboardingFooter extends StatelessWidget {
   const OnboardingFooter({super.key, this.secondary, required this.primary});
 
@@ -454,8 +479,11 @@ class OnboardingFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sideBySide = onboardingSideBySide(context);
     if (secondary == null) {
-      return SizedBox(width: double.infinity, child: primary);
+      return sideBySide
+          ? primary
+          : SizedBox(width: double.infinity, child: primary);
     }
     if (MediaQuery.textScalerOf(context).scale(14) > 20) {
       return Column(
@@ -468,10 +496,14 @@ class OnboardingFooter extends StatelessWidget {
       );
     }
     return Row(
+      mainAxisSize: sideBySide ? MainAxisSize.min : MainAxisSize.max,
       children: [
         secondary!,
         const SizedBox(width: AppSpacing.md),
-        Expanded(child: primary),
+        // Loose, not tight: the primary keeps its own width while the pair
+        // fits, and still yields to the column on the 720x450 board, where a
+        // long service name next to "Test connection" does not.
+        if (sideBySide) Flexible(child: primary) else Expanded(child: primary),
       ],
     );
   }
@@ -613,7 +645,7 @@ class OnboardingPick extends StatelessWidget {
         Text(
           'Pick your services',
           style: theme.textTheme.headlineMedium!
-              .weight(FontWeight.w800)
+              .weight(FontWeight.w700)
               .copyWith(color: theme.colorScheme.onSurface),
         ),
         const SizedBox(height: AppSpacing.md),

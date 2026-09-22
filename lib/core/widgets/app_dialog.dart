@@ -88,7 +88,7 @@ Future<AppConfirmResult> showAppConfirmDialog({
                   // under them.
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleLarge!.weight(FontWeight.w700),
+                  style: theme.textTheme.titleLarge!.weight(FontWeight.w600),
                 ),
               ),
             ],
@@ -113,7 +113,7 @@ Future<AppConfirmResult> showAppConfirmDialog({
                       // hang `wght` on, so the bold never reached the face.
                       style: opt.danger && (values[opt.key] ?? false)
                           ? theme.textTheme.bodyLarge!
-                                .weight(FontWeight.bold)
+                                .weight(FontWeight.w600)
                                 .copyWith(color: errorColor)
                           : null,
                     ),
@@ -152,7 +152,7 @@ Future<AppConfirmResult> showAppConfirmDialog({
                           // Same restructure: `bodyMedium` is the dialog's own
                           // content role, which this note is an emphasis of.
                           style: theme.textTheme.bodyMedium!
-                              .weight(FontWeight.bold)
+                              .weight(FontWeight.w600)
                               .copyWith(color: errorColor),
                         ),
                       ),

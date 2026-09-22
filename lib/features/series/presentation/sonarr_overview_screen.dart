@@ -255,7 +255,7 @@ class _AiringRow extends StatelessWidget {
           style: AppTheme.chrome(
             context,
             size: 11,
-            weight: FontWeight.w700,
+            weight: FontWeight.w600,
             color: colorScheme.onSurfaceVariant,
           ),
         ),

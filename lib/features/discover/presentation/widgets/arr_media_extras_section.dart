@@ -123,7 +123,7 @@ class _ConnectSeerrCta extends StatelessWidget {
       children: [
         Text(
           'Cast & collections',
-          style: theme.textTheme.titleSmall?.weight(FontWeight.w700),
+          style: theme.textTheme.titleSmall?.weight(FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(

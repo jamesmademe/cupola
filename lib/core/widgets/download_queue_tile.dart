@@ -231,7 +231,7 @@ class DownloadQueueTile extends StatelessWidget {
                               Text(
                                 percentage == null ? '—' : '$percentage%',
                                 style: theme.textTheme.labelMedium!
-                                    .weight(FontWeight.w700)
+                                    .weight(FontWeight.w600)
                                     .tabular
                                     // One plate, four clients, every service
                                     // accent: the percentage is the only
@@ -460,7 +460,7 @@ class _StatusChip extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelSmall!
-            .weight(FontWeight.w800)
+            .weight(FontWeight.w600)
             // Walked against the chip's own composited tint, not against the
             // surface: the label sits on 12% of its own tone, which is part of
             // the contrast calculation.

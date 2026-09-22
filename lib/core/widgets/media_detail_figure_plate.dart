@@ -76,7 +76,7 @@ class MediaDetailFigurePlate extends StatelessWidget {
                     value,
                     maxLines: 1,
                     style: theme.textTheme.headlineSmall!
-                        .weight(FontWeight.w800)
+                        .weight(FontWeight.w700)
                         .tabular
                         .copyWith(
                           color: ServiceTheme.onTint(

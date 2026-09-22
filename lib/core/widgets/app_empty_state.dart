@@ -106,7 +106,7 @@ class AppEmptyState extends StatelessWidget {
               (compact
                       ? theme.textTheme.titleSmall!
                       : theme.textTheme.titleMedium!)
-                  .weight(FontWeight.w700),
+                  .weight(FontWeight.w600),
           textAlign: TextAlign.center,
         ),
         if (message != null) ...[

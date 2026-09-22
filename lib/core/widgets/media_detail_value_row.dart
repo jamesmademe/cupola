@@ -149,7 +149,7 @@ class _MediaDetailValueRowState<T> extends State<MediaDetailValueRow<T>> {
       // The same dense metadata label the fact grid uses, so an editable field
       // and a read-only one are the same kind of thing until you reach for them.
       style: theme.textTheme.labelSmall!
-          .weight(FontWeight.w700)
+          .weight(FontWeight.w600)
           .copyWith(color: colorScheme.onSurfaceVariant),
     );
 
@@ -364,7 +364,7 @@ class MediaValueOptionRow extends StatelessWidget {
                 label,
                 style: isSelected
                     ? theme.textTheme.bodyLarge!
-                          .weight(FontWeight.w700)
+                          .weight(FontWeight.w600)
                           .copyWith(color: selectedInk)
                     : theme.textTheme.bodyLarge!.weight(FontWeight.w500),
               ),

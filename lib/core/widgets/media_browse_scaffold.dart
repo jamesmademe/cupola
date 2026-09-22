@@ -610,7 +610,7 @@ class _MediaBrowseScaffoldState<T>
                   section.label,
                   style: Theme.of(
                     context,
-                  ).textTheme.titleLarge!.weight(FontWeight.w700),
+                  ).textTheme.titleLarge!.weight(FontWeight.w600),
                 ),
                 const SizedBox(height: AppSpacing.md),
               ],
@@ -970,7 +970,7 @@ class _MediaBrowseFilterChip extends StatelessWidget {
               child: Text(
                 label,
                 style: Theme.of(context).textTheme.labelMedium!
-                    .weight(FontWeight.w700)
+                    .weight(FontWeight.w600)
                     .copyWith(
                       color: selected
                           ? ServiceTheme.foregroundOn(color)

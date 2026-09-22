@@ -169,7 +169,7 @@ class _IssueCard extends StatelessWidget {
                   title,
                   style: Theme.of(
                     context,
-                  ).textTheme.titleMedium?.weight(FontWeight.w700),
+                  ).textTheme.titleMedium?.weight(FontWeight.w600),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
@@ -226,7 +226,7 @@ class _UserCard extends StatelessWidget {
                   user.displayName,
                   style: Theme.of(
                     context,
-                  ).textTheme.titleMedium?.weight(FontWeight.w700),
+                  ).textTheme.titleMedium?.weight(FontWeight.w600),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(

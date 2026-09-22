@@ -80,7 +80,7 @@ class RatingChip extends StatelessWidget {
                   Text(
                     sourceIcon,
                     style: Theme.of(context).textTheme.labelSmall!
-                        .weight(FontWeight.bold)
+                        .weight(FontWeight.w600)
                         .copyWith(color: color),
                   ),
                   const SizedBox(width: AppSpacing.xs),
@@ -89,7 +89,7 @@ class RatingChip extends StatelessWidget {
                     // Score plus vote count — digits that differ per card and
                     // stack in a ratings row, so they get a shared advance.
                     style: Theme.of(context).textTheme.labelSmall!
-                        .weight(FontWeight.w700)
+                        .weight(FontWeight.w600)
                         .tabular
                         .copyWith(color: color),
                   ),

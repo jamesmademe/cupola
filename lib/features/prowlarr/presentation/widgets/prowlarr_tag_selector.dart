@@ -178,7 +178,7 @@ class _TagToggle extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelMedium!
-                    .weight(FontWeight.w700)
+                    .weight(FontWeight.w600)
                     .copyWith(
                       color: selected
                           ? AppColors.prowlarr

@@ -342,7 +342,7 @@ class _FilterChip extends StatelessWidget {
               child: Text(
                 label,
                 style: Theme.of(context).textTheme.labelMedium
-                    ?.weight(FontWeight.w700)
+                    ?.weight(FontWeight.w600)
                     .copyWith(
                       // Foreground picked from the fill's luminance: white on
                       // the Radarr amber measures 2.15:1, well below AA.
@@ -600,7 +600,7 @@ class _SearchSectionHeader extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: Theme.of(
                 context,
-              ).textTheme.labelLarge?.weight(FontWeight.w700),
+              ).textTheme.labelLarge?.weight(FontWeight.w600),
             ),
           ),
           // Which connection answered. On the heading rather than on the rows:
@@ -856,7 +856,7 @@ class _SearchResultCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(
                     context,
-                  ).textTheme.bodyMedium?.weight(FontWeight.w700),
+                  ).textTheme.bodyMedium?.weight(FontWeight.w600),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
@@ -1012,7 +1012,7 @@ class _ResultTag extends StatelessWidget {
         label,
         style: Theme.of(
           context,
-        ).textTheme.labelSmall?.weight(FontWeight.w800).copyWith(color: color),
+        ).textTheme.labelSmall?.weight(FontWeight.w600).copyWith(color: color),
       ),
     );
   }
@@ -1111,7 +1111,7 @@ class _SearchEmptyState extends ConsumerWidget {
           textAlign: TextAlign.center,
           style: Theme.of(
             context,
-          ).textTheme.titleMedium?.weight(FontWeight.w700),
+          ).textTheme.titleMedium?.weight(FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
@@ -1164,7 +1164,7 @@ class _SearchEmptyState extends ConsumerWidget {
                 child: Text(
                   'Clear',
                   style: Theme.of(context).textTheme.labelSmall
-                      ?.weight(FontWeight.w700)
+                      ?.weight(FontWeight.w600)
                       .copyWith(color: colorScheme.primary),
                 ),
               ),

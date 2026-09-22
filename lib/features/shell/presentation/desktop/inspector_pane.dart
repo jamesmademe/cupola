@@ -129,7 +129,7 @@ class _InspectorHeader extends ConsumerWidget {
               style: AppTheme.chrome(
                 context,
                 size: 13,
-                weight: FontWeight.w700,
+                weight: FontWeight.w600,
                 color: colorScheme.onSurface,
               ),
             ),
@@ -487,7 +487,7 @@ class _SectionLabel extends StatelessWidget {
       style: AppTheme.chrome(
         context,
         size: 11,
-        weight: FontWeight.w700,
+        weight: FontWeight.w600,
         color: CupolaThemeColors.of(context).dimText,
         height: 1.2,
         letterSpacing: 1.4,

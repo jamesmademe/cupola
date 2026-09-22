@@ -175,7 +175,7 @@ class _ReadarrRecordTile extends StatelessWidget {
                     title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.weight(FontWeight.w700),
+                    style: theme.textTheme.titleSmall?.weight(FontWeight.w600),
                   ),
                   if (subtitle.isNotEmpty) ...[
                     const SizedBox(height: 4),

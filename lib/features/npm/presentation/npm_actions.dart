@@ -122,7 +122,7 @@ Future<bool> confirmByTyping(
                 phrase,
                 style: Theme.of(
                   context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
             const SizedBox(height: AppSpacing.md),

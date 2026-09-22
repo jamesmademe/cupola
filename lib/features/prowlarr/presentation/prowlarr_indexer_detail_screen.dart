@@ -319,7 +319,7 @@ class _InfoCard extends ConsumerWidget {
                       row.$2,
                       style: Theme.of(
                         context,
-                      ).textTheme.bodyMedium!.weight(FontWeight.w700),
+                      ).textTheme.bodyMedium!.weight(FontWeight.w600),
                     ),
                   ],
                 ),
@@ -432,7 +432,7 @@ class _StatTile extends StatelessWidget {
               // place, so the digits get a fixed advance.
               style: Theme.of(
                 context,
-              ).textTheme.titleSmall!.weight(FontWeight.w800).tabular,
+              ).textTheme.titleSmall!.weight(FontWeight.w600).tabular,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -466,7 +466,7 @@ class _SectionLabel extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.titleSmall!.weight(FontWeight.w800),
+        style: Theme.of(context).textTheme.titleSmall!.weight(FontWeight.w600),
       ),
     );
   }
@@ -581,7 +581,7 @@ class _HistoryRow extends StatelessWidget {
               child: Text(
                 event.label,
                 style: Theme.of(context).textTheme.labelSmall!
-                    .weight(FontWeight.w800)
+                    .weight(FontWeight.w600)
                     .copyWith(color: event.color),
               ),
             ),

@@ -886,7 +886,7 @@ class _CollapsedBarContent extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: Theme.of(
               context,
-            ).textTheme.titleMedium!.weight(FontWeight.w700),
+            ).textTheme.titleMedium!.weight(FontWeight.w600),
           ),
         ),
       );
