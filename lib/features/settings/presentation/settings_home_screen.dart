@@ -17,6 +17,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/regions.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/domain/trademark_notice.dart';
 import 'package:cupola/features/settings/presentation/widgets/donation_sheet.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart';
@@ -195,6 +196,21 @@ class SettingsHomeScreen extends ConsumerWidget {
             title: 'Support Development',
             subtitle: 'Buy me a coffee',
             onTap: () => _openDonation(context),
+          ),
+          // The only way into the licence page. `main.dart` registers Inter's
+          // OFL with the registry, and the OFL's one condition on a bundling
+          // binary is that its text travels with it — which it did not, in
+          // any build, while nothing in the app opened the page.
+          SettingsCard.grouped(
+            leading: const Icon(Icons.gavel_rounded),
+            title: 'Licenses & trademarks',
+            subtitle: 'Open-source licenses and trademark notices',
+            accentColor: colorScheme.onSurfaceVariant,
+            onTap: () => showLicensePage(
+              context: context,
+              applicationName: 'Cupola',
+              applicationLegalese: trademarkNotice,
+            ),
           ),
         ],
       ),

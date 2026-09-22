@@ -578,5 +578,17 @@ copies obtained before the change, and its original notice is preserved in
 
 The bundled typeface, [Inter](https://github.com/rsms/inter), is licensed
 separately under the SIL Open Font License 1.1 — its text ships alongside the
-font in [assets/fonts/OFL.txt](assets/fonts/OFL.txt). Service names and marks
-belong to their owners and are used only to identify what Cupola connects to.
+font in [assets/fonts/OFL.txt](assets/fonts/OFL.txt).
+
+### Trademarks
+
+Cupola is an independent project. It is not affiliated with, endorsed or sponsored by
+the makers of the services it connects to, whose names are used only to identify them.
+
+- Plex and Plex Media Server are trademarks of Plex and used under a license.
+- TrueNAS® is a registered trademark of iXsystems, dba TrueNAS.
+- Unraid® is a registered trademark of Lime Technology, Inc. This application is not
+  affiliated with, endorsed, or sponsored by Lime Technology, Inc.
+
+All other product names are trademarks of their respective owners. The same notice
+ships in the app, under Settings → About → Licenses & trademarks.

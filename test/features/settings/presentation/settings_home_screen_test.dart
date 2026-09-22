@@ -224,6 +224,25 @@ void main() {
       expect(find.text('Send Feedback'), findsOneWidget);
     });
 
+    testWidgets('the licence page carries the trademark notice', (
+      tester,
+    ) async {
+      await _pumpSettingsHome(tester);
+
+      await tester.scrollUntilVisible(find.text('Licenses & trademarks'), 300);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Licenses & trademarks'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LicensePage), findsOneWidget);
+      // Unraid's policy prescribes this sentence for every app using the name.
+      expect(
+        find.textContaining('Unraid® is a registered trademark of Lime'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('trademarks of Plex'), findsOneWidget);
+    });
+
     testWidgets('reset tile shows Danger Zone section', (tester) async {
       await _pumpSettingsHome(tester);
 
