@@ -95,6 +95,7 @@ dependencies:
   # replaced by lookalikes. Desktop-only by construction — every call site is
   # behind `DesktopWindow.isSupported`, so the mobile builds never touch it.
   window_manager: ^0.5.0
+  material_symbols_icons: ^4.2960.0
 
 dependency_overrides:
   # path_provider_foundation 2.6.0 pulls in objective_c native assets,
@@ -129,6 +130,11 @@ flutter:
     - family: Inter
       fonts:
         - asset: assets/fonts/Inter.ttf
+    # One mark per service, built from `tool/service_glyphs/` by its
+    # `build_font.py`. Generated: rebuild it rather than editing the file.
+    - family: CupolaServices
+      fonts:
+        - asset: assets/fonts/CupolaServices.otf
 
   assets:
     # The product mark — the Cupola seen from above: six lit window panes on the

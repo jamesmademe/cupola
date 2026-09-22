@@ -311,6 +311,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     return FloatingNavDestination(
       icon: tab.icon,
       selectedIcon: tab.selectedIcon,
+      railIcon: tab.railIcon,
       label: tab.label,
       accentColor: tab.accentColor,
       badgeCount: badge,

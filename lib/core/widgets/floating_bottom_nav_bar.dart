@@ -17,6 +17,9 @@ class FloatingNavDestination {
   /// The icon to display when this destination is selected.
   final IconData selectedIcon;
 
+  /// The desktop rail's glyph, where it differs from [icon]. Null elsewhere.
+  final IconData? railIcon;
+
   /// The label for this destination.
   final String label;
 
@@ -38,6 +41,7 @@ class FloatingNavDestination {
   const FloatingNavDestination({
     required this.icon,
     required this.selectedIcon,
+    this.railIcon,
     required this.label,
     required this.accentColor,
     this.badgeCount = 0,

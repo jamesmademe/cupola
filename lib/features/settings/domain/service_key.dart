@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/service_glyphs.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/truenas/domain/truenas_version.dart';
 
@@ -109,38 +110,38 @@ extension ServiceKeyExtension on ServiceKey {
     ServiceKey.plex => 'Plex',
   };
 
+  /// The service's own mark, from `ServiceGlyphs`.
+  ///
+  /// A category glyph named what a service *does* — a download arrow, a play
+  /// button — and three download clients and two media servers came out as
+  /// the same picture told apart only by colour. Each service now carries its
+  /// own mark: the project's logo reduced to one filled shape (Simple Icons'
+  /// where one exists, drawn from the official logo where it does not).
+  ///
+  /// Three are deliberately not logos. TrueNAS limits fair use of its marks to
+  /// text and Unraid forbids its logo inside a third-party interface, so both
+  /// draw the kind of machine instead — a drive rack, a hard disk. Plex allows
+  /// its chevron only unaltered and, per its brand guide, only with written
+  /// permission; until that exists it is a film strip, never a play symbol,
+  /// which its guidelines also rule out.
   IconData get icon => switch (this) {
-    ServiceKey.seerr => Icons.search_rounded,
-    ServiceKey.radarr => Icons.movie_rounded,
-    ServiceKey.sonarr => Icons.tv_rounded,
-    ServiceKey.lidarr => Icons.music_note_rounded,
-    ServiceKey.qbittorrent => Icons.download_rounded,
-    // Told apart from the three download clients by *direction*, not detail:
-    // theirs are all one-way arrows into the box, and a BitTorrent daemon is
-    // the one client in the group that is equally busy sending. The paired
-    // arrows survive the 18pt matrix glyph where a restyled download arrow
-    // would read as a second qBittorrent.
-    ServiceKey.transmission => Icons.swap_vert_rounded,
-    // A reverse proxy is a fork in the road — one address in, many services
-    // out. Distinct at glyph size from TrueNAS's drive stack, Dockge's
-    // layers and Unraid's board.
-    ServiceKey.nginxProxyManager => Icons.alt_route_rounded,
-    ServiceKey.bazarr => Icons.subtitles_rounded,
-    ServiceKey.truenas => Icons.storage_rounded,
-    ServiceKey.dockge => Icons.layers_rounded,
-    ServiceKey.prowlarr => Icons.travel_explore_rounded,
-    ServiceKey.readarr => Icons.menu_book_rounded,
-    ServiceKey.sabnzbd => Icons.cloud_download_rounded,
-    ServiceKey.nzbget => Icons.cloud_sync_rounded,
-    ServiceKey.unraid => Icons.developer_board_rounded,
-    // The two media servers do the same job, so they are told apart by
-    // *silhouette* rather than by detail: a circle against a rounded
-    // rectangle survives the 18pt glyph on an expanded matrix cell and the
-    // 32pt one on a folded card, where two screen-shaped glyphs would not.
-    // Neither may be `live_tv_rounded` — that is a TV outline with signal
-    // arcs and collides with Sonarr's `tv_rounded` at cell size.
-    ServiceKey.jellyfin => Icons.play_circle_rounded,
-    ServiceKey.plex => Icons.smart_display_rounded,
+    ServiceKey.seerr => ServiceGlyphs.seerr,
+    ServiceKey.radarr => ServiceGlyphs.radarr,
+    ServiceKey.sonarr => ServiceGlyphs.sonarr,
+    ServiceKey.lidarr => ServiceGlyphs.lidarr,
+    ServiceKey.qbittorrent => ServiceGlyphs.qbittorrent,
+    ServiceKey.transmission => ServiceGlyphs.transmission,
+    ServiceKey.nginxProxyManager => ServiceGlyphs.nginxProxyManager,
+    ServiceKey.bazarr => ServiceGlyphs.bazarr,
+    ServiceKey.truenas => ServiceGlyphs.truenas,
+    ServiceKey.dockge => ServiceGlyphs.dockge,
+    ServiceKey.prowlarr => ServiceGlyphs.prowlarr,
+    ServiceKey.readarr => ServiceGlyphs.readarr,
+    ServiceKey.sabnzbd => ServiceGlyphs.sabnzbd,
+    ServiceKey.nzbget => ServiceGlyphs.nzbget,
+    ServiceKey.unraid => ServiceGlyphs.unraid,
+    ServiceKey.jellyfin => ServiceGlyphs.jellyfin,
+    ServiceKey.plex => ServiceGlyphs.plex,
   };
 
   Color get accent => switch (this) {

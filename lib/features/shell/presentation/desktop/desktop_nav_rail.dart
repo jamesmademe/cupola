@@ -113,14 +113,20 @@ class _RailItemState extends State<_RailItem> {
     // accents, which belong to service surfaces. See `NavTab`.
     final primary = colorScheme.primary;
 
-    // The outline in both states, never the filled `selectedIcon`. The pill
-    // behind the glyph already says which section is current; filling the glyph
-    // too said it twice, and on a rail of four the one solid shape outweighed
-    // everything else in the shell. The phone's bar keeps the fill — there the
-    // label and the fill are the whole of the selected state.
+    // The outline in both states, never a filled glyph. The pill behind it
+    // already says which section is current; filling the glyph too said it
+    // twice, and on a rail of four the one solid shape outweighed everything
+    // else in the shell. The phone's bar keeps the fill — there the label and
+    // the fill are the whole of the selected state.
+    //
+    // Weight 300 through Material Symbols' `wght` axis: Material Icons has one
+    // stroke, and at rail size it read heavier than the type beside it.
     final glyph = Icon(
-      destination.icon,
+      destination.railIcon ?? destination.icon,
       size: 20,
+      weight: 300,
+      fill: 0,
+      opticalSize: 20,
       color: widget.selected
           ? colorScheme.onSurface
           : (_hovered ? colorScheme.onSurface : colorScheme.onSurfaceVariant),

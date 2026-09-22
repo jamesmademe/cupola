@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart' show Icons, ThemeMode;
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/service_glyphs.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -311,17 +312,25 @@ void main() {
   });
 
   group('ServiceKey metadata', () {
-    test('exposes prototype accent colors and icons', () {
+    test('exposes prototype accent colors', () {
       expect(ServiceKey.seerr.accent.toARGB32(), 0xFF6366F1);
       expect(ServiceKey.radarr.accent.toARGB32(), 0xFFF59E0B);
       expect(ServiceKey.sonarr.accent.toARGB32(), 0xFF8B5CF6);
       expect(ServiceKey.lidarr.accent.toARGB32(), 0xFFEC4899);
       expect(ServiceKey.bazarr.accent.toARGB32(), 0xFF25A7DF);
-      expect(ServiceKey.seerr.icon, Icons.search_rounded);
-      expect(ServiceKey.radarr.icon, Icons.movie_rounded);
-      expect(ServiceKey.sonarr.icon, Icons.tv_rounded);
-      expect(ServiceKey.lidarr.icon, Icons.music_note_rounded);
-      expect(ServiceKey.bazarr.icon, Icons.subtitles_rounded);
+    });
+
+    test('every service draws its own mark from the service glyph font', () {
+      for (final service in ServiceKey.values) {
+        expect(
+          service.icon.fontFamily,
+          ServiceGlyphs.fontFamily,
+          reason: '${service.title} fell back to a category glyph',
+        );
+      }
+      // A mark is only an identity while no two services share it.
+      final codePoints = ServiceKey.values.map((s) => s.icon.codePoint);
+      expect(codePoints.toSet(), hasLength(ServiceKey.values.length));
     });
 
     test('maps API versions per service', () {

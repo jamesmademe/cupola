@@ -94,7 +94,7 @@ void main() {
     testWidgets('renders the service icon in the header', (tester) async {
       await _pumpServiceSettings(tester, service: ServiceKey.lidarr);
 
-      expect(find.byIcon(Icons.music_note_rounded), findsOneWidget);
+      expect(find.byIcon(ServiceKey.lidarr.icon), findsOneWidget);
     });
 
     testWidgets('validates that the server URL is required', (tester) async {
