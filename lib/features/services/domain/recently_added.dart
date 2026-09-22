@@ -14,25 +14,27 @@
 /// grab landed was being shown a stable list that never changed.
 library;
 
+import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One library item, flattened to just what the rail paints and sorts on.
 ///
 /// A projection rather than a union of the three models on purpose: the rail
-/// needs five fields, and building the small struct up front means the sort runs
-/// over those instead of over full library objects.
+/// needs a handful of fields, and building the small struct up front means the
+/// sort runs over those instead of over full library objects.
+///
+/// Built one per history record, then folded by [groupRecentlyAdded] — a
+/// season that lands as six episode imports is one row saying so, not six rows
+/// with the same poster and the same title.
 class RecentlyAddedItem {
   final ServiceKey service;
   final int id;
   final String title;
-
-  /// Year for a movie or series, album count for an artist — whatever the
-  /// service's own idea of a one-line qualifier is. Empty when there is none.
-  final String subtitle;
   final String posterUrl;
 
   /// When the service says it was imported. Null when the service did not say,
-  /// which sorts last — see [sortRecentlyAdded].
+  /// which sorts last — see [sortRecentlyAdded]. On a folded row, the newest of
+  /// its records.
   final DateTime? addedAt;
 
   /// Whether the import failed.
@@ -44,18 +46,107 @@ class RecentlyAddedItem {
   /// the day went better than it did.
   final bool failed;
 
+  /// What this record is one piece of, and therefore what rows fold on: the
+  /// season number on Sonarr, the album id on Lidarr. Null on Radarr, where the
+  /// movie is its own unit, and whenever the record does not say.
+  final int? unitId;
+
+  /// The record's own piece, as the service names it: `S01E03` for an episode,
+  /// the artist behind an album. Null when there is none.
+  final String? detail;
+
+  /// How many history records this row stands for. One until
+  /// [groupRecentlyAdded] folds a season or an album together.
+  final int count;
+
   const RecentlyAddedItem({
     required this.service,
     required this.id,
     required this.title,
-    required this.subtitle,
     required this.posterUrl,
     required this.addedAt,
     this.failed = false,
+    this.unitId,
+    this.detail,
+    this.count = 1,
   });
 
+  /// The line under the title: `Season 1 · 6 episodes`, `S01E03`,
+  /// `Cindy Lee · 12 tracks`. Empty on a movie.
+  ///
+  /// A folded season drops the episode code rather than listing six of them —
+  /// the count is the fact, and the codes are what the series page is for.
+  String get subtitle => switch (service) {
+    ServiceKey.sonarr when count > 1 => joinDisplayParts([
+      _seasonLabel(unitId),
+      '$count episodes',
+    ]),
+    ServiceKey.sonarr => detail ?? '',
+    ServiceKey.lidarr => joinDisplayParts([
+      detail,
+      if (count > 1) '$count tracks',
+    ]),
+    _ => '',
+  };
+
   /// Hero tag shared with the destination screen.
-  String get heroTag => 'services_recent_${service.routeParam}_$id';
+  ///
+  /// Carries the unit and the outcome as well as the id: two seasons of one
+  /// series, or a season that half landed and half failed, are two rows over
+  /// one library item, and two heroes with one tag assert on the flight.
+  String get heroTag => [
+    'services_recent_${service.routeParam}_$id',
+    if (unitId != null) '$unitId',
+    if (failed) 'failed',
+  ].join('_');
+
+  RecentlyAddedItem _foldedWith(RecentlyAddedItem other) {
+    final newer = _newerFirst(this, other) <= 0 ? this : other;
+    return RecentlyAddedItem(
+      service: service,
+      id: id,
+      title: title,
+      // The first record that carried a poster keeps it: history embeds the
+      // same series on every record, but an older record is no worse a source.
+      posterUrl: posterUrl.isNotEmpty ? posterUrl : other.posterUrl,
+      addedAt: newer.addedAt,
+      failed: failed,
+      unitId: unitId,
+      detail: newer.detail ?? detail ?? other.detail,
+      count: count + other.count,
+    );
+  }
+}
+
+String? _seasonLabel(int? season) => switch (season) {
+  null => null,
+  0 => 'Specials',
+  _ => 'Season $season',
+};
+
+/// Folds the records of one season, one album, or one movie into one row.
+///
+/// The key is service, library item, unit and outcome. The outcome is in it on
+/// purpose: a season whose episodes half landed and half failed is two facts,
+/// and folding them would either paint successes amber or hide the failure.
+/// A record that names no library item (`id <= 0` — a failed grab of something
+/// the arr never added) is never folded: there is nothing to say it and its
+/// neighbour are the same thing.
+///
+/// Folds **before** [sortRecentlyAdded] caps the list, so the cap counts rows
+/// rather than records — six episodes of one season no longer spend the whole
+/// region on one show.
+List<RecentlyAddedItem> groupRecentlyAdded(List<RecentlyAddedItem> items) {
+  final groups = <Object, RecentlyAddedItem>{};
+  var loose = 0;
+  for (final item in items) {
+    final Object key = item.id <= 0
+        ? loose++
+        : (item.service, item.id, item.unitId, item.failed);
+    final existing = groups[key];
+    groups[key] = existing == null ? item : existing._foldedWith(item);
+  }
+  return groups.values.toList(growable: false);
 }
 
 /// The region's eyebrow: `5 imported · 1 failed`.
@@ -66,25 +157,35 @@ class RecentlyAddedItem {
 ({String imported, String? failed}) recentlyAddedEyebrow(
   List<RecentlyAddedItem> items,
 ) {
-  final failed = items.where((item) => item.failed).length;
-  final imported = items.length - failed;
+  // Records, not rows: a folded season of six is six imports, which is what the
+  // row under this eyebrow says too.
+  var failed = 0;
+  var imported = 0;
+  for (final item in items) {
+    if (item.failed) {
+      failed += item.count;
+    } else {
+      imported += item.count;
+    }
+  }
   return (
     imported: '$imported imported',
     failed: failed == 0 ? null : '$failed failed',
   );
 }
 
-/// What one poster tile announces: `title · service · time`.
+/// What one poster tile announces: `title · detail · service · time`.
 ///
 /// The rail is six tiles wide and each one is a tap target, so the accessible
-/// name has to carry the three facts the tile's own 60×90 box can only show two
-/// of. Time is spoken as a clock reading rather than "4 hours ago": these are
+/// name has to carry the facts the tile's own 60×90 box cannot show — the
+/// season or album among them, since the tile paints only the title. Time is spoken as a clock reading rather than "4 hours ago": these are
 /// today's imports, and the hour is what tells two grabs of the same show apart.
 String recentlyAddedTileLabel(
   RecentlyAddedItem item, {
   required String timeLabel,
 }) => [
   item.title,
+  if (item.subtitle.isNotEmpty) item.subtitle,
   item.service.title,
   if (item.failed) 'failed import',
   if (timeLabel.isNotEmpty) timeLabel,
@@ -127,15 +228,16 @@ List<RecentlyAddedItem> sortRecentlyAdded(
   List<RecentlyAddedItem> items, {
   required int limit,
 }) {
-  final sorted = List<RecentlyAddedItem>.of(items)
-    ..sort((a, b) {
-      final addedA = a.addedAt;
-      final addedB = b.addedAt;
-      if (addedA == null && addedB == null) return 0;
-      if (addedA == null) return 1;
-      if (addedB == null) return -1;
-      return addedB.compareTo(addedA);
-    });
+  final sorted = List<RecentlyAddedItem>.of(items)..sort(_newerFirst);
 
   return sorted.take(limit).toList(growable: false);
+}
+
+int _newerFirst(RecentlyAddedItem a, RecentlyAddedItem b) {
+  final addedA = a.addedAt;
+  final addedB = b.addedAt;
+  if (addedA == null && addedB == null) return 0;
+  if (addedA == null) return 1;
+  if (addedB == null) return -1;
+  return addedB.compareTo(addedA);
 }

@@ -12,7 +12,6 @@ RecentlyAddedItem _item(
   service: service,
   id: id,
   title: title,
-  subtitle: '',
   posterUrl: '',
   addedAt: parseAddedTimestamp(added),
 );
@@ -92,6 +91,105 @@ void main() {
     });
   });
 
+  group('groupRecentlyAdded', () {
+    RecentlyAddedItem episode(
+      String code, {
+      int season = 1,
+      int series = 4,
+      String added = '2024-05-05T22:40:00Z',
+      bool failed = false,
+    }) => RecentlyAddedItem(
+      service: ServiceKey.sonarr,
+      id: series,
+      title: "Marvel's Daredevil",
+      posterUrl: '',
+      addedAt: parseAddedTimestamp(added),
+      failed: failed,
+      unitId: season,
+      detail: code,
+    );
+
+    test('folds one season into one row that counts its episodes', () {
+      final rows = groupRecentlyAdded([
+        episode('S01E01', added: '2024-05-05T22:39:00Z'),
+        episode('S01E02', added: '2024-05-05T22:40:00Z'),
+        episode('S01E03', added: '2024-05-05T22:39:30Z'),
+      ]);
+
+      expect(rows, hasLength(1));
+      expect(rows.single.count, 3);
+      expect(rows.single.subtitle, 'Season 1 · 3 episodes');
+      expect(
+        rows.single.addedAt,
+        DateTime.utc(2024, 5, 5, 22, 40),
+        reason: 'a folded row is as recent as its newest record',
+      );
+    });
+
+    test('a lone episode keeps its code', () {
+      final rows = groupRecentlyAdded([episode('S02E05', season: 2)]);
+      expect(rows.single.subtitle, 'S02E05');
+    });
+
+    test('seasons, series and outcomes stay apart', () {
+      final rows = groupRecentlyAdded([
+        episode('S01E01'),
+        episode('S02E01', season: 2),
+        episode('S01E01', series: 9),
+        episode('S01E02', failed: true),
+      ]);
+
+      expect(rows, hasLength(4));
+      expect(
+        rows.map((row) => row.heroTag).toSet(),
+        hasLength(4),
+        reason: 'two rows over one series must not share a hero',
+      );
+    });
+
+    test('specials are named, not numbered', () {
+      final rows = groupRecentlyAdded([
+        episode('S00E01', season: 0),
+        episode('S00E02', season: 0),
+      ]);
+      expect(rows.single.subtitle, 'Specials · 2 episodes');
+    });
+
+    test('an album folds its tracks under the artist', () {
+      RecentlyAddedItem track() => const RecentlyAddedItem(
+        service: ServiceKey.lidarr,
+        id: 5,
+        title: 'Diamond Jubilee',
+        posterUrl: '',
+        addedAt: null,
+        unitId: 9,
+        detail: 'Cindy Lee',
+      );
+
+      final rows = groupRecentlyAdded([track(), track(), track()]);
+      expect(rows.single.subtitle, 'Cindy Lee · 3 tracks');
+    });
+
+    test('records that name no library item are never folded', () {
+      final rows = groupRecentlyAdded([
+        _item('Unknown.Release', id: 0),
+        _item('Unknown.Release', id: 0),
+      ]);
+      expect(rows, hasLength(2));
+    });
+
+    test('the eyebrow counts records, not rows', () {
+      final rows = groupRecentlyAdded([
+        episode('S01E01'),
+        episode('S01E02'),
+        episode('S01E03', failed: true),
+      ]);
+      final counts = recentlyAddedEyebrow(rows);
+      expect(counts.imported, '2 imported');
+      expect(counts.failed, '1 failed');
+    });
+  });
+
   _theRegionsOwnStrings();
 }
 
@@ -165,7 +263,6 @@ RecentlyAddedItem _imported(String title, {required bool failed}) =>
       service: ServiceKey.radarr,
       id: 1,
       title: title,
-      subtitle: '',
       posterUrl: '',
       addedAt: DateTime.utc(2024, 5, 5),
       failed: failed,

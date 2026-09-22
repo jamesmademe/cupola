@@ -12,6 +12,7 @@ import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_album.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -530,6 +531,86 @@ void main() {
         'Diamond Jubilee',
         reason: 'the embed is what keeps the raw release name off the tile',
       );
+    });
+
+    test('a Lidarr row wears the album cover, then the artist', () async {
+      Map<String, dynamic> record(int id, {required bool albumCover}) => {
+        'id': id,
+        'eventType': 'trackFileImported',
+        'date': '2024-05-05T08:1$id:00Z',
+        'artistId': 5,
+        'albumId': 8 + id,
+        'artist': {
+          'artistName': 'Cindy Lee',
+          'images': [
+            {'coverType': 'poster', 'remoteUrl': 'https://img.test/artist.jpg'},
+          ],
+        },
+        'album': {
+          'id': 8 + id,
+          'title': 'Album $id',
+          'images': [
+            if (albumCover)
+              {'coverType': 'cover', 'remoteUrl': 'https://img.test/album.jpg'},
+          ],
+        },
+      };
+
+      final client = FakeApiClient();
+      client.getResponseData = {
+        'records': [record(1, albumCover: true), record(2, albumCover: false)],
+        'totalRecords': 2,
+      };
+
+      final container = _container(
+        settings: settingsWith(
+          lidarrUrl: 'https://lidarr.local:8686',
+          lidarrApiKey: 'key',
+        ),
+        lidarrService: LidarrService(client),
+      );
+
+      final items = await container.read(servicesRecentlyAddedProvider.future);
+      final byTitle = {for (final item in items) item.title: item.posterUrl};
+
+      expect(byTitle['Album 1'], 'https://img.test/album.jpg');
+      expect(
+        byTitle['Album 2'],
+        'https://img.test/artist.jpg',
+        reason: 'an album with no cover yet still has a face',
+      );
+    });
+
+    test('a season imported episode by episode is one row', () async {
+      Map<String, dynamic> episode(int id, int number) => {
+        'id': id,
+        'eventType': 'downloadFolderImported',
+        'date': '2024-05-05T22:${39 + number % 2}:00Z',
+        'seriesId': 4,
+        'series': {'title': "Marvel's Daredevil"},
+        'episode': {'seasonNumber': 1, 'episodeNumber': number},
+      };
+
+      final client = FakeApiClient();
+      client.getResponseData = {
+        'records': [for (var n = 1; n <= 6; n++) episode(n, n)],
+        'totalRecords': 6,
+      };
+
+      final container = _container(
+        settings: settingsWith(
+          sonarrUrl: 'https://sonarr.local:8989',
+          sonarrApiKey: 'key',
+        ),
+        sonarrService: SonarrService(client),
+      );
+
+      final items = await container.read(servicesRecentlyAddedProvider.future);
+
+      expect(items, hasLength(1));
+      expect(items.single.title, "Marvel's Daredevil");
+      expect(items.single.subtitle, 'Season 1 · 6 episodes');
+      expect(recentlyAddedEyebrow(items).imported, '6 imported');
     });
 
     test('it reads history, and keeps only what landed or failed', () async {

@@ -685,7 +685,8 @@ class ArrHistoryEntry {
     required this.id,
     required this.mediaId,
     required this.title,
-    required this.subtitle,
+    required this.unitId,
+    required this.detail,
     required this.posterUrl,
     required this.outcome,
     required this.at,
@@ -704,7 +705,14 @@ class ArrHistoryEntry {
   final int mediaId;
 
   final String title;
-  final String subtitle;
+
+  /// The season (Sonarr) or album id (Lidarr) the record belongs to — what
+  /// Recently added folds on. Null on Radarr and when the record does not say.
+  final int? unitId;
+
+  /// The record's own piece: `S01E03`, or the artist behind an album.
+  final String? detail;
+
   final String posterUrl;
   final ArrImportOutcome outcome;
   final DateTime? at;
@@ -779,12 +787,8 @@ final servicesArrHistoryProvider = FutureProvider<List<ArrHistoryEntry>>((
     // `LidarrService` overrides `getHistoryPage`, which this `getHistory`
     // delegates through, and injects `includeArtist`/`includeAlbum` there. So
     // the title resolves to the album (`arrPrimaryMediaTitle` reads `album`
-    // then `artist`) rather than falling back to the raw `sourceTitle`.
-    //
-    // What is still absent is the *poster*: `_historyEntryFrom` reads images
-    // off `movie` or `series` only, and an artist's cover art is not one of
-    // them, so a Lidarr tile draws its service glyph. That is a gap in the
-    // mapper below, not in the request.
+    // then `artist`) rather than falling back to the raw `sourceTitle`, and
+    // the tile's artwork is the album cover — see `_historyPosterUrl`.
     from(
       ServiceKey.lidarr,
       () => ref
@@ -802,7 +806,6 @@ ArrHistoryEntry _historyEntryFrom(
   required String baseUrl,
   required String apiKey,
 }) {
-  final media = mapOrNull(record['movie']) ?? mapOrNull(record['series']);
   final data = mapOrNull(record['data']);
   final title =
       arrPrimaryMediaTitle(record) ?? arrReleaseTitle(record) ?? 'Unknown item';
@@ -816,17 +819,21 @@ ArrHistoryEntry _historyEntryFrom(
         intOrNull(record['artistId']) ??
         0,
     title: title,
-    subtitle: joinDisplayParts([
-      service.title,
-      if (service == ServiceKey.sonarr) arrEpisodeCode(record),
-    ]),
-    posterUrl: media == null
-        ? ''
-        : ImageUtils.extractPosterUrl(
-            media['images'] as List<dynamic>?,
-            baseUrl: baseUrl,
-            apiKey: apiKey,
-          ).url,
+    unitId: switch (service) {
+      ServiceKey.sonarr => intOrNull(
+        mapOrNull(record['episode'])?['seasonNumber'] ?? record['seasonNumber'],
+      ),
+      ServiceKey.lidarr => intOrNull(
+        record['albumId'] ?? mapOrNull(record['album'])?['id'],
+      ),
+      _ => null,
+    },
+    detail: switch (service) {
+      ServiceKey.sonarr => arrEpisodeCode(record),
+      ServiceKey.lidarr => arrArtistName(record),
+      _ => null,
+    },
+    posterUrl: _historyPosterUrl(record, baseUrl: baseUrl, apiKey: apiKey),
     outcome: classifyHistoryEvent(stringOrNull(record['eventType'])),
     at: parseAddedTimestamp(stringOrNull(record['date'])),
     // `statusMessages` is where an \*arr puts the reason an import failed, and
@@ -835,6 +842,42 @@ ArrHistoryEntry _historyEntryFrom(
     reason:
         stringOrNull(data?['statusMessages']) ?? stringOrNull(data?['message']),
   );
+}
+
+/// The artwork a history record carries in its embedded media.
+///
+/// On Lidarr the album's cover comes first and the artist's poster second: the
+/// Recently added row folds on the album, so the album is what it should look
+/// like, and an album whose cover Lidarr has not fetched yet still has a face.
+/// Both embeds are already on the record (`includeAlbum`/`includeArtist`), so
+/// this costs no request.
+String _historyPosterUrl(
+  Map<String, dynamic> record, {
+  required String baseUrl,
+  required String apiKey,
+}) {
+  String from(Object? media, List<String> coverTypes) {
+    final images = mapOrNull(media)?['images'];
+    if (images is! List) return '';
+    return ImageUtils.extractPosterUrl(
+      images,
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      coverTypes: coverTypes,
+    ).url;
+  }
+
+  const posterTypes = ['poster', 'cover'];
+  for (final (media, coverTypes) in [
+    (record['movie'], posterTypes),
+    (record['series'], posterTypes),
+    (record['album'], const ['cover', 'disc']),
+    (record['artist'], const ['poster', 'fanart']),
+  ]) {
+    final url = from(media, coverTypes);
+    if (url.isNotEmpty) return url;
+  }
+  return '';
 }
 
 /// What the arrs actually imported, newest first.
@@ -858,14 +901,18 @@ final servicesRecentlyAddedProvider = FutureProvider<List<RecentlyAddedItem>>((
           service: entry.service,
           id: entry.mediaId,
           title: entry.title,
-          subtitle: entry.subtitle,
           posterUrl: entry.posterUrl,
           addedAt: entry.at,
           failed: entry.outcome == ArrImportOutcome.failed,
+          unitId: entry.unitId,
+          detail: entry.detail,
         ),
   ];
 
-  return sortRecentlyAdded(items, limit: servicesRecentlyAddedLimit);
+  return sortRecentlyAdded(
+    groupRecentlyAdded(items),
+    limit: servicesRecentlyAddedLimit,
+  );
 });
 
 /// How many in-flight items the hub shows before deferring to `/activity`.

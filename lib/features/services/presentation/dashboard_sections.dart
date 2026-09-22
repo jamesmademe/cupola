@@ -548,6 +548,7 @@ class _RecentlyAddedRows extends StatelessWidget {
               title: item.title,
               subtitle: joinDisplayParts([
                 item.failed ? 'failed import' : item.service.title,
+                item.subtitle,
                 formatImportedAt(item.addedAt),
               ]),
               imageUrl: item.posterUrl.isEmpty ? null : item.posterUrl,

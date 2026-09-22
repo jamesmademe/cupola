@@ -713,7 +713,6 @@ RecentlyAddedItem _imported(
   service: ServiceKey.radarr,
   id: 1,
   title: title,
-  subtitle: 'Radarr',
   posterUrl: '',
   addedAt: at,
   failed: failed,
