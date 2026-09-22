@@ -9,26 +9,24 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
 import 'package:cupola/features/shell/presentation/desktop/shell_freshness.dart';
 
-/// The deck: where you are, what else there is, and the way to anything.
+/// The deck: where you are, how the stack is, and the way to anything.
 ///
 /// The one part of the desktop shell with no counterpart on the phone — and the
-/// reason the window does not read as the phone app stretched wide. It is a
-/// *strip*, not a sidebar: seventeen services at 22pt each cost 52pt of height
-/// once, where a column of them would cost a quarter of the window forever and
-/// put seventeen accents on screen at all times, which the Room Light Rule does
-/// not allow.
+/// reason the window does not read as the phone app stretched wide. It carries
+/// one health summary, not the seventeen services: a strip of seventeen glyphs
+/// put twelve or more service accents in the highest-contrast band of the
+/// window at all times, which the Room Light Rule does not allow, while the
+/// one accent that says which room you are in sat behind them. The services
+/// are one keystroke away on ⌘K, which lists every connection by name.
 ///
-/// Below [AppBreakpoints.desktopCompact] the glyph bands are what gives way,
-/// and they are replaced by the aggregate they were showing — fewer things,
-/// each still at full size, never the same things shrunk.
+/// The same row at every width: a narrower window shows fewer items, never
+/// the same items shrunk.
 class ServiceDeck extends ConsumerWidget {
   const ServiceDeck({
     super.key,
@@ -89,11 +87,8 @@ class ServiceDeck extends ConsumerWidget {
                     _ActiveChip(service: current, compact: compact),
                     SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
                   ],
-                  if (compact)
-                    _HealthReadout(narrow: narrow)
-                  else
-                    Expanded(child: _GlyphBands(current: current)),
-                  if (compact) const Spacer(),
+                  _HealthReadout(narrow: narrow, compact: compact),
+                  const Spacer(),
                   if (!narrow) ...[
                     SizedBox(width: compact ? AppSpacing.sm : AppSpacing.lg),
                     const ShellFreshness(),
@@ -224,189 +219,12 @@ class _ActiveChip extends ConsumerWidget {
   }
 }
 
-/// The seventeen services, grouped by the job they do.
-///
-/// Grouped rather than listed: the domains are the pipeline — catalogue,
-/// acquire, watch, and the box it all runs on — and the hairlines between them
-/// are the only reason a strip of seventeen glyphs is readable at all.
-///
-/// Scrolls horizontally rather than shrinking its cells. A 22pt glyph is
-/// already the smallest a service mark stays recognisable at, and the alternative
-/// — the same seventeen services at 16pt — is the mistake the Column Floor Rule
-/// exists to prevent, one axis over.
-class _GlyphBands extends ConsumerWidget {
-  const _GlyphBands({required this.current});
-
-  final ServiceKey? current;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final domains = ServiceDomain.values;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (var i = 0; i < domains.length; i++) ...[
-            if (i > 0)
-              Container(
-                width: 1,
-                height: 16,
-                margin: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm + 2,
-                ),
-                color: colorScheme.outlineVariant,
-              ),
-            for (final service in domains[i].services)
-              Padding(
-                padding: const EdgeInsets.only(right: 5),
-                child: _GlyphCell(
-                  service: service,
-                  selected: service == current,
-                ),
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// One service, 22pt square, in three states and no alarm chrome.
-///
-/// Unconfigured drains to a hairline rather than turning red, because a service
-/// nobody set up is a daily condition and not a fault — the same rule the
-/// matrix cells and the state leaves follow.
-class _GlyphCell extends ConsumerStatefulWidget {
-  const _GlyphCell({required this.service, required this.selected});
-
-  final ServiceKey service;
-  final bool selected;
-
-  @override
-  ConsumerState<_GlyphCell> createState() => _GlyphCellState();
-}
-
-class _GlyphCellState extends ConsumerState<_GlyphCell> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final service = widget.service;
-    final settings = ref.watch(currentSettingsProvider);
-    final configured = settings.isServiceConfigured(service);
-    final summary = configured
-        ? ref.watch(serviceSummaryProvider(service)).asData?.value
-        : null;
-    final offline = summary != null && !summary.isOnline;
-    final accent = service.accent;
-
-    final Color background;
-    final Color? border;
-    final Color glyph;
-    if (!configured) {
-      background = Colors.transparent;
-      border = colorScheme.outlineVariant;
-      glyph = CupolaThemeColors.of(context).dimText;
-    } else if (offline) {
-      background = colorScheme.error.withValues(alpha: 0.1);
-      border = colorScheme.error.withValues(alpha: 0.36);
-      glyph = colorScheme.error;
-    } else {
-      final tintAlpha = widget.selected ? 0.3 : 0.14;
-      background = accent.withValues(alpha: tintAlpha);
-      border = widget.selected ? accent.withValues(alpha: 0.62) : null;
-      // Not the raw accent: four of the seventeen — SABnzbd's gold, Radarr's
-      // amber, Unraid's orange, Bazarr's sky — sit under 3:1 against a light
-      // ground, so a bare glyph in them is a smudge in light theme. `onTint`
-      // walks the hue down until it clears the composite, in whichever theme is
-      // on, and hands back a neutral if the hue cannot.
-      glyph = ServiceTheme.onTint(
-        accent,
-        surface: colorScheme.surface,
-        tintAlpha: tintAlpha,
-      );
-    }
-
-    final instance = ref.watch(activeInstanceProvider(service));
-    final instanceLabel = instance?.label.trim() ?? '';
-    final state = !configured
-        ? 'not set up'
-        : offline
-        ? 'not answering'
-        : summary == null
-        ? 'checking'
-        : 'online';
-    final tooltip = [
-      service.title,
-      if (instanceLabel.isNotEmpty) instanceLabel,
-      state,
-    ].join(' · ');
-
-    void openService() => GoRouter.of(context).go(
-      configured
-          ? '${NavTab.dashboard.routePath}/${service.routeParam}'
-          // An unset service is still a door: it leads to the form that sets it
-          // up, which is the only useful thing it can do.
-          : '${NavTab.settings.routePath}/connections',
-    );
-
-    // Keep the visible service mark at 22pt, but give it a native 40pt button
-    // target. A painted GestureDetector plus a hand-authored Semantics node is
-    // not reliably exported by the macOS Flutter embedder, so it can respond to
-    // a coordinate click while being absent from the native AX tree.
-    return Semantics(
-      button: true,
-      container: true,
-      enabled: true,
-      selected: widget.selected,
-      label: tooltip,
-      onTap: openService,
-      child: ExcludeSemantics(
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _hovered = true),
-          onExit: (_) => setState(() => _hovered = false),
-          child: IconButton(
-            tooltip: tooltip,
-            onPressed: openService,
-            isSelected: widget.selected,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 40, height: 40),
-            style: ButtonStyle(
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              padding: const WidgetStatePropertyAll(EdgeInsets.zero),
-              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-            ),
-            icon: Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                color: background,
-                borderRadius: BorderRadius.circular(7),
-                border: Border.all(
-                  color:
-                      border ??
-                      (_hovered
-                          ? colorScheme.onSurface.withValues(alpha: 0.24)
-                          : Colors.transparent),
-                ),
-              ),
-              child: Icon(service.icon, size: 13, color: glyph),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The compact deck's replacement for the bands: the figure they added up to.
+/// The stack in one figure: how many of the configured connections answer.
 class _HealthReadout extends ConsumerWidget {
-  const _HealthReadout({required this.narrow});
+  const _HealthReadout({required this.narrow, required this.compact});
 
   final bool narrow;
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -416,7 +234,7 @@ class _HealthReadout extends ConsumerWidget {
       label: health.sentence,
       excludeSemantics: true,
       child: Container(
-        height: 26,
+        height: compact ? 26 : 30,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 2),
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainer,

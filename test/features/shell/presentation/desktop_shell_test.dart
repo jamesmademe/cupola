@@ -85,7 +85,12 @@ void main() {
         expect(activitySemantics.flagsCollection.isButton, isTrue);
         expect(activitySemantics.hasAction(SemanticsAction.tap), isTrue);
         expect(find.bySemanticsLabel('Jump to anything, ⌘K'), findsNWidgets(2));
-        expect(find.bySemanticsLabel('Seerr · not set up'), findsOneWidget);
+        // The deck speaks the stack as one sentence, the one the Dashboard
+        // header prints, rather than seventeen glyphs one by one.
+        expect(
+          find.bySemanticsLabel(RegExp(r'^1 of 1 answering')),
+          findsOneWidget,
+        );
       } finally {
         semantics.dispose();
       }
@@ -154,9 +159,27 @@ void main() {
     });
   });
 
-  testWidgets('the compact window trades the glyph bands for the aggregate', (
+  testWidgets('the full window shows the aggregate, not seventeen glyphs', (
     tester,
   ) async {
+    // The Room Light Rule: one health figure in the deck, the services on ⌘K.
+    await onPlatform(TargetPlatform.macOS, () async {
+      await _pumpShell(tester, overrides: await _world());
+
+      final deck = tester.widget<ServiceDeck>(find.byType(ServiceDeck));
+      expect(deck.compact, isFalse);
+      expect(
+        find.descendant(
+          of: find.byType(ServiceDeck),
+          matching: find.textContaining('/ 1'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Radarr · 4K · online'), findsNothing);
+    });
+  });
+
+  testWidgets('the compact window keeps the same aggregate', (tester) async {
     await onPlatform(TargetPlatform.macOS, () async {
       await _pumpShell(
         tester,
