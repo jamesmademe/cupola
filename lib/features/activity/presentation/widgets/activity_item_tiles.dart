@@ -362,14 +362,15 @@ class GlobalActivityItemTile extends ConsumerWidget {
               ? null
               : _RowActionsMenu(item: item, actions: writeActions));
 
-    // A window gets the table at every width it has, not only above 1100. The
+    // A window gets the table at every width its shell has, not only above
+    // 1100 — under 720 it has the phone's shell, and the phone's cards. The
     // gate used to be `isDesktopShell && width >= desktopCompact`, so dragging
     // a desktop window narrower than 1100 swapped the whole list for phone
     // cards — a different information architecture at a size the user reached
     // by moving a mouse. The size-class rule is the opposite: below the compact
     // breakpoint the shell keeps every part it had and shows fewer items in
     // each, never smaller ones. So the row stays a row and sheds cells.
-    if (AppBreakpoints.isDesktopShell) {
+    if (AppBreakpoints.isDesktopShell(context)) {
       return _DesktopActivityRow(
         item: item,
         icon: icon,
@@ -1275,7 +1276,7 @@ class ActivityTableHeader extends StatelessWidget {
 
   /// Whether this width draws the table at all.
   static bool visibleAt(BuildContext context) =>
-      AppBreakpoints.isDesktopShell &&
+      AppBreakpoints.isDesktopShell(context) &&
       MediaQuery.sizeOf(context).width >= AppBreakpoints.desktopCompact;
 
   @override

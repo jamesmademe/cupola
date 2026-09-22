@@ -86,8 +86,9 @@ class SearchScreen extends ConsumerWidget {
     // phone has no line long enough to print one without wrapping into the
     // field. The compact window gets the heading alone, as drawn.
     final showsReadout =
-        AppBreakpoints.isDesktopShell && width >= AppBreakpoints.desktopCompact;
-    final stacked = !AppBreakpoints.isDesktopShell;
+        AppBreakpoints.isDesktopShell(context) &&
+        width >= AppBreakpoints.desktopCompact;
+    final stacked = !AppBreakpoints.isDesktopShell(context);
 
     return AmbientScaffold(
       appBar: GlassAppBar(
@@ -448,7 +449,7 @@ class _SearchResultsList extends ConsumerWidget {
     List<GlobalSearchServiceResults> lanes,
   ) {
     final width = MediaQuery.sizeOf(context).width;
-    if (!AppBreakpoints.isDesktopShell ||
+    if (!AppBreakpoints.isDesktopShell(context) ||
         width < AppBreakpoints.desktopCompact ||
         lanes.length < 2) {
       return [lanes];

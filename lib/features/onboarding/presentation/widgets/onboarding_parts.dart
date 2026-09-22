@@ -42,7 +42,7 @@ const onboardingMaxWidth = 560.0;
 /// This function keeps only the half that *is* about onboarding — the platform
 /// gate in front of it.
 bool onboardingSideBySide(BuildContext context) {
-  if (!AppBreakpoints.isDesktopShell) return false;
+  if (!AppBreakpoints.isDesktopShell(context)) return false;
   return AppBreakpoints.isLandscapeFrame(context);
 }
 

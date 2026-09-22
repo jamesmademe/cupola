@@ -7,10 +7,10 @@ class MainFlutterWindow: NSWindow {
     let flutterViewController = FlutterViewController()
     self.contentViewController = flutterViewController
 
-    // The compact artboard, which is the smallest window the desktop shell has
-    // anything left to collapse into: below it the deck has already given up
-    // its glyph bands and the inspector is already closed.
-    self.minSize = NSSize(width: 720, height: 450)
+    // A small phone's width: below the 720pt compact artboard the window paints
+    // the phone layout rather than stopping. Mirrors
+    // `AppBreakpoints.desktopMinimumWindow`, which window_manager applies too.
+    self.minSize = NSSize(width: 360, height: 450)
 
     let autosaveName = "CupolaMainWindow"
     let isFirstLaunch =

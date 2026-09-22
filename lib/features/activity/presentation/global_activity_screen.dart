@@ -987,7 +987,8 @@ class _FinishedTodayBand extends ConsumerWidget {
   const _FinishedTodayBand();
 
   /// Whether this width draws the band at all.
-  static bool visibleAt(BuildContext context) => AppBreakpoints.isDesktopShell;
+  static bool visibleAt(BuildContext context) =>
+      AppBreakpoints.isDesktopShell(context);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

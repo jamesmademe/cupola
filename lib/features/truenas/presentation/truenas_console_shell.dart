@@ -131,7 +131,7 @@ class TrueNasConsoleShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!AppBreakpoints.isDesktopShell) return child;
+    if (!AppBreakpoints.isDesktopShell(context)) return child;
 
     final location = GoRouterState.of(context).uri.path;
     final compact =

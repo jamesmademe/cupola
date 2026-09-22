@@ -117,7 +117,7 @@ class FloatingNavBarMetrics {
     // dead strip along the bottom of all 73 screens — and this one helper is
     // where all of them ask, which is why the answer belongs here rather than
     // in 50 build methods.
-    if (AppBreakpoints.isDesktopShell) return 0;
+    if (AppBreakpoints.isDesktopShell(context)) return 0;
 
     // `paddingOf`, not `of`: this helper is called from ~50 `build` methods, and
     // an unscoped `MediaQuery.of` subscribes every one of them to *any*

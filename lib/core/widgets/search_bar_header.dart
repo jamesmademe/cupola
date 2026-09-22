@@ -175,7 +175,7 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
     // Only a desktop window has a `⌘F`, so only a desktop window pays for the
     // registration — and a phone build keeps this widget free of any provider
     // dependency at all.
-    if (!AppBreakpoints.isDesktopShell) return field;
+    if (!AppBreakpoints.isDesktopShell(context)) return field;
     return ScreenSearchTarget(focusNode: _focusNode, child: field);
   }
 }

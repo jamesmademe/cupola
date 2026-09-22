@@ -47,7 +47,7 @@ class SettingsMasterDetail extends StatelessWidget {
   /// rail. Two screens reading one predicate, so they cannot disagree about
   /// which of the two the user is looking at.
   static bool showsRail(BuildContext context) =>
-      AppBreakpoints.isDesktopShell &&
+      AppBreakpoints.isDesktopShell(context) &&
       MediaQuery.sizeOf(context).width >= AppBreakpoints.desktopCompact;
 
   static const List<SettingsSection> sections = [

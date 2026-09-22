@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart' show Size;
 import 'package:window_manager/window_manager.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
@@ -43,11 +42,11 @@ enum WindowChromeStyle {
 /// during startup, before any error UI exists to report it.
 abstract final class DesktopWindow {
   /// Whether this build manages its own window.
-  static bool get isSupported => AppBreakpoints.isDesktopShell;
+  static bool get isSupported => AppBreakpoints.isDesktopPlatform;
 
   /// Which chrome shape this OS wants. Only meaningful when [isSupported].
   /// Asked of [defaultTargetPlatform] rather than of `dart:io`, so a test can
-  /// render all three chromes — see [AppBreakpoints.isDesktopShell].
+  /// render all three chromes — see [AppBreakpoints.isDesktopPlatform].
   static WindowChromeStyle get style => switch (defaultTargetPlatform) {
     TargetPlatform.macOS => WindowChromeStyle.macos,
     TargetPlatform.windows => WindowChromeStyle.windows,
@@ -71,13 +70,14 @@ abstract final class DesktopWindow {
   /// frame through `setFrameAutosaveName`, so a size here would throw away the
   /// window the user left behind on every launch; Windows and Linux set their
   /// default in their own runners, once, at creation. The minimum is set here
-  /// because it is a design constant rather than a platform one: 720x450 is the
-  /// compact artboard, and below it the shell has nothing left to collapse.
+  /// because it is a design constant rather than a platform one: a small
+  /// phone's width, since below the 720pt compact artboard the window paints
+  /// the phone layout instead of stopping — see [AppBreakpoints.desktopMobile].
   static Future<void> ensureReady() async {
     if (!isSupported) return;
     await windowManager.ensureInitialized();
     const options = WindowOptions(
-      minimumSize: Size(720, 450),
+      minimumSize: AppBreakpoints.desktopMinimumWindow,
       titleBarStyle: TitleBarStyle.hidden,
       // macOS keeps its traffic lights over our strip; the other two get
       // nothing, because we draw their buttons.

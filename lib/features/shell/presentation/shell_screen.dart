@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
+import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/service_theme.dart';
@@ -19,6 +20,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_shell.dart';
+import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 import 'package:cupola/features/shell/presentation/portal_coach_mark.dart';
 import 'package:cupola/features/shell/presentation/service_portal.dart';
 
@@ -40,9 +42,9 @@ class ShellScreen extends ConsumerStatefulWidget {
   /// bottom bar to a side rail. See [AppBreakpoints.touchRail] for the number
   /// and the reasoning.
   ///
-  /// Only ever consulted on a touch build now: a desktop window gets the window
-  /// shell at every size, because what makes it a desktop is the window, not
-  /// the width.
+  /// A desktop window never reaches it: at [AppBreakpoints.desktopMobile] and
+  /// above it gets the window shell, and below that it is narrower than any
+  /// rail threshold, so it always gets the bottom bar.
 
   @override
   ConsumerState<ShellScreen> createState() => _ShellScreenState();
@@ -188,7 +190,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // layout of the same shell: it has a chrome strip, a deck and an inspector
     // that no touch build has, and it reaches the branch navigator unmodified —
     // so every screen inside it is still the same screen the phone shows.
-    if (AppBreakpoints.isDesktopShell) {
+    if (AppBreakpoints.isDesktopShell(context)) {
       return ReleaseSearchLifecycle(
         child: DesktopShell(
           navigationShell: widget.navigationShell,
@@ -200,60 +202,77 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       );
     }
 
-    return ReleaseSearchLifecycle(
-      child: useRail
-          ? Scaffold(
-              body: Row(
-                children: [
-                  // SafeArea on the rail side only: on a tablet held on its
-                  // side the camera housing and the rounded corner sit on the
-                  // leading edge, and the rail was laid out underneath them.
-                  // The content keeps its own insets. Only tablets reach this
-                  // branch on touch — the phone is portrait-only and never
-                  // 840pt wide — but tablets still rotate, so the inset is
-                  // real.
-                  SafeArea(
-                    right: false,
-                    child: _ServicesNavRail(
-                      selectedIndex: selectedIndex,
-                      destinations: destinations,
-                      onDestinationSelected: (int idx) =>
-                          _onItemTapped(idx, context, selectedIndex),
-                    ),
+    final Widget touchShell = useRail
+        ? Scaffold(
+            body: Row(
+              children: [
+                // SafeArea on the rail side only: on a tablet held on its
+                // side the camera housing and the rounded corner sit on the
+                // leading edge, and the rail was laid out underneath them.
+                // The content keeps its own insets. Only tablets reach this
+                // branch on touch — the phone is portrait-only and never
+                // 840pt wide — but tablets still rotate, so the inset is
+                // real.
+                SafeArea(
+                  right: false,
+                  child: _ServicesNavRail(
+                    selectedIndex: selectedIndex,
+                    destinations: destinations,
+                    onDestinationSelected: (int idx) =>
+                        _onItemTapped(idx, context, selectedIndex),
                   ),
-                  Expanded(child: widget.navigationShell),
-                ],
-              ),
-            )
-          : Scaffold(
-              extendBody: true,
-              body:
-                  // The Portal is a cover the route system cannot see: it
-                  // freezes the page's pixels while leaving its timers running.
-                  // Scoping the stage tells whatever polls under there to stop —
-                  // see `PageCoverageScope`.
-                  PageCoverageScope(
-                    covering: _portal.covering,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        PortalStage(
-                          controller: _portal,
-                          child: widget.navigationShell,
-                        ),
-                        if (!accessibleNav)
-                          PortalCoachMark(controller: _portal),
-                      ],
-                    ),
-                  ),
-              bottomNavigationBar: FloatingBottomNavBar(
-                selectedIndex: selectedIndex,
-                onDestinationSelected: (int idx) =>
-                    _onItemTapped(idx, context, selectedIndex),
-                destinations: destinations,
-                verticalDragDelegate: accessibleNav ? null : _portal,
-              ),
+                ),
+                Expanded(child: widget.navigationShell),
+              ],
             ),
+          )
+        : Scaffold(
+            extendBody: true,
+            body:
+                // The Portal is a cover the route system cannot see: it
+                // freezes the page's pixels while leaving its timers running.
+                // Scoping the stage tells whatever polls under there to stop —
+                // see `PageCoverageScope`.
+                PageCoverageScope(
+                  covering: _portal.covering,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      PortalStage(
+                        controller: _portal,
+                        child: widget.navigationShell,
+                      ),
+                      if (!accessibleNav) PortalCoachMark(controller: _portal),
+                    ],
+                  ),
+                ),
+            bottomNavigationBar: FloatingBottomNavBar(
+              selectedIndex: selectedIndex,
+              onDestinationSelected: (int idx) =>
+                  _onItemTapped(idx, context, selectedIndex),
+              destinations: destinations,
+              verticalDragDelegate: accessibleNav ? null : _portal,
+            ),
+          );
+
+    // A desktop window dragged under the compact artboard paints the phone
+    // layout, but it is still a frameless window: something has to carry the
+    // traffic-light gutter, the caption buttons and the drag region, or on
+    // Windows and Linux it can neither be moved nor closed. The drag strip is
+    // that something, and renders nothing on a phone.
+    if (!AppBreakpoints.isDesktopPlatform) {
+      return ReleaseSearchLifecycle(child: touchShell);
+    }
+    return ReleaseSearchLifecycle(
+      child: Material(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: Column(
+          children: [
+            const WindowDragStrip(trail: [kAppName]),
+            Expanded(child: touchShell),
+          ],
+        ),
+      ),
     );
   }
 

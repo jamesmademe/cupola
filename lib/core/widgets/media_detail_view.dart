@@ -147,7 +147,7 @@ class MediaDetailView extends StatelessWidget {
                   accent: accent,
                   heroFallbackIcon: heroFallbackIcon,
                 ),
-                if (_twoTrack(constraints.maxWidth))
+                if (_twoTrack(context, constraints.maxWidth))
                   ..._emitTwoTrack(context, constraints.maxWidth, entranceDelay)
                 else
                   ..._emitBody(context, gutter, entranceDelay),
@@ -197,8 +197,8 @@ class MediaDetailView extends StatelessWidget {
   /// for 380 it did not have. A touch build never takes this path at any width:
   /// a tablet in landscape is still held in two hands, and the spine is what it
   /// is holding.
-  static bool _twoTrack(double availableWidth) =>
-      AppBreakpoints.isDesktopShell &&
+  static bool _twoTrack(BuildContext context, double availableWidth) =>
+      AppBreakpoints.isDesktopShell(context) &&
       availableWidth >= AppBreakpoints.contentWell;
 
   /// The spine and its side track, as one scroll.

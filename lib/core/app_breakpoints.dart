@@ -10,9 +10,11 @@ import 'package:flutter/widgets.dart';
 /// there are only two numbers here and not a scale.
 ///
 /// The important distinction is that [isDesktopShell] asks about the
-/// **platform**, not about the width. A 720pt desktop window still gets the
-/// window chrome, the rail and the deck — it just gets their compact variants —
-/// while a 900pt iPad must never grow a window strip it has no window for.
+/// **platform** first and the width only second. A 720pt desktop window still
+/// gets the window chrome, the rail and the deck — it just gets their compact
+/// variants — while a 900pt iPad must never grow a window strip it has no
+/// window for. Only below the compact artboard does a desktop window give the
+/// shell up, and then for the phone's layout, drawn for exactly that measure.
 /// Width alone cannot tell those two apart, and the shell that tried ended up
 /// putting a caption bar on an iPad. The phone used to be the second half of
 /// that argument, at roughly 850pt on its side; it is portrait-only now (The
@@ -92,11 +94,25 @@ abstract final class AppBreakpoints {
   /// whatever is left after the rail and the inspector.
   static const double contentWell = 1140;
 
-  /// Whether this build draws its own window chrome and desktop shell.
+  /// Width below which a desktop window paints the touch shell.
   ///
-  /// Answers on the platform, so it is a constant per build rather than
-  /// something a resize can change: the shell may switch between full and
-  /// compact all day, but never between desktop and touch.
+  /// 720 is the compact artboard, the narrowest frame the window shell is drawn
+  /// at: below it the deck has already given up its glyph bands and the
+  /// inspector is already closed, so there is nothing left to collapse. Rather
+  /// than stopping the window there, a narrower one gets the layout drawn for
+  /// that measure — the phone's, bottom bar and all — under a bare drag strip
+  /// that keeps the OS window buttons. The window stays frameless either way.
+  static const double desktopMobile = 720;
+
+  /// Narrowest a desktop window may be dragged: a small phone's width. Height
+  /// stays the compact artboard's, so the 720x450 frame remains reachable.
+  static const Size desktopMinimumWindow = Size(360, 450);
+
+  /// Whether this build runs in a window it manages itself.
+  ///
+  /// Answers on the platform, so it is a constant per build: it decides who
+  /// owns the window — frameless strip, caption buttons, drag regions — never
+  /// which layout paints inside it. For that ask [isDesktopShell].
   ///
   /// [defaultTargetPlatform] rather than `Platform.isMacOS`, and the difference
   /// matters: widget tests run on a developer's Mac, so `dart:io` would answer
@@ -104,16 +120,28 @@ abstract final class AppBreakpoints {
   /// mobile shell at the window layout. `defaultTargetPlatform` is Android
   /// under `flutter_test` unless a test says otherwise, so each shell is tested
   /// by asking for it.
-  static bool get isDesktopShell =>
+  static bool get isDesktopPlatform =>
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.macOS ||
           defaultTargetPlatform == TargetPlatform.windows ||
           defaultTargetPlatform == TargetPlatform.linux);
 
+  /// Whether [context]'s window draws the desktop shell: chrome, rail, deck.
+  ///
+  /// The platform first, then the width. A 900pt iPad never qualifies — it has
+  /// no window to put a caption bar on — while a desktop window dragged under
+  /// [desktopMobile] stops qualifying and gets the phone layout. A resize may
+  /// cross it all day: the branch navigators are keyed globally, so their
+  /// stacks survive the swap between shells.
+  static bool isDesktopShell(BuildContext context) =>
+      isDesktopPlatform && MediaQuery.sizeOf(context).width >= desktopMobile;
+
   /// Whether this desktop window is narrow enough for the compact variants.
   ///
-  /// False on every touch build, so a caller can ask it without first asking
-  /// [isDesktopShell].
-  static bool isCompactDesktop(BuildContext context) =>
-      isDesktopShell && MediaQuery.sizeOf(context).width < desktopCompact;
+  /// False on every touch build and on a desktop window painting the touch
+  /// shell, so a caller can ask it without first asking [isDesktopShell].
+  static bool isCompactDesktop(BuildContext context) {
+    if (!isDesktopShell(context)) return false;
+    return MediaQuery.sizeOf(context).width < desktopCompact;
+  }
 }

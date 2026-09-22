@@ -71,7 +71,7 @@ class DashboardDecisionsSection extends ConsumerWidget {
     // The rule is `AppBreakpoints`', resolved here and passed pure — see
     // `decisionCapFor`.
     final cap = decisionCapFor(
-      desktopShell: AppBreakpoints.isDesktopShell,
+      desktopShell: AppBreakpoints.isDesktopShell(context),
       compact: AppBreakpoints.isCompactDesktop(context),
     );
     final shown = rankDecisions(decisions, cap: cap);
@@ -303,7 +303,7 @@ class ServicesRecentlyAddedSection extends ConsumerWidget {
             // carry the title, the time and the service without truncating any
             // of the three. The reduction rule is Reflow's — fewer items, never
             // smaller ones — and a row is not a smaller tile.
-            return AppBreakpoints.isDesktopShell
+            return AppBreakpoints.isDesktopShell(context)
                 ? _RecentlyAddedRows(items: data)
                 : _RecentlyAddedRail(items: data);
           },

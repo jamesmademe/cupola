@@ -37,7 +37,7 @@ class DesktopContentWell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!AppBreakpoints.isDesktopShell) return child;
+    if (!AppBreakpoints.isDesktopShell(context)) return child;
     return Align(
       alignment: Alignment.topCenter,
       child: Padding(

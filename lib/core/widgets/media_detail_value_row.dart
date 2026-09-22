@@ -207,7 +207,7 @@ class _MediaDetailValueRowState<T> extends State<MediaDetailValueRow<T>> {
       child: PressableScale(
         onTap: _editable
             ? () {
-                if (AppBreakpoints.isDesktopShell) {
+                if (AppBreakpoints.isDesktopShell(context)) {
                   _menu.isOpen ? _menu.close() : _menu.open();
                 } else {
                   _openSheet();
@@ -222,7 +222,7 @@ class _MediaDetailValueRowState<T> extends State<MediaDetailValueRow<T>> {
       ),
     );
 
-    if (!AppBreakpoints.isDesktopShell) return row;
+    if (!AppBreakpoints.isDesktopShell(context)) return row;
 
     // A window gets the select on the row itself: a sheet sliding up from the
     // bottom of a 1440pt window to offer four words is a phone gesture wearing a

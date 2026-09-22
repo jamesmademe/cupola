@@ -47,7 +47,10 @@ class WindowChrome extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final compact = AppBreakpoints.isCompactDesktop(context);
+    // Width alone, like [WindowDragStrip]: the strip only ever paints inside a
+    // desktop window, so the platform half of the shell test adds nothing.
+    final compact =
+        MediaQuery.sizeOf(context).width < AppBreakpoints.desktopCompact;
     final location = GoRouterState.of(context).uri.path;
     final crumbs = ShellBreadcrumb.of(location);
     final lens = _lensFor(ref, location);
@@ -180,7 +183,11 @@ class WindowDragStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!DesktopWindow.isSupported) return const SizedBox.shrink();
-    final compact = AppBreakpoints.isCompactDesktop(context);
+    // Width alone, not [AppBreakpoints.isCompactDesktop]: a window narrow
+    // enough for the phone layout still carries this strip, and it is the
+    // narrowest window there is, not a full-height one.
+    final compact =
+        MediaQuery.sizeOf(context).width < AppBreakpoints.desktopCompact;
 
     return SizedBox(
       // The shell's own heights, through the shell's own helper: 44 full, 38

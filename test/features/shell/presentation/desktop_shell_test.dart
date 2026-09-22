@@ -97,6 +97,33 @@ void main() {
     });
   });
 
+  testWidgets('a window under the compact artboard gets the phone layout', (
+    tester,
+  ) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      await _pumpShell(
+        tester,
+        viewport: const Size(400, 800),
+        overrides: await _world(),
+      );
+
+      expect(find.byType(FloatingBottomNavBar), findsOneWidget);
+      expect(find.byType(WindowChrome), findsNothing);
+      expect(find.byType(DesktopNavRail), findsNothing);
+      expect(find.byType(ServiceDeck), findsNothing);
+      // Still a frameless window: the strip keeps the lights' gutter and the
+      // drag region above the phone layout.
+      expect(find.byType(WindowDragStrip), findsOneWidget);
+
+      // And dragging it wide again brings the window shell back.
+      tester.view.physicalSize = const Size(1440, 900);
+      await tester.pumpAndSettle();
+      expect(find.byType(WindowChrome), findsOneWidget);
+      expect(find.byType(FloatingBottomNavBar), findsNothing);
+      expect(find.byType(WindowDragStrip), findsNothing);
+    });
+  });
+
   testWidgets('the breadcrumb is the window title, service and all', (
     tester,
   ) async {
