@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/widgets/cross_service_action.dart';
+
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -322,6 +324,30 @@ void main() {
       expectReachableControl(tester, 'Stop this playback');
       expectReachableControl(tester, 'Pause this playback');
       expectReachableControl(tester, 'Send a message to this player');
+      handle.dispose();
+    });
+
+    testWidgets('session controls are never capability-gated', (tester) async {
+      // A non-administrator Jellyfin token is only ever shown sessions it may
+      // control, so there is no refusal to gate against; dimming these would
+      // dim controls that work. Plex has no documented probe. Neither service
+      // is `hasScopedCredential`, and this keeps it that way on the screen.
+      final handle = tester.ensureSemantics();
+      for (final pump in [
+        () => _pumpNowPlaying(tester, sessions: [_session()]),
+        () => _pumpPlexNowPlaying(tester, sessions: [_session()]),
+      ]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await pump();
+        expect(find.byType(CapabilityGatedAction), findsNothing);
+        final stop = find.byTooltip('Stop this playback');
+        if (stop.evaluate().isEmpty) continue;
+        expect(tester.getSemantics(stop).hint, isEmpty);
+        expect(
+          find.ancestor(of: stop, matching: find.byType(Opacity)),
+          findsNothing,
+        );
+      }
       handle.dispose();
     });
 

@@ -8,6 +8,7 @@ import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_admin_placeholder.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
@@ -165,6 +166,8 @@ class _OverviewBody extends ConsumerWidget {
           // a media server holds, and the only region on this page that is
           // about people rather than about files.
           StreamNowPlayingSection(service: service, sessions: sessions),
+          if (!_isPlex && ref.watch(jellyfinLacksAdministratorProvider))
+            const JellyfinOwnPlaybackNote(),
           const SizedBox(height: AppSpacing.lg),
           if (_isPlex) const _OnDeckSection(),
           _LibrariesSection(service: service),

@@ -18,6 +18,26 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
+/// Which of the two credential kinds the slot holds, as far as the reads
+/// behind the Devices, Tasks and Libraries tabs are concerned.
+enum JellyfinCredentialKind {
+  /// An API key: Administrator by construction, with no user behind it.
+  apiKey,
+
+  /// A user token whose policy is `IsAdministrator`.
+  administrator,
+
+  /// A user token without it: plays and browses, and cannot read the elevated
+  /// endpoints.
+  user,
+
+  /// `/Users/Me` did not answer. Nothing is withheld on a guess.
+  unknown;
+
+  /// Whether the elevated reads are known to be out of reach.
+  bool get lacksAdministrator => this == JellyfinCredentialKind.user;
+}
+
 /// `GET /System/Info/Public` — the one endpoint that takes no credential.
 ///
 /// Answering this proves the box is up and the base URL points at a Jellyfin,

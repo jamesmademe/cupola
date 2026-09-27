@@ -232,6 +232,69 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+  group('a household member\'s token', () {
+    final member = jellyfinCredentialKindProvider.overrideWith(
+      (ref) async => JellyfinCredentialKind.user,
+    );
+
+    for (final (screen, what) in const [
+      (JellyfinDevicesScreen(), 'devices'),
+      (JellyfinTasksScreen(), 'scheduled tasks'),
+    ]) {
+      testWidgets('$what: a calm administrator placeholder, not an error', (
+        tester,
+      ) async {
+        await _pump(
+          tester,
+          screen: screen,
+          overrides: [
+            member,
+            // Refused, as the server refuses a non-administrator. The
+            // refusal never reaches the screen.
+            jellyfinDevicesProvider.overrideWith(
+              (ref) async => throw Exception('403'),
+            ),
+            jellyfinTasksProvider.overrideWith(
+              (ref) async => throw Exception('403'),
+            ),
+          ],
+        );
+        expect(find.text('Needs a Jellyfin administrator'), findsOneWidget);
+        expect(find.textContaining('list $what'), findsOneWidget);
+        expect(find.byType(AppErrorState), findsNothing);
+        expect(find.text('Update the key'), findsOneWidget);
+      });
+    }
+
+    testWidgets('Now playing says it shows only this account', (tester) async {
+      await _pump(
+        tester,
+        screen: const JellyfinActivityScreen(),
+        overrides: [
+          member,
+          jellyfinSessionsProvider.overrideWith((ref) async => const []),
+        ],
+      );
+      expect(
+        find.text('Showing only this account\'s playback'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('an API key sees the lists and no note', (tester) async {
+      await _pump(
+        tester,
+        screen: const JellyfinDevicesScreen(),
+        overrides: [
+          jellyfinCredentialKindProvider.overrideWith(
+            (ref) async => JellyfinCredentialKind.apiKey,
+          ),
+          jellyfinDevicesProvider.overrideWith((ref) async => const []),
+        ],
+      );
+      expect(find.text('Needs a Jellyfin administrator'), findsNothing);
+    });
+  });
 }
 
 Future<void> _pump(

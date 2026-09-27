@@ -6,6 +6,7 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_admin_placeholder.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -82,6 +83,18 @@ class _LibrariesBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // `/Library/VirtualFolders` is elevated on Jellyfin: a household member's
+    // token is refused it, and an empty list would read as a server with no
+    // libraries.
+    if (service == ServiceKey.jellyfin &&
+        ref.watch(jellyfinLacksAdministratorProvider)) {
+      return JellyfinAdminPlaceholder(
+        what: 'libraries',
+        topPadding: topPadding,
+        connectionId:
+            ref.watch(activeInstanceProvider(ServiceKey.jellyfin))?.id ?? '',
+      );
+    }
     final librariesAsync = service == ServiceKey.jellyfin
         ? ref.watch(jellyfinLibrariesProvider)
         : ref.watch(plexLibrariesProvider);

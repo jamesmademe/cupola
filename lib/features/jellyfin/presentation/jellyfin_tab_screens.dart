@@ -6,6 +6,7 @@ import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_admin_placeholder.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -49,6 +50,9 @@ class JellyfinDevicesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!_isConfigured(ref)) return _notConfigured();
+    if (ref.watch(jellyfinLacksAdministratorProvider)) {
+      return _needsAdministrator(ref, 'devices', topPadding);
+    }
     return ServiceListPage<JellyfinDevice>(
       service: ServiceKey.jellyfin,
       topPadding: topPadding,
@@ -76,6 +80,9 @@ class JellyfinTasksScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!_isConfigured(ref)) return _notConfigured();
+    if (ref.watch(jellyfinLacksAdministratorProvider)) {
+      return _needsAdministrator(ref, 'scheduled tasks', topPadding);
+    }
     return ServiceListPage<JellyfinScheduledTask>(
       service: ServiceKey.jellyfin,
       topPadding: topPadding,
@@ -133,6 +140,8 @@ class _JellyfinActivityBody extends ConsumerWidget {
               service: ServiceKey.jellyfin,
               sessions: sessions,
             ),
+            if (ref.watch(jellyfinLacksAdministratorProvider))
+              const JellyfinOwnPlaybackNote(),
           ],
         ),
       ),
@@ -145,6 +154,19 @@ bool _isConfigured(WidgetRef ref) =>
 
 Widget _notConfigured() =>
     NotConfiguredPlaceholder.forService(ServiceKey.jellyfin);
+
+/// The Devices and Tasks tabs on a non-administrator token: `/Devices` and
+/// `/ScheduledTasks` are elevated, so the list would only ever be a refusal.
+Widget _needsAdministrator(WidgetRef ref, String what, double topPadding) =>
+    AmbientScaffold(
+      accent: ServiceKey.jellyfin.accent,
+      body: JellyfinAdminPlaceholder(
+        what: what,
+        topPadding: topPadding,
+        connectionId:
+            ref.watch(activeInstanceProvider(ServiceKey.jellyfin))?.id ?? '',
+      ),
+    );
 
 class _UserRow extends StatelessWidget {
   const _UserRow({required this.user});

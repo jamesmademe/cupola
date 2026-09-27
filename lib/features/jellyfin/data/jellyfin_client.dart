@@ -34,25 +34,35 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 /// nicety. It is also the asymmetry the Stream contract was built around: a Plex
 /// token *is* a user and cannot impersonate, an API key is nobody and must.
 ///
-/// ## Why there is no administrator probe, and must not be one
+/// ## Why playback control needs no capability gate
 ///
-/// Decision 19 gates Jellyfin's admin writes on `Policy.IsAdministrator`, read
-/// from `GET /Users/Me` once per connection, with a banner and dimmed writes
-/// when it is absent — the same shape Unraid's key-scope and NPM's role probes
-/// take. **That probe has no target here.** This client is constructed from an
-/// `apiKey` and nothing else, and an API key is Administrator by construction:
-/// it passes every admin policy before any endpoint is called. `/Users/Me` has
-/// no "me" to answer for and does not return a policy for it.
+/// The credential slot holds **either** of two kinds, and both work. Jellyfin
+/// matches a token against user sessions first and API keys second, so an
+/// API key authenticates as Administrator with no user, while a user's
+/// `AccessToken` from `POST /Users/AuthenticateByName` — which is what the
+/// maclab bootstrap stores — authenticates as that user, with that user's
+/// policy.
 ///
-/// So the probe would be a request whose answer is fixed, the banner would be a
-/// card that can never appear, and every write would dim on a condition that
-/// cannot arise. `JellyfinUserDto.isAdministrator` is parsed and stays parsed —
-/// it describes the *household members* the Users surface administers, which is
-/// a different question from what this credential may do.
+/// Even so, **no session control Cupola draws can be refused.** Pause, resume,
+/// message and stop go through `SessionManager.AssertCanControl`, a no-op up to
+/// 10.11.x; from 12.0 it allows an API key, a session with no user or the
+/// caller's own session, and otherwise wants
+/// `Policy.EnableRemoteControlOfOtherUsers`. But `GET /Sessions` without
+/// `controllableByUserId` — which is how [getSessions] asks — hands a
+/// non-administrator only its own sessions plus sessions with no user: exactly
+/// the ones it may control. A control on screen is a control the credential
+/// may use, on every version, so Jellyfin carries no write gate, no banner and
+/// no dimmed session control (`ServiceKey.hasScopedCredential` is false).
 ///
-/// The probe becomes real the day this constructor takes a user token
-/// (`POST /Users/AuthenticateByName`), and not before. Adding a second
-/// credential kind is what unblocks it; adding a probe first does not.
+/// The one administrator-only write in this client, [refreshLibrary]
+/// (`RequiresElevation`), has no caller in the UI. What a non-administrator
+/// token *does* lose is reads: `/Devices`, `/ScheduledTasks` and
+/// `/Library/VirtualFolders` are elevated. That is a read scope, answered by
+/// [getCredentialKind] from `GET /Users/Me`, and drawn as an "administrator
+/// only" placeholder rather than an error.
+///
+/// Do not probe with `GET /Auth/Keys`: it would answer, but its body carries
+/// every key's token.
 ///
 /// ## Units
 ///
@@ -713,6 +723,32 @@ class JellyfinClient implements StreamServerClient {
           .toList(growable: false);
     } catch (_) {
       return const [];
+    }
+  }
+
+  /// Which credential kind the slot holds, from `GET /Users/Me`.
+  ///
+  /// An API key has no user, and Jellyfin answers **400** with no body (the
+  /// user id is empty — unchanged from 10.8 to master); that means
+  /// Administrator. A user token gets 200 and its `UserDto`, whose
+  /// `Policy.IsAdministrator` decides. Anything else — a transport error, a
+  /// 401 — is [JellyfinCredentialKind.unknown], so a failure never withholds a
+  /// tab that might have worked.
+  Future<JellyfinCredentialKind> getCredentialKind() async {
+    try {
+      final response = await _api.get('/Users/Me');
+      final data = response.data;
+      if (data is! Map) return JellyfinCredentialKind.unknown;
+      final user = JellyfinUserDto.fromJson(data.cast<String, dynamic>());
+      return user.isAdministrator
+          ? JellyfinCredentialKind.administrator
+          : JellyfinCredentialKind.user;
+    } on DioException catch (e) {
+      return e.response?.statusCode == 400
+          ? JellyfinCredentialKind.apiKey
+          : JellyfinCredentialKind.unknown;
+    } catch (_) {
+      return JellyfinCredentialKind.unknown;
     }
   }
 

@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
+import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
@@ -1237,6 +1238,50 @@ void main() {
       expect(await client.getSessions(), isEmpty);
       expect(await client.getLibraries(), isEmpty);
       expect(await client.getItem(_movieId), isNull);
+    });
+  });
+
+  group('which credential the slot holds (GET /Users/Me)', () {
+    test('an API key has no user: 400, and that means administrator', () async {
+      final adapter = CapturingHttpAdapter(response: '', statusCode: 400);
+      expect(
+        await _client(adapter).getCredentialKind(),
+        JellyfinCredentialKind.apiKey,
+      );
+      expect(adapter.lastUri!.path, '/Users/Me');
+    });
+
+    test('a user token answers with its policy', () async {
+      final admin = CapturingHttpAdapter(
+        response: {
+          'Id': 'u1',
+          'Name': 'nadia',
+          'Policy': {'IsAdministrator': true},
+        },
+      );
+      final member = CapturingHttpAdapter(
+        response: {
+          'Id': 'u2',
+          'Name': 'kid',
+          'Policy': {'IsAdministrator': false},
+        },
+      );
+      expect(
+        await _client(admin).getCredentialKind(),
+        JellyfinCredentialKind.administrator,
+      );
+      expect(
+        await _client(member).getCredentialKind(),
+        JellyfinCredentialKind.user,
+      );
+      expect(JellyfinCredentialKind.user.lacksAdministrator, isTrue);
+    });
+
+    test('no answer withholds nothing', () async {
+      final adapter = CapturingHttpAdapter(response: '', statusCode: 401);
+      final kind = await _client(adapter).getCredentialKind();
+      expect(kind, JellyfinCredentialKind.unknown);
+      expect(kind.lacksAdministrator, isFalse);
     });
   });
 }

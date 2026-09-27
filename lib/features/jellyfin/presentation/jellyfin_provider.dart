@@ -212,6 +212,29 @@ final jellyfinStrictLibrariesProvider = FutureProvider<List<StreamLibrary>>(
   retry: noProviderRetry,
 );
 
+/// Which credential kind the lens connection's slot holds. Never fails: an
+/// unanswered probe is [JellyfinCredentialKind.unknown].
+///
+/// `noProviderRetry`, because the tabs that read it wait on it before they
+/// decide between their list and the administrator placeholder.
+final jellyfinCredentialKindProvider = FutureProvider<JellyfinCredentialKind>(
+  (ref) => ref.watch(jellyfinClientProvider).getCredentialKind(),
+  retry: noProviderRetry,
+);
+
+/// Whether the elevated reads are known to be out of reach for the lens
+/// connection. False while the probe is out and when it did not answer, so a
+/// healthy administrator never sees the placeholder flash.
+final jellyfinLacksAdministratorProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(jellyfinCredentialKindProvider)
+          .asData
+          ?.value
+          .lacksAdministrator ??
+      false,
+);
+
 final jellyfinUsersProvider = FutureProvider<List<JellyfinUserDto>>((
   ref,
 ) async {
