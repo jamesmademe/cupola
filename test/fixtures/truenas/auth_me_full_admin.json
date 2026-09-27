@@ -1,0 +1,37 @@
+{
+  "pw_name": "truenas_admin",
+  "pw_uid": 950,
+  "pw_gid": 950,
+  "pw_gecos": "Local Administrator",
+  "pw_dir": "/home/truenas_admin",
+  "pw_shell": "/usr/bin/zsh",
+  "attributes": {},
+  "two_factor_config": {},
+  "privilege": {
+    "roles": [
+      "FULL_ADMIN",
+      "READONLY_ADMIN",
+      "ACCOUNT_READ",
+      "ACCOUNT_WRITE",
+      "ALERT_LIST_READ",
+      "ALERT_LIST_WRITE",
+      "APPS_READ",
+      "APPS_WRITE",
+      "DATASET_READ",
+      "DATASET_WRITE",
+      "DATASET_DELETE",
+      "POOL_READ",
+      "POOL_WRITE",
+      "SHARING_ADMIN",
+      "SHARING_SMB_WRITE",
+      "SHARING_NFS_WRITE",
+      "SNAPSHOT_WRITE",
+      "SNAPSHOT_DELETE",
+      "SYSTEM_GENERAL_WRITE",
+      "VIRT_INSTANCE_WRITE"
+    ],
+    "allowlist": [{"method": "*", "resource": "*"}],
+    "web_shell": true
+  },
+  "account_attributes": ["LOCAL", "API_KEY"]
+}

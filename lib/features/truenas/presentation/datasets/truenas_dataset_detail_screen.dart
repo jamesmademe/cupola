@@ -8,6 +8,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -21,6 +22,8 @@ import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.da
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 class TrueNasDatasetDetailScreen extends ConsumerWidget {
   final String datasetId;
@@ -32,6 +35,12 @@ class TrueNasDatasetDetailScreen extends ConsumerWidget {
 
     return TrueNasSectionScaffold(
       title: datasetId.split('/').last,
+      capabilityAreas: {
+        TrueNasCapabilityArea.datasetWrite.key,
+        TrueNasCapabilityArea.datasetDelete.key,
+        TrueNasCapabilityArea.snapshotWrite.key,
+        TrueNasCapabilityArea.snapshotDelete.key,
+      },
       actions: [
         dataset.maybeWhen(
           data: (d) => d == null
@@ -40,10 +49,34 @@ class TrueNasDatasetDetailScreen extends ConsumerWidget {
                   onSelected: (value) async {
                     switch (value) {
                       case 'edit':
+                        if (!trueNasWriteAllowed(
+                          context,
+                          ref,
+                          area: TrueNasCapabilityArea.datasetWrite.key,
+                          verbPhrase: 'edit datasets',
+                        )) {
+                          return;
+                        }
                         await editDatasetFlow(context, ref, d);
                       case 'child':
+                        if (!trueNasWriteAllowed(
+                          context,
+                          ref,
+                          area: TrueNasCapabilityArea.datasetWrite.key,
+                          verbPhrase: 'create datasets',
+                        )) {
+                          return;
+                        }
                         await createDatasetFlow(context, ref, parentId: d.id);
                       case 'delete':
+                        if (!trueNasWriteAllowed(
+                          context,
+                          ref,
+                          area: TrueNasCapabilityArea.datasetDelete.key,
+                          verbPhrase: 'delete datasets',
+                        )) {
+                          return;
+                        }
                         final deleted = await deleteDatasetFlow(
                           context,
                           ref,
@@ -52,13 +85,33 @@ class TrueNasDatasetDetailScreen extends ConsumerWidget {
                         if (deleted && context.mounted) context.pop();
                     }
                   },
+                  // Never `enabled: false`: a disabled item drops off the
+                  // screen reader's path, taking the explanation with it.
                   itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    const PopupMenuItem(
-                      value: 'child',
-                      child: Text('Create child dataset'),
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: trueNasGatedMenuLabel(
+                        ref: ref,
+                        area: TrueNasCapabilityArea.datasetWrite.key,
+                        text: 'Edit',
+                      ),
                     ),
-                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                    PopupMenuItem(
+                      value: 'child',
+                      child: trueNasGatedMenuLabel(
+                        ref: ref,
+                        area: TrueNasCapabilityArea.datasetWrite.key,
+                        text: 'Create child dataset',
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: trueNasGatedMenuLabel(
+                        ref: ref,
+                        area: TrueNasCapabilityArea.datasetDelete.key,
+                        text: 'Delete',
+                      ),
+                    ),
                   ],
                 ),
           orElse: () => const SizedBox.shrink(),
@@ -146,17 +199,36 @@ class _DetailBody extends ConsumerWidget {
         const SizedBox(height: AppSpacing.md),
         SectionHeader.action(
           title: 'Snapshots',
-          trailing: TextButton.icon(
-            onPressed: () => createSnapshotFlow(context, ref, dataset.id),
-            icon: const Icon(Icons.add_rounded, size: 16),
-            label: const Text('New'),
+          trailing: trueNasGatedButton(
+            ref: ref,
+            area: TrueNasCapabilityArea.snapshotWrite.key,
+            verbPhrase: 'create snapshots',
+            onTap: () => createSnapshotFlow(context, ref, dataset.id),
+            builder: (context, onPressed, annotate) => TextButton(
+              onPressed: onPressed,
+              child: annotate(
+                const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_rounded, size: 16),
+                    SizedBox(width: AppSpacing.xs),
+                    Text('New'),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
         snapshots.when(
           loading: () => AppSkeleton.listRows(count: 3),
-          error: (e, _) => AppCard.surfaceOutlined(
-            child: Text('$e', style: Theme.of(context).textTheme.bodySmall),
+          // The section's own fallback, never the raw exception: the page
+          // above still reads, and the snapshot list is the one part that did
+          // not answer. See `TrueNasDatasetApi.getSnapshots` for the upstream
+          // change that makes this likely on TrueNAS 25.10.
+          error: (_, _) => InlineErrorRetry(
+            message: 'Failed to load snapshots',
+            onRetry: () => ref.invalidate(truenasSnapshotsProvider(dataset.id)),
           ),
           data: (list) => list.isEmpty
               ? AppCard.surfaceOutlined(
@@ -218,7 +290,10 @@ class _SnapshotTile extends ConsumerWidget {
               ],
             ),
           ),
-          IconButton(
+          trueNasGatedIcon(
+            ref: ref,
+            area: TrueNasCapabilityArea.snapshotDelete.key,
+            verbPhrase: 'delete snapshots',
             icon: Icon(
               Icons.delete_outline_rounded,
               size: 18,
@@ -230,7 +305,7 @@ class _SnapshotTile extends ConsumerWidget {
               ),
             ),
             tooltip: 'Delete snapshot',
-            onPressed: () async {
+            onTap: () async {
               final result = await showAppConfirmDialog(
                 context: context,
                 title: 'Delete snapshot?',

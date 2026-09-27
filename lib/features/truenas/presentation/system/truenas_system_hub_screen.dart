@@ -15,6 +15,7 @@ import 'package:cupola/features/truenas/presentation/system/truenas_diagnostics_
 import 'package:cupola/features/truenas/presentation/system/truenas_power_card.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 class _SystemEntry {
   final String title;
@@ -69,6 +70,7 @@ class TrueNasSystemHubScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return TrueNasSectionScaffold(
       title: 'System',
+      capabilityAreas: {TrueNasCapabilityArea.power.key},
       body: TrueNasConsoleShell(
         child: ListView(
           padding: EdgeInsets.fromLTRB(

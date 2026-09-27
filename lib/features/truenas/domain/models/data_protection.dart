@@ -39,6 +39,11 @@ class TrueNasProtectionTask {
   /// survive parsing for "Run now" to work at all. Null for every other kind.
   final String? poolName;
 
+  /// A replication task that pulls from a remote. TrueNAS gates changing or
+  /// running one on its own role (`REPLICATION_TASK_WRITE_PULL`), so the
+  /// capability gate needs the direction typed rather than only printed.
+  final bool isPull;
+
   const TrueNasProtectionTask({
     required this.kind,
     required this.id,
@@ -47,6 +52,7 @@ class TrueNasProtectionTask {
     required this.enabled,
     this.state,
     this.poolName,
+    this.isPull = false,
   });
 
   factory TrueNasProtectionTask.fromJson(
@@ -100,6 +106,9 @@ class TrueNasProtectionTask {
       enabled: json['enabled'] == true,
       state: state,
       poolName: poolName,
+      isPull:
+          kind == TrueNasTaskKind.replication &&
+          stringOrNull(json['direction'])?.toUpperCase() == 'PULL',
     );
   }
 }

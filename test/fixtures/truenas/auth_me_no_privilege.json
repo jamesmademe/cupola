@@ -1,0 +1,6 @@
+{
+  "pw_name": "cupola",
+  "pw_uid": 3000,
+  "pw_gid": 3000,
+  "account_attributes": ["LOCAL", "API_KEY"]
+}

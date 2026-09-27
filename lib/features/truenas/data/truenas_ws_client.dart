@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
+import 'package:cupola/core/capability/permission_refusal.dart';
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
@@ -10,16 +13,70 @@ import 'package:cupola/core/utils/url_utils.dart';
 /// Error surfaced by the TrueNAS WebSocket client. Carries the [reason] so a
 /// caller verifying the connection can tell an unreachable host from a
 /// rejected API key.
-class TrueNasException implements Exception, HasFailureReason {
+class TrueNasException
+    implements Exception, HasFailureReason, HasPermissionRefusal {
   final String message;
   @override
   final ServiceFailureReason reason;
+
+  /// The middleware refused this call for this credential: the session is
+  /// authenticated and its user lacks the role the method needs. Never set for
+  /// an expired session, which shares the errno and means something else.
+  final bool forbidden;
+
   const TrueNasException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
+    this.forbidden = false,
   });
+
+  @override
+  bool get isPermissionRefusal => forbidden;
+
   @override
   String toString() => 'TrueNasException: $message';
+}
+
+/// The exception a JSON-RPC `error` object stands for, from [method].
+///
+/// The envelope is `{"code": -32001, "message": "Method call error", "data":
+/// {"error": 13, "errname": "EACCES", "reason": "[EACCES] Not authorized"}}`
+/// (middleware `main.py` / `ws_handler/rpc.py`, TS-25.04.0). Keeping only
+/// `message` made every failure read "Method call error"; the `data.reason` is
+/// the sentence, and `errname` says what kind of failure it was:
+///
+///  * `EACCES` (errno 13) is a role refusal — **unless** the reason says the
+///    session expired, which reuses the errno and is a login problem;
+///  * `EPERM` (errno 1) from a `service.*` method is the second, in-body check
+///    those methods make for the service being changed, and is a refusal too.
+@visibleForTesting
+TrueNasException trueNasRpcError(Object? error, {required String method}) {
+  if (error is! Map) return TrueNasException(error.toString());
+  final data = error['data'];
+  final message = error['message']?.toString() ?? 'RPC error';
+  if (data is! Map) return TrueNasException(message);
+
+  final reason = data['reason']?.toString();
+  final errname = data['errname']?.toString().toUpperCase();
+  final errno = data['error'];
+  final text = (reason == null || reason.isEmpty) ? message : reason;
+
+  final eacces = errname == 'EACCES' || (errname == null && errno == 13);
+  final eperm = errname == 'EPERM' || (errname == null && errno == 1);
+  if (eacces && text.toLowerCase().contains('session is expired')) {
+    return TrueNasException(text, reason: ServiceFailureReason.unauthorized);
+  }
+  if (eacces || (eperm && method.startsWith('service.'))) {
+    return TrueNasException(text, forbidden: true);
+  }
+  return TrueNasException(text);
+}
+
+/// An RPC error frame, held until [TrueNasWsClient._rawCall] knows which
+/// method it answered.
+class _RpcError {
+  const _RpcError(this.error);
+  final Object? error;
 }
 
 /// A minimal JSON-RPC 2.0 over WebSocket client for TrueNAS SCALE 25.x.
@@ -232,37 +289,43 @@ class TrueNasWsClient {
         'params': params,
       }),
     );
-    return completer.future.timeout(
-      callTimeout,
-      onTimeout: () {
-        _pending.remove(id);
-        // A call that never came back means one of two things. If the socket
-        // answered *something* inside the timeout window it is alive and merely
-        // slow, so only this call fails. If it has gone completely silent it is
-        // almost certainly half-open — a suspend or a Wi-Fi→cellular handoff
-        // drops the TCP connection without ever delivering `onDone`/`onError` —
-        // and leaving `_socket`/`_authed` set would wedge `_ensureConnected` on
-        // a dead socket for the rest of the app session, with every poll tick
-        // stacking another doomed timeout. Drop it so the next call reconnects.
-        final lastMessage = _lastMessageAt;
-        final alive =
-            lastMessage != null &&
-            DateTime.now().difference(lastMessage) < callTimeout;
-        if (!alive) {
-          _dropConnection(
-            socket,
-            const TrueNasException(
-              'Connection lost',
+    return completer.future
+        .catchError(
+          (Object e) =>
+              throw trueNasRpcError((e as _RpcError).error, method: method),
+          test: (e) => e is _RpcError,
+        )
+        .timeout(
+          callTimeout,
+          onTimeout: () {
+            _pending.remove(id);
+            // A call that never came back means one of two things. If the socket
+            // answered *something* inside the timeout window it is alive and merely
+            // slow, so only this call fails. If it has gone completely silent it is
+            // almost certainly half-open — a suspend or a Wi-Fi→cellular handoff
+            // drops the TCP connection without ever delivering `onDone`/`onError` —
+            // and leaving `_socket`/`_authed` set would wedge `_ensureConnected` on
+            // a dead socket for the rest of the app session, with every poll tick
+            // stacking another doomed timeout. Drop it so the next call reconnects.
+            final lastMessage = _lastMessageAt;
+            final alive =
+                lastMessage != null &&
+                DateTime.now().difference(lastMessage) < callTimeout;
+            if (!alive) {
+              _dropConnection(
+                socket,
+                const TrueNasException(
+                  'Connection lost',
+                  reason: ServiceFailureReason.timeout,
+                ),
+              );
+            }
+            throw TrueNasException(
+              'Timed out calling $method',
               reason: ServiceFailureReason.timeout,
-            ),
-          );
-        }
-        throw TrueNasException(
-          'Timed out calling $method',
-          reason: ServiceFailureReason.timeout,
+            );
+          },
         );
-      },
-    );
   }
 
   /// Tears the transport down so the next call reconnects, failing everything
@@ -309,10 +372,7 @@ class TrueNasWsClient {
 
     final error = decoded['error'];
     if (error != null) {
-      final message = error is Map
-          ? (error['message']?.toString() ?? 'RPC error')
-          : error.toString();
-      completer.completeError(TrueNasException(message));
+      completer.completeError(_RpcError(error));
     } else {
       completer.complete(decoded['result']);
     }

@@ -17,6 +17,8 @@ import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.da
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 class TrueNasPoolDetailScreen extends ConsumerWidget {
   final String poolName;
@@ -49,11 +51,15 @@ class TrueNasPoolDetailScreen extends ConsumerWidget {
 
     return TrueNasSectionScaffold(
       title: poolName,
+      capabilityAreas: {TrueNasCapabilityArea.scrubRun.key},
       actions: [
-        IconButton(
+        trueNasGatedIcon(
+          ref: ref,
+          area: TrueNasCapabilityArea.scrubRun.key,
+          verbPhrase: 'start a scrub',
           tooltip: 'Start scrub',
           icon: const Icon(Icons.cleaning_services_outlined),
-          onPressed: () => _runScrub(context, ref),
+          onTap: () => _runScrub(context, ref),
         ),
       ],
       body: TrueNasConsoleShell(

@@ -1,0 +1,29 @@
+{
+  "pw_name": "shares",
+  "pw_uid": 3002,
+  "pw_gid": 3002,
+  "privilege": {
+    "roles": [
+      "SHARING_ADMIN",
+      "READONLY_ADMIN",
+      "DATASET_READ",
+      "DATASET_WRITE",
+      "SERVICE_READ",
+      "SHARING_READ",
+      "SHARING_WRITE",
+      "SHARING_SMB_READ",
+      "SHARING_SMB_WRITE",
+      "SHARING_NFS_READ",
+      "SHARING_NFS_WRITE",
+      "SHARING_ISCSI_READ",
+      "SHARING_ISCSI_WRITE",
+      "SHARING_ISCSI_TARGET_READ",
+      "SHARING_ISCSI_TARGET_WRITE",
+      "SHARING_FTP_READ",
+      "SHARING_FTP_WRITE"
+    ],
+    "allowlist": [],
+    "web_shell": false
+  },
+  "account_attributes": ["LOCAL", "API_KEY"]
+}

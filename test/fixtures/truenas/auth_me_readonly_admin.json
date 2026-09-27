@@ -1,0 +1,32 @@
+{
+  "pw_name": "auditor",
+  "pw_uid": 3001,
+  "pw_gid": 3001,
+  "privilege": {
+    "roles": [
+      "READONLY_ADMIN",
+      "ACCOUNT_READ",
+      "ALERT_LIST_READ",
+      "ALERT_READ",
+      "APPS_READ",
+      "CLOUD_SYNC_READ",
+      "DATASET_READ",
+      "POOL_READ",
+      "POOL_SCRUB_READ",
+      "REPLICATION_TASK_READ",
+      "SERVICE_READ",
+      "SHARING_READ",
+      "SHARING_SMB_READ",
+      "SHARING_NFS_READ",
+      "SHARING_ISCSI_READ",
+      "SNAPSHOT_READ",
+      "SNAPSHOT_TASK_READ",
+      "SYSTEM_ADVANCED_READ",
+      "SYSTEM_GENERAL_READ",
+      "VIRT_INSTANCE_READ"
+    ],
+    "allowlist": [],
+    "web_shell": false
+  },
+  "account_attributes": ["LOCAL", "API_KEY"]
+}

@@ -1,0 +1,1 @@
+{"error":{"code":-32001,"message":"Method call error","data":{"error":13,"errname":"EACCES","reason":"[EACCES] Not authorized","trace":null,"extra":null}}}

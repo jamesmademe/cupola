@@ -16,6 +16,8 @@ import 'package:cupola/features/truenas/presentation/datasets/truenas_dataset_pr
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 class TrueNasDatasetsScreen extends ConsumerWidget {
   const TrueNasDatasetsScreen({super.key});
@@ -26,6 +28,7 @@ class TrueNasDatasetsScreen extends ConsumerWidget {
 
     return TrueNasSectionScaffold(
       title: 'Datasets',
+      capabilityAreas: {TrueNasCapabilityArea.datasetWrite.key},
       floatingActionButton: const DatasetCreateButton(),
       body: TrueNasConsoleShell(
         child: TrueNasAsyncBody(
@@ -164,11 +167,26 @@ class DatasetCreateButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return FloatingActionButton.extended(
-      onPressed: () => createDatasetFlow(context, ref, parentId: null),
-      backgroundColor: AppColors.truenas,
-      icon: const Icon(Icons.add_rounded),
-      label: const Text('New dataset'),
+    // Gated at the tap that opens the form, never after it is filled.
+    return trueNasGatedButton(
+      ref: ref,
+      area: TrueNasCapabilityArea.datasetWrite.key,
+      verbPhrase: 'create datasets',
+      onTap: () => createDatasetFlow(context, ref, parentId: null),
+      builder: (context, onPressed, annotate) => FloatingActionButton.extended(
+        onPressed: onPressed,
+        backgroundColor: AppColors.truenas,
+        label: annotate(
+          const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_rounded),
+              SizedBox(width: AppSpacing.sm),
+              Text('New dataset'),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

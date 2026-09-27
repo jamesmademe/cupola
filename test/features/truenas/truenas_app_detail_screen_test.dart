@@ -3,10 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/domain/models/app.dart';
 import 'package:cupola/features/truenas/presentation/apps/truenas_app_detail_screen.dart';
 import 'package:cupola/features/truenas/presentation/apps/truenas_apps_providers.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
+
+import '../../test_helpers/capability_overrides.dart';
+import '../../test_helpers/settings_scope.dart';
 
 /// The channel `url_launcher` dispatches on. Mocking it is how the test sees
 /// whether a portal tap reached the OS at all.
@@ -40,6 +44,10 @@ Future<void> _pump(WidgetTester tester, TrueNasApp app) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // The page's capability banner reads which connection it looks
+        // through, and asks nothing of the server here.
+        ...await settingsScopeOverrides(configured: const [ServiceKey.truenas]),
+        capabilityOverride(),
         truenasAppProvider.overrideWith((ref, name) async => app),
         // The section chrome asks for the server version; the test has no
         // server.

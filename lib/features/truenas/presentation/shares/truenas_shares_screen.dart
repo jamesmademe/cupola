@@ -17,6 +17,8 @@ import 'package:cupola/features/truenas/presentation/widgets/truenas_form_sheet.
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 class TrueNasSharesScreen extends ConsumerStatefulWidget {
   const TrueNasSharesScreen({super.key});
@@ -40,6 +42,14 @@ class _TrueNasSharesScreenState extends ConsumerState<TrueNasSharesScreen>
   Widget build(BuildContext context) {
     return TrueNasSectionScaffold(
       title: 'Shares',
+      capabilityAreas: {
+        TrueNasCapabilityArea.smb.key,
+        TrueNasCapabilityArea.nfs.key,
+        TrueNasCapabilityArea.iscsi.key,
+        trueNasServiceArea('cifs'),
+        trueNasServiceArea('nfs'),
+        trueNasServiceArea('iscsitarget'),
+      },
       appBarBottom: TabBar(
         controller: _tab,
         tabs: const [
@@ -105,7 +115,10 @@ class _ServiceStateBanner extends ConsumerWidget {
                 style: theme.textTheme.bodyMedium,
               ),
             ),
-            Switch(
+            trueNasGatedToggle(
+              ref: ref,
+              area: trueNasServiceArea(serviceName),
+              verbPhrase: 'start or stop the $label service',
               value: running,
               onChanged: (value) => runTrueNasAction(
                 context,
@@ -174,6 +187,8 @@ class _SmbTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final shares = ref.watch(truenasSmbSharesProvider);
     return _ShareTabScaffold(
+      createArea: TrueNasCapabilityArea.smb.key,
+      createVerb: 'create SMB shares',
       onCreate: () => _create(context, ref),
       onRefresh: () => ref.invalidate(truenasSmbSharesProvider),
       serviceBanner: const _ServiceStateBanner(
@@ -234,6 +249,8 @@ class _SmbShareTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return _ShareRow(
+      area: TrueNasCapabilityArea.smb.key,
+      noun: 'SMB shares',
       title: share.name,
       subtitle: share.path,
       enabled: share.enabled,
@@ -302,6 +319,8 @@ class _NfsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final shares = ref.watch(truenasNfsSharesProvider);
     return _ShareTabScaffold(
+      createArea: TrueNasCapabilityArea.nfs.key,
+      createVerb: 'create NFS exports',
       onCreate: () => _create(context, ref),
       onRefresh: () => ref.invalidate(truenasNfsSharesProvider),
       serviceBanner: const _ServiceStateBanner(
@@ -317,6 +336,8 @@ class _NfsTab extends ConsumerWidget {
                 children: [
                   for (final share in list)
                     _ShareRow(
+                      area: TrueNasCapabilityArea.nfs.key,
+                      noun: 'NFS exports',
                       title: share.displayPath,
                       subtitle: share.comment ?? 'NFS export',
                       enabled: share.enabled,
@@ -368,6 +389,8 @@ class _IscsiTab extends ConsumerWidget {
                 children: [
                   for (final target in list)
                     _ShareRow(
+                      area: TrueNasCapabilityArea.iscsi.key,
+                      noun: 'iSCSI targets',
                       title: target.name,
                       subtitle: target.alias ?? 'iSCSI target',
                       onDelete: () => _deleteShare(
@@ -412,21 +435,27 @@ Future<void> _deleteShare(
   );
 }
 
-class _ShareTabScaffold extends StatelessWidget {
+class _ShareTabScaffold extends ConsumerWidget {
   final Widget child;
   final Widget serviceBanner;
   final VoidCallback onRefresh;
   final VoidCallback? onCreate;
+
+  /// The area the create action writes, and its blocked-toast verb.
+  final String? createArea;
+  final String? createVerb;
 
   const _ShareTabScaffold({
     required this.child,
     required this.serviceBanner,
     required this.onRefresh,
     this.onCreate,
+    this.createArea,
+    this.createVerb,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Stack(
       children: [
         RefreshIndicator(
@@ -446,11 +475,19 @@ class _ShareTabScaffold extends StatelessWidget {
           Positioned(
             right: AppSpacing.lg,
             bottom: AppSpacing.lg,
-            child: FloatingActionButton(
-              heroTag: null,
-              backgroundColor: AppColors.truenas,
-              onPressed: onCreate,
-              child: const Icon(Icons.add_rounded),
+            // Gated at the tap that opens the form, never after it is filled.
+            child: trueNasGatedButton(
+              ref: ref,
+              area: createArea!,
+              verbPhrase: createVerb!,
+              onTap: onCreate!,
+              builder: (context, onPressed, annotate) => FloatingActionButton(
+                heroTag: null,
+                backgroundColor: AppColors.truenas,
+                tooltip: 'New',
+                onPressed: onPressed,
+                child: annotate(const Icon(Icons.add_rounded)),
+              ),
             ),
           ),
       ],
@@ -458,7 +495,11 @@ class _ShareTabScaffold extends StatelessWidget {
   }
 }
 
-class _ShareRow extends StatelessWidget {
+class _ShareRow extends ConsumerWidget {
+  /// The capability area every write on this row belongs to, and the plural
+  /// its blocked toasts name.
+  final String area;
+  final String noun;
   final String title;
   final String subtitle;
   final bool? enabled;
@@ -467,6 +508,8 @@ class _ShareRow extends StatelessWidget {
   final VoidCallback onDelete;
 
   const _ShareRow({
+    required this.area,
+    required this.noun,
     required this.title,
     required this.subtitle,
     required this.onDelete,
@@ -476,7 +519,7 @@ class _ShareRow extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return AppCard.surfaceOutlined(
       padding: const EdgeInsets.symmetric(
@@ -505,12 +548,18 @@ class _ShareRow extends StatelessWidget {
             ),
           ),
           if (onEdit != null)
-            IconButton(
+            trueNasGatedIcon(
+              ref: ref,
+              area: area,
+              verbPhrase: 'edit $noun',
               icon: const Icon(Icons.edit_outlined, size: 18),
               tooltip: 'Edit',
-              onPressed: onEdit,
+              onTap: onEdit!,
             ),
-          IconButton(
+          trueNasGatedIcon(
+            ref: ref,
+            area: area,
+            verbPhrase: 'delete $noun',
             icon: Icon(
               Icons.delete_outline_rounded,
               size: 18,
@@ -522,10 +571,16 @@ class _ShareRow extends StatelessWidget {
               ),
             ),
             tooltip: 'Delete',
-            onPressed: onDelete,
+            onTap: onDelete,
           ),
           if (enabled != null && onToggle != null)
-            Switch(value: enabled!, onChanged: onToggle),
+            trueNasGatedToggle(
+              ref: ref,
+              area: area,
+              verbPhrase: 'enable or disable $noun',
+              value: enabled!,
+              onChanged: onToggle!,
+            ),
         ],
       ),
     );

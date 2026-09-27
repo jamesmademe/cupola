@@ -22,6 +22,8 @@ import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.da
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 /// Live metrics for the dashboard: the CPU/memory gauges and the network
 /// sparkline, all derived from the newest reporting samples.
@@ -233,6 +235,7 @@ class _TrueNasDashboardScreenState
 
     return TrueNasSectionScaffold(
       title: 'Dashboard',
+      capabilityAreas: {TrueNasCapabilityArea.alerts.key},
       body: TrueNasConsoleShell(
         child: Column(
           children: [
@@ -606,8 +609,11 @@ class _AlertCard extends ConsumerWidget {
             child: Text(alert.message, style: theme.textTheme.bodySmall),
           ),
           const SizedBox(width: AppSpacing.sm),
-          TextButton(
-            onPressed: () => runTrueNasAction(
+          trueNasGatedButton(
+            ref: ref,
+            area: TrueNasCapabilityArea.alerts.key,
+            verbPhrase: 'dismiss alerts',
+            onTap: () => runTrueNasAction(
               context,
               ref,
               action: () =>
@@ -616,7 +622,10 @@ class _AlertCard extends ConsumerWidget {
               failureMessage: 'Could not dismiss alert',
               invalidate: [truenasDashboardProvider],
             ),
-            child: const Text('Dismiss'),
+            builder: (context, onPressed, annotate) => TextButton(
+              onPressed: onPressed,
+              child: annotate(const Text('Dismiss')),
+            ),
           ),
         ],
       ),

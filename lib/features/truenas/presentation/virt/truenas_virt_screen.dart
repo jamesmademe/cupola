@@ -22,6 +22,8 @@ import 'package:cupola/features/truenas/presentation/virt/truenas_virt_providers
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 /// The two things Incus runs, and the only axis this section has.
 enum TrueNasVirtKind {
@@ -99,11 +101,19 @@ class _TrueNasVirtScreenState extends ConsumerState<TrueNasVirtScreen> {
 
     return TrueNasSectionScaffold(
       title: 'Virtualization',
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.truenas,
-        onPressed: () => createInstanceFlow(context, ref, type: _kind.wire),
-        tooltip: 'New ${_kind.singular}',
-        child: const Icon(Icons.add_rounded),
+      capabilityAreas: {TrueNasCapabilityArea.virt.key},
+      // Gated at the tap that opens the form, never after it is filled.
+      floatingActionButton: trueNasGatedButton(
+        ref: ref,
+        area: TrueNasCapabilityArea.virt.key,
+        verbPhrase: 'create instances',
+        onTap: () => createInstanceFlow(context, ref, type: _kind.wire),
+        builder: (context, onPressed, annotate) => FloatingActionButton(
+          backgroundColor: AppColors.truenas,
+          onPressed: onPressed,
+          tooltip: 'New ${_kind.singular}',
+          child: annotate(const Icon(Icons.add_rounded)),
+        ),
       ),
       body: TrueNasConsoleShell(
         child: Column(
@@ -436,26 +446,55 @@ class VirtLifecycleButton extends ConsumerWidget {
       return PopupMenuButton<String>(
         icon: const Icon(Icons.more_vert_rounded),
         tooltip: 'Actions for ${instance.name}',
-        onSelected: (value) => runTrueNasAction(
-          context,
-          ref,
-          action: () => value == 'restart'
-              ? api.restart(instance.id)
-              : api.stop(instance.id),
-          successMessage: value == 'restart' ? 'Restarting' : 'Stopping',
-          failureMessage: 'Action failed',
-        ).then((_) => invalidate()),
-        itemBuilder: (context) => const [
-          PopupMenuItem(value: 'stop', child: Text('Stop')),
-          PopupMenuItem(value: 'restart', child: Text('Restart')),
+        onSelected: (value) {
+          if (!trueNasWriteAllowed(
+            context,
+            ref,
+            area: TrueNasCapabilityArea.virt.key,
+            verbPhrase: 'stop or restart instances',
+          )) {
+            return;
+          }
+          runTrueNasAction(
+            context,
+            ref,
+            action: () => value == 'restart'
+                ? api.restart(instance.id)
+                : api.stop(instance.id),
+            successMessage: value == 'restart' ? 'Restarting' : 'Stopping',
+            failureMessage: 'Action failed',
+          ).then((_) => invalidate());
+        },
+        // Never `enabled: false`: a disabled item drops off the screen
+        // reader's path, taking the explanation with it.
+        itemBuilder: (context) => [
+          PopupMenuItem(
+            value: 'stop',
+            child: trueNasGatedMenuLabel(
+              ref: ref,
+              area: TrueNasCapabilityArea.virt.key,
+              text: 'Stop',
+            ),
+          ),
+          PopupMenuItem(
+            value: 'restart',
+            child: trueNasGatedMenuLabel(
+              ref: ref,
+              area: TrueNasCapabilityArea.virt.key,
+              text: 'Restart',
+            ),
+          ),
         ],
       );
     }
-    return IconButton(
+    return trueNasGatedIcon(
+      ref: ref,
+      area: TrueNasCapabilityArea.virt.key,
+      verbPhrase: 'start instances',
       icon: const Icon(Icons.play_arrow_rounded),
       color: statusToneColor(Theme.of(context).colorScheme, StatusTone.success),
       tooltip: 'Start ${instance.name}',
-      onPressed: () => runTrueNasAction(
+      onTap: () => runTrueNasAction(
         context,
         ref,
         action: () => api.start(instance.id),

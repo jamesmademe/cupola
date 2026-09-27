@@ -14,6 +14,8 @@ import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 class TrueNasServicesScreen extends ConsumerWidget {
   const TrueNasServicesScreen({super.key});
@@ -24,6 +26,12 @@ class TrueNasServicesScreen extends ConsumerWidget {
 
     return TrueNasSectionScaffold(
       title: 'Services',
+      // One area per listed service: whether a key may change a service
+      // depends on which service it is (see `trueNasMayWriteService`).
+      capabilityAreas: {
+        for (final item in services.asData?.value ?? const [])
+          trueNasServiceArea(item.name),
+      },
       body: TrueNasConsoleShell(
         child: TrueNasAsyncBody(
           value: services,
@@ -110,7 +118,10 @@ class _ServiceTile extends ConsumerWidget {
             ),
           ),
           if (item.id != null)
-            IconButton(
+            trueNasGatedIcon(
+              ref: ref,
+              area: trueNasServiceArea(item.name),
+              verbPhrase: 'change ${item.name}',
               tooltip: item.enabled ? 'Disable autostart' : 'Enable autostart',
               icon: Icon(
                 item.enabled ? Icons.flash_on_rounded : Icons.flash_off_rounded,
@@ -123,7 +134,7 @@ class _ServiceTile extends ConsumerWidget {
                     ? AppColors.truenas
                     : theme.colorScheme.outline,
               ),
-              onPressed: () => runTrueNasAction(
+              onTap: () => runTrueNasAction(
                 context,
                 ref,
                 action: () => api.setServiceAutostart(item.id!, !item.enabled),
@@ -134,7 +145,10 @@ class _ServiceTile extends ConsumerWidget {
                 invalidate: [truenasServicesProvider],
               ),
             ),
-          Switch(
+          trueNasGatedToggle(
+            ref: ref,
+            area: trueNasServiceArea(item.name),
+            verbPhrase: 'start or stop ${item.name}',
             value: item.running,
             onChanged: (value) => runTrueNasAction(
               context,

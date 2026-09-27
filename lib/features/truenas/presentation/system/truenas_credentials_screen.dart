@@ -16,6 +16,8 @@ import 'package:cupola/features/truenas/presentation/widgets/truenas_form_sheet.
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 class TrueNasCredentialsScreen extends ConsumerStatefulWidget {
   const TrueNasCredentialsScreen({super.key});
@@ -40,6 +42,7 @@ class _TrueNasCredentialsScreenState
   Widget build(BuildContext context) {
     return TrueNasSectionScaffold(
       title: 'Credentials',
+      capabilityAreas: {TrueNasCapabilityArea.accounts.key},
       appBarBottom: TabBar(
         controller: _tab,
         tabs: const [
@@ -96,6 +99,7 @@ class _UsersTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final users = ref.watch(truenasUsersProvider);
     return _CrudList(
+      createVerb: 'create users',
       onCreate: () => _create(context, ref),
       onRefresh: () => ref.invalidate(truenasUsersProvider),
       child: TrueNasAsyncBody.inline(
@@ -147,7 +151,10 @@ class _UserTile extends ConsumerWidget {
             ),
           ),
           if (!user.builtin)
-            IconButton(
+            trueNasGatedIcon(
+              ref: ref,
+              area: TrueNasCapabilityArea.accounts.key,
+              verbPhrase: 'delete users',
               icon: Icon(
                 Icons.delete_outline_rounded,
                 size: 18,
@@ -159,7 +166,7 @@ class _UserTile extends ConsumerWidget {
                 ),
               ),
               tooltip: 'Delete user',
-              onPressed: () async {
+              onTap: () async {
                 final result = await showAppConfirmDialog(
                   context: context,
                   title: 'Delete ${user.username}?',
@@ -215,6 +222,7 @@ class _GroupsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final groups = ref.watch(truenasGroupsProvider);
     return _CrudList(
+      createVerb: 'create groups',
       onCreate: () => _create(context, ref),
       onRefresh: () => ref.invalidate(truenasGroupsProvider),
       child: TrueNasAsyncBody.inline(
@@ -266,7 +274,10 @@ class _GroupTile extends ConsumerWidget {
             ),
           ),
           if (!group.builtin)
-            IconButton(
+            trueNasGatedIcon(
+              ref: ref,
+              area: TrueNasCapabilityArea.accounts.key,
+              verbPhrase: 'delete groups',
               icon: Icon(
                 Icons.delete_outline_rounded,
                 size: 18,
@@ -278,7 +289,7 @@ class _GroupTile extends ConsumerWidget {
                 ),
               ),
               tooltip: 'Delete group',
-              onPressed: () async {
+              onTap: () async {
                 final result = await showAppConfirmDialog(
                   context: context,
                   title: 'Delete ${group.name}?',
@@ -305,19 +316,23 @@ class _GroupTile extends ConsumerWidget {
   }
 }
 
-class _CrudList extends StatelessWidget {
+class _CrudList extends ConsumerWidget {
   final Widget child;
   final VoidCallback onCreate;
   final VoidCallback onRefresh;
+
+  /// What the create action does, for its blocked toast.
+  final String createVerb;
 
   const _CrudList({
     required this.child,
     required this.onCreate,
     required this.onRefresh,
+    required this.createVerb,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Stack(
       children: [
         RefreshIndicator(
@@ -336,11 +351,19 @@ class _CrudList extends StatelessWidget {
         Positioned(
           right: AppSpacing.lg,
           bottom: AppSpacing.lg,
-          child: FloatingActionButton(
-            heroTag: null,
-            backgroundColor: AppColors.truenas,
-            onPressed: onCreate,
-            child: const Icon(Icons.add_rounded),
+          // Gated at the tap that opens the form, never after it is filled.
+          child: trueNasGatedButton(
+            ref: ref,
+            area: TrueNasCapabilityArea.accounts.key,
+            verbPhrase: createVerb,
+            onTap: onCreate,
+            builder: (context, onPressed, annotate) => FloatingActionButton(
+              heroTag: null,
+              backgroundColor: AppColors.truenas,
+              tooltip: 'New',
+              onPressed: onPressed,
+              child: annotate(const Icon(Icons.add_rounded)),
+            ),
           ),
         ),
       ],

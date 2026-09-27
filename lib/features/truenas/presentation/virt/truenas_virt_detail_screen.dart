@@ -18,6 +18,8 @@ import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.
 import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 class TrueNasVirtDetailScreen extends ConsumerWidget {
   final String id;
@@ -34,11 +36,15 @@ class TrueNasVirtDetailScreen extends ConsumerWidget {
 
     return TrueNasSectionScaffold(
       title: id,
+      capabilityAreas: {TrueNasCapabilityArea.virt.key},
       actions: [
-        IconButton(
+        trueNasGatedIcon(
+          ref: ref,
+          area: TrueNasCapabilityArea.virt.key,
+          verbPhrase: 'delete instances',
           icon: const Icon(Icons.delete_outline_rounded),
           tooltip: 'Delete',
-          onPressed: () async {
+          onTap: () async {
             final result = await showAppConfirmDialog(
               context: context,
               title: 'Delete "$id"?',

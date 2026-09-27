@@ -16,6 +16,7 @@ import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.da
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 class TrueNasAppDetailScreen extends ConsumerWidget {
   final String name;
@@ -27,6 +28,7 @@ class TrueNasAppDetailScreen extends ConsumerWidget {
 
     return TrueNasSectionScaffold(
       title: name,
+      capabilityAreas: {TrueNasCapabilityArea.apps.key},
       body: TrueNasConsoleShell(
         child: TrueNasAsyncBody(
           value: app,

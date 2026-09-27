@@ -14,6 +14,8 @@ import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 final truenasProtectionTasksProvider = FutureProvider.autoDispose
     .family<List<TrueNasProtectionTask>, TrueNasTaskKind>((ref, kind) async {
@@ -28,6 +30,7 @@ class TrueNasDataProtectionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return TrueNasSectionScaffold(
       title: 'Data protection',
+      capabilityAreas: trueNasDataProtectionAreas,
       body: TrueNasConsoleShell(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -160,12 +163,18 @@ class _TaskTile extends ConsumerWidget {
             ),
           ),
           if (_canRun)
-            IconButton(
+            trueNasGatedIcon(
+              ref: ref,
+              area: task.runArea.key,
+              verbPhrase: 'run ${task.kind.label.toLowerCase()}',
               icon: const Icon(Icons.play_arrow_rounded, size: 20),
               tooltip: 'Run now',
-              onPressed: () => _run(context, ref),
+              onTap: () => _run(context, ref),
             ),
-          IconButton(
+          trueNasGatedIcon(
+            ref: ref,
+            area: task.writeArea.key,
+            verbPhrase: 'delete ${task.kind.label.toLowerCase()}',
             icon: Icon(
               Icons.delete_outline_rounded,
               size: 18,
@@ -177,7 +186,7 @@ class _TaskTile extends ConsumerWidget {
               ),
             ),
             tooltip: 'Delete',
-            onPressed: () async {
+            onTap: () async {
               final result = await showAppConfirmDialog(
                 context: context,
                 title: 'Delete task?',
@@ -196,7 +205,10 @@ class _TaskTile extends ConsumerWidget {
               );
             },
           ),
-          Switch(
+          trueNasGatedToggle(
+            ref: ref,
+            area: task.writeArea.key,
+            verbPhrase: 'enable or disable ${task.kind.label.toLowerCase()}',
             value: task.enabled,
             onChanged: (value) => runTrueNasAction(
               context,

@@ -4,15 +4,20 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
+import 'package:cupola/core/capability/capability_copy.dart';
 import 'package:cupola/core/utils/service_action.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
 
 /// Runs a TrueNAS mutation with the shared plumbing: await [action],
 /// invalidate the [invalidate] providers on success, and report the outcome
 /// via `SnackBarHelper`.
 ///
 /// A thin alias over [runServiceAction], which the whole app shares; kept as a
-/// named entry point because every TrueNAS action flow reads through it.
+/// named entry point because every TrueNAS action flow reads through it — and
+/// that is what wires the refusal path once for every TrueNAS write: an
+/// EACCES from the middleware marks the connection the pages read through as
+/// read-only and raises the refusal toast instead of a failure.
 Future<bool> runTrueNasAction(
   BuildContext context,
   WidgetRef ref, {
@@ -28,6 +33,10 @@ Future<bool> runTrueNasAction(
     successMessage: successMessage,
     failureMessage: failureMessage,
     invalidate: invalidate,
+    capability: CapabilityTarget(
+      connectionId: readTrueNasConnectionId(ref),
+      copy: trueNasCapabilityCopy,
+    ),
   );
 }
 
@@ -48,6 +57,10 @@ Future<bool> runTrueNasAction(
 /// thing anyone here can honestly claim. Nothing invalidates: every provider
 /// behind this screen is about to be unreachable, and re-fetching them would
 /// only race the shutdown to an error card.
+///
+/// It cannot learn a refusal either, since it never sees the reply; the power
+/// controls are gated on the probe alone, which is safe because reboot and
+/// shutdown are `FULL_ADMIN`-only and the probe reads that unambiguously.
 void runTrueNasDetachedAction(
   BuildContext context, {
   required Future<void> Function() action,

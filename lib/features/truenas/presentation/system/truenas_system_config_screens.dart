@@ -17,6 +17,8 @@ import 'package:cupola/features/truenas/presentation/widgets/truenas_form_sheet.
 import 'package:cupola/features/truenas/presentation/widgets/truenas_info_row.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 /// Renders an async config map/list into a standard section scaffold.
 class _AsyncSection<T> extends StatelessWidget {
@@ -26,12 +28,16 @@ class _AsyncSection<T> extends StatelessWidget {
   final Widget Function(T data) builder;
   final List<Widget>? actions;
 
+  /// Forwarded to [TrueNasSectionScaffold.capabilityAreas].
+  final Set<String>? capabilityAreas;
+
   const _AsyncSection({
     required this.title,
     required this.value,
     required this.onRefresh,
     required this.builder,
     this.actions,
+    this.capabilityAreas,
   });
 
   @override
@@ -39,6 +45,7 @@ class _AsyncSection<T> extends StatelessWidget {
     return TrueNasSectionScaffold(
       title: title,
       actions: actions,
+      capabilityAreas: capabilityAreas,
       body: TrueNasAsyncBody(
         value: value,
         onRetry: onRefresh,
@@ -74,13 +81,17 @@ class TrueNasGeneralScreen extends ConsumerWidget {
     final config = ref.watch(truenasGeneralConfigProvider);
     return _AsyncSection<Map<String, dynamic>>(
       title: 'General',
+      capabilityAreas: {TrueNasCapabilityArea.systemGeneral.key},
       value: config,
       onRefresh: () => ref.invalidate(truenasGeneralConfigProvider),
       actions: [
-        IconButton(
+        trueNasGatedIcon(
+          ref: ref,
+          area: TrueNasCapabilityArea.systemGeneral.key,
+          verbPhrase: 'change general settings',
           icon: const Icon(Icons.edit_outlined),
           tooltip: 'Edit',
-          onPressed: () {
+          onTap: () {
             final data = config.asData?.value ?? const {};
             editTrueNasConfig(
               context: context,
@@ -139,13 +150,17 @@ class TrueNasAdvancedScreen extends ConsumerWidget {
     final config = ref.watch(truenasAdvancedConfigProvider);
     return _AsyncSection<Map<String, dynamic>>(
       title: 'Advanced',
+      capabilityAreas: {TrueNasCapabilityArea.systemAdvanced.key},
       value: config,
       onRefresh: () => ref.invalidate(truenasAdvancedConfigProvider),
       actions: [
-        IconButton(
+        trueNasGatedIcon(
+          ref: ref,
+          area: TrueNasCapabilityArea.systemAdvanced.key,
+          verbPhrase: 'change advanced settings',
           icon: const Icon(Icons.edit_outlined),
           tooltip: 'Edit',
-          onPressed: () {
+          onTap: () {
             final data = config.asData?.value ?? const {};
             editTrueNasConfig(
               context: context,
@@ -307,13 +322,20 @@ class TrueNasEmailScreen extends ConsumerWidget {
     final config = ref.watch(truenasMailConfigProvider);
     return _AsyncSection<Map<String, dynamic>>(
       title: 'Email',
+      capabilityAreas: {
+        TrueNasCapabilityArea.mailConfig.key,
+        TrueNasCapabilityArea.mailSend.key,
+      },
       value: config,
       onRefresh: () => ref.invalidate(truenasMailConfigProvider),
       actions: [
-        IconButton(
+        trueNasGatedIcon(
+          ref: ref,
+          area: TrueNasCapabilityArea.mailConfig.key,
+          verbPhrase: 'change email settings',
           icon: const Icon(Icons.edit_outlined),
           tooltip: 'Edit',
-          onPressed: () {
+          onTap: () {
             final data = config.asData?.value ?? const {};
             editTrueNasConfig(
               context: context,
@@ -364,10 +386,13 @@ class TrueNasEmailScreen extends ConsumerWidget {
             );
           },
         ),
-        IconButton(
+        trueNasGatedIcon(
+          ref: ref,
+          area: TrueNasCapabilityArea.mailSend.key,
+          verbPhrase: 'send a test email',
           icon: const Icon(Icons.send_rounded),
           tooltip: 'Send test email',
-          onPressed: () => runTrueNasAction(
+          onTap: () => runTrueNasAction(
             context,
             ref,
             action: () => ref.read(truenasSystemApiProvider).sendTestMail(null),

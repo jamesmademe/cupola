@@ -10,6 +10,8 @@ import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/system/truenas_system_providers.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 /// Reboot and Shut down, at the foot of the System section (decision 38).
 ///
@@ -65,22 +67,43 @@ class TrueNasPowerCard extends ConsumerWidget {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
+              // Gated on the probe alone: these two never see a reply, so
+              // they cannot learn a refusal, and both are `FULL_ADMIN`-only,
+              // which the probe reads without ambiguity. Gated at the tap that
+              // opens the typed confirmation, never after the name is typed.
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _confirmThenFire(
+                child: trueNasGatedButton(
+                  ref: ref,
+                  area: TrueNasCapabilityArea.power.key,
+                  verbPhrase: 'reboot this server',
+                  onTap: () => _confirmThenFire(
                     context,
                     ref,
                     hostname: hostname,
                     reboot: true,
                   ),
-                  icon: const Icon(Icons.restart_alt_rounded, size: 18),
-                  label: const Text('Reboot…'),
+                  builder: (context, onPressed, annotate) => OutlinedButton(
+                    onPressed: onPressed,
+                    child: annotate(
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.restart_alt_rounded, size: 18),
+                          SizedBox(width: AppSpacing.sm),
+                          Flexible(child: Text('Reboot…')),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _confirmThenFire(
+                child: trueNasGatedButton(
+                  ref: ref,
+                  area: TrueNasCapabilityArea.power.key,
+                  verbPhrase: 'shut down this server',
+                  onTap: () => _confirmThenFire(
                     context,
                     ref,
                     hostname: hostname,
@@ -89,15 +112,26 @@ class TrueNasPowerCard extends ConsumerWidget {
                   // Shutting a NAS down from a phone is the irreversible-
                   // action exception: nothing in this app can power it back
                   // on. Walked against the card the button sits on.
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: statusToneColor(
-                      colorScheme,
-                      StatusTone.error,
-                      surface: colorScheme.surfaceContainer,
+                  builder: (context, onPressed, annotate) => OutlinedButton(
+                    onPressed: onPressed,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: statusToneColor(
+                        colorScheme,
+                        StatusTone.error,
+                        surface: colorScheme.surfaceContainer,
+                      ),
+                    ),
+                    child: annotate(
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.power_settings_new_rounded, size: 18),
+                          SizedBox(width: AppSpacing.sm),
+                          Flexible(child: Text('Shut down…')),
+                        ],
+                      ),
                     ),
                   ),
-                  icon: const Icon(Icons.power_settings_new_rounded, size: 18),
-                  label: const Text('Shut down…'),
                 ),
               ),
             ],

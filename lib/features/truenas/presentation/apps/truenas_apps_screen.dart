@@ -18,6 +18,8 @@ import 'package:cupola/features/truenas/presentation/apps/truenas_apps_providers
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
+import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 
 class TrueNasAppsScreen extends ConsumerWidget {
   const TrueNasAppsScreen({super.key});
@@ -30,15 +32,19 @@ class TrueNasAppsScreen extends ConsumerWidget {
 
     return TrueNasSectionScaffold(
       title: 'Apps',
+      capabilityAreas: {TrueNasCapabilityArea.apps.key},
       actions: [
         if (upgradableCount > 0)
-          IconButton(
+          trueNasGatedIcon(
+            ref: ref,
+            area: TrueNasCapabilityArea.apps.key,
+            verbPhrase: 'update apps',
             tooltip: 'Update all ($upgradableCount)',
             icon: Badge(
               label: Text('$upgradableCount'),
               child: const Icon(Icons.system_update_alt_rounded),
             ),
-            onPressed: () => updateAllApps(context, ref, apps: appList),
+            onTap: () => updateAllApps(context, ref, apps: appList),
           ),
       ],
       body: TrueNasConsoleShell(
@@ -230,7 +236,10 @@ class AppLifecycleControl extends ConsumerWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
+        trueNasGatedIcon(
+          ref: ref,
+          area: TrueNasCapabilityArea.apps.key,
+          verbPhrase: 'start or stop apps',
           icon: Icon(
             app.isRunning
                 ? Icons.stop_circle_outlined
@@ -243,7 +252,7 @@ class AppLifecycleControl extends ConsumerWidget {
                   ),
           ),
           tooltip: app.isRunning ? 'Stop' : 'Start',
-          onPressed: () => appLifecycleAction(
+          onTap: () => appLifecycleAction(
             context,
             ref,
             app: app,
@@ -252,15 +261,39 @@ class AppLifecycleControl extends ConsumerWidget {
         ),
         PopupMenuButton<AppAction>(
           icon: const Icon(Icons.more_vert_rounded),
-          onSelected: (action) =>
-              appLifecycleAction(context, ref, app: app, action: action),
+          onSelected: (action) {
+            if (!trueNasWriteAllowed(
+              context,
+              ref,
+              area: TrueNasCapabilityArea.apps.key,
+              verbPhrase: action == AppAction.delete
+                  ? 'delete apps'
+                  : 'upgrade apps',
+            )) {
+              return;
+            }
+            appLifecycleAction(context, ref, app: app, action: action);
+          },
+          // Never `enabled: false`: a disabled item drops off the screen
+          // reader's path, taking the explanation with it.
           itemBuilder: (context) => [
             if (app.upgradeAvailable)
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: AppAction.upgrade,
-                child: Text('Upgrade'),
+                child: trueNasGatedMenuLabel(
+                  ref: ref,
+                  area: TrueNasCapabilityArea.apps.key,
+                  text: 'Upgrade',
+                ),
               ),
-            const PopupMenuItem(value: AppAction.delete, child: Text('Delete')),
+            PopupMenuItem(
+              value: AppAction.delete,
+              child: trueNasGatedMenuLabel(
+                ref: ref,
+                area: TrueNasCapabilityArea.apps.key,
+                text: 'Delete',
+              ),
+            ),
           ],
         ),
       ],

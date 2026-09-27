@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/npm/presentation/npm_capability.dart';
+import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
 import 'package:cupola/features/unraid/presentation/unraid_capability.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -35,6 +36,7 @@ typedef CapabilityProbe =
 final capabilityProbesProvider = Provider<Map<ServiceKey, CapabilityProbe>>(
   (ref) => const {
     ServiceKey.unraid: probeUnraidCapability,
+    ServiceKey.truenas: probeTrueNasCapability,
     ServiceKey.nginxProxyManager: probeNpmCapability,
   },
 );
