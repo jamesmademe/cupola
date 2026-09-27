@@ -24,6 +24,7 @@ class _CountingController extends ServicePortalController {
 Future<({_CountingController controller, double slide})> _arrive(
   WidgetTester tester, {
   required bool reduceMotion,
+  bool screenReader = false,
 }) async {
   final controller = _CountingController(vsync: tester);
   addTearDown(controller.dispose);
@@ -34,7 +35,10 @@ Future<({_CountingController controller, double slide})> _arrive(
       container: container,
       child: MaterialApp(
         home: MediaQuery(
-          data: MediaQueryData(disableAnimations: reduceMotion),
+          data: MediaQueryData(
+            disableAnimations: reduceMotion,
+            accessibleNavigation: screenReader,
+          ),
           child: Scaffold(
             body: Stack(children: [PortalCoachMark(controller: controller)]),
           ),
@@ -82,5 +86,18 @@ void main() {
     expect(find.text('Swipe up to open the Portal'), findsOneWidget);
     expect(result.controller.bounces, 0);
     expect(result.slide, 0);
+  });
+
+  testWidgets('with a screen reader the words arrive without the bounce', (
+    tester,
+  ) async {
+    final result = await _arrive(
+      tester,
+      reduceMotion: false,
+      screenReader: true,
+    );
+
+    expect(find.text('Swipe up to open the Portal'), findsOneWidget);
+    expect(result.controller.bounces, 0);
   });
 }

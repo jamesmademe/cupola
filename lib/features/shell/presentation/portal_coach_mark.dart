@@ -41,7 +41,11 @@ class _PortalCoachMarkState extends ConsumerState<PortalCoachMark> {
     // words still arrive, but nothing lifts — no bounce of the bar, and the
     // pill fades in place instead of sliding up into it.
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    if (visible && !_wasVisible && !reduceMotion) {
+    // A screen reader skips the bounce too, as the shell does: the bar moving
+    // on its own shows nothing to someone who cannot see it, and moves the
+    // focus rectangle under their finger.
+    final screenReader = MediaQuery.accessibleNavigationOf(context);
+    if (visible && !_wasVisible && !reduceMotion && !screenReader) {
       // The invitation arrives with the words: one bounce, not a loop.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) widget.controller.playDemoBounce();
