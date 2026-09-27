@@ -18,6 +18,7 @@ import 'package:cupola/features/services/presentation/service_kpi_provider.dart'
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/presentation/truenas_console_shell.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_version_banner.dart';
 
 /// A TrueNAS management section reachable from the hub grid.
@@ -70,41 +71,58 @@ class _HubGrid extends ConsumerWidget {
         (topPadding > 0 ? MediaQuery.paddingOf(context).top : 0) +
         AppSpacing.sm;
 
-    return ListView(
-      padding: EdgeInsets.only(top: top),
-      children: [
-        ServiceKpiPeek(
-          kpis: ref.watch(serviceKpiProvider(ServiceKey.truenas)),
-          accent: AppColors.truenas,
-        ),
-        const TrueNasVersionBanner(),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.md,
-            AppSpacing.lg,
-            0,
+    // The one service page without a pull. Its rail read "not answering" until
+    // the user left and came back, since nothing else re-asks the dashboard
+    // call or the probe behind the identity band.
+    return RefreshIndicator(
+      onRefresh: () async {
+        invalidateServiceReadout(ref, ServiceKey.truenas);
+        ref.invalidate(truenasVersionProvider);
+        // Held until the rail has its answer, whichever way it went.
+        try {
+          await ref.read(serviceKpiProvider(ServiceKey.truenas).future);
+        } catch (_) {}
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.only(top: top),
+        children: [
+          ServiceKpiPeek(
+            kpis: ref.watch(serviceKpiProvider(ServiceKey.truenas)),
+            accent: AppColors.truenas,
           ),
-          child: GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: AppSpacing.md,
-            crossAxisSpacing: AppSpacing.md,
-            // Grows the cells taller with the reading size; a fixed ratio
-            // clipped the tile labels at accessibility text sizes.
-            childAspectRatio: TextScaleMetrics.aspectRatio(context, base: 1.35),
-            children: [
-              for (var i = 0; i < trueNasSections.length; i++)
-                StaggeredEntrance(
-                  index: i,
-                  child: _SectionTile(section: trueNasSections[i]),
-                ),
-            ],
+          const TrueNasVersionBanner(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              0,
+            ),
+            child: GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: AppSpacing.md,
+              crossAxisSpacing: AppSpacing.md,
+              // Grows the cells taller with the reading size; a fixed ratio
+              // clipped the tile labels at accessibility text sizes.
+              childAspectRatio: TextScaleMetrics.aspectRatio(
+                context,
+                base: 1.35,
+              ),
+              children: [
+                for (var i = 0; i < trueNasSections.length; i++)
+                  StaggeredEntrance(
+                    index: i,
+                    child: _SectionTile(section: trueNasSections[i]),
+                  ),
+              ],
+            ),
           ),
-        ),
-        SizedBox(height: bottomPadding + AppSpacing.lg),
-      ],
+          SizedBox(height: bottomPadding + AppSpacing.lg),
+        ],
+      ),
     );
   }
 }
