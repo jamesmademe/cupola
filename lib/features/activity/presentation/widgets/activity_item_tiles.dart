@@ -1285,7 +1285,13 @@ class ActivityTableHeader extends StatelessWidget {
 
     Widget cell(String label, double width) => SizedBox(
       width: width,
-      child: Text(label, textAlign: TextAlign.right, style: style),
+      // Sentence case in the source, uppercase for the eye: the eyebrow is
+      // the one uppercase voice, and it is applied here, not typed.
+      child: Text(
+        label.toUpperCase(),
+        textAlign: TextAlign.right,
+        style: style,
+      ),
     );
 
     return Semantics(
@@ -1303,10 +1309,10 @@ class ActivityTableHeader extends StatelessWidget {
         child: Row(
           children: [
             const SizedBox(width: _ActivityTableMetrics.glyph + AppSpacing.md),
-            Expanded(child: Text('RELEASE', style: style)),
+            Expanded(child: Text('Release'.toUpperCase(), style: style)),
             const SizedBox(width: AppSpacing.md),
-            cell('DETAILS', _ActivityTableMetrics.figures),
-            cell('WHEN', _ActivityTableMetrics.time),
+            cell('Details', _ActivityTableMetrics.figures),
+            cell('When', _ActivityTableMetrics.time),
             const SizedBox(width: _ActivityTableMetrics.actions),
           ],
         ),

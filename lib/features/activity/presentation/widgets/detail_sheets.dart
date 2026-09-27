@@ -28,7 +28,7 @@ class DetailSheets {
     final title =
         arrPrimaryMediaTitle(item, includeMovieYear: true) ??
         arrReleaseTitle(item) ??
-        'Queue Item';
+        'Queue item';
     return _show(
       context: context,
       title: title,
@@ -45,7 +45,7 @@ class DetailSheets {
     final title =
         arrPrimaryMediaTitle(item, includeMovieYear: true) ??
         arrReleaseTitle(item) ??
-        'History Item';
+        'History item';
     return _show(
       context: context,
       title: title,
@@ -77,7 +77,7 @@ class DetailSheets {
   ) {
     return _show(
       context: context,
-      title: stringOrNull(item['title']) ?? 'Wanted Item',
+      title: stringOrNull(item['title']) ?? 'Wanted item',
       sections: _buildWantedSections(item, serviceType),
     );
   }
@@ -140,10 +140,10 @@ List<_DetailSection> _buildQueueSections(Map<String, dynamic> item) {
     _DetailSection(
       title: 'Summary',
       fields: _compactFields([
-        _detailField('Display Status', displayStatus),
+        _detailField('Display status', displayStatus),
         _detailField('Status', item['status']),
-        _detailField('Tracked Status', item['trackedDownloadStatus']),
-        _detailField('Tracked State', item['trackedDownloadState']),
+        _detailField('Tracked status', item['trackedDownloadStatus']),
+        _detailField('Tracked state', item['trackedDownloadState']),
         _detailField('Quality', extractQualityName(item)),
       ]),
     ),
@@ -151,7 +151,7 @@ List<_DetailSection> _buildQueueSections(Map<String, dynamic> item) {
       title: 'Transfer',
       fields: _compactFields([
         _detailField('Protocol', item['protocol']),
-        _detailField('Download Client', item['downloadClient']),
+        _detailField('Download client', item['downloadClient']),
         _detailField('Indexer', item['indexer']),
         _detailField('Size', formatActivityBytes(item['size'])),
         _detailField('Remaining', formatActivityBytes(item['sizeleft'])),
@@ -160,14 +160,14 @@ List<_DetailSection> _buildQueueSections(Map<String, dynamic> item) {
           formatActivityDuration(stringOrNull(item['timeleft'])),
         ),
         _detailField(
-          'Estimated Completion',
+          'Estimated completion',
           formatActivityDateTime(stringOrNull(item['estimatedCompletionTime'])),
         ),
-        _detailField('Output Path', item['outputPath']),
+        _detailField('Output path', item['outputPath']),
       ]),
     ),
     if (statusMessages.isNotEmpty)
-      _DetailSection(title: 'Status Messages', messages: statusMessages),
+      _DetailSection(title: 'Status messages', messages: statusMessages),
   ];
 }
 
@@ -182,12 +182,12 @@ List<_DetailSection> _buildHistorySections(Map<String, dynamic> item) {
       title: 'Event',
       fields: _compactFields([
         _detailField(
-          'Event Type',
+          'Event type',
           humanizeEventType(item['eventType']?.toString() ?? 'Unknown'),
         ),
         _detailField('Date', formatDateOnly(stringOrNull(item['date']))),
         _detailField(
-          'Relative Time',
+          'Relative time',
           formatRelativeActivityDate(stringOrNull(item['date'])),
         ),
         _detailField(
@@ -200,7 +200,7 @@ List<_DetailSection> _buildHistorySections(Map<String, dynamic> item) {
       ]),
     ),
     if (dataFields.isNotEmpty)
-      _DetailSection(title: 'Additional Data', fields: dataFields),
+      _DetailSection(title: 'Additional data', fields: dataFields),
   ];
 }
 
@@ -209,14 +209,14 @@ List<_DetailSection> _buildBlocklistSections(Map<String, dynamic> item) {
 
   return [
     _DetailSection(
-      title: 'Blocked Release',
+      title: 'Blocked release',
       fields: _compactFields([
         _detailField(
           'Date',
           formatActivityDateTime(stringOrNull(item['date'])),
         ),
         _detailField(
-          'Relative Time',
+          'Relative time',
           formatRelativeActivityDate(stringOrNull(item['date'])),
         ),
         _detailField('Protocol', item['protocol']),
@@ -225,7 +225,7 @@ List<_DetailSection> _buildBlocklistSections(Map<String, dynamic> item) {
       ]),
     ),
     if (statusMessages.isNotEmpty)
-      _DetailSection(title: 'Status Messages', messages: statusMessages),
+      _DetailSection(title: 'Status messages', messages: statusMessages),
   ];
 }
 
@@ -235,7 +235,7 @@ List<_DetailSection> _buildWantedSections(
 ) {
   return [
     _DetailSection(
-      title: 'Wanted Item',
+      title: 'Wanted item',
       fields: _buildWantedFields(item, serviceType),
     ),
   ];
@@ -250,20 +250,20 @@ List<_DetailField> _buildWantedFields(
       _detailField('Series', asActivityMap(item['series'])?['title']),
       _detailField('Status', wantedStatusText(item, serviceType)),
       _detailField(
-        'Episode Code',
+        'Episode code',
         formatEpisodeCode(
           intOrNull(item['seasonNumber']),
           intOrNull(item['episodeNumber']),
         ),
       ),
-      _detailField('Episode Title', item['title']),
+      _detailField('Episode title', item['title']),
       _detailField(
-        'Air Date',
+        'Air date',
         formatActivityDateTime(stringOrNull(item['airDateUtc'])),
       ),
       _detailField('Monitored', item['monitored']),
       _detailField(
-        'Current Quality',
+        'Current quality',
         extractQualityName(item, fileKey: 'episodeFile'),
       ),
     ]),
@@ -272,7 +272,7 @@ List<_DetailField> _buildWantedFields(
       _detailField('Status', wantedStatusText(item, serviceType)),
       _detailField('Year', item['year']),
       _detailField(
-        'Release Date',
+        'Release date',
         formatActivityDateTime(
           stringOrNull(
             item['airDateUtc'] ?? item['digitalRelease'] ?? item['inCinemas'],
@@ -281,7 +281,7 @@ List<_DetailField> _buildWantedFields(
       ),
       _detailField('Monitored', item['monitored']),
       _detailField(
-        'Current Quality',
+        'Current quality',
         extractQualityName(item, fileKey: 'movieFile'),
       ),
     ]),
@@ -291,7 +291,7 @@ List<_DetailField> _buildWantedFields(
       _detailField('Artist', asActivityMap(item['artist'])?['artistName']),
       _detailField('Album', asActivityMap(item['album'])?['title']),
       _detailField(
-        'Release Date',
+        'Release date',
         formatActivityDateTime(stringOrNull(item['releaseDate'])),
       ),
       _detailField('Monitored', item['monitored']),

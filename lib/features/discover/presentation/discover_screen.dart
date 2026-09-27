@@ -156,33 +156,33 @@ class DiscoverScreen extends ConsumerWidget {
             onSeeAll: () => context.push(ServiceRoutes.seerrTrendingAll),
           ),
           DiscoverCarousel(
-            title: 'Popular Movies',
+            title: 'Popular movies',
             sectionId: 'movies',
             items: ref.watch(discoverMoviesProvider),
             forcedMediaType: 'movie',
             onSeeAll: () => context.push(ServiceRoutes.seerrMoviesAll),
           ),
           DiscoverCarousel(
-            title: 'Popular Series',
+            title: 'Popular series',
             sectionId: 'tv',
             items: ref.watch(discoverTVProvider),
             forcedMediaType: 'tv',
             onSeeAll: () => context.push(ServiceRoutes.seerrTvAll),
           ),
           DiscoverCarousel(
-            title: 'Upcoming Movies',
+            title: 'Upcoming movies',
             sectionId: 'upcoming_movies',
             items: ref.watch(discoverUpcomingMoviesProvider),
             forcedMediaType: 'movie',
           ),
           DiscoverCarousel(
-            title: 'Top Rated Movies',
+            title: 'Top rated movies',
             sectionId: 'top_rated',
             items: ref.watch(discoverTopRatedMoviesProvider),
             forcedMediaType: 'movie',
           ),
           DiscoverCarousel(
-            title: 'Upcoming Series',
+            title: 'Upcoming series',
             sectionId: 'upcoming_tv',
             items: ref.watch(discoverUpcomingTvProvider),
             forcedMediaType: 'tv',
@@ -341,7 +341,8 @@ class _FeaturedBanner extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'FEATURED',
+                              'Featured'.toUpperCase(),
+                              semanticsLabel: 'Featured',
                               style: AppTheme.eyebrow(colorScheme.primary),
                             ),
                             const SizedBox(height: AppSpacing.xs),

@@ -112,12 +112,12 @@ void main() {
       expect(status.tone, StatusTone.neutral);
     });
 
-    test('an unreleased movie reads Not Released, not Missing', () {
+    test('an unreleased movie reads Not released, not Missing', () {
       final status = radarrMovieStatus(
         _movie(status: 'announced', isAvailable: false),
       );
 
-      expect(status.label, 'Not Released');
+      expect(status.label, 'Not released');
       expect(status.tone, StatusTone.neutral);
     });
   });

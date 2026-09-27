@@ -204,7 +204,7 @@ class _UpgradeBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        'UPDATE',
+        'Update',
         style: Theme.of(context).textTheme.labelSmall!
             .weight(FontWeight.w600)
             // The ink walks against the tint it sits on, not against the page.

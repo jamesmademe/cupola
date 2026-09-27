@@ -87,7 +87,7 @@ void main() {
       );
     });
 
-    testWidgets('an unaired episode reads Not Released, never Missing', (
+    testWidgets('an unaired episode reads Not released, never Missing', (
       tester,
     ) async {
       final airsAt = DateTime.now().add(const Duration(days: 30));
@@ -106,7 +106,7 @@ void main() {
         ],
       );
 
-      expect(find.textContaining('Not Released'), findsOneWidget);
+      expect(find.textContaining('Not released'), findsOneWidget);
       expect(find.textContaining('Missing'), findsNothing);
     });
 

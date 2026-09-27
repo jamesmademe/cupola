@@ -48,15 +48,15 @@ void main() {
       );
 
       await tester.scrollUntilVisible(
-        find.text('Clear Data'),
+        find.text('Clear data'),
         200,
         scrollable: find.byType(Scrollable).last,
       );
-      await tester.tap(find.text('Clear Data'));
+      await tester.tap(find.text('Clear data'));
       await tester.pumpAndSettle();
 
       expect(find.byType(AlertDialog), findsNothing);
-      expect(find.text('Clear Data'), findsOneWidget);
+      expect(find.text('Clear data'), findsOneWidget);
       expect(onDataChangedCount, 0);
     });
 

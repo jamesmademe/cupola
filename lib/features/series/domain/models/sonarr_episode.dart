@@ -15,7 +15,7 @@ class SonarrEpisode {
   final String? airDate;
 
   /// Broadcast instant in UTC, used to tell an unaired episode from a missing
-  /// one — "Not Released" and "Missing" are very different rows.
+  /// one — "Not released" and "Missing" are very different rows.
   final String? airDateUtc;
 
   /// Episode length in minutes, when Sonarr knows it.
@@ -50,7 +50,7 @@ class SonarrEpisode {
   /// True when the broadcast is in the future.
   ///
   /// An episode with no air date at all is treated as aired: Sonarr leaves the
-  /// field empty for older catalogues, and reporting "Not Released" for
+  /// field empty for older catalogues, and reporting "Not released" for
   /// something from 1994 would be worse than saying nothing.
   bool isUnairedAt(DateTime now) {
     final airsAt = this.airsAt;

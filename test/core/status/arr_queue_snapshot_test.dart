@@ -102,7 +102,7 @@ void main() {
 
       expect(entry, isNotNull);
       expect(entry!.pipeline, MediaPipeline.queued);
-      expect(entry.label, 'Some New State');
+      expect(entry.label, 'Some new state');
     });
 
     test('an empty record still counts as in-flight', () {
@@ -143,7 +143,7 @@ void main() {
           monitored: true,
           queueEntry: entry,
         ).label,
-        'Client Unavailable',
+        'Client unavailable',
       );
     });
 

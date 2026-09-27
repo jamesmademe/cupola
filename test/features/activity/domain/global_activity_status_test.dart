@@ -148,7 +148,7 @@ void main() {
         'eventType': 'someFutureEvent',
       });
 
-      expect(status.label, 'Some Future Event');
+      expect(status.label, 'Some future event');
       expect(status.tone, StatusTone.neutral);
     });
 

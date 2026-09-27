@@ -37,7 +37,7 @@ class DiscoverWatchProviders extends StatelessWidget {
         if (providers.flatrate.isNotEmpty && providers.buy.isNotEmpty)
           const SizedBox(height: AppSpacing.sm),
         if (providers.buy.isNotEmpty) ...[
-          _ProviderGroupLabel(label: 'Buy / Rent'),
+          _ProviderGroupLabel(label: 'Buy / rent'),
           const SizedBox(height: AppSpacing.xs),
           _WatchProviderRow(entries: providers.buy),
         ],

@@ -213,7 +213,7 @@ void main() {
       expect(
         find.bySemanticsLabel(
           RegExp(
-            r'Ubuntu 24\.04 LTS, DL, 42 per cent, .*'
+            r'Ubuntu 24\.04 LTS, Downloading, 42 per cent, .*'
             r'downloading at .*, uploading at ',
           ),
         ),

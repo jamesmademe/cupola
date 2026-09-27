@@ -39,7 +39,7 @@ void main() {
         type: 'tv',
       );
 
-      expect(request.displayStatus.label, 'Partially Available');
+      expect(request.displayStatus.label, 'Partially available');
       expect(
         request.displayStatus.kind,
         SeerrRequestDisplayKind.partiallyAvailable,

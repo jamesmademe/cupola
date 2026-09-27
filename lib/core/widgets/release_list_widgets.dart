@@ -404,7 +404,7 @@ class _ReleaseDetails extends StatelessWidget {
 
         if (customFormats.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.sm),
-          _SectionHeader(title: 'Custom Formats', score: score),
+          _SectionHeader(title: 'Custom formats', score: score),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
             spacing: AppSpacing.sm,
@@ -420,7 +420,7 @@ class _ReleaseDetails extends StatelessWidget {
 
         if (rejections.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
-          const _SectionHeader(title: 'Rejection Reasons', isError: true),
+          const _SectionHeader(title: 'Rejection reasons', isError: true),
           const SizedBox(height: AppSpacing.xs),
           ...rejections.map(
             (reason) => Padding(
@@ -502,7 +502,7 @@ class _GrabButton extends StatelessWidget {
               onPressed: onPressed,
               tooltip: onPressed == null
                   ? 'Another download is starting'
-                  : 'Grab Release',
+                  : 'Grab release',
               style: IconButton.styleFrom(
                 backgroundColor: tone
                     .color(colorScheme)
@@ -529,10 +529,12 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       children: [
         Text(
-          title.toUpperCase(),
+          title,
           // Not `AppTheme.eyebrow`: this repeats inside every expanded release
           // card (and twice in one when a release is both scored and
-          // rejected), so it is a dense label, not a region kicker.
+          // rejected), so it is a dense label, not a region kicker — and
+          // therefore sentence case, since the eyebrow is the one uppercase
+          // voice.
           style: theme.textTheme.labelSmall!
               .weight(FontWeight.w600)
               .copyWith(

@@ -26,7 +26,7 @@ class TrueNasDataProtectionScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return TrueNasSectionScaffold(
-      title: 'Data Protection',
+      title: 'Data protection',
       body: TrueNasConsoleShell(
         child: RefreshIndicator(
           onRefresh: () async {

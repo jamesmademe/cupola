@@ -114,7 +114,7 @@ void main() {
       await tester.tap(find.text('S2'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Partially Available'), findsOneWidget);
+      expect(find.text('Partially available'), findsOneWidget);
     });
 
     testWidgets('episode rows carry no invented per-episode status', (

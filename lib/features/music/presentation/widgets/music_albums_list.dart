@@ -121,7 +121,7 @@ class MusicAlbumsList extends StatelessWidget {
       subtitle: <String>[
         if (album.year.isNotEmpty) album.year,
         ?summary,
-      ].join(' • '),
+      ].join(' · '),
       icon: Icons.album_rounded,
       accent: ServiceKey.lidarr.accent,
       builder: (context, controller) => _AlbumTracksSheet(

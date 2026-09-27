@@ -217,11 +217,11 @@ void main() {
       // Connections, General, Security, About, Danger Zone.
       expect(find.byType(SettingsGroupCard), findsNWidgets(5));
 
-      await tester.scrollUntilVisible(find.text('Send Feedback'), 300);
+      await tester.scrollUntilVisible(find.text('Send feedback'), 300);
       await tester.pumpAndSettle();
 
       expect(find.text('GitHub'), findsOneWidget);
-      expect(find.text('Send Feedback'), findsOneWidget);
+      expect(find.text('Send feedback'), findsOneWidget);
     });
 
     testWidgets('the licence page carries the trademark notice', (

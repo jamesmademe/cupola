@@ -270,7 +270,7 @@ String formatActivityValue(dynamic value) {
           (entry) =>
               '${humanizeCamelCase(entry.key.toString())}: ${formatActivityValue(entry.value)}',
         )
-        .join(' • ');
+        .join(' · ');
   }
 
   return value.toString();
@@ -420,7 +420,7 @@ String wantedTitle(Map<String, dynamic> item, ServiceType serviceType) {
         episodeCode,
         stringOrNull(item['title']),
       ]);
-      return title.isEmpty ? 'Unknown Episode' : title;
+      return title.isEmpty ? 'Unknown episode' : title;
     case ServiceType.discover:
       return stringOrNull(item['title']) ?? 'Unknown';
   }
@@ -437,7 +437,7 @@ String? wantedSubtitle(Map<String, dynamic> item, ServiceType serviceType) {
       return stringOrNull(asActivityMap(item['artist'])?['artistName']);
     case ServiceType.series:
       return stringOrNull(asActivityMap(item['series'])?['title']) ??
-          'Unknown Series';
+          'Unknown series';
     case ServiceType.discover:
       return null;
   }

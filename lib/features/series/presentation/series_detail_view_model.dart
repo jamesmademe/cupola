@@ -83,7 +83,7 @@ class SeriesDetailViewModel {
       return null;
     }
 
-    return parts.join(' • ');
+    return parts.join(' · ');
   }
 
   List<String> get metadataItems => [
@@ -121,7 +121,7 @@ class SeriesDetailViewModel {
         MediaInfoGroup(title: 'Profile', child: Text(qualityProfileName)),
       if (_hasText(seriesType))
         MediaInfoGroup(
-          title: 'Series Type',
+          title: 'Series type',
           child: seriesTypeControl ?? Text(capitalizeFirst(seriesType!)),
         ),
       if (_hasText(certification))
@@ -141,19 +141,19 @@ class SeriesDetailViewModel {
     return [
       if (_hasText(seriesType))
         MediaInfoGroup(
-          title: 'Series Type',
+          title: 'Series type',
           child: seriesTypeControl ?? Text(capitalizeFirst(seriesType!)),
         ),
       if (_hasText(certification))
         MediaInfoGroup(title: 'Certification', child: Text(certification!)),
       if (_hasText(originalLanguage))
         MediaInfoGroup(
-          title: 'Original Language',
+          title: 'Original language',
           child: Text(originalLanguage!),
         ),
       if (airDateFacts.isNotEmpty)
         MediaInfoGroup(
-          title: 'Air Dates',
+          title: 'Air dates',
           child: MediaFactsList(facts: airDateFacts),
         ),
       if (genres.isNotEmpty)
@@ -172,9 +172,9 @@ class SeriesDetailViewModel {
 
   List<MediaFact> _buildAirDateFacts() => [
     if (_hasText(firstAired))
-      MediaFact('First Aired', formatMediumDate(firstAired!)),
+      MediaFact('First aired', formatMediumDate(firstAired!)),
     if (_hasText(lastAired))
-      MediaFact('Last Aired', formatMediumDate(lastAired!)),
+      MediaFact('Last aired', formatMediumDate(lastAired!)),
   ];
 
   bool _hasText(String? value) => value != null && value.isNotEmpty;

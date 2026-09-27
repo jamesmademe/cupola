@@ -1145,7 +1145,8 @@ class _SearchEmptyState extends ConsumerWidget {
           Row(
             children: [
               Text(
-                'RECENT',
+                'Recent'.toUpperCase(),
+                semanticsLabel: 'Recent',
                 style: AppTheme.eyebrow(colorScheme.onSurfaceVariant),
               ),
               const Spacer(),

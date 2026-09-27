@@ -20,10 +20,10 @@ void main() {
       const info = MediaStatusInfo(
         availability: MediaAvailability.missing,
         pipeline: MediaPipeline.paused,
-        labelOverride: 'Client Unavailable',
+        labelOverride: 'Client unavailable',
       );
 
-      expect(info.label, 'Client Unavailable');
+      expect(info.label, 'Client unavailable');
     });
 
     test('unmonitored surfaces only when nothing is on disk', () {
@@ -53,12 +53,12 @@ void main() {
     });
 
     final availabilityLabels = <MediaAvailability, String>{
-      MediaAvailability.notTracked: 'Not Requested',
-      MediaAvailability.unavailable: 'Not Released',
+      MediaAvailability.notTracked: 'Not requested',
+      MediaAvailability.unavailable: 'Not released',
       MediaAvailability.missing: 'Missing',
       MediaAvailability.partial: 'Partial',
       MediaAvailability.available: 'Available',
-      MediaAvailability.upgradable: 'Upgrade Available',
+      MediaAvailability.upgradable: 'Upgrade available',
       MediaAvailability.deleted: 'Deleted',
       MediaAvailability.unknown: 'Unknown',
     };

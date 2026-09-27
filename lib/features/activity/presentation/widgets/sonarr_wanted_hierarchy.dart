@@ -69,7 +69,7 @@ _groupEpisodesBySeriesAndSeason(List<dynamic> items) {
         stringOrNull(
           asActivityMap(item['series'])?['title'] ?? item['seriesTitle'],
         ) ??
-        'Unknown Series';
+        'Unknown series';
     final seasonNumber = intOrNull(item['seasonNumber']) ?? 0;
 
     grouped
@@ -222,7 +222,7 @@ class _EpisodeListTile extends ConsumerWidget {
     final textTheme = theme.textTheme;
     final colorScheme = theme.colorScheme;
     final episodeNumber = intOrNull(episode['episodeNumber']) ?? 0;
-    final episodeTitle = stringOrNull(episode['title']) ?? 'Unknown Episode';
+    final episodeTitle = stringOrNull(episode['title']) ?? 'Unknown episode';
     final isMonitored = episode['monitored'] != false;
     final episodeId = extractWantedItemId(ServiceType.series, episode);
     final title =

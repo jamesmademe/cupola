@@ -30,7 +30,7 @@ class ArrQueueEntry {
   /// unrecognised status keeps its own humanised wording instead of being
   /// flattened to "Queued".
   ///
-  /// It no longer carries "Client Unavailable": that was a real state wearing a
+  /// It no longer carries "Client unavailable": that was a real state wearing a
   /// label, and a label is exactly what the merge in [_EntryAccumulator] is
   /// entitled to discard. It is [MediaPipeline.clientUnavailable] now.
   final String? label;

@@ -347,7 +347,7 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
     final rejections = releaseRejectionReasons(release);
     final result = await showAppConfirmDialog(
       context: rowContext,
-      title: rejections.isEmpty ? 'Grab Release' : 'Grab Rejected Release',
+      title: rejections.isEmpty ? 'Grab release' : 'Grab rejected release',
       message: rejections.isEmpty
           ? 'Download "$releaseTitle"?'
           : 'This release was rejected:\n\n'
@@ -782,7 +782,7 @@ class _IndexerChip extends StatelessWidget {
             children: [
               const Icon(Icons.all_inclusive_rounded, size: 20),
               const SizedBox(width: AppSpacing.sm),
-              const Text('All Indexers'),
+              const Text('All indexers'),
               if (selected == null) ...[
                 const Spacer(),
                 Icon(Icons.check_rounded, size: 20, color: colorScheme.primary),
@@ -814,7 +814,7 @@ class _IndexerChip extends StatelessWidget {
       ],
       child: _ChipShell(
         icon: Icons.dns_rounded,
-        label: selected ?? 'All Indexers',
+        label: selected ?? 'All indexers',
         selected: selected != null,
         trailing: selected == null
             ? null
@@ -863,7 +863,7 @@ class _EmptyReleases extends StatelessWidget {
                 message: 'Loosen the filters to see the rest of the results.',
                 action: TextButton(
                   onPressed: onClearFilters,
-                  child: const Text('Clear Filters'),
+                  child: const Text('Clear filters'),
                 ),
               )
             : const AppEmptyState.compact(

@@ -339,8 +339,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Unknown Episode'), findsOneWidget);
-      expect(find.text('Unknown Series'), findsOneWidget);
+      expect(find.text('Unknown episode'), findsOneWidget);
+      expect(find.text('Unknown series'), findsOneWidget);
     });
   });
 
@@ -363,7 +363,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Import Pending'), findsOneWidget);
+      expect(find.text('Import pending'), findsOneWidget);
       expect(find.text('Available'), findsNothing);
     });
 
@@ -496,7 +496,7 @@ void main() {
                     title: 'Dune: Part Two',
                     subtitle: 'Dune.Part.Two.2024.2160p',
                     status: MediaStatusInfo(
-                      labelOverride: 'Import Failed',
+                      labelOverride: 'Import failed',
                       toneOverride: StatusTone.warning,
                     ),
                     raw: {

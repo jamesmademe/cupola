@@ -52,7 +52,7 @@ void main() {
       expect(viewModel.title, 'Test Movie');
       expect(viewModel.overview, 'A movie overview.');
       expect(viewModel.posterUrl, 'https://image.tmdb.org/t/p/w500/poster.jpg');
-      expect(viewModel.seerrStatus, 'Partially Available');
+      expect(viewModel.seerrStatus, 'Partially available');
       expect(viewModel.isAvailable, isFalse);
       expect(viewModel.isPartiallyAvailable, isTrue);
       expect(viewModel.genres, 'Action, Drama');
@@ -113,7 +113,7 @@ void main() {
       expect(viewModel.voteAverage, 8.1);
       expect(viewModel.voteCount, 1000);
       expect(viewModel.tvdbId, 321);
-      expect(viewModel.metadataLine, 'Sci-Fi • HBO, Max');
+      expect(viewModel.metadataLine, 'Sci-Fi · HBO, Max');
     });
 
     test('handles missing optional data with safe defaults', () {
@@ -124,7 +124,7 @@ void main() {
       expect(viewModel.title, 'Unknown');
       expect(viewModel.overview, isEmpty);
       expect(viewModel.posterUrl, isEmpty);
-      expect(viewModel.seerrStatus, 'Available to Request');
+      expect(viewModel.seerrStatus, 'Available to request');
       expect(viewModel.isAvailable, isFalse);
       expect(viewModel.genres, isEmpty);
       expect(viewModel.genresList, isEmpty);
@@ -148,12 +148,12 @@ void main() {
     test('maps seerr status codes consistently', () {
       expect(
         DiscoverDetailViewModel.mapSeerrStatus(null),
-        'Available to Request',
+        'Available to request',
       );
       expect(DiscoverDetailViewModel.mapSeerrStatus(1), 'Unknown');
       expect(DiscoverDetailViewModel.mapSeerrStatus(2), 'Pending');
       expect(DiscoverDetailViewModel.mapSeerrStatus(3), 'Processing');
-      expect(DiscoverDetailViewModel.mapSeerrStatus(4), 'Partially Available');
+      expect(DiscoverDetailViewModel.mapSeerrStatus(4), 'Partially available');
       expect(DiscoverDetailViewModel.mapSeerrStatus(5), 'Available');
       expect(DiscoverDetailViewModel.mapSeerrStatus(6), 'Deleted');
       expect(DiscoverDetailViewModel.mapSeerrStatus(99), 'Unknown');

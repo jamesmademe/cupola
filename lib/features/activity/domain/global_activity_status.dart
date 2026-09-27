@@ -214,7 +214,7 @@ StatusTone historyEventTone(String eventType) => _historyEvent(eventType).$2;
     // Faults, and therefore amber. Red is reserved for a connection that did
     // not answer — a failed grab means the service answered and told us so.
     'downloadFailed' => ('Failed', StatusTone.warning),
-    'importFailed' => ('Import Failed', StatusTone.warning),
+    'importFailed' => ('Import failed', StatusTone.warning),
     // The forks' own import faults, and the failure each library actually
     // suffers: the book went in with files missing, the album with tracks
     // missing. Amber for the same reason as the two above — the service
@@ -223,7 +223,7 @@ StatusTone historyEventTone(String eventType) => _historyEvent(eventType).$2;
     'albumImportIncomplete' => ('Import incomplete', StatusTone.warning),
     // Deliberately not an error, and no longer sharing `importFailed`'s wording.
     // `downloadIgnored` is a choice somebody made — the \*arr was told to leave
-    // this release alone. Rendering it as a red "Import Failed" sent the user
+    // this release alone. Rendering it as a red "Import failed" sent the user
     // looking for a fault that never happened.
     'downloadIgnored' => ('Ignored', StatusTone.neutral),
     // A file the user or an upgrade removed. Amber would claim a fault that

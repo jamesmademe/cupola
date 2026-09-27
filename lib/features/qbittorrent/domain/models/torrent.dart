@@ -15,22 +15,22 @@ enum TorrentState {
   String get label {
     switch (this) {
       case TorrentState.downloading:
-        return 'DL';
+        return 'Downloading';
       case TorrentState.metaDownloading:
-        return 'META';
+        return 'Fetching metadata';
       case TorrentState.seeding:
-        return 'SEED';
+        return 'Seeding';
       case TorrentState.stalled:
-        return 'STALLED';
+        return 'Stalled';
       case TorrentState.checking:
-        return 'CHECK';
+        return 'Checking';
       case TorrentState.paused:
-        return 'PAUSE';
+        return 'Paused';
       case TorrentState.queuedUp:
       case TorrentState.queuedDl:
-        return 'QUEUE';
+        return 'Queued';
       case TorrentState.error:
-        return 'ERR';
+        return 'Error';
       case TorrentState.unknown:
         return '—';
     }

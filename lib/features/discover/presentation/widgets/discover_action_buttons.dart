@@ -181,7 +181,7 @@ class DiscoverActionButtons extends ConsumerWidget {
   void _showRequestSheet(BuildContext context, WidgetRef ref) {
     AppBottomSheet.show(
       context: context,
-      title: _normalizedMediaType == 'tv' ? 'Request TV Show' : 'Request Movie',
+      title: _normalizedMediaType == 'tv' ? 'Request TV show' : 'Request movie',
       icon: Icons.download_rounded,
       accent: ServiceKey.seerr.accent,
       builder: (sheetContext) => RequestBottomSheet(

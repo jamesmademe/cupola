@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 /// A reusable popup menu for media search options.
 ///
-/// Shows options for "Automatic Search" and "Interactive Search".
+/// Shows options for "Automatic search" and "Interactive search".
 /// Used in Series and Music detail screens for season/album search menus.
 class MediaSearchPopupMenu extends StatelessWidget {
-  /// Callback when "Automatic Search" is selected.
+  /// Callback when "Automatic search" is selected.
   final VoidCallback onAutoSearch;
 
-  /// Callback when "Interactive Search" is selected.
+  /// Callback when "Interactive search" is selected.
   final VoidCallback onInteractiveSearch;
 
   /// Whether to show a loading indicator instead of the menu.
@@ -51,10 +51,10 @@ class MediaSearchPopupMenu extends StatelessWidget {
         if (value == 'interactive') onInteractiveSearch();
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(value: 'auto', child: Text('Automatic Search')),
+        const PopupMenuItem(value: 'auto', child: Text('Automatic search')),
         const PopupMenuItem(
           value: 'interactive',
-          child: Text('Interactive Search'),
+          child: Text('Interactive search'),
         ),
       ],
     );

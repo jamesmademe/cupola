@@ -45,7 +45,7 @@ void main() {
         ),
       );
 
-      expect(find.text('In Cinemas'), findsNothing);
+      expect(find.text('In cinemas'), findsNothing);
       expect(find.text('2023-06-15'), findsNothing);
     });
 
@@ -55,7 +55,7 @@ void main() {
           home: Scaffold(
             body: MediaFactsList(
               facts: const [
-                MediaFact('In Cinemas', '2023-06-15'),
+                MediaFact('In cinemas', '2023-06-15'),
                 MediaFact('Digital', '2023-09-01'),
               ],
             ),
@@ -63,7 +63,7 @@ void main() {
         ),
       );
 
-      expect(find.text('In Cinemas'), findsOneWidget);
+      expect(find.text('In cinemas'), findsOneWidget);
       expect(find.text('2023-06-15'), findsOneWidget);
       expect(find.text('Digital'), findsOneWidget);
       expect(find.text('2023-09-01'), findsOneWidget);

@@ -477,7 +477,7 @@ class TrueNasNtpScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final servers = ref.watch(truenasNtpServersProvider);
     return _AsyncSection<List<Map<String, dynamic>>>(
-      title: 'NTP Servers',
+      title: 'NTP servers',
       value: servers,
       onRefresh: () => ref.invalidate(truenasNtpServersProvider),
       builder: (list) => list.isEmpty
@@ -522,7 +522,7 @@ class TrueNasAlertSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final services = ref.watch(truenasAlertServicesProvider);
     return _AsyncSection<List<Map<String, dynamic>>>(
-      title: 'Alert Settings',
+      title: 'Alert settings',
       value: services,
       onRefresh: () => ref.invalidate(truenasAlertServicesProvider),
       builder: (list) => list.isEmpty

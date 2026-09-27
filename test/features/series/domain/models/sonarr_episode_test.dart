@@ -89,7 +89,7 @@ void main() {
 
       test('no air date at all counts as aired', () {
         // Sonarr leaves the field empty for older catalogues; reporting
-        // "Not Released" for something from 1994 would be worse than silence.
+        // "Not released" for something from 1994 would be worse than silence.
         const episode = SonarrEpisode(
           id: 1,
           seasonNumber: 1,

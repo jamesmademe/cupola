@@ -374,7 +374,7 @@ class _AutostartBadge extends StatelessWidget {
           ),
           const SizedBox(width: 3),
           Text(
-            'AUTOSTART',
+            'Autostart',
             style: theme.textTheme.labelSmall!
                 .weight(FontWeight.w600)
                 .copyWith(

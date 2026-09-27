@@ -99,7 +99,7 @@ void main() {
         onGrab: () => grabbed = true,
       );
 
-      await tester.tap(find.byTooltip('Grab Release'));
+      await tester.tap(find.byTooltip('Grab release'));
       await tester.pump();
 
       expect(grabbed, isTrue);
@@ -138,7 +138,7 @@ void main() {
         settle: false,
       );
 
-      expect(find.byTooltip('Grab Release'), findsNothing);
+      expect(find.byTooltip('Grab release'), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
@@ -178,7 +178,7 @@ void main() {
         _grabButtonColor(tester),
         _expectedTone(tester, StatusTone.warning),
       );
-      expect(find.text('REJECTION REASONS'), findsOneWidget);
+      expect(find.text('Rejection reasons'), findsOneWidget);
       expect(find.text('Minimum seeders not met'), findsOneWidget);
     });
 
@@ -216,7 +216,7 @@ void main() {
 
       await _expandRelease(tester);
 
-      expect(find.text('CUSTOM FORMATS'), findsOneWidget);
+      expect(find.text('Custom formats'), findsOneWidget);
       expect(find.text('Score: +4'), findsOneWidget);
       expect(find.text('HDR'), findsOneWidget);
       expect(find.text('+5'), findsOneWidget);
@@ -381,7 +381,7 @@ Color? _grabButtonColor(WidgetTester tester) {
   return tester
       .widget<IconButton>(
         find.ancestor(
-          of: find.byTooltip('Grab Release'),
+          of: find.byTooltip('Grab release'),
           matching: find.byType(IconButton),
         ),
       )

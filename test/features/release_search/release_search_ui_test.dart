@@ -323,7 +323,7 @@ void main() {
     /// grabbing row spins on an indeterminate indicator, so nothing ever
     /// settles while the grab is in flight.
     Future<void> tapGrab(WidgetTester tester) async {
-      await tester.tap(find.byTooltip('Grab Release').first);
+      await tester.tap(find.byTooltip('Grab release').first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Download'));
       await tester.pump();
@@ -352,7 +352,7 @@ void main() {
       // Not reported as a failure either — the prompt already said why.
       expect(find.byType(SnackBar), findsNothing);
       // Re-armed rather than dead: the row can be grabbed again.
-      expect(find.byTooltip('Grab Release'), findsOneWidget);
+      expect(find.byTooltip('Grab release'), findsOneWidget);
     });
 
     testWidgets('the prompt promises a search and only a search', (

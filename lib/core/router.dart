@@ -452,7 +452,7 @@ GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
       GoRoute(
         path: 'tv/all',
         builder: (context, state) =>
-            const DiscoverSeeAllScreen(type: 'tv', title: 'TV Series'),
+            const DiscoverSeeAllScreen(type: 'tv', title: 'TV series'),
       ),
       GoRoute(
         path: 'trending/all',
@@ -2698,7 +2698,7 @@ List<GoRoute> _truenasSectionRoutes() => <GoRoute>[
   ),
   _page(
     'vms',
-    (state) => const TrueNasVirtScreen(type: 'VM', title: 'Virtual Machines'),
+    (state) => const TrueNasVirtScreen(type: 'VM', title: 'Virtual machines'),
     routes: [
       _page(
         'instance/:id',

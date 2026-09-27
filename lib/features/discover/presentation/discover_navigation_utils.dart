@@ -148,7 +148,7 @@ Future<bool> _openSeriesInService({
 void _showNotConfiguredDialog(BuildContext context, String serviceName) {
   showAppConfirmDialog(
     context: context,
-    title: '$serviceName Not Configured',
+    title: '$serviceName not set up',
     message: 'Please configure $serviceName in Settings to use this feature.',
     confirmLabel: 'OK',
     cancelLabel: 'Cancel',

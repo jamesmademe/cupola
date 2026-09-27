@@ -37,8 +37,8 @@ Future<TorrentDeleteResult> showTorrentDeleteDialog({
     destructive: true,
     confirmLabel: 'Delete',
     dangerNote: multi
-        ? 'This cannot be undone! All selected torrents and their files will be permanently removed.'
-        : 'This cannot be undone! Files will be permanently removed from disk.',
+        ? 'This cannot be undone. All selected torrents and their files will be permanently removed.'
+        : 'This cannot be undone. Files will be permanently removed from disk.',
     options: const [
       AppConfirmOption(
         key: 'deleteFiles',

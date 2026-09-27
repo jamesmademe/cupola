@@ -299,7 +299,7 @@ void main() {
       find.widgetWithText(TextFormField, 'Server URL'),
       'https://nas.lan:7879',
     );
-    await tester.enterText(find.widgetWithText(TextFormField, 'API Key'), 'k2');
+    await tester.enterText(find.widgetWithText(TextFormField, 'API key'), 'k2');
     await tester.enterText(find.widgetWithText(TextFormField, 'Name'), 'HD');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save'));
@@ -336,7 +336,7 @@ void main() {
       find.widgetWithText(TextFormField, 'Server URL'),
       'https://nas.lan/radarr4k',
     );
-    await tester.enterText(find.widgetWithText(TextFormField, 'API Key'), 'k2');
+    await tester.enterText(find.widgetWithText(TextFormField, 'API key'), 'k2');
     await tester.enterText(find.widgetWithText(TextFormField, 'Name'), '4K');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save'));
@@ -370,7 +370,7 @@ void main() {
       find.widgetWithText(TextFormField, 'Server URL'),
       'https://nas.lan:7879',
     );
-    await tester.enterText(find.widgetWithText(TextFormField, 'API Key'), 'k2');
+    await tester.enterText(find.widgetWithText(TextFormField, 'API key'), 'k2');
     // The exact string the derivation is about to produce for the sibling.
     await tester.enterText(find.widgetWithText(TextFormField, 'Name'), '7878');
     await tester.pumpAndSettle();

@@ -13,7 +13,7 @@ void main() {
       final titles = trueNasSections.map((s) => s.title).toList();
       expect(titles, contains('Virtualization'));
       expect(titles, isNot(contains('Containers')));
-      expect(titles, isNot(contains('Virtual Machines')));
+      expect(titles, isNot(contains('Virtual machines')));
     });
 
     test('that one door still owns both of the old paths', () {
@@ -40,7 +40,7 @@ void main() {
       );
       expect(
         titles.indexOf('Virtualization'),
-        lessThan(titles.indexOf('Data Protection')),
+        lessThan(titles.indexOf('Data protection')),
       );
     });
 

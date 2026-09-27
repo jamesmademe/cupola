@@ -82,7 +82,7 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
                 _SectionLabel(text: 'Last 24 hours'),
                 _StatsSection(indexerId: indexerId),
                 const SizedBox(height: AppSpacing.sm),
-                _SectionLabel(text: 'Recent Activity'),
+                _SectionLabel(text: 'Recent activity'),
                 _IndexerHistory(indexerId: indexerId),
                 const SizedBox(height: AppSpacing.xl),
               ],

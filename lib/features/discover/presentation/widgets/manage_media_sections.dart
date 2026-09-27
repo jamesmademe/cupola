@@ -377,7 +377,7 @@ class AdvancedSection extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: !isDeleting ? onClear : null,
             icon: const Icon(Icons.cleaning_services_outlined),
-            label: const Text('Clear Data'),
+            label: const Text('Clear data'),
             style: ElevatedButton.styleFrom(
               backgroundColor: colorScheme.error,
               foregroundColor: colorScheme.onError,

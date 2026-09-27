@@ -60,7 +60,7 @@ class RequestBottomSheet extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
           ],
-          Text('Quality Profile', style: theme.textTheme.labelLarge),
+          Text('Quality profile', style: theme.textTheme.labelLarge),
           const SizedBox(height: AppSpacing.sm),
           DropdownButtonFormField<int>(
             key: ValueKey('request_profile_${state.selectedProfileId}'),
@@ -81,7 +81,7 @@ class RequestBottomSheet extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           if (state.rootFolders.isNotEmpty) ...[
-            Text('Root Folder', style: theme.textTheme.labelLarge),
+            Text('Root folder', style: theme.textTheme.labelLarge),
             const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<String>(
               key: ValueKey('request_root_${state.selectedRootFolder}'),
@@ -127,7 +127,7 @@ class RequestBottomSheet extends ConsumerWidget {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Submit Request'),
+                  : const Text('Submit request'),
             ),
           ),
         ],

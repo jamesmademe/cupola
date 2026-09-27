@@ -44,15 +44,15 @@ void main() {
 
   group('TorrentState.label', () {
     test('returns expected labels', () {
-      expect(TorrentState.downloading.label, 'DL');
-      expect(TorrentState.metaDownloading.label, 'META');
-      expect(TorrentState.seeding.label, 'SEED');
-      expect(TorrentState.stalled.label, 'STALLED');
-      expect(TorrentState.checking.label, 'CHECK');
-      expect(TorrentState.paused.label, 'PAUSE');
-      expect(TorrentState.queuedUp.label, 'QUEUE');
-      expect(TorrentState.queuedDl.label, 'QUEUE');
-      expect(TorrentState.error.label, 'ERR');
+      expect(TorrentState.downloading.label, 'Downloading');
+      expect(TorrentState.metaDownloading.label, 'Fetching metadata');
+      expect(TorrentState.seeding.label, 'Seeding');
+      expect(TorrentState.stalled.label, 'Stalled');
+      expect(TorrentState.checking.label, 'Checking');
+      expect(TorrentState.paused.label, 'Paused');
+      expect(TorrentState.queuedUp.label, 'Queued');
+      expect(TorrentState.queuedDl.label, 'Queued');
+      expect(TorrentState.error.label, 'Error');
       expect(TorrentState.unknown.label, '—');
     });
   });

@@ -134,7 +134,7 @@ void main() {
         );
 
         final releaseGroup = vm.buildInfoGroups().firstWhere(
-          (group) => group.title == 'Release Dates',
+          (group) => group.title == 'Release dates',
         );
 
         expect(releaseGroup.child, isA<MediaFactsList>());
@@ -171,8 +171,8 @@ void main() {
 
         expect(vm.buildInfoGroups().map((group) => group.title).toList(), [
           'Certification',
-          'Original Language',
-          'Release Dates',
+          'Original language',
+          'Release dates',
           'Genre',
           'Studio',
         ]);

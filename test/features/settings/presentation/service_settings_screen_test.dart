@@ -70,7 +70,7 @@ void main() {
       expect(find.text('Radarr'), findsNWidgets(2));
       expect(find.text('Save'), findsOneWidget);
       expect(find.text('Server URL'), findsOneWidget);
-      expect(find.text('API Key'), findsOneWidget);
+      expect(find.text('API key'), findsOneWidget);
       expect(find.byType(TextFormField), findsNWidgets(2));
     });
 
@@ -85,7 +85,7 @@ void main() {
       );
 
       final urlField = tester.widget<TextField>(_fieldByLabel('Server URL'));
-      final apiKeyField = tester.widget<TextField>(_fieldByLabel('API Key'));
+      final apiKeyField = tester.widget<TextField>(_fieldByLabel('API key'));
 
       expect(urlField.controller?.text, 'https://radarr.local');
       expect(apiKeyField.controller?.text, 'radarr-key');
@@ -365,7 +365,7 @@ void main() {
         _fieldByLabel('Server URL'),
         'https://sonarr.local',
       );
-      await tester.enterText(_fieldByLabel('API Key'), 'sonarr-key');
+      await tester.enterText(_fieldByLabel('API key'), 'sonarr-key');
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
@@ -418,7 +418,7 @@ void main() {
         ),
       );
 
-      await tester.showKeyboard(_fieldByLabel('API Key'));
+      await tester.showKeyboard(_fieldByLabel('API key'));
       await tester.pumpAndSettle();
       expect(tester.testTextInput.isVisible, isTrue);
 
@@ -443,7 +443,7 @@ void main() {
         ),
       );
 
-      await tester.enterText(_fieldByLabel('API Key'), 'typed-key');
+      await tester.enterText(_fieldByLabel('API key'), 'typed-key');
       await tester.pumpAndSettle();
       expect(tester.testTextInput.isVisible, isTrue);
 

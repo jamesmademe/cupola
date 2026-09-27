@@ -2,11 +2,11 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// The kind of data-protection task, each backed by a distinct RPC namespace.
 enum TrueNasTaskKind {
-  snapshot('Snapshot Tasks', 'pool.snapshottask'),
+  snapshot('Snapshot tasks', 'pool.snapshottask'),
   replication('Replication', 'replication'),
-  cloudSync('Cloud Sync', 'cloudsync'),
+  cloudSync('Cloud sync', 'cloudsync'),
   rsync('Rsync', 'rsynctask'),
-  scrub('Scrub Tasks', 'pool.scrub');
+  scrub('Scrub tasks', 'pool.scrub');
 
   final String label;
   final String namespace;

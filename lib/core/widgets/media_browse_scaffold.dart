@@ -59,7 +59,7 @@ enum MediaBrowseFilter {
 /// nothing else. A bucket is exhaustive over [MediaAvailability] by
 /// construction, so a state added later cannot silently fall out of the library.
 enum MediaBrowseBucket {
-  /// Something is on disk: Available, Upgrade Available, Partial.
+  /// Something is on disk: Available, Upgrade available, Partial.
   onDisk,
 
   /// Something the user can act on is not on disk.
@@ -118,7 +118,7 @@ bool mediaBrowseFilterMatches(
       mediaBrowseBucketOf(status) == MediaBrowseBucket.gap,
     // Orthogonal to the buckets on purpose: what is moving is a different
     // question from what is on disk, and a downloading title belongs in both
-    // In Queue and Missing.
+    // In queue and Missing.
     MediaBrowseFilter.inQueue => status?.isInPipeline ?? false,
     // Also orthogonal: a below-cutoff file is on disk, so it answers to
     // Available too. Neither of these two may join the bucket partition or the
@@ -837,7 +837,7 @@ class _MediaBrowseFilterChips extends StatelessWidget {
                         MediaBrowseFilter.all => 'All',
                         MediaBrowseFilter.available => 'Available',
                         MediaBrowseFilter.missing => 'Missing',
-                        MediaBrowseFilter.inQueue => 'In Queue',
+                        MediaBrowseFilter.inQueue => 'In queue',
                         MediaBrowseFilter.cutoffUnmet => 'Cutoff unmet',
                         MediaBrowseFilter.unmonitored => 'Unmonitored',
                       },

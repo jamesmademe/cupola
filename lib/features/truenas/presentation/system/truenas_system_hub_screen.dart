@@ -53,9 +53,9 @@ const _entries = <_SystemEntry>[
     Icons.system_update_rounded,
     'update',
   ),
-  _SystemEntry('NTP Servers', 'Time sync', Icons.schedule_rounded, 'ntp'),
+  _SystemEntry('NTP servers', 'Time sync', Icons.schedule_rounded, 'ntp'),
   _SystemEntry(
-    'Alert Settings',
+    'Alert settings',
     'Notification services',
     Icons.notifications_rounded,
     'alert-settings',

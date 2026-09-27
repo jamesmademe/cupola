@@ -35,7 +35,7 @@ void main() {
         final album = LidarrAlbum.fromJson(<String, dynamic>{});
 
         expect(album.id, 0);
-        expect(album.title, 'Unknown Album');
+        expect(album.title, 'Unknown album');
         expect(album.releaseDate, isNull);
         expect(album.monitored, isFalse);
         expect(album.images, isEmpty);

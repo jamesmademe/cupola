@@ -42,8 +42,8 @@ void main() {
       expect(find.text('Downloading (Warning)'), findsOneWidget);
       await _scrollSheetUntilVisible(tester, find.text('Transfer'));
       expect(find.text('Transfer'), findsOneWidget);
-      await _scrollSheetUntilVisible(tester, find.text('Status Messages'));
-      expect(find.text('Status Messages'), findsOneWidget);
+      await _scrollSheetUntilVisible(tester, find.text('Status messages'));
+      expect(find.text('Status messages'), findsOneWidget);
       expect(find.text('qBittorrent'), findsOneWidget);
       expect(find.text('/downloads/movie'), findsOneWidget);
       expect(find.text('Movie.2024.2160p.WEB-DL-GROUP'), findsOneWidget);
@@ -74,10 +74,10 @@ void main() {
 
         expect(find.text('Release.Name'), findsOneWidget);
         expect(find.text('Event'), findsOneWidget);
-        await _scrollSheetUntilVisible(tester, find.text('Additional Data'));
-        expect(find.text('Additional Data'), findsOneWidget);
+        await _scrollSheetUntilVisible(tester, find.text('Additional data'));
+        expect(find.text('Additional data'), findsOneWidget);
         expect(find.text('Imported'), findsOneWidget);
-        expect(find.text('Download Id'), findsOneWidget);
+        expect(find.text('Download id'), findsOneWidget);
         expect(find.text('abc123'), findsOneWidget);
         expect(find.text('Date'), findsOneWidget);
         expect(find.textContaining('2026-04-03'), findsWidgets);
@@ -137,11 +137,11 @@ void main() {
       );
 
       expect(find.text('Bad.Release'), findsOneWidget);
-      expect(find.text('Blocked Release'), findsOneWidget);
+      expect(find.text('Blocked release'), findsOneWidget);
       expect(find.text('Reason'), findsOneWidget);
       expect(find.text('Rejected'), findsOneWidget);
-      await _scrollSheetUntilVisible(tester, find.text('Status Messages'));
-      expect(find.text('Status Messages'), findsOneWidget);
+      await _scrollSheetUntilVisible(tester, find.text('Status messages'));
+      expect(find.text('Status messages'), findsOneWidget);
       expect(find.text('Still blocked'), findsOneWidget);
     });
 
@@ -168,7 +168,7 @@ void main() {
       expect(find.text('Pilot'), findsWidgets);
       expect(find.text('Series'), findsOneWidget);
       expect(find.text('Breaking Bad'), findsOneWidget);
-      expect(find.text('Episode Code'), findsOneWidget);
+      expect(find.text('Episode code'), findsOneWidget);
       expect(find.text('S01E02'), findsOneWidget);
       expect(find.text('Episode missing from disk'), findsOneWidget);
       expect(find.text('WEBDL-1080p'), findsOneWidget);

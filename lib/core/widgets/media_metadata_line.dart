@@ -17,7 +17,7 @@ class MediaMetadataLine extends StatelessWidget {
     final joined = items
         .map((item) => item.trim())
         .where((item) => item.isNotEmpty)
-        .join(' • ');
+        .join(' · ');
 
     if (joined.isEmpty) {
       return const SizedBox.shrink();

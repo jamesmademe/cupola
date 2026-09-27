@@ -291,7 +291,7 @@ class _DonationSheetState extends State<DonationSheet> {
           Icon(Icons.favorite_rounded, color: AppColors.lidarr, size: 48),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Thank you!',
+            'Thank you',
             style: textTheme.titleLarge!.weight(FontWeight.w600),
           ),
           const SizedBox(height: AppSpacing.xs),

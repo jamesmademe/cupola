@@ -129,8 +129,10 @@ String capitalizeFirst(String value) {
   return value[0].toUpperCase() + value.substring(1);
 }
 
-/// Turns an API identifier into display text: `importBlocked` → `Import
-/// Blocked`, `download_client` → `Download Client`.
+/// Turns an API identifier into display text, in sentence case like every
+/// other label: `importBlocked` → `Import blocked`, `download_client` →
+/// `Download client`. A word the identifier already spells in capitals
+/// (`IMDB_id`, `TVDB`) keeps them.
 String humanizeCamelCase(String value) {
   if (value.trim().isEmpty) return value;
 
@@ -140,11 +142,19 @@ String humanizeCamelCase(String value) {
     (match) => '${match[1]} ${match[2]}',
   );
 
-  return withSpaces
+  final words = withSpaces
       .split(RegExp(r'\s+'))
       .where((part) => part.isNotEmpty)
-      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
-      .join(' ');
+      .toList();
+  return [
+    for (final (index, word) in words.indexed)
+      if (index == 0)
+        capitalizeFirst(word)
+      else if (word.length > 1 && word == word.toUpperCase())
+        word
+      else
+        '${word[0].toLowerCase()}${word.substring(1)}',
+  ].join(' ');
 }
 
 /// `1 device` / `3 devices` — a count and its noun, pluralised the naive way.

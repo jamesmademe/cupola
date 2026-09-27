@@ -29,7 +29,8 @@ class MediaDetailFigurePlate extends StatelessWidget {
   /// The figure itself, pre-formatted ('12').
   final String value;
 
-  /// What the figure counts ('MISSING'). Uppercased for the eye.
+  /// What the figure counts, in sentence case ('Missing'). Uppercased for the
+  /// eye.
   final String label;
 
   /// The page's service accent.

@@ -34,8 +34,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Trending'), findsOneWidget);
-      expect(find.text('Popular Movies'), findsOneWidget);
-      expect(find.text('Popular Series'), findsOneWidget);
+      expect(find.text('Popular movies'), findsOneWidget);
+      expect(find.text('Popular series'), findsOneWidget);
       expect(find.byType(ContentCard), findsWidgets);
     });
 
@@ -57,7 +57,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Empty rows collapse rather than showing a placeholder message.
-      expect(find.text('Popular Movies'), findsNothing);
+      expect(find.text('Popular movies'), findsNothing);
       expect(find.text('Trending'), findsOneWidget);
     });
 

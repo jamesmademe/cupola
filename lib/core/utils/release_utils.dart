@@ -9,7 +9,7 @@ final _whitespace = RegExp(r'\s+');
 
 /// Sort options for releases in Interactive Search.
 enum ReleaseSortType {
-  score('CF Score', Icons.star_rounded),
+  score('CF score', Icons.star_rounded),
   size('Size', Icons.storage_rounded),
   seeders('Seeders', Icons.arrow_upward_rounded),
   age('Age', Icons.schedule_rounded);

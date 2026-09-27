@@ -57,7 +57,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Wanted Subtitles'), findsOneWidget);
+    expect(find.text('Wanted subtitles'), findsOneWidget);
     expect(find.text('Episodes'), findsOneWidget);
     expect(find.text('Movies'), findsOneWidget);
     expect(find.text('Foundation'), findsOneWidget);

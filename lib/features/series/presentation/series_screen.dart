@@ -48,7 +48,7 @@ class SeriesScreen extends ConsumerWidget {
         .maybeWhen(data: (snapshot) => snapshot, orElse: () => null);
 
     return MediaBrowseScaffold<SonarrSeries>(
-      title: 'TV Series',
+      title: 'TV series',
       searchHint: 'Search TV series...',
       activityRoute: '/activity/series',
       navigationSection: NavigationSection.dashboard,

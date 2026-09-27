@@ -63,7 +63,7 @@ class _ServiceAllRequestsScreenState
     return Scaffold(
       appBar: widget.showAppBar
           ? _ServiceListAppBar(
-              title: 'All Requests',
+              title: 'All requests',
               backRoute: ServiceRoutes.seerr,
               accent: ServiceKey.seerr.accent,
             )
@@ -218,7 +218,7 @@ class _RequestListRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final media = request.media;
-    final title = media?.title ?? 'Unknown Media';
+    final title = media?.title ?? 'Unknown media';
     final requester = request.requestedBy?.displayName ?? 'Unknown';
     final mediaType = request.type == 'tv' ? 'Series' : 'Movie';
     final displayStatus = request.displayStatus;
@@ -364,7 +364,7 @@ class _RequestListRow extends ConsumerWidget {
   ) async {
     final result = await showAppConfirmDialog(
       context: context,
-      title: 'Delete Request?',
+      title: 'Delete request?',
       message: 'This removes the request for $title from Seerr.',
       destructive: true,
       confirmLabel: 'Delete',

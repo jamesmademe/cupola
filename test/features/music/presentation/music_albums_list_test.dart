@@ -35,7 +35,7 @@ void main() {
       expect(find.text('OK Computer'), findsOneWidget);
       // Year, the manifest gap and — because the album is complete — no status
       // word, all on one metadata line.
-      expect(find.text('1997 • 12 of 12 tracks'), findsOneWidget);
+      expect(find.text('1997 · 12 of 12 tracks'), findsOneWidget);
       expect(find.byType(MediaSearchPopupMenu), findsOneWidget);
       expect(find.byType(StatusBadge), findsOneWidget);
       // The `ExpansionTile` this replaced — the third `container -> children`
@@ -65,9 +65,9 @@ void main() {
       );
 
       expect(find.byType(MediaChildTile), findsNWidgets(3));
-      expect(find.text('1997 • 6 of 12 tracks • Partial'), findsOneWidget);
-      expect(find.text('1997 • 0 of 12 tracks • Missing'), findsOneWidget);
-      expect(find.text('1997 • 12 of 12 tracks'), findsOneWidget);
+      expect(find.text('1997 · 6 of 12 tracks · Partial'), findsOneWidget);
+      expect(find.text('1997 · 0 of 12 tracks · Missing'), findsOneWidget);
+      expect(find.text('1997 · 12 of 12 tracks'), findsOneWidget);
     });
 
     testWidgets('tapping an album opens a sheet of sorted tracks', (

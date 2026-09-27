@@ -81,7 +81,7 @@ class _BazarrWantedScreenState extends ConsumerState<BazarrWantedScreen>
     return Scaffold(
       appBar: widget.showAppBar
           ? _BazarrDetailAppBar(
-              title: 'Wanted Subtitles',
+              title: 'Wanted subtitles',
               backRoute: ServiceRoutes.bazarr,
               accent: AppColors.bazarr,
               bottom: tabBar,
@@ -236,7 +236,7 @@ class _BazarrWantedTabState extends ConsumerState<_BazarrWantedTab> {
 
     if (_items.isEmpty) {
       return const _BazarrWantedEmpty(
-        label: 'No wanted subtitles. Everything is covered!',
+        label: 'No wanted subtitles. Everything is covered.',
       );
     }
 
@@ -359,7 +359,7 @@ class _BazarrWantedRow extends StatelessWidget {
                   borderRadius: AppRadius.borderRadiusSm,
                 ),
                 child: Text(
-                  langCodes.isNotEmpty ? langCodes : 'WANTED',
+                  langCodes.isNotEmpty ? langCodes : 'Wanted',
                   style: Theme.of(context).textTheme.labelSmall!
                       .weight(FontWeight.w600)
                       .copyWith(color: AppColors.bazarr),

@@ -110,7 +110,7 @@ class _DecisionRow extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
 
     final media = request.media;
-    final title = media?.title ?? 'Unknown Media';
+    final title = media?.title ?? 'Unknown media';
     final year = media?.year;
     final heading = year == null || year.isEmpty ? title : '$title ($year)';
     final requester = request.requestedBy?.displayName;

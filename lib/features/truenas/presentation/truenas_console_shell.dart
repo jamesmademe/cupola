@@ -88,7 +88,7 @@ const trueNasSections = <TrueNasSection>[
     alsoMatches: [ServiceRoutes.truenasVms],
   ),
   TrueNasSection(
-    title: 'Data Protection',
+    title: 'Data protection',
     subtitle: 'Snapshots & replication',
     icon: Icons.shield_rounded,
     route: ServiceRoutes.truenasDataProtection,

@@ -254,7 +254,7 @@ extension ServiceKeyExtension on ServiceKey {
   /// already used, so moving the string into the registry changes where it lives
   /// and not what it says.
   String get credentialLabel =>
-      this == ServiceKey.plex ? 'Plex token' : 'API Key';
+      this == ServiceKey.plex ? 'Plex token' : 'API key';
 
   /// The word this service's secret is filed under in secure storage.
   ///

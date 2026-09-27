@@ -63,8 +63,8 @@ class DiscoverReleaseInfoCard extends StatelessWidget {
   }) {
     final entries = <MediaFact>[];
 
-    _addDatedFactEntry(entries, 'First Aired', firstAirDate);
-    _addDatedFactEntry(entries, 'Last Aired', lastAirDate);
+    _addDatedFactEntry(entries, 'First aired', firstAirDate);
+    _addDatedFactEntry(entries, 'Last aired', lastAirDate);
     if (nextEpisodeToAir != null &&
         (nextEpisodeToAir.airDate?.isNotEmpty ?? false)) {
       final parts = <String>[];
@@ -79,7 +79,7 @@ class DiscoverReleaseInfoCard extends StatelessWidget {
       }
       parts.add(formatMediumDate(nextEpisodeToAir.airDate!));
 
-      entries.add(MediaFact('Next Episode', parts.join(' • ')));
+      entries.add(MediaFact('Next episode', parts.join(' · ')));
     }
 
     return DiscoverReleaseInfoCard._(
@@ -98,7 +98,7 @@ class DiscoverReleaseInfoCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final sectionChildren = <MediaInfoGroup>[
       MediaInfoGroup(
-        title: 'Release Dates',
+        title: 'Release dates',
         child: emptyMessage != null
             ? Text(
                 emptyMessage!,

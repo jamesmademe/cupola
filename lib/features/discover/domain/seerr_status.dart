@@ -21,7 +21,7 @@ MediaStatusInfo seerrMediaStatus(
   if (code == null) {
     return const MediaStatusInfo(
       availability: MediaAvailability.notTracked,
-      labelOverride: 'Available to Request',
+      labelOverride: 'Available to request',
     );
   }
 
@@ -54,7 +54,7 @@ MediaStatusInfo seerrMediaStatus(
         : switch (code) {
             2 => 'Pending',
             3 => 'Processing',
-            4 => 'Partially Available',
+            4 => 'Partially available',
             6 => 'Deleted',
             _ => null,
           },
@@ -70,7 +70,7 @@ MediaStatusInfo seerrMediaStatus(
 /// [SeerrMediaAvailability] the shared status vocabulary could not render.
 /// Routing it through [seerrMediaStatus] means a season badge speaks exactly the
 /// same language as the page's own — including Seerr's wording for
-/// "Partially Available".
+/// "Partially available".
 ///
 /// Seasons absent from the payload are [seerrUntrackedSeasonStatus].
 ///

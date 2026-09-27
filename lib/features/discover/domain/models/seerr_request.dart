@@ -74,7 +74,7 @@ enum SeerrMediaAvailability {
       case SeerrMediaAvailability.processing:
         return 'Processing';
       case SeerrMediaAvailability.partiallyAvailable:
-        return 'Partially Available';
+        return 'Partially available';
       case SeerrMediaAvailability.available:
         return 'Available';
       case SeerrMediaAvailability.deleted:
@@ -188,7 +188,7 @@ extension SeerrRequestDisplayStatusX on SeerrRequest {
           return (label: 'Available', kind: SeerrRequestDisplayKind.available);
         case SeerrMediaAvailability.partiallyAvailable:
           return (
-            label: 'Partially Available',
+            label: 'Partially available',
             kind: SeerrRequestDisplayKind.partiallyAvailable,
           );
         case SeerrMediaAvailability.processing:

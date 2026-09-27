@@ -119,7 +119,7 @@ void main() {
         queueEntry: const ArrQueueEntry(pipeline: MediaPipeline.importPending),
       );
 
-      expect(status.label, 'Import Pending');
+      expect(status.label, 'Import pending');
       expect(status.availability, MediaAvailability.partial);
     });
   });
@@ -251,14 +251,14 @@ void main() {
       expect(status.label, 'Missing');
     });
 
-    test('an unaired episode is Not Released, never Missing', () {
+    test('an unaired episode is Not released, never Missing', () {
       final status = sonarrEpisodeStatus(
         _episode(hasFile: false, airDateUtc: '2999-01-01T00:00:00Z'),
         now: DateTime.utc(2026, 1, 1),
       );
 
       expect(status.availability, MediaAvailability.unavailable);
-      expect(status.label, 'Not Released');
+      expect(status.label, 'Not released');
       expect(status.tone, StatusTone.neutral);
     });
 

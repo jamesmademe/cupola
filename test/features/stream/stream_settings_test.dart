@@ -147,7 +147,7 @@ void main() {
     testWidgets('Jellyfin keeps the ordinary API-key wording', (tester) async {
       await pump(tester, ServiceKey.jellyfin);
 
-      expect(find.text('API Key'), findsOneWidget);
+      expect(find.text('API key'), findsOneWidget);
       expect(find.text('Plex token'), findsNothing);
       // The setup note has to say the key carries no user, because that is what
       // makes the viewer picker necessary rather than optional.

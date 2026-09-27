@@ -12,7 +12,7 @@ void main() {
         ),
       );
 
-      expect(find.text('2023 • 120 min'), findsOneWidget);
+      expect(find.text('2023 · 120 min'), findsOneWidget);
     });
 
     testWidgets('filters out empty items', (tester) async {
@@ -24,7 +24,7 @@ void main() {
         ),
       );
 
-      expect(find.text('2023 • 120 min'), findsOneWidget);
+      expect(find.text('2023 · 120 min'), findsOneWidget);
     });
 
     testWidgets('renders nothing when all items are empty', (tester) async {
@@ -35,7 +35,7 @@ void main() {
       );
 
       expect(find.text('2023'), findsNothing);
-      expect(find.text('•'), findsNothing);
+      expect(find.text('·'), findsNothing);
     });
 
     testWidgets('renders single item without dot', (tester) async {

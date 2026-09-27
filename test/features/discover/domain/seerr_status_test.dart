@@ -8,7 +8,7 @@ void main() {
     test('no media record at all is an invitation to request', () {
       final status = seerrMediaStatus(null);
 
-      expect(status.label, 'Available to Request');
+      expect(status.label, 'Available to request');
       expect(status.availability, MediaAvailability.notTracked);
       expect(status.tone, StatusTone.primary);
     });
@@ -17,7 +17,7 @@ void main() {
       1: 'Unknown',
       2: 'Pending',
       3: 'Processing',
-      4: 'Partially Available',
+      4: 'Partially available',
       5: 'Available',
       6: 'Deleted',
     };
@@ -145,7 +145,7 @@ void main() {
       expect(statuses[2]!.availability, MediaAvailability.partial);
       // Seerr's own wording survives, the same way the page-level status keeps
       // it.
-      expect(statuses[2]!.label, 'Partially Available');
+      expect(statuses[2]!.label, 'Partially available');
     });
 
     test('a season Seerr has no record of is notTracked, not unknown', () {
@@ -156,7 +156,7 @@ void main() {
       }, seasons);
 
       expect(statuses[0]!.availability, MediaAvailability.notTracked);
-      expect(statuses[0]!.label, 'Not Requested');
+      expect(statuses[0]!.label, 'Not requested');
       expect(statuses[2]!.availability, MediaAvailability.notTracked);
     });
 

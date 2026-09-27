@@ -111,7 +111,7 @@ void main() {
         );
 
         final typeGroup = vm.buildInfoGroups().firstWhere(
-          (group) => group.title == 'Artist Type',
+          (group) => group.title == 'Artist type',
         );
 
         expect((typeGroup.child as Text).data, 'Group');
@@ -133,7 +133,7 @@ void main() {
             .toList();
 
         expect(titles, contains('Disambiguation'));
-        expect(titles, contains('Library Path'));
+        expect(titles, contains('Library path'));
       });
 
       test('preserves group order', () {
@@ -149,10 +149,10 @@ void main() {
         );
 
         expect(vm.buildInfoGroups().map((group) => group.title).toList(), [
-          'Artist Type',
+          'Artist type',
           'Disambiguation',
           'Genre',
-          'Library Path',
+          'Library path',
         ]);
       });
     });

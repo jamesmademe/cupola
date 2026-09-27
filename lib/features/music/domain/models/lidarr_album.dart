@@ -38,7 +38,7 @@ class LidarrAlbum {
       id: (json['id'] as num?)?.toInt() ?? 0,
       title: (json['title'] as String?)?.trim().isNotEmpty == true
           ? (json['title'] as String).trim()
-          : 'Unknown Album',
+          : 'Unknown album',
       releaseDate: json['releaseDate'] as String?,
       monitored: json['monitored'] as bool? ?? false,
       images: json['images'] as List<dynamic>? ?? const [],

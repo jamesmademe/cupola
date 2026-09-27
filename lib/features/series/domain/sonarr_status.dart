@@ -113,7 +113,7 @@ MediaAvailability sonarrEpisodeAvailability(
 }) {
   if (episode.hasFile) return MediaAvailability.available;
   // Not yet broadcast: nothing is wrong and nothing is expected, so this is
-  // "Not Released" rather than the red "Missing" every future episode of a
+  // "Not released" rather than the red "Missing" every future episode of a
   // continuing series used to draw.
   if (episode.isUnairedAt(now ?? DateTime.now())) {
     return MediaAvailability.unavailable;

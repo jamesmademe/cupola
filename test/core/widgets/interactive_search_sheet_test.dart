@@ -230,7 +230,7 @@ void main() {
 
       expect(find.text('No releases match filters'), findsOneWidget);
 
-      await tester.tap(find.text('Clear Filters'));
+      await tester.tap(find.text('Clear filters'));
       await tester.pumpAndSettle();
 
       expect(find.text('3 releases · 2 approved'), findsOneWidget);
@@ -375,12 +375,12 @@ void main() {
 
       expect(find.byType(SnackBar), findsOneWidget);
 
-      await tester.tap(find.text('Clear Filters'));
+      await tester.tap(find.text('Clear filters'));
       await tester.pumpAndSettle();
 
       expect(find.byType(InteractiveSearchSheet), findsOneWidget);
       expect(find.byTooltip('Another download is starting'), findsNothing);
-      expect(find.byTooltip('Grab Release'), findsNWidgets(3));
+      expect(find.byTooltip('Grab release'), findsNWidgets(3));
     });
   });
 }
@@ -391,7 +391,7 @@ void main() {
 /// spins on an indeterminate indicator, so nothing ever settles while the
 /// request is outstanding.
 Future<void> _startGrabInFlight(WidgetTester tester) async {
-  await tester.tap(find.byTooltip('Grab Release').first);
+  await tester.tap(find.byTooltip('Grab release').first);
   await tester.pumpAndSettle();
   await tester.tap(find.text('Download'));
   await tester.pump();
@@ -413,7 +413,7 @@ ListView _listViewAround(WidgetTester tester, String text) =>
     );
 
 Future<void> _grabFirstRelease(WidgetTester tester) async {
-  await tester.tap(find.byTooltip('Grab Release').first);
+  await tester.tap(find.byTooltip('Grab release').first);
   await tester.pumpAndSettle();
   await tester.tap(find.text('Download'));
   await tester.pumpAndSettle();

@@ -90,12 +90,12 @@ class MovieDetailViewModel {
         MediaInfoGroup(title: 'Certification', child: Text(certification!)),
       if (_hasText(originalLanguage))
         MediaInfoGroup(
-          title: 'Original Language',
+          title: 'Original language',
           child: Text(originalLanguage!),
         ),
       if (releaseFacts.isNotEmpty)
         MediaInfoGroup(
-          title: 'Release Dates',
+          title: 'Release dates',
           child: MediaFactsList(facts: releaseFacts),
         ),
       if (genres.isNotEmpty)
@@ -124,7 +124,7 @@ class MovieDetailViewModel {
 
   List<MediaFact> _buildReleaseFacts() => [
     if (_hasText(inCinemas))
-      MediaFact('In Cinemas', formatMediumDate(inCinemas!)),
+      MediaFact('In cinemas', formatMediumDate(inCinemas!)),
     if (_hasText(digitalRelease))
       MediaFact('Digital', formatMediumDate(digitalRelease!)),
     if (_hasText(physicalRelease))

@@ -126,7 +126,7 @@ void main() {
 
         final typeGroup = vm
             .buildInfoGroups(null)
-            .firstWhere((group) => group.title == 'Series Type');
+            .firstWhere((group) => group.title == 'Series type');
 
         expect(typeGroup.child, isA<Text>());
         expect((typeGroup.child as Text).data, 'Anime');
@@ -144,7 +144,7 @@ void main() {
 
         final airDatesGroup = vm
             .buildInfoGroups(null)
-            .firstWhere((group) => group.title == 'Air Dates');
+            .firstWhere((group) => group.title == 'Air dates');
 
         expect(airDatesGroup.child, isA<MediaFactsList>());
       });
@@ -164,10 +164,10 @@ void main() {
         );
 
         expect(vm.buildInfoGroups(null).map((group) => group.title).toList(), [
-          'Series Type',
+          'Series type',
           'Certification',
-          'Original Language',
-          'Air Dates',
+          'Original language',
+          'Air dates',
           'Genre',
           'Network',
         ]);
@@ -187,14 +187,14 @@ void main() {
 
         final withControl = vm
             .buildInfoGroups(null, seriesTypeControl: control)
-            .firstWhere((group) => group.title == 'Series Type');
+            .firstWhere((group) => group.title == 'Series type');
         expect(withControl.child, same(control));
 
         // And without one it is still a fact — which is what a series this
         // Sonarr does not hold has to stay.
         final withoutControl = vm
             .buildInfoGroups(null)
-            .firstWhere((group) => group.title == 'Series Type');
+            .firstWhere((group) => group.title == 'Series type');
         expect(withoutControl.child, isA<Text>());
       });
     });

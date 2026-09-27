@@ -311,7 +311,7 @@ class StatusBadge extends StatelessWidget {
 /// as every other status word beside it. Left raw the brand measured 4.40:1 on
 /// the dark scaffold and 3.96:1 on a light chip at 16% tint, so the one tone
 /// the rule exempted was failing in both themes. The walk holds the hue and
-/// moves only the lightness, so "Not Requested" is still indigo — it is an
+/// moves only the lightness, so "Not requested" is still indigo — it is an
 /// indigo that can be read. Brand chrome keeps `colorScheme.primary` directly
 /// and is untouched by this.
 Color statusToneColor(

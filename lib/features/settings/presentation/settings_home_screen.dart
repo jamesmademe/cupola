@@ -186,14 +186,14 @@ class SettingsHomeScreen extends ConsumerWidget {
           ),
           SettingsCard.grouped(
             leading: const Icon(Icons.feedback_rounded),
-            title: 'Send Feedback',
+            title: 'Send feedback',
             subtitle: 'Email the developer',
             semanticHint: 'opens your email composer',
             onTap: () => _sendFeedback(context),
           ),
           SettingsCard.grouped(
             leading: const Icon(Icons.favorite_rounded),
-            title: 'Support Development',
+            title: 'Support development',
             subtitle: 'Buy me a coffee',
             onTap: () => _openDonation(context),
           ),
@@ -221,7 +221,7 @@ class SettingsHomeScreen extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return [
-      const SettingsSectionLabel('Danger Zone'),
+      const SettingsSectionLabel('Danger zone'),
       const SizedBox(height: AppSpacing.sm),
       SettingsGroupCard(
         children: [

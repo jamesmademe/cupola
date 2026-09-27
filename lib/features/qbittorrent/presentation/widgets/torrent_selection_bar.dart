@@ -65,7 +65,7 @@ class TorrentSelectionBar extends ConsumerWidget {
                   Icons.flash_on_rounded,
                   color: AppColors.qbittorrent,
                 ),
-                tooltip: 'Force Resume',
+                tooltip: 'Force resume',
                 onPressed: () => runTorrentAction(
                   context,
                   ref,

@@ -90,7 +90,7 @@ class DiscoverDetailViewModel {
   });
 
   String get metadataLine =>
-      [genres, networks].where((value) => value.isNotEmpty).join(' • ');
+      [genres, networks].where((value) => value.isNotEmpty).join(' · ');
 
   bool get hasManageableMedia => mediaInfo?['id'] != null;
 
@@ -127,7 +127,7 @@ class DiscoverDetailViewModel {
       return null;
     }
 
-    return parts.join(' • ');
+    return parts.join(' · ');
   }
 
   WatchProviderRegion? watchProvidersForRegion(String region) {
@@ -283,7 +283,7 @@ class DiscoverDetailViewModel {
   }
 
   static String mapSeerrStatus(int? status) {
-    if (status == null) return 'Available to Request';
+    if (status == null) return 'Available to request';
 
     switch (status) {
       case 1:
@@ -293,7 +293,7 @@ class DiscoverDetailViewModel {
       case 3:
         return 'Processing';
       case 4:
-        return 'Partially Available';
+        return 'Partially available';
       case 5:
         return 'Available';
       case 6:

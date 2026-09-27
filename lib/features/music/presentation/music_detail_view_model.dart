@@ -76,13 +76,13 @@ class MusicDetailViewModel {
       ),
       if (_hasText(artistType))
         MediaInfoGroup(
-          title: 'Artist Type',
+          title: 'Artist type',
           child: Text(capitalizeFirst(artistType!)),
         ),
       if (_hasText(disambiguation))
         MediaInfoGroup(title: 'Disambiguation', child: Text(disambiguation!)),
       if (_hasText(path))
-        MediaInfoGroup(title: 'Library Path', child: Text(path!)),
+        MediaInfoGroup(title: 'Library path', child: Text(path!)),
     ];
   }
 
@@ -90,7 +90,7 @@ class MusicDetailViewModel {
     return [
       if (_hasText(artistType))
         MediaInfoGroup(
-          title: 'Artist Type',
+          title: 'Artist type',
           child: Text(capitalizeFirst(artistType!)),
         ),
       if (_hasText(disambiguation))
@@ -105,7 +105,7 @@ class MusicDetailViewModel {
           ),
         ),
       if (_hasText(path))
-        MediaInfoGroup(title: 'Library Path', child: Text(path!)),
+        MediaInfoGroup(title: 'Library path', child: Text(path!)),
     ];
   }
 

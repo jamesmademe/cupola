@@ -90,11 +90,11 @@ enum MediaPipeline {
     MediaPipeline.queued => 'Queued',
     MediaPipeline.downloading => 'Downloading',
     MediaPipeline.stalled => 'Stalled',
-    MediaPipeline.importPending => 'Import Pending',
-    MediaPipeline.importBlocked => 'Import Blocked',
+    MediaPipeline.importPending => 'Import pending',
+    MediaPipeline.importBlocked => 'Import blocked',
     MediaPipeline.importing => 'Importing',
     MediaPipeline.paused => 'Paused',
-    MediaPipeline.clientUnavailable => 'Client Unavailable',
+    MediaPipeline.clientUnavailable => 'Client unavailable',
     MediaPipeline.failed => 'Failed',
   };
 }
@@ -150,7 +150,7 @@ class MediaStatusInfo {
   final String? detail;
 
   /// Overrides the derived [label] when a service has better wording of its
-  /// own (Seerr's "Available to Request", a download client's native state).
+  /// own (Seerr's "Available to request", a download client's native state).
   final String? labelOverride;
 
   /// Overrides the derived [tone] for states the two axes cannot express.
@@ -247,12 +247,12 @@ class MediaStatusInfo {
     if (unmonitored && !isAvailable) return 'Unmonitored';
 
     return switch (availability) {
-      MediaAvailability.notTracked => 'Not Requested',
-      MediaAvailability.unavailable => 'Not Released',
+      MediaAvailability.notTracked => 'Not requested',
+      MediaAvailability.unavailable => 'Not released',
       MediaAvailability.missing => 'Missing',
       MediaAvailability.partial => 'Partial',
       MediaAvailability.available => 'Available',
-      MediaAvailability.upgradable => 'Upgrade Available',
+      MediaAvailability.upgradable => 'Upgrade available',
       MediaAvailability.deleted => 'Deleted',
       MediaAvailability.unknown => 'Unknown',
     };

@@ -19,7 +19,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('Submit Request'), findsNothing);
+      expect(find.text('Submit request'), findsNothing);
     });
 
     testWidgets('shows error when no servers are configured', (tester) async {
@@ -33,7 +33,7 @@ void main() {
         find.text('No Radarr servers configured in Seerr'),
         findsOneWidget,
       );
-      expect(find.text('Submit Request'), findsNothing);
+      expect(find.text('Submit request'), findsNothing);
     });
 
     testWidgets('renders quality profile dropdown and submit button', (
@@ -42,9 +42,9 @@ void main() {
       await _pumpSheetDirect(tester, service: _movieService());
       await tester.pumpAndSettle();
 
-      expect(find.text('Request Movie'), findsOneWidget);
-      expect(find.text('Quality Profile'), findsOneWidget);
-      expect(find.text('Submit Request'), findsOneWidget);
+      expect(find.text('Request movie'), findsOneWidget);
+      expect(find.text('Quality profile'), findsOneWidget);
+      expect(find.text('Submit request'), findsOneWidget);
     });
 
     testWidgets('hides server dropdown when only one server exists', (
@@ -54,7 +54,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Server'), findsNothing);
-      expect(find.text('Quality Profile'), findsOneWidget);
+      expect(find.text('Quality profile'), findsOneWidget);
     });
 
     testWidgets('shows server dropdown when multiple servers exist', (
@@ -75,7 +75,7 @@ void main() {
       await _pumpSheetDirect(tester, service: _movieService());
       await tester.pumpAndSettle();
 
-      expect(find.text('Root Folder'), findsOneWidget);
+      expect(find.text('Root folder'), findsOneWidget);
     });
   });
 
@@ -92,7 +92,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Submit Request'));
+      await tester.tap(find.text('Submit request'));
       await tester.pumpAndSettle();
 
       expect(requestCompleteCount, 1);
@@ -121,7 +121,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Submit Request'));
+      await tester.tap(find.text('Submit request'));
       await tester.pumpAndSettle();
 
       expect(
@@ -134,7 +134,7 @@ void main() {
       await _pumpSheetDirect(tester, service: _tvService(), mediaType: 'tv');
       await tester.pumpAndSettle();
 
-      expect(find.text('Request TV Show'), findsOneWidget);
+      expect(find.text('Request TV show'), findsOneWidget);
     });
   });
 }
@@ -205,7 +205,7 @@ Future<void> _pumpSheetDirect(
             // Mirror real usage: the title lives in the shared AppBottomSheet
             // header (per media type), not inside RequestBottomSheet.
             child: AppBottomSheet(
-              title: mediaType == 'tv' ? 'Request TV Show' : 'Request Movie',
+              title: mediaType == 'tv' ? 'Request TV show' : 'Request movie',
               child: RequestBottomSheet(
                 mediaId: mediaId,
                 mediaType: mediaType,

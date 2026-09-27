@@ -185,7 +185,7 @@ void main() {
       expect(find.text('All'), findsOneWidget);
       expect(find.text('Available'), findsOneWidget);
       expect(find.text('Missing'), findsOneWidget);
-      expect(find.text('In Queue'), findsOneWidget);
+      expect(find.text('In queue'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('media-browse-section-A')),
         findsOneWidget,
@@ -403,7 +403,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('In Queue'));
+      await tester.tap(find.text('In queue'));
       await tester.pumpAndSettle();
 
       expect(find.text('Queued Item'), findsOneWidget);

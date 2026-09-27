@@ -27,7 +27,7 @@ class AddTorrentButton extends ConsumerWidget {
     return IconButton(
       icon: Icon(Icons.add_rounded, color: qbittorrentBarInk(context)),
       onPressed: () => _showAddTorrentSheet(context, ref),
-      tooltip: 'Add Torrent',
+      tooltip: 'Add torrent',
     );
   }
 
@@ -181,7 +181,7 @@ class AddTorrentButton extends ConsumerWidget {
                 TextFormField(
                   controller: savePathController,
                   decoration: const InputDecoration(
-                    labelText: 'Save Path (optional)',
+                    labelText: 'Save path (optional)',
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
@@ -251,7 +251,7 @@ class AddTorrentButton extends ConsumerWidget {
                       const Icon(Icons.add_rounded, size: 18),
                       const SizedBox(width: 8),
                       Text(
-                        'Add Torrent',
+                        'Add torrent',
                         style: Theme.of(
                           ctx2,
                         ).textTheme.labelLarge!.weight(FontWeight.w600),

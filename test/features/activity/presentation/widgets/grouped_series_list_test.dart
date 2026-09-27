@@ -125,7 +125,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Unknown Series'), findsOneWidget);
+      expect(find.text('Unknown series'), findsOneWidget);
     });
 
     testWidgets('renders no expansion tiles for empty items', (tester) async {

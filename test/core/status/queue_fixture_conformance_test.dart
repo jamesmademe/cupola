@@ -101,8 +101,8 @@ void main() {
 
       // "Not a Custom Format upgrade for existing movie file" is the canonical
       // reason an \*arr blocks an import: it needs a person to decide. It used to
-      // render as "Import Pending", the state that clears itself in seconds.
-      expect(status.label, 'Import Blocked');
+      // render as "Import pending", the state that clears itself in seconds.
+      expect(status.label, 'Import blocked');
       expect(status.hasWarning, isTrue);
       expect(status.tone, StatusTone.warning);
       expect(
@@ -258,7 +258,7 @@ void main() {
         // and no way to tell why the marker was there. Gravity ranking surfaces the
         // blocked one, which is the only one that will still be stuck tomorrow.
         expect(status.availability, MediaAvailability.partial);
-        expect(status.label, 'Import Blocked');
+        expect(status.label, 'Import blocked');
         expect(status.hasWarning, isTrue);
       },
     );

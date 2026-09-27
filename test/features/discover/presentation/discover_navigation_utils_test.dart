@@ -73,7 +73,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(result.value, isFalse);
-      expect(find.text('Radarr Not Configured'), findsOneWidget);
+      expect(find.text('Radarr not set up'), findsOneWidget);
       expect(
         find.text('Please configure Radarr in Settings to use this feature.'),
         findsOneWidget,
@@ -105,7 +105,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(result.value, isFalse);
-      expect(find.text('Radarr Not Configured'), findsNothing);
+      expect(find.text('Radarr not set up'), findsNothing);
       expect(find.text('Movie not found in Radarr'), findsOneWidget);
     });
 
@@ -135,7 +135,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(result.value, isFalse);
-      expect(find.text('Sonarr Not Configured'), findsNothing);
+      expect(find.text('Sonarr not set up'), findsNothing);
       expect(find.text('Series not found in Sonarr'), findsOneWidget);
     });
   });

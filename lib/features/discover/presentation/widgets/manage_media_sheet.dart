@@ -171,12 +171,12 @@ class ManageMediaSheet extends ConsumerWidget {
 
     final result = await showAppConfirmDialog(
       context: context,
-      title: 'Clear Data',
+      title: 'Clear data',
       message:
           'This will irreversibly remove all data for this ${mediaType == 'movie' ? 'movie' : 'series'}, '
           'including any requests. If this item exists in your Jellyfin library, '
           'the media information will be recreated during the next scan.',
-      confirmLabel: 'Clear Data',
+      confirmLabel: 'Clear data',
       destructive: true,
     );
 

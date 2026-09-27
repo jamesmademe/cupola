@@ -21,7 +21,7 @@ void main() {
     await _pumpAllRequests(tester);
     await _pumpAsyncContent(tester);
 
-    expect(find.text('All Requests'), findsOneWidget);
+    expect(find.text('All requests'), findsOneWidget);
     expect(find.text('All'), findsOneWidget);
     expect(find.text('Pending'), findsOneWidget);
     expect(find.text('Approved'), findsOneWidget);
