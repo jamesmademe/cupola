@@ -87,12 +87,6 @@ final unraidDockerProvider = FutureProvider<List<UnraidDockerContainer>>((
   return ref.watch(unraidClientProvider).getDockerContainers();
 }, retry: noProviderRetry);
 
-final unraidCapabilitiesProvider = FutureProvider<UnraidCapabilities>((
-  ref,
-) async {
-  return ref.watch(unraidClientProvider).getCapabilities();
-}, retry: noProviderRetry);
-
 final unraidVmsProvider = FutureProvider<List<UnraidVm>>((ref) async {
   return ref.watch(unraidClientProvider).getVms();
 }, retry: noProviderRetry);

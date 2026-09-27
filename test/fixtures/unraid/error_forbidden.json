@@ -1,0 +1,1 @@
+{"errors":[{"message":"Forbidden resource","locations":[{"line":1,"column":12}],"path":["vm","stop"],"extensions":{"code":"FORBIDDEN"}}],"data":null}

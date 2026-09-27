@@ -20,11 +20,29 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart';
 /// having no caller is the honest state, not a gap.
 enum UnraidResource { vms, notifications, share }
 
+/// What an Unraid API key may do, from `query { me { roles permissions } }`.
+///
+/// Any valid key may ask about itself: `Query.me` needs only `ME:READ_ANY`,
+/// which every role inherits from `GUEST` (Unraid API v4.0.0+).
 class UnraidCapabilities {
-  const UnraidCapabilities({required this.isAdmin, required this.writable});
+  const UnraidCapabilities({
+    required this.isAdmin,
+    required this.writable,
+    this.answered = true,
+  });
 
   final bool isAdmin;
   final Set<UnraidResource> writable;
+
+  /// Whether the server answered with a `roles` list at all. False for a `me`
+  /// object missing the field — an answer that says nothing, which the probe
+  /// reads as "could not ask" rather than as read-only.
+  final bool answered;
+
+  /// The actions that change a resource. Only the `_ANY` forms: the resolvers
+  /// Cupola calls guard on `UPDATE_ANY` / `DELETE_ANY` / `CREATE_ANY`, so a key
+  /// holding only `UPDATE_OWN` cannot make them and must not be drawn live.
+  static const writeActions = {'UPDATE_ANY', 'DELETE_ANY', 'CREATE_ANY'};
 
   bool canWrite(UnraidResource resource) =>
       isAdmin || writable.contains(resource);
@@ -40,11 +58,11 @@ class UnraidCapabilities {
               ?.map((e) => e.toString().toUpperCase())
               .toSet() ??
           const <String>{};
-      if (!actions.any(
-        (a) => a.startsWith('UPDATE_') || a.startsWith('DELETE_'),
-      )) {
-        continue;
-      }
+      // `me.permissions` lists only the key's **explicit** permissions, never
+      // the ones its roles imply — and `VIEWER`, `CONNECT` and `GUEST` imply
+      // no write on the resources Cupola changes, so this list is the whole
+      // answer for a non-admin.
+      if (!actions.any(writeActions.contains)) continue;
       final resource = switch (permission['resource']
           ?.toString()
           .toUpperCase()) {
@@ -58,6 +76,7 @@ class UnraidCapabilities {
     return UnraidCapabilities(
       isAdmin: roles.any((r) => r.toString().toUpperCase() == 'ADMIN'),
       writable: Set.unmodifiable(writable),
+      answered: json['roles'] is List,
     );
   }
 }

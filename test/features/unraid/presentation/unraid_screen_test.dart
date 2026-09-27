@@ -1,17 +1,23 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/unraid/data/unraid_client.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
+import 'package:cupola/features/unraid/presentation/unraid_capability.dart';
 import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 import 'package:cupola/features/unraid/presentation/unraid_screen.dart';
 
+import '../../../test_helpers/capability_overrides.dart';
+import '../../../test_helpers/capturing_http_adapter.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 const _array = UnraidArray(
@@ -35,11 +41,6 @@ const _containers = [
     age: 'Up 3 days',
   ),
 ];
-
-const _capabilities = UnraidCapabilities(
-  isAdmin: true,
-  writable: {UnraidResource.vms, UnraidResource.notifications},
-);
 
 const _vms = [UnraidVm(id: 'vm:1', name: 'Home Assistant', state: 'RUNNING')];
 
@@ -67,11 +68,26 @@ const _shares = [
   ),
 ];
 
+/// Every write the page can make lands on this adapter, so a gated tap is
+/// proved to have reached nothing.
+CapturingHttpAdapter _adapter() => CapturingHttpAdapter(
+  response: {
+    'data': {
+      'vm': {'start': true, 'stop': true, 'resume': true},
+      'archiveNotification': {'id': 'notification:1'},
+    },
+  },
+);
+
 Future<void> _pump(
   WidgetTester tester,
   Widget screen, {
   UnraidSection? failingSection,
+  CapabilityGrant grant = const CapabilityGrant.unknown(),
+  CapturingHttpAdapter? adapter,
 }) async {
+  final dio = Dio(BaseOptions(baseUrl: 'https://unraid.local'))
+    ..httpClientAdapter = adapter ?? _adapter();
   tester.view.physicalSize = const Size(1000, 2400);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -85,7 +101,11 @@ Future<void> _pump(
         // than as an error state.
         unraidArrayProvider.overrideWith((ref) async => _array),
         unraidDockerProvider.overrideWith((ref) async => _containers),
-        unraidCapabilitiesProvider.overrideWith((ref) async => _capabilities),
+        unraidClientProvider.overrideWithValue(
+          UnraidClient(url: 'https://unraid.local', apiKey: 'K', dio: dio),
+        ),
+        // The first Unraid connection takes the service's route param as id.
+        capabilityOverride({'unraid': grant}),
         unraidVmsProvider.overrideWith((ref) async {
           if (failingSection == UnraidSection.vms) throw Exception('offline');
           return _vms;
@@ -245,5 +265,141 @@ void main() {
         reason: '$screen',
       );
     }
+  });
+
+  group('a read-only key', () {
+    for (final (section, screen, tooltip, copy, blocked) in [
+      (
+        'VMs',
+        const UnraidScreen.vms(showAppBar: false),
+        'stop Home Assistant',
+        unraidVmsCopy,
+        'This Unraid key can\'t start or stop VMs.',
+      ),
+      (
+        'Notifications',
+        const UnraidScreen.notifications(showAppBar: false),
+        'Archive notification',
+        unraidNotificationsCopy,
+        'This Unraid key can\'t archive notifications.',
+      ),
+    ]) {
+      testWidgets('$section: one banner, first, and a dimmed live control', (
+        tester,
+      ) async {
+        final adapter = _adapter();
+        await _pump(
+          tester,
+          screen,
+          grant: const CapabilityGrant.readOnly(),
+          adapter: adapter,
+        );
+
+        expect(find.byType(CapabilityBanner), findsOneWidget);
+        expect(find.text(copy.answered), findsOneWidget);
+        // First: above the section header.
+        expect(
+          tester.getTopLeft(find.byType(CapabilityBanner)).dy,
+          lessThan(tester.getTopLeft(find.byType(SectionHeader).first).dy),
+        );
+
+        final control = find.byTooltip(tooltip);
+        expect(
+          tester.getSemantics(control),
+          containsSemantics(
+            hint: copy.hint,
+            isButton: true,
+            isEnabled: true,
+            hasTapAction: true,
+          ),
+        );
+        expect(
+          find.descendant(
+            of: find.byType(IconButton),
+            matching: find.byType(Opacity),
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(control);
+        await tester.pumpAndSettle();
+        expect(find.text(blocked), findsOneWidget);
+        // No confirmation drawn, and nothing reached the server.
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(adapter.callCount, 0);
+      });
+    }
+  });
+
+  testWidgets('a read-write key: no banner, and the write goes out', (
+    tester,
+  ) async {
+    final adapter = _adapter();
+    await _pump(
+      tester,
+      const UnraidScreen.notifications(showAppBar: false),
+      grant: const CapabilityGrant.readWrite(),
+      adapter: adapter,
+    );
+    expect(find.byType(CapabilityBanner), findsNothing);
+    await tester.tap(find.byTooltip('Archive notification'));
+    await tester.pumpAndSettle();
+    expect(adapter.callCount, 1);
+  });
+
+  testWidgets('an unprobed key: no banner, controls live', (tester) async {
+    await _pump(tester, const UnraidScreen.vms(showAppBar: false));
+    expect(find.byType(CapabilityBanner), findsNothing);
+    await tester.tap(find.byTooltip('stop Home Assistant'));
+    await tester.pumpAndSettle();
+    // Live: the stop confirmation, naming the host.
+    expect(find.text('Stop Home Assistant?'), findsOneWidget);
+  });
+
+  testWidgets('a key that may write VMs only gets a banner on Notifications', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const UnraidScreen.vms(showAppBar: false),
+      grant: const CapabilityGrant.partial({'vms'}),
+    );
+    expect(find.byType(CapabilityBanner), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pump(
+      tester,
+      const UnraidScreen.notifications(showAppBar: false),
+      grant: const CapabilityGrant.partial({'vms'}),
+    );
+    expect(find.byType(CapabilityBanner), findsOneWidget);
+  });
+
+  testWidgets('a FORBIDDEN on a write marks the key and says so', (
+    tester,
+  ) async {
+    final adapter = CapturingHttpAdapter(
+      response: {
+        'errors': [
+          {
+            'message': 'Forbidden resource',
+            'extensions': {'code': 'FORBIDDEN'},
+          },
+        ],
+        'data': null,
+      },
+    );
+    await _pump(
+      tester,
+      const UnraidScreen.notifications(showAppBar: false),
+      adapter: adapter,
+    );
+    await tester.tap(find.byTooltip('Archive notification'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(unraidNotificationsCopy.refusal), findsOneWidget);
+    expect(find.textContaining('Could not archive'), findsNothing);
+    // And the page now says why.
+    expect(find.text(unraidNotificationsCopy.refused), findsOneWidget);
   });
 }

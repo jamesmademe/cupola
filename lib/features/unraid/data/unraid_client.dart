@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
+import 'package:cupola/core/capability/permission_refusal.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
@@ -10,16 +11,61 @@ import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 
 /// Error thrown by [UnraidClient]. Carries the [reason] so a caller verifying
 /// the connection can tell an unreachable host from a rejected API key.
-class UnraidException implements Exception, HasFailureReason {
+class UnraidException
+    implements Exception, HasFailureReason, HasPermissionRefusal {
   const UnraidException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
+    this.forbidden = false,
   });
   final String message;
   @override
   final ServiceFailureReason reason;
+
+  /// Unraid answered `FORBIDDEN`: the key is valid and may not do this.
+  ///
+  /// Its own flag because the message is "Forbidden resource", which the
+  /// generic message heuristic folds into *unauthorized* — and a key that
+  /// works but may not write is not a key that does not work.
+  final bool forbidden;
+
+  @override
+  bool get isPermissionRefusal => forbidden;
+
   @override
   String toString() => 'UnraidException: $message';
+}
+
+/// The exception one GraphQL error entry stands for.
+///
+/// Unraid answers **200** with a GraphQL error for both a bad key and a
+/// refused permission, so the status says nothing. The error's
+/// `extensions.code` does: `FORBIDDEN` (Nest's `ForbiddenException`, message
+/// "Forbidden resource") is a valid key that may not do this, and
+/// `UNAUTHENTICATED` is a key that does not work. Anything else — an older
+/// server with no code — falls back to reading the message.
+@visibleForTesting
+UnraidException unraidGraphQlError(Object? error) {
+  final message = error is Map
+      ? (error['message'] ?? error).toString()
+      : error.toString();
+  final extensions = error is Map ? error['extensions'] : null;
+  final code = extensions is Map
+      ? extensions['code']?.toString().toUpperCase()
+      : null;
+  return switch (code) {
+    'FORBIDDEN' => UnraidException(message, forbidden: true),
+    'UNAUTHENTICATED' => UnraidException(
+      message,
+      reason: ServiceFailureReason.unauthorized,
+    ),
+    _ => UnraidException(
+      message,
+      reason: looksUnauthorizedMessage(message)
+          ? ServiceFailureReason.unauthorized
+          : ServiceFailureReason.unknown,
+    ),
+  };
 }
 
 /// Client for the Unraid GraphQL API.
@@ -105,17 +151,7 @@ class UnraidClient {
       final map = _decodeGraphQl(response.data);
       final errors = map['errors'];
       if (errors is List && errors.isNotEmpty) {
-        final first = errors.first;
-        final message = first is Map
-            ? (first['message'] ?? first).toString()
-            : first.toString();
-        // The Unraid API answers 200 with a GraphQL error for a bad API key.
-        throw UnraidException(
-          message,
-          reason: looksUnauthorizedMessage(message)
-              ? ServiceFailureReason.unauthorized
-              : ServiceFailureReason.unknown,
-        );
+        throw unraidGraphQlError(errors.first);
       }
       return (map['data'] as Map?)?.cast<String, dynamic>() ?? const {};
     } on DioException catch (e) {

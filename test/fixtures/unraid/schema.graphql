@@ -41,9 +41,18 @@ type Permission {
   actions: [AuthAction!]!
 }
 
-enum Role { ADMIN VIEWER }
+enum Role { ADMIN VIEWER CONNECT GUEST }
 enum Resource { VMS NOTIFICATIONS SHARE }
-enum AuthAction { READ_ANY UPDATE_ANY DELETE_ANY }
+enum AuthAction {
+  CREATE_ANY
+  CREATE_OWN
+  READ_ANY
+  READ_OWN
+  UPDATE_ANY
+  UPDATE_OWN
+  DELETE_ANY
+  DELETE_OWN
+}
 
 type VmDomain { id: PrefixedID! name: String state: VmState! }
 type Vms { domains: [VmDomain!] domain: [VmDomain!] }

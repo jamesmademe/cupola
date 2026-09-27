@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/npm/presentation/npm_capability.dart';
+import 'package:cupola/features/unraid/presentation/unraid_capability.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -32,7 +33,10 @@ typedef CapabilityProbe =
 /// — the "asked once per credential" promise is otherwise untestable. Only the
 /// services whose [ServiceKeyExtension.hasScopedCredential] is true appear.
 final capabilityProbesProvider = Provider<Map<ServiceKey, CapabilityProbe>>(
-  (ref) => const {ServiceKey.nginxProxyManager: probeNpmCapability},
+  (ref) => const {
+    ServiceKey.unraid: probeUnraidCapability,
+    ServiceKey.nginxProxyManager: probeNpmCapability,
+  },
 );
 
 /// What the saved credential of `connectionId` may do.

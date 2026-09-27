@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/unraid/data/unraid_client.dart';
+import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 
 /// Tier-3 contract test (plan §7.4). Unraid has no formal OpenAPI spec, so the
 /// committed GraphQL SDL is the contract: a lightweight substring check (no gql
@@ -19,6 +20,22 @@ import 'package:cupola/features/unraid/data/unraid_client.dart';
 void main() {
   group('Unraid GraphQL SDL contract', () {
     final sdl = File('test/fixtures/unraid/schema.graphql').readAsStringSync();
+
+    test('the capability probe reads what the schema declares', () {
+      // `me { roles permissions { resource actions } }`, and the probe grants
+      // a write only on the three `_ANY` write actions and the ADMIN role.
+      for (final needle in [
+        'type UserAccount',
+        'roles:',
+        'permissions:',
+        'resource:',
+        'actions:',
+        'enum Role { ADMIN',
+        ...UnraidCapabilities.writeActions,
+      ]) {
+        expect(sdl, contains(needle), reason: '"$needle" is gone');
+      }
+    });
 
     test('the queried types and fields still exist in the schema', () {
       for (final needle in const [

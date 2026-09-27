@@ -221,6 +221,31 @@ void main() {
     });
   });
 
+  test('only the _ANY write actions count as a write', () {
+    // The resolvers Cupola calls guard on UPDATE_ANY / DELETE_ANY; a key
+    // holding only the _OWN forms cannot make them.
+    final capabilities = UnraidCapabilities.fromJson({
+      'roles': ['VIEWER'],
+      'permissions': [
+        {
+          'resource': 'VMS',
+          'actions': ['READ_ANY', 'UPDATE_OWN'],
+        },
+        {
+          'resource': 'NOTIFICATIONS',
+          'actions': ['DELETE_OWN'],
+        },
+      ],
+    });
+    expect(capabilities.canWrite(UnraidResource.vms), isFalse);
+    expect(capabilities.canWrite(UnraidResource.notifications), isFalse);
+    expect(capabilities.answered, isTrue);
+  });
+
+  test('a me object with no roles is no answer', () {
+    expect(UnraidCapabilities.fromJson(const {}).answered, isFalse);
+  });
+
   test('capabilities preserve per-resource write scope', () {
     final capabilities = UnraidCapabilities.fromJson({
       'roles': ['VIEWER'],

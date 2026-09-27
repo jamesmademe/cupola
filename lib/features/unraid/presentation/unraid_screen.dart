@@ -4,14 +4,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/capability_copy.dart';
+import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_action.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
+import 'package:cupola/features/unraid/presentation/unraid_capability.dart';
 import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 
 /// Which half of the old Unraid dashboard a page lists.
@@ -48,16 +52,17 @@ enum UnraidSection {
 /// the tab that carries the identity block and the readouts, and repeating them
 /// on a section tab would be the same four figures twice in one scroll.
 ///
-/// **Both halves are read-only, and that is a data-layer fact rather than a
-/// product choice.** Decision 14 draws the guarded write set — Stop and Restart
-/// a container, Stop and Force stop a VM, each through one dialog naming the
-/// host — but the Unraid GraphQL contract this app is written against
-/// (`test/fixtures/unraid/schema.graphql`) declares no `Mutation` type at all,
-/// and the release whose schema does is not the one the three read documents
-/// here match. Guessing a mutation name would ship a confirm dialog that names
-/// the user's server and then fails, which is worse than not offering it. See
-/// the notes on `UnraidDockerContainer.condition` for the half that *is*
-/// readable from what the API already returns.
+/// **Two pages write; Array, Docker and Shares only read.** The contract this
+/// app is written against (`test/fixtures/unraid/schema.graphql`) declares two
+/// mutations Cupola uses — `vm { start stop resume … }` and
+/// `archiveNotification` — and those are the VMs and Notifications writes,
+/// each gated on the key's scope (`unraid_capability.dart`). Container writes
+/// stay absent on purpose: decision 14 draws Stop and Restart a container, but
+/// the contract declares no container mutation, and guessing a name would ship
+/// a confirm dialog that names the user's server and then fails, which is
+/// worse than not offering it. See the notes on
+/// `UnraidDockerContainer.condition` for the half that *is* readable from what
+/// the API already returns.
 class UnraidScreen extends ConsumerWidget {
   /// The array half — Unraid's Array tab.
   const UnraidScreen.array({
@@ -183,13 +188,21 @@ class _UnraidSection extends ConsumerWidget {
             ref.watch(unraidDockerProvider),
           ),
           UnraidSection.vms => [
-            const _UnraidPermissionBand(resource: UnraidResource.vms),
+            CapabilityBannerSlot(
+              connectionId: capabilityConnectionId(ref, ServiceKey.unraid),
+              copy: unraidVmsCopy,
+              resources: {UnraidResource.vms.name},
+            ),
             const SectionHeader(title: 'Virtual machines', showChevron: false),
             const SizedBox(height: 2),
             _VmList(vmsAsync: ref.watch(unraidVmsProvider)),
           ],
           UnraidSection.notifications => [
-            const _UnraidPermissionBand(resource: UnraidResource.notifications),
+            CapabilityBannerSlot(
+              connectionId: capabilityConnectionId(ref, ServiceKey.unraid),
+              copy: unraidNotificationsCopy,
+              resources: {UnraidResource.notifications.name},
+            ),
             const SectionHeader(
               title: 'Unread notifications',
               showChevron: false,
@@ -261,6 +274,13 @@ String _dockerTally(List<UnraidDockerContainer> containers) {
 /// trip they did not ask for. The KPI and summary providers are shared and are
 /// invalidated by both, because both are what the Dashboard card reads.
 void _invalidate(WidgetRef ref, UnraidSection section) {
+  // A refresh is the moment to find out the key was given permissions it did
+  // not have when the page opened, on every section that has writes and on
+  // Shares, whose writes are the next to land.
+  void recheck() => recheckCapability(
+    ref,
+    ref.read(activeInstanceProvider(ServiceKey.unraid))?.id ?? '',
+  );
   switch (section) {
     case UnraidSection.array:
       ref.invalidate(unraidArrayProvider);
@@ -268,41 +288,16 @@ void _invalidate(WidgetRef ref, UnraidSection section) {
       ref.invalidate(unraidDockerProvider);
     case UnraidSection.vms:
       ref.invalidate(unraidVmsProvider);
-      ref.invalidate(unraidCapabilitiesProvider);
+      recheck();
     case UnraidSection.notifications:
       ref.invalidate(unraidNotificationsProvider);
-      ref.invalidate(unraidCapabilitiesProvider);
+      recheck();
     case UnraidSection.shares:
       ref.invalidate(unraidSharesProvider);
-      // Capabilities too, for the same reason the other two write-capable
-      // sections do it: a refresh is the moment to find out the key was given
-      // permissions it did not have when the page opened.
-      ref.invalidate(unraidCapabilitiesProvider);
+      recheck();
   }
   ref.invalidate(serviceKpiProvider(ServiceKey.unraid));
   ref.invalidate(serviceSummaryProvider(ServiceKey.unraid));
-}
-
-class _UnraidPermissionBand extends ConsumerWidget {
-  const _UnraidPermissionBand({required this.resource});
-  final UnraidResource resource;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final capability = ref.watch(unraidCapabilitiesProvider).asData?.value;
-    if (capability == null || capability.canWrite(resource)) {
-      return const SizedBox.shrink();
-    }
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Text(
-        'This API key is read-only. Readouts stay available; actions require write permission.',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
 }
 
 class _VmList extends ConsumerWidget {
@@ -338,17 +333,23 @@ class _VmTile extends ConsumerWidget {
     final action = vm.isRunning
         ? UnraidVmAction.stop
         : (vm.isPaused ? UnraidVmAction.resume : UnraidVmAction.start);
+    final connectionId = capabilityConnectionId(ref, ServiceKey.unraid);
     return _UnraidTile(
       icon: Icons.computer_rounded,
       iconColor: color,
       title: vm.name,
       // `PMSUSPENDED` and `SHUTOFF` are libvirt's words, not anyone else's.
       detail: _vmStateLabel(vm.state),
-      trailing: IconButton(
+      trailing: CapabilityGatedAction.icon(
+        service: ServiceKey.unraid,
+        connectionId: connectionId,
+        resource: UnraidResource.vms.name,
+        hint: unraidVmsCopy.hint,
+        blockedMessage: 'This Unraid key can\'t start or stop VMs.',
         // `_actionVerb`, not `action.graphQl`: the mutation's field name is a
         // wire detail and "forceStop Kodi" is not a sentence.
         tooltip: '${_actionVerb(action)} ${vm.name}',
-        onPressed: () => _run(context, ref, action),
+        onTap: () => _run(context, ref, action, connectionId),
         icon: Icon(
           action == UnraidVmAction.start || action == UnraidVmAction.resume
               ? Icons.play_arrow_rounded
@@ -362,16 +363,10 @@ class _VmTile extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     UnraidVmAction action,
+    String connectionId,
   ) async {
-    final capability = ref.read(unraidCapabilitiesProvider).asData?.value;
-    if (capability?.canWrite(UnraidResource.vms) != true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This action requires a read-write Unraid key.'),
-        ),
-      );
-      return;
-    }
+    // The scope is gated at the tap (`CapabilityGatedAction.icon`), before the
+    // confirmation below is ever drawn.
     if (action == UnraidVmAction.stop) {
       final host =
           ref
@@ -421,6 +416,17 @@ class _VmTile extends ConsumerWidget {
       );
     } catch (error) {
       if (!context.mounted) return;
+      // A `FORBIDDEN` is the key answering the question the probe asked: it
+      // marks the connection read-only and says so, rather than reading as a
+      // failure.
+      if (reportCapabilityRefusal(
+        context,
+        ref,
+        CapabilityTarget(connectionId: connectionId, copy: unraidVmsCopy),
+        error,
+      )) {
+        return;
+      }
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('VM action failed: $error')));
@@ -486,28 +492,36 @@ class _NotificationTile extends ConsumerWidget {
       item.tone,
       surface: Theme.of(context).colorScheme.surface,
     );
+    final connectionId = capabilityConnectionId(ref, ServiceKey.unraid);
     return _UnraidTile(
       icon: Icons.notifications_outlined,
       iconColor: color,
       title: item.title.isEmpty ? item.subject : item.title,
       detail: item.description.isEmpty ? item.subject : item.description,
-      trailing: IconButton(
+      trailing: CapabilityGatedAction.icon(
+        service: ServiceKey.unraid,
+        connectionId: connectionId,
+        resource: UnraidResource.notifications.name,
+        hint: unraidNotificationsCopy.hint,
+        blockedMessage: 'This Unraid key can\'t archive notifications.',
         tooltip: 'Archive notification',
-        onPressed: () async {
-          final capability = ref.read(unraidCapabilitiesProvider).asData?.value;
-          if (capability?.canWrite(UnraidResource.notifications) != true) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Archiving requires a read-write Unraid key.'),
-              ),
-            );
-            return;
-          }
+        onTap: () async {
           try {
             await ref.read(unraidClientProvider).archiveNotification(item.id);
             ref.invalidate(unraidNotificationsProvider);
           } catch (error) {
             if (!context.mounted) return;
+            if (reportCapabilityRefusal(
+              context,
+              ref,
+              CapabilityTarget(
+                connectionId: connectionId,
+                copy: unraidNotificationsCopy,
+              ),
+              error,
+            )) {
+              return;
+            }
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Could not archive: $error')),
             );
