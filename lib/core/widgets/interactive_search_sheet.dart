@@ -482,15 +482,15 @@ class _ReleaseToolbar extends StatelessWidget {
                 vertical: AppSpacing.md,
               ),
               border: OutlineInputBorder(
-                borderRadius: AppRadius.borderRadiusFull,
+                borderRadius: AppRadius.borderRadiusMd,
                 borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: AppRadius.borderRadiusFull,
+                borderRadius: AppRadius.borderRadiusMd,
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: AppRadius.borderRadiusFull,
+                borderRadius: AppRadius.borderRadiusMd,
                 borderSide: BorderSide(color: colorScheme.primary),
               ),
             ),

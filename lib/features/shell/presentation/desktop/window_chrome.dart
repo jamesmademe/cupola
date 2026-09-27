@@ -332,7 +332,12 @@ class _CrumbLinkState extends State<_CrumbLink> {
   }
 }
 
-/// A 28pt pill in the strip: label, optional shortcut, optional accent.
+/// A 28pt chip in the strip: label, optional shortcut, optional accent.
+///
+/// It is a control, so it takes the 12dp interactive radius and not full
+/// radius, which in this system means a tag or a piece of metadata. It keeps
+/// that shape when accented: the accent marks it as on, and the shape stays
+/// the same when it is toggled.
 ///
 /// Accented means *on* — the inspector chip is the only one that has a state —
 /// and the accent is always the owning surface's colour rather than a status
@@ -377,7 +382,7 @@ class _ChromeChipState extends State<_ChromeChip> {
         color: accent != null
             ? accent.withValues(alpha: 0.14)
             : (_hovered ? colorScheme.onSurface.withValues(alpha: 0.06) : null),
-        borderRadius: BorderRadius.circular(AppRadius.full),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(
           color: accent != null
               ? accent.withValues(alpha: 0.4)

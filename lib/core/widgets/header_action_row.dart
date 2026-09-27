@@ -50,9 +50,11 @@ class HeaderActionRow extends StatelessWidget {
   /// opens up. Locked by `header_action_row_test.dart`.
   static const double buttonHeight = 48.0;
 
-  /// Shared rounded shape for all detail header action buttons.
+  /// Shared rounded shape for all detail header action buttons: the 12dp
+  /// interactive radius. These are controls, and full or near-full radius is
+  /// the metadata shape in this system.
   static final _buttonShape = RoundedRectangleBorder(
-    borderRadius: AppRadius.borderRadiusXl,
+    borderRadius: AppRadius.borderRadiusMd,
   );
 
   static ButtonStyle _filledButtonStyle({

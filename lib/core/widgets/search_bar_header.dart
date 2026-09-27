@@ -160,7 +160,7 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
           ),
           shape: WidgetStateProperty.all(
             RoundedRectangleBorder(
-              borderRadius: AppRadius.borderRadiusXl,
+              borderRadius: AppRadius.borderRadiusMd,
               side: BorderSide(color: colorScheme.outlineVariant),
             ),
           ),
