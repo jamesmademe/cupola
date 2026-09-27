@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/capability/capability_copy.dart';
 import 'package:cupola/core/capability/capability_scope.dart';
+import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/widgets/capability_banner.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import '../../test_helpers/capability_overrides.dart';
 import '../../test_helpers/settings_scope.dart';
 
 /// BONUS 3, as a set of rules rather than a look.
@@ -330,6 +334,566 @@ void main() {
       await tester.tap(find.text('Update the key'));
       await tester.pump();
       expect(fixed, 1);
+    });
+  });
+
+  _gatedVariants();
+  _bannerSlot();
+}
+
+const _unraid = 'unraid';
+
+/// A gated control under a router, so the toast's fix has somewhere to land,
+/// with the unraid connection answering [grant].
+Future<GoRouter> _pumpGated(
+  WidgetTester tester, {
+  required CapabilityGrant grant,
+  required Widget child,
+  TextScaler textScaler = TextScaler.noScaling,
+}) async {
+  final router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => MediaQuery.withClampedTextScaling(
+          minScaleFactor: textScaler.scale(1),
+          maxScaleFactor: textScaler.scale(1),
+          child: Scaffold(
+            body: Align(alignment: Alignment.topLeft, child: child),
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/settings/service/:service',
+        builder: (context, state) => const Scaffold(body: Text('settings')),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+  await tester.pumpWidget(
+    ProviderScope(
+      retry: (_, _) => null,
+      overrides: [
+        ...await settingsScopeOverrides(configured: const [ServiceKey.unraid]),
+        capabilityOverride({_unraid: grant}),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return router;
+}
+
+String _location(GoRouter router) =>
+    router.routerDelegate.currentConfiguration.uri.toString();
+
+/// The shapes a write takes in the three gated services, each held to the same
+/// four rules: reachable, dimmed, hinted, and answering a tap with the fix.
+void _gatedVariants() {
+  const blocked = 'This Unraid key can\'t start or stop VMs.';
+  const hint = 'requires a key that can write VMs';
+
+  Widget iconButton(VoidCallback onTap) => CapabilityGatedAction.icon(
+    service: ServiceKey.unraid,
+    connectionId: _unraid,
+    resource: 'vms',
+    icon: const Icon(Icons.play_arrow_rounded),
+    tooltip: 'Start Home Assistant',
+    blockedMessage: blocked,
+    hint: hint,
+    onTap: onTap,
+  );
+
+  Widget textButton(VoidCallback onTap) => CapabilityGatedAction.builder(
+    service: ServiceKey.unraid,
+    connectionId: _unraid,
+    resource: 'vms',
+    blockedMessage: blocked,
+    hint: hint,
+    onTap: onTap,
+    builder: (context, onPressed, annotate) =>
+        TextButton(onPressed: onPressed, child: annotate(const Text('Start'))),
+  );
+
+  Future<void> expectFix(WidgetTester tester, GoRouter router) async {
+    expect(find.text(blocked), findsOneWidget);
+    await tester.tap(find.widgetWithText(SnackBarAction, 'Update the key'));
+    await tester.pumpAndSettle();
+    expect(_location(router), '/settings/service/unraid?i=unraid');
+  }
+
+  group('the icon shape', () {
+    testWidgets(
+      'blocked: reachable, dimmed, hinted, and answers with the fix',
+      (tester) async {
+        var acted = 0;
+        final router = await _pumpGated(
+          tester,
+          grant: const CapabilityGrant.readOnly(),
+          child: iconButton(() => acted++),
+        );
+
+        expect(
+          tester.getSemantics(find.byType(IconButton)),
+          containsSemantics(
+            // The tooltip is the icon button's name; the hint sits beside it.
+            tooltip: 'Start Home Assistant',
+            hint: hint,
+            isButton: true,
+            isEnabled: true,
+            hasTapAction: true,
+          ),
+        );
+        final opacity = tester.widget<Opacity>(
+          find.descendant(
+            of: find.byType(IconButton),
+            matching: find.byType(Opacity),
+          ),
+        );
+        expect(opacity.opacity, GatedAffordance.dimmedOpacity);
+        // Material's 48pt target, never shrunk with the glyph.
+        expect(tester.getSize(find.byType(IconButton)).height, 48);
+        expect(find.byTooltip('Start Home Assistant'), findsOneWidget);
+
+        await tester.tap(find.byType(IconButton));
+        await tester.pumpAndSettle();
+        expect(acted, 0);
+        await expectFix(tester, router);
+      },
+    );
+
+    testWidgets('live: acts at full ink with no hint and no toast', (
+      tester,
+    ) async {
+      var acted = 0;
+      await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.readWrite(),
+        child: iconButton(() => acted++),
+      );
+      expect(
+        find.descendant(
+          of: find.byType(IconButton),
+          matching: find.byType(Opacity),
+        ),
+        findsNothing,
+      );
+      expect(tester.getSemantics(find.byType(IconButton)).hint, isEmpty);
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+      expect(acted, 1);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('per resource: a partial grant gates only what it omits', (
+      tester,
+    ) async {
+      var acted = 0;
+      await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.partial({'vms'}),
+        child: iconButton(() => acted++),
+      );
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+      expect(acted, 1);
+    });
+
+    testWidgets('could not ask: its own hint, and the toast re-asks', (
+      tester,
+    ) async {
+      await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.unanswered(),
+        child: iconButton(() {}),
+      );
+      expect(
+        tester.getSemantics(find.byType(IconButton)),
+        containsSemantics(hint: 'this key\'s permissions are unknown'),
+      );
+      await tester.tap(find.byType(IconButton));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(CapabilityCopy.unansweredToast(ServiceKey.unraid)),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(SnackBarAction, 'Check again'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('the builder shape', () {
+    testWidgets('blocked: the button keeps its node, and the hint is on it', (
+      tester,
+    ) async {
+      var acted = 0;
+      final router = await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.readOnly(),
+        child: textButton(() => acted++),
+      );
+
+      expect(
+        tester.getSemantics(find.byType(TextButton)),
+        containsSemantics(
+          label: 'Start',
+          hint: hint,
+          isButton: true,
+          isEnabled: true,
+          hasTapAction: true,
+        ),
+      );
+      expect(
+        tester.widget<TextButton>(find.byType(TextButton)).onPressed,
+        isNotNull,
+      );
+      final opacity = tester.widget<Opacity>(
+        find.descendant(
+          of: find.byType(TextButton),
+          matching: find.byType(Opacity),
+        ),
+      );
+      expect(opacity.opacity, GatedAffordance.dimmedOpacity);
+      expect(
+        tester.getSize(find.byType(TextButton)).height,
+        greaterThanOrEqualTo(44),
+      );
+
+      await tester.tap(find.byType(TextButton));
+      await tester.pumpAndSettle();
+      expect(acted, 0);
+      await expectFix(tester, router);
+    });
+
+    testWidgets('live: acts, with no toast', (tester) async {
+      var acted = 0;
+      await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.unknown(),
+        child: textButton(() => acted++),
+      );
+      await tester.tap(find.byType(TextButton));
+      await tester.pump();
+      expect(acted, 1);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(tester.getSemantics(find.byType(TextButton)).hint, isEmpty);
+    });
+  });
+
+  group('the toggle shape', () {
+    Widget toggle(List<bool> changes, {required bool value}) =>
+        CapabilityGatedAction.toggle(
+          service: ServiceKey.unraid,
+          connectionId: _unraid,
+          value: value,
+          onChanged: changes.add,
+          blockedMessage: blocked,
+          hint: hint,
+        );
+
+    testWidgets('blocked: a tap answers and does not flip the switch', (
+      tester,
+    ) async {
+      final changes = <bool>[];
+      final router = await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.readOnly(),
+        child: toggle(changes, value: true),
+      );
+
+      expect(
+        tester.getSemantics(find.byType(Switch)),
+        containsSemantics(
+          hint: hint,
+          hasToggledState: true,
+          isToggled: true,
+          isEnabled: true,
+          hasTapAction: true,
+        ),
+      );
+      final opacity = tester.widget<Opacity>(
+        find.ancestor(of: find.byType(Switch), matching: find.byType(Opacity)),
+      );
+      expect(opacity.opacity, GatedAffordance.dimmedOpacity);
+      expect(
+        tester.getSize(find.byType(Switch)).height,
+        greaterThanOrEqualTo(44),
+      );
+
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      expect(changes, isEmpty);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+      await expectFix(tester, router);
+    });
+
+    testWidgets('live: the change goes through', (tester) async {
+      final changes = <bool>[];
+      await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.readWrite(),
+        child: toggle(changes, value: true),
+      );
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      expect(changes, [false]);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+  });
+
+  group('the menu shape', () {
+    Widget menu(List<String> acted) => Consumer(
+      builder: (context, ref, _) => PopupMenuButton<String>(
+        tooltip: 'More',
+        onSelected: (value) {
+          if (!capabilityWriteAllowed(
+            context,
+            ref,
+            service: ServiceKey.unraid,
+            connectionId: _unraid,
+            resource: 'vms',
+            blockedMessage: blocked,
+          )) {
+            return;
+          }
+          acted.add(value);
+        },
+        itemBuilder: (context) => const [
+          PopupMenuItem(
+            value: 'stop',
+            child: CapabilityGatedMenuLabel(
+              service: ServiceKey.unraid,
+              connectionId: _unraid,
+              resource: 'vms',
+              text: 'Stop',
+              hint: hint,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    testWidgets('blocked: the item stays enabled, hinted, and toasts', (
+      tester,
+    ) async {
+      final acted = <String>[];
+      final router = await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.readOnly(),
+        child: menu(acted),
+      );
+      await tester.tap(find.byTooltip('More'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<PopupMenuItem<String>>(find.byType(PopupMenuItem<String>))
+            .enabled,
+        isTrue,
+      );
+      expect(
+        tester.getSemantics(find.text('Stop')),
+        containsSemantics(label: 'Stop', hint: hint, isEnabled: true),
+      );
+      final opacity = tester.widget<Opacity>(
+        find.ancestor(of: find.text('Stop'), matching: find.byType(Opacity)),
+      );
+      expect(opacity.opacity, GatedAffordance.dimmedOpacity);
+
+      await tester.tap(find.text('Stop'));
+      await tester.pumpAndSettle();
+      expect(acted, isEmpty);
+      await expectFix(tester, router);
+    });
+
+    testWidgets('live: the item acts', (tester) async {
+      final acted = <String>[];
+      await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.readWrite(),
+        child: menu(acted),
+      );
+      await tester.tap(find.byTooltip('More'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Stop'));
+      await tester.pumpAndSettle();
+      expect(acted, ['stop']);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+  });
+
+  group('the cross-service builder shape', () {
+    testWidgets('an unconfigured target dims the caller\'s own button', (
+      tester,
+    ) async {
+      var acted = 0;
+      await _pump(
+        tester,
+        configured: const [],
+        child: CrossServiceAction.builder(
+          target: ServiceKey.radarr,
+          blockedMessage: 'Connect Radarr to open this movie',
+          onTap: () => acted++,
+          builder: (context, onPressed, annotate) => TextButton(
+            onPressed: onPressed,
+            child: annotate(const Text('Open in Radarr')),
+          ),
+        ),
+      );
+      expect(
+        tester.getSemantics(find.byType(TextButton)),
+        containsSemantics(
+          label: 'Open in Radarr',
+          hint: 'requires Radarr',
+          isEnabled: true,
+          hasTapAction: true,
+        ),
+      );
+      await tester.tap(find.byType(TextButton));
+      await tester.pump();
+      expect(acted, 0);
+      expect(find.widgetWithText(SnackBarAction, 'Settings'), findsOneWidget);
+    });
+  });
+}
+
+void _bannerSlot() {
+  const copy = CapabilityCopy(
+    service: ServiceKey.unraid,
+    answered:
+        'This Unraid key can read. Starting and stopping VMs needs a key '
+        'with write access to VMs.',
+    scope: 'write access to VMs',
+    hint: 'requires a key that can write VMs',
+  );
+
+  Widget slot({Set<String>? resources}) => CapabilityBannerSlot(
+    connectionId: _unraid,
+    copy: copy,
+    resources: resources,
+  );
+
+  group('the banner slot', () {
+    testWidgets('says nothing while unknown or read-write', (tester) async {
+      for (final grant in const [
+        CapabilityGrant.unknown(),
+        CapabilityGrant.readWrite(),
+        CapabilityGrant.partial({'vms'}),
+      ]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await _pumpGated(
+          tester,
+          grant: grant,
+          child: slot(resources: {'vms'}),
+        );
+        expect(find.byType(CapabilityBanner), findsNothing, reason: '$grant');
+      }
+    });
+
+    testWidgets('a read-only answer gets the answered sentence and the fix', (
+      tester,
+    ) async {
+      final router = await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.readOnly(),
+        child: slot(resources: {'vms'}),
+      );
+      expect(find.text(copy.answered), findsOneWidget);
+      await tester.tap(find.text('Update the key'));
+      await tester.pumpAndSettle();
+      expect(_location(router), '/settings/service/unraid?i=unraid');
+    });
+
+    testWidgets('a refusal says it was refused', (tester) async {
+      await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.refused(),
+        child: slot(),
+      );
+      expect(find.text(copy.refused), findsOneWidget);
+    });
+
+    testWidgets('could not ask: Check again, and it re-runs the probe', (
+      tester,
+    ) async {
+      var probes = 0;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => Scaffold(body: slot()),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            ...await settingsScopeOverrides(
+              configured: const [ServiceKey.unraid],
+            ),
+            capabilityProbesProvider.overrideWithValue({
+              ServiceKey.unraid: (ref, id) async {
+                probes++;
+                return const CapabilityGrant.unanswered();
+              },
+            }),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(copy.unanswered), findsOneWidget);
+      expect(probes, 1);
+
+      await tester.tap(find.text('Check again'));
+      await tester.pumpAndSettle();
+      expect(probes, 2);
+    });
+
+    testWidgets('respects the page\'s resources', (tester) async {
+      await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.partial({'vms'}),
+        child: slot(resources: {'notifications'}),
+      );
+      expect(find.byType(CapabilityBanner), findsOneWidget);
+    });
+
+    testWidgets('stacks at a 3x reading size without overflowing', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.readOnly(),
+        textScaler: const TextScaler.linear(3),
+        child: slot(),
+      );
+      expect(tester.takeException(), isNull);
+      final message = tester.getRect(find.text(copy.answered));
+      final action = tester.getRect(find.text('Update the key'));
+      // The action sits under the sentence, not beside it.
+      expect(action.top, greaterThanOrEqualTo(message.bottom));
+    });
+
+    testWidgets('is not a live region', (tester) async {
+      // A standing state, not an event: drawn on every visit to a read-only
+      // connection's pages, it would otherwise interrupt each of them.
+      await _pumpGated(
+        tester,
+        grant: const CapabilityGrant.readOnly(),
+        child: slot(),
+      );
+      expect(
+        tester.getSemantics(find.byType(CapabilityBanner)),
+        isNot(containsSemantics(isLiveRegion: true)),
+      );
     });
   });
 }

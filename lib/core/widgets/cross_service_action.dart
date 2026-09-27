@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/capability/capability_copy.dart';
 import 'package:cupola/core/capability/capability_scope.dart';
+import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
@@ -42,29 +44,69 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// keeps full ink and gets a `FaultBand` instead — the two states need opposite
 /// answers ("go set this up" against "this is what it said last") and one
 /// visual language cannot carry both.
+///
+/// ## The two shapes
+///
+/// The default constructor draws the whole cell itself, around a
+/// **non-interactive** child — a glyph, a caption — through [PressableScale].
+/// [GatedAffordance.builder] is for a control that is already a button (a
+/// `TextButton`, a FAB, a `HeaderActionButton`): it hands the builder the
+/// gated `onPressed` and an `annotate` function, and the builder's own button
+/// keeps its role, name and target. Wrapping a Material button in the default
+/// shape would nest a button inside a button, which a screen reader reads as
+/// two stops for one control.
 class GatedAffordance extends StatelessWidget {
   const GatedAffordance({
     super.key,
     required this.enabled,
-    required this.label,
+    required String this.label,
     required this.hint,
     required this.onTap,
     required this.onBlocked,
-    required this.child,
-  });
+    required Widget this.child,
+  }) : builder = null;
+
+  /// For a control that is already a button.
+  ///
+  /// [builder] receives the gated `onPressed` — never null, so the button is
+  /// never `Semantics(enabled: false)` — and `annotate`, which wraps the
+  /// button's **own content** in the dim and the hint. The annotation has to go
+  /// inside: `ButtonStyleButton` publishes a `container: true` node, so a
+  /// `Semantics(hint:)` wrapped around the button lands on a second,
+  /// non-actionable node the screen reader never focuses.
+  ///
+  /// A caller keeps any *other* reason to pass `null` to its button — a save
+  /// with nothing to save — but the precondition this widget gates is never
+  /// expressed that way.
+  const GatedAffordance.builder({
+    super.key,
+    required this.enabled,
+    required this.hint,
+    required this.onTap,
+    required this.onBlocked,
+    required GatedAffordanceBuilder this.builder,
+  }) : label = null,
+       child = null;
 
   /// Whether the precondition is met. When true this is an ordinary control.
   final bool enabled;
 
-  /// The accessible name. Required even when [child] renders its own text: this
-  /// widget publishes one node for the whole cell, so the child's text is
-  /// excluded and there would otherwise be nothing to announce.
-  final String label;
+  /// The accessible name, for the default shape. Required there even when
+  /// [child] renders its own text: that shape publishes one node for the whole
+  /// cell, so the child's text is excluded and there would otherwise be nothing
+  /// to announce. The builder shape's button names itself.
+  final String? label;
 
   /// What the control wants, in the user's terms — `requires qBittorrent`,
-  /// `requires a read-write key`. Published in **both** states; a hint that
-  /// disappears when it becomes relevant is not a hint.
-  final String hint;
+  /// `requires an admin account`. Null publishes no hint.
+  ///
+  /// A cross-service jump publishes its hint in **both** states: *requires
+  /// qBittorrent* is true of the jump whether or not qBittorrent is set up, and
+  /// a hint that disappears when it becomes relevant is not a hint. A
+  /// capability gate publishes one only while blocked, because on a credential
+  /// that may write there is no requirement left to explain and every write on
+  /// a page saying "requires write access" would be noise read on every stop.
+  final String? hint;
 
   /// What the control does when it can act.
   final VoidCallback onTap;
@@ -72,7 +114,10 @@ class GatedAffordance extends StatelessWidget {
   /// What it does when it cannot. Raises the toast; never navigates silently.
   final VoidCallback onBlocked;
 
-  final Widget child;
+  final Widget? child;
+
+  /// The builder shape's content. See [GatedAffordance.builder].
+  final GatedAffordanceBuilder? builder;
 
   /// The one dim in the app that means "precondition unmet".
   ///
@@ -81,10 +126,31 @@ class GatedAffordance extends StatelessWidget {
   /// only mean two things that look almost the same.
   static const double dimmedOpacity = 0.38;
 
-  @override
-  Widget build(BuildContext context) {
+  /// The dim and the hint, applied to a control's own foreground.
+  static Widget annotateFor({
+    required bool enabled,
+    required String? hint,
+    required Widget child,
+  }) {
     final Widget body = enabled
         ? child
+        : Opacity(opacity: dimmedOpacity, child: child);
+    return hint == null ? body : Semantics(hint: hint, child: body);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final builder = this.builder;
+    if (builder != null) {
+      return builder(
+        context,
+        enabled ? onTap : onBlocked,
+        (content) => annotateFor(enabled: enabled, hint: hint, child: content),
+      );
+    }
+
+    final Widget body = enabled
+        ? child!
         : Opacity(
             opacity: dimmedOpacity,
             // The foreground only. The cell's own hit area, padding and any
@@ -121,6 +187,15 @@ class GatedAffordance extends StatelessWidget {
   }
 }
 
+/// Builds a gated control from its gated `onPressed` and an `annotate`
+/// function that dims and hints the control's own content.
+typedef GatedAffordanceBuilder =
+    Widget Function(
+      BuildContext context,
+      VoidCallback onPressed,
+      Widget Function(Widget content) annotate,
+    );
+
 /// [GatedAffordance] wired to "is the other service configured?".
 ///
 /// The specimen is Radarr's *Open in qBittorrent*: the control reads the saved
@@ -135,18 +210,30 @@ class CrossServiceAction extends ConsumerWidget {
   const CrossServiceAction({
     super.key,
     required this.target,
-    required this.label,
+    required String this.label,
     required this.blockedMessage,
     required this.onTap,
-    required this.child,
+    required Widget this.child,
     this.hint,
-  });
+  }) : builder = null;
+
+  /// For a jump that is already a button — see [GatedAffordance.builder].
+  const CrossServiceAction.builder({
+    super.key,
+    required this.target,
+    required this.blockedMessage,
+    required this.onTap,
+    required GatedAffordanceBuilder this.builder,
+    this.hint,
+  }) : label = null,
+       child = null;
 
   /// The service this control acts on. Not the service the page belongs to.
   final ServiceKey target;
 
-  /// The accessible name, e.g. `Open in qBittorrent`.
-  final String label;
+  /// The accessible name, e.g. `Open in qBittorrent`. The builder shape's
+  /// button names itself.
+  final String? label;
 
   /// The toast, e.g. `Connect qBittorrent to open this transfer`.
   final String blockedMessage;
@@ -158,7 +245,8 @@ class CrossServiceAction extends ConsumerWidget {
   /// whose precondition needs more than a name.
   final String? hint;
 
-  final Widget child;
+  final Widget? child;
+  final GatedAffordanceBuilder? builder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -170,46 +258,257 @@ class CrossServiceAction extends ConsumerWidget {
     final configured = ref.watch(
       currentSettingsProvider.select((s) => s.isServiceConfigured(target)),
     );
+    final resolvedHint = hint ?? 'requires ${target.title}';
+    void blocked() => SnackBarHelper.withAction(
+      context,
+      blockedMessage,
+      actionLabel: 'Settings',
+      // The action is the fix, and it is the *specific* fix: this service's
+      // own settings page, where its setup note is printed, rather than the
+      // settings root the user would then have to navigate.
+      onAction: () => context.go(ServiceRoutes.settingsFor(target)),
+    );
 
+    final builder = this.builder;
+    if (builder != null) {
+      return GatedAffordance.builder(
+        enabled: configured,
+        hint: resolvedHint,
+        onTap: onTap,
+        onBlocked: blocked,
+        builder: builder,
+      );
+    }
     return GatedAffordance(
       enabled: configured,
-      label: label,
-      hint: hint ?? 'requires ${target.title}',
+      label: label!,
+      hint: resolvedHint,
       onTap: onTap,
-      onBlocked: () => SnackBarHelper.withAction(
-        context,
-        blockedMessage,
-        actionLabel: 'Settings',
-        // The action is the fix, and it is the *specific* fix: this service's
-        // own settings page, where its setup note is printed, rather than the
-        // settings root the user would then have to navigate.
-        onAction: () => context.go(ServiceRoutes.settingsFor(target)),
-      ),
-      child: child,
+      onBlocked: blocked,
+      child: child!,
     );
   }
 }
 
+/// What a capability gate resolved to for one control.
+class _CapabilityGate {
+  const _CapabilityGate({
+    required this.enabled,
+    required this.hint,
+    required this.onBlocked,
+  });
+
+  final bool enabled;
+  final String? hint;
+  final VoidCallback onBlocked;
+}
+
+/// Resolves a control's gate from its connection's grant.
+///
+/// The hint and the toast follow *why* the control is blocked. When the
+/// service answered (or refused a write), the caller's sentences name the
+/// missing permission and the toast's one action is the fix: that
+/// connection's settings form, labelled with the service's own verb. When
+/// Cupola could not ask, the credential may well be fine — the hint and toast
+/// say so, and the action re-asks instead of sending the user to replace a
+/// key that may work.
+_CapabilityGate _resolveCapabilityGate(
+  BuildContext context,
+  WidgetRef ref, {
+  required ServiceKey service,
+  required String connectionId,
+  required String? resource,
+  required String hint,
+  required String blockedMessage,
+}) {
+  final grant = ref.watch(capabilityGrantForProvider(connectionId));
+  final enabled = grant.scopeFor(resource).canWrite;
+  final unanswered = grant.basis == CapabilityBasis.unanswered;
+  return _CapabilityGate(
+    enabled: enabled,
+    hint: enabled
+        ? null
+        : unanswered
+        ? CapabilityCopy.unansweredHint(service)
+        : hint,
+    onBlocked: () => _showCapabilityBlocked(
+      context,
+      ref,
+      service: service,
+      connectionId: connectionId,
+      message: blockedMessage,
+      unanswered: unanswered,
+    ),
+  );
+}
+
+void _showCapabilityBlocked(
+  BuildContext context,
+  WidgetRef ref, {
+  required ServiceKey service,
+  required String connectionId,
+  required String message,
+  required bool unanswered,
+}) {
+  if (unanswered) {
+    SnackBarHelper.withAction(
+      context,
+      CapabilityCopy.unansweredToast(service),
+      actionLabel: 'Check again',
+      onAction: () => recheckCapability(ref, connectionId),
+    );
+    return;
+  }
+  SnackBarHelper.withAction(
+    context,
+    message,
+    actionLabel: service.capabilityFixLabel,
+    onAction: () =>
+        context.go(ServiceRoutes.settingsForConnection(service, connectionId)),
+  );
+}
+
+/// Whether a write on [resource] of [connectionId] may go ahead — and, when it
+/// may not, the answer the user gets instead of the action.
+///
+/// For the writes that cannot be wrapped in a gated widget: a `PopupMenuItem`
+/// (whose label is a [CapabilityGatedMenuLabel]) and a save inside an editor.
+/// Returns false **after** raising the same toast a dimmed control raises, so
+/// the call site reads `if (!capabilityWriteAllowed(...)) return;`.
+bool capabilityWriteAllowed(
+  BuildContext context,
+  WidgetRef ref, {
+  required ServiceKey service,
+  required String connectionId,
+  String? resource,
+  required String blockedMessage,
+}) {
+  final grant = ref.read(capabilityGrantForProvider(connectionId));
+  if (grant.scopeFor(resource).canWrite) return true;
+  _showCapabilityBlocked(
+    context,
+    ref,
+    service: service,
+    connectionId: connectionId,
+    message: blockedMessage,
+    unanswered: grant.basis == CapabilityBasis.unanswered,
+  );
+  return false;
+}
+
+enum _GateShape { cell, icon, builder, toggle }
+
 /// [GatedAffordance] wired to a credential's scope.
 ///
-/// The write half of cross-cutting C: the banner says what the key cannot do
-/// once, at the top of the page, and every write below it dims to match rather
-/// than disappearing. The readouts keep refreshing — a read-only key reads
-/// perfectly well, and the page is still worth looking at.
+/// The write half of cross-cutting C: the banner says what the credential
+/// cannot do once, at the top of the page, and every write below it dims to
+/// match rather than disappearing. The readouts keep refreshing — a read-only
+/// key reads perfectly well, and the page is still worth looking at.
+///
+/// One constructor per shape of control, because each hosts its hint and its
+/// dim differently and a flag could not say which:
+///
+///  * the default — a bare glyph or caption cell, drawn by [GatedAffordance];
+///  * [CapabilityGatedAction.icon] — every `IconButton` write;
+///  * [CapabilityGatedAction.builder] — a `TextButton`, `FilledButton`,
+///    `OutlinedButton` or FAB the caller builds;
+///  * [CapabilityGatedAction.toggle] — every `Switch` write.
+///
+/// A menu item is the fifth shape and is not a widget of this class: see
+/// [CapabilityGatedMenuLabel] and [capabilityWriteAllowed].
+///
+/// A flow (a sheet that collects a form, a typed confirmation) is gated at the
+/// tap that **opens** it, never after the form is filled.
 class CapabilityGatedAction extends ConsumerWidget {
   const CapabilityGatedAction({
     super.key,
     required this.service,
     required this.connectionId,
-    required this.label,
+    required String this.label,
     required this.blockedMessage,
     required this.onTap,
-    required this.child,
+    required Widget this.child,
     this.hint = 'requires a read-write key',
-  });
+    this.resource,
+  }) : _shape = _GateShape.cell,
+       icon = null,
+       tooltip = null,
+       color = null,
+       builder = null,
+       value = null,
+       onChanged = null;
 
-  /// Which service the blocked control belongs to. Used only to aim the
-  /// toast's action at the page where the key is replaced.
+  /// An `IconButton` write. The button is built here so its `onPressed` is
+  /// never null; [tooltip] stays its accessible name (and what
+  /// `find.byTooltip` finds), the dim and the hint go on [icon] inside the
+  /// button, and it keeps Material's 48pt target.
+  const CapabilityGatedAction.icon({
+    super.key,
+    required this.service,
+    required this.connectionId,
+    required Widget this.icon,
+    required String this.tooltip,
+    required this.blockedMessage,
+    required this.onTap,
+    this.hint = 'requires a read-write key',
+    this.resource,
+    this.color,
+  }) : _shape = _GateShape.icon,
+       label = null,
+       child = null,
+       builder = null,
+       value = null,
+       onChanged = null;
+
+  /// A button the caller builds — see [GatedAffordance.builder].
+  const CapabilityGatedAction.builder({
+    super.key,
+    required this.service,
+    required this.connectionId,
+    required this.blockedMessage,
+    required this.onTap,
+    required GatedAffordanceBuilder this.builder,
+    this.hint = 'requires a read-write key',
+    this.resource,
+  }) : _shape = _GateShape.builder,
+       label = null,
+       child = null,
+       icon = null,
+       tooltip = null,
+       color = null,
+       value = null,
+       onChanged = null;
+
+  /// A `Switch` write.
+  ///
+  /// [value] is controlled by the caller, so a blocked tap does not flip it:
+  /// the switch answers with the toast and stays where the server says it is.
+  /// The hint is merged onto the toggle's own node, which a `Semantics(hint:)`
+  /// placed around a `Switch` would miss.
+  const CapabilityGatedAction.toggle({
+    super.key,
+    required this.service,
+    required this.connectionId,
+    required bool this.value,
+    required ValueChanged<bool> this.onChanged,
+    required this.blockedMessage,
+    this.hint = 'requires a read-write key',
+    this.resource,
+  }) : _shape = _GateShape.toggle,
+       label = null,
+       child = null,
+       icon = null,
+       tooltip = null,
+       color = null,
+       builder = null,
+       onTap = _noop;
+
+  static void _noop() {}
+
+  final _GateShape _shape;
+
+  /// Which service the blocked control belongs to. Aims the toast's action at
+  /// the page where that credential is replaced, and names its verb.
   final ServiceKey service;
 
   /// Which saved connection's scope governs this control. Per connection, not
@@ -217,32 +516,139 @@ class CapabilityGatedAction extends ConsumerWidget {
   /// read-only on another, so the *scope* cannot be looked up from [service].
   final String connectionId;
 
-  final String label;
+  /// For services that scope per resource — which resource this writes
+  /// (`vms`, `proxy_hosts`, a TrueNAS area). Null asks about the connection
+  /// as a whole.
+  final String? resource;
 
-  /// The toast, e.g. `This Unraid key can read. Starting a container needs a
-  /// key with write scope.`
+  /// The accessible name of the default cell.
+  final String? label;
+
+  /// The toast, e.g. `This Unraid key can't start or stop VMs.`
   final String blockedMessage;
 
   final VoidCallback onTap;
+
+  /// The `requires …` fragment, published while the control is blocked.
   final String hint;
-  final Widget child;
+
+  final Widget? child;
+
+  /// The glyph of the [CapabilityGatedAction.icon] shape.
+  final Widget? icon;
+
+  /// The name of the [CapabilityGatedAction.icon] shape.
+  final String? tooltip;
+
+  /// The glyph colour of the [CapabilityGatedAction.icon] shape.
+  final Color? color;
+
+  final GatedAffordanceBuilder? builder;
+
+  /// The state of the [CapabilityGatedAction.toggle] shape.
+  final bool? value;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scope = ref.watch(capabilityScopeForProvider(connectionId));
-
-    return GatedAffordance(
-      enabled: scope.canWrite,
-      label: label,
+    final gate = _resolveCapabilityGate(
+      context,
+      ref,
+      service: service,
+      connectionId: connectionId,
+      resource: resource,
       hint: hint,
-      onTap: onTap,
-      onBlocked: () => SnackBarHelper.withAction(
-        context,
-        blockedMessage,
-        actionLabel: 'Update the key',
-        onAction: () => context.go(ServiceRoutes.settingsFor(service)),
-      ),
-      child: child,
+      blockedMessage: blockedMessage,
+    );
+
+    switch (_shape) {
+      case _GateShape.cell:
+        return GatedAffordance(
+          enabled: gate.enabled,
+          label: label!,
+          hint: gate.hint,
+          onTap: onTap,
+          onBlocked: gate.onBlocked,
+          child: child!,
+        );
+      case _GateShape.builder:
+        return GatedAffordance.builder(
+          enabled: gate.enabled,
+          hint: gate.hint,
+          onTap: onTap,
+          onBlocked: gate.onBlocked,
+          builder: builder!,
+        );
+      case _GateShape.icon:
+        return IconButton(
+          tooltip: tooltip,
+          color: color,
+          onPressed: gate.enabled ? onTap : gate.onBlocked,
+          icon: GatedAffordance.annotateFor(
+            enabled: gate.enabled,
+            hint: gate.hint,
+            child: icon!,
+          ),
+        );
+      case _GateShape.toggle:
+        final toggle = Switch(
+          value: value!,
+          onChanged: gate.enabled ? onChanged : (_) => gate.onBlocked(),
+        );
+        return MergeSemantics(
+          child: Semantics(
+            hint: gate.hint,
+            child: gate.enabled
+                ? toggle
+                : Opacity(
+                    opacity: GatedAffordance.dimmedOpacity,
+                    child: toggle,
+                  ),
+          ),
+        );
+    }
+  }
+}
+
+/// The label of a `PopupMenuItem` write, dimmed and hinted when the write is
+/// blocked.
+///
+/// The item itself stays `enabled: true` — a disabled menu item is skipped by
+/// screen readers, the same failure as a disabled button — and its
+/// `onSelected` asks [capabilityWriteAllowed] before acting. The hint lands on
+/// the item's own node because `PopupMenuItem` merges its content.
+class CapabilityGatedMenuLabel extends ConsumerWidget {
+  const CapabilityGatedMenuLabel({
+    super.key,
+    required this.connectionId,
+    required this.text,
+    required this.hint,
+    required this.service,
+    this.resource,
+    this.style,
+  });
+
+  final ServiceKey service;
+  final String connectionId;
+  final String? resource;
+  final String text;
+
+  /// The `requires …` fragment, published while the write is blocked.
+  final String hint;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final grant = ref.watch(capabilityGrantForProvider(connectionId));
+    final enabled = grant.scopeFor(resource).canWrite;
+    return GatedAffordance.annotateFor(
+      enabled: enabled,
+      hint: enabled
+          ? null
+          : grant.basis == CapabilityBasis.unanswered
+          ? CapabilityCopy.unansweredHint(service)
+          : hint,
+      child: Text(text, style: style),
     );
   }
 }
