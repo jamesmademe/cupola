@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 
@@ -159,7 +160,9 @@ class ProwlarrIndexerTile extends StatelessWidget {
               borderRadius: AppRadius.borderRadiusSm,
             ),
             child: Text(
-              (indexer.protocol ?? '?').toUpperCase(),
+              // Sentence case: a dense per-row badge, and the eyebrow is the
+              // only voice that uppercases.
+              capitalizeFirst(indexer.protocol ?? '?'),
               style: Theme.of(context).textTheme.labelSmall!
                   .weight(FontWeight.w600)
                   .copyWith(color: protocolColor),

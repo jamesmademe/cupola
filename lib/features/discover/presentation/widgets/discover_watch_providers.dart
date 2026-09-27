@@ -163,10 +163,10 @@ class _ProviderGroupLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      label.toUpperCase(),
-      // Uppercase, but there are two of these inside one section that already
-      // has its own header, so they are sub-group labels rather than eyebrows —
-      // they stay on the label ramp with the tracking it derives.
+      label,
+      // Two of these sit inside one section that already has its own header,
+      // so they are sub-group labels rather than kickers: sentence case on the
+      // label ramp, because the eyebrow is the only voice that uppercases.
       style: Theme.of(context).textTheme.labelSmall
           ?.weight(FontWeight.w600)
           .copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),

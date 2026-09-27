@@ -1578,13 +1578,13 @@ class _ServiceTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      label.toUpperCase(),
+                      label,
                       maxLines: 1,
-                      // Off `AppTheme.eyebrow` and onto the label ramp: there is
-                      // one of these per chip in a strip of them, and the Eyebrow
-                      // Rule stops at repetition — a kicker that appears eight
-                      // times across one scroll is not introducing anything. The
-                      // selected/unselected tone is unchanged.
+                      // Sentence case on the label ramp: there is one of these
+                      // per chip in a strip of them, and the Eyebrow Rule stops
+                      // at repetition — a kicker that appears eight times
+                      // across one scroll is not introducing anything, and the
+                      // eyebrow is the only voice that uppercases.
                       style: theme.textTheme.labelSmall
                           ?.weight(FontWeight.w600)
                           .copyWith(

@@ -17,8 +17,7 @@ import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 /// which it toned blue while the table calls it neutral: a grab is the system
 /// doing its job, on a list that is mostly grabs.
 ///
-/// Only the *shape* is this file's: an uppercase badge string and an
-/// [IconData]. The label, the tone and the picture all come from the table.
+/// Only the *shape* is this file's: a badge string and an [IconData]. The label, the tone and the picture all come from the table.
 ({IconData icon, Color color, String label}) readarrEventStyle(
   String eventType,
   ColorScheme colorScheme,
@@ -31,11 +30,11 @@ import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
     // — the two events this list shows most — were the only ones in it that
     // could not be read in daylight.
     color: statusToneColor(colorScheme, tone),
-    // The badge is uppercase by design; the *wording* is not this file's to
-    // choose. An event the table has not classified arrives humanised
-    // ("Author Renamed"), which uppercases to a readable "AUTHOR RENAMED"
-    // rather than the old camel-case shout.
-    label: label.toUpperCase(),
+    // The table's own sentence-case wording, unchanged. The badge used to
+    // uppercase it, which made a dense label repeated on every row into a
+    // second uppercase voice beside the eyebrow. An event the table has not
+    // classified arrives humanised ("Author renamed").
+    label: label,
   );
 }
 

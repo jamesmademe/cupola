@@ -483,16 +483,12 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+    // A section kicker, so the eyebrow itself rather than a hand-built copy
+    // of its numbers; the ear gets the sentence-case source.
     child: Text(
       text.toUpperCase(),
-      style: AppTheme.chrome(
-        context,
-        size: 11,
-        weight: FontWeight.w600,
-        color: CupolaThemeColors.of(context).dimText,
-        height: 1.2,
-        letterSpacing: 1.4,
-      ),
+      semanticsLabel: text,
+      style: AppTheme.eyebrow(CupolaThemeColors.of(context).dimText),
     ),
   );
 }

@@ -72,12 +72,12 @@ void main() {
           expect(incomplete.color, isNot(scheme.onSurfaceVariant));
           // The table's wording, not this tile's. These are two different
           // events — a grab that never imported, and a book that imported with
-          // files missing — and collapsing both to "IMPORT FAILED" here made
+          // files missing — and collapsing both to "Import failed" here made
           // the History tab say one thing where the Overview said two.
-          expect(incomplete.label, 'IMPORT INCOMPLETE');
+          expect(incomplete.label, 'Import incomplete');
           expect(
             readarrEventStyle('importFailed', scheme).label,
-            'IMPORT FAILED',
+            'Import failed',
           );
           expect(
             readarrEventStyle('importFailed', scheme).color,
@@ -92,15 +92,15 @@ void main() {
           // "BOOKFILERENAMED" on the History tab while the Overview, reading
           // the same record through the same table, read "Renamed".
           final renamed = readarrEventStyle('bookFileRenamed', scheme);
-          expect(renamed.label, 'RENAMED');
+          expect(renamed.label, 'Renamed');
           expect(renamed.color, statusToneColor(scheme, StatusTone.neutral));
 
           final retagged = readarrEventStyle('bookFileRetagged', scheme);
-          expect(retagged.label, 'RETAGGED');
+          expect(retagged.label, 'Retagged');
           expect(retagged.color, statusToneColor(scheme, StatusTone.neutral));
 
           final ignored = readarrEventStyle('downloadIgnored', scheme);
-          expect(ignored.label, 'IGNORED');
+          expect(ignored.label, 'Ignored');
         });
 
         test('this tile and the shared table cannot disagree', () {
@@ -123,7 +123,7 @@ void main() {
             final style = readarrEventStyle(eventType, scheme);
             expect(
               style.label,
-              historyEventLabel(eventType).toUpperCase(),
+              historyEventLabel(eventType),
               reason: 'label for $eventType',
             );
             expect(
@@ -139,7 +139,7 @@ void main() {
           // unnamed event is spelled out and left neutral, which is the right
           // answer for something nobody has classified. It is not a shout.
           final style = readarrEventStyle('authorRenamed', scheme);
-          expect(style.label, 'AUTHOR RENAMED');
+          expect(style.label, 'Author renamed');
           expect(style.color, statusToneColor(scheme, StatusTone.neutral));
         });
       });

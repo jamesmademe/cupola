@@ -32,7 +32,7 @@ void main() {
             _item(eventType: 'indexerQuery', successful: false),
             scheme,
           );
-          expect(style.label, 'FAILED');
+          expect(style.label, 'Failed');
           expect(style.color, statusToneColor(scheme, StatusTone.warning));
           expect(style.color, isNot(statusToneColor(scheme, StatusTone.error)));
         });
@@ -61,6 +61,19 @@ void main() {
             ).color,
             statusToneColor(scheme, StatusTone.success),
           );
+        });
+
+        test('a badge is sentence case, never a second uppercase voice', () {
+          // The eyebrow is the only voice that uppercases. These badges repeat
+          // on every row, and they used to read GRAB, QUERY and, for an event
+          // nobody had named, the API identifier shouted in capitals.
+          String label(String eventType) =>
+              prowlarrEventStyle(_item(eventType: eventType), scheme).label;
+          expect(label('releaseGrabbed'), 'Grab');
+          expect(label('indexerQuery'), 'Query');
+          expect(label('indexerAuth'), 'Auth');
+          expect(label('indexerRss'), 'RSS');
+          expect(label('indexerStatusChange'), 'Indexer status change');
         });
       });
     }

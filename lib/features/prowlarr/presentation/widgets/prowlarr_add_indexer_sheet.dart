@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
@@ -251,7 +252,8 @@ class _DefinitionRow extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isTorrent = (definition.protocol ?? '').toLowerCase() == 'torrent';
     final badges = <String>[
-      if (definition.protocol != null) definition.protocol!.toUpperCase(),
+      // Sentence case, like the other badges beside it.
+      if (definition.protocol != null) capitalizeFirst(definition.protocol!),
       if (definition.privacy != null) definition.privacy!,
       if (definition.language != null) definition.language!,
     ];

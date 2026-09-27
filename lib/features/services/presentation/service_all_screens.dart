@@ -470,11 +470,11 @@ class _SmallPill extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       child: Text(
-        label.toUpperCase(),
-        // Uppercase but *not* `AppTheme.eyebrow`: this pill repeats once per
-        // request row, and the eyebrow earns its tracking by being the single
-        // kicker over a region. So it stays on the label ramp and takes the
-        // tracking the ramp derives for 11pt.
+        label,
+        // Sentence case: this pill repeats once per request row, so it is a
+        // dense label, not a kicker. The eyebrow is the one uppercase voice and
+        // earns it by being the single kicker over a region; a pill that
+        // shouted on every row was a second uppercase voice beside it.
         style: Theme.of(
           context,
         ).textTheme.labelSmall?.weight(FontWeight.w600).copyWith(color: color),

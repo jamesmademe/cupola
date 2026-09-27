@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 
@@ -20,19 +21,19 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
     // A query the indexer refused is a fault the indexer reported, which is
     // amber. Red is kept for a Prowlarr that did not answer at all.
     return (
-      label: 'FAILED',
+      label: 'Failed',
       color: statusToneColor(colorScheme, StatusTone.warning),
       icon: Icons.close_rounded,
     );
   }
   return switch (item.eventType) {
     'releaseGrabbed' => (
-      label: 'GRAB',
+      label: 'Grab',
       color: statusToneColor(colorScheme, StatusTone.success),
       icon: Icons.download_rounded,
     ),
     'indexerQuery' => (
-      label: 'QUERY',
+      label: 'Query',
       color: AppColors.prowlarr,
       icon: Icons.search_rounded,
     ),
@@ -46,12 +47,14 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
     // colour on an indexer doing exactly what it is supposed to — and left the
     // one real failure in this list indistinguishable from it.
     'indexerAuth' => (
-      label: 'AUTH',
+      label: 'Auth',
       color: statusToneColor(colorScheme, StatusTone.info),
       icon: Icons.key_rounded,
     ),
     _ => (
-      label: (item.eventType ?? 'EVENT').toUpperCase(),
+      // Humanised, not uppercased: the badge is a dense label repeated on
+      // every row, and the eyebrow is the only voice that uppercases.
+      label: humanizeCamelCase(item.eventType ?? 'Event'),
       color: AppColors.prowlarr,
       icon: Icons.bolt_rounded,
     ),

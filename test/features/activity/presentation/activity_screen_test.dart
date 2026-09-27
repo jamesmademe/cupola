@@ -254,7 +254,15 @@ void main() {
     expect(find.byType(SelectionPills<int>), findsOneWidget);
     expect(find.text('Downloading'), findsOneWidget);
     expect(find.text('Streaming'), findsOneWidget);
-    expect(find.text('All'), findsNothing);
+    // Scoped to the pills: the service strip's own "All" chip now reads in
+    // sentence case too, and it is a different control.
+    expect(
+      find.descendant(
+        of: find.byType(SelectionPills<int>),
+        matching: find.text('All'),
+      ),
+      findsNothing,
+    );
 
     await tester.tap(find.text('History'));
     await tester.pumpAndSettle();
