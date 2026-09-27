@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
@@ -1501,9 +1502,24 @@ class _SavedConnectionStatus extends ConsumerWidget {
       reason: diagnosis.reason,
     );
 
+    // "Answering · read-only key": a credential that reads and may not write
+    // is a fact about this connection worth stating where it is replaced.
+    // Asked only once the connection answers, and only of the three services
+    // whose one credential can be narrower than their writes.
+    final qualifier =
+        diagnosis.status == ServiceConnectionStatus.connected &&
+            service.hasScopedCredential
+        ? credentialScopeQualifier(
+            service,
+            ref.watch(capabilityGrantForProvider(instanceId)),
+          )
+        : null;
+
     return _HeaderStatus(
       icon: presentation.icon,
-      label: presentation.label,
+      label: qualifier == null
+          ? presentation.label
+          : '${presentation.label} · $qualifier',
       color: statusToneColor(colorScheme, presentation.tone),
       busy: diagnosis.status == ServiceConnectionStatus.checking,
     );

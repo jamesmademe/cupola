@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
@@ -33,6 +34,28 @@ class ConnectionPresentation {
   /// for never-configured services — the settings home stays quiet unless
   /// something is actually wrong.
   final bool needsAttention;
+}
+
+/// The words a connection's label gains when it answers with a credential
+/// narrower than the service's writes: `read-only key`, `view-only account`,
+/// `limited key`. Null when there is nothing to add.
+///
+/// Only answers the service gave (or a refusal it made) qualify the label. A
+/// probe that could not ask says nothing here: "Answering · read-only key"
+/// would state a fact nobody established. Green stays green — a narrow
+/// credential is configuration, not a fault — so this changes the words and
+/// never the tone.
+String? credentialScopeQualifier(ServiceKey service, CapabilityGrant grant) {
+  if (!service.hasScopedCredential) return null;
+  if (grant.basis == CapabilityBasis.unanswered) return null;
+  final noun = service.capabilityCredentialNoun;
+  if (grant.scopeFor(null).isRestricted) {
+    return service == ServiceKey.nginxProxyManager
+        ? 'view-only $noun'
+        : 'read-only $noun';
+  }
+  if (grant.writable != null) return 'limited $noun';
+  return null;
 }
 
 /// Describes a connection state for [service].

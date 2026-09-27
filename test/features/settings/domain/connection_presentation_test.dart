@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
@@ -167,6 +168,56 @@ void main() {
           reason: '$status',
         );
       }
+    });
+  });
+
+  group('the credential scope qualifier', () {
+    test('a read-only answer reads in the service\'s own noun', () {
+      expect(
+        credentialScopeQualifier(
+          ServiceKey.unraid,
+          const CapabilityGrant.readOnly(),
+        ),
+        'read-only key',
+      );
+      expect(
+        credentialScopeQualifier(
+          ServiceKey.nginxProxyManager,
+          const CapabilityGrant.readOnly(),
+        ),
+        'view-only account',
+      );
+      expect(
+        credentialScopeQualifier(
+          ServiceKey.truenas,
+          const CapabilityGrant.refused(),
+        ),
+        'read-only key',
+      );
+      expect(
+        credentialScopeQualifier(
+          ServiceKey.truenas,
+          const CapabilityGrant.partial({'smb'}),
+        ),
+        'limited key',
+      );
+    });
+
+    test('nothing is claimed that nobody established', () {
+      for (final grant in const [
+        CapabilityGrant.unanswered(),
+        CapabilityGrant.unknown(),
+        CapabilityGrant.readWrite(),
+      ]) {
+        expect(credentialScopeQualifier(ServiceKey.unraid, grant), isNull);
+      }
+      expect(
+        credentialScopeQualifier(
+          ServiceKey.radarr,
+          const CapabilityGrant.readOnly(),
+        ),
+        isNull,
+      );
     });
   });
 }
