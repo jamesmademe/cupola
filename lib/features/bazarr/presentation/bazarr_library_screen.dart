@@ -9,6 +9,7 @@ import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -425,7 +426,12 @@ class _BazarrLibraryError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline_rounded, color: colorScheme.error),
+            // A load that did not come back: red on the glyph alone, walked
+            // against the page it sits on.
+            Icon(
+              Icons.error_outline_rounded,
+              color: statusToneColor(colorScheme, StatusTone.error),
+            ),
             const SizedBox(height: AppSpacing.sm),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: AppSpacing.md),

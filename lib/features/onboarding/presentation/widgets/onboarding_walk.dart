@@ -731,6 +731,15 @@ class _CertificateCard extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final rotated = probe.rotated;
+    // The card's own ground: the rotation's wash over the page, or the plain
+    // container. Every red ink inside it is measured against this.
+    final ground = rotated
+        ? Color.alphaBlend(
+            scheme.errorContainer.withValues(alpha: 0.35),
+            scheme.surface,
+          )
+        : scheme.surfaceContainer;
+    final alarm = statusToneColor(scheme, StatusTone.error, surface: ground);
 
     return Container(
       width: double.infinity,
@@ -752,6 +761,7 @@ class _CertificateCard extends StatelessWidget {
             probe: probe,
             previousFingerprint: previousFingerprint,
             sharedWith: sharedWith,
+            surface: ground,
           ),
           const SizedBox(height: AppSpacing.md),
           // Rotated gets no visually-affirmative default: an outlined button
@@ -761,7 +771,7 @@ class _CertificateCard extends StatelessWidget {
           OutlinedButton(
             onPressed: onTrust,
             style: rotated
-                ? OutlinedButton.styleFrom(foregroundColor: scheme.error)
+                ? OutlinedButton.styleFrom(foregroundColor: alarm)
                 : null,
             child: Text(
               rotated

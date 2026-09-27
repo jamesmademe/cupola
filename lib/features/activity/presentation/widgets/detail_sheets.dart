@@ -6,6 +6,7 @@ import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 
@@ -395,7 +396,18 @@ class _SectionMessageContent extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.warning_amber_rounded, size: 18, color: colorScheme.error),
+          // A status message is the *arr explaining what went wrong with a
+          // record it read perfectly well: a fault, so amber, walked against
+          // the sheet the transparent card sits on.
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 18,
+            color: statusToneColor(
+              colorScheme,
+              StatusTone.warning,
+              surface: colorScheme.surfaceContainer,
+            ),
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(child: Text(message, style: theme.textTheme.bodyMedium)),
         ],

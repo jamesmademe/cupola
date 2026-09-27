@@ -56,8 +56,13 @@ class ManageMediaSheet extends ConsumerWidget {
     }
 
     if (state.error != null) {
+      // A load that did not come back: the glyph carries the red, the
+      // sentence stays in the sheet's own secondary ink.
       return Center(
-        child: Text(state.error!, style: TextStyle(color: colorScheme.error)),
+        child: FaultNote.unreachable(
+          message: state.error!,
+          surface: colorScheme.surfaceContainer,
+        ),
       );
     }
 

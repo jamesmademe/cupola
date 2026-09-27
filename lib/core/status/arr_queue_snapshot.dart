@@ -47,11 +47,14 @@ class ArrQueueEntry {
 
   /// The tone this record's severity earns over the one its [pipeline] implies.
   ///
-  /// Only an `error` overrides: a warning already escalates a calm tone inside
-  /// [MediaStatusInfo.tone], but nothing there could promote a record the
-  /// service explicitly flagged as failing.
+  /// Only an `error` overrides, and it overrides to **amber**. A record the
+  /// service flagged as failing is the canonical fault: the \*arr answered and
+  /// said this download is broken. Red would claim it did not answer at all.
+  /// The override still matters, because it holds the fault tone even when the
+  /// pipeline alone would read calm; a warning escalates the same way through
+  /// [MediaStatusInfo.hasWarning].
   StatusTone? get toneOverride =>
-      severity == ArrQueueSeverity.error ? StatusTone.error : null;
+      severity == ArrQueueSeverity.error ? StatusTone.warning : null;
 
   /// Reads a single `/queue` record.
   ///

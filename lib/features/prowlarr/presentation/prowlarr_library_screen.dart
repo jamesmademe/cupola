@@ -10,6 +10,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
@@ -231,14 +232,15 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
               toggleIndexerFlow(context, ref, indexer);
             },
           ),
+          // The irreversible-action exception, walked against the sheet.
           ListTile(
             leading: Icon(
               Icons.delete_outline_rounded,
-              color: Theme.of(context).colorScheme.error,
+              color: _destructiveInk(context),
             ),
             title: Text(
               'Delete',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              style: TextStyle(color: _destructiveInk(context)),
             ),
             onTap: () {
               Navigator.of(sheetContext).pop();
@@ -869,4 +871,15 @@ class _FilterChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Red for the one irreversible row, measured against the `AppBottomSheet`
+/// ground (`surfaceContainer` in both themes) instead of painted raw.
+Color _destructiveInk(BuildContext context) {
+  final colorScheme = Theme.of(context).colorScheme;
+  return statusToneColor(
+    colorScheme,
+    StatusTone.error,
+    surface: colorScheme.surfaceContainer,
+  );
 }

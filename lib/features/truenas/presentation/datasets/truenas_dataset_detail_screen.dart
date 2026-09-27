@@ -10,6 +10,7 @@ import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/section_header.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/truenas/domain/models/dataset.dart';
 import 'package:cupola/features/truenas/presentation/datasets/truenas_dataset_actions.dart';
@@ -221,7 +222,12 @@ class _SnapshotTile extends ConsumerWidget {
             icon: Icon(
               Icons.delete_outline_rounded,
               size: 18,
-              color: theme.colorScheme.error,
+              // The irreversible-action exception, walked against the card.
+              color: statusToneColor(
+                theme.colorScheme,
+                StatusTone.error,
+                surface: theme.colorScheme.surfaceContainer,
+              ),
             ),
             tooltip: 'Delete snapshot',
             onPressed: () async {

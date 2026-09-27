@@ -306,6 +306,7 @@ class _UnreachableCard extends ConsumerWidget {
                         colorScheme,
                         StatusTone.error,
                         surface: _paneSurface(colorScheme),
+                        tintAlpha: 0.07,
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),

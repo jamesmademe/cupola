@@ -179,10 +179,17 @@ class _ActionBar extends ConsumerWidget {
     // blue Update, amber Down — which put the whole status vocabulary on a row
     // of *controls*. A tone describes a state; nothing here has a state. Amber
     // on "Down" claimed a fault about an action the user is about to take on
-    // purpose, and red on "Stop" said "unreachable", which is the one thing red
-    // means on this canvas. So: the service accent for everything that is an
-    // ordinary operation, and `colorScheme.error` — Material's destructive
-    // role, not a status tone — for the two that destroy something.
+    // purpose, and red on a status says "unreachable", which is the one thing
+    // red means on this canvas. So: the service accent for everything that is
+    // an ordinary operation, and red only for Delete, because red on an action
+    // means it cannot be undone. Stop used to be red too, and a stopped stack is
+    // one Start away from running again.
+    final destructive = statusToneColor(
+      colorScheme,
+      StatusTone.error,
+      surface: colorScheme.surface,
+      tintAlpha: 0.12,
+    );
     final accent = ServiceTheme.onTint(
       AppColors.dockge,
       surface: colorScheme.surface,
@@ -208,7 +215,7 @@ class _ActionBar extends ConsumerWidget {
         _ActionChip(
           icon: Icons.stop_rounded,
           label: 'Stop',
-          color: colorScheme.error,
+          color: accent,
           onTap: () => runDockgeStackAction(
             context,
             ref,
@@ -260,7 +267,7 @@ class _ActionBar extends ConsumerWidget {
         _ActionChip(
           icon: Icons.delete_outline_rounded,
           label: 'Delete',
-          color: colorScheme.error,
+          color: destructive,
           onTap: () => _confirmDelete(context, ref),
         ),
       ],
@@ -283,8 +290,15 @@ class _ActionBar extends ConsumerWidget {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-              foregroundColor: Theme.of(ctx).colorScheme.onError,
+              backgroundColor: statusToneFill(
+                Theme.of(ctx).colorScheme,
+                StatusTone.error,
+              ),
+              // Measured against the fill: `onError` white reads 3.5:1 on the
+              // light theme's red.
+              foregroundColor: ServiceTheme.foregroundOn(
+                statusToneFill(Theme.of(ctx).colorScheme, StatusTone.error),
+              ),
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete'),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -85,8 +86,15 @@ class TrueNasPowerCard extends ConsumerWidget {
                     hostname: hostname,
                     reboot: false,
                   ),
+                  // Shutting a NAS down from a phone is the irreversible-
+                  // action exception: nothing in this app can power it back
+                  // on. Walked against the card the button sits on.
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: colorScheme.error,
+                    foregroundColor: statusToneColor(
+                      colorScheme,
+                      StatusTone.error,
+                      surface: colorScheme.surfaceContainer,
+                    ),
                   ),
                   icon: const Icon(Icons.power_settings_new_rounded, size: 18),
                   label: const Text('Shut down…'),
@@ -224,8 +232,13 @@ Future<bool> _confirmByTypingHostname(
               hint: enabled ? null : 'Type $phrase above to enable',
               child: FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.error,
-                  foregroundColor: colorScheme.onError,
+                  backgroundColor: statusToneFill(
+                    colorScheme,
+                    StatusTone.error,
+                  ),
+                  foregroundColor: ServiceTheme.foregroundOn(
+                    statusToneFill(colorScheme, StatusTone.error),
+                  ),
                 ),
                 onPressed: enabled
                     ? () => Navigator.of(context).pop(true)

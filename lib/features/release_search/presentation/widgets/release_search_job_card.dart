@@ -184,9 +184,10 @@ class ReleaseSearchJobCard extends StatelessWidget {
         label: 'Expired',
         tone: StatusTone.neutral,
       ),
+      // Stopped unexpectedly: the fault arm, the same tone as the indicator.
       ReleaseSearchJobStatus.failed => const _Pill(
         label: 'Stopped',
-        tone: StatusTone.error,
+        tone: StatusTone.warning,
       ),
       _ => const _Pill(label: 'Done', tone: StatusTone.neutral),
     };

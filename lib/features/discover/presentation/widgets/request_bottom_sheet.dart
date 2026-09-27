@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/features/discover/presentation/request_form_provider.dart';
 
 /// Bottom sheet for selecting quality profile and submitting request to Seerr.
@@ -36,7 +37,12 @@ class RequestBottomSheet extends ConsumerWidget {
         if (state.isLoading)
           const Center(child: CircularProgressIndicator())
         else if (state.error != null)
-          Text(state.error!, style: TextStyle(color: colorScheme.error))
+          // A load that did not come back: the glyph carries the red, the
+          // sentence stays in the sheet's own secondary ink.
+          FaultNote.unreachable(
+            message: state.error!,
+            surface: colorScheme.surfaceContainer,
+          )
         else ...[
           if (state.servers.length > 1) ...[
             Text('Server', style: theme.textTheme.labelLarge),

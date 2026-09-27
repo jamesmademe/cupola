@@ -340,9 +340,19 @@ class _RequestListRow extends ConsumerWidget {
                 dimension: 28,
                 child: IconButton.filledTonal(
                   icon: const Icon(Icons.delete_outline_rounded, size: 14),
-                  color: AppColors.error,
+                  // The irreversible-action exception, walked against its own
+                  // wash over the row's card.
+                  color: statusToneColor(
+                    colorScheme,
+                    StatusTone.error,
+                    surface: colorScheme.surfaceContainer,
+                    tintAlpha: 0.10,
+                  ),
                   style: IconButton.styleFrom(
-                    backgroundColor: AppColors.error.withValues(alpha: 0.10),
+                    backgroundColor: statusToneFill(
+                      colorScheme,
+                      StatusTone.error,
+                    ).withValues(alpha: 0.10),
                     padding: EdgeInsets.zero,
                   ),
                   onPressed: () => _deleteRequest(context, ref, title),

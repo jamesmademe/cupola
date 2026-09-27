@@ -153,10 +153,14 @@ MediaStatusInfo manualImportCommandStatus(ManualImportCommandStatus command) {
     'queued' => ('Queued', StatusTone.info),
     'started' => ('Running', StatusTone.info),
     'completed' => ('Completed', StatusTone.success),
-    'failed' => ('Failed', StatusTone.error),
-    'aborted' => ('Aborted', StatusTone.error),
-    'cancelled' => ('Cancelled', StatusTone.error),
-    'orphaned' => ('Orphaned', StatusTone.error),
+    // Amber, not red: the service answered and reported the import went
+    // wrong, which is a fault. An aborted or orphaned command stopped without
+    // anyone asking it to, which is the same arm.
+    'failed' => ('Failed', StatusTone.warning),
+    'aborted' => ('Aborted', StatusTone.warning),
+    'orphaned' => ('Orphaned', StatusTone.warning),
+    // Somebody cancelled it. Stopped on purpose is neutral.
+    'cancelled' => ('Cancelled', StatusTone.neutral),
     _ => (command.status, StatusTone.info),
   };
   return MediaStatusInfo(

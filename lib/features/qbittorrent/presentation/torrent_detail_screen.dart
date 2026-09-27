@@ -750,7 +750,14 @@ class _ActionsTab extends ConsumerWidget {
         const SizedBox(height: AppSpacing.sm),
         FilledButton.icon(
           style: FilledButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.error,
+            backgroundColor: statusToneFill(
+              Theme.of(context).colorScheme,
+              StatusTone.error,
+            ),
+            // The theme's `onPrimary` white reads 3.5:1 on the light red.
+            foregroundColor: ServiceTheme.foregroundOn(
+              statusToneFill(Theme.of(context).colorScheme, StatusTone.error),
+            ),
           ),
           onPressed: () => _confirmDeleteSingle(context, ref, torrent),
           icon: const Icon(Icons.delete_outline_rounded, size: 18),

@@ -7,6 +7,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/section_header.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/truenas/domain/models/data_protection.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
@@ -168,7 +169,12 @@ class _TaskTile extends ConsumerWidget {
             icon: Icon(
               Icons.delete_outline_rounded,
               size: 18,
-              color: theme.colorScheme.error,
+              // The irreversible-action exception, walked against the card.
+              color: statusToneColor(
+                theme.colorScheme,
+                StatusTone.error,
+                surface: theme.colorScheme.surfaceContainer,
+              ),
             ),
             tooltip: 'Delete',
             onPressed: () async {

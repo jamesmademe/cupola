@@ -476,6 +476,15 @@ class SettingsCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final effectiveAccentColor = accentColor ?? colorScheme.primary;
+    final leadingTheme = ServiceTheme.fromAccent(effectiveAccentColor);
+    // The glyph is ink on the accent's own soft wash over the card, so it is
+    // walked against that composite. Raw, the destructive rows' red and the
+    // brighter accents fell under 3:1 on paper.
+    final leadingInk = ServiceTheme.onTint(
+      effectiveAccentColor,
+      surface: colorScheme.surfaceContainer,
+      tintAlpha: leadingTheme.softContainer.a,
+    );
 
     final spokenLabel =
         semanticLabel ?? [title, ?subtitleLeadingLabel, ?subtitle].join(', ');
@@ -489,13 +498,11 @@ class SettingsCard extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: ServiceTheme.fromAccent(
-                  effectiveAccentColor,
-                ).softContainer,
+                color: leadingTheme.softContainer,
                 borderRadius: AppRadius.borderRadiusSm,
               ),
               child: IconTheme(
-                data: IconThemeData(color: effectiveAccentColor, size: 20),
+                data: IconThemeData(color: leadingInk, size: 20),
                 child: Center(child: leading!),
               ),
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -30,7 +31,13 @@ class CertTrustContent extends StatelessWidget {
     required this.probe,
     this.previousFingerprint,
     this.sharedWith = const [],
+    this.surface,
   });
+
+  /// The ground this content is drawn on, which the rotation's red is measured
+  /// against. Defaults to the dialog surface; the onboarding card passes its
+  /// own tinted composite.
+  final Color? surface;
 
   /// The origin (`https://host:port`) this certificate was presented for.
   final String origin;
@@ -57,6 +64,18 @@ class CertTrustContent extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final cert = probe.certificate;
+    // Red stays the rotation's: a changed fingerprint is the one case where the
+    // app refuses to talk to a host it could otherwise reach, and it may be an
+    // interception. It is still walked against the ground it lands on — raw,
+    // the error byte reads about 3.4:1 as text on paper.
+    final alarm = statusToneColor(
+      scheme,
+      StatusTone.error,
+      surface:
+          surface ??
+          theme.dialogTheme.backgroundColor ??
+          scheme.surfaceContainerHigh,
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -72,7 +91,7 @@ class CertTrustContent extends StatelessWidget {
               // normal condition on a home install, and if the first trust
               // looks as dangerous as a *changed* fingerprint then the one that
               // matters stops standing out. Red is the rotation's alone.
-              color: rotated ? scheme.error : scheme.onSurfaceVariant,
+              color: rotated ? alarm : scheme.onSurfaceVariant,
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
@@ -85,7 +104,7 @@ class CertTrustContent extends StatelessWidget {
                     : 'Self-signed certificate',
                 style: theme.textTheme.titleMedium!
                     .weight(FontWeight.w600)
-                    .copyWith(color: rotated ? scheme.error : null),
+                    .copyWith(color: rotated ? alarm : null),
               ),
             ),
           ],
@@ -123,7 +142,7 @@ class CertTrustContent extends StatelessWidget {
           label: 'SHA-256',
           value: cert.displayFingerprint,
           monospace: true,
-          tone: rotated ? scheme.error : null,
+          tone: rotated ? alarm : null,
         ),
       ],
     );

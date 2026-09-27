@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -147,8 +148,12 @@ Future<bool> confirmByTyping(
             valueListenable: matches,
             builder: (context, enabled, _) => FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: colorScheme.error,
-                foregroundColor: colorScheme.onError,
+                backgroundColor: statusToneFill(colorScheme, StatusTone.error),
+                // Measured against the fill, never assumed: `onError` is white,
+                // which reads 3.5:1 on the light theme's red.
+                foregroundColor: ServiceTheme.foregroundOn(
+                  statusToneFill(colorScheme, StatusTone.error),
+                ),
               ),
               onPressed: enabled ? () => Navigator.of(context).pop(true) : null,
               child: Text(confirmLabel),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 
 /// A premium error state with an optional retry affordance.
 ///
@@ -63,7 +64,13 @@ class AppErrorState extends StatelessWidget {
               child: Icon(
                 Icons.error_outline_rounded,
                 size: compact ? 26 : 32,
-                color: colorScheme.error,
+                // A service that did not answer, so red; walked against the
+                // well it sits in rather than assumed to clear it.
+                color: statusToneColor(
+                  colorScheme,
+                  StatusTone.error,
+                  surface: colorScheme.errorContainer,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),

@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/media_search_popup_menu.dart';
+import 'package:cupola/core/widgets/tag_chip.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
@@ -342,6 +345,88 @@ void main() {
       expect(find.text('Unknown episode'), findsOneWidget);
       expect(find.text('Unknown series'), findsOneWidget);
     });
+  });
+
+  // The tone rule, on the two chips that broke it: a flagged queue record is a
+  // fault (amber), an unmonitored wanted row is backlog (neutral). Both used to
+  // be red, which says the service did not answer.
+  group('tone rule', () {
+    Color chipInk(WidgetTester tester, String label) => tester
+        .widget<Text>(
+          find.descendant(of: find.byType(TagChip), matching: find.text(label)),
+        )
+        .style!
+        .color!;
+
+    for (final theme in [AppTheme.darkTheme(), AppTheme.lightTheme()]) {
+      final scheme = theme.colorScheme;
+      final name = theme.brightness.name;
+
+      testWidgets('a queue warning is amber, not red ($name)', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: const Scaffold(
+              body: QueueItemTile(
+                item: {
+                  'title': 'Movie.2024.WEB-DL',
+                  'status': 'downloading',
+                  'trackedDownloadStatus': 'warning',
+                },
+                serviceType: ServiceType.movies,
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          chipInk(tester, 'Warning'),
+          ServiceTheme.onTint(
+            AppColors.warning,
+            surface: scheme.surfaceContainer,
+            tintAlpha: 0.12,
+          ),
+        );
+      });
+
+      testWidgets('an unmonitored wanted row is neutral ($name)', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: const Scaffold(
+              body: WantedItemTile(
+                item: {
+                  'title': 'Cool Movie',
+                  'status': 'released',
+                  'hasFile': false,
+                  'monitored': false,
+                },
+                serviceType: ServiceType.movies,
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          chipInk(tester, 'Unmonitored'),
+          ServiceTheme.onTint(
+            scheme.onSurfaceVariant,
+            surface: scheme.surfaceContainer,
+            tintAlpha: 0.12,
+          ),
+        );
+        // "Missing from disk" is the list of things to fetch, not damage.
+        expect(
+          tester
+              .widget<Text>(find.text('Movie missing from disk'))
+              .style!
+              .color,
+          scheme.onSurfaceVariant,
+        );
+      });
+    }
   });
 
   group('Queue status normalization', () {

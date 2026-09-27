@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
 
@@ -107,9 +108,14 @@ void main() {
           ),
         ),
       );
+      // Red, walked against the dialog it is drawn in rather than raw.
       expect(
         tester.widget<Icon>(find.byIcon(Icons.gpp_bad_outlined)).color,
-        scheme.error,
+        statusToneColor(
+          scheme,
+          StatusTone.error,
+          surface: AppTheme.darkTheme().dialogTheme.backgroundColor,
+        ),
       );
     });
 

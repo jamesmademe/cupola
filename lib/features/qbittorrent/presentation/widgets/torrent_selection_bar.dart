@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_actions.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/widgets/torrent_delete_dialog.dart';
@@ -92,7 +93,12 @@ class TorrentSelectionBar extends ConsumerWidget {
               IconButton(
                 icon: Icon(
                   Icons.delete_outline_rounded,
-                  color: colorScheme.error,
+                  // The irreversible-action exception, walked against the bar.
+                  color: statusToneColor(
+                    colorScheme,
+                    StatusTone.error,
+                    surface: colorScheme.surfaceContainerHigh,
+                  ),
                 ),
                 tooltip: 'Delete',
                 onPressed: onConfirmDelete,

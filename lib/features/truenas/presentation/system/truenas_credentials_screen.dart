@@ -7,6 +7,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/truenas/domain/models/credentials.dart';
 import 'package:cupola/features/truenas/presentation/system/truenas_system_providers.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
@@ -150,7 +151,12 @@ class _UserTile extends ConsumerWidget {
               icon: Icon(
                 Icons.delete_outline_rounded,
                 size: 18,
-                color: theme.colorScheme.error,
+                // The irreversible-action exception, walked against the card.
+                color: statusToneColor(
+                  theme.colorScheme,
+                  StatusTone.error,
+                  surface: theme.colorScheme.surfaceContainer,
+                ),
               ),
               tooltip: 'Delete user',
               onPressed: () async {
@@ -264,7 +270,12 @@ class _GroupTile extends ConsumerWidget {
               icon: Icon(
                 Icons.delete_outline_rounded,
                 size: 18,
-                color: theme.colorScheme.error,
+                // The irreversible-action exception, walked against the card.
+                color: statusToneColor(
+                  theme.colorScheme,
+                  StatusTone.error,
+                  surface: theme.colorScheme.surfaceContainer,
+                ),
               ),
               tooltip: 'Delete group',
               onPressed: () async {

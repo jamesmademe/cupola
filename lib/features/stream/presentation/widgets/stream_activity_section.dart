@@ -210,7 +210,8 @@ class _OfflineNote extends StatelessWidget {
           Icon(
             Icons.cloud_off_rounded,
             size: 16,
-            color: theme.colorScheme.error,
+            // Unreachable is the one thing red means; walked, not raw.
+            color: statusToneColor(theme.colorScheme, StatusTone.error),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(

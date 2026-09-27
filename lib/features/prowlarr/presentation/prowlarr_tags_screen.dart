@@ -10,6 +10,7 @@ import 'package:cupola/core/utils/service_action.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 
@@ -292,7 +293,12 @@ class _TagRow extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.delete_outline_rounded, size: 18),
                   tooltip: 'Delete tag',
-                  color: colorScheme.error,
+                  // The irreversible-action exception, walked against the row.
+                  color: statusToneColor(
+                    colorScheme,
+                    StatusTone.error,
+                    surface: colorScheme.surface,
+                  ),
                   onPressed: onDelete,
                 ),
               ],

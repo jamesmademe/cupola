@@ -211,7 +211,7 @@ void main() {
       expect(entry?.severity, ArrQueueSeverity.warning);
     });
 
-    test('a service-reported error outranks a warning', () {
+    test('a service-reported error is a fault, not unreachable', () {
       final entry = ArrQueueEntry.fromQueueItem({
         'status': 'downloading',
         'trackedDownloadState': 'downloading',
@@ -219,16 +219,17 @@ void main() {
       });
 
       expect(entry?.severity, ArrQueueSeverity.error);
-      expect(entry?.toneOverride, StatusTone.error);
+      // Changed: this used to override to StatusTone.error. The \*arr answered
+      // and flagged the download as failing, which is the canonical amber
+      // fault; red is kept for a connection that did not answer.
+      expect(entry?.toneOverride, StatusTone.warning);
       expect(
         mediaStatusFromQueue(
           availability: MediaAvailability.missing,
           monitored: true,
           queueEntry: entry,
         ).tone,
-        // Not downgraded to `warning` by `hasWarning`, which is what used to
-        // happen to every record the service had explicitly failed.
-        StatusTone.error,
+        StatusTone.warning,
       );
     });
 

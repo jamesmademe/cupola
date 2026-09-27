@@ -244,7 +244,10 @@ StatusTone releaseSearchTone(ReleaseSearchJob job) {
     ReleaseSearchJobStatus.running => StatusTone.info,
     ReleaseSearchJobStatus.completed =>
       job.releaseCount == 0 ? StatusTone.neutral : StatusTone.success,
-    ReleaseSearchJobStatus.failed => StatusTone.error,
+    // A search that stopped without being asked to is a fault, so amber: the
+    // job is what failed, and red is kept for the service's own reachability,
+    // which its connection badge already reports.
+    ReleaseSearchJobStatus.failed => StatusTone.warning,
     ReleaseSearchJobStatus.expired => StatusTone.neutral,
   };
 }

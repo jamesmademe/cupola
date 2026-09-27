@@ -296,8 +296,9 @@ class WantedItemTile extends StatelessWidget {
                 : null,
           ),
           if (subtitle != null) _SubtitleText(text: subtitle),
-          if (statusText != null)
-            _SubtitleText(text: statusText, color: colorScheme.error),
+          // Backlog, so neutral: "missing from disk" is the list of things to
+          // fetch, the resting state of a wanted row, not damage.
+          if (statusText != null) _SubtitleText(text: statusText),
           _ChipRow(chips: chips),
         ],
       ),
@@ -749,7 +750,15 @@ class _SheetActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    // Red here is the irreversible-action exception, walked against the sheet
+    // the buttons sit on rather than painted as the raw byte.
+    final destructiveInk = statusToneColor(
+      colorScheme,
+      StatusTone.error,
+      surface: colorScheme.surfaceContainer,
+    );
 
     void select(_RowAction action) {
       // Close the sheet first: the confirmation dialog is the thing that should
@@ -769,9 +778,9 @@ class _SheetActions extends StatelessWidget {
                   onPressed: () => select(action),
                   icon: Icon(action.icon, size: 18),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: colorScheme.error,
+                    foregroundColor: destructiveInk,
                     side: BorderSide(
-                      color: colorScheme.error.withValues(alpha: 0.5),
+                      color: destructiveInk.withValues(alpha: 0.5),
                     ),
                   ),
                   label: Text(action.label),
@@ -822,7 +831,14 @@ List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
   BuildContext context,
   List<_RowAction> actions,
 ) {
-  final colorScheme = Theme.of(context).colorScheme;
+  final theme = Theme.of(context);
+  final colorScheme = theme.colorScheme;
+  // The irreversible-action exception, walked against the menu's own surface.
+  final destructiveInk = statusToneColor(
+    colorScheme,
+    StatusTone.error,
+    surface: theme.popupMenuTheme.color ?? colorScheme.surfaceContainer,
+  );
   return [
     for (final action in actions)
       PopupMenuItem<_RowAction>(
@@ -833,7 +849,7 @@ List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
               action.icon,
               size: 18,
               color: action.destructive
-                  ? colorScheme.error
+                  ? destructiveInk
                   : colorScheme.onSurfaceVariant,
             ),
             const SizedBox(width: AppSpacing.md),
@@ -853,7 +869,7 @@ List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
                 style: action.destructive
                     ? DefaultTextStyle.of(
                         context,
-                      ).style.copyWith(color: colorScheme.error)
+                      ).style.copyWith(color: destructiveInk)
                     : null,
               ),
             ),
@@ -1168,11 +1184,13 @@ List<Widget> _buildQueueChips(
   final hasWarning = arrQueueHasWarning(item);
 
   return [
+    // A record the service flagged is a fault, so amber. Red would say the
+    // service did not answer, and it did: it answered with this warning.
     if (hasWarning)
       TagChip(
         surface: colorScheme.surfaceContainer,
         text: 'Warning',
-        color: colorScheme.error,
+        color: statusToneFill(colorScheme, StatusTone.warning),
         icon: Icons.warning_amber_rounded,
       ),
     if (quality != null)
@@ -1241,11 +1259,13 @@ List<Widget> _buildWantedChips(
   bool isCutoff = false,
   String? qualityProfileName,
 }) {
+  // Neutral: an unmonitored item is one the user chose to stop tracking, which
+  // is the backlog arm of the tone rule, not a fault and not unreachable.
   final monitored = item['monitored'] == false
       ? TagChip(
           surface: colorScheme.surfaceContainer,
           text: 'Unmonitored',
-          color: colorScheme.error,
+          color: statusToneFill(colorScheme, StatusTone.neutral),
         )
       : null;
   final quality = switch (serviceType) {

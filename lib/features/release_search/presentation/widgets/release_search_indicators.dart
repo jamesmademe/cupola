@@ -44,7 +44,7 @@ class ReleaseSearchRowChip extends ConsumerWidget {
                     ? StatusTone.warning
                     : StatusTone.success,
               ),
-      ReleaseSearchJobStatus.failed => ('Stopped', StatusTone.error),
+      ReleaseSearchJobStatus.failed => ('Stopped', StatusTone.warning),
       ReleaseSearchJobStatus.expired => ('Expired', StatusTone.neutral),
     };
 

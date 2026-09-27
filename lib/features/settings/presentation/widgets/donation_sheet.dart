@@ -5,6 +5,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/features/settings/data/donation_service.dart';
 
 /// Bottom sheet for in-app donations on iOS.
@@ -254,29 +255,31 @@ class _DonationSheetState extends State<DonationSheet> {
     );
   }
 
+  // Both messages come from the purchase stream: the store answered and the
+  // purchase did not go through. That is a fault, not an unreachable store —
+  // an unreachable store never gets this far, the sheet falls back to Ko-fi.
   Widget _buildError(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-      child: Text(
-        _errorMessage!,
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: colorScheme.error),
-        textAlign: TextAlign.center,
+      child: Center(
+        child: FaultNote.fault(
+          message: _errorMessage!,
+          surface: _sheetSurface(context),
+        ),
       ),
     );
   }
 
   Widget _buildInlineError(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Text(
-      _errorMessage!,
-      style: Theme.of(
-        context,
-      ).textTheme.bodySmall?.copyWith(color: colorScheme.error),
+    return FaultNote.fault(
+      message: _errorMessage!,
+      surface: _sheetSurface(context),
     );
   }
+
+  // `AppBottomSheet` paints `surfaceContainer` in both themes.
+  Color _sheetSurface(BuildContext context) =>
+      Theme.of(context).colorScheme.surfaceContainer;
 
   Widget _buildThankYou(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;

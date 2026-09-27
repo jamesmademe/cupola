@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/search/presentation/arr_add_form_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -189,24 +190,29 @@ class _SheetError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    // The presence rule every failure surface follows: the tone is spent on the
+    // glyph, walked against the sheet, and the words stay in text ink. The
+    // sentence used to be red too, which put the alarm on the words and read
+    // under 4.5:1 on paper.
+    final alarm = statusToneColor(
+      colorScheme,
+      StatusTone.error,
+      surface: colorScheme.surfaceContainer,
+    );
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.error_outline_rounded, size: 18, color: colorScheme.error),
+        Icon(Icons.error_outline_rounded, size: 18, color: alarm),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                message,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: colorScheme.error),
-              ),
+              Text(message, style: theme.textTheme.bodyMedium),
               if (detail != null && detail!.isNotEmpty)
                 Text(
                   detail!,

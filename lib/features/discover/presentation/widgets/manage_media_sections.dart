@@ -4,6 +4,8 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
 class RequestsSection extends StatelessWidget {
@@ -120,8 +122,10 @@ class _RequestCard extends StatelessWidget {
                   spacing: AppSpacing.xs,
                   runSpacing: AppSpacing.xs,
                   children: [
+                    // A fact about the request, so blue. Amber would call the
+                    // resolution a fault.
                     if (request.is4k)
-                      const _Badge(text: '4K', color: AppColors.warning),
+                      const _Badge(text: '4K', color: AppColors.info),
                     _StatusBadge(request: request),
                   ],
                 ),
@@ -181,8 +185,18 @@ class _RequestCard extends StatelessWidget {
             onPressed: onDelete,
             icon: const Icon(Icons.delete_outline),
             style: IconButton.styleFrom(
-              backgroundColor: colorScheme.error.withValues(alpha: 0.1),
-              foregroundColor: colorScheme.error,
+              backgroundColor: statusToneFill(
+                colorScheme,
+                StatusTone.error,
+              ).withValues(alpha: 0.1),
+              // The irreversible-action exception, walked against the wash
+              // over the card it sits on.
+              foregroundColor: statusToneColor(
+                colorScheme,
+                StatusTone.error,
+                surface: colorScheme.surfaceContainer,
+                tintAlpha: 0.1,
+              ),
             ),
           ),
         ],
@@ -235,29 +249,17 @@ class _StatusBadge extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final displayStatus = request.displayStatus;
 
-    late final Color color;
-    switch (displayStatus.kind) {
-      case SeerrRequestDisplayKind.available:
-      case SeerrRequestDisplayKind.partiallyAvailable:
-      case SeerrRequestDisplayKind.completed:
-        color = AppColors.success;
-        break;
-      case SeerrRequestDisplayKind.pending:
-        color = AppColors.warning;
-        break;
-      case SeerrRequestDisplayKind.approved:
-      case SeerrRequestDisplayKind.processing:
-        color = colorScheme.primary;
-        break;
-      case SeerrRequestDisplayKind.declined:
-      case SeerrRequestDisplayKind.failed:
-      case SeerrRequestDisplayKind.deleted:
-        color = AppColors.error;
-        break;
-      case SeerrRequestDisplayKind.unknown:
-        color = colorScheme.onSurfaceVariant;
-        break;
-    }
+    // The tone comes from the one resolver every other request row uses, so
+    // this badge cannot disagree with Activity about the same request. That
+    // resolver is where the arms are argued: a failed request is a fault Seerr
+    // reported (amber); a declined one is a decision somebody made, and a
+    // decision is not a fault, so it is neutral with the deleted ones. This
+    // badge used to paint all three red, which on this canvas says Seerr did not
+    // answer, when the badge exists precisely because it did.
+    final color = statusToneFill(
+      colorScheme,
+      resolveRequestStatus(request).tone,
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -329,10 +331,7 @@ class MediaSection extends StatelessWidget {
                   )
                 : const Icon(Icons.delete_outline),
             label: Text('Remove from $serviceName'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorScheme.error,
-              foregroundColor: colorScheme.onError,
-            ),
+            style: _destructiveFill(colorScheme),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -378,10 +377,7 @@ class AdvancedSection extends StatelessWidget {
             onPressed: !isDeleting ? onClear : null,
             icon: const Icon(Icons.cleaning_services_outlined),
             label: const Text('Clear data'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorScheme.error,
-              foregroundColor: colorScheme.onError,
-            ),
+            style: _destructiveFill(colorScheme),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -396,4 +392,15 @@ class AdvancedSection extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The red fill of an irreversible action, with its label measured against the
+/// fill rather than assumed: `onError` is white, which reads 3.5:1 on the light
+/// theme's red.
+ButtonStyle _destructiveFill(ColorScheme colorScheme) {
+  final fill = statusToneFill(colorScheme, StatusTone.error);
+  return ElevatedButton.styleFrom(
+    backgroundColor: fill,
+    foregroundColor: ServiceTheme.foregroundOn(fill),
+  );
 }

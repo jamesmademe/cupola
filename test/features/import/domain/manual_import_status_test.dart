@@ -130,9 +130,19 @@ void main() {
         manualImportCommandStatus(command('completed')).tone,
         StatusTone.success,
       );
+      // Changed: the four terminal failures used to resolve to
+      // StatusTone.error. The service answered and reported them, so the ones
+      // nobody asked for are faults and the cancelled one is neutral.
+      for (final status in const ['failed', 'aborted', 'orphaned']) {
+        expect(
+          manualImportCommandStatus(command(status)).tone,
+          StatusTone.warning,
+          reason: status,
+        );
+      }
       expect(
-        manualImportCommandStatus(command('failed')).tone,
-        StatusTone.error,
+        manualImportCommandStatus(command('cancelled')).tone,
+        StatusTone.neutral,
       );
       expect(manualImportCommandStatus(command('failed')).label, 'Failed');
     });

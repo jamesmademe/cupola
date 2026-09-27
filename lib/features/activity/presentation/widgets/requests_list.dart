@@ -112,6 +112,13 @@ class _RequestCard extends ConsumerWidget {
     final title = request.media?.title ?? 'Unknown';
     final year = request.media?.year;
     final heading = year == null || year.isEmpty ? title : '$title ($year)';
+    // Delete and Decline are the irreversible-action exception, walked against
+    // the card they sit on rather than painted as the raw byte.
+    final destructiveInk = statusToneColor(
+      colorScheme,
+      StatusTone.error,
+      surface: colorScheme.surfaceContainer,
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -147,7 +154,7 @@ class _RequestCard extends ConsumerWidget {
                   tooltip: 'Delete request',
                   icon: Icon(
                     Icons.delete_outline_rounded,
-                    color: colorScheme.error,
+                    color: destructiveInk,
                   ),
                   onPressed: () => _delete(context, ref),
                 ),
@@ -196,9 +203,9 @@ class _RequestCard extends ConsumerWidget {
                     onPressed: () => _decline(context, ref),
                     icon: const Icon(Icons.cancel_outlined, size: 18),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: colorScheme.error,
+                      foregroundColor: destructiveInk,
                       side: BorderSide(
-                        color: colorScheme.error.withValues(alpha: 0.5),
+                        color: destructiveInk.withValues(alpha: 0.5),
                       ),
                     ),
                     label: const Text('Decline'),

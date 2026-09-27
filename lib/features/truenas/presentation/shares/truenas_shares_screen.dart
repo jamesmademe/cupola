@@ -514,7 +514,12 @@ class _ShareRow extends StatelessWidget {
             icon: Icon(
               Icons.delete_outline_rounded,
               size: 18,
-              color: theme.colorScheme.error,
+              // The irreversible-action exception, walked against the card.
+              color: statusToneColor(
+                theme.colorScheme,
+                StatusTone.error,
+                surface: theme.colorScheme.surfaceContainer,
+              ),
             ),
             tooltip: 'Delete',
             onPressed: onDelete,
