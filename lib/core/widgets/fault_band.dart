@@ -240,7 +240,8 @@ class FaultBand extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.sm,
                   ),
-                  visualDensity: VisualDensity.compact,
+                  // No `VisualDensity.compact`: it silently takes 8 off
+                  // `minimumSize`, and 44 declared measured 40.
                 ),
                 child: Text(action.label),
               ),

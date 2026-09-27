@@ -390,7 +390,8 @@ class _ReleaseDetails extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             IconButton(
               icon: const Icon(Icons.copy_rounded, size: 16),
-              visualDensity: VisualDensity.compact,
+              // No `VisualDensity.compact`: it takes 8 off the padded tap
+              // target as well as the padding, so this measured 40 on a phone.
               tooltip: 'Copy release name',
               onPressed: () async {
                 await Clipboard.setData(ClipboardData(text: releaseTitle));
@@ -482,9 +483,11 @@ class _GrabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      width: 40,
-      height: 40,
+    // The slot is the 48dp tap target (Android's floor, above iOS's 44pt);
+    // the disc inside it stays 40. A tight 40 box used to clamp the target to
+    // the disc, and `Center` is what lets the button pad itself back out.
+    return SizedBox.square(
+      dimension: kMinInteractiveDimension,
       child: busy
           ? Center(
               child: SizedBox(
@@ -496,18 +499,20 @@ class _GrabButton extends StatelessWidget {
                 ),
               ),
             )
-          : IconButton(
-              icon: const Icon(Icons.download_rounded, size: 20),
-              color: tone.color(colorScheme),
-              onPressed: onPressed,
-              tooltip: onPressed == null
-                  ? 'Another download is starting'
-                  : 'Grab release',
-              style: IconButton.styleFrom(
-                backgroundColor: tone
-                    .color(colorScheme)
-                    .withValues(alpha: onPressed == null ? 0.06 : 0.14),
-                shape: const CircleBorder(),
+          : Center(
+              child: IconButton(
+                icon: const Icon(Icons.download_rounded, size: 20),
+                color: tone.color(colorScheme),
+                onPressed: onPressed,
+                tooltip: onPressed == null
+                    ? 'Another download is starting'
+                    : 'Grab release',
+                style: IconButton.styleFrom(
+                  backgroundColor: tone
+                      .color(colorScheme)
+                      .withValues(alpha: onPressed == null ? 0.06 : 0.14),
+                  shape: const CircleBorder(),
+                ),
               ),
             ),
     );

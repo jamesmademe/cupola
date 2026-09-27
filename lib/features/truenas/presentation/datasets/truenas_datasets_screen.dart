@@ -93,10 +93,11 @@ class _DatasetNode extends StatelessWidget {
         IconButton(
           icon: const Icon(Icons.info_outline_rounded, size: 16),
           tooltip: 'Details',
-          visualDensity: VisualDensity.compact,
           padding: EdgeInsets.zero,
           // 44pt hit area even though the glyph is 16pt: the visual stays
           // compact in a dense tree while the target meets the HIG minimum.
+          // Without `VisualDensity.compact`, which took 8 off these
+          // constraints and left the target at 40.
           constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           onPressed: () =>
               context.push(ServiceRoutes.truenasDataset(dataset.id)),

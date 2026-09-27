@@ -375,6 +375,10 @@ void main() {
 
       expect(find.byType(SnackBar), findsOneWidget);
 
+      // The filter row's Clear is a full 48dp target now, which moves the
+      // empty state under it to the edge of the 600pt test window.
+      await tester.ensureVisible(find.text('Clear filters'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Clear filters'));
       await tester.pumpAndSettle();
 

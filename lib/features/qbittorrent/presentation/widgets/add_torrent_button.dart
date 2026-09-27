@@ -131,7 +131,6 @@ class AddTorrentButton extends ConsumerWidget {
                                     size: 18,
                                   ),
                                   tooltip: 'Remove',
-                                  visualDensity: VisualDensity.compact,
                                   onPressed: () {
                                     pickedFilesNotifier.value = files
                                         .where((x) => x != f)

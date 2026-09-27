@@ -573,7 +573,6 @@ class _ReleaseToolbar extends StatelessWidget {
                   icon: const Icon(Icons.filter_alt_off_rounded, size: 16),
                   label: const Text('Clear'),
                   style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.sm,
                     ),

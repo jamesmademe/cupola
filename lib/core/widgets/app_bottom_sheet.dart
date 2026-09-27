@@ -109,7 +109,6 @@ class AppSheetHeader extends StatelessWidget {
             icon: const Icon(Icons.close_rounded),
             onPressed: () => Navigator.of(context).maybePop(),
             tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-            visualDensity: VisualDensity.compact,
           ),
       ],
     );

@@ -740,7 +740,6 @@ class _SearchLaneFault extends StatelessWidget {
                 minimumSize: const Size(44, 44),
                 foregroundColor: tone,
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                visualDensity: VisualDensity.compact,
               ),
               // Named, because there are up to seven of these on one screen and
               // a screen reader hearing "Retry" seven times cannot tell which
@@ -1161,7 +1160,6 @@ class _SearchEmptyState extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.sm,
                   ),
-                  visualDensity: VisualDensity.compact,
                 ),
                 child: Text(
                   'Clear',

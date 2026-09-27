@@ -107,9 +107,10 @@ class CapabilityBanner extends StatelessWidget {
               onPressed: onFix,
               style: TextButton.styleFrom(
                 foregroundColor: colorScheme.primary,
+                // No `VisualDensity.compact`: it silently takes 8 off
+                // `minimumSize`, and 44 declared measured 40.
                 minimumSize: const Size(56, 44),
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                visualDensity: VisualDensity.compact,
               ),
               child: Text(actionLabel),
             ),

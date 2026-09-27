@@ -314,7 +314,6 @@ class ImportBreadcrumb extends StatelessWidget {
         children: [
           IconButton(
             tooltip: 'Root folder',
-            visualDensity: VisualDensity.compact,
             onPressed: onSegmentTap == null ? null : () => onSegmentTap!('/'),
             icon: Icon(
               Icons.home_rounded,

@@ -3,7 +3,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 
-/// A reusable section header with title and optional "See All" action.
+/// A reusable section header with title and optional "See all" action.
 ///
 /// Follows Material Design 3 styling with consistent typography
 /// and tap feedback for the entire header area.
@@ -14,10 +14,14 @@ import 'package:cupola/core/theme.dart';
 /// stops on each fragment and the "see all" affordance, being a bare chevron,
 /// has no name at all.
 class SectionHeader extends StatelessWidget {
+  /// The floor a finger can reach when the whole header is the button: iOS's
+  /// 44pt.
+  static const double _minTouchTarget = 44;
+
   /// The title text for the section
   final String title;
 
-  /// Optional callback when the header is tapped (e.g., "See All" action)
+  /// Optional callback when the header is tapped (e.g., a "See all" action)
   final VoidCallback? onTap;
 
   /// Whether to show the chevron icon indicating more content
@@ -193,7 +197,13 @@ class SectionHeader extends StatelessWidget {
                 // The name and the tap action are published above; without this
                 // the ink response adds a second, unnamed actionable node.
                 excludeFromSemantics: true,
-                child: content,
+                // The row is the target, and a one-line title makes it 36pt
+                // tall. A `ConstrainedBox` floor, not a `minimumSize`, so no
+                // density can take it back.
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: _minTouchTarget),
+                  child: content,
+                ),
               ),
       ),
     );

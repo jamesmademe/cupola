@@ -117,9 +117,10 @@ class InlineErrorRetry extends StatelessWidget {
                 foregroundColor: colorScheme.primary,
                 // 44pt on iOS / 48dp on Android is the floor, and this button
                 // shares its row with body text that would otherwise size it.
+                // No `VisualDensity.compact`: it silently takes 8 off
+                // `minimumSize`, and 44 declared measured 40.
                 minimumSize: const Size(56, 44),
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                visualDensity: VisualDensity.compact,
               ),
               child: const Text('Retry'),
             ),

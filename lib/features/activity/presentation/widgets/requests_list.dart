@@ -145,8 +145,6 @@ class _RequestCard extends ConsumerWidget {
                 ],
                 IconButton(
                   tooltip: 'Delete request',
-                  // Trims the padding without touching the hit area.
-                  visualDensity: VisualDensity.compact,
                   icon: Icon(
                     Icons.delete_outline_rounded,
                     color: colorScheme.error,

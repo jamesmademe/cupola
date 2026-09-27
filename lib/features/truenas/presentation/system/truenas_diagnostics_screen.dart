@@ -200,7 +200,6 @@ class _ProbeCard extends StatelessWidget {
               IconButton(
                 tooltip: 'Copy',
                 icon: const Icon(Icons.copy_rounded, size: 16),
-                visualDensity: VisualDensity.compact,
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: result.output));
                   SnackBarHelper.success(
