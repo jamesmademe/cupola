@@ -91,12 +91,18 @@ abstract final class ReelMotion {
   ///
   /// Deliberately calmer and shorter than [command]: this one repeats on a timer
   /// for as long as a network call takes, and the same bounce that reads as
-  /// tactile on a single press reads as a twitch at four ticks a second.
+  /// tactile on a single press reads as a twitch on a repeating beat.
+  ///
+  /// The beat is not set here: `reel_text` derives it from this preset when no
+  /// `step` is given — the roll ([AppAnimation.durationSm], 200 ms, with no
+  /// bounce to stretch it) plus the 24 ms exit offset plus a fixed 160 ms rest,
+  /// so one tick every 384 ms, about 2.6 a second. Changing the duration or the
+  /// exit offset moves it.
   ///
   /// **This preset is the one place `respectDisableAnimations` does not cover
   /// us.** That flag suppresses the *roll*; it does not stop the controller's
   /// frame timer, so under Reduce Motion an ellipsis loop still hard-swaps
-  /// `Testing` → `Testing.` → `Testing..` four times a second. Text changing on
+  /// `Testing` → `Testing.` → `Testing..` on that 384 ms beat. Text changing on
   /// a timer with no animation is not motion, but it is still something moving
   /// for a user who asked for less — so callers check
   /// [MediaQuery.disableAnimationsOf] and show a settled label instead. That

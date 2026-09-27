@@ -116,11 +116,9 @@ void main() {
         final t = i / 100;
         for (final reduceMotion in const [false, true]) {
           final phase = MediaDetailHeroPhase(t: t, reduceMotion: reduceMotion);
-          expect(phase.summaryFade, inInclusiveRange(0, 1));
           expect(phase.scrimDepth, inInclusiveRange(0, 1));
           expect(phase.barReveal, inInclusiveRange(0, 1));
           expect(phase.posterScale, inInclusiveRange(0.86, 1));
-          expect(phase.posterLift, inInclusiveRange(0, 1));
           expect(phase.glowAlpha, inInclusiveRange(0.12, 0.22));
         }
       }
@@ -128,17 +126,14 @@ void main() {
 
     test('t = 0 renders identity — byte-identical to the static hero', () {
       const phase = MediaDetailHeroPhase(t: 0);
-      expect(phase.summaryFade, 1);
       expect(phase.scrimDepth, 0);
       expect(phase.barReveal, 0);
       expect(phase.posterScale, 1);
-      expect(phase.posterLift, 0);
       expect(phase.glowAlpha, 0.22);
     });
 
     test('t = 1 reaches the fully collapsed pose', () {
       const phase = MediaDetailHeroPhase(t: 1);
-      expect(phase.summaryFade, 0);
       expect(phase.scrimDepth, 1);
       expect(phase.barReveal, 1);
       expect(phase.posterScale, closeTo(0.86, 0.001));
@@ -148,7 +143,6 @@ void main() {
     test('reduce motion flattens only the decorative getters', () {
       const phase = MediaDetailHeroPhase(t: 0.7, reduceMotion: true);
       expect(phase.posterScale, 1);
-      expect(phase.posterLift, 0);
       expect(phase.parallaxFactor, 0);
       // Functional layers keep tracking the finger.
       expect(phase.scrimDepth, greaterThan(0));

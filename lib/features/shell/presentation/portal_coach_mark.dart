@@ -5,7 +5,7 @@
 /// Its × is the Settings → Hints → Portal switch (which turns it back on);
 /// opening the Portal resets the need-counter and the pill retires by itself.
 /// When it appears, the bar plays one demo bounce so the words and the physics
-/// arrive together.
+/// arrive together — except under Reduce Motion, where it only fades in.
 library;
 
 import 'package:flutter/material.dart';
@@ -37,7 +37,11 @@ class _PortalCoachMarkState extends ConsumerState<PortalCoachMark> {
     final visible = ref.watch(
       portalHintsProvider.select((s) => s.coachVisible),
     );
-    if (visible && !_wasVisible) {
+    // Reduce Motion, read the way the shell's own demo bounce reads it: the
+    // words still arrive, but nothing lifts — no bounce of the bar, and the
+    // pill fades in place instead of sliding up into it.
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (visible && !_wasVisible && !reduceMotion) {
       // The invitation arrives with the words: one bounce, not a loop.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) widget.controller.playDemoBounce();
@@ -69,7 +73,9 @@ class _PortalCoachMarkState extends ConsumerState<PortalCoachMark> {
               child: child,
             ),
             child: AnimatedSlide(
-              offset: visible ? Offset.zero : const Offset(0, 0.35),
+              offset: visible || reduceMotion
+                  ? Offset.zero
+                  : const Offset(0, 0.35),
               duration: AppAnimation.durationSm,
               curve: AppAnimation.emphasizedCurve,
               child: AnimatedOpacity(

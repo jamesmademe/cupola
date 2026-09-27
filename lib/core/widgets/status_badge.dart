@@ -32,8 +32,15 @@ class StatusBadge extends StatelessWidget {
   /// badge is decoration, which is what a coloured dot on a poster is.
   final bool excludeFromSemantics;
 
-  /// Whether status changes animate (tone cross-tween, icon/label switcher,
-  /// swept progress ring). Only the `.animated` constructor sets this — the
+  /// Whether status changes animate. A new resolved status cross-fades the
+  /// badge's content — glyph, label and percentage together — through an
+  /// [AnimatedSwitcher], so the tone changes only as the old glyph fades out
+  /// and the new one fades in; no colour is tweened. The progress ring sweeps
+  /// to each new value rather than snapping. The pill does not resize
+  /// smoothly: during the fade it holds the wider of the two contents, and the
+  /// width jumps to the new one when the fade ends.
+  ///
+  /// Only the `.animated` constructor sets this — the
   /// default badge stays static because it appears on twenty-odd surfaces
   /// (poster overlays, queue rows, activity feeds) where a per-cell animation
   /// would be noise.
@@ -47,8 +54,9 @@ class StatusBadge extends StatelessWidget {
     this.excludeFromSemantics = false,
   }) : _animated = false;
 
-  /// Full badge whose tone, glyph and progress ring animate between resolved
-  /// statuses. Used on the media detail hero, where a single badge changing
+  /// Full badge that cross-fades between resolved statuses and sweeps its
+  /// progress ring (see [_animated] for exactly what moves). Used on the media
+  /// detail hero, where a single badge changing
   /// state (missing → downloading → available) is the point of the surface.
   /// Renders identically to the default under Reduce Motion.
   const StatusBadge.animated({
@@ -124,10 +132,10 @@ class StatusBadge extends StatelessWidget {
     // changes and is deliberately left alone.
     //
     // The label was rolled on `.animated` and reverted. This badge is the only
-    // reel candidate whose surface *already* had a considered animation: a tone
-    // cross-tween, a keyed glyph switcher and a swept progress ring, tuned
-    // together for a badge whose changing state is the point of the page. A roll
-    // on top of those is a fourth treatment competing with three that work —
+    // reel candidate whose surface *already* had a considered animation: a keyed
+    // cross-fade of the whole content and a swept progress ring, tuned together
+    // for a badge whose changing state is the point of the page. A roll on top
+    // of those is a third treatment competing with two that work —
     // motion added because it was available, not because anything was missing.
     // It also does not pay for itself: `ReelText` renders one `Text` per
     // grapheme, so rolling the label scattered single-letter `Text` widgets over

@@ -109,7 +109,7 @@ class MediaDetailHeaderMetrics {
 /// position, not an animation: there is no animator and no clock, so these
 /// stages do NOT need to check Reduce Motion. What Reduce Motion suppresses is
 /// only motion that is independent of the finger — the parallax translation,
-/// the overscroll stretch, and the poster scale/lift, which read as the scene
+/// the overscroll stretch, and the poster scale, which read as the scene
 /// moving on its own. Those getters flatten when [reduceMotion] is set; the
 /// scrim, bar reveal and glow keep working because they are the functional
 /// legibility/orientation layer.
@@ -125,10 +125,6 @@ class MediaDetailHeroPhase {
   static double _seg(double t, double a, double b) =>
       ((t - a) / (b - a)).clamp(0.0, 1.0);
 
-  /// Hero title/metadata/badge dissolve early — they are about to be replaced
-  /// by the collapsed bar's title.
-  double get summaryFade => 1 - _seg(t, 0.10, 0.45);
-
   /// The scrim deepens as art gives way to chrome.
   double get scrimDepth => _seg(t, 0.0, 0.80);
 
@@ -138,9 +134,6 @@ class MediaDetailHeroPhase {
   /// Poster shrink while collapsing. Decorative — flat under Reduce Motion.
   double get posterScale =>
       reduceMotion ? 1 : lerpDouble(1.0, 0.86, _seg(t, 0.20, 0.90))!;
-
-  /// Poster slide progress toward the bar. Decorative.
-  double get posterLift => reduceMotion ? 0 : _seg(t, 0.0, 1.0);
 
   /// Fraction of scroll speed the backdrop moves at. Decorative.
   double get parallaxFactor => reduceMotion ? 0 : 0.35;
