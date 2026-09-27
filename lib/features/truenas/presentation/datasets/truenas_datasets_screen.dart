@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/truenas/domain/models/dataset.dart';
 import 'package:cupola/features/truenas/presentation/datasets/truenas_dataset_actions.dart';
@@ -69,6 +70,22 @@ class _DatasetNode extends StatelessWidget {
   final int depth;
   const _DatasetNode({required this.dataset, required this.depth});
 
+  /// The height floor of a tree row and of its Details button.
+  ///
+  /// 44 anywhere a finger can reach the tree: the floor is binding for every
+  /// touch build (DESIGN.md, decided 2026-09-27). A desktop build is driven by
+  /// a pointer and never by a finger, so there the tree keeps the denser 40 it
+  /// was drawn at; WCAG 2.5.8 asks 24px of a pointer target. The switch is
+  /// [AppBreakpoints.isDesktopPlatform], the per-build constant the shell
+  /// already uses, not a width, because a narrow desktop window is still
+  /// driven by a pointer.
+  ///
+  /// Declared as `minTileHeight` and never left to `VisualDensity.compact`,
+  /// which takes 8 off a default height: the tree used to declare 40 under
+  /// compact and reached the floor only because the Details button happened
+  /// to be taller than the row.
+  static double get _rowFloor => AppBreakpoints.isDesktopPlatform ? 40 : 44;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -94,11 +111,14 @@ class _DatasetNode extends StatelessWidget {
           icon: const Icon(Icons.info_outline_rounded, size: 16),
           tooltip: 'Details',
           padding: EdgeInsets.zero,
-          // 44pt hit area even though the glyph is 16pt: the visual stays
-          // compact in a dense tree while the target meets the HIG minimum.
+          // The row's own floor even though the glyph is 16pt: the visual
+          // stays compact in a dense tree while the target meets the floor.
           // Without `VisualDensity.compact`, which took 8 off these
           // constraints and left the target at 40.
-          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          constraints: BoxConstraints(
+            minWidth: _rowFloor,
+            minHeight: _rowFloor,
+          ),
           onPressed: () =>
               context.push(ServiceRoutes.truenasDataset(dataset.id)),
         ),
@@ -109,7 +129,7 @@ class _DatasetNode extends StatelessWidget {
       return ListTile(
         contentPadding: EdgeInsets.only(left: depth * 10.0),
         dense: true,
-        visualDensity: VisualDensity.compact,
+        minTileHeight: _rowFloor,
         minVerticalPadding: 2,
         title: tileTitle,
         subtitle: Text(subtitle, style: theme.textTheme.labelSmall!.tabular),
@@ -122,8 +142,7 @@ class _DatasetNode extends StatelessWidget {
       child: ExpansionTile(
         tilePadding: EdgeInsets.zero,
         childrenPadding: EdgeInsets.zero,
-        visualDensity: VisualDensity.compact,
-        minTileHeight: 40,
+        minTileHeight: _rowFloor,
         shape: const Border(),
         collapsedShape: const Border(),
         initiallyExpanded: depth == 0,
