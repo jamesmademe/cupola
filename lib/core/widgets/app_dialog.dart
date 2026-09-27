@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 
 /// A toggleable option (checkbox) shown inside [showAppConfirmDialog].
 class AppConfirmOption {
@@ -41,6 +43,14 @@ class AppConfirmResult {
 /// Supports a plain confirm, a [destructive] variant (red confirm button +
 /// warning affordance), and optional [options] (checkboxes) — e.g. the
 /// "delete files" / "add exclusion" toggles used when removing media.
+///
+/// [destructive] is the one deliberate exception to the tone rule. Red in a
+/// **status** means unreachable and nothing else; red in an **action** means
+/// irreversible. A delete confirmation is an action, so it keeps its red — but
+/// every red glyph and line of text is still walked through [statusToneColor]
+/// against the dialog's own surface, and the red fill takes its label from
+/// [ServiceTheme.foregroundOn], because raw red as text measured 3.4:1 on the
+/// light dialog.
 Future<AppConfirmResult> showAppConfirmDialog({
   required BuildContext context,
   required String title,
@@ -62,7 +72,25 @@ Future<AppConfirmResult> showAppConfirmDialog({
       builder: (context, setState) {
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
-        final errorColor = colorScheme.error;
+        // The ground every red ink here lands on — the dialog, not the page
+        // behind the barrier.
+        final dialogSurface =
+            theme.dialogTheme.backgroundColor ??
+            colorScheme.surfaceContainerHigh;
+        final errorFill = statusToneFill(colorScheme, StatusTone.error);
+        final errorColor = statusToneColor(
+          colorScheme,
+          StatusTone.error,
+          surface: dialogSurface,
+        );
+        // The danger note sits on its own 10% wash, so it is measured against
+        // that composite rather than the bare dialog.
+        final dangerNoteColor = statusToneColor(
+          colorScheme,
+          StatusTone.error,
+          surface: dialogSurface,
+          tintAlpha: 0.10,
+        );
         final headerColor = destructive ? errorColor : colorScheme.onSurface;
         final effectiveIcon =
             icon ?? (destructive ? Icons.warning_amber_rounded : null);
@@ -136,15 +164,19 @@ Future<AppConfirmResult> showAppConfirmDialog({
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: errorColor.withValues(alpha: 0.10),
+                    color: errorFill.withValues(alpha: 0.10),
                     borderRadius: AppRadius.borderRadiusSm,
                     border: Border.all(
-                      color: errorColor.withValues(alpha: 0.35),
+                      color: errorFill.withValues(alpha: 0.35),
                     ),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.warning_rounded, color: errorColor, size: 20),
+                      Icon(
+                        Icons.warning_rounded,
+                        color: dangerNoteColor,
+                        size: 20,
+                      ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
@@ -153,7 +185,7 @@ Future<AppConfirmResult> showAppConfirmDialog({
                           // content role, which this note is an emphasis of.
                           style: theme.textTheme.bodyMedium!
                               .weight(FontWeight.w600)
-                              .copyWith(color: errorColor),
+                              .copyWith(color: dangerNoteColor),
                         ),
                       ),
                     ],
@@ -174,8 +206,8 @@ Future<AppConfirmResult> showAppConfirmDialog({
               ).pop(AppConfirmResult(confirmed: true, options: Map.of(values))),
               style: destructive
                   ? FilledButton.styleFrom(
-                      backgroundColor: errorColor,
-                      foregroundColor: colorScheme.onError,
+                      backgroundColor: errorFill,
+                      foregroundColor: ServiceTheme.foregroundOn(errorFill),
                     )
                   : null,
               child: Text(confirmLabel),

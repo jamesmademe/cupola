@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/status/media_action.dart';
-import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/widgets/header_action_row.dart';
 import 'package:cupola/core/widgets/library_detail_actions.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
@@ -458,7 +458,7 @@ void main() {
       }
     });
 
-    testWidgets('a destructive row is toned by the theme error colour', (
+    testWidgets('a destructive row is toned by the walked error colour', (
       tester,
     ) async {
       await _pumpActions(
@@ -470,9 +470,14 @@ void main() {
       await tester.tap(find.byIcon(Icons.more_horiz_rounded));
       await tester.pumpAndSettle();
 
-      final error = Theme.of(
-        tester.element(find.text('Delete')),
-      ).colorScheme.error;
+      // Red in an action means irreversible, so the row keeps it — walked
+      // against the sheet it sits on rather than painted raw.
+      final scheme = Theme.of(tester.element(find.text('Delete'))).colorScheme;
+      final error = statusToneColor(
+        scheme,
+        StatusTone.error,
+        surface: scheme.surfaceContainer,
+      );
       expect(tester.widget<Text>(find.text('Delete')).style?.color, error);
       expect(
         tester.widget<Icon>(find.byIcon(Icons.delete_outline_rounded)).color,

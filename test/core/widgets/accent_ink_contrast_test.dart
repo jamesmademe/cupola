@@ -154,7 +154,7 @@ void main() {
       // The release row's score ink is a status tone on its own wash over the
       // row's card, which is `surfaceContainerHigh`, not the scaffold.
       for (final score in const [120, -40]) {
-        final tone = score > 0 ? StatusTone.success : StatusTone.error;
+        final tone = score > 0 ? StatusTone.success : StatusTone.neutral;
 
         testWidgets('ScoreBadge $score', (tester) async {
           await _pump(tester, theme, ScoreBadge(score: score));

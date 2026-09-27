@@ -372,14 +372,13 @@ class _ReleaseDetails extends StatelessWidget {
     final customFormats =
         release['customFormats'] as List<dynamic>? ?? const [];
     final rejections = releaseRejectionReasons(release);
-    // Walked, not raw. This is a *sentence* in the error tone, and raw red
-    // measures 3.42:1 on the light scaffold — it fails AA as body text in
-    // exactly the panel whose whole job is explaining why a grab was refused.
-    final rejectionInk = statusToneColor(
-      colorScheme,
-      StatusTone.error,
-      surface: _releaseRowGround(colorScheme),
-    );
+    // Neutral, not red. Red is reserved for a service that did not answer, and
+    // a rejection reason is the opposite: the *Arr read the release, applied
+    // the profile and said why not. The row already carries the refusal in
+    // amber on its rail, pill and grab button; the reasons are the explanation
+    // under it, so they read as text, with a `block` glyph so the list is not
+    // told apart by colour alone.
+    final rejectionInk = statusToneColor(colorScheme, StatusTone.neutral);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,7 +437,7 @@ class _ReleaseDetails extends StatelessWidget {
 
         if (rejections.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
-          const _SectionHeader(title: 'Rejection reasons', isError: true),
+          const _SectionHeader(title: 'Rejection reasons'),
           const SizedBox(height: AppSpacing.xs),
           ...rejections.map(
             (reason) => Padding(
@@ -449,7 +448,7 @@ class _ReleaseDetails extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Icon(
-                      Icons.error_outline_rounded,
+                      Icons.block_rounded,
                       size: 14,
                       color: rejectionInk,
                     ),
@@ -549,9 +548,8 @@ class _GrabButton extends StatelessWidget {
 class _SectionHeader extends StatelessWidget {
   final String title;
   final int? score;
-  final bool isError;
 
-  const _SectionHeader({required this.title, this.score, this.isError = false});
+  const _SectionHeader({required this.title, this.score});
 
   @override
   Widget build(BuildContext context) {
@@ -569,30 +567,30 @@ class _SectionHeader extends StatelessWidget {
           // voice.
           style: theme.textTheme.labelSmall!
               .weight(FontWeight.w600)
-              .copyWith(
-                color: isError
-                    ? statusToneColor(
-                        colorScheme,
-                        StatusTone.error,
-                        surface: _releaseRowGround(colorScheme),
-                      )
-                    : colorScheme.onSurfaceVariant,
-              ),
+              .copyWith(color: colorScheme.onSurfaceVariant),
         ),
         if (score != null) ...[
           const Spacer(),
           _Pill(
             label: 'Score: ${_signed(score!)}',
-            color: statusToneFill(
-              colorScheme,
-              score! >= 0 ? StatusTone.success : StatusTone.error,
-            ),
+            color: statusToneFill(colorScheme, scoreTone(score!)),
           ),
         ],
       ],
     );
   }
 }
+
+/// The tone of a custom-format score: green when the profile rewards it,
+/// neutral when it penalises it.
+///
+/// Not red. A negative score is the quality profile doing its job — the *Arr
+/// weighed the format and marked it down — and red is reserved for a service
+/// that did not answer. The minus sign carries the direction in words, so the
+/// colour is not the only signal. Zero counts as positive, which is how the
+/// chips always read it.
+StatusTone scoreTone(int score) =>
+    score >= 0 ? StatusTone.success : StatusTone.neutral;
 
 /// Custom-format score badge shown on the right of the badge row.
 class ScoreBadge extends StatelessWidget {
@@ -604,11 +602,8 @@ class ScoreBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final neutral = score == 0;
-    final tone = neutral
-        ? StatusTone.neutral
-        : (score > 0 ? StatusTone.success : StatusTone.error);
-    final tintAlpha = neutral ? 0.10 : 0.16;
+    final tone = score == 0 ? StatusTone.neutral : scoreTone(score);
+    final tintAlpha = tone == StatusTone.neutral ? 0.10 : 0.16;
 
     // Fill and ink are different tokens, and this badge is the clearest case
     // for why: the wash keeps the tone's own byte so a positive score still
@@ -673,7 +668,7 @@ class CustomFormatChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final tone = score >= 0 ? StatusTone.success : StatusTone.error;
+    final tone = scoreTone(score);
     final color = statusToneFill(colorScheme, tone);
     // The wash keeps the tone's byte; the score is measured against it.
     final ink = statusToneColor(

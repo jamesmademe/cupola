@@ -5,12 +5,12 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/status/media_action.dart';
-import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/header_action_row.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One row of the actions overflow sheet.
@@ -197,13 +197,18 @@ class _MediaOverflowRow extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final enabled = onInvoke != null;
+    // Red here is the irreversible-action exception, not a status: it is still
+    // walked against the sheet it sits on, where raw red read 3.4:1 on paper.
+    final destructiveInk = statusToneColor(
+      colorScheme,
+      StatusTone.error,
+      surface: colorScheme.surfaceContainer,
+    );
     final glyphColor = enabled
-        ? (action.isDestructive
-              ? colorScheme.error
-              : colorScheme.onSurfaceVariant)
+        ? (action.isDestructive ? destructiveInk : colorScheme.onSurfaceVariant)
         : colorScheme.onSurfaceVariant.withValues(alpha: 0.38);
     final labelColor = enabled
-        ? (action.isDestructive ? colorScheme.error : colorScheme.onSurface)
+        ? (action.isDestructive ? destructiveInk : colorScheme.onSurface)
         : colorScheme.onSurface.withValues(alpha: 0.38);
 
     return PressableScale(

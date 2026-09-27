@@ -43,6 +43,43 @@ void main() {
       expect(find.text('-5'), findsOneWidget);
     });
 
+    testWidgets('a penalty reads neutral, a reward keeps its green', (
+      tester,
+    ) async {
+      // A negative score is the profile marking a format down, not a failure,
+      // and red is reserved for a service that did not answer. The minus sign
+      // carries the direction in words.
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                CustomFormatChip(name: 'BR-DISK', score: -5),
+                CustomFormatChip(name: 'HDR', score: 10),
+              ],
+            ),
+          ),
+        ),
+      );
+      final scheme = Theme.of(
+        tester.element(find.byType(CustomFormatChip).first),
+      ).colorScheme;
+
+      expect(
+        tester.widget<Text>(find.text('-5')).style?.color,
+        scheme.onSurfaceVariant,
+      );
+      expect(
+        tester.widget<Text>(find.text('+10')).style?.color,
+        statusToneColor(
+          scheme,
+          StatusTone.success,
+          surface: scheme.surfaceContainerHigh,
+          tintAlpha: 0.12,
+        ),
+      );
+    });
+
     testWidgets('treats zero as a positive score', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -203,6 +240,35 @@ void main() {
       );
       expect(find.text('Rejection reasons'), findsOneWidget);
       expect(find.text('Minimum seeders not met'), findsOneWidget);
+
+      // The reasons are the explanation under an amber refusal, not a second
+      // alarm: neutral ink, and a `block` glyph so they are not told apart by
+      // colour alone. Red is for a service that did not answer.
+      final neutral = Theme.of(
+        tester.element(find.byType(ReleaseListItem)),
+      ).colorScheme.onSurfaceVariant;
+      expect(
+        tester.widget<Text>(find.text('Minimum seeders not met')).style?.color,
+        neutral,
+      );
+      expect(
+        tester.widget<Text>(find.text('Rejection reasons')).style?.color,
+        neutral,
+      );
+      expect(find.byIcon(Icons.error_outline_rounded), findsNothing);
+      expect(
+        tester
+            .widget<Icon>(
+              find
+                  .descendant(
+                    of: find.byType(Row),
+                    matching: find.byIcon(Icons.block_rounded),
+                  )
+                  .last,
+            )
+            .color,
+        neutral,
+      );
     });
 
     testWidgets('shows object rejection reasons for rejected releases', (
