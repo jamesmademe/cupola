@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_actions.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/widgets/add_torrent_button.dart';
@@ -24,7 +23,7 @@ class QbittorrentOverflowMenu extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return PopupMenuButton<_QbOverflowAction>(
-      icon: Icon(Icons.more_vert_rounded, color: AppColors.qbittorrent),
+      icon: Icon(Icons.more_vert_rounded, color: qbittorrentBarInk(context)),
       tooltip: 'More',
       onSelected: (action) => _handle(context, ref, action),
       itemBuilder: (ctx) => const [

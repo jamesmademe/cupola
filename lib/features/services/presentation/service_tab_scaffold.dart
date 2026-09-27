@@ -26,7 +26,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// On a desktop window there is no band above it: the bar is drawn as
 /// [ServiceTabBar.header] and is the service's whole header, flush with the
-/// deck. See [ServiceHomeScreen.drawsBand].
+/// deck. See [ServiceHomeScreen.drawsBand]. That header is not glass — it is
+/// the room's one lit surface, opaque so its ink can be measured.
 class ServiceTabScaffold extends StatelessWidget {
   final ServiceKey service;
   final ServiceTab tab;
@@ -68,14 +69,14 @@ class ServiceTabScaffold extends StatelessWidget {
             top: 0,
             left: 0,
             right: 0,
-            child: GlassSurface(
-              child: ServiceTabBar.header(
-                service: service,
-                current: tab,
-                onSelected: (next) => _go(context, next),
-                lens: InstanceLensBadge(service: service),
-                actions: [?action],
-              ),
+            // Not glass: the header paints its own opaque, lit band (the
+            // Bounded Light Rule), so a frost behind it would be covered.
+            child: ServiceTabBar.header(
+              service: service,
+              current: tab,
+              onSelected: (next) => _go(context, next),
+              lens: InstanceLensBadge(service: service),
+              actions: [?action],
             ),
           ),
         ],

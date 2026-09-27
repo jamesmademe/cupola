@@ -44,6 +44,41 @@ class ServiceTabBar extends StatelessWidget {
   /// Height of the bar, so a hosted scroll view can reserve it.
   static const double height = 44;
 
+  /// The room light: the service accent over the header's surface, across the
+  /// whole band. DESIGN.md's Bounded Light Rule — the room is named by one
+  /// bounded, edged surface at 0.12, not by the ambient radial, which sits at
+  /// the ceiling measurement allows and cannot say which room this is.
+  ///
+  /// The rule named the deck strip as that band. Since the tab row became the
+  /// service header on a desktop window the deck carries only the fleet, so
+  /// the light moved here: this band is the one lit surface on a service page.
+  static const double roomLightAlpha = 0.12;
+
+  /// How far up from the band's lower edge the bloom reaches — the 11px
+  /// DESIGN.md gives it. Every label, glyph and pill is centred in the 44pt
+  /// row and ends above it, so no text is ever drawn over the bloom.
+  static const double bloomHeight = 11;
+
+  /// The bloom's strength at the band's lower edge. **Solved, not chosen.**
+  ///
+  /// DESIGN.md writes 0.55, which it set for the deck — a band with nothing in
+  /// its lower 11px. This band has the selected tab's 2px rule there, drawn in
+  /// the same accent: at 0.55 the rule falls to 2.08:1 against the bloom under
+  /// it (NZBGet, dark) and stops reading as the selection. 0.30 is the
+  /// strongest bloom at which every one of the sixteen tabbed accents keeps
+  /// its rule at 3:1 or better in both themes (floor 3.10:1, Transmission,
+  /// light) — the bloom gave way, not the indicator.
+  static const double bloomAlpha = 0.30;
+
+  /// The opaque surface every control on the header sits on: the room light
+  /// composited over the scheme's surface. Anything drawn on the band resolves
+  /// its ink against this, never against the bare surface.
+  static Color headerSurfaceOf(ColorScheme colorScheme, ServiceKey service) =>
+      Color.alphaBlend(
+        service.accent.withValues(alpha: roomLightAlpha),
+        colorScheme.surface,
+      );
+
   const ServiceTabBar({
     super.key,
     required this.service,
@@ -82,11 +117,12 @@ class ServiceTabBar extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     // The accent is walked against the surface the bar sits on: seven of the
     // seventeen are under 3:1 on paper, and this label is the accent carrying
-    // ink at its smallest in the whole app.
+    // ink at its smallest in the whole app. On the header that surface is the
+    // lit band, so the walk is told about the room light under it.
     final accent = ServiceTheme.onTint(
       service.accent,
       surface: colorScheme.surface,
-      tintAlpha: 0,
+      tintAlpha: _header ? roomLightAlpha : 0,
     );
 
     // Scrollable, always, and aligned to the start. Eight of the sixteen
@@ -123,24 +159,104 @@ class ServiceTabBar extends StatelessWidget {
 
     if (!_header) return SizedBox(height: height, child: strip);
 
-    return SizedBox(
-      height: height,
-      child: Row(
-        children: [
-          const SizedBox(width: AppSpacing.lg),
-          _Identity(service: service),
-          ?lens,
-          const SizedBox(width: AppSpacing.sm),
-          Container(width: 1, height: 20, color: colorScheme.outlineVariant),
-          // The tabs give way before the identity or the instruments do: they
-          // scroll, and a clipped name or a missing action does not.
-          Expanded(child: strip),
-          ...actions,
-          const SizedBox(width: AppSpacing.sm),
-        ],
+    final surface = headerSurfaceOf(colorScheme, service);
+
+    // Opaque, not glass. The band is the one lit surface on the page and its
+    // ink is measured against it; a translucent band would put whatever
+    // scrolled under it into that measurement. No accent border either: the
+    // selected tab's rule already draws the accent edge, and a second accent
+    // line along the band would read as a second selection.
+    return ServiceBandSurface(
+      color: surface,
+      child: SizedBox(
+        key: const ValueKey('service-header-band'),
+        height: height,
+        child: ColoredBox(
+          color: surface,
+          child: Stack(
+            children: [
+              // Painted before the row, so the tabs — and the selected tab's
+              // rule, which sits in this zone — are drawn crisp above it.
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: bloomHeight,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    key: const ValueKey('service-header-bloom'),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          service.accent.withValues(alpha: 0),
+                          service.accent.withValues(alpha: bloomAlpha),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: Row(
+                  children: [
+                    const SizedBox(width: AppSpacing.lg),
+                    _Identity(service: service, surface: surface),
+                    ?lens,
+                    const SizedBox(width: AppSpacing.sm),
+                    Container(
+                      width: 1,
+                      height: 20,
+                      color: colorScheme.outlineVariant,
+                    ),
+                    // The tabs give way before the identity or the instruments
+                    // do: they scroll, and a clipped name or a missing action
+                    // does not.
+                    Expanded(child: strip),
+                    ...actions,
+                    const SizedBox(width: AppSpacing.sm),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
+}
+
+/// The surface a service header's controls are drawn on.
+///
+/// The header's lens and actions are built by whoever hosts the header and
+/// passed in as widgets, so they cannot be handed the lit band's colour as an
+/// argument; they read it here instead. Outside a header — the phone's band —
+/// there is no room light and the answer is the scheme's own surface, which is
+/// what those controls resolved against before.
+///
+/// A plain [InheritedWidget] on purpose, not a [Theme] override: a sheet or a
+/// menu opened from the header captures the inherited *theme*, and a scheme
+/// whose surface had been swapped for the lit band would tint the sheet too.
+class ServiceBandSurface extends InheritedWidget {
+  const ServiceBandSurface({
+    super.key,
+    required this.color,
+    required super.child,
+  });
+
+  /// The opaque composite the controls sit on.
+  final Color color;
+
+  /// The band surface over [context], or the scheme's surface when there is no
+  /// header above it.
+  static Color of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ServiceBandSurface>()?.color ??
+      Theme.of(context).colorScheme.surface;
+
+  @override
+  bool updateShouldNotify(ServiceBandSurface oldWidget) =>
+      color != oldWidget.color;
 }
 
 /// The service's glyph and name at the start of the header row.
@@ -148,9 +264,12 @@ class ServiceTabBar extends StatelessWidget {
 /// The name is the page's heading — on a desktop window it is the only place
 /// the service's name is set as one, since the band that carried it is gone.
 class _Identity extends StatelessWidget {
-  const _Identity({required this.service});
+  const _Identity({required this.service, required this.surface});
 
   final ServiceKey service;
+
+  /// The lit band the tile sits on — the tile's tint composites over it.
+  final Color surface;
 
   @override
   Widget build(BuildContext context) {
@@ -174,7 +293,7 @@ class _Identity extends StatelessWidget {
               size: 14,
               color: ServiceTheme.onTint(
                 service.accent,
-                surface: colorScheme.surface,
+                surface: surface,
                 tintAlpha: tintAlpha,
               ),
             ),

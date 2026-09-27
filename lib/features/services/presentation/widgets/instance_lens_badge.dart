@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -31,6 +32,9 @@ class InstanceLensBadge extends ConsumerWidget {
 
   final ServiceKey service;
 
+  /// The pill's own tint of the accent.
+  static const double _pillAlpha = 0.15;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!ref.watch(hasMultipleInstancesProvider(service))) {
@@ -40,6 +44,15 @@ class InstanceLensBadge extends ConsumerWidget {
     if (active == null) return const SizedBox.shrink();
 
     final label = active.label.isEmpty ? active.id : active.label;
+    // The label is the accent on its own tint, so it is walked against the
+    // composite it lands on — the pill over the lit header band on a desktop
+    // window, over the plain surface on a phone. Raw Radarr amber on its tint
+    // is under 2:1 on paper.
+    final ink = ServiceTheme.onTint(
+      service.accent,
+      surface: ServiceBandSurface.of(context),
+      tintAlpha: _pillAlpha,
+    );
 
     return Semantics(
       button: true,
@@ -64,7 +77,7 @@ class InstanceLensBadge extends ConsumerWidget {
                   height: 24,
                   padding: const EdgeInsets.only(left: 10, right: 6),
                   decoration: BoxDecoration(
-                    color: service.accent.withValues(alpha: 0.15),
+                    color: service.accent.withValues(alpha: _pillAlpha),
                     borderRadius: AppRadius.borderRadiusPill,
                     border: Border.all(
                       color: service.accent.withValues(alpha: 0.40),
@@ -73,14 +86,11 @@ class InstanceLensBadge extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        label.toUpperCase(),
-                        style: AppTheme.eyebrow(service.accent),
-                      ),
+                      Text(label.toUpperCase(), style: AppTheme.eyebrow(ink)),
                       Icon(
                         Icons.keyboard_arrow_down_rounded,
                         size: 14,
-                        color: service.accent,
+                        color: ink,
                       ),
                     ],
                   ),

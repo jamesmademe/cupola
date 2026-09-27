@@ -4,10 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
+
+/// qBittorrent's accent as ink on the header it sits in, walked against that
+/// header's surface — the lit band on a desktop window, the plain surface on a
+/// phone. The raw accent is measured nowhere.
+Color qbittorrentBarInk(BuildContext context) => ServiceTheme.onTint(
+  AppColors.qbittorrent,
+  surface: ServiceBandSurface.of(context),
+  tintAlpha: 0,
+);
 
 class AddTorrentButton extends ConsumerWidget {
   const AddTorrentButton({super.key});
@@ -15,7 +25,7 @@ class AddTorrentButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return IconButton(
-      icon: Icon(Icons.add_rounded, color: AppColors.qbittorrent),
+      icon: Icon(Icons.add_rounded, color: qbittorrentBarInk(context)),
       onPressed: () => _showAddTorrentSheet(context, ref),
       tooltip: 'Add Torrent',
     );
