@@ -386,10 +386,23 @@ class _DomainBand extends ConsumerWidget {
         continue;
       }
 
-      final signal = ref
-          .watch(serviceSignalPairProvider(service))
-          .asData
-          ?.value;
+      // The same provider the cell paints from, so the line and the card
+      // cannot disagree about a folded service.
+      final signalState = folded.total > 1
+          ? ref.watch(foldedServiceSignalPairProvider(service))
+          : ref.watch(serviceSignalPairProvider(service));
+      // Clean is a claim about the figures, and a card still waiting for them,
+      // or showing a dash because they failed, has not made one. Counting either
+      // as clean put "3 of 3 clean" over a Dockge card that never resolved.
+      if (signalState.hasError && !signalState.isLoading) {
+        qualifiers.add('${service.title} $servicesFiguresUnavailableLabel');
+        continue;
+      }
+      if (!signalState.hasValue) {
+        qualifiers.add('${service.title} checking');
+        continue;
+      }
+      final signal = signalState.value;
       final flagged =
           signal != null &&
           (signal.primary.tone == StatusTone.warning ||

@@ -89,6 +89,8 @@ void main() {
       find.descendant(of: sonarr, matching: find.byType(ShimmerPlaceholder)),
       findsNothing,
     );
+    // And the band's line does not count it clean.
+    expect(find.textContaining('Sonarr figures unavailable'), findsOneWidget);
   });
 
   group('the header', () {
