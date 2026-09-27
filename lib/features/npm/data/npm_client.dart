@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import 'package:cupola/core/capability/permission_refusal.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
@@ -13,7 +14,8 @@ import 'package:cupola/features/npm/domain/models/npm_models.dart';
 /// the bearer token, and `AppErrorState` renders `toString()` verbatim, so
 /// `throw NpmException('Login failed: ${response.data}')` would put a working
 /// credential on screen. [redactJwt] is the belt to that braces.
-class NpmException implements Exception, HasFailureReason {
+class NpmException
+    implements Exception, HasFailureReason, HasPermissionRefusal {
   const NpmException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
@@ -34,6 +36,9 @@ class NpmException implements Exception, HasFailureReason {
 
   @override
   final ServiceFailureReason reason;
+
+  @override
+  bool get isPermissionRefusal => forbidden;
 
   @override
   String toString() => 'NpmException: $message';
