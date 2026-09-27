@@ -14,8 +14,6 @@ import 'package:cupola/features/services/domain/service_tab.dart';
 
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 
-import 'package:cupola/features/services/presentation/services_provider.dart';
-
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -82,8 +80,7 @@ class _OverviewBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(serviceSummaryProvider(ServiceKey.prowlarr));
-        ref.invalidate(serviceKpiProvider(ServiceKey.prowlarr));
+        invalidateServiceReadout(ref, ServiceKey.prowlarr);
         ref.invalidate(prowlarrIndexersProvider);
         ref.invalidate(prowlarrIndexerStatsProvider);
         ref.invalidate(prowlarrIndexerStatusProvider);
@@ -139,7 +136,11 @@ class _AttentionSection extends ConsumerWidget {
         value: section,
         serviceName: 'Prowlarr',
         loadingLabel: 'Loading what needs attention',
-        onRetry: () => ref.invalidate(prowlarrIndexerStatusProvider),
+        onRetry: () {
+          ref.invalidate(prowlarrIndexerStatusProvider);
+          ref.invalidate(prowlarrIndexersProvider);
+          ref.invalidate(prowlarrHealthProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (data) => data.rows.isEmpty,
         // A resting state wears no alarm chrome.
@@ -182,7 +183,11 @@ class _IndexersSection extends ConsumerWidget {
         value: section,
         serviceName: 'Prowlarr',
         loadingLabel: 'Loading indexers',
-        onRetry: () => ref.invalidate(prowlarrIndexersProvider),
+        onRetry: () {
+          ref.invalidate(prowlarrIndexersProvider);
+          ref.invalidate(prowlarrIndexerStatsProvider);
+          ref.invalidate(prowlarrIndexerStatusProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 3),
         isEmpty: (data) => data.rows.isEmpty,
         emptyBuilder: const ServiceOverviewEmpty(

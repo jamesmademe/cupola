@@ -326,8 +326,12 @@ void _invalidateServicesDashboard(WidgetRef ref) {
   // em dash rather than a confident zero; separate also means a pull that
   // stopped at the line above refreshed the grids and left every figure on
   // every stack card exactly where it was.
-  ref.invalidate(radarrKpiLibraryProvider);
-  ref.invalidate(sonarrKpiLibraryProvider);
-  ref.invalidate(lidarrKpiLibraryProvider);
-  ref.invalidate(readarrKpiLibraryProvider);
+  //
+  // Every service's, not four: `serviceKpiSources` is exhaustive over
+  // `ServiceKey`, which the hand-written list of the four arrs was not.
+  for (final service in ServiceKey.values) {
+    for (final source in serviceKpiSources(service)) {
+      ref.invalidate(source);
+    }
+  }
 }

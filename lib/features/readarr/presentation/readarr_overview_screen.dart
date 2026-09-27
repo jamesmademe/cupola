@@ -7,7 +7,6 @@ import 'package:cupola/features/readarr/presentation/readarr_overview_provider.d
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -89,8 +88,7 @@ class _OverviewBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(serviceSummaryProvider(ServiceKey.readarr));
-        ref.invalidate(serviceKpiProvider(ServiceKey.readarr));
+        invalidateServiceReadout(ref, ServiceKey.readarr);
         // The authors list feeds both the rail and the backlog row, so a pull
         // that refreshed only the derived provider would redraw the same
         // cached figure and look broken.
@@ -162,7 +160,10 @@ class _NeedsAttentionSection extends ConsumerWidget {
         value: items,
         serviceName: 'Readarr',
         loadingLabel: 'Loading what needs attention',
-        onRetry: () => ref.invalidate(readarrNeedsAttentionProvider),
+        onRetry: () {
+          ref.invalidate(readarrNeedsAttentionProvider);
+          ref.invalidate(readarrQueueRecordsProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (data) => data.isEmpty,
         // The resting case, and it has to be reachable: every row here is

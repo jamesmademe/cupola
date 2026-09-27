@@ -6,7 +6,6 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
@@ -93,8 +92,7 @@ class _OverviewBody extends ConsumerWidget {
         ref.invalidate(transmissionTorrentsProvider);
         ref.invalidate(transmissionSessionProvider);
         ref.invalidate(transmissionStatsProvider);
-        ref.invalidate(serviceSummaryProvider(ServiceKey.transmission));
-        ref.invalidate(serviceKpiProvider(ServiceKey.transmission));
+        invalidateServiceReadout(ref, ServiceKey.transmission);
         ref.invalidate(transmissionTransferringProvider);
         ref.invalidate(transmissionLabelsProvider);
         ref.invalidate(transmissionFreeSpaceProvider);

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
@@ -1720,7 +1721,9 @@ final serviceSignalPairProvider = FutureProvider.autoDispose
     .family<ServiceSignalPair?, ServiceKey>((ref, service) async {
       final kpis = await ref.watch(serviceKpiProvider(service).future);
       return resolveServiceSignalPair(kpis);
-    });
+      // Derived from `serviceKpiProvider`, which carries the flag: without it
+      // a failed read bounced between shimmer and dash on the default backoff.
+    }, retry: noProviderRetry);
 
 /// The two figures a **folded** card shows: the fleet's, not the lens's.
 ///
@@ -1738,4 +1741,6 @@ final foldedServiceSignalPairProvider = FutureProvider.autoDispose
     .family<ServiceSignalPair?, ServiceKey>((ref, service) async {
       final kpis = await ref.watch(foldedServiceKpisProvider(service).future);
       return kpis == null ? null : resolveServiceSignalPair(kpis);
-    });
+      // Derived from `serviceKpiProvider`, which carries the flag: without it
+      // a failed read bounced between shimmer and dash on the default backoff.
+    }, retry: noProviderRetry);

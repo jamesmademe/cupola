@@ -14,8 +14,6 @@ import 'package:cupola/features/services/domain/service_tab.dart';
 
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 
-import 'package:cupola/features/services/presentation/services_provider.dart';
-
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -76,8 +74,7 @@ class _OverviewBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(serviceSummaryProvider(ServiceKey.bazarr));
-        ref.invalidate(serviceKpiProvider(ServiceKey.bazarr));
+        invalidateServiceReadout(ref, ServiceKey.bazarr);
         ref.invalidate(bazarrBadgesProvider);
         ref.invalidate(bazarrDashboardWantedProvider);
         ref.invalidate(bazarrDashboardHistoryProvider);
@@ -128,7 +125,10 @@ class _WantedSection extends ConsumerWidget {
         value: section,
         serviceName: 'Bazarr',
         loadingLabel: 'Loading wanted subtitles',
-        onRetry: () => ref.invalidate(bazarrDashboardWantedProvider),
+        onRetry: () {
+          ref.invalidate(bazarrDashboardWantedProvider);
+          ref.invalidate(bazarrBadgesProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 3),
         isEmpty: (data) => data.rows.isEmpty,
         // A resting state wears no alarm chrome, and an empty backlog is the

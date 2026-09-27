@@ -28,8 +28,6 @@ import 'package:cupola/features/services/domain/service_tab.dart';
 
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 
-import 'package:cupola/features/services/presentation/services_provider.dart';
-
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -90,8 +88,7 @@ class _OverviewBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(serviceSummaryProvider(ServiceKey.seerr));
-        ref.invalidate(serviceKpiProvider(ServiceKey.seerr));
+        invalidateServiceReadout(ref, ServiceKey.seerr);
         ref.invalidate(requestsProvider);
         ref.invalidate(seerrOverviewDecisionsProvider);
         ref.invalidate(seerrOverviewProcessingProvider);

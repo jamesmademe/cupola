@@ -5,7 +5,6 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
@@ -106,8 +105,7 @@ class _OverviewBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(serviceSummaryProvider(ServiceKey.unraid));
-        ref.invalidate(serviceKpiProvider(ServiceKey.unraid));
+        invalidateServiceReadout(ref, ServiceKey.unraid);
         // The three documents, and then the folds derived from them. The folds
         // are invalidated too rather than left to recompute: they are
         // `autoDispose`, so a region the user has scrolled past may already
@@ -172,7 +170,10 @@ class _ArraySection extends ConsumerWidget {
         value: digest,
         serviceName: 'Unraid',
         loadingLabel: 'Loading the array',
-        onRetry: () => ref.invalidate(unraidOverviewArrayProvider),
+        onRetry: () {
+          ref.invalidate(unraidOverviewArrayProvider);
+          ref.invalidate(unraidArrayProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 3),
         isEmpty: (value) => value.preview.isEmpty,
         emptyBuilder: const ServiceOverviewEmpty(
@@ -255,7 +256,10 @@ class _DockerSection extends ConsumerWidget {
         value: digest,
         serviceName: 'Unraid',
         loadingLabel: 'Loading the containers',
-        onRetry: () => ref.invalidate(unraidOverviewDockerProvider),
+        onRetry: () {
+          ref.invalidate(unraidOverviewDockerProvider);
+          ref.invalidate(unraidDockerProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 3),
         isEmpty: (value) => value.preview.isEmpty,
         emptyBuilder: const ServiceOverviewEmpty(
@@ -337,7 +341,10 @@ class _SystemSection extends ConsumerWidget {
         value: facts,
         serviceName: 'Unraid',
         loadingLabel: 'Loading the system',
-        onRetry: () => ref.invalidate(unraidOverviewSystemProvider),
+        onRetry: () {
+          ref.invalidate(unraidOverviewSystemProvider);
+          ref.invalidate(unraidInfoProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         // Never empty: `info` either answers both facts — with `—` for one it
         // left out — or it fails, and a failure is the error state rather than

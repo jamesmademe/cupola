@@ -8,7 +8,6 @@ import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_pr
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -108,8 +107,7 @@ class _OverviewBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(serviceSummaryProvider(ServiceKey.qbittorrent));
-        ref.invalidate(serviceKpiProvider(ServiceKey.qbittorrent));
+        invalidateServiceReadout(ref, ServiceKey.qbittorrent);
         // The two sources every region on this page is folded from. The four
         // derived providers below are invalidated too rather than left to
         // recompute: they are `autoDispose`, so a region the user has scrolled
@@ -181,7 +179,10 @@ class _NeedsAttentionSection extends ConsumerWidget {
         value: items,
         serviceName: 'qBittorrent',
         loadingLabel: 'Loading what needs attention',
-        onRetry: () => ref.invalidate(qbittorrentOverviewAttentionProvider),
+        onRetry: () {
+          ref.invalidate(qbittorrentOverviewAttentionProvider);
+          ref.invalidate(allTorrentsProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (data) => data.isEmpty,
         // A resting state wears no alarm chrome: nothing is wrong, and saying
@@ -257,7 +258,10 @@ class _QueueSection extends ConsumerWidget {
         value: transfers,
         serviceName: 'qBittorrent',
         loadingLabel: 'Loading the queue',
-        onRetry: () => ref.invalidate(qbittorrentOverviewTransfersProvider),
+        onRetry: () {
+          ref.invalidate(qbittorrentOverviewTransfersProvider);
+          ref.invalidate(allTorrentsProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 3),
         isEmpty: (data) => data.isEmpty,
         emptyBuilder: const ServiceOverviewEmpty(
@@ -337,7 +341,10 @@ class _CategoriesSection extends ConsumerWidget {
         value: rows,
         serviceName: 'qBittorrent',
         loadingLabel: 'Loading categories',
-        onRetry: () => ref.invalidate(qbittorrentOverviewCategoriesProvider),
+        onRetry: () {
+          ref.invalidate(qbittorrentOverviewCategoriesProvider);
+          ref.invalidate(allTorrentsProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 3),
         isEmpty: (data) => data.isEmpty,
         emptyBuilder: const ServiceOverviewEmpty(
@@ -400,7 +407,10 @@ class _SessionSection extends ConsumerWidget {
         value: facts,
         serviceName: 'qBittorrent',
         loadingLabel: 'Loading the session',
-        onRetry: () => ref.invalidate(qbittorrentOverviewSessionProvider),
+        onRetry: () {
+          ref.invalidate(qbittorrentOverviewSessionProvider);
+          ref.invalidate(transferInfoProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 3),
         // Never empty: `/transfer/info` either answers all six facts or fails,
         // and a failure is the error state rather than an empty one.

@@ -30,8 +30,6 @@ import 'package:cupola/features/services/domain/services_semantics.dart';
 
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 
-import 'package:cupola/features/services/presentation/services_provider.dart';
-
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -119,8 +117,7 @@ class _OverviewBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(serviceSummaryProvider(ServiceKey.sonarr));
-        ref.invalidate(serviceKpiProvider(ServiceKey.sonarr));
+        invalidateServiceReadout(ref, ServiceKey.sonarr);
         // The two libraries, not only the readings of them. Both are plain
         // `FutureProvider`s cached for the session, so invalidating just the
         // derived pair re-ran `sonarrAiringWeek` against the same cached list
@@ -197,7 +194,10 @@ class _AiringSection extends ConsumerWidget {
         value: week,
         serviceName: 'Sonarr',
         loadingLabel: 'Loading what is airing this week',
-        onRetry: () => ref.invalidate(sonarrAiringWeekProvider),
+        onRetry: () {
+          ref.invalidate(sonarrAiringWeekProvider);
+          ref.invalidate(sonarrOverviewSeriesProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         // Only the answerable emptiness is "empty"; the other one is a
         // different sentence and is drawn below, because the empty slot takes a
@@ -287,7 +287,11 @@ class _NeedsAttentionSection extends ConsumerWidget {
         value: items,
         serviceName: 'Sonarr',
         loadingLabel: 'Loading what needs attention',
-        onRetry: () => ref.invalidate(sonarrNeedsAttentionProvider),
+        onRetry: () {
+          ref.invalidate(sonarrNeedsAttentionProvider);
+          ref.invalidate(sonarrQueueRecordsProvider);
+          ref.invalidate(sonarrBacklogProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (data) => data.isEmpty,
         // A resting state wears no alarm chrome: nothing is wrong, and saying
@@ -354,7 +358,10 @@ class _RecentlyDownloadedSection extends ConsumerWidget {
         value: episodes,
         serviceName: 'Sonarr',
         loadingLabel: 'Loading recently downloaded episodes',
-        onRetry: () => ref.invalidate(sonarrRecentlyDownloadedProvider),
+        onRetry: () {
+          ref.invalidate(sonarrRecentlyDownloadedProvider);
+          ref.invalidate(sonarrHistoryPageProvider);
+        },
         skeleton: AppSkeleton.posterRow(height: 138),
         isEmpty: (items) => items.isEmpty,
         emptyBuilder: const Padding(
@@ -503,7 +510,10 @@ class _HistoryTodaySection extends ConsumerWidget {
         value: entries,
         serviceName: 'Sonarr',
         loadingLabel: "Loading today's history",
-        onRetry: () => ref.invalidate(sonarrHistoryTodayProvider),
+        onRetry: () {
+          ref.invalidate(sonarrHistoryTodayProvider);
+          ref.invalidate(sonarrHistoryPageProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (items) => items.isEmpty,
         emptyBuilder: const ServiceOverviewEmpty(

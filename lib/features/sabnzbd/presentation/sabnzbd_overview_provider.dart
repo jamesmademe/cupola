@@ -54,6 +54,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
@@ -391,7 +392,7 @@ final sabnzbdOverviewQueueProvider =
     FutureProvider.autoDispose<SabnzbdQueueSection>((ref) async {
       final queue = await ref.watch(sabnzbdQueueProvider.future);
       return sabnzbdQueuePreview(queue);
-    });
+    }, retry: noProviderRetry);
 
 // ─── History today ──────────────────────────────────────────────────────────
 

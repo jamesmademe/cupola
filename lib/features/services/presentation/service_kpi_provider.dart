@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
@@ -99,6 +100,80 @@ final serviceKpiProvider = FutureProvider.autoDispose
           );
       }
     }, retry: noProviderRetry);
+
+/// Every provider [serviceKpiProvider] reads for [service] — the sources, not
+/// the folds.
+///
+/// A pull that invalidates only [serviceKpiProvider] re-folds the same cached
+/// answers: most of these are plain `FutureProvider`s that live as long as the
+/// app, so the Dashboard's refresh redrew thirteen stack cards from figures it
+/// never re-asked for, and a source that had failed stayed failed however many
+/// times it was pulled. Kept beside the switch above and exhaustive over
+/// [ServiceKey], so a service added there cannot be missing here.
+///
+/// The per-connection readers behind [serviceKpiForProvider] ask their client
+/// directly and hold nothing, so invalidating that family is already a re-ask.
+List<ProviderOrFamily> serviceKpiSources(ServiceKey service) =>
+    switch (service) {
+      ServiceKey.radarr => [
+        radarrKpiLibraryProvider,
+        radarrQueueSnapshotProvider,
+        radarrQueuedMovieIdsProvider,
+      ],
+      ServiceKey.sonarr => [sonarrKpiLibraryProvider],
+      ServiceKey.lidarr => [lidarrKpiLibraryProvider],
+      ServiceKey.readarr => [readarrKpiLibraryProvider, readarrQueueProvider],
+      ServiceKey.qbittorrent => [allTorrentsProvider],
+      ServiceKey.seerr => [requestsProvider],
+      ServiceKey.bazarr => [bazarrBadgesProvider],
+      ServiceKey.truenas => [truenasDashboardProvider],
+      ServiceKey.dockge => [dockgeStackListProvider],
+      ServiceKey.prowlarr => [
+        prowlarrIndexersProvider,
+        prowlarrIndexerStatsProvider,
+      ],
+      ServiceKey.sabnzbd => [sabnzbdQueueProvider, sabnzbdServerStatsProvider],
+      ServiceKey.nzbget => [nzbgetStatusProvider, nzbgetQueueProvider],
+      ServiceKey.unraid => [unraidArrayProvider, unraidDockerProvider],
+      ServiceKey.transmission => [
+        transmissionStatsProvider,
+        transmissionTorrentsProvider,
+      ],
+      ServiceKey.nginxProxyManager => [
+        npmProxyHostsProvider,
+        npmCertificatesProvider,
+      ],
+      ServiceKey.jellyfin => [
+        jellyfinStrictSessionsProvider,
+        jellyfinStrictLibrariesProvider,
+      ],
+      ServiceKey.plex => [
+        plexStrictSessionsProvider,
+        plexStrictLibrariesProvider,
+      ],
+    };
+
+/// What a service page's pull-to-refresh has to re-ask: its reachability probe
+/// and every source its KPI rail reads.
+///
+/// [serviceSummaryProvider] only delegates to [instanceSummaryProvider], which
+/// is not `autoDispose`; invalidating the wrapper alone redrew the identity
+/// band from the probe already in the cache, so a pull never asked the server
+/// whether it was up. And [serviceKpiProvider] folds sources that live as long
+/// as the app — see [serviceKpiSources].
+void invalidateServiceReadout(WidgetRef ref, ServiceKey service) {
+  ref.invalidate(serviceSummaryProvider(service));
+  for (final instance
+      in ref.read(currentSettingsProvider).configuredInstancesOf(service)) {
+    ref.invalidate(
+      instanceSummaryProvider((service: service, instanceId: instance.id)),
+    );
+  }
+  ref.invalidate(serviceKpiProvider(service));
+  for (final source in serviceKpiSources(service)) {
+    ref.invalidate(source);
+  }
+}
 
 /// The same KPIs, for one **named connection** rather than for the lens.
 ///
@@ -249,7 +324,7 @@ final serviceSignalProvider = FutureProvider.autoDispose
     .family<ServiceSignal?, ServiceKey>((ref, service) async {
       final kpis = await ref.watch(serviceKpiProvider(service).future);
       return resolveServiceSignal(kpis);
-    });
+    }, retry: noProviderRetry);
 
 int _statInt(Map<String, dynamic>? stats, String key) =>
     (stats?[key] as num?)?.toInt() ?? 0;

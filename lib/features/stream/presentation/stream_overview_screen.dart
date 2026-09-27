@@ -135,8 +135,7 @@ class _OverviewBody extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(serviceSummaryProvider(service));
-        ref.invalidate(serviceKpiProvider(service));
+        invalidateServiceReadout(ref, service);
         if (_isPlex) {
           ref.invalidate(plexSessionsProvider);
           ref.invalidate(plexLibrariesProvider);

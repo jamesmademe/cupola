@@ -13,7 +13,6 @@ import 'package:cupola/features/npm/presentation/npm_screen.dart'
 import 'package:cupola/features/npm/presentation/npm_write_gate.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -128,8 +127,7 @@ class _OverviewBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(serviceSummaryProvider(ServiceKey.nginxProxyManager));
-        ref.invalidate(serviceKpiProvider(ServiceKey.nginxProxyManager));
+        invalidateServiceReadout(ref, ServiceKey.nginxProxyManager);
         // The two documents every region is folded from. The upstream probe is
         // deliberately absent: it awaits `npmProxyHostsProvider.future`, so one
         // gesture re-reads the table and re-probes it, and invalidating it
@@ -202,7 +200,11 @@ class _NeedsAttentionSection extends ConsumerWidget {
         value: items,
         serviceName: 'Nginx Proxy Manager',
         loadingLabel: 'Loading what needs attention',
-        onRetry: () => ref.invalidate(npmOverviewAttentionProvider),
+        onRetry: () {
+          ref.invalidate(npmOverviewAttentionProvider);
+          ref.invalidate(npmProxyHostsProvider);
+          ref.invalidate(npmCertificatesProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (data) => data.isEmpty,
         // A resting state wears no alarm chrome: nothing is wrong, and saying

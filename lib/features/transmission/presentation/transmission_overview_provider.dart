@@ -31,6 +31,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
@@ -126,7 +127,7 @@ final transmissionTransferringProvider =
     FutureProvider.autoDispose<List<TransmissionTorrent>>((ref) async {
       final torrents = await ref.watch(transmissionTorrentsProvider.future);
       return transmissionTransferring(torrents);
-    });
+    }, retry: noProviderRetry);
 
 // ─── Labels ─────────────────────────────────────────────────────────────────
 
@@ -196,7 +197,7 @@ final transmissionLabelsProvider =
     FutureProvider.autoDispose<List<TransmissionLabelTally>>((ref) async {
       final torrents = await ref.watch(transmissionTorrentsProvider.future);
       return transmissionLabelTallies(torrents);
-    });
+    }, retry: noProviderRetry);
 
 // ─── Session ────────────────────────────────────────────────────────────────
 
@@ -370,13 +371,15 @@ final transmissionFreeSpaceProvider = FutureProvider.autoDispose<int?>((
   } catch (_) {
     return null;
   }
-});
+}, retry: noProviderRetry);
 
 /// The Session region.
 ///
-/// Derived from [transmissionSessionProvider], which carries no `retry:`
-/// override — so neither does this, and the derivation propagates the source's
-/// behaviour rather than quietly changing it. The screen gates on
+/// Derived from [transmissionSessionProvider], which carries
+/// `retry: noProviderRetry` — so this does too, and the derivation propagates
+/// the source's behaviour rather than quietly changing it: left on the default,
+/// the section sat on its skeleton through the backoff after the source had
+/// already failed. The screen gates on
 /// `isServiceConfigured` before any of this is watched, so the one condition no
 /// amount of retrying could fix never reaches a provider at all.
 final transmissionSessionFactsProvider =
@@ -384,7 +387,7 @@ final transmissionSessionFactsProvider =
       final session = await ref.watch(transmissionSessionProvider.future);
       final free = await ref.watch(transmissionFreeSpaceProvider.future);
       return transmissionSessionFacts(session, freeSpaceBytes: free);
-    });
+    }, retry: noProviderRetry);
 
 // ─── Finished today ─────────────────────────────────────────────────────────
 
@@ -485,4 +488,4 @@ final transmissionFinishedTodayProvider =
     FutureProvider.autoDispose<List<TransmissionFinishedItem>>((ref) async {
       final torrents = await ref.watch(transmissionTorrentsProvider.future);
       return transmissionFinishedToday(torrents, now: DateTime.now());
-    });
+    }, retry: noProviderRetry);

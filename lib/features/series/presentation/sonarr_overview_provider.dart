@@ -222,7 +222,9 @@ final sonarrOverviewSeriesProvider = FutureProvider<List<SonarrSeries>>((
 /// one, a derivation *dropping* a `noProviderRetry` its source carried.
 ///
 /// That Retry is reachable now, which it was not while the source swallowed its
-/// own failure into `[]`.
+/// own failure into `[]` — and it has to invalidate the source too, not only
+/// this fold: the source is plain, so a Retry that re-ran the fold alone read
+/// the same cached error straight back and could never recover.
 final sonarrAiringWeekProvider = FutureProvider.autoDispose<SonarrAiringWeek>((
   ref,
 ) async {

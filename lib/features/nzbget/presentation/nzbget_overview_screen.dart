@@ -7,7 +7,6 @@ import 'package:cupola/features/nzbget/presentation/nzbget_overview_provider.dar
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -96,8 +95,7 @@ class _OverviewBody extends ConsumerWidget {
         // the sources alone would be enough — the derived providers watch them
         // — but naming all five keeps a pull-to-refresh honest if one of them
         // is ever given its own fetch.
-        ref.invalidate(serviceSummaryProvider(ServiceKey.nzbget));
-        ref.invalidate(serviceKpiProvider(ServiceKey.nzbget));
+        invalidateServiceReadout(ref, ServiceKey.nzbget);
         ref.invalidate(nzbgetStatusProvider);
         ref.invalidate(nzbgetQueueProvider);
         ref.invalidate(nzbgetHistoryProvider);

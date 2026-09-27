@@ -7,7 +7,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_provider.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -92,7 +92,7 @@ class _OverviewBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(serviceSummaryProvider(ServiceKey.sabnzbd));
+        invalidateServiceReadout(ref, ServiceKey.sabnzbd);
         // The two fetches, then the two derivations. Invalidating only the
         // derivations would recompute them over the cached payloads and leave
         // the page showing the same figures after a deliberate pull.

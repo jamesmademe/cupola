@@ -101,8 +101,7 @@ class _OverviewBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(serviceSummaryProvider(ServiceKey.radarr));
-        ref.invalidate(serviceKpiProvider(ServiceKey.radarr));
+        invalidateServiceReadout(ref, ServiceKey.radarr);
         // The library itself, not only the three readings of it. Coming up,
         // Recently added and all four figures on the rail fall out of
         // `moviesProvider`, which is a plain `FutureProvider` fetched once for
@@ -270,7 +269,11 @@ class _NeedsAttentionSection extends ConsumerWidget {
         value: items,
         serviceName: 'Radarr',
         loadingLabel: 'Loading what needs attention',
-        onRetry: () => ref.invalidate(radarrNeedsAttentionProvider),
+        onRetry: () {
+          ref.invalidate(radarrNeedsAttentionProvider);
+          ref.invalidate(radarrQueueRecordsProvider);
+          ref.invalidate(radarrCutoffUnmetCountProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (data) => data.isEmpty,
         // A resting state wears no alarm chrome: nothing is wrong, and saying

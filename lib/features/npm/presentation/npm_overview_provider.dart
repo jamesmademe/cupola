@@ -48,6 +48,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/features/npm/data/npm_upstream_probe.dart';
@@ -345,9 +346,9 @@ String npmAttentionSubtitle(
 /// this provider simply recomputes when the sockets answer, and the upstream
 /// rows appear then.
 ///
-/// No `retry: noProviderRetry`: neither source carries it. (If one ever does,
-/// this derivation must carry it too, or the retry the source refused comes
-/// back in through the back door.)
+/// `retry: noProviderRetry`, because both sources carry it: a derivation on
+/// the default would bring back through the back door the retry the source
+/// refused, and hold the section on its skeleton through the backoff.
 final npmOverviewAttentionProvider =
     FutureProvider.autoDispose<List<NpmAttentionItem>>((ref) async {
       final hosts = await ref.watch(npmProxyHostsProvider.future);
@@ -361,7 +362,7 @@ final npmOverviewAttentionProvider =
         now: DateTime.now(),
         upstreams: upstreams,
       );
-    });
+    }, retry: noProviderRetry);
 
 // ─── Proxy hosts ────────────────────────────────────────────────────────────
 

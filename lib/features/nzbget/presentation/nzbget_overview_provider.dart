@@ -36,6 +36,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart'
     show joinDisplayParts;
@@ -353,7 +354,7 @@ final nzbgetOverviewQueueProvider =
         status = null;
       }
       return nzbgetQueueSection(groups, status: status);
-    });
+    }, retry: noProviderRetry);
 
 // ─── History ────────────────────────────────────────────────────────────────
 
@@ -625,4 +626,4 @@ final nzbgetOverviewHistoryProvider =
     FutureProvider.autoDispose<NzbgetHistorySection>((ref) async {
       final items = await ref.watch(nzbgetHistoryProvider.future);
       return nzbgetHistoryToday(items, now: DateTime.now());
-    });
+    }, retry: noProviderRetry);

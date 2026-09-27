@@ -30,8 +30,6 @@ import 'package:cupola/features/services/domain/services_semantics.dart';
 
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 
-import 'package:cupola/features/services/presentation/services_provider.dart';
-
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -112,8 +110,7 @@ class _OverviewBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(serviceSummaryProvider(ServiceKey.lidarr));
-        ref.invalidate(serviceKpiProvider(ServiceKey.lidarr));
+        invalidateServiceReadout(ref, ServiceKey.lidarr);
         // The artist list itself, and not only the two things derived from it.
         // `lidarrRecentlyAddedProvider` re-runs on invalidation but re-reads a
         // `musicProvider` that is still holding the answer it already had, so
@@ -178,7 +175,11 @@ class _NeedsAttentionSection extends ConsumerWidget {
         value: items,
         serviceName: 'Lidarr',
         loadingLabel: 'Loading what needs attention',
-        onRetry: () => ref.invalidate(lidarrNeedsAttentionProvider),
+        onRetry: () {
+          ref.invalidate(lidarrNeedsAttentionProvider);
+          ref.invalidate(lidarrQueueRecordsProvider);
+          ref.invalidate(lidarrMissingPageProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (data) => data.isEmpty,
         // A resting state wears no alarm chrome: nothing is wrong, and saying
