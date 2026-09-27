@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_gradients.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The full colour bundle for a single service, derived from its accent.
@@ -31,7 +32,9 @@ class ServiceTheme {
     return ServiceTheme(
       accent: accent,
       onAccent: foregroundOn(accent),
-      softContainer: accent.withValues(alpha: 0.14),
+      softContainer: accent.withValues(
+        alpha: DesignTokens.opacityServiceSoftContainer,
+      ),
     );
   }
 
@@ -62,7 +65,7 @@ class ServiceTheme {
   }
 
   /// gray-900, softer than pure black.
-  static const Color _darkInk = Color(0xFF111827);
+  static const Color _darkInk = DesignTokens.colorInkOnBright;
 
   /// [_darkInk] never changes, so its luminance is resolved once instead of on
   /// every [foregroundOn] call — each `computeLuminance` is three `pow`s.

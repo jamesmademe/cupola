@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 
 /// Material Design 3 Animation Constants
 ///
@@ -10,19 +11,19 @@ class AppAnimation {
   // === DURATIONS ===
 
   /// 100ms - Extra short for micro-interactions (ripples, highlights)
-  static const Duration durationXs = Duration(milliseconds: 100);
+  static const Duration durationXs = DesignTokens.durationXs;
 
   /// 200ms - Short for simple state changes
-  static const Duration durationSm = Duration(milliseconds: 200);
+  static const Duration durationSm = DesignTokens.durationSm;
 
   /// 300ms - Medium for standard transitions
-  static const Duration durationMd = Duration(milliseconds: 300);
+  static const Duration durationMd = DesignTokens.durationMd;
 
   /// 400ms - Long for complex transitions
-  static const Duration durationLg = Duration(milliseconds: 400);
+  static const Duration durationLg = DesignTokens.durationLg;
 
   /// 500ms - Extra long for dramatic effects
-  static const Duration durationXl = Duration(milliseconds: 500);
+  static const Duration durationXl = DesignTokens.durationXl;
 
   // === M3 EASING CURVES ===
 
@@ -37,11 +38,12 @@ class AppAnimation {
   // === COMMON ANIMATION CONFIGS ===
 
   /// Shimmer animation cycle
-  static const Duration shimmerDuration = Duration(milliseconds: 1500);
+  static const Duration shimmerDuration = DesignTokens.durationShimmer;
 
   /// How long a transient success confirmation (a check that replaces a
   /// button's icon after an action lands) stays visible before reverting.
   /// Long enough to be seen after the eye returns from the snackbar, short
   /// enough that the control is back to normal by the next glance.
-  static const Duration confirmationHold = Duration(milliseconds: 1600);
+  static const Duration confirmationHold =
+      DesignTokens.durationConfirmationHold;
 }

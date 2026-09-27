@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 
 /// Premium elevation tokens for Cupola.
 ///
@@ -29,14 +30,30 @@ class AppElevation {
     final dark = _isDark(scheme);
     return [
       BoxShadow(
-        color: scheme.shadow.withValues(alpha: dark ? 0.28 : 0.06),
-        blurRadius: 6,
-        offset: const Offset(0, 2),
+        color: scheme.shadow.withValues(
+          alpha: dark
+              ? DesignTokensDark.elevationLevel1Contact
+              : DesignTokensLight.elevationLevel1Contact,
+        ),
+        blurRadius: DesignTokens.shadowLevel1ContactBlur,
+        spreadRadius: DesignTokens.shadowLevel1ContactSpread,
+        offset: const Offset(
+          DesignTokens.shadowLevel1ContactOffsetX,
+          DesignTokens.shadowLevel1ContactOffsetY,
+        ),
       ),
       BoxShadow(
-        color: scheme.shadow.withValues(alpha: dark ? 0.18 : 0.04),
-        blurRadius: 12,
-        offset: const Offset(0, 4),
+        color: scheme.shadow.withValues(
+          alpha: dark
+              ? DesignTokensDark.elevationLevel1Ambient
+              : DesignTokensLight.elevationLevel1Ambient,
+        ),
+        blurRadius: DesignTokens.shadowLevel1AmbientBlur,
+        spreadRadius: DesignTokens.shadowLevel1AmbientSpread,
+        offset: const Offset(
+          DesignTokens.shadowLevel1AmbientOffsetX,
+          DesignTokens.shadowLevel1AmbientOffsetY,
+        ),
       ),
     ];
   }
@@ -46,14 +63,30 @@ class AppElevation {
     final dark = _isDark(scheme);
     return [
       BoxShadow(
-        color: scheme.shadow.withValues(alpha: dark ? 0.34 : 0.08),
-        blurRadius: 10,
-        offset: const Offset(0, 4),
+        color: scheme.shadow.withValues(
+          alpha: dark
+              ? DesignTokensDark.elevationLevel2Contact
+              : DesignTokensLight.elevationLevel2Contact,
+        ),
+        blurRadius: DesignTokens.shadowLevel2ContactBlur,
+        spreadRadius: DesignTokens.shadowLevel2ContactSpread,
+        offset: const Offset(
+          DesignTokens.shadowLevel2ContactOffsetX,
+          DesignTokens.shadowLevel2ContactOffsetY,
+        ),
       ),
       BoxShadow(
-        color: scheme.shadow.withValues(alpha: dark ? 0.22 : 0.05),
-        blurRadius: 22,
-        offset: const Offset(0, 10),
+        color: scheme.shadow.withValues(
+          alpha: dark
+              ? DesignTokensDark.elevationLevel2Ambient
+              : DesignTokensLight.elevationLevel2Ambient,
+        ),
+        blurRadius: DesignTokens.shadowLevel2AmbientBlur,
+        spreadRadius: DesignTokens.shadowLevel2AmbientSpread,
+        offset: const Offset(
+          DesignTokens.shadowLevel2AmbientOffsetX,
+          DesignTokens.shadowLevel2AmbientOffsetY,
+        ),
       ),
     ];
   }
@@ -63,14 +96,30 @@ class AppElevation {
     final dark = _isDark(scheme);
     return [
       BoxShadow(
-        color: scheme.shadow.withValues(alpha: dark ? 0.40 : 0.10),
-        blurRadius: 16,
-        offset: const Offset(0, 6),
+        color: scheme.shadow.withValues(
+          alpha: dark
+              ? DesignTokensDark.elevationLevel3Contact
+              : DesignTokensLight.elevationLevel3Contact,
+        ),
+        blurRadius: DesignTokens.shadowLevel3ContactBlur,
+        spreadRadius: DesignTokens.shadowLevel3ContactSpread,
+        offset: const Offset(
+          DesignTokens.shadowLevel3ContactOffsetX,
+          DesignTokens.shadowLevel3ContactOffsetY,
+        ),
       ),
       BoxShadow(
-        color: scheme.shadow.withValues(alpha: dark ? 0.26 : 0.07),
-        blurRadius: 36,
-        offset: const Offset(0, 18),
+        color: scheme.shadow.withValues(
+          alpha: dark
+              ? DesignTokensDark.elevationLevel3Ambient
+              : DesignTokensLight.elevationLevel3Ambient,
+        ),
+        blurRadius: DesignTokens.shadowLevel3AmbientBlur,
+        spreadRadius: DesignTokens.shadowLevel3AmbientSpread,
+        offset: const Offset(
+          DesignTokens.shadowLevel3AmbientOffsetX,
+          DesignTokens.shadowLevel3AmbientOffsetY,
+        ),
       ),
     ];
   }
@@ -83,14 +132,30 @@ class AppElevation {
     final dark = _isDark(scheme);
     return [
       BoxShadow(
-        color: Colors.black.withValues(alpha: dark ? 0.35 : 0.18),
-        blurRadius: 32,
-        offset: const Offset(0, 8),
+        color: DesignTokens.shadowGlassAmbientColor.withValues(
+          alpha: dark
+              ? DesignTokensDark.elevationGlassAmbient
+              : DesignTokensLight.elevationGlassAmbient,
+        ),
+        blurRadius: DesignTokens.shadowGlassAmbientBlur,
+        spreadRadius: DesignTokens.shadowGlassAmbientSpread,
+        offset: const Offset(
+          DesignTokens.shadowGlassAmbientOffsetX,
+          DesignTokens.shadowGlassAmbientOffsetY,
+        ),
       ),
       BoxShadow(
-        color: Colors.white.withValues(alpha: dark ? 0.07 : 0.55),
-        blurRadius: 0,
-        offset: const Offset(0, 1),
+        color: DesignTokens.shadowGlassHighlightColor.withValues(
+          alpha: dark
+              ? DesignTokensDark.elevationGlassHighlight
+              : DesignTokensLight.elevationGlassHighlight,
+        ),
+        blurRadius: DesignTokens.shadowGlassHighlightBlur,
+        spreadRadius: DesignTokens.shadowGlassHighlightSpread,
+        offset: const Offset(
+          DesignTokens.shadowGlassHighlightOffsetX,
+          DesignTokens.shadowGlassHighlightOffsetY,
+        ),
       ),
     ];
   }

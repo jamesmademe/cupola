@@ -24,22 +24,11 @@ void main() {
   /// each entry must match exactly one heavy-weight line, so an entry whose
   /// site has gone fails too instead of quietly allowing the next one.
   const allowed = <String, List<String>>{
+    // The app-bar title: `titleLarge` lifted to the 700 ceiling.
+    'lib/core/theme.dart': ['.weight(FontWeight.w700)'],
     // The ramp itself: Display at 800 (Small at 700) and Headline at 700.
-    // `headlineMedium` is split over lines by the formatter, so its weight
-    // line is matched on its own.
-    'lib/core/theme.dart': [
-      'displayLarge: style(size: 57, weight: FontWeight.w800',
-      'displayMedium: style(size: 45, weight: FontWeight.w800',
-      'displaySmall: style(size: 36, weight: FontWeight.w700',
-      'headlineLarge: style(size: 32, weight: FontWeight.w700',
-      'weight: FontWeight.w700,',
-      'headlineSmall: style(size: 24, weight: FontWeight.w700',
-      // The app-bar title: `titleLarge` lifted to the 700 ceiling.
-      '.weight(FontWeight.w700)',
-    ],
-    // The ramp's weights as the token sets state them: Display at 800 (Small
-    // at 700) and Headline at 700. Generated from `design/tokens/core.json`,
-    // so a heavier role added there fails here.
+    // The ramp reads its weights from the constants generated from
+    // `design/tokens/core.json`, so a heavier role added there fails here.
     'lib/core/generated/design_tokens.g.dart': [
       'static const FontWeight typeDisplayLargeFontWeight = FontWeight.w800;',
       'static const FontWeight typeDisplayMediumFontWeight = FontWeight.w800;',

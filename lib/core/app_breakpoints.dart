@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/widgets.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 
 /// The window sizes the app is designed at, and the one test that decides which
 /// shell paints them.
@@ -38,7 +39,7 @@ abstract final class AppBreakpoints {
   /// out of scope at or above 840), so this is less a switch between two
   /// supported layouts than the edge of the supported range, with the rail as
   /// the least-wrong thing on the far side.
-  static const double touchRail = 840;
+  static const double touchRail = DesignTokens.breakpointTouchRail;
 
   /// Width below which the desktop shell uses its compact variants.
   ///
@@ -47,7 +48,7 @@ abstract final class AppBreakpoints {
   /// bands, the TrueNAS section list, a second results column — all stop
   /// fitting well before the window is halved. Below it the shell keeps every
   /// part it had and shows fewer items in each, never smaller ones.
-  static const double desktopCompact = 1100;
+  static const double desktopCompact = DesignTokens.breakpointDesktopCompact;
 
   /// Aspect ratio at or above which a frame stops stacking and starts putting
   /// two things side by side.
@@ -72,7 +73,7 @@ abstract final class AppBreakpoints {
   /// [desktopCompact] answers "how much room", this answers "what shape", and
   /// the onboarding walk asking the first one is why four drawn compact frames
   /// were code the app could never reach.
-  static const double landscapeAspect = 1.2;
+  static const double landscapeAspect = DesignTokens.breakpointLandscapeAspect;
 
   /// Whether [context]'s frame is landscape enough for a side-by-side
   /// arrangement.
@@ -92,7 +93,7 @@ abstract final class AppBreakpoints {
   /// A dashboard stretched across a 27-inch display is not more information, it
   /// is the same information with the reading line broken. The well centres in
   /// whatever is left after the rail and the inspector.
-  static const double contentWell = 1140;
+  static const double contentWell = DesignTokens.breakpointContentWell;
 
   /// Width below which a desktop window paints the touch shell.
   ///
@@ -102,11 +103,14 @@ abstract final class AppBreakpoints {
   /// than stopping the window there, a narrower one gets the layout drawn for
   /// that measure — the phone's, bottom bar and all — under a bare drag strip
   /// that keeps the OS window buttons. The window stays frameless either way.
-  static const double desktopMobile = 720;
+  static const double desktopMobile = DesignTokens.breakpointDesktopMobile;
 
   /// Narrowest a desktop window may be dragged: a small phone's width. Height
   /// stays the compact artboard's, so the 720x450 frame remains reachable.
-  static const Size desktopMinimumWindow = Size(360, 450);
+  static const Size desktopMinimumWindow = Size(
+    DesignTokens.breakpointDesktopMinWidth,
+    DesignTokens.breakpointDesktopMinHeight,
+  );
 
   /// Whether this build runs in a window it manages itself.
   ///

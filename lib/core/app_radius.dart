@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 
 /// Material Design 3 Border Radius Scale
 ///
@@ -8,19 +9,19 @@ class AppRadius {
   AppRadius._();
 
   /// 0dp - No rounding (sharp corners)
-  static const double none = 0;
+  static const double none = DesignTokens.radiusNone;
 
   /// 4dp - Extra small rounding for subtle curves
-  static const double xs = 4;
+  static const double xs = DesignTokens.radiusXs;
 
   /// 8dp - Small rounding for chips, badges
-  static const double sm = 8;
+  static const double sm = DesignTokens.radiusSm;
 
   /// 12dp - Medium rounding for cards, containers
-  static const double md = 12;
+  static const double md = DesignTokens.radiusMd;
 
   /// 16dp - Large rounding for dialogs, sheets
-  static const double lg = 16;
+  static const double lg = DesignTokens.radiusLg;
 
   /// 20dp - The selected-affordance radius
   ///
@@ -30,13 +31,13 @@ class AppRadius {
   /// the Activity segment pills — now shares that vocabulary, and "this one is
   /// active" should look the same everywhere. Reach for it only for a selected
   /// state, never as a general corner.
-  static const double pill = 20;
+  static const double pill = DesignTokens.radiusPill;
 
   /// 28dp - Extra large rounding for FAB
-  static const double xl = 28;
+  static const double xl = DesignTokens.radiusXl;
 
   /// 50dp - Full/circular rounding
-  static const double full = 50;
+  static const double full = DesignTokens.radiusFull;
 
   // --- Pre-built BorderRadius ---
 

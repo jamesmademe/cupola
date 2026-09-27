@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
@@ -560,7 +561,7 @@ class _NavBarIndicator extends StatelessWidget {
 }
 
 class _NavBarLayoutMetrics {
-  static const double _compactBreakpoint = 360.0;
+  static const double _compactBreakpoint = DesignTokens.breakpointNavCompact;
   static const double _compactTargetWidth = 52.0;
   static const double _compactMinWidth = 48.0;
 

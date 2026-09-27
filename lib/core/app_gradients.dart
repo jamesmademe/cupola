@@ -1,6 +1,7 @@
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 
 /// Centralised gradient tokens for Cupola.
 ///
@@ -26,8 +27,12 @@ class AppGradients {
       end: Alignment.topCenter,
       colors: [
         surface,
-        surface.withValues(alpha: lerpDouble(0.85, 1.0, depth)!),
-        surface.withValues(alpha: lerpDouble(0.0, 0.35, depth)!),
+        surface.withValues(
+          alpha: lerpDouble(DesignTokens.opacityHeroScrimRest, 1.0, depth)!,
+        ),
+        surface.withValues(
+          alpha: lerpDouble(0.0, DesignTokens.opacityHeroScrimDeep, depth)!,
+        ),
       ],
       stops: const [0.0, 0.35, 1.0],
     );
@@ -46,7 +51,9 @@ class AppGradients {
       radius: 1.4,
       colors: [
         glow.withValues(
-          alpha: scheme.brightness == Brightness.dark ? 0.16 : 0.10,
+          alpha: scheme.brightness == Brightness.dark
+              ? DesignTokensDark.opacityAmbientGlow
+              : DesignTokensLight.opacityAmbientGlow,
         ),
         scheme.surface.withValues(alpha: 0.0),
       ],
@@ -65,7 +72,7 @@ class AppGradients {
     Color accent, {
     Alignment center = Alignment.topRight,
     double radius = 1.2,
-    double alpha = 0.22,
+    double alpha = DesignTokens.opacityServiceGlow,
   }) {
     return RadialGradient(
       center: center,

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 
 /// Builds a [TextStyle] backed by the bundled Inter variable font.
 ///
@@ -103,20 +104,23 @@ class AppColors {
   AppColors._();
 
   // === SERVICE ACCENTS ===
-  static const Color seerr = Color(0xFF6366F1);
-  static const Color radarr = Color(0xFFF59E0B);
-  static const Color sonarr = Color(0xFF8B5CF6);
-  static const Color lidarr = Color(0xFFEC4899);
-  static const Color qbittorrent = Color(0xFF2F67BA);
-  static const Color bazarr = Color(0xFF25A7DF);
-  static const Color truenas = Color(0xFF0095D5); // TrueNAS blue
-  static const Color dockge = Color(0xFF058373); // Dockge teal
-  static const Color prowlarr = Color(0xFFE66000); // Prowlarr orange
-  static const Color readarr = Color(0xFFC0392B); // Readarr red
-  static const Color sabnzbd = Color(0xFFF0A800); // SABnzbd amber/gold
-  static const Color nzbget = Color(0xFF0F9D58); // NZBGet green
-  static const Color unraid = Color(0xFFFF8C2B); // Unraid orange
-  static const Color jellyfin = Color(0xFFAA5CC3); // Jellyfin purple
+  static const Color seerr = DesignTokens.colorServiceSeerr;
+  static const Color radarr = DesignTokens.colorServiceRadarr;
+  static const Color sonarr = DesignTokens.colorServiceSonarr;
+  static const Color lidarr = DesignTokens.colorServiceLidarr;
+  static const Color qbittorrent = DesignTokens.colorServiceQbittorrent;
+  static const Color bazarr = DesignTokens.colorServiceBazarr;
+  static const Color truenas = DesignTokens.colorServiceTruenas; // TrueNAS blue
+  static const Color dockge = DesignTokens.colorServiceDockge; // Dockge teal
+  static const Color prowlarr =
+      DesignTokens.colorServiceProwlarr; // Prowlarr orange
+  static const Color readarr = DesignTokens.colorServiceReadarr; // Readarr red
+  static const Color sabnzbd =
+      DesignTokens.colorServiceSabnzbd; // SABnzbd amber/gold
+  static const Color nzbget = DesignTokens.colorServiceNzbget; // NZBGet green
+  static const Color unraid = DesignTokens.colorServiceUnraid; // Unraid orange
+  static const Color jellyfin =
+      DesignTokens.colorServiceJellyfin; // Jellyfin purple
 
   /// Transmission crimson — the brand's red family, walked off its own hex for
   /// the same reason [plex] is walked off Plex gold.
@@ -129,7 +133,7 @@ class AppColors {
   /// toward crimson keeps it unmistakably Transmission red while clearing
   /// ΔE 8.8 from the alarm tone and 10.8 from Readarr. For reference, the
   /// tightest pair already shipping is [radarr]/[sabnzbd] at ΔE 4.8.
-  static const Color transmission = Color(0xFFE11D48);
+  static const Color transmission = DesignTokens.colorServiceTransmission;
 
   /// Nginx Proxy Manager vermilion — the brand value, used unchanged.
   ///
@@ -137,7 +141,8 @@ class AppColors {
   /// ΔE 9.2 from [prowlarr]'s orange and 8.3 from [error], comfortably above
   /// the palette's existing floor, because it is a *red*-orange and the crowded
   /// band above it ([unraid], [plex], [radarr], [sabnzbd]) is amber.
-  static const Color nginxProxyManager = Color(0xFFF15833);
+  static const Color nginxProxyManager =
+      DesignTokens.colorServiceNginxProxyManager;
 
   /// Plex bronze — deliberately **not** Plex's brand gold `#E5A00D`.
   ///
@@ -158,7 +163,7 @@ class AppColors {
   /// and 20 from the alarm tone. It resolves to 5.05:1 as a label over its own
   /// 14% tint in dark; light theme still goes through `ServiceTheme.onTint`,
   /// which brand gold also required (it measured 1.84:1 there).
-  static const Color plex = Color(0xFFC97A16);
+  static const Color plex = DesignTokens.colorServicePlex;
 
   // === NAV SECTION ACCENTS ===
   //
@@ -177,32 +182,44 @@ class AppColors {
   //   in the cool, instrument-panel end of the palette rather than reaching for
   //   the alarm hues.
   // - Services keeps `primary`: it is the app's own colour and the home tab.
-  static const Color navDashboard = primary;
-  static const Color navActivity = Color(0xFF06B6D4); // cyan-500
-  static const Color navSearch = Color(0xFFA855F7); // purple-500
-  static const Color navSettings = Color(0xFF14B8A6); // teal-500
+  static const Color navDashboard = DesignTokens.colorNavDashboard;
+  static const Color navActivity = DesignTokens.colorNavActivity; // cyan-500
+  static const Color navSearch = DesignTokens.colorNavSearch; // purple-500
+  static const Color navSettings = DesignTokens.colorNavSettings; // teal-500
 
   // === PRIMARY (Seerr Indigo) ===
   static const Color primary = seerr;
-  static const Color primaryDark = Color(0xFF4F46E5); // indigo-600
-  static const Color primaryLight = Color(0xFF818CF8); // indigo-400
-  static const Color primaryLighter = Color(0xFFA5B4FC); // indigo-300
+  static const Color primaryDark =
+      DesignTokens.colorBrandPrimaryDark; // indigo-600
+  static const Color primaryLight =
+      DesignTokens.colorBrandPrimaryLight; // indigo-400
+  static const Color primaryLighter =
+      DesignTokens.colorBrandPrimaryLighter; // indigo-300
 
   // === DARK THEME SURFACES ===
   // Deep, layered near-black ladder so cards separate cleanly once elevation
   // and shadows are applied. Each step is a genuinely distinct tone.
-  static const Color surfaceDark = Color(0xFF0A0B11); // scaffold base
-  static const Color surfaceContainerLowestDark = Color(0xFF08090F);
-  static const Color surfaceContainerLowDark = Color(0xFF11131B);
-  static const Color surfaceContainerDark = Color(0xFF161923);
-  static const Color surfaceContainerHighDark = Color(0xFF1E2430);
-  static const Color surfaceContainerHighestDark = Color(0xFF29303E);
+  static const Color surfaceDark =
+      DesignTokensDark.colorSurface; // scaffold base
+  static const Color surfaceContainerLowestDark =
+      DesignTokensDark.colorSurfaceContainerLowest;
+  static const Color surfaceContainerLowDark =
+      DesignTokensDark.colorSurfaceContainerLow;
+  static const Color surfaceContainerDark =
+      DesignTokensDark.colorSurfaceContainer;
+  static const Color surfaceContainerHighDark =
+      DesignTokensDark.colorSurfaceContainerHigh;
+  static const Color surfaceContainerHighestDark =
+      DesignTokensDark.colorSurfaceContainerHighest;
 
   // === LIGHT THEME SURFACES ===
-  static const Color surfaceLight = Color(0xFFF3F4F6);
-  static const Color surfaceContainerLight = Color(0xFFFFFFFF);
-  static const Color surfaceContainerHighLight = Color(0xFFF0F1F5);
-  static const Color surfaceContainerHighestLight = Color(0xFFE2E4EA);
+  static const Color surfaceLight = DesignTokensLight.colorSurface;
+  static const Color surfaceContainerLight =
+      DesignTokensLight.colorSurfaceContainer;
+  static const Color surfaceContainerHighLight =
+      DesignTokensLight.colorSurfaceContainerHigh;
+  static const Color surfaceContainerHighestLight =
+      DesignTokensLight.colorSurfaceContainerHighest;
 
   // === PLATE (artwork stand-ins) ===
   //
@@ -219,10 +236,10 @@ class AppColors {
   // pinned itself to a near-black literal with the same reasoning written out
   // beside it — which is the argument for naming them here instead of letting
   // each surface rediscover them.
-  static const Color plateSurface = surfaceContainerHighDark;
-  static const Color plateWell = surfaceContainerLowestDark;
-  static const Color plateOutline = outlineDark;
-  static const Color plateInk = onSurfaceDark;
+  static const Color plateSurface = DesignTokens.colorPlateSurface;
+  static const Color plateWell = DesignTokens.colorPlateWell;
+  static const Color plateOutline = DesignTokens.colorPlateOutline;
+  static const Color plateInk = DesignTokens.colorPlateInk;
 
   /// The plate's secondary ink.
   ///
@@ -230,20 +247,21 @@ class AppColors {
   /// and measures 4.20:1 on [plateSurface], which is below AA on the very
   /// surface a plate's caption sits on. This is one step brighter and clears it
   /// at 5.49:1 on [plateSurface] and 7.02:1 on [plateWell].
-  static const Color plateDimInk = Color(0xFF909AAD);
+  static const Color plateDimInk = DesignTokens.colorPlateDimInk;
 
   /// Fill behind a selected segment/chip in light mode.
   ///
   /// Deliberately further from `surfaceLight` than the container tokens: a
   /// selected state has to be visible at a glance, and 1.03:1 was not.
-  static const Color selectedContainerLight = Color(0xFFE2E5EE);
+  static const Color selectedContainerLight =
+      DesignTokensLight.colorSecondaryContainer;
 
   // === TEXT COLORS - DARK ===
-  static const Color onSurfaceDark = Color(0xFFF0F2F8);
-  static const Color onSurfaceVariantDark = Color(
-    0xFFB4BCCB,
-  ); // brighter secondary
-  static const Color onSurfaceDimDark = Color(0xFF7C8598); // dimmer tertiary
+  static const Color onSurfaceDark = DesignTokensDark.colorOnSurface;
+  static const Color onSurfaceVariantDark =
+      DesignTokensDark.colorOnSurfaceVariant; // brighter secondary
+  static const Color onSurfaceDimDark =
+      DesignTokensDark.colorDimText; // dimmer tertiary
 
   // === TEXT COLORS - LIGHT ===
   //
@@ -261,19 +279,24 @@ class AppColors {
   // and highest — with room to spare: onVariant 6.87 / 7.56 / 6.70 / 5.94, and
   // dim 5.49 / 6.04 / 5.35 / 4.75. The two-step hierarchy between them is
   // preserved, and both stay neutral grays so nothing reads as tinted.
-  static const Color onSurfaceLight = Color(0xFF111827); // gray-900
-  static const Color onSurfaceVariantLight = Color(0xFF4B5563); // 5.94:1 worst
-  static const Color onSurfaceDimLight = Color(0xFF5C6371); // 4.75:1 worst
+  static const Color onSurfaceLight =
+      DesignTokensLight.colorOnSurface; // gray-900
+  static const Color onSurfaceVariantLight =
+      DesignTokensLight.colorOnSurfaceVariant; // 5.94:1 worst
+  static const Color onSurfaceDimLight =
+      DesignTokensLight.colorDimText; // 4.75:1 worst
 
   // === OUTLINE / BORDER ===
-  static const Color outlineDark = Color(0xFF2D3748);
-  static const Color outlineVariantDark = Color(0xFF2D3748);
-  static const Color outlineLight = Color(0xFFE2E4EA);
-  static const Color outlineVariantLight = Color(0xFFE2E4EA);
+  static const Color outlineDark = DesignTokensDark.colorOutline;
+  static const Color outlineVariantDark = DesignTokensDark.colorOutlineVariant;
+  static const Color outlineLight = DesignTokensLight.colorOutline;
+  static const Color outlineVariantLight =
+      DesignTokensLight.colorOutlineVariant;
 
   // === SEMANTIC COLORS ===
-  static const Color success = Color(0xFF22C55E); // green-500
-  static const Color successContainer = Color(0xFF166534); // green-800
+  static const Color success = DesignTokens.colorStatusSuccess; // green-500
+  static const Color successContainer =
+      DesignTokens.colorStatusSuccessContainer; // green-800
   /// The fault tone — yellow-400, and deliberately not amber-500.
   ///
   /// It used to be `#F59E0B`, which is the **same byte** as [radarr]. A fault
@@ -286,10 +309,11 @@ class AppColors {
   /// nearest accent in the palette — and 25.7 from [radarr]; nothing else is
   /// under 40. It stays a warmer yellow than any of them, so the *word* amber
   /// in the tone vocabulary still describes what the eye sees.
-  static const Color warning = Color(0xFFFACC15); // yellow-400
-  static const Color error = Color(0xFFEF4444); // red-500
-  static const Color errorContainer = Color(0xFF991B1B); // red-800
-  static const Color info = Color(0xFF3B82F6); // blue-500
+  static const Color warning = DesignTokens.colorStatusWarning; // yellow-400
+  static const Color error = DesignTokens.colorStatusError; // red-500
+  static const Color errorContainer =
+      DesignTokens.colorStatusErrorContainer; // red-800
+  static const Color info = DesignTokens.colorStatusInfo; // blue-500
 
   /// The ink a *bright* fill takes, when white loses the measurement.
   ///
@@ -310,7 +334,7 @@ class AppColors {
   /// `onPrimary` is deliberately still white: on brand indigo white measures
   /// 4.47:1 and this ink 3.97:1, so white wins and the brand keeps its
   /// familiar reversed-out label.
-  static const Color inkOnBright = Color(0xFF111827);
+  static const Color inkOnBright = DesignTokens.colorInkOnBright;
 }
 
 @immutable
@@ -362,13 +386,17 @@ class CupolaThemeColors extends ThemeExtension<CupolaThemeColors> {
   }) {
     final isDark = brightness == Brightness.dark;
     return CupolaThemeColors(
-      statusBadgeBackground: colorScheme.surface.withValues(alpha: 0.8),
+      statusBadgeBackground: colorScheme.surface.withValues(
+        alpha: DesignTokens.opacityStatusBadge,
+      ),
       statusBadgeForeground: colorScheme.onSurface,
       dimText: isDark
           ? AppColors.onSurfaceDimDark
           : AppColors.onSurfaceDimLight,
       glassSurface: colorScheme.surfaceContainer.withValues(
-        alpha: isDark ? 0.72 : 0.55,
+        alpha: isDark
+            ? DesignTokensDark.opacityGlassSurface
+            : DesignTokensLight.opacityGlassSurface,
       ),
       brandGradientStart: AppColors.seerr,
       brandGradientEnd: AppColors.sonarr,
@@ -430,7 +458,7 @@ class AppTheme {
   AppTheme._();
 
   /// Bundled app font family declared in pubspec.yaml.
-  static const String fontFamily = 'Inter';
+  static const String fontFamily = DesignTokens.typeFamilySans;
 
   /// Family for code, logs, hashes and anything read in columns.
   ///
@@ -446,16 +474,11 @@ class AppTheme {
   /// Menlo leads because it is the mono face reliably present on both Apple
   /// platforms; the fallbacks pick the job up everywhere else, ending at the
   /// Android alias.
-  static const String monoFontFamily = 'Menlo';
+  static const String monoFontFamily = DesignTokens.typeFamilyMono;
 
   /// Fallbacks for [monoFontFamily], in resolution order.
-  static const List<String> monoFontFamilyFallback = <String>[
-    'SF Mono',
-    'Roboto Mono',
-    'Droid Sans Mono',
-    'Consolas',
-    'monospace',
-  ];
+  static const List<String> monoFontFamilyFallback =
+      DesignTokens.typeFamilyMonoFallback;
 
   // === VARIABLE AXES ===
   //
@@ -534,10 +557,10 @@ class AppTheme {
   /// reading as a cramped acronym. Kept off [interTracking] deliberately.
   static TextStyle eyebrow(Color color) => _inter(
     color: color,
-    fontSize: 11,
-    fontWeight: FontWeight.w600,
-    height: 1.2,
-    letterSpacing: 1.4,
+    fontSize: DesignTokens.typeLabelEyebrowFontSize,
+    fontWeight: DesignTokens.typeLabelEyebrowFontWeight,
+    height: DesignTokens.typeLabelEyebrowLineHeight,
+    letterSpacing: DesignTokens.typeLabelEyebrowLetterSpacing,
     brightness: Brightness.dark,
   );
 
@@ -558,28 +581,28 @@ class AppTheme {
   /// bar. One step under Title because it names the surface the app bar already
   /// put you on, not the surface itself.
   static TextStyle subtitle(Brightness brightness) => _inter(
-    fontSize: 20,
-    fontWeight: FontWeight.w600,
-    height: 1.26,
-    letterSpacing: -0.3,
+    fontSize: DesignTokens.typeTitleSubtitleFontSize,
+    fontWeight: DesignTokens.typeTitleSubtitleFontWeight,
+    height: DesignTokens.typeTitleSubtitleLineHeight,
+    letterSpacing: DesignTokens.typeTitleSubtitleLetterSpacing,
     brightness: brightness,
   );
 
   /// **Panel header** (600, 18) — an `h2` inside a page: a Dockge stack, an NPM
   /// host, a TrueNAS console section. It heads a region, not the whole screen.
   static TextStyle panelHeader(Brightness brightness) => _inter(
-    fontSize: 18,
-    fontWeight: FontWeight.w600,
-    height: 1.28,
+    fontSize: DesignTokens.typeTitlePanelHeaderFontSize,
+    fontWeight: DesignTokens.typeTitlePanelHeaderFontWeight,
+    height: DesignTokens.typeTitlePanelHeaderLineHeight,
     brightness: brightness,
   );
 
   /// **Row title** (600, 15) — the primary line of a list row that is a *name*
   /// rather than a sentence: a device, a now-playing session, a proxy host.
   static TextStyle rowTitle(Brightness brightness) => _inter(
-    fontSize: 15,
-    fontWeight: FontWeight.w600,
-    height: 1.30,
+    fontSize: DesignTokens.typeTitleRowTitleFontSize,
+    fontWeight: DesignTokens.typeTitleRowTitleFontWeight,
+    height: DesignTokens.typeTitleRowTitleLineHeight,
     brightness: brightness,
   );
 
@@ -589,9 +612,9 @@ class AppTheme {
   /// It sits *above* Label on purpose. The thing that needs a human must never
   /// be smaller than the word describing it.
   static TextStyle data(Brightness brightness) => _inter(
-    fontSize: 13,
-    fontWeight: FontWeight.w500,
-    height: 1.30,
+    fontSize: DesignTokens.typeLabelDataFontSize,
+    fontWeight: DesignTokens.typeLabelDataFontWeight,
+    height: DesignTokens.typeLabelDataLineHeight,
     brightness: brightness,
   );
 
@@ -612,16 +635,18 @@ class AppTheme {
   /// specifically so it would not need one.
   static TextStyle chrome(
     BuildContext context, {
-    double size = 11,
-    FontWeight weight = FontWeight.w500,
+    double size = DesignTokens.typeLabelChromeFontSize,
+    FontWeight weight = DesignTokens.typeLabelChromeFontWeight,
     Color? color,
     double? height,
     double? letterSpacing,
   }) => _inter(
     color: color,
-    fontSize: size < 11 ? 11 : size,
+    fontSize: size < DesignTokens.typeLabelChromeFontSize
+        ? DesignTokens.typeLabelChromeFontSize
+        : size,
     fontWeight: weight,
-    height: height ?? 1.22,
+    height: height ?? DesignTokens.typeLabelChromeLineHeight,
     letterSpacing: letterSpacing,
     brightness: Theme.of(context).brightness,
   );
@@ -741,7 +766,10 @@ class AppTheme {
           foregroundColor: colorScheme.onPrimary,
           textStyle: labelLarge.weight(FontWeight.w600),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: DesignTokens.spaceXl,
+            vertical: DesignTokens.spaceMd,
+          ),
         ),
       ),
 
@@ -752,7 +780,10 @@ class AppTheme {
           textStyle: labelLarge.weight(FontWeight.w600),
           side: BorderSide(color: colorScheme.outline),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: DesignTokens.spaceXl,
+            vertical: DesignTokens.spaceMd,
+          ),
         ),
       ),
 
@@ -789,8 +820,8 @@ class AppTheme {
           borderSide: BorderSide(color: colorScheme.error, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
+          horizontal: DesignTokens.spaceLg,
+          vertical: DesignTokens.spaceMd,
         ),
         hintStyle: textTheme.bodyMedium!.copyWith(
           color: colorScheme.onSurfaceVariant,
@@ -831,7 +862,9 @@ class AppTheme {
 
       // ListTile
       listTileTheme: ListTileThemeData(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: DesignTokens.spaceLg,
+        ),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
       ),
 
@@ -856,43 +889,43 @@ class AppTheme {
   static final ColorScheme _darkColorScheme = ColorScheme(
     brightness: Brightness.dark,
     // Primary
-    primary: AppColors.primary,
-    onPrimary: Colors.white,
-    primaryContainer: AppColors.primaryDark,
-    onPrimaryContainer: AppColors.primaryLighter,
+    primary: DesignTokensDark.colorPrimary,
+    onPrimary: DesignTokensDark.colorOnPrimary,
+    primaryContainer: DesignTokensDark.colorPrimaryContainer,
+    onPrimaryContainer: DesignTokensDark.colorOnPrimaryContainer,
     // Secondary (same as primary for unified look)
-    secondary: AppColors.primaryLight,
-    onSecondary: AppColors.inkOnBright,
-    secondaryContainer: AppColors.surfaceContainerHighDark,
-    onSecondaryContainer: AppColors.onSurfaceVariantDark,
+    secondary: DesignTokensDark.colorSecondary,
+    onSecondary: DesignTokensDark.colorOnSecondary,
+    secondaryContainer: DesignTokensDark.colorSecondaryContainer,
+    onSecondaryContainer: DesignTokensDark.colorOnSecondaryContainer,
     // Tertiary
-    tertiary: AppColors.success,
-    onTertiary: AppColors.inkOnBright,
-    tertiaryContainer: AppColors.successContainer,
-    onTertiaryContainer: Colors.white,
+    tertiary: DesignTokensDark.colorTertiary,
+    onTertiary: DesignTokensDark.colorOnTertiary,
+    tertiaryContainer: DesignTokensDark.colorTertiaryContainer,
+    onTertiaryContainer: DesignTokensDark.colorOnTertiaryContainer,
     // Error
-    error: AppColors.error,
-    onError: AppColors.inkOnBright,
-    errorContainer: AppColors.errorContainer,
-    onErrorContainer: Colors.white,
+    error: DesignTokensDark.colorError,
+    onError: DesignTokensDark.colorOnError,
+    errorContainer: DesignTokensDark.colorErrorContainer,
+    onErrorContainer: DesignTokensDark.colorOnErrorContainer,
     // Surface
-    surface: AppColors.surfaceDark,
-    onSurface: AppColors.onSurfaceDark,
-    surfaceContainerLowest: AppColors.surfaceContainerLowestDark,
-    surfaceContainerLow: AppColors.surfaceContainerLowDark,
-    surfaceContainer: AppColors.surfaceContainerDark,
-    surfaceContainerHigh: AppColors.surfaceContainerHighDark,
-    surfaceContainerHighest: AppColors.surfaceContainerHighestDark,
-    onSurfaceVariant: AppColors.onSurfaceVariantDark,
+    surface: DesignTokensDark.colorSurface,
+    onSurface: DesignTokensDark.colorOnSurface,
+    surfaceContainerLowest: DesignTokensDark.colorSurfaceContainerLowest,
+    surfaceContainerLow: DesignTokensDark.colorSurfaceContainerLow,
+    surfaceContainer: DesignTokensDark.colorSurfaceContainer,
+    surfaceContainerHigh: DesignTokensDark.colorSurfaceContainerHigh,
+    surfaceContainerHighest: DesignTokensDark.colorSurfaceContainerHighest,
+    onSurfaceVariant: DesignTokensDark.colorOnSurfaceVariant,
     // Outline
-    outline: AppColors.outlineDark,
-    outlineVariant: AppColors.outlineVariantDark,
+    outline: DesignTokensDark.colorOutline,
+    outlineVariant: DesignTokensDark.colorOutlineVariant,
     // Other
-    shadow: Colors.black,
-    scrim: Colors.black,
-    inverseSurface: AppColors.surfaceLight,
-    onInverseSurface: AppColors.onSurfaceLight,
-    inversePrimary: AppColors.primaryDark,
+    shadow: DesignTokensDark.colorShadow,
+    scrim: DesignTokensDark.colorScrim,
+    inverseSurface: DesignTokensDark.colorInverseSurface,
+    onInverseSurface: DesignTokensDark.colorOnInverseSurface,
+    inversePrimary: DesignTokensDark.colorInversePrimary,
   );
 
   static final ColorScheme _lightColorScheme = ColorScheme(
@@ -918,10 +951,10 @@ class AppTheme {
     // the brand, because a walked indigo is a repainted brand. Choosing the
     // adjacent step of the brand's own ramp per theme is the design's own
     // answer instead.
-    primary: AppColors.primaryDark,
-    onPrimary: Colors.white,
-    primaryContainer: AppColors.primaryLighter,
-    onPrimaryContainer: AppColors.primaryDark,
+    primary: DesignTokensLight.colorPrimary,
+    onPrimary: DesignTokensLight.colorOnPrimary,
+    primaryContainer: DesignTokensLight.colorPrimaryContainer,
+    onPrimaryContainer: DesignTokensLight.colorOnPrimaryContainer,
     // Secondary
     //
     // `secondaryContainer` is what Material paints behind a selected
@@ -930,32 +963,32 @@ class AppTheme {
     // fill at all, and with onSurfaceVariant as its foreground it read as
     // *less* prominent than the unselected ones. A distinctly tinted container
     // plus full-strength text makes the selected state unmistakable.
-    secondary: AppColors.primaryDark,
-    onSecondary: Colors.white,
-    secondaryContainer: AppColors.selectedContainerLight,
-    onSecondaryContainer: AppColors.onSurfaceLight,
+    secondary: DesignTokensLight.colorSecondary,
+    onSecondary: DesignTokensLight.colorOnSecondary,
+    secondaryContainer: DesignTokensLight.colorSecondaryContainer,
+    onSecondaryContainer: DesignTokensLight.colorOnSecondaryContainer,
     // Tertiary
-    tertiary: AppColors.success,
-    onTertiary: AppColors.inkOnBright,
-    tertiaryContainer: const Color(0xFFDCFCE7), // green-100
-    onTertiaryContainer: AppColors.successContainer,
+    tertiary: DesignTokensLight.colorTertiary,
+    onTertiary: DesignTokensLight.colorOnTertiary,
+    tertiaryContainer: DesignTokensLight.colorTertiaryContainer,
+    onTertiaryContainer: DesignTokensLight.colorOnTertiaryContainer,
     // Error
-    error: AppColors.error,
-    onError: AppColors.inkOnBright,
-    errorContainer: const Color(0xFFFEE2E2), // red-100
-    onErrorContainer: AppColors.errorContainer,
+    error: DesignTokensLight.colorError,
+    onError: DesignTokensLight.colorOnError,
+    errorContainer: DesignTokensLight.colorErrorContainer,
+    onErrorContainer: DesignTokensLight.colorOnErrorContainer,
     // Surface
-    surface: AppColors.surfaceLight,
-    onSurface: AppColors.onSurfaceLight,
-    surfaceContainerLowest: Colors.white,
-    surfaceContainerLow: AppColors.surfaceLight,
-    surfaceContainer: AppColors.surfaceContainerLight,
-    surfaceContainerHigh: AppColors.surfaceContainerHighLight,
-    surfaceContainerHighest: AppColors.surfaceContainerHighestLight,
-    onSurfaceVariant: AppColors.onSurfaceVariantLight,
+    surface: DesignTokensLight.colorSurface,
+    onSurface: DesignTokensLight.colorOnSurface,
+    surfaceContainerLowest: DesignTokensLight.colorSurfaceContainerLowest,
+    surfaceContainerLow: DesignTokensLight.colorSurfaceContainerLow,
+    surfaceContainer: DesignTokensLight.colorSurfaceContainer,
+    surfaceContainerHigh: DesignTokensLight.colorSurfaceContainerHigh,
+    surfaceContainerHighest: DesignTokensLight.colorSurfaceContainerHighest,
+    onSurfaceVariant: DesignTokensLight.colorOnSurfaceVariant,
     // Outline
-    outline: AppColors.outlineLight,
-    outlineVariant: AppColors.outlineVariantLight,
+    outline: DesignTokensLight.colorOutline,
+    outlineVariant: DesignTokensLight.colorOutlineVariant,
     // Other
     //
     // Ink, not black. Every `AppElevation` level paints `scheme.shadow`, and on
@@ -963,11 +996,11 @@ class AppTheme {
     // depth — the light ladder is drawn as `rgba(17,24,39, …)` at all three
     // levels. `AppElevation.glass()` is the deliberate exception and hardcodes
     // its own black, so it is unaffected by this line.
-    shadow: AppColors.onSurfaceLight,
-    scrim: Colors.black,
-    inverseSurface: AppColors.surfaceDark,
-    onInverseSurface: AppColors.onSurfaceDark,
-    inversePrimary: AppColors.primaryLight,
+    shadow: DesignTokensLight.colorShadow,
+    scrim: DesignTokensLight.colorScrim,
+    inverseSurface: DesignTokensLight.colorInverseSurface,
+    onInverseSurface: DesignTokensLight.colorOnInverseSurface,
+    inversePrimary: DesignTokensLight.colorInversePrimary,
   );
 
   // === TEXT THEME ===
@@ -1014,29 +1047,85 @@ class AppTheme {
         .apply(fontFamily: fontFamily)
         .copyWith(
           // Display — editorial: heaviest weights, tightest leading.
-          displayLarge: style(size: 57, weight: FontWeight.w800, height: 1.10),
-          displayMedium: style(size: 45, weight: FontWeight.w800, height: 1.10),
-          displaySmall: style(size: 36, weight: FontWeight.w700, height: 1.10),
-          // Headline — screen-level headings.
-          headlineLarge: style(size: 32, weight: FontWeight.w700, height: 1.15),
-          headlineMedium: style(
-            size: 28,
-            weight: FontWeight.w700,
-            height: 1.18,
+          displayLarge: style(
+            size: DesignTokens.typeDisplayLargeFontSize,
+            weight: DesignTokens.typeDisplayLargeFontWeight,
+            height: DesignTokens.typeDisplayLargeLineHeight,
           ),
-          headlineSmall: style(size: 24, weight: FontWeight.w700, height: 1.20),
+          displayMedium: style(
+            size: DesignTokens.typeDisplayMediumFontSize,
+            weight: DesignTokens.typeDisplayMediumFontWeight,
+            height: DesignTokens.typeDisplayMediumLineHeight,
+          ),
+          displaySmall: style(
+            size: DesignTokens.typeDisplaySmallFontSize,
+            weight: DesignTokens.typeDisplaySmallFontWeight,
+            height: DesignTokens.typeDisplaySmallLineHeight,
+          ),
+          // Headline — screen-level headings.
+          headlineLarge: style(
+            size: DesignTokens.typeHeadlineLargeFontSize,
+            weight: DesignTokens.typeHeadlineLargeFontWeight,
+            height: DesignTokens.typeHeadlineLargeLineHeight,
+          ),
+          headlineMedium: style(
+            size: DesignTokens.typeHeadlineMediumFontSize,
+            weight: DesignTokens.typeHeadlineMediumFontWeight,
+            height: DesignTokens.typeHeadlineMediumLineHeight,
+          ),
+          headlineSmall: style(
+            size: DesignTokens.typeHeadlineSmallFontSize,
+            weight: DesignTokens.typeHeadlineSmallFontWeight,
+            height: DesignTokens.typeHeadlineSmallLineHeight,
+          ),
           // Title — section headers, card titles, row primaries, KPI values.
-          titleLarge: style(size: 22, weight: FontWeight.w600, height: 1.25),
-          titleMedium: style(size: 16, weight: FontWeight.w600, height: 1.32),
-          titleSmall: style(size: 14, weight: FontWeight.w500, height: 1.34),
+          titleLarge: style(
+            size: DesignTokens.typeTitleLargeFontSize,
+            weight: DesignTokens.typeTitleLargeFontWeight,
+            height: DesignTokens.typeTitleLargeLineHeight,
+          ),
+          titleMedium: style(
+            size: DesignTokens.typeTitleMediumFontSize,
+            weight: DesignTokens.typeTitleMediumFontWeight,
+            height: DesignTokens.typeTitleMediumLineHeight,
+          ),
+          titleSmall: style(
+            size: DesignTokens.typeTitleSmallFontSize,
+            weight: DesignTokens.typeTitleSmallFontWeight,
+            height: DesignTokens.typeTitleSmallLineHeight,
+          ),
           // Body — running text. The only roles set for reading, not for chrome.
-          bodyLarge: style(size: 16, weight: FontWeight.w400, height: 1.55),
-          bodyMedium: style(size: 14, weight: FontWeight.w400, height: 1.45),
-          bodySmall: style(size: 12, weight: FontWeight.w400, height: 1.40),
+          bodyLarge: style(
+            size: DesignTokens.typeBodyLargeFontSize,
+            weight: DesignTokens.typeBodyLargeFontWeight,
+            height: DesignTokens.typeBodyLargeLineHeight,
+          ),
+          bodyMedium: style(
+            size: DesignTokens.typeBodyMediumFontSize,
+            weight: DesignTokens.typeBodyMediumFontWeight,
+            height: DesignTokens.typeBodyMediumLineHeight,
+          ),
+          bodySmall: style(
+            size: DesignTokens.typeBodySmallFontSize,
+            weight: DesignTokens.typeBodySmallFontWeight,
+            height: DesignTokens.typeBodySmallLineHeight,
+          ),
           // Label — chips, badges, nav, dense metadata. Chrome: leading stays put.
-          labelLarge: style(size: 14, weight: FontWeight.w500, height: 1.22),
-          labelMedium: style(size: 12, weight: FontWeight.w500, height: 1.22),
-          labelSmall: style(size: 11, weight: FontWeight.w500, height: 1.22),
+          labelLarge: style(
+            size: DesignTokens.typeLabelLargeFontSize,
+            weight: DesignTokens.typeLabelLargeFontWeight,
+            height: DesignTokens.typeLabelLargeLineHeight,
+          ),
+          labelMedium: style(
+            size: DesignTokens.typeLabelMediumFontSize,
+            weight: DesignTokens.typeLabelMediumFontWeight,
+            height: DesignTokens.typeLabelMediumLineHeight,
+          ),
+          labelSmall: style(
+            size: DesignTokens.typeLabelSmallFontSize,
+            weight: DesignTokens.typeLabelSmallFontWeight,
+            height: DesignTokens.typeLabelSmallLineHeight,
+          ),
         );
   }
 }
