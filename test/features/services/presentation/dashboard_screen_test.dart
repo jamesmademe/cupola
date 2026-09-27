@@ -21,6 +21,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
@@ -62,6 +63,32 @@ void main() {
       'ServicesInFlightSection',
       'ServicesRecentlyAddedSection',
     ]);
+  });
+
+  testWidgets('a card whose figures failed reads an em dash, not a shimmer', (
+    tester,
+  ) async {
+    // The Dockge bug: the probe answered, the figures read failed, and the
+    // card shimmered for good because failure and "still coming" were both
+    // null.
+    await _pumpDashboard(
+      tester,
+      signalPairFuture: (service) => service == ServiceKey.sonarr
+          ? Future.error(Exception('Sonarr did not answer'))
+          : Future.value(null),
+    );
+    await tester.pump();
+
+    final sonarr = find.byKey(const ValueKey('service-matrix-cell-sonarr'));
+    await tester.scrollUntilVisible(sonarr, 200);
+    expect(
+      find.descendant(of: sonarr, matching: find.text('—')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: sonarr, matching: find.byType(ShimmerPlaceholder)),
+      findsNothing,
+    );
   });
 
   group('the header', () {
@@ -536,6 +563,7 @@ Future<void> _pumpDashboard(
   Future<ServiceSummary> Function(_InstanceKey key)? instanceSummaryFuture,
   ServiceSummary Function(ServiceKey service)? summary,
   Future<ServiceSummary> Function(ServiceKey service)? summaryFuture,
+  Future<ServiceSignalPair?> Function(ServiceKey service)? signalPairFuture,
   SharedPreferences? prefs,
 }) async {
   final overrides = <Override>[
@@ -552,31 +580,33 @@ Future<void> _pumpDashboard(
           Future.value(summary?.call(service) ?? _summary(service)),
     ),
     serviceSignalPairProvider.overrideWith(
-      (ref, service) async => switch (service) {
-        ServiceKey.radarr => const ServiceSignalPair(
-          primary: ServiceSignal(
-            label: 'movies',
-            value: '2 038',
-            icon: Icons.movie_rounded,
-            tone: StatusTone.neutral,
-          ),
-          secondary: ServiceSignal(
-            label: 'missing',
-            value: '34',
-            icon: Icons.report_gmailerrorred_rounded,
-            tone: StatusTone.neutral,
-          ),
-        ),
-        ServiceKey.seerr => const ServiceSignalPair(
-          primary: ServiceSignal(
-            label: 'pending',
-            value: '4',
-            icon: Icons.hourglass_top_rounded,
-            tone: StatusTone.neutral,
-          ),
-        ),
-        _ => null,
-      },
+      (ref, service) async =>
+          await signalPairFuture?.call(service) ??
+          switch (service) {
+            ServiceKey.radarr => const ServiceSignalPair(
+              primary: ServiceSignal(
+                label: 'movies',
+                value: '2 038',
+                icon: Icons.movie_rounded,
+                tone: StatusTone.neutral,
+              ),
+              secondary: ServiceSignal(
+                label: 'missing',
+                value: '34',
+                icon: Icons.report_gmailerrorred_rounded,
+                tone: StatusTone.neutral,
+              ),
+            ),
+            ServiceKey.seerr => const ServiceSignalPair(
+              primary: ServiceSignal(
+                label: 'pending',
+                value: '4',
+                icon: Icons.hourglass_top_rounded,
+                tone: StatusTone.neutral,
+              ),
+            ),
+            _ => null,
+          },
     ),
     dashboardDecisionsProvider.overrideWith(
       (ref) async => rankDecisions(decisions ?? const []),

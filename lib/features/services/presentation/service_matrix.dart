@@ -80,6 +80,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
@@ -620,16 +621,21 @@ class ServiceMatrixCell extends ConsumerWidget {
     // Only asked for once the service has answered. Watching it while offline
     // would fan out a library fetch per unreachable service on every rebuild,
     // and there is nothing to paint with the result.
-    final signals =
+    final signalState =
         role == ServiceMatrixRole.readout &&
             reachability == ServiceReachability.online
         ? (folded != null && folded.total > 1
-              ? ref
-                    .watch(foldedServiceSignalPairProvider(service))
-                    .asData
-                    ?.value
-              : ref.watch(serviceSignalPairProvider(service)).asData?.value)
+              ? ref.watch(foldedServiceSignalPairProvider(service))
+              : ref.watch(serviceSignalPairProvider(service)))
         : null;
+    final signals = signalState?.asData?.value;
+    // A figure that failed is not a figure still coming. Both left `signals`
+    // null, and null drew the shimmer, so a service that answered its probe
+    // and then failed its read shimmered for good — a Dockge whose stack push
+    // timed out sat on "coming" until the app was restarted. A retry in flight
+    // is still coming, which is why a reloading error does not count.
+    final signalsFailed =
+        signalState != null && signalState.hasError && !signalState.isLoading;
 
     return _ServiceMatrixCellBody(
       service: service,
@@ -640,6 +646,7 @@ class ServiceMatrixCell extends ConsumerWidget {
       // that silently drops an unreachable connection is a wrong number, not a
       // partial one.
       signals: degraded ? null : signals,
+      signalsFailed: !degraded && signalsFailed,
       host: host,
       degradedOf: degraded ? folded : null,
       instanceId: instanceId,
@@ -732,6 +739,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
     required this.service,
     required this.reachability,
     required this.signals,
+    this.signalsFailed = false,
     required this.host,
     required this.role,
     this.degradedOf,
@@ -762,6 +770,10 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
   final ServiceKey service;
   final ServiceReachability reachability;
   final ServiceSignalPair? signals;
+
+  /// The service answered its probe and its figures did not arrive. Drawn as
+  /// an em dash rather than the in-flight shimmer — see [_CellLiveLine].
+  final bool signalsFailed;
   final String host;
 
   @override
@@ -838,7 +850,9 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
       semanticLabel: displayName,
       semanticValue: serviceMatrixCellValue(
         statusLabel: statusLabel,
-        signalSpoken: signals?.primary.spoken,
+        signalSpoken: signalsFailed
+            ? servicesFiguresUnavailableLabel
+            : signals?.primary.spoken,
         secondarySpoken: signals?.secondary?.spoken,
         instanceLabel: instanceCount == null
             ? null
@@ -872,6 +886,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
             _CellLiveLine(
               reachability: reachability,
               signals: signals,
+              signalsFailed: signalsFailed,
               statusLabel: statusLabel,
               surface: surface,
             )
@@ -1037,12 +1052,14 @@ class _CellLiveLine extends StatelessWidget {
   const _CellLiveLine({
     required this.reachability,
     required this.signals,
+    this.signalsFailed = false,
     required this.statusLabel,
     required this.surface,
   });
 
   final ServiceReachability reachability;
   final ServiceSignalPair? signals;
+  final bool signalsFailed;
   final String statusLabel;
 
   /// The cell's own background, which is what a tone-coloured word here is
@@ -1084,6 +1101,19 @@ class _CellLiveLine extends StatelessWidget {
     }
 
     final current = signals;
+    if (current == null && signalsFailed) {
+      // Untoned, like `ServiceKpi.unavailable`: the figure's absence is not a
+      // fault of the service, which has just answered its probe.
+      return Text(
+        ServiceKpi.unavailableValue,
+        maxLines: 1,
+        style: figureStyle?.copyWith(
+          color:
+              theme.extension<CupolaThemeColors>()?.dimText ??
+              colorScheme.onSurfaceVariant,
+        ),
+      );
+    }
     if (current == null) {
       // Reachable, metric still in flight. A shimmer says "coming"; blank space
       // would say "nothing to report", which is a different fact.

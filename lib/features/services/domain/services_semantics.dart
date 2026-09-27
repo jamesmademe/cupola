@@ -76,6 +76,10 @@ String serviceInstanceCountLabel(int count) {
 /// dimmed cell in the domain it belongs to says both, and leads somewhere.
 const String servicesNotSetUpCellLabel = 'Not set up · Add it';
 
+/// What a stack card says when the service answered and its figures did not.
+/// The card shows an em dash; this is the spoken form of it.
+const String servicesFiguresUnavailableLabel = 'figures unavailable';
+
 /// The STACK region header: `Stack · 16 · 1 more to set up`.
 ///
 /// The count is the whole registry, not the configured subset, which is the
