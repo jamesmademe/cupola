@@ -341,6 +341,11 @@ class _ActionChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: AppRadius.borderRadiusSm,
         child: Container(
+          // A finger's 44pt. The padding and a labelMedium line came to about
+          // 34 (measured), so the chip met the floor only once the text had grown. The
+          // floor wraps the padding, which hands the row a minimum it centres
+          // its icon and label in.
+          constraints: const BoxConstraints(minHeight: 44),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm,

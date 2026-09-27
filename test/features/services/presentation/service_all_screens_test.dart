@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 
 import 'package:cupola/features/discover/data/seerr_service.dart';
@@ -187,6 +188,99 @@ void main() {
       );
     });
   });
+
+  group('targets and ink', () {
+    testWidgets(
+      'the delete button is a finger target around a 28pt plate',
+      (tester) async {
+        await _pumpAllRequests(tester);
+        await _pumpAsyncContent(tester);
+
+        final button = find.byTooltip('Delete request for A Quiet Place');
+        final hitBox = tester.getSize(
+          find.ancestor(of: button, matching: find.byType(IconButton)),
+        );
+        expect(hitBox.width, greaterThanOrEqualTo(44));
+        expect(hitBox.height, greaterThanOrEqualTo(44));
+
+        // The plate the eye sees did not grow with it.
+        final plate = tester.getSize(
+          find
+              .descendant(
+                of: find.ancestor(
+                  of: button,
+                  matching: find.byType(IconButton),
+                ),
+                matching: find.byType(Material),
+              )
+              .first,
+        );
+        expect(plate, const Size.square(28));
+      },
+      variant: TargetPlatformVariant.mobile(),
+    );
+
+    testWidgets(
+      'a desktop build keeps the 28pt plate as its whole target',
+      (tester) async {
+        await _pumpAllRequests(tester);
+        await _pumpAsyncContent(tester);
+
+        final hitBox = tester.getSize(
+          find.ancestor(
+            of: find.byTooltip('Delete request for A Quiet Place'),
+            matching: find.byType(IconButton),
+          ),
+        );
+        expect(hitBox, const Size.square(28));
+      },
+      variant: TargetPlatformVariant.desktop(),
+    );
+
+    for (final brightness in Brightness.values) {
+      testWidgets('status pills clear 4.5:1 on their own wash '
+          '(${brightness.name})', (tester) async {
+        final theme = brightness == Brightness.light
+            ? AppTheme.lightTheme()
+            : AppTheme.darkTheme();
+        await _pumpAllRequests(tester, theme: theme);
+        await _pumpAsyncContent(tester);
+
+        final pills = find.byWidgetPredicate((widget) {
+          if (widget is! Container || widget.child is! Text) return false;
+          final decoration = widget.decoration;
+          return decoration is BoxDecoration &&
+              decoration.shape == BoxShape.rectangle &&
+              decoration.borderRadius != null &&
+              decoration.color != null;
+        });
+        expect(pills, findsNWidgets(2));
+
+        // The card the pill sits on, which the wash is composited over.
+        final card = theme.colorScheme.surfaceContainer;
+        for (final pill in tester.widgetList<Container>(pills)) {
+          final wash = (pill.decoration! as BoxDecoration).color!;
+          final label = pill.child! as Text;
+          final ink = label.style!.color!;
+          final ground = Color.alphaBlend(wash, card);
+          expect(
+            _contrast(ink, ground),
+            greaterThanOrEqualTo(4.5),
+            reason: '"${label.data}": $ink on $ground',
+          );
+        }
+      });
+    }
+  });
+}
+
+/// WCAG 2.1 relative-luminance contrast ratio between two opaque colours.
+double _contrast(Color a, Color b) {
+  final la = a.computeLuminance();
+  final lb = b.computeLuminance();
+  final hi = la > lb ? la : lb;
+  final lo = la > lb ? lb : la;
+  return (hi + 0.05) / (lo + 0.05);
 }
 
 class _RecordingSeerrService extends FakeSeerrService {
@@ -205,11 +299,12 @@ class _RecordingSeerrService extends FakeSeerrService {
 Future<void> _pumpAllRequests(
   WidgetTester tester, {
   SeerrService? seerr,
+  ThemeData? theme,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: _providerOverrides(seerr: seerr),
-      child: const MaterialApp(home: ServiceAllRequestsScreen()),
+      child: MaterialApp(theme: theme, home: const ServiceAllRequestsScreen()),
     ),
   );
 }

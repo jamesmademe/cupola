@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
@@ -214,6 +215,16 @@ class _RequestListRow extends ConsumerWidget {
 
   const _RequestListRow({required this.request});
 
+  /// The delete button's painted plate.
+  static const double _deletePlate = 28;
+
+  /// The delete button's hit box: 44 anywhere a finger can reach the row, the
+  /// plate itself on a desktop build, which a pointer drives. The switch is
+  /// [AppBreakpoints.isDesktopPlatform], not a width, because a narrow desktop
+  /// window is still driven by a pointer.
+  static double get _deleteTarget =>
+      AppBreakpoints.isDesktopPlatform ? _deletePlate : 44;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -222,10 +233,7 @@ class _RequestListRow extends ConsumerWidget {
     final requester = request.requestedBy?.displayName ?? 'Unknown';
     final mediaType = request.type == 'tv' ? 'Series' : 'Movie';
     final displayStatus = request.displayStatus;
-    final statusColor = statusToneColor(
-      colorScheme,
-      resolveRequestStatus(request).tone,
-    );
+    final statusTone = resolveRequestStatus(request).tone;
     final posterUrl = ImageUtils.buildTmdbPosterUrl(media?.posterPath);
     final heroTag = 'services_all_request_${request.id}';
 
@@ -332,32 +340,49 @@ class _RequestListRow extends ConsumerWidget {
               ExcludeSemantics(
                 child: _SmallPill(
                   label: displayStatus.label,
-                  color: statusColor,
+                  tone: statusTone,
+                  // The row's own card, which is what the pill's wash sits on.
+                  surface: colorScheme.surfaceContainer,
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
+              // The plate stays the 28pt square the row was drawn with; what
+              // grows is the square around it. `Center` loosens the
+              // constraints so `MaterialTapTargetSize.padded` can spread the
+              // hit box out to fill it — a tight 28 square capped it at 28.
               SizedBox.square(
-                dimension: 28,
-                child: IconButton.filledTonal(
-                  icon: const Icon(Icons.delete_outline_rounded, size: 14),
-                  // The irreversible-action exception, walked against its own
-                  // wash over the row's card.
-                  color: statusToneColor(
-                    colorScheme,
-                    StatusTone.error,
-                    surface: colorScheme.surfaceContainer,
-                    tintAlpha: 0.10,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: statusToneFill(
+                dimension: _deleteTarget,
+                child: Center(
+                  child: IconButton.filledTonal(
+                    icon: const Icon(Icons.delete_outline_rounded, size: 14),
+                    // The irreversible-action exception, walked against its
+                    // own wash over the row's card.
+                    color: statusToneColor(
                       colorScheme,
                       StatusTone.error,
-                    ).withValues(alpha: 0.10),
-                    padding: EdgeInsets.zero,
+                      surface: colorScheme.surfaceContainer,
+                      tintAlpha: 0.10,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: statusToneFill(
+                        colorScheme,
+                        StatusTone.error,
+                      ).withValues(alpha: 0.10),
+                      padding: EdgeInsets.zero,
+                      // `minimumSize` as well as `fixedSize`: `fixedSize` is
+                      // clamped into the resolved minimum, and IconButton's M3
+                      // default minimum is 48.
+                      minimumSize: const Size.square(_deletePlate),
+                      fixedSize: const Size.square(_deletePlate),
+                      visualDensity: VisualDensity.standard,
+                      tapTargetSize: AppBreakpoints.isDesktopPlatform
+                          ? MaterialTapTargetSize.shrinkWrap
+                          : MaterialTapTargetSize.padded,
+                    ),
+                    onPressed: () => _deleteRequest(context, ref, title),
+                    // Names which request: there is one of these per row.
+                    tooltip: 'Delete request for $title',
                   ),
-                  onPressed: () => _deleteRequest(context, ref, title),
-                  // Names which request: there is one of these per row.
-                  tooltip: 'Delete request for $title',
                 ),
               ),
             ],
@@ -457,15 +482,34 @@ class _RequesterAvatar extends StatelessWidget {
 
 class _SmallPill extends StatelessWidget {
   final String label;
-  final Color color;
+  final StatusTone tone;
 
-  const _SmallPill({required this.label, required this.color});
+  /// The ground under the pill's wash, which the label is walked against.
+  final Color surface;
+
+  const _SmallPill({
+    required this.label,
+    required this.tone,
+    required this.surface,
+  });
+
+  static const double _tintAlpha = 0.14;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    // The wash keeps the tone's raw byte; the label is walked against that
+    // wash over the card, so it clears 4.5:1 in both themes. The label used to
+    // be the raw tone too, which put it under the floor on its own tint.
+    final color = statusToneColor(
+      colorScheme,
+      tone,
+      surface: surface,
+      tintAlpha: _tintAlpha,
+    );
     return Container(
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
+        color: statusToneFill(colorScheme, tone).withValues(alpha: _tintAlpha),
         borderRadius: AppRadius.borderRadiusSm,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
