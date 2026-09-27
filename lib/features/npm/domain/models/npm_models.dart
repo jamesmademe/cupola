@@ -423,9 +423,11 @@ class NpmAccount {
   final int id;
   final String name;
 
-  /// `roles` contains `admin`. An admin's permission map is not populated by
-  /// NPM at all, so this has to short-circuit the lookup rather than fall
-  /// through it — reading the map for an admin finds nothing and would dim
+  /// `roles` contains `admin`. NPM does write an admin a manage-all permission
+  /// row (on setup and on user creation), but it never *consults* that row for
+  /// an admin — the role alone grants everything — so this short-circuits the
+  /// lookup rather than trusting a map that an older install, a hand-edited
+  /// row or a response without `?expand=permissions` could leave empty and dim
   /// every control on the screen for the one account that can use them.
   final bool isAdmin;
 

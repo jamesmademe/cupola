@@ -4,13 +4,18 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/capability_copy.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_action.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
-import 'package:cupola/features/npm/presentation/npm_access.dart';
+import 'package:cupola/features/npm/domain/models/npm_models.dart';
+import 'package:cupola/features/npm/presentation/npm_capability.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Runs an [NpmClient] mutation with the shared plumbing.
 ///
@@ -18,15 +23,24 @@ import 'package:cupola/features/npm/presentation/npm_provider.dart';
 /// strings — the client never interpolates a response body — so the `$e` below
 /// cannot carry the bearer token or the password. That is the whole reason the
 /// client is strict about it: this line is where it would otherwise surface.
+///
+/// [resource] is what the write changes, so a refusal names it.
 Future<bool> runNpmAction(
   BuildContext context,
   WidgetRef ref, {
+  required NpmResource resource,
   required Future<void> Function(NpmClient client) action,
   String? successMessage,
   required String failureMessage,
   List<ProviderOrFamily> invalidate = const [],
 }) async {
   final client = ref.read(npmClientProvider);
+  final capability = CapabilityTarget(
+    connectionId:
+        ref.read(activeInstanceProvider(ServiceKey.nginxProxyManager))?.id ??
+        '',
+    copy: npmCapabilityCopy(resource),
+  );
   try {
     await action(client);
     for (final provider in invalidate) {
@@ -43,14 +57,16 @@ Future<bool> runNpmAction(
     // an expired token onto the same `unauthorized` verdict, and neither of
     // those says anything about what this account may change — dimming the
     // whole screen over a mistyped password would be a lie with a long tail.
-    if (e is NpmException && e.forbidden) {
-      ref.read(npmWriteRefusedProvider.notifier).markRefused();
-    }
+    final refused = markCapabilityRefusal(ref, capability, e);
     for (final provider in invalidate) {
       ref.invalidate(provider);
     }
     if (context.mounted) {
-      SnackBarHelper.error(context, failureMessage, detail: e);
+      if (refused) {
+        showCapabilityRefusal(context, capability);
+      } else {
+        SnackBarHelper.error(context, failureMessage, detail: e);
+      }
     }
     return false;
   }

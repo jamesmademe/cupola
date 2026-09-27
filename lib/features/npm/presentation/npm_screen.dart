@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
@@ -13,8 +14,8 @@ import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_access.dart';
 import 'package:cupola/features/npm/presentation/npm_actions.dart';
 import 'package:cupola/features/npm/presentation/npm_advanced_config_screen.dart';
+import 'package:cupola/features/npm/presentation/npm_capability.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
-import 'package:cupola/features/npm/presentation/npm_write_gate.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -248,7 +249,19 @@ class _NpmSection extends ConsumerWidget {
               accent: AppColors.nginxProxyManager,
             ),
           const NpmDefaultAdminWarning(),
-          const NpmAccessBand(),
+          NpmCapabilityBannerSlot(
+            resources: switch (section) {
+              NpmSection.everything => const {
+                NpmResource.proxyHosts,
+                NpmResource.certificates,
+              },
+              NpmSection.proxyHosts => const {NpmResource.proxyHosts},
+              NpmSection.certificates => const {NpmResource.certificates},
+              // No writes on these two: the banner speaks only when the
+              // account can change nothing at all.
+              NpmSection.accessLists || NpmSection.auditLog => null,
+            },
+          ),
           const SizedBox(height: AppSpacing.sm),
           ...switch (section) {
             NpmSection.everything => [
@@ -456,9 +469,8 @@ class _NpmReadOnlyTile extends StatelessWidget {
 /// **Public because it is shared chrome, not a section.** It is a fact about
 /// the box rather than about a list, so every NPM surface draws it — this page
 /// in all three of its shapes and `NpmOverviewScreen` — and a second copy of
-/// the card written next door is a second copy that drifts. `NpmAccessBand`
-/// travels with it for the same reason and already lives in
-/// `npm_write_gate.dart`.
+/// the card written next door is a second copy that drifts.
+/// `NpmCapabilityBannerSlot` travels with it for the same reason.
 class NpmDefaultAdminWarning extends ConsumerWidget {
   const NpmDefaultAdminWarning({super.key});
 
@@ -698,15 +710,30 @@ class _ProxyHostMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final access = ref.watch(npmWriteAccessProvider);
-    final mayWrite = access.canManage(NpmResource.proxyHosts);
-    final colorScheme = Theme.of(context).colorScheme;
+    final connectionId = capabilityConnectionId(
+      ref,
+      ServiceKey.nginxProxyManager,
+    );
+    bool allowed() => capabilityWriteAllowed(
+      context,
+      ref,
+      service: ServiceKey.nginxProxyManager,
+      connectionId: connectionId,
+      resource: NpmResource.proxyHosts.key,
+      blockedMessage: npmBlockedMessage(NpmResource.proxyHosts),
+    );
     // Dimmed, never removed. Taking the item out would take the *fact* out with
     // it: the user would be left wondering where Disable went rather than
-    // learning that this account cannot use it.
-    final itemStyle = mayWrite
-        ? null
-        : TextStyle(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6));
+    // learning that this account cannot use it. And never `enabled: false`: a
+    // disabled item drops off the screen reader's path, taking the explanation
+    // with it.
+    Widget label(String text) => CapabilityGatedMenuLabel(
+      service: ServiceKey.nginxProxyManager,
+      connectionId: connectionId,
+      resource: NpmResource.proxyHosts.key,
+      text: text,
+      hint: npmCapabilityHint,
+    );
 
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert_rounded, size: 18),
@@ -717,17 +744,18 @@ class _ProxyHostMenu extends ConsumerWidget {
             // Switching a host back **on** is the recoverable direction: it can
             // only restore service, and nginx refusing the config is reported
             // rather than hidden. No typed confirmation for that.
-            if (!npmWriteAllowed(context, ref, NpmResource.proxyHosts)) return;
+            if (!allowed()) return;
             runNpmAction(
               context,
               ref,
+              resource: NpmResource.proxyHosts,
               action: (c) => c.setProxyHostEnabled(host.id, true),
               successMessage: '${host.primaryDomain} enabled',
               failureMessage: 'Failed to enable ${host.primaryDomain}',
               invalidate: _invalidateAfterAction,
             );
           case 'disable':
-            if (!npmWriteAllowed(context, ref, NpmResource.proxyHosts)) return;
+            if (!allowed()) return;
             _confirmDisable(context, ref, host);
           case 'advanced':
             // Opening the editor is a read; the save inside it is what the role
@@ -742,23 +770,9 @@ class _ProxyHostMenu extends ConsumerWidget {
       },
       itemBuilder: (context) => [
         if (host.enabled)
-          PopupMenuItem(
-            value: 'disable',
-            // Semantics, not `enabled: false`: a disabled item drops off the
-            // screen reader's path, taking the explanation with it.
-            child: Semantics(
-              hint: mayWrite ? null : access.hint,
-              child: Text('Disable…', style: itemStyle),
-            ),
-          )
+          PopupMenuItem(value: 'disable', child: label('Disable…'))
         else
-          PopupMenuItem(
-            value: 'enable',
-            child: Semantics(
-              hint: mayWrite ? null : access.hint,
-              child: Text('Enable', style: itemStyle),
-            ),
-          ),
+          PopupMenuItem(value: 'enable', child: label('Enable')),
         PopupMenuItem(
           value: 'advanced',
           child: Text(
@@ -792,6 +806,7 @@ Future<void> _confirmDisable(
   await runNpmAction(
     context,
     ref,
+    resource: NpmResource.proxyHosts,
     action: (c) => c.setProxyHostEnabled(host.id, false),
     successMessage: '${host.primaryDomain} is now offline',
     failureMessage: 'Failed to disable ${host.primaryDomain}',
@@ -939,16 +954,27 @@ class _CertificateTile extends ConsumerWidget {
               // the control keeps its target and its name, gains the hint, and
               // answers on tap.
               if (cert.isLetsEncrypt)
-                NpmWriteButton(
-                  resource: NpmResource.certificates,
-                  label: 'Renew',
-                  onPressed: () => runNpmAction(
+                CapabilityGatedAction.builder(
+                  service: ServiceKey.nginxProxyManager,
+                  connectionId: capabilityConnectionId(
+                    ref,
+                    ServiceKey.nginxProxyManager,
+                  ),
+                  resource: NpmResource.certificates.key,
+                  hint: npmCapabilityHint,
+                  blockedMessage: npmBlockedMessage(NpmResource.certificates),
+                  onTap: () => runNpmAction(
                     context,
                     ref,
+                    resource: NpmResource.certificates,
                     action: (c) => c.renewCertificate(cert.id),
                     successMessage: 'Renewal requested',
                     failureMessage: 'Failed to request renewal',
                     invalidate: _invalidateAfterAction,
+                  ),
+                  builder: (context, onPressed, annotate) => TextButton(
+                    onPressed: onPressed,
+                    child: annotate(const Text('Renew')),
                   ),
                 ),
             ],

@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_actions.dart';
+import 'package:cupola/features/npm/presentation/npm_capability.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
-import 'package:cupola/features/npm/presentation/npm_write_gate.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The per-host custom Nginx block, editable (decision 33).
 ///
@@ -76,7 +78,16 @@ class _NpmAdvancedConfigScreenState
   bool get _dirty => _controller.text != _opened;
 
   Future<void> _save() async {
-    if (!npmWriteAllowed(context, ref, NpmResource.proxyHosts)) return;
+    if (!capabilityWriteAllowed(
+      context,
+      ref,
+      service: ServiceKey.nginxProxyManager,
+      connectionId: capabilityConnectionId(ref, ServiceKey.nginxProxyManager),
+      resource: NpmResource.proxyHosts.key,
+      blockedMessage: npmBlockedMessage(NpmResource.proxyHosts),
+    )) {
+      return;
+    }
 
     final domain = widget.host.primaryDomain;
     final confirmed = await confirmByTyping(
@@ -104,6 +115,7 @@ class _NpmAdvancedConfigScreenState
     final ok = await runNpmAction(
       context,
       ref,
+      resource: NpmResource.proxyHosts,
       action: (client) async {
         after = await client.updateProxyHostAdvancedConfig(
           widget.host.id,
@@ -129,104 +141,131 @@ class _NpmAdvancedConfigScreenState
 
   @override
   Widget build(BuildContext context) {
+    return AmbientScaffold(
+      accent: AppColors.nginxProxyManager,
+      appBar: const GlassAppBar(title: Text('Advanced')),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Above the editor, not inside its padded column: the banner owns
+            // its own gutter.
+            const NpmCapabilityBannerSlot(resources: {NpmResource.proxyHosts}),
+            Expanded(child: _editor(context)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _editor(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final lines = _controller.text.trim().isEmpty
         ? 0
         : _controller.text.trim().split('\n').length;
-
-    return AmbientScaffold(
-      accent: AppColors.nginxProxyManager,
-      appBar: const GlassAppBar(title: Text('Advanced')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.md,
-            AppSpacing.lg,
-            AppSpacing.xxl,
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.xxl,
+      ),
+      children: [
+        Text(
+          'the custom Nginx block for ${widget.host.primaryDomain} · '
+          '$lines lines',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
           ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        TextField(
+          controller: _controller,
+          minLines: 12,
+          maxLines: null,
+          autocorrect: false,
+          enableSuggestions: false,
+          keyboardType: TextInputType.multiline,
+          // `.mono` rather than the `'monospace'` family alias, which
+          // resolves to nothing on iOS and macOS. An Nginx block is read in
+          // columns — an indented `location` body is the shape of the
+          // thing — so the face is load-bearing, not decorative.
+          style: theme.textTheme.bodySmall!.mono.copyWith(
+            color: colorScheme.onSurface,
+          ),
+          decoration: InputDecoration(
+            hintText: '# nothing yet',
+            filled: true,
+            fillColor: colorScheme.surface,
+            contentPadding: const EdgeInsets.all(14),
+            border: OutlineInputBorder(
+              borderRadius: AppRadius.borderRadiusMd,
+              borderSide: BorderSide(color: colorScheme.outlineVariant),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: AppRadius.borderRadiusMd,
+              borderSide: BorderSide(color: colorScheme.outlineVariant),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'No validation, no autocomplete, no formatter. Cupola cannot tell '
+          'you a line is wrong before you save it.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        if (_nginxError.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
+          _NginxVerdict(
+            message: _nginxError,
+            domain: widget.host.primaryDomain,
+          ),
+        ],
+        const SizedBox(height: AppSpacing.lg),
+        Row(
           children: [
-            Text(
-              'the custom Nginx block for ${widget.host.primaryDomain} · '
-              '$lines lines',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
+            Expanded(
+              child: OutlinedButton(
+                // The only undo NPM leaves: it keeps one block per host and
+                // no history, so this is the text this editor opened with
+                // and nothing older exists anywhere.
+                onPressed: _dirty && !_busy
+                    ? () => _controller.text = _opened
+                    : null,
+                child: const Text('Revert to the block I opened'),
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: _controller,
-              minLines: 12,
-              maxLines: null,
-              autocorrect: false,
-              enableSuggestions: false,
-              keyboardType: TextInputType.multiline,
-              // `.mono` rather than the `'monospace'` family alias, which
-              // resolves to nothing on iOS and macOS. An Nginx block is read in
-              // columns — an indented `location` body is the shape of the
-              // thing — so the face is load-bearing, not decorative.
-              style: theme.textTheme.bodySmall!.mono.copyWith(
-                color: colorScheme.onSurface,
-              ),
-              decoration: InputDecoration(
-                hintText: '# nothing yet',
-                filled: true,
-                fillColor: colorScheme.surface,
-                contentPadding: const EdgeInsets.all(14),
-                border: OutlineInputBorder(
-                  borderRadius: AppRadius.borderRadiusMd,
-                  borderSide: BorderSide(color: colorScheme.outlineVariant),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              // Gated on the account's scope, and still `null` while there
+              // is nothing to save — that is a different reason, and the
+              // capability is never expressed as `null`.
+              child: CapabilityGatedAction.builder(
+                service: ServiceKey.nginxProxyManager,
+                connectionId: capabilityConnectionId(
+                  ref,
+                  ServiceKey.nginxProxyManager,
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: AppRadius.borderRadiusMd,
-                  borderSide: BorderSide(color: colorScheme.outlineVariant),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'No validation, no autocomplete, no formatter. Cupola cannot tell '
-              'you a line is wrong before you save it.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            if (_nginxError.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.md),
-              _NginxVerdict(
-                message: _nginxError,
-                domain: widget.host.primaryDomain,
-              ),
-            ],
-            const SizedBox(height: AppSpacing.lg),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    // The only undo NPM leaves: it keeps one block per host and
-                    // no history, so this is the text this editor opened with
-                    // and nothing older exists anywhere.
-                    onPressed: _dirty && !_busy
-                        ? () => _controller.text = _opened
-                        : null,
-                    child: const Text('Revert to the block I opened'),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _dirty && !_busy ? _save : null,
-                    child: _busy
+                resource: NpmResource.proxyHosts.key,
+                hint: npmCapabilityHint,
+                blockedMessage: npmBlockedMessage(NpmResource.proxyHosts),
+                onTap: _save,
+                builder: (context, onPressed, annotate) => FilledButton(
+                  onPressed: _dirty && !_busy ? onPressed : null,
+                  child: annotate(
+                    _busy
                         ? const Text('Reloading nginx…')
                         : const Text('Save changes…'),
                   ),
                 ),
-              ],
+              ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 }

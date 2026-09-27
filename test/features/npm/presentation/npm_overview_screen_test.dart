@@ -12,7 +12,7 @@ import 'package:cupola/features/npm/presentation/npm_overview_screen.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart'
     show NpmDefaultAdminWarning;
-import 'package:cupola/features/npm/presentation/npm_write_gate.dart';
+import 'package:cupola/features/npm/presentation/npm_capability.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -76,12 +76,13 @@ void main() {
     // is the sentence that explains an attenuated control, and the warning is a
     // fact about the box that outranks everything else on it.
     expect(find.byType(NpmDefaultAdminWarning), findsOneWidget);
-    expect(find.byType(NpmAccessBand), findsOneWidget);
+    expect(find.byType(NpmCapabilityBannerSlot), findsOneWidget);
+    expect(find.byType(CapabilityBanner), findsOneWidget);
     expect(find.textContaining('view-only'), findsOneWidget);
 
     // And the Overview adds no write of its own, so the gate is neither
     // weakened nor duplicated here.
-    expect(find.byType(NpmWriteButton), findsNothing);
+    expect(find.byType(CapabilityGatedAction), findsNothing);
   });
 
   testWidgets('the probe coverage is printed beside every figure it touches', (
@@ -313,7 +314,22 @@ void main() {
     // a provider that throws is a *failed* provider retrying on a backoff for a
     // condition no waiting changes. A pending timer here would be the tell.
     expect(find.byType(SectionHeader), findsNothing);
-    expect(find.byType(NpmAccessBand), findsNothing);
+    expect(find.byType(CapabilityBanner), findsNothing);
+  });
+
+  testWidgets('a scoped account gets no band on the Overview', (tester) async {
+    // It can change something, and the Overview changes nothing: the tabs whose
+    // writes it may not make say so themselves.
+    await _pump(
+      tester,
+      account: const NpmAccount(
+        id: 3,
+        name: 'hosts',
+        isAdmin: false,
+        permissions: {'proxy_hosts': 'manage', 'certificates': 'view'},
+      ),
+    );
+    expect(find.byType(CapabilityBanner), findsNothing);
   });
 }
 

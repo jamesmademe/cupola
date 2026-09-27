@@ -7,9 +7,10 @@ import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/features/npm/data/npm_upstream_probe.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_access.dart';
+import 'package:cupola/features/npm/presentation/npm_advanced_config_screen.dart';
+import 'package:cupola/features/npm/presentation/npm_capability.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart';
-import 'package:cupola/features/npm/presentation/npm_write_gate.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -307,7 +308,7 @@ void main() {
     ]) {
       await _pump(tester, screen: screen, account: _viewOnly);
       expect(
-        find.byType(NpmAccessBand),
+        find.byType(CapabilityBanner),
         findsOneWidget,
         reason: '$screen must carry the band',
       );
@@ -361,5 +362,153 @@ void main() {
 
       expect(find.byType(NotConfiguredPlaceholder), findsOneWidget);
     }
+  });
+
+  group('the gate on a view-only account', () {
+    testWidgets('the host menu item is reachable, hinted, and answers', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        screen: const NpmScreen.proxyHosts(showAppBar: false),
+        account: _viewOnly,
+      );
+      await tester.tap(find.byTooltip('Host actions').first);
+      await tester.pumpAndSettle();
+
+      final item = find.ancestor(
+        of: find.text('Disable…'),
+        matching: find.byType(PopupMenuItem<String>),
+      );
+      expect(tester.widget<PopupMenuItem<String>>(item).enabled, isTrue);
+      expect(
+        tester.getSemantics(find.text('Disable…')),
+        containsSemantics(hint: 'requires an admin account', isEnabled: true),
+      );
+
+      await tester.tap(find.text('Disable…'));
+      await tester.pumpAndSettle();
+      // The toast, not the typed confirmation: the gate is at the tap that
+      // opens the flow, never after the domain is typed.
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(
+        find.text(npmBlockedMessage(NpmResource.proxyHosts)),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(SnackBarAction, 'Change account'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Renew is dimmed but tappable, and toasts', (tester) async {
+      await _pump(
+        tester,
+        screen: const NpmScreen.certificates(showAppBar: false),
+        account: _viewOnly,
+      );
+      final renew = find.widgetWithText(TextButton, 'Renew').first;
+      expect(tester.widget<TextButton>(renew).onPressed, isNotNull);
+      expect(
+        tester.getSemantics(renew),
+        containsSemantics(
+          label: 'Renew',
+          hint: 'requires an admin account',
+          isEnabled: true,
+          hasTapAction: true,
+        ),
+      );
+      expect(
+        find.descendant(of: renew, matching: find.byType(Opacity)),
+        findsOneWidget,
+      );
+
+      // The client is never built in this harness; a tap that reached it would
+      // throw "not configured" instead of raising the toast.
+      await tester.tap(renew);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(npmBlockedMessage(NpmResource.certificates)),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('a scoped account', () {
+    const hostsOnly = NpmAccount(
+      id: 3,
+      name: 'hosts',
+      isAdmin: false,
+      permissions: {'proxy_hosts': 'manage', 'certificates': 'view'},
+    );
+
+    testWidgets('Certificates names what it cannot change there', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        screen: const NpmScreen.certificates(showAppBar: false),
+        account: hostsOnly,
+      );
+      expect(find.byType(CapabilityBanner), findsOneWidget);
+      expect(
+        find.text(
+          'This Nginx Proxy Manager account can read certificates but not '
+          'change them. Changing them needs an account that can manage '
+          'certificates.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Proxy hosts, which it manages, has no band and live menus', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        screen: const NpmScreen.proxyHosts(showAppBar: false),
+        account: hostsOnly,
+      );
+      expect(find.byType(CapabilityBanner), findsNothing);
+      await tester.tap(find.byTooltip('Host actions').first);
+      await tester.pumpAndSettle();
+      expect(tester.getSemantics(find.text('Disable…')).hint, isEmpty);
+    });
+  });
+
+  testWidgets('an admin gets no band anywhere', (tester) async {
+    for (final screen in const [
+      NpmScreen(showAppBar: false),
+      NpmScreen.proxyHosts(showAppBar: false),
+      NpmScreen.certificates(showAppBar: false),
+    ]) {
+      await _pump(tester, screen: screen, account: _admin);
+      expect(find.byType(CapabilityBanner), findsNothing, reason: '$screen');
+    }
+  });
+
+  testWidgets('the advanced config save is gated and names the block', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      screen: NpmAdvancedConfigScreen(host: _host(1, 'jellyfin.lan')),
+      account: _viewOnly,
+    );
+    // One banner, first, above the editor.
+    expect(find.byType(CapabilityBanner), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'client_max_body_size 0;');
+    await tester.pump();
+
+    final save = find.widgetWithText(FilledButton, 'Save changes…');
+    expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    // The toast, not the typed confirmation.
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(
+      find.text(npmBlockedMessage(NpmResource.proxyHosts)),
+      findsOneWidget,
+    );
   });
 }

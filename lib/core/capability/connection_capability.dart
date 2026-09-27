@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/features/npm/presentation/npm_capability.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -31,7 +32,7 @@ typedef CapabilityProbe =
 /// — the "asked once per credential" promise is otherwise untestable. Only the
 /// services whose [ServiceKeyExtension.hasScopedCredential] is true appear.
 final capabilityProbesProvider = Provider<Map<ServiceKey, CapabilityProbe>>(
-  (ref) => const {},
+  (ref) => const {ServiceKey.nginxProxyManager: probeNpmCapability},
 );
 
 /// What the saved credential of `connectionId` may do.
@@ -100,12 +101,6 @@ final connectionCapabilityProvider =
 String capabilityConnectionId(WidgetRef ref, ServiceKey service) =>
     ref.watch(activeInstanceProvider(service))?.id ?? '';
 
-/// The same lookup for provider code, which holds a [Ref] rather than a
-/// [WidgetRef]. Reads rather than watches: an action runner wants the lens at
-/// the moment it acts, not a rebuild edge.
-String capabilityConnectionIdOf(Ref ref, ServiceKey service) =>
-    ref.read(activeInstanceProvider(service))?.id ?? '';
-
 /// Asks the probe for [connectionId] again — pull-to-refresh on a page with
 /// writes, and the banner's *Check again*.
 ///
@@ -113,11 +108,3 @@ String capabilityConnectionIdOf(Ref ref, ServiceKey service) =>
 /// and only a credential change retires it.
 void recheckCapability(WidgetRef ref, String connectionId) =>
     ref.invalidate(connectionCapabilityProvider(connectionId));
-
-/// Whether a write on [resource] of [connectionId] may be drawn live, read
-/// once. For action code that needs the answer without building a widget.
-bool capabilityAllows(WidgetRef ref, String connectionId, {String? resource}) =>
-    ref
-        .read(capabilityGrantForProvider(connectionId))
-        .scopeFor(resource)
-        .canWrite;

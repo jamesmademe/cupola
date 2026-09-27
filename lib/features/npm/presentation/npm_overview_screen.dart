@@ -6,11 +6,11 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_access.dart';
+import 'package:cupola/features/npm/presentation/npm_capability.dart';
 import 'package:cupola/features/npm/presentation/npm_overview_provider.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart'
     show NpmDefaultAdminWarning;
-import 'package:cupola/features/npm/presentation/npm_write_gate.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -34,14 +34,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// ## The chrome this page inherits rather than invents
 ///
-/// [NpmDefaultAdminWarning] and [NpmAccessBand] are drawn here exactly as they
+/// [NpmDefaultAdminWarning] and [NpmCapabilityBannerSlot] are drawn here as they
 /// are on every other NPM surface, and neither is decoration:
 ///
 ///  * the warning fires only on an install that still ships
 ///    `admin@example.com` / `changeme`, and on that install it outranks every
 ///    other thing on the page — that account rewrites every route on the box;
 ///  * the band is the sentence that explains why a control elsewhere in this
-///    service is attenuated. `npm_write_gate.dart` owns the gate, this page
+///    service is attenuated. `npm_capability.dart` owns the gate, this page
 ///    neither weakens nor duplicates it: **the Overview offers no writes at
 ///    all.** Renew lives on the Certificates tab beside its confirmation, and
 ///    `NpmClient.renewCertificate` talks to Let's Encrypt, so a Renew reachable
@@ -164,7 +164,7 @@ class _OverviewBody extends ConsumerWidget {
           // explains an attenuated control has to be readable before the
           // control is reached.
           const NpmDefaultAdminWarning(),
-          const NpmAccessBand(),
+          const NpmCapabilityBannerSlot(),
           const SizedBox(height: AppSpacing.sm),
           const _NeedsAttentionSection(),
           const _ProxyHostsSection(),
