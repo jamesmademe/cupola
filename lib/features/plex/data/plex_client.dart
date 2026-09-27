@@ -518,19 +518,25 @@ class PlexClient implements StreamServerClient {
   Future<PlexException> _mapTerminateError(DioException error) async {
     final status = error.response?.statusCode;
     if (status == 401) {
-      // Not a credential failure. Ask the server which of the two it is so the
-      // message names the actual blocker.
+      // The session list just answered with this same token, so it reads —
+      // but a 401 here has more than one cause and the reply does not say
+      // which. Termination needs Plex Pass on the server *and* the server
+      // owner's token: a home, managed or shared user's token reads sessions
+      // and is refused this (community-reported; Plex does not document it).
+      // Ask the server about the one cause it can confirm, and never claim the
+      // token is fine, because for a non-owner it is exactly the problem.
       final capabilities = await getCapabilities();
       if (capabilities?.myPlexSubscription == false) {
         return const PlexException(
           'Stopping a stream is a Plex Pass feature, and this server does not '
-          'have one. Your token is fine.',
+          'have one.',
           reason: ServiceFailureReason.unauthorized,
         );
       }
       return const PlexException(
-        'This server refused to stop the stream. Session termination has to be '
-        'enabled on the server, the token is not the problem.',
+        'Plex refused to stop this stream. Only the server owner\'s token can '
+        'stop streams; a home or shared user\'s token can see them but not '
+        'stop them.',
         reason: ServiceFailureReason.unauthorized,
       );
     }

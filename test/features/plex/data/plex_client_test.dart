@@ -1482,7 +1482,7 @@ void main() {
       },
     );
 
-    test('a 401 with Plex Pass blames the server setting', () async {
+    test('a 401 with Plex Pass names the owner token, never clears it', () async {
       final adapter = _RoutingAdapter([
         _Route('/status/sessions/terminate', status: 401, body: null),
         _Route(
@@ -1496,7 +1496,14 @@ void main() {
         _client(adapter).stopSession('u7k2m9x4qp1zvb3n'),
         throwsA(
           isA<PlexException>()
-              .having((e) => e.message, 'message', contains('not the problem'))
+              // A home or shared user's token reads sessions and is refused
+              // this; "the token is not the problem" was wrong for exactly them.
+              .having((e) => e.message, 'message', contains('owner'))
+              .having(
+                (e) => e.message,
+                'message',
+                isNot(contains('not the problem')),
+              )
               .having((e) => e.tokenIssue, 'tokenIssue', PlexTokenIssue.none),
         ),
       );
