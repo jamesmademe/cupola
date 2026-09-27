@@ -1,0 +1,654 @@
+{
+  "color": {
+    "base": {
+      "white": {
+        "$type": "color",
+        "$value": "#ffffff",
+        "$description": "Pure white: reversed-out labels on the brand and on deep status fills."
+      },
+      "black": {
+        "$type": "color",
+        "$value": "#000000",
+        "$description": "Pure black: modal scrims, the dark theme's shadow ink and the glass shadow."
+      }
+    },
+    "brand": {
+      "primary-dark": {
+        "$type": "color",
+        "$value": "#4f46e5",
+        "$description": "Indigo Deep (indigo-600), fixed in both themes. The light theme's primary, and the dark theme's primary container."
+      },
+      "primary-light": {
+        "$type": "color",
+        "$value": "#818cf8",
+        "$description": "Indigo Light (indigo-400), fixed. The dark theme's secondary and the light theme's inverse primary."
+      },
+      "primary-lighter": {
+        "$type": "color",
+        "$value": "#a5b4fc",
+        "$description": "Indigo Pale (indigo-300), fixed. Text on the dark primary container; the light primary container."
+      }
+    },
+    "service": {
+      "seerr": {
+        "$type": "color",
+        "$value": "#6366f1",
+        "$description": "Seerr Indigo (indigo-500): the Seerr accent and the app's own brand colour, the dark theme's primary."
+      },
+      "radarr": {
+        "$type": "color",
+        "$value": "#f59e0b",
+        "$description": "Radarr Amber, the movies accent. A fill label on it takes ink-on-bright: white measures 2.15:1."
+      },
+      "sonarr": {
+        "$type": "color",
+        "$value": "#8b5cf6",
+        "$description": "Sonarr Violet, the series accent; also the brand gradient's end."
+      },
+      "lidarr": {
+        "$type": "color",
+        "$value": "#ec4899",
+        "$description": "Lidarr Pink, the music accent."
+      },
+      "readarr": {
+        "$type": "color",
+        "$value": "#c0392b",
+        "$description": "Readarr Red, the books accent."
+      },
+      "prowlarr": {
+        "$type": "color",
+        "$value": "#e66000",
+        "$description": "Prowlarr Orange, the indexers accent."
+      },
+      "bazarr": {
+        "$type": "color",
+        "$value": "#25a7df",
+        "$description": "Bazarr Sky, the subtitles accent."
+      },
+      "qbittorrent": {
+        "$type": "color",
+        "$value": "#2f67ba",
+        "$description": "qBittorrent Blue, the torrent client accent."
+      },
+      "transmission": {
+        "$type": "color",
+        "$value": "#e11d48",
+        "$description": "Transmission Crimson: walked off the brand red so it clears readarr (ΔE 10.8) and the error tone (ΔE 8.8)."
+      },
+      "sabnzbd": {
+        "$type": "color",
+        "$value": "#f0a800",
+        "$description": "SABnzbd Gold, a usenet client accent."
+      },
+      "nzbget": {
+        "$type": "color",
+        "$value": "#0f9d58",
+        "$description": "NZBGet Green, a usenet client accent."
+      },
+      "dockge": {
+        "$type": "color",
+        "$value": "#058373",
+        "$description": "Dockge Teal, the stacks accent."
+      },
+      "truenas": {
+        "$type": "color",
+        "$value": "#0095d5",
+        "$description": "TrueNAS Blue, the storage accent."
+      },
+      "unraid": {
+        "$type": "color",
+        "$value": "#ff8c2b",
+        "$description": "Unraid Orange, the server accent."
+      },
+      "nginx-proxy-manager": {
+        "$type": "color",
+        "$value": "#f15833",
+        "$description": "Nginx Proxy Manager Vermilion, the brand value unchanged: a red-orange clear of the amber band."
+      },
+      "jellyfin": {
+        "$type": "color",
+        "$value": "#aa5cc3",
+        "$description": "Jellyfin Purple, a streaming accent."
+      },
+      "plex": {
+        "$type": "color",
+        "$value": "#c97a16",
+        "$description": "Plex Bronze: deliberately not brand gold #E5A00D, which collides with sabnzbd and the fault tone."
+      }
+    },
+    "nav": {
+      "dashboard": {
+        "$type": "color",
+        "$value": "{color.service.seerr}",
+        "$description": "Dashboard tab pill: the app's own indigo."
+      },
+      "activity": {
+        "$type": "color",
+        "$value": "#06b6d4",
+        "$description": "Section Cyan (cyan-500), the Activity tab pill. A section, not a service, and never a status hue."
+      },
+      "search": {
+        "$type": "color",
+        "$value": "#a855f7",
+        "$description": "Section Purple (purple-500), the Search tab pill."
+      },
+      "settings": {
+        "$type": "color",
+        "$value": "#14b8a6",
+        "$description": "Section Teal (teal-500), the Settings tab pill."
+      }
+    },
+    "status": {
+      "success": {
+        "$type": "color",
+        "$value": "#22c55e",
+        "$description": "GREEN (green-500): available or complete. A fill byte; as text it always goes through the tone walk."
+      },
+      "success-container": {
+        "$type": "color",
+        "$value": "#166534",
+        "$description": "Deep green (green-800): the dark success container, and text on the light one."
+      },
+      "warning": {
+        "$type": "color",
+        "$value": "#facc15",
+        "$description": "AMBER (yellow-400): a fault, never the backlog. Deliberately not radarr's amber-500."
+      },
+      "error": {
+        "$type": "color",
+        "$value": "#ef4444",
+        "$description": "RED (red-500): unreachable, and nothing else."
+      },
+      "error-container": {
+        "$type": "color",
+        "$value": "#991b1b",
+        "$description": "Deep red (red-800): the dark error container, and text on the light one."
+      },
+      "info": {
+        "$type": "color",
+        "$value": "#3b82f6",
+        "$description": "BLUE (blue-500): queued or informational."
+      }
+    },
+    "ink-on-bright": {
+      "$type": "color",
+      "$value": "#111827",
+      "$description": "gray-900: the label a bright fill takes where white loses the contrast measurement."
+    },
+    "plate": {
+      "surface": {
+        "$type": "color",
+        "$value": "#1e2430",
+        "$description": "Artwork stand-in (a missing poster, an album without cover). Fixed dark in both themes: artwork is not palette."
+      },
+      "well": {
+        "$type": "color",
+        "$value": "#08090f",
+        "$description": "The letterboxed well behind a backdrop; fixed dark in both themes."
+      },
+      "outline": {
+        "$type": "color",
+        "$value": "#2d3748",
+        "$description": "Hairline on a plate; fixed."
+      },
+      "ink": {
+        "$type": "color",
+        "$value": "#f0f2f8",
+        "$description": "Primary text on a plate."
+      },
+      "dim-ink": {
+        "$type": "color",
+        "$value": "#909aad",
+        "$description": "Secondary text on a plate: 5.49:1 on the plate surface, 7.02:1 on the well."
+      }
+    }
+  },
+  "space": {
+    "xxs": {
+      "$type": "dimension",
+      "$value": "2px",
+      "$description": "Inside components only: glyph-to-label gap, between two lines of a row."
+    },
+    "xs": {
+      "$type": "dimension",
+      "$value": "4px",
+      "$description": "Minimal spacing for tight layouts; chip vertical padding."
+    },
+    "s": {
+      "$type": "dimension",
+      "$value": "6px",
+      "$description": "Inside components only: chip inner padding, nav bar inner padding."
+    },
+    "sm": {
+      "$type": "dimension",
+      "$value": "8px",
+      "$description": "Small spacing for related elements; badge padding."
+    },
+    "m": {
+      "$type": "dimension",
+      "$value": "10px",
+      "$description": "Inside components only: row line gaps, inner plates."
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "12px",
+      "$description": "Compact spacing: grid and carousel gaps, button vertical padding."
+    },
+    "ml": {
+      "$type": "dimension",
+      "$value": "14px",
+      "$description": "Inside components only: nav pill horizontal padding."
+    },
+    "lg": {
+      "$type": "dimension",
+      "$value": "16px",
+      "$description": "The default: page gutter, card padding, input horizontal padding."
+    },
+    "xl": {
+      "$type": "dimension",
+      "$value": "24px",
+      "$description": "Section separation; button horizontal padding."
+    },
+    "xxl": {
+      "$type": "dimension",
+      "$value": "32px",
+      "$description": "Major blocks."
+    },
+    "xxxl": {
+      "$type": "dimension",
+      "$value": "48px",
+      "$description": "The largest section break."
+    },
+    "grid-gap": {
+      "$type": "dimension",
+      "$value": "{space.md}",
+      "$description": "Gap between grid items."
+    },
+    "carousel-gap": {
+      "$type": "dimension",
+      "$value": "{space.md}",
+      "$description": "Gap between carousel items."
+    }
+  },
+  "radius": {
+    "none": {
+      "$type": "dimension",
+      "$value": "0px",
+      "$description": "Sharp corners (full-bleed backdrops)."
+    },
+    "hair": {
+      "$type": "dimension",
+      "$value": "3px",
+      "$description": "Small-object geometry: a 3dp tag."
+    },
+    "xs": {
+      "$type": "dimension",
+      "$value": "4px",
+      "$description": "Subtle curves; progress tracks."
+    },
+    "xs2": {
+      "$type": "dimension",
+      "$value": "6px",
+      "$description": "Small-object geometry: a poster corner in dense rails."
+    },
+    "sm": {
+      "$type": "dimension",
+      "$value": "8px",
+      "$description": "Chips, badges and small objects."
+    },
+    "sm2": {
+      "$type": "dimension",
+      "$value": "10px",
+      "$description": "Small-object geometry: an inner plate."
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "12px",
+      "$description": "The default: cards, buttons, inputs, posters, snackbars, list tiles."
+    },
+    "lg": {
+      "$type": "dimension",
+      "$value": "16px",
+      "$description": "Dialogs, bottom-sheet top corners, grouped settings."
+    },
+    "pill": {
+      "$type": "dimension",
+      "$value": "20px",
+      "$description": "Selected affordances only: the nav indicator and segment pills. Never a general corner."
+    },
+    "xl": {
+      "$type": "dimension",
+      "$value": "28px",
+      "$description": "The floating navigation bar."
+    },
+    "full": {
+      "$type": "dimension",
+      "$value": "50px",
+      "$description": "Metadata pills (tags, genres, ratings). Never an interactive container."
+    }
+  },
+  "breakpoint": {
+    "$description": "Window regimes, never a device check.",
+    "nav-compact": {
+      "$type": "dimension",
+      "$value": "360px",
+      "$description": "Below this width the floating bar switches to compact item targets."
+    },
+    "desktop-mobile": {
+      "$type": "dimension",
+      "$value": "720px",
+      "$description": "Below this width a desktop window paints the touch shell under a bare drag strip."
+    },
+    "touch-rail": {
+      "$type": "dimension",
+      "$value": "840px",
+      "$description": "At or above this width a touch build moves from the bottom bar to a side rail."
+    },
+    "desktop-compact": {
+      "$type": "dimension",
+      "$value": "1100px",
+      "$description": "Below this width the desktop shell uses its compact variants."
+    },
+    "content-well": {
+      "$type": "dimension",
+      "$value": "1140px",
+      "$description": "The widest the main content well may grow, on any shell."
+    },
+    "desktop-min-width": {
+      "$type": "dimension",
+      "$value": "360px",
+      "$description": "Narrowest a desktop window may be dragged: a small phone's width."
+    },
+    "desktop-min-height": {
+      "$type": "dimension",
+      "$value": "450px",
+      "$description": "Shortest a desktop window may be dragged: the compact artboard's height."
+    },
+    "landscape-aspect": {
+      "$type": "number",
+      "$value": 1.2,
+      "$description": "Aspect ratio at or above which a frame puts two things side by side instead of stacking. A shape, not a width."
+    }
+  },
+  "duration": {
+    "xs": {
+      "$type": "duration",
+      "$value": "100ms",
+      "$description": "Micro-interactions: ripples, highlights."
+    },
+    "sm": {
+      "$type": "duration",
+      "$value": "200ms",
+      "$description": "Simple state changes."
+    },
+    "md": {
+      "$type": "duration",
+      "$value": "300ms",
+      "$description": "Standard transitions."
+    },
+    "lg": {
+      "$type": "duration",
+      "$value": "400ms",
+      "$description": "Complex transitions."
+    },
+    "xl": {
+      "$type": "duration",
+      "$value": "500ms",
+      "$description": "Dramatic effects."
+    },
+    "shimmer": {
+      "$type": "duration",
+      "$value": "1500ms",
+      "$description": "One skeleton shimmer cycle."
+    },
+    "confirmation-hold": {
+      "$type": "duration",
+      "$value": "1600ms",
+      "$description": "How long a transient success check replaces a button's icon before reverting."
+    }
+  },
+  "opacity": {
+    "service-soft-container": {
+      "$type": "number",
+      "$value": 0.14,
+      "$description": "A service accent's soft container: icon backgrounds and chips."
+    },
+    "service-glow": {
+      "$type": "number",
+      "$value": 0.22,
+      "$description": "Centre of a signature card's accent glow. A grid repeating the treatment takes a fraction of it."
+    },
+    "hero-scrim-rest": {
+      "$type": "number",
+      "$value": 0.85,
+      "$description": "Mid stop of the hero scrim at rest; it deepens to opaque as the hero collapses."
+    },
+    "hero-scrim-deep": {
+      "$type": "number",
+      "$value": 0.35,
+      "$description": "Top stop of the hero scrim once collapsed, so the art recedes behind chrome."
+    },
+    "status-badge": {
+      "$type": "number",
+      "$value": 0.8,
+      "$description": "The surface behind a status badge laid over artwork."
+    }
+  },
+  "shadow": {
+    "$description": "Two-layer stacks (a tight contact shadow plus a wide ambient one), deeper on dark. Flat is the default; a surface earns a shadow only when it must read as lifted. Each layer's opacity is per theme.",
+    "level-1": {
+      "$description": "Resting cards, rows, KPI tiles.",
+      "contact": {
+        "offset-x": { "$type": "dimension", "$value": "0px" },
+        "offset-y": { "$type": "dimension", "$value": "2px" },
+        "blur": { "$type": "dimension", "$value": "6px" },
+        "spread": { "$type": "dimension", "$value": "0px" }
+      },
+      "ambient": {
+        "offset-x": { "$type": "dimension", "$value": "0px" },
+        "offset-y": { "$type": "dimension", "$value": "4px" },
+        "blur": { "$type": "dimension", "$value": "12px" },
+        "spread": { "$type": "dimension", "$value": "0px" }
+      }
+    },
+    "level-2": {
+      "$description": "Posters, elevated cards, feature cards.",
+      "contact": {
+        "offset-x": { "$type": "dimension", "$value": "0px" },
+        "offset-y": { "$type": "dimension", "$value": "4px" },
+        "blur": { "$type": "dimension", "$value": "10px" },
+        "spread": { "$type": "dimension", "$value": "0px" }
+      },
+      "ambient": {
+        "offset-x": { "$type": "dimension", "$value": "0px" },
+        "offset-y": { "$type": "dimension", "$value": "10px" },
+        "blur": { "$type": "dimension", "$value": "22px" },
+        "spread": { "$type": "dimension", "$value": "0px" }
+      }
+    },
+    "level-3": {
+      "$description": "Sheets, popovers, hero surfaces, a poster mid-flight.",
+      "contact": {
+        "offset-x": { "$type": "dimension", "$value": "0px" },
+        "offset-y": { "$type": "dimension", "$value": "6px" },
+        "blur": { "$type": "dimension", "$value": "16px" },
+        "spread": { "$type": "dimension", "$value": "0px" }
+      },
+      "ambient": {
+        "offset-x": { "$type": "dimension", "$value": "0px" },
+        "offset-y": { "$type": "dimension", "$value": "18px" },
+        "blur": { "$type": "dimension", "$value": "36px" },
+        "spread": { "$type": "dimension", "$value": "0px" }
+      }
+    },
+    "glass": {
+      "$description": "The floating navigation bar: a deep ambient shadow plus a 1px top highlight.",
+      "ambient": {
+        "color": { "$type": "color", "$value": "{color.base.black}" },
+        "offset-x": { "$type": "dimension", "$value": "0px" },
+        "offset-y": { "$type": "dimension", "$value": "8px" },
+        "blur": { "$type": "dimension", "$value": "32px" },
+        "spread": { "$type": "dimension", "$value": "0px" }
+      },
+      "highlight": {
+        "color": { "$type": "color", "$value": "{color.base.white}" },
+        "offset-x": { "$type": "dimension", "$value": "0px" },
+        "offset-y": { "$type": "dimension", "$value": "1px" },
+        "blur": { "$type": "dimension", "$value": "0px" },
+        "spread": { "$type": "dimension", "$value": "0px" }
+      }
+    }
+  },
+  "type": {
+    "family": {
+      "sans": {
+        "$type": "fontFamily",
+        "$value": "Inter",
+        "$description": "The bundled Inter variable font (wght 100–900, opsz 14–32). Every role is set in it."
+      },
+      "mono": {
+        "$type": "fontFamily",
+        "$value": ["Menlo", "SF Mono", "Roboto Mono", "Droid Sans Mono", "Consolas", "monospace"],
+        "$description": "Code, logs, hashes and anything compared by eye in columns, in resolution order. Never the bare 'monospace' alias, which Apple platforms do not have."
+      }
+    },
+    "display": {
+      "large": {
+        "$description": "Rare editorial and onboarding moments. The only roles allowed 800.",
+        "font-size": { "$type": "dimension", "$value": "57px" },
+        "font-weight": { "$type": "fontWeight", "$value": 800 },
+        "line-height": { "$type": "number", "$value": 1.1 }
+      },
+      "medium": {
+        "$description": "Editorial display, one step down.",
+        "font-size": { "$type": "dimension", "$value": "45px" },
+        "font-weight": { "$type": "fontWeight", "$value": 800 },
+        "line-height": { "$type": "number", "$value": 1.1 }
+      },
+      "small": {
+        "$description": "The smallest display.",
+        "font-size": { "$type": "dimension", "$value": "36px" },
+        "font-weight": { "$type": "fontWeight", "$value": 700 },
+        "line-height": { "$type": "number", "$value": 1.1 }
+      }
+    },
+    "headline": {
+      "large": {
+        "$description": "Screen-level headings.",
+        "font-size": { "$type": "dimension", "$value": "32px" },
+        "font-weight": { "$type": "fontWeight", "$value": 700 },
+        "line-height": { "$type": "number", "$value": 1.15 }
+      },
+      "medium": {
+        "$description": "Screen headings on compact widths.",
+        "font-size": { "$type": "dimension", "$value": "28px" },
+        "font-weight": { "$type": "fontWeight", "$value": 700 },
+        "line-height": { "$type": "number", "$value": 1.18 }
+      },
+      "small": {
+        "$description": "Detail hero titles, collapsed.",
+        "font-size": { "$type": "dimension", "$value": "24px" },
+        "font-weight": { "$type": "fontWeight", "$value": 700 },
+        "line-height": { "$type": "number", "$value": 1.2 }
+      }
+    },
+    "title": {
+      "large": {
+        "$description": "Section headers. The app-bar title is this role at 700.",
+        "font-size": { "$type": "dimension", "$value": "22px" },
+        "font-weight": { "$type": "fontWeight", "$value": 600 },
+        "line-height": { "$type": "number", "$value": 1.25 }
+      },
+      "subtitle": {
+        "$description": "A service's own name in its app bar, one step under Title.",
+        "font-size": { "$type": "dimension", "$value": "20px" },
+        "font-weight": { "$type": "fontWeight", "$value": 600 },
+        "line-height": { "$type": "number", "$value": 1.26 },
+        "letter-spacing": { "$type": "dimension", "$value": "-0.3px" }
+      },
+      "panel-header": {
+        "$description": "An h2 inside a page: a Dockge stack, an NPM host, a TrueNAS console section.",
+        "font-size": { "$type": "dimension", "$value": "18px" },
+        "font-weight": { "$type": "fontWeight", "$value": 600 },
+        "line-height": { "$type": "number", "$value": 1.28 }
+      },
+      "medium": {
+        "$description": "Card titles; KPI values, read at 700.",
+        "font-size": { "$type": "dimension", "$value": "16px" },
+        "font-weight": { "$type": "fontWeight", "$value": 600 },
+        "line-height": { "$type": "number", "$value": 1.32 }
+      },
+      "row-title": {
+        "$description": "The primary line of a row that is a name, not a sentence: a device, a session, a proxy host.",
+        "font-size": { "$type": "dimension", "$value": "15px" },
+        "font-weight": { "$type": "fontWeight", "$value": 600 },
+        "line-height": { "$type": "number", "$value": 1.3 }
+      },
+      "small": {
+        "$description": "Small titles and dense card headers.",
+        "font-size": { "$type": "dimension", "$value": "14px" },
+        "font-weight": { "$type": "fontWeight", "$value": 500 },
+        "line-height": { "$type": "number", "$value": 1.34 }
+      }
+    },
+    "body": {
+      "large": {
+        "$description": "The widest prose measure: overviews and descriptions.",
+        "font-size": { "$type": "dimension", "$value": "16px" },
+        "font-weight": { "$type": "fontWeight", "$value": 400 },
+        "line-height": { "$type": "number", "$value": 1.55 }
+      },
+      "medium": {
+        "$description": "Running text, metadata, empty-state copy, input text.",
+        "font-size": { "$type": "dimension", "$value": "14px" },
+        "font-weight": { "$type": "fontWeight", "$value": 400 },
+        "line-height": { "$type": "number", "$value": 1.45 }
+      },
+      "small": {
+        "$description": "Fine print and secondary lines.",
+        "font-size": { "$type": "dimension", "$value": "12px" },
+        "font-weight": { "$type": "fontWeight", "$value": 400 },
+        "line-height": { "$type": "number", "$value": 1.4 }
+      }
+    },
+    "label": {
+      "data": {
+        "$description": "The answer in a row: an attention item, a queue entry, a table cell. Never smaller than the label describing it.",
+        "font-size": { "$type": "dimension", "$value": "13px" },
+        "font-weight": { "$type": "fontWeight", "$value": 500 },
+        "line-height": { "$type": "number", "$value": 1.3 }
+      },
+      "large": {
+        "$description": "Button labels (at 600) and tab labels.",
+        "font-size": { "$type": "dimension", "$value": "14px" },
+        "font-weight": { "$type": "fontWeight", "$value": 500 },
+        "line-height": { "$type": "number", "$value": 1.22 }
+      },
+      "medium": {
+        "$description": "Chips, badges, nav labels.",
+        "font-size": { "$type": "dimension", "$value": "12px" },
+        "font-weight": { "$type": "fontWeight", "$value": 500 },
+        "line-height": { "$type": "number", "$value": 1.22 }
+      },
+      "small": {
+        "$description": "The 11px floor. Nothing in the app renders smaller.",
+        "font-size": { "$type": "dimension", "$value": "11px" },
+        "font-weight": { "$type": "fontWeight", "$value": 500 },
+        "line-height": { "$type": "number", "$value": 1.22 }
+      },
+      "eyebrow": {
+        "$description": "Uppercase kicker above a section or a single-value readout. The one role whose tracking is authored; set the text uppercase.",
+        "font-size": { "$type": "dimension", "$value": "11px" },
+        "font-weight": { "$type": "fontWeight", "$value": 600 },
+        "line-height": { "$type": "number", "$value": 1.2 },
+        "letter-spacing": { "$type": "dimension", "$value": "1.4px" }
+      },
+      "chrome": {
+        "$description": "Dense desktop-shell chrome off the ramp. Its size is both the default and the enforced floor.",
+        "font-size": { "$type": "dimension", "$value": "11px" },
+        "font-weight": { "$type": "fontWeight", "$value": 500 },
+        "line-height": { "$type": "number", "$value": 1.22 }
+      }
+    }
+  }
+}

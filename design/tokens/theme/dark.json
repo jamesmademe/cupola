@@ -1,0 +1,226 @@
+{
+  "color": {
+    "primary": {
+      "$type": "color",
+      "$value": "{color.service.seerr}",
+      "$description": "The app's interactive accent: filled buttons, text-button labels, selected nav, links, focus ring, progress."
+    },
+    "on-primary": {
+      "$type": "color",
+      "$value": "{color.base.white}",
+      "$description": "Label on a primary fill: the brand's reversed-out white."
+    },
+    "primary-container": {
+      "$type": "color",
+      "$value": "{color.brand.primary-dark}",
+      "$description": "Contained companion of the brand: the nav indicator, the fill a label sits on when raw indigo would miss AA."
+    },
+    "on-primary-container": {
+      "$type": "color",
+      "$value": "{color.brand.primary-lighter}",
+      "$description": "Text on the primary container."
+    },
+    "secondary": {
+      "$type": "color",
+      "$value": "{color.brand.primary-light}",
+      "$description": "Secondary indigo, one step lighter than the brand."
+    },
+    "on-secondary": {
+      "$type": "color",
+      "$value": "{color.ink-on-bright}",
+      "$description": "Label on a secondary fill."
+    },
+    "secondary-container": {
+      "$type": "color",
+      "$value": "{color.surface-container-high}",
+      "$description": "Fill behind a selected segment."
+    },
+    "on-secondary-container": {
+      "$type": "color",
+      "$value": "{color.on-surface-variant}",
+      "$description": "Label on a selected segment."
+    },
+    "tertiary": {
+      "$type": "color",
+      "$value": "{color.status.success}",
+      "$description": "The success tone as a scheme role."
+    },
+    "on-tertiary": {
+      "$type": "color",
+      "$value": "{color.ink-on-bright}",
+      "$description": "Label on a success fill."
+    },
+    "tertiary-container": {
+      "$type": "color",
+      "$value": "{color.status.success-container}",
+      "$description": "Filled status surface for success."
+    },
+    "on-tertiary-container": {
+      "$type": "color",
+      "$value": "{color.base.white}",
+      "$description": "Text on the success container."
+    },
+    "error": {
+      "$type": "color",
+      "$value": "{color.status.error}",
+      "$description": "The unreachable tone as a scheme role."
+    },
+    "on-error": {
+      "$type": "color",
+      "$value": "{color.ink-on-bright}",
+      "$description": "Label on an error fill: white measures 3.76:1 there, this ink 4.71:1."
+    },
+    "error-container": {
+      "$type": "color",
+      "$value": "{color.status.error-container}",
+      "$description": "Filled status surface for error."
+    },
+    "on-error-container": {
+      "$type": "color",
+      "$value": "{color.base.white}",
+      "$description": "Text on the error container."
+    },
+    "surface": {
+      "$type": "color",
+      "$value": "#0a0b11",
+      "$description": "Room Floor: the scaffold behind every screen."
+    },
+    "on-surface": {
+      "$type": "color",
+      "$value": "#f0f2f8",
+      "$description": "Bright Label: primary text and icons on every surface and container."
+    },
+    "surface-container-lowest": {
+      "$type": "color",
+      "$value": "#08090f",
+      "$description": "Sub-floor: recessed wells such as log panels and code blocks."
+    },
+    "surface-container-low": {
+      "$type": "color",
+      "$value": "#11131b",
+      "$description": "Riser: the first raised step above the floor; grouped-list backgrounds."
+    },
+    "surface-container": {
+      "$type": "color",
+      "$value": "#161923",
+      "$description": "Panel: cards, bottom sheets, dialogs, KPI tiles, and the navigation bar."
+    },
+    "surface-container-high": {
+      "$type": "color",
+      "$value": "#1e2430",
+      "$description": "Raised Panel: secondary panels and the ground accent chips most often sit on."
+    },
+    "surface-container-highest": {
+      "$type": "color",
+      "$value": "#29303e",
+      "$description": "Instrument Face: input and chip fill, carrying on-surface-variant labels."
+    },
+    "on-surface-variant": {
+      "$type": "color",
+      "$value": "#b4bccb",
+      "$description": "Secondary Label: metadata, chip labels, input hints, unselected nav."
+    },
+    "dim-text": {
+      "$type": "color",
+      "$value": "#7c8598",
+      "$description": "Dim Label: editorial captions and tertiary metadata on surface and surface-container. Below AA on surface-container-high; use the plate dim ink on plates."
+    },
+    "outline": {
+      "$type": "color",
+      "$value": "#2d3748",
+      "$description": "Hairline: dividers, outlined buttons and cards, the rare boundary a tint cannot draw."
+    },
+    "outline-variant": {
+      "$type": "color",
+      "$value": "{color.outline}",
+      "$description": "Grouped surfaces, genre chips, KPI tile border. The same byte as outline."
+    },
+    "shadow": {
+      "$type": "color",
+      "$value": "{color.base.black}",
+      "$description": "The ink every elevation level paints its shadow in."
+    },
+    "scrim": {
+      "$type": "color",
+      "$value": "{color.base.black}",
+      "$description": "Modal barrier and hero scrims."
+    },
+    "inverse-surface": {
+      "$type": "color",
+      "$value": "#f3f4f6",
+      "$description": "Snackbar fill."
+    },
+    "on-inverse-surface": {
+      "$type": "color",
+      "$value": "#111827",
+      "$description": "Snackbar text on the inverse surface."
+    },
+    "inverse-primary": {
+      "$type": "color",
+      "$value": "{color.brand.primary-dark}",
+      "$description": "The brand on an inverse surface."
+    }
+  },
+  "opacity": {
+    "glass-surface": {
+      "$type": "number",
+      "$value": 0.72,
+      "$description": "Opacity of surface-container in the floating nav bar's glass fill. A tint, not a backdrop blur."
+    },
+    "ambient-glow": {
+      "$type": "number",
+      "$value": 0.16,
+      "$description": "Centre of the ambient accent wash behind headers and the onboarding canvas."
+    }
+  },
+  "elevation": {
+    "level-1": {
+      "contact": {
+        "$type": "number",
+        "$value": 0.28,
+        "$description": "Opacity of the level-1 contact shadow."
+      },
+      "ambient": {
+        "$type": "number",
+        "$value": 0.18,
+        "$description": "Opacity of the level-1 ambient shadow."
+      }
+    },
+    "level-2": {
+      "contact": {
+        "$type": "number",
+        "$value": 0.34,
+        "$description": "Opacity of the level-2 contact shadow."
+      },
+      "ambient": {
+        "$type": "number",
+        "$value": 0.22,
+        "$description": "Opacity of the level-2 ambient shadow."
+      }
+    },
+    "level-3": {
+      "contact": {
+        "$type": "number",
+        "$value": 0.4,
+        "$description": "Opacity of the level-3 contact shadow."
+      },
+      "ambient": {
+        "$type": "number",
+        "$value": 0.26,
+        "$description": "Opacity of the level-3 ambient shadow."
+      }
+    },
+    "glass": {
+      "ambient": {
+        "$type": "number",
+        "$value": 0.35,
+        "$description": "Opacity of the glass bar's ambient shadow."
+      },
+      "highlight": {
+        "$type": "number",
+        "$value": 0.07,
+        "$description": "Opacity of the glass bar's 1px top highlight."
+      }
+    }
+  }
+}

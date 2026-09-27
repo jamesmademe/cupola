@@ -37,6 +37,17 @@ void main() {
       // The app-bar title: `titleLarge` lifted to the 700 ceiling.
       '.weight(FontWeight.w700)',
     ],
+    // The ramp's weights as the token sets state them: Display at 800 (Small
+    // at 700) and Headline at 700. Generated from `design/tokens/core.json`,
+    // so a heavier role added there fails here.
+    'lib/core/generated/design_tokens.g.dart': [
+      'static const FontWeight typeDisplayLargeFontWeight = FontWeight.w800;',
+      'static const FontWeight typeDisplayMediumFontWeight = FontWeight.w800;',
+      'static const FontWeight typeDisplaySmallFontWeight = FontWeight.w700;',
+      'static const FontWeight typeHeadlineLargeFontWeight = FontWeight.w700;',
+      'static const FontWeight typeHeadlineMediumFontWeight = FontWeight.w700;',
+      'static const FontWeight typeHeadlineSmallFontWeight = FontWeight.w700;',
+    ],
     // The KPI figure, the rule's one named exception.
     'lib/core/widgets/service_kpi_peek.dart': ['.weight(FontWeight.w700)'],
     // The onboarding close headline: a Display role (`displaySmall`) taken
