@@ -2,8 +2,8 @@
 ///
 /// The Overview is the one tab that carries the identity block and the
 /// readouts, so everything else on it is derived rather than fetched twice:
-/// Coming up and Recently added both fall out of [moviesProvider], which the
-/// KPI rail already loads, and Needs attention reads the *raw* queue records
+/// Coming up and Recently added both fall out of [radarrOverviewMoviesProvider],
+/// and Needs attention reads the *raw* queue records
 /// rather than [ArrQueueSnapshot] — the snapshot collapses to one headline per
 /// media id and drops the titles and timestamps the fault rows are made of.
 ///
@@ -124,6 +124,24 @@ List<RadarrUpcomingRelease> radarrUpcomingReleases(
   return List.unmodifiable(releases);
 }
 
+/// The library, read so that a failure is still a failure when it arrives.
+///
+/// **Not [moviesProvider]**, for the reason `sonarrOverviewSeriesProvider`
+/// gives: that provider reads `getMovies`, which degrades to `[]`, so a dark
+/// Radarr resolved it successfully with an empty library and this screen
+/// printed "next 7 days · 0 releases" over "Nothing releasing this week",
+/// under an identity band that already read Unreachable. `moviesProvider`
+/// keeps its degradation for the browse grid.
+///
+/// Plain, not `autoDispose`, like the library it mirrors; the default retry
+/// stays, because the sections watch it as an `AsyncValue` and a blip should
+/// heal itself. Pull-to-refresh and the sections' Retry invalidate it.
+final radarrOverviewMoviesProvider = FutureProvider<List<RadarrMovie>>((
+  ref,
+) async {
+  return ref.watch(radarrServiceProvider).getMoviesOrThrow();
+});
+
 /// Everything Radarr will release in the next [radarrComingUpDays] days.
 ///
 /// Derived client-side rather than from `/api/v3/calendar`: for Radarr the
@@ -132,7 +150,7 @@ List<RadarrUpcomingRelease> radarrUpcomingReleases(
 /// endpoint — an episode is not a row of the series list.)
 final radarrComingUpProvider =
     FutureProvider.autoDispose<List<RadarrUpcomingRelease>>((ref) async {
-      final movies = await ref.watch(moviesProvider.future);
+      final movies = await ref.watch(radarrOverviewMoviesProvider.future);
       return radarrUpcomingReleases(movies, now: DateTime.now());
     });
 
@@ -158,7 +176,7 @@ List<RadarrMovie> radarrRecentlyAdded(
 
 final radarrRecentlyAddedProvider =
     FutureProvider.autoDispose<List<RadarrMovie>>((ref) async {
-      final movies = await ref.watch(moviesProvider.future);
+      final movies = await ref.watch(radarrOverviewMoviesProvider.future);
       return radarrRecentlyAdded(movies);
     });
 

@@ -34,18 +34,13 @@ void main() {
       expect(client.lastGetPath, '/api/badges');
     });
 
-    test(
-      'returns an empty badges object when the payload is not a map',
-      () async {
-        final client = FakeApiClient()..getResponseData = 'unexpected';
-        final service = BazarrService(client);
+    test('a payload that is not the badge map is a failure, not zeros', () {
+      // All-zero badges read "Wanted 0" for a Bazarr that never said.
+      final client = FakeApiClient()..getResponseData = 'unexpected';
+      final service = BazarrService(client);
 
-        final badges = await service.getBadges();
-
-        expect(badges.totalWanted, 0);
-        expect(badges.status, isFalse);
-      },
-    );
+      expect(service.getBadges(), throwsA(isA<Exception>()));
+    });
   });
 
   group('BazarrService.getProviderSummary', () {

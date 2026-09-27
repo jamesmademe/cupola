@@ -111,6 +111,9 @@ class _OverviewBody extends ConsumerWidget {
         // refetched nothing: a film that landed, one that was added or a
         // release date that moved never appeared.
         ref.invalidate(moviesProvider);
+        // The Overview's own throwing read of it — see
+        // `radarrOverviewMoviesProvider`.
+        ref.invalidate(radarrOverviewMoviesProvider);
         // And the rail's own non-swallowing read of it. See
         // `radarrKpiLibraryProvider`.
         ref.invalidate(radarrKpiLibraryProvider);
@@ -187,7 +190,10 @@ class _ComingUpSection extends ConsumerWidget {
         value: releases,
         serviceName: 'Radarr',
         loadingLabel: 'Loading what is coming up',
-        onRetry: () => ref.invalidate(radarrComingUpProvider),
+        onRetry: () {
+          ref.invalidate(radarrOverviewMoviesProvider);
+          ref.invalidate(radarrComingUpProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (items) => items.isEmpty,
         emptyBuilder: const ServiceOverviewEmpty(
@@ -333,7 +339,10 @@ class _RecentlyAddedSection extends ConsumerWidget {
         value: movies,
         serviceName: 'Radarr',
         loadingLabel: 'Loading recently added films',
-        onRetry: () => ref.invalidate(radarrRecentlyAddedProvider),
+        onRetry: () {
+          ref.invalidate(radarrOverviewMoviesProvider);
+          ref.invalidate(radarrRecentlyAddedProvider);
+        },
         skeleton: AppSkeleton.posterRow(height: 138),
         isEmpty: (items) => items.isEmpty,
         emptyBuilder: const Padding(

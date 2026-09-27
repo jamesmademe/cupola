@@ -23,15 +23,10 @@ class BazarrService {
     if (raw is Map<String, dynamic>) {
       return BazarrBadges.fromJson(raw);
     }
-    return const BazarrBadges(
-      episodes: 0,
-      movies: 0,
-      providers: 0,
-      status: false,
-      sonarrSignalR: false,
-      radarrSignalR: false,
-      announcements: 0,
-    );
+    // Not a zero. A body that is not the badge map — a proxy's login page, an
+    // HTML error — answered this with all-zero badges, and the rail printed
+    // "Wanted 0" for a Bazarr that had said nothing about its backlog.
+    throw Exception('Bazarr returned an unreadable badge payload');
   }
 
   /// Returns the aggregate configured-provider count exposed by `/api/badges`.

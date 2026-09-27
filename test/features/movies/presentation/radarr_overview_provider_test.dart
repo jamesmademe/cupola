@@ -77,8 +77,19 @@ class _ScriptedRadarr extends FakeRadarrService {
   }
 }
 
+/// A Radarr that does not answer: the degrading read still says `[]`, the
+/// throwing one says what happened.
+class _UnreachableRadarr extends _ScriptedRadarr {
+  @override
+  Future<List<RadarrMovie>> getMoviesOrThrow() async =>
+      throw Exception('Radarr unreachable');
+}
+
 ProviderContainer _container(_ScriptedRadarr service) {
   final container = ProviderContainer(
+    // Riverpod re-runs a failed provider on an exponential backoff; a test that
+    // deliberately fails one would otherwise wait out the whole sequence.
+    retry: (_, _) => null,
     overrides: [radarrServiceProvider.overrideWith((ref) => service)],
   );
   addTearDown(container.dispose);
@@ -122,6 +133,21 @@ RadarrMovie _movie({
 String _iso(DateTime date) => date.toIso8601String();
 
 void main() {
+  test('a Radarr that did not answer is a failure, not an empty week', () {
+    // `getMovies` degrades to `[]`, which drew "0 releases" over "Nothing
+    // releasing this week" under an identity band that read Unreachable.
+    final container = _container(_UnreachableRadarr());
+
+    expect(
+      container.read(radarrComingUpProvider.future),
+      throwsA(isA<Exception>()),
+    );
+    expect(
+      container.read(radarrRecentlyAddedProvider.future),
+      throwsA(isA<Exception>()),
+    );
+  });
+
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
 

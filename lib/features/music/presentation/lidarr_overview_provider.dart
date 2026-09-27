@@ -158,10 +158,24 @@ List<LidarrArtist> lidarrRecentlyAdded(
   return List.unmodifiable(dated.take(limit).map((entry) => entry.$2));
 }
 
-/// The newest arrivals, off the artist list the readouts already loaded.
+/// The artist list, read so that a failure is still a failure when it arrives.
+///
+/// **Not [musicProvider]**, whose `getArtists` degrades to `[]`: a dark Lidarr
+/// resolved it successfully and Recently added read "Nothing added yet" under
+/// an identity band that already said Unreachable. The same split
+/// `sonarrOverviewSeriesProvider` makes; `musicProvider` keeps its degradation
+/// for the browse grid. Plain, with the default retry, for the reasons given
+/// there. Pull-to-refresh and the section's Retry invalidate it.
+final lidarrOverviewArtistsProvider = FutureProvider<List<LidarrArtist>>((
+  ref,
+) async {
+  return ref.watch(lidarrServiceProvider).getArtistsOrThrow();
+});
+
+/// The newest arrivals, off [lidarrOverviewArtistsProvider].
 final lidarrRecentlyAddedProvider =
     FutureProvider.autoDispose<List<LidarrArtist>>((ref) async {
-      final artists = await ref.watch(musicProvider.future);
+      final artists = await ref.watch(lidarrOverviewArtistsProvider.future);
       return lidarrRecentlyAdded(artists);
     });
 

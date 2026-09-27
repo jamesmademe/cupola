@@ -113,10 +113,12 @@ class _OverviewBody extends ConsumerWidget {
         invalidateServiceReadout(ref, ServiceKey.lidarr);
         // The artist list itself, and not only the two things derived from it.
         // `lidarrRecentlyAddedProvider` re-runs on invalidation but re-reads a
-        // `musicProvider` that is still holding the answer it already had, so
-        // without this line a pull-to-refresh re-sorts the same six artists and
-        // reports itself finished.
+        // library that is still holding the answer it already had, so without
+        // these a pull-to-refresh re-sorts the same six artists and reports
+        // itself finished. Both reads: the grid's degrading one and this
+        // screen's own — see `lidarrOverviewArtistsProvider`.
         ref.invalidate(musicProvider);
+        ref.invalidate(lidarrOverviewArtistsProvider);
         // And the rail's own non-swallowing read of it. See
         // `sonarrKpiLibraryProvider`.
         ref.invalidate(lidarrKpiLibraryProvider);
@@ -251,7 +253,10 @@ class _RecentlyAddedSection extends ConsumerWidget {
         value: artists,
         serviceName: 'Lidarr',
         loadingLabel: 'Loading recently added artists',
-        onRetry: () => ref.invalidate(lidarrRecentlyAddedProvider),
+        onRetry: () {
+          ref.invalidate(lidarrOverviewArtistsProvider);
+          ref.invalidate(lidarrRecentlyAddedProvider);
+        },
         skeleton: AppSkeleton.posterRow(height: 138),
         isEmpty: (items) => items.isEmpty,
         emptyBuilder: const Padding(
