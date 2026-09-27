@@ -233,7 +233,7 @@ class TorrentSortRow extends ConsumerWidget {
                               style: textTheme.labelSmall!
                                   .weight(
                                     sort == currentSort
-                                        ? FontWeight.w700
+                                        ? FontWeight.w600
                                         : FontWeight.w500,
                                   )
                                   .copyWith(
@@ -375,7 +375,7 @@ class _FilterPill extends StatelessWidget {
           child: Text(
             'All',
             style: textTheme.bodySmall!.weight(
-              selectedLabel == null ? FontWeight.w700 : FontWeight.w400,
+              selectedLabel == null ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
         ),
@@ -385,7 +385,7 @@ class _FilterPill extends StatelessWidget {
             child: Text(
               o,
               style: textTheme.bodySmall!.weight(
-                o == selectedLabel ? FontWeight.w700 : FontWeight.w400,
+                o == selectedLabel ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ),
@@ -415,7 +415,7 @@ class _FilterPill extends StatelessWidget {
                 Text(
                   displayLabel,
                   style: textTheme.labelSmall!
-                      .weight(active ? FontWeight.w700 : FontWeight.w500)
+                      .weight(active ? FontWeight.w600 : FontWeight.w500)
                       .copyWith(
                         color: active ? accent : colorScheme.onSurfaceVariant,
                       ),

@@ -371,7 +371,7 @@ class _AreaRowState extends State<_AreaRow> {
                             context,
                             size: 12,
                             weight: selected
-                                ? FontWeight.w700
+                                ? FontWeight.w600
                                 : FontWeight.w500,
                             color: selected
                                 ? colorScheme.onSurface

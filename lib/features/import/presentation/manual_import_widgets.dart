@@ -257,7 +257,7 @@ class ImportStationBar extends StatelessWidget {
                             style: theme.textTheme.labelMedium!
                                 .weight(
                                   index == activeIndex
-                                      ? FontWeight.w700
+                                      ? FontWeight.w600
                                       : FontWeight.w500,
                                 )
                                 .copyWith(
@@ -342,7 +342,7 @@ class ImportBreadcrumb extends StatelessWidget {
                     : colorScheme.onSurfaceVariant,
                 textStyle: theme.textTheme.labelMedium!.weight(
                   index == pathSegments.length - 1
-                      ? FontWeight.w700
+                      ? FontWeight.w600
                       : FontWeight.w500,
                 ),
               ),

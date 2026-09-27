@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
@@ -122,7 +123,7 @@ Future<bool> confirmByTyping(
                 phrase,
                 style: Theme.of(
                   context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                ).textTheme.bodyMedium?.weight(FontWeight.w600),
               ),
             ),
             const SizedBox(height: AppSpacing.md),

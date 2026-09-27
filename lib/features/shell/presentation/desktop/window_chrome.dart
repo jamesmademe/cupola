@@ -271,7 +271,7 @@ class _Breadcrumb extends StatelessWidget {
         style: AppTheme.chrome(
           context,
           size: size,
-          weight: isLast && !dim ? FontWeight.w700 : FontWeight.w500,
+          weight: isLast && !dim ? FontWeight.w600 : FontWeight.w500,
           color: isLast && !dim
               ? colorScheme.onSurface
               : CupolaThemeColors.of(context).dimText,

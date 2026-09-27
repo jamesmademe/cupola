@@ -772,7 +772,7 @@ class _NavBarItem extends StatelessWidget {
   /// overflow them before the label ever grew.
   static const double iconSize = _iconSize;
 
-  /// The selected destination's label style: `labelMedium` at w700.
+  /// The selected destination's label style: `labelMedium` at w600.
   ///
   /// Nav is chrome in a fixed-height pill, which is exactly what the label roles
   /// are for, and `labelMedium` is the 12pt rung this bar has always drawn at.

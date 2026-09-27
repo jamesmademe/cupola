@@ -75,16 +75,13 @@ class MediaDetailFigurePlate extends StatelessWidget {
                   Text(
                     value,
                     maxLines: 1,
-                    style: theme.textTheme.headlineSmall!
-                        .weight(FontWeight.w700)
-                        .tabular
-                        .copyWith(
-                          color: ServiceTheme.onTint(
-                            accent,
-                            surface: colorScheme.surfaceContainerHigh,
-                            tintAlpha: 0.14,
-                          ),
-                        ),
+                    style: theme.textTheme.headlineSmall!.tabular.copyWith(
+                      color: ServiceTheme.onTint(
+                        accent,
+                        surface: colorScheme.surfaceContainerHigh,
+                        tintAlpha: 0.14,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(

@@ -68,7 +68,7 @@ class SettingsChoiceRow extends StatelessWidget {
                         // states at Regular.
                         style: theme.textTheme.titleMedium!
                             .weight(
-                              selected ? FontWeight.w700 : FontWeight.w500,
+                              selected ? FontWeight.w600 : FontWeight.w500,
                             )
                             .copyWith(
                               color: selected

@@ -931,7 +931,7 @@ class ImportChoiceRow extends StatelessWidget {
                   child: Text(
                     label,
                     style: theme.textTheme.bodyLarge!
-                        .weight(selected ? FontWeight.w700 : FontWeight.w500)
+                        .weight(selected ? FontWeight.w600 : FontWeight.w500)
                         .copyWith(
                           color: selected
                               ? colorScheme.onSurface

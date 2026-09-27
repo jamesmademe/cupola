@@ -646,7 +646,7 @@ class _DirectoryRow extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.titleSmall!.weight(
-                            selected ? FontWeight.w700 : FontWeight.w600,
+                            selected ? FontWeight.w600 : FontWeight.w500,
                           ),
                         ),
                         Text(

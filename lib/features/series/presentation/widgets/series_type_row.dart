@@ -209,7 +209,7 @@ class _SeriesTypeOption extends StatelessWidget {
                     Text(
                       type.label,
                       style: theme.textTheme.bodyLarge!
-                          .weight(selected ? FontWeight.w700 : FontWeight.w500)
+                          .weight(selected ? FontWeight.w600 : FontWeight.w500)
                           .copyWith(
                             color: selected ? accentInk : colorScheme.onSurface,
                           ),

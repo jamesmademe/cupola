@@ -718,6 +718,9 @@ class _Pill extends StatelessWidget {
   final String label;
   final IconData? icon;
   final Color color;
+
+  /// Carried by a denser tint, not by weight: the label is already at the 600
+  /// ceiling for its role, and 700 on an 11px label read as shouting.
   final bool emphasize;
 
   const _Pill({
@@ -753,7 +756,7 @@ class _Pill extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall!
-                  .weight(emphasize ? FontWeight.w700 : FontWeight.w600)
+                  .weight(FontWeight.w600)
                   .copyWith(color: color),
             ),
           ),

@@ -16,6 +16,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/shell/presentation/service_portal.dart';
 
@@ -92,8 +93,8 @@ class _PortalCoachMarkState extends ConsumerState<PortalCoachMark> {
                       children: [
                         Text(
                           'Swipe up to open the Portal',
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
+                          style: theme.textTheme.labelLarge?.weight(
+                            FontWeight.w600,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.xs),

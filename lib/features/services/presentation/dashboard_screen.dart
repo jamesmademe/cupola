@@ -170,9 +170,9 @@ class _StackHeadline extends ConsumerWidget {
           children: [
             Text(
               'Your stack',
-              style: theme.textTheme.headlineSmall
-                  ?.weight(FontWeight.w700)
-                  .copyWith(color: colorScheme.onSurface),
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 2),
             Text(

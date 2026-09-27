@@ -253,7 +253,7 @@ class _SectionRowState extends State<_SectionRow> {
                       style: AppTheme.chrome(
                         context,
                         size: 13,
-                        weight: selected ? FontWeight.w700 : FontWeight.w500,
+                        weight: selected ? FontWeight.w600 : FontWeight.w500,
                         color: selected
                             ? colorScheme.onSurface
                             : CupolaThemeColors.of(context).dimText,

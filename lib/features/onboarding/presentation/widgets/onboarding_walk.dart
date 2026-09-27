@@ -118,9 +118,9 @@ class OnboardingWalkSubject extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           ReelLine(
             'Where does ${service.title} live?',
-            style: theme.textTheme.headlineSmall!
-                .weight(FontWeight.w700)
-                .copyWith(color: scheme.onSurface),
+            style: theme.textTheme.headlineSmall!.copyWith(
+              color: scheme.onSurface,
+            ),
             options: ReelMotion.word,
             // Wraps rather than rolls once the sentence stops fitting one line,
             // which for the longest service name happens well inside the

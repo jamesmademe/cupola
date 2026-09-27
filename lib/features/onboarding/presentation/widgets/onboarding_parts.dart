@@ -644,9 +644,9 @@ class OnboardingPick extends StatelessWidget {
         // drawn Pick frame carries this line unaccented.
         Text(
           'Pick your services',
-          style: theme.textTheme.headlineMedium!
-              .weight(FontWeight.w700)
-              .copyWith(color: theme.colorScheme.onSurface),
+          style: theme.textTheme.headlineMedium!.copyWith(
+            color: theme.colorScheme.onSurface,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         Text(

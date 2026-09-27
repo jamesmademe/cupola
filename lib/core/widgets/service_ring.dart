@@ -634,6 +634,9 @@ class OnePunchline extends StatelessWidget {
 
   /// Defaults to `displayMedium` — the ramp's own step between a heading and a
   /// hero line. Pass a smaller role where the claim is a caption, not the door.
+  ///
+  /// The weight comes from the role and is not forced here: 800 belongs to
+  /// Display, so the door reads at 800 and a caption keeps its own weight.
   final TextStyle? style;
 
   static const _appInk = AppColors.primary;
@@ -645,9 +648,12 @@ class OnePunchline extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final base = (style ?? theme.textTheme.displayMedium!)
-        .weight(FontWeight.w800)
-        .copyWith(color: scheme.onSurface, height: 1.02);
+    // 1.10 is the display leading floor; two lines of heavy type tighter than
+    // that start to touch.
+    final base = (style ?? theme.textTheme.displayMedium!).copyWith(
+      color: scheme.onSurface,
+      height: 1.10,
+    );
 
     // Both inks resolve against the composite they sit on. The cyan proves why
     // that is not optional: raw #06B6D4 measures 8.1:1 on `surface-dark` but
