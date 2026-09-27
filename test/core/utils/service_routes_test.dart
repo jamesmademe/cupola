@@ -5,6 +5,20 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
   group('ServiceRoutes', () {
+    test('the capability fix lands on that connection, not the first', () {
+      // A read-only key on the second TrueNAS is fixed on the second TrueNAS's
+      // form. The router already reads `?i=` for the settings form.
+      expect(
+        ServiceRoutes.settingsForConnection(ServiceKey.truenas, 'truenas-2a'),
+        '/settings/service/truenas?i=truenas-2a',
+      );
+      // No connection id collapses to the service's own page.
+      expect(
+        ServiceRoutes.settingsForConnection(ServiceKey.truenas, ''),
+        ServiceRoutes.settingsFor(ServiceKey.truenas),
+      );
+    });
+
     test('every registered service has a home route, and it interpolates', () {
       // Exhaustive over the registry, so a service added later cannot ship
       // without one. It also catches the specific way this helper can be

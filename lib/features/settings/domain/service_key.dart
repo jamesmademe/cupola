@@ -256,6 +256,55 @@ extension ServiceKeyExtension on ServiceKey {
   String get credentialLabel =>
       this == ServiceKey.plex ? 'Plex token' : 'API key';
 
+  /// Whether one saved credential of this service can carry a narrower scope
+  /// than the service's own writes in Cupola need — the services that get a
+  /// capability probe, a banner and dimmed writes.
+  ///
+  /// Exhaustive, like [usesApiKey], so a new service has to answer.
+  bool get hasScopedCredential => switch (this) {
+    // An Unraid key carries roles and per-resource actions; a TrueNAS key
+    // carries its user's roles; an NPM account carries a role and a
+    // per-resource permission map. All three can read and not write.
+    ServiceKey.unraid ||
+    ServiceKey.truenas ||
+    ServiceKey.nginxProxyManager => true,
+    // Jellyfin's slot can hold a non-admin user's token, but a non-admin is
+    // only ever shown sessions it may control, so no write Cupola draws can be
+    // refused (see `jellyfin_client.dart`). Plex's owner-versus-shared token is
+    // real but has no documented probe.
+    ServiceKey.jellyfin || ServiceKey.plex => false,
+    // One key compared for equality, or one account with no role: nothing to
+    // be narrower than. SABnzbd's NZB key and NZBGet's add-only user are
+    // narrower, but they cannot *read* either, which makes them a connection
+    // failure rather than a read-only scope.
+    ServiceKey.seerr ||
+    ServiceKey.radarr ||
+    ServiceKey.sonarr ||
+    ServiceKey.lidarr ||
+    ServiceKey.bazarr ||
+    ServiceKey.prowlarr ||
+    ServiceKey.readarr ||
+    ServiceKey.sabnzbd ||
+    ServiceKey.nzbget ||
+    ServiceKey.qbittorrent ||
+    ServiceKey.transmission ||
+    ServiceKey.dockge => false,
+  };
+
+  /// What the capability copy calls this service's credential: an NPM login is
+  /// an *account* with a role, everything else here hands out a *key*.
+  ///
+  /// One getter so no banner, hint or toast picks the noun for itself.
+  String get capabilityCredentialNoun =>
+      this == ServiceKey.nginxProxyManager ? 'account' : 'key';
+
+  /// The verb that fixes a credential too narrow for a write. NPM hands out a
+  /// role on an account, not a key, and "Update the key" would send the user
+  /// looking for a field that does not exist.
+  String get capabilityFixLabel => this == ServiceKey.nginxProxyManager
+      ? 'Change account'
+      : 'Update the key';
+
   /// The word this service's secret is filed under in secure storage.
   ///
   /// The tail of `ServiceInstance.credentialStorageKey`, and the reason that

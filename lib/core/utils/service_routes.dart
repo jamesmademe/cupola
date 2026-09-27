@@ -547,6 +547,18 @@ class ServiceRoutes {
   static String settingsFor(ServiceKey service) =>
       '$settings/service/${service.routeParam}';
 
+  /// The settings form of one saved connection of [service] — where a
+  /// too-narrow credential is replaced.
+  ///
+  /// Not [settingsFor]: a service can have two connections, and the fix for a
+  /// read-only key on the second one has to land on the second one's form
+  /// rather than on the first, which is fine. An empty [connectionId] collapses
+  /// to [settingsFor].
+  static String settingsForConnection(
+    ServiceKey service,
+    String connectionId,
+  ) => _withQuery(settingsFor(service), {'i': connectionId});
+
   static String _withQuery(String path, Map<String, String?> queryParameters) {
     final values = {
       for (final entry in queryParameters.entries)
