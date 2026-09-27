@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 
 /// A reusable widget to display file information (path and filename).
@@ -40,6 +41,19 @@ class FileInfoSection extends StatelessWidget {
       filename = null,
       _isMissingHint = true;
 
+  /// The page accent walked against the well the glyph sits in
+  /// (`surfaceContainerHighest`), so an amber page does not paint a sub-2:1
+  /// glyph in daylight.
+  Color _glyphColor(ColorScheme colorScheme) {
+    final tone = accent;
+    if (tone == null) return colorScheme.onSurfaceVariant;
+    return ServiceTheme.onTint(
+      tone,
+      surface: colorScheme.surfaceContainerHighest,
+      tintAlpha: 0,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -50,7 +64,7 @@ class FileInfoSection extends StatelessWidget {
         title: 'Import a file you already have',
         subtitle: 'Manual import is in the actions menu.',
         icon: Icons.drive_folder_upload_rounded,
-        iconColor: accent ?? colorScheme.onSurfaceVariant,
+        iconColor: _glyphColor(colorScheme),
         colorScheme: colorScheme,
         theme: theme,
         // The actionable half must survive a reading size, and this line is the
@@ -67,7 +81,7 @@ class FileInfoSection extends StatelessWidget {
       title: filename ?? 'Library path',
       subtitle: path,
       icon: Icons.storage_rounded,
-      iconColor: accent ?? colorScheme.onSurfaceVariant,
+      iconColor: _glyphColor(colorScheme),
       colorScheme: colorScheme,
       theme: theme,
     );

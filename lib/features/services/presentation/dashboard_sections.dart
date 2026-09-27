@@ -983,7 +983,12 @@ class _InFlightRow extends StatelessWidget {
     // Identity: the Room Light Rule confines service accents on this screen to
     // the stack cards, and seven download sources putting their own hue on a
     // percentage is the rainbow that rule exists to prevent.
-    final accent = colorScheme.primary;
+    // Walked against the row's card: the brand indigo is under 4.5:1 on paper.
+    final accent = statusToneColor(
+      colorScheme,
+      StatusTone.primary,
+      surface: colorScheme.surfaceContainer,
+    );
     final line = formatInFlightLine(
       quality: item.quality,
       doneBytes: item.doneBytes,

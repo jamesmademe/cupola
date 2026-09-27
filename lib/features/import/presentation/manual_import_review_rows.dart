@@ -947,7 +947,11 @@ class ImportChoiceRow extends StatelessWidget {
                       ? Icon(
                           Icons.check_circle_rounded,
                           size: 22,
-                          color: accent,
+                          color: ServiceTheme.onTint(
+                            accent,
+                            surface: colorScheme.surfaceContainer,
+                            tintAlpha: 0,
+                          ),
                         )
                       : null,
                 ),

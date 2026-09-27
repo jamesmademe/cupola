@@ -596,7 +596,17 @@ class _SheetHeader extends StatelessWidget {
                 color: serviceThemeFor(service).softContainer,
                 borderRadius: AppRadius.borderRadiusMd,
               ),
-              child: Icon(service.icon, color: service.accent, size: 20),
+              // The mark on its 14% tile over the sheet, walked rather than
+              // raw: the amber services measured under 2:1 in light theme.
+              child: Icon(
+                service.icon,
+                color: ServiceTheme.onTint(
+                  service.accent,
+                  surface: Theme.of(context).colorScheme.surfaceContainer,
+                  tintAlpha: 0.14,
+                ),
+                size: 20,
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.md),
@@ -714,7 +724,15 @@ class _SearchStep extends StatelessWidget {
         SearchBar(
           controller: controller,
           hintText: service.manualImportSearchHint,
-          leading: Icon(Icons.search_rounded, color: service.accent, size: 18),
+          leading: Icon(
+            Icons.search_rounded,
+            color: ServiceTheme.onTint(
+              service.accent,
+              surface: Theme.of(context).colorScheme.surfaceContainerHigh,
+              tintAlpha: 0,
+            ),
+            size: 18,
+          ),
           trailing: [
             if (controller.text.isNotEmpty)
               IconButton(
@@ -937,11 +955,23 @@ class _ResultTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final accent = service.accent;
+    // The row's own selected wash over the sheet is the ground both glyphs
+    // are measured against — the worse of its two states in either theme.
+    final rowGround = Color.alphaBlend(
+      service.accent.withValues(alpha: 0.1),
+      colorScheme.surfaceContainer,
+    );
+    final accent = ServiceTheme.onTint(
+      service.accent,
+      surface: rowGround,
+      tintAlpha: 0.14,
+    );
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
       decoration: BoxDecoration(
-        color: selected ? accent.withValues(alpha: 0.1) : Colors.transparent,
+        color: selected
+            ? service.accent.withValues(alpha: 0.1)
+            : Colors.transparent,
         borderRadius: AppRadius.borderRadiusSm,
       ),
       child: ListTile(

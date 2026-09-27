@@ -384,7 +384,15 @@ class _LastFolderShortcut extends ConsumerWidget {
         excludeChildSemantics: true,
         child: Row(
           children: [
-            Icon(Icons.history_rounded, size: 18, color: service.accent),
+            Icon(
+              Icons.history_rounded,
+              size: 18,
+              color: ServiceTheme.onTint(
+                service.accent,
+                surface: Theme.of(context).colorScheme.surfaceContainer,
+                tintAlpha: 0,
+              ),
+            ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Column(
@@ -634,7 +642,15 @@ class _DirectoryRow extends StatelessWidget {
                       color: serviceThemeFor(service).softContainer,
                       borderRadius: AppRadius.borderRadiusSm,
                     ),
-                    child: Icon(Icons.folder_rounded, size: 18, color: accent),
+                    child: Icon(
+                      Icons.folder_rounded,
+                      size: 18,
+                      color: ServiceTheme.onTint(
+                        accent,
+                        surface: colorScheme.surfaceContainerHigh,
+                        tintAlpha: 0.14,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
@@ -674,7 +690,15 @@ class _DirectoryRow extends StatelessWidget {
                   ],
                   if (selected) ...[
                     const SizedBox(width: AppSpacing.sm),
-                    Icon(Icons.check_rounded, size: 18, color: accent),
+                    Icon(
+                      Icons.check_rounded,
+                      size: 18,
+                      color: ServiceTheme.onTint(
+                        accent,
+                        surface: colorScheme.surfaceContainerHigh,
+                        tintAlpha: 0.08,
+                      ),
+                    ),
                   ],
                 ],
               ),

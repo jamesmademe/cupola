@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 
 class RatingChip extends StatelessWidget {
@@ -43,7 +44,16 @@ class RatingChip extends StatelessWidget {
     final displayText = formattedVotes.isEmpty
         ? score
         : '$score ($formattedVotes)';
-    final color = accent ?? Theme.of(context).colorScheme.primary;
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = accent ?? colorScheme.primary;
+    // The accent keeps the wash; the source mark and the score are measured
+    // against the composite they land on. Raw, a Radarr or Plex score on its own
+    // 12% tint read under 2:1 on the light page.
+    final ink = ServiceTheme.onTint(
+      color,
+      surface: colorScheme.surface,
+      tintAlpha: _tintAlpha,
+    );
 
     // No `onTap`: the parameter existed, was never passed by any of the four
     // construction sites, and was the only reason this metadata pill carried a
@@ -71,7 +81,7 @@ class RatingChip extends StatelessWidget {
                 vertical: AppSpacing.xs,
               ),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withValues(alpha: _tintAlpha),
                 borderRadius: AppRadius.borderRadiusFull,
               ),
               child: Row(
@@ -81,7 +91,7 @@ class RatingChip extends StatelessWidget {
                     sourceIcon,
                     style: Theme.of(context).textTheme.labelSmall!
                         .weight(FontWeight.w600)
-                        .copyWith(color: color),
+                        .copyWith(color: ink),
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Text(
@@ -91,7 +101,7 @@ class RatingChip extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelSmall!
                         .weight(FontWeight.w600)
                         .tabular
-                        .copyWith(color: color),
+                        .copyWith(color: ink),
                   ),
                 ],
               ),
@@ -101,6 +111,8 @@ class RatingChip extends StatelessWidget {
       ),
     );
   }
+
+  static const double _tintAlpha = 0.12;
 
   /// The scale as words, for the ear.
   ///

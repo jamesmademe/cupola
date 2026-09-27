@@ -278,7 +278,13 @@ class _HealthReadout extends ConsumerWidget {
                   context,
                   size: 11,
                   weight: FontWeight.w500,
-                  color: colorScheme.error,
+                  // Walked against the readout's own container: raw red on
+                  // it measured 3.4:1 in light theme.
+                  color: statusToneColor(
+                    colorScheme,
+                    StatusTone.error,
+                    surface: colorScheme.surfaceContainer,
+                  ),
                 ),
               ),
             ],

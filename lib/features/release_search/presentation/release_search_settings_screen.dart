@@ -11,6 +11,7 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/features/release_search/data/release_search_notifications.dart';
 import 'package:cupola/features/release_search/data/release_search_transport.dart';
@@ -583,8 +584,14 @@ class _NotifyRow extends StatelessWidget {
                         // a blocked permission in green. Amber rather than red
                         // because a permission the user can switch back on is
                         // something to fix, not something that failed.
+                        // Walked against the settings card: the raw yellow
+                        // is about 1.5:1 on paper.
                         color: systemPermission == false
-                            ? AppColors.warning
+                            ? statusToneColor(
+                                colors,
+                                StatusTone.warning,
+                                surface: colors.surfaceContainer,
+                              )
                             : colors.onSurfaceVariant,
                       ),
                     ),

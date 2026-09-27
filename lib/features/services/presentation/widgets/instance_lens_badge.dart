@@ -161,7 +161,14 @@ class _LensOptions extends ConsumerWidget {
             subtitle: service.extractHost(instance.url) ?? instance.url,
             accentColor: service.accent,
             trailing: instance.id == activeId
-                ? Icon(Icons.check_rounded, color: service.accent)
+                ? Icon(
+                    Icons.check_rounded,
+                    color: ServiceTheme.onTint(
+                      service.accent,
+                      surface: Theme.of(context).colorScheme.surfaceContainer,
+                      tintAlpha: 0,
+                    ),
+                  )
                 : null,
             semanticHint: instance.id == activeId
                 ? 'currently being read'

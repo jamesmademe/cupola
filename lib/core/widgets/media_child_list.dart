@@ -40,6 +40,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
@@ -547,7 +548,13 @@ class _CollapseToggle extends StatelessWidget {
             ),
             label: Text(label, maxLines: 2, textAlign: TextAlign.center),
             style: TextButton.styleFrom(
-              foregroundColor: accent,
+              // Walked against the page it sits on: the raw accent is a
+              // brand byte, not an ink, and the amber ones fail AA on paper.
+              foregroundColor: ServiceTheme.onTint(
+                accent,
+                surface: Theme.of(context).colorScheme.surface,
+                tintAlpha: 0,
+              ),
               // A floor rather than a fixed height, so the label may still grow
               // with the reading size.
               minimumSize: const Size(double.infinity, 48),

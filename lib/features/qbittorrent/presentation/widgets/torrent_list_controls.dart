@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
@@ -40,7 +41,14 @@ class TorrentFilterChipsRow extends ConsumerWidget {
     final selectedFilter = ref.watch(torrentFilterProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final accent = AppColors.qbittorrent;
+    // The selected sort is a label on its own 12% wash over the page, so the
+    // qBittorrent blue is walked against that composite: raw, it measured
+    // about 3.3:1 in dark theme.
+    final accent = ServiceTheme.onTint(
+      AppColors.qbittorrent,
+      surface: colorScheme.surface,
+      tintAlpha: 0.12,
+    );
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -221,7 +229,7 @@ class TorrentSortRow extends ConsumerWidget {
                         ),
                         decoration: BoxDecoration(
                           color: sort == currentSort
-                              ? accent.withValues(alpha: 0.12)
+                              ? AppColors.qbittorrent.withValues(alpha: 0.12)
                               : Colors.transparent,
                           borderRadius: AppRadius.borderRadiusMd,
                         ),

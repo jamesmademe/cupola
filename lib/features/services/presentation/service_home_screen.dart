@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
@@ -167,7 +168,16 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
               trailingAction!
             else
               IconButton(
-                icon: Icon(Icons.monitor_heart_outlined, color: service.accent),
+                // The band is glass over the page, so the glyph is walked
+                // against the page surface rather than painted raw.
+                icon: Icon(
+                  Icons.monitor_heart_outlined,
+                  color: ServiceTheme.onTint(
+                    service.accent,
+                    surface: colorScheme.surface,
+                    tintAlpha: 0,
+                  ),
+                ),
                 onPressed: () => context.go('/activity'),
                 tooltip: 'Activity',
               ),

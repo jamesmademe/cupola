@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/widgets/file_info_section.dart';
 
 void main() {
@@ -72,10 +73,17 @@ void main() {
       );
 
       // One accent per screen: the glyph used to be `colorScheme.primary`
-      // indigo, which is a second accent on an amber or violet page.
+      // indigo, which is a second accent on an amber or violet page. The
+      // accent is walked against the well it sits in, so it is the page's hue
+      // at a lightness that reads rather than the raw brand byte.
+      final context = tester.element(find.byType(FileInfoSection));
       expect(
         tester.widget<Icon>(find.byIcon(Icons.storage_rounded)).color,
-        radarrAmber,
+        ServiceTheme.onTint(
+          radarrAmber,
+          surface: Theme.of(context).colorScheme.surfaceContainerHighest,
+          tintAlpha: 0,
+        ),
       );
     });
 

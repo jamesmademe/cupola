@@ -395,9 +395,19 @@ Future<void> _expandRelease(WidgetTester tester) async {
 /// tests assert a hex rather than a meaning, so they failed the moment the
 /// tones started being walked for contrast — which is a change they should
 /// never have been able to see.
+///
+/// The glyph is a label on its own 14% wash over the row's card
+/// (`surfaceContainerHigh`), so that composite is the ground it is walked
+/// against — not the scaffold.
 Color _expectedTone(WidgetTester tester, StatusTone tone) {
   final context = tester.element(find.byType(ReleaseListItem).first);
-  return statusToneColor(Theme.of(context).colorScheme, tone);
+  final scheme = Theme.of(context).colorScheme;
+  return statusToneColor(
+    scheme,
+    tone,
+    surface: scheme.surfaceContainerHigh,
+    tintAlpha: 0.14,
+  );
 }
 
 Color? _grabButtonColor(WidgetTester tester) {

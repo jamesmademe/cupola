@@ -157,6 +157,7 @@ class HistoryItemTile extends StatelessWidget {
                   children: [
                     if (episodeCode != null)
                       TagChip(
+                        surface: colorScheme.surfaceContainer,
                         text: episodeCode,
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -425,7 +426,15 @@ class GlobalActivityItemTile extends ConsumerWidget {
                 color: ServiceTheme.fromAccent(accent).softContainer,
                 borderRadius: AppRadius.borderRadiusSm,
               ),
-              child: Icon(icon, color: accent, size: 20),
+              child: Icon(
+                icon,
+                color: ServiceTheme.onTint(
+                  accent,
+                  surface: colorScheme.surfaceContainer,
+                  tintAlpha: 0.14,
+                ),
+                size: 20,
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -474,6 +483,7 @@ class GlobalActivityItemTile extends ConsumerWidget {
                       ConnectionBadge(
                         label: item.instanceLabel,
                         accent: accent,
+                        surface: colorScheme.surfaceContainer,
                       ),
                       // When each event happened. `sortDate` was already being
                       // parsed to order the feed but never shown, which left the
@@ -1160,14 +1170,25 @@ List<Widget> _buildQueueChips(
   return [
     if (hasWarning)
       TagChip(
+        surface: colorScheme.surfaceContainer,
         text: 'Warning',
         color: colorScheme.error,
         icon: Icons.warning_amber_rounded,
       ),
-    if (quality != null) TagChip(text: quality),
-    if (protocol != null) TagChip(text: protocol, color: AppColors.info),
+    if (quality != null)
+      TagChip(surface: colorScheme.surfaceContainer, text: quality),
+    if (protocol != null)
+      TagChip(
+        surface: colorScheme.surfaceContainer,
+        text: protocol,
+        color: AppColors.info,
+      ),
     if (downloadClient != null)
-      TagChip(text: downloadClient, color: colorScheme.tertiary),
+      TagChip(
+        surface: colorScheme.surfaceContainer,
+        text: downloadClient,
+        color: colorScheme.tertiary,
+      ),
   ];
 }
 
@@ -1179,8 +1200,14 @@ List<Widget> _buildHistoryChips(
   final indexer = stringOrNull(asActivityMap(item['data'])?['indexer']);
 
   return [
-    if (quality != null) TagChip(text: quality),
-    if (indexer != null) TagChip(text: indexer, color: colorScheme.tertiary),
+    if (quality != null)
+      TagChip(surface: colorScheme.surfaceContainer, text: quality),
+    if (indexer != null)
+      TagChip(
+        surface: colorScheme.surfaceContainer,
+        text: indexer,
+        color: colorScheme.tertiary,
+      ),
   ];
 }
 
@@ -1192,8 +1219,18 @@ List<Widget> _buildBlocklistChips(
   final indexer = stringOrNull(item['indexer']);
 
   return [
-    if (protocol != null) TagChip(text: protocol, color: AppColors.info),
-    if (indexer != null) TagChip(text: indexer, color: colorScheme.tertiary),
+    if (protocol != null)
+      TagChip(
+        surface: colorScheme.surfaceContainer,
+        text: protocol,
+        color: AppColors.info,
+      ),
+    if (indexer != null)
+      TagChip(
+        surface: colorScheme.surfaceContainer,
+        text: indexer,
+        color: colorScheme.tertiary,
+      ),
   ];
 }
 
@@ -1205,7 +1242,11 @@ List<Widget> _buildWantedChips(
   String? qualityProfileName,
 }) {
   final monitored = item['monitored'] == false
-      ? TagChip(text: 'Unmonitored', color: colorScheme.error)
+      ? TagChip(
+          surface: colorScheme.surfaceContainer,
+          text: 'Unmonitored',
+          color: colorScheme.error,
+        )
       : null;
   final quality = switch (serviceType) {
     ServiceType.movies =>
@@ -1228,9 +1269,14 @@ List<Widget> _buildWantedChips(
 
   return [
     ?monitored,
-    if (quality != null) TagChip(text: quality),
+    if (quality != null)
+      TagChip(surface: colorScheme.surfaceContainer, text: quality),
     if (showDateChip && date != null)
-      TagChip(text: formatIsoDate(date), color: AppColors.info),
+      TagChip(
+        surface: colorScheme.surfaceContainer,
+        text: formatIsoDate(date),
+        color: AppColors.info,
+      ),
   ];
 }
 
@@ -1473,7 +1519,11 @@ class _DesktopActivityRowState extends ConsumerState<_DesktopActivityRow> {
               Icon(
                 widget.icon,
                 size: _ActivityTableMetrics.glyph,
-                color: widget.accent,
+                color: ServiceTheme.onTint(
+                  widget.accent,
+                  surface: colorScheme.surface,
+                  tintAlpha: 0,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(

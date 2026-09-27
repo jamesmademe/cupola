@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
@@ -344,7 +345,17 @@ class ProwlarrMessageBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: accent),
+          // The banner rides in a form sheet; the glyph is measured against
+          // its 10% wash over the sheet's container.
+          Icon(
+            Icons.info_outline_rounded,
+            size: 18,
+            color: ServiceTheme.onTint(
+              accent,
+              surface: colorScheme.surfaceContainer,
+              tintAlpha: 0.1,
+            ),
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(

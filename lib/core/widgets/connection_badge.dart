@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 
 /// The name of the connection a row came off, in the app's one shape for it.
@@ -16,25 +17,43 @@ import 'package:cupola/core/theme.dart';
 /// section because one leg queries one server; the Activity feed interleaves
 /// connections inside one service group, so its badge belongs on the row.
 class ConnectionBadge extends StatelessWidget {
-  const ConnectionBadge({super.key, required this.label, required this.accent});
+  const ConnectionBadge({
+    super.key,
+    required this.label,
+    required this.accent,
+    this.surface,
+  });
 
   /// The connection's name, or empty to render nothing.
   final String label;
 
   final Color accent;
 
+  /// The ground the badge sits on, defaulting to [ColorScheme.surface]. The
+  /// label is the accent walked against its 14% wash over this, so a badge on a
+  /// card passes the card's container.
+  final Color? surface;
+
+  static const double _tintAlpha = 0.14;
+
   @override
   Widget build(BuildContext context) {
     if (label.isEmpty) return const SizedBox.shrink();
 
+    final ink = ServiceTheme.onTint(
+      accent,
+      surface: surface ?? Theme.of(context).colorScheme.surface,
+      tintAlpha: _tintAlpha,
+    );
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.14),
+        color: accent.withValues(alpha: _tintAlpha),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: accent.withValues(alpha: 0.34)),
       ),
-      child: Text(label.toUpperCase(), style: AppTheme.eyebrow(accent)),
+      child: Text(label.toUpperCase(), style: AppTheme.eyebrow(ink)),
     );
   }
 }

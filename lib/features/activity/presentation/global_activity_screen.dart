@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
@@ -1259,7 +1260,13 @@ class _ServiceGroupHeader extends StatelessWidget {
                     style: theme.textTheme.labelMedium
                         ?.weight(FontWeight.w600)
                         .tabular
-                        .copyWith(color: service.accent),
+                        .copyWith(
+                          color: ServiceTheme.onTint(
+                            service.accent,
+                            surface: theme.colorScheme.surface,
+                            tintAlpha: 0,
+                          ),
+                        ),
                   ),
                 ],
               ),

@@ -4,6 +4,7 @@ import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/sheet_utils.dart';
 
@@ -66,7 +67,17 @@ class AppSheetHeader extends StatelessWidget {
               color: accentColor.withValues(alpha: 0.14),
               borderRadius: AppRadius.borderRadiusMd,
             ),
-            child: Icon(icon, size: 20, color: accentColor),
+            // The glyph is measured against its 14% tile over the sheet's
+            // own container, not painted in the raw brand byte.
+            child: Icon(
+              icon,
+              size: 20,
+              color: ServiceTheme.onTint(
+                accentColor,
+                surface: colorScheme.surfaceContainer,
+                tintAlpha: 0.14,
+              ),
+            ),
           ),
           const SizedBox(width: AppSpacing.md),
         ],

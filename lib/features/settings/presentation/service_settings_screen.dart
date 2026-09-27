@@ -656,7 +656,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               color: serviceTheme.softContainer,
               borderRadius: AppRadius.borderRadiusMd,
             ),
-            child: Icon(service.icon, color: service.accent, size: 24),
+            // The mark on its 14% tile over the card, walked rather than raw.
+            child: Icon(
+              service.icon,
+              color: ServiceTheme.onTint(
+                service.accent,
+                surface: colorScheme.surfaceContainer,
+                tintAlpha: 0.14,
+              ),
+              size: 24,
+            ),
           ),
           const SizedBox(width: AppSpacing.lg),
           Expanded(
@@ -744,9 +753,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       status: result.status,
       reason: result.reason,
     );
-    final color = result.isConnected
-        ? AppColors.success
-        : statusToneColor(colorScheme, presentation.tone);
+    final tone = result.isConnected ? StatusTone.success : presentation.tone;
+    // The wash keeps the tone's byte; the glyph and the verdict are walked
+    // against that 10% wash over the page, which is what they land on.
+    final fill = statusToneFill(colorScheme, tone);
+    final color = statusToneColor(
+      colorScheme,
+      tone,
+      surface: colorScheme.surface,
+      tintAlpha: 0.10,
+    );
     final outcome = result.isConnected
         ? 'Connection test succeeded'
         : 'Connection test failed';
@@ -789,9 +805,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.10),
+          color: fill.withValues(alpha: 0.10),
           borderRadius: AppRadius.borderRadiusMd,
-          border: Border.all(color: color.withValues(alpha: 0.4)),
+          border: Border.all(color: fill.withValues(alpha: 0.4)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -826,7 +842,12 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                       note.message,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: note.isWarning
-                            ? AppColors.warning
+                            ? statusToneColor(
+                                colorScheme,
+                                StatusTone.warning,
+                                surface: colorScheme.surface,
+                                tintAlpha: 0.10,
+                              )
                             : colorScheme.onSurfaceVariant,
                       ),
                     ),

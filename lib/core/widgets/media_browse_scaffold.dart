@@ -972,9 +972,16 @@ class _MediaBrowseFilterChip extends StatelessWidget {
                 style: Theme.of(context).textTheme.labelMedium!
                     .weight(FontWeight.w600)
                     .copyWith(
+                      // Unselected, the accent is a label on its own 12% wash,
+                      // so it is walked against that composite — raw, the
+                      // amber accents measured under 2:1 on the light page.
                       color: selected
                           ? ServiceTheme.foregroundOn(color)
-                          : color,
+                          : ServiceTheme.onTint(
+                              color,
+                              surface: Theme.of(context).colorScheme.surface,
+                              tintAlpha: 0.12,
+                            ),
                     ),
               ),
             ),

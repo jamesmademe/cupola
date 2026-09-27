@@ -5,6 +5,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/release_utils.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
@@ -34,6 +35,14 @@ enum ReleaseStatusTone {
   /// The painted colour, walked against [colorScheme]'s surface.
   Color color(ColorScheme colorScheme) => statusToneColor(colorScheme, tone);
 }
+
+/// The ground every label, chip and glyph inside a release row is measured
+/// against: the row's own card, which [ReleaseListItem] fills with
+/// `surfaceContainerHigh`. Measuring against the scaffold instead passes inks
+/// that fail on the card in dark theme, where the card is the lighter of the
+/// two.
+Color _releaseRowGround(ColorScheme colorScheme) =>
+    colorScheme.surfaceContainerHigh;
 
 /// Resolves the [ReleaseStatusTone] for a raw release map.
 ///
@@ -107,7 +116,7 @@ class _ReleaseListItemState extends State<ReleaseListItem> {
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHigh,
+          color: _releaseRowGround(colorScheme),
           borderRadius: AppRadius.borderRadiusMd,
           border: Border.all(
             color: tone == ReleaseStatusTone.rejected
@@ -272,7 +281,7 @@ class _ReleaseBadgeRow extends StatelessWidget {
                 _Pill(
                   label: tone.label,
                   icon: Icons.block_rounded,
-                  color: tone.color(colorScheme),
+                  color: statusToneFill(colorScheme, tone.tone),
                 ),
             ],
           ),
@@ -332,9 +341,13 @@ class _ReleaseMetaRow extends StatelessWidget {
   Color? _peerColor(BuildContext context) {
     if (!isTorrent || seeders == null) return null;
     final colorScheme = Theme.of(context).colorScheme;
-    if (seeders == 0) return statusToneColor(colorScheme, StatusTone.warning);
-    if (seeders! < 5) return statusToneColor(colorScheme, StatusTone.info);
-    return statusToneColor(colorScheme, StatusTone.success);
+    final ground = _releaseRowGround(colorScheme);
+    final tone = switch (seeders!) {
+      0 => StatusTone.warning,
+      < 5 => StatusTone.info,
+      _ => StatusTone.success,
+    };
+    return statusToneColor(colorScheme, tone, surface: ground);
   }
 }
 
@@ -362,7 +375,11 @@ class _ReleaseDetails extends StatelessWidget {
     // Walked, not raw. This is a *sentence* in the error tone, and raw red
     // measures 3.42:1 on the light scaffold — it fails AA as body text in
     // exactly the panel whose whole job is explaining why a grab was refused.
-    final rejectionInk = statusToneColor(colorScheme, StatusTone.error);
+    final rejectionInk = statusToneColor(
+      colorScheme,
+      StatusTone.error,
+      surface: _releaseRowGround(colorScheme),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,12 +497,24 @@ class _GrabButton extends StatelessWidget {
     required this.onPressed,
   });
 
+  static const double _tintAlpha = 0.14;
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     // The slot is the 48dp tap target (Android's floor, above iOS's 44pt);
     // the disc inside it stays 40. A tight 40 box used to clamp the target to
     // the disc, and `Center` is what lets the button pad itself back out.
+    //
+    // The glyph is a label on its own 14% wash over the card, so it is walked
+    // against that composite; the wash keeps the tone's own byte.
+    final ink = statusToneColor(
+      colorScheme,
+      tone.tone,
+      surface: _releaseRowGround(colorScheme),
+      tintAlpha: _tintAlpha,
+    );
+    final fill = statusToneFill(colorScheme, tone.tone);
     return SizedBox.square(
       dimension: kMinInteractiveDimension,
       child: busy
@@ -493,24 +522,21 @@ class _GrabButton extends StatelessWidget {
               child: SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: tone.color(colorScheme),
-                ),
+                child: CircularProgressIndicator(strokeWidth: 2, color: ink),
               ),
             )
           : Center(
               child: IconButton(
                 icon: const Icon(Icons.download_rounded, size: 20),
-                color: tone.color(colorScheme),
+                color: ink,
                 onPressed: onPressed,
                 tooltip: onPressed == null
                     ? 'Another download is starting'
                     : 'Grab release',
                 style: IconButton.styleFrom(
-                  backgroundColor: tone
-                      .color(colorScheme)
-                      .withValues(alpha: onPressed == null ? 0.06 : 0.14),
+                  backgroundColor: fill.withValues(
+                    alpha: onPressed == null ? 0.06 : _tintAlpha,
+                  ),
                   shape: const CircleBorder(),
                 ),
               ),
@@ -530,6 +556,7 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Row(
       children: [
@@ -544,15 +571,22 @@ class _SectionHeader extends StatelessWidget {
               .weight(FontWeight.w600)
               .copyWith(
                 color: isError
-                    ? AppColors.error
-                    : theme.colorScheme.onSurfaceVariant,
+                    ? statusToneColor(
+                        colorScheme,
+                        StatusTone.error,
+                        surface: _releaseRowGround(colorScheme),
+                      )
+                    : colorScheme.onSurfaceVariant,
               ),
         ),
         if (score != null) ...[
           const Spacer(),
           _Pill(
             label: 'Score: ${_signed(score!)}',
-            color: score! >= 0 ? AppColors.success : AppColors.error,
+            color: statusToneFill(
+              colorScheme,
+              score! >= 0 ? StatusTone.success : StatusTone.error,
+            ),
           ),
         ],
       ],
@@ -587,7 +621,7 @@ class ScoreBadge extends StatelessWidget {
       colorScheme,
       tone,
       // These badges ride in release rows on a card, not on the scaffold.
-      surface: colorScheme.surfaceContainer,
+      surface: _releaseRowGround(colorScheme),
       tintAlpha: tintAlpha,
     );
 
@@ -638,8 +672,16 @@ class CustomFormatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isPositive = score >= 0;
-    final color = isPositive ? AppColors.success : AppColors.error;
+    final colorScheme = theme.colorScheme;
+    final tone = score >= 0 ? StatusTone.success : StatusTone.error;
+    final color = statusToneFill(colorScheme, tone);
+    // The wash keeps the tone's byte; the score is measured against it.
+    final ink = statusToneColor(
+      colorScheme,
+      tone,
+      surface: _releaseRowGround(colorScheme),
+      tintAlpha: 0.12,
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -670,7 +712,7 @@ class CustomFormatChip extends StatelessWidget {
             style: theme.textTheme.labelSmall!
                 .weight(FontWeight.w600)
                 .tabular
-                .copyWith(color: color),
+                .copyWith(color: ink),
           ),
         ],
       ),
@@ -721,6 +763,10 @@ class InfoChip extends StatelessWidget {
 }
 
 /// Compact tinted label used for quality, protocol and status.
+///
+/// [color] is the tone's byte and paints the wash; the label and glyph are that
+/// tone walked against the wash over the row's card, so a quality pill in the
+/// brand indigo or a rejection in amber reads at AA in both themes.
 class _Pill extends StatelessWidget {
   final String label;
   final IconData? icon;
@@ -740,6 +786,12 @@ class _Pill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tintAlpha = emphasize ? 0.16 : 0.10;
+    final ink = ServiceTheme.onTint(
+      color,
+      surface: _releaseRowGround(theme.colorScheme),
+      tintAlpha: tintAlpha,
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -747,14 +799,14 @@ class _Pill extends StatelessWidget {
         vertical: 2,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: emphasize ? 0.16 : 0.10),
+        color: color.withValues(alpha: tintAlpha),
         borderRadius: AppRadius.borderRadiusSm,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 12, color: color),
+            Icon(icon, size: 12, color: ink),
             const SizedBox(width: AppSpacing.xs),
           ],
           Flexible(
@@ -764,7 +816,7 @@ class _Pill extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall!
                   .weight(FontWeight.w600)
-                  .copyWith(color: color),
+                  .copyWith(color: ink),
             ),
           ),
         ],

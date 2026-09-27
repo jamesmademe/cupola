@@ -347,9 +347,15 @@ class _FilterChip extends StatelessWidget {
                     .copyWith(
                       // Foreground picked from the fill's luminance: white on
                       // the Radarr amber measures 2.15:1, well below AA.
+                      // Unselected, the accent is a label on its own 12%
+                      // wash and is walked against that composite.
                       color: selected
                           ? ServiceTheme.foregroundOn(effectiveColor)
-                          : effectiveColor,
+                          : ServiceTheme.onTint(
+                              effectiveColor,
+                              surface: Theme.of(context).colorScheme.surface,
+                              tintAlpha: 0.12,
+                            ),
                     ),
               ),
             ),
@@ -574,6 +580,13 @@ class _SearchSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final service = lane.service;
+    // The mark and the connection badge are both the accent on its own 14%
+    // wash over the page, so one walked ink serves both.
+    final ink = ServiceTheme.onTint(
+      service.accent,
+      surface: Theme.of(context).colorScheme.surface,
+      tintAlpha: 0.14,
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -591,7 +604,7 @@ class _SearchSectionHeader extends StatelessWidget {
               color: service.accent.withValues(alpha: 0.14),
               borderRadius: AppRadius.borderRadiusSm,
             ),
-            child: Icon(service.icon, size: 14, color: service.accent),
+            child: Icon(service.icon, size: 14, color: ink),
           ),
           const SizedBox(width: AppSpacing.sm),
           Flexible(
@@ -621,7 +634,7 @@ class _SearchSectionHeader extends StatelessWidget {
               ),
               child: Text(
                 lane.instanceLabel.toUpperCase(),
-                style: AppTheme.eyebrow(service.accent),
+                style: AppTheme.eyebrow(ink),
               ),
             ),
           ],
@@ -1002,6 +1015,13 @@ class _ResultTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Result rows are `surfaceContainer` cards; the label is measured against
+    // its 12% wash over that.
+    final ink = ServiceTheme.onTint(
+      color,
+      surface: Theme.of(context).colorScheme.surfaceContainer,
+      tintAlpha: 0.12,
+    );
     return Container(
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
@@ -1012,7 +1032,7 @@ class _ResultTag extends StatelessWidget {
         label,
         style: Theme.of(
           context,
-        ).textTheme.labelSmall?.weight(FontWeight.w600).copyWith(color: color),
+        ).textTheme.labelSmall?.weight(FontWeight.w600).copyWith(color: ink),
       ),
     );
   }

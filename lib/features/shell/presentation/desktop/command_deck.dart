@@ -7,6 +7,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -264,6 +265,14 @@ class _EntryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final accent = entry.service?.accent ?? colorScheme.primary;
+    // The connection glyph is measured against the selected row's wash over
+    // the palette, the darker of its two grounds in light theme and the
+    // lighter in dark, so it holds AA whether or not the row is selected and
+    // does not shift as the selection moves.
+    final glyphGround = Color.alphaBlend(
+      colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+      colorScheme.surfaceContainer,
+    );
     final spokenLabel = entry.detail == null
         ? entry.label
         : '${entry.label}, ${entry.detail}';
@@ -310,7 +319,11 @@ class _EntryRow extends StatelessWidget {
                         },
                     size: 15,
                     color: entry.kind == CommandDeckKind.connection
-                        ? accent
+                        ? ServiceTheme.onTint(
+                            accent,
+                            surface: glyphGround,
+                            tintAlpha: 0,
+                          )
                         : CupolaThemeColors.of(context).dimText,
                   ),
                   const SizedBox(width: AppSpacing.md - 1),

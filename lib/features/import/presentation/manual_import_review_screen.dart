@@ -1052,7 +1052,11 @@ class _ScanningState extends StatelessWidget {
                     child: Icon(
                       Icons.radar_rounded,
                       size: 18,
-                      color: service.accent,
+                      color: ServiceTheme.onTint(
+                        service.accent,
+                        surface: theme.colorScheme.surfaceContainer,
+                        tintAlpha: 0.14,
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
@@ -1137,7 +1141,11 @@ class _ScannedFolderLine extends StatelessWidget {
               child: Icon(
                 Icons.folder_rounded,
                 size: 16,
-                color: service.accent,
+                color: ServiceTheme.onTint(
+                  service.accent,
+                  surface: colorScheme.surface,
+                  tintAlpha: 0,
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -1157,7 +1165,11 @@ class _ScannedFolderLine extends StatelessWidget {
               onPressed: onChange,
               style: TextButton.styleFrom(
                 minimumSize: const Size(44, 44),
-                foregroundColor: service.accent,
+                foregroundColor: ServiceTheme.onTint(
+                  service.accent,
+                  surface: colorScheme.surface,
+                  tintAlpha: 0,
+                ),
                 textStyle: theme.textTheme.labelMedium!.weight(FontWeight.w600),
               ),
               child: const Text('Choose another folder'),

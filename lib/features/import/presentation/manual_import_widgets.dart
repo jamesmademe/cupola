@@ -232,7 +232,15 @@ class ImportStationBar extends StatelessWidget {
                         // way to tell "Review" the second of three from
                         // "Review" the last thing left to do.
                         if (index < activeIndex) ...[
-                          Icon(Icons.check_rounded, size: 14, color: accent),
+                          Icon(
+                            Icons.check_rounded,
+                            size: 14,
+                            color: ServiceTheme.onTint(
+                              accent,
+                              surface: colorScheme.surface,
+                              tintAlpha: 0.14,
+                            ),
+                          ),
                           const SizedBox(width: AppSpacing.xs),
                         ] else ...[
                           Text(

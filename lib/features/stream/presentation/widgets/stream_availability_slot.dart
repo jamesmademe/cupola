@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -80,7 +81,15 @@ class _StreamAvailabilityCard extends StatelessWidget {
       semanticHint: 'Open on ${match.service.title}',
       child: Row(
         children: [
-          Icon(match.service.icon, size: 20, color: accent),
+          Icon(
+            match.service.icon,
+            size: 20,
+            color: ServiceTheme.onTint(
+              accent,
+              surface: theme.colorScheme.surfaceContainer,
+              tintAlpha: 0,
+            ),
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
