@@ -149,22 +149,87 @@ final dockgeStackListProvider = StreamProvider.autoDispose<List<DockgeStack>>((
   if (client.latestStacks.isNotEmpty) {
     yield client.latestStacks;
   }
-  unawaited(client.requestStackList());
+  // A failed request is not this stream's error: the answer it asks for is a
+  // push, and the missing push is what the deadline below reports.
+  client.requestStackList().ignore();
   // A broken Dockge can acknowledge `requestStackList` without publishing a
   // list (for example when its Docker daemon socket is missing). Do not leave
   // the Overview skeleton spinning forever while waiting for an event that
   // cannot arrive. A real empty installation publishes an empty list too, so
   // a timeout is an honest transport error rather than an empty-state claim.
-  yield* client.stackListStream.timeout(
+  //
+  // The deadline is on the **first** list only. `Stream.timeout` measures every
+  // gap, and Dockge re-pushes the list on a ten-second cron: a push landing a
+  // few milliseconds late turned a healthy stream into this error, the
+  // Overview into "Couldn't load Dockge" and the Dashboard card into a shimmer
+  // that never resolved — while Retry, reading the cached list, always worked.
+  yield* firstEventWithin(
+    client.stackListStream,
     const Duration(seconds: 10),
-    onTimeout: (sink) {
-      sink.addError(
-        const DockgeException('Dockge did not return its stack list'),
-      );
-      sink.close();
-    },
+    () => const DockgeException('Dockge did not return its stack list'),
   );
 }, retry: noProviderRetry);
+
+/// [source], failing with [onTimeout] only when its **first** event takes longer
+/// than [limit]; every later event passes through with no deadline at all.
+///
+/// The clock stops while the subscription is paused and restarts in full on
+/// resume. Riverpod pauses a provider nobody on screen is watching, and a
+/// paused broadcast subscription holds its events rather than delivering them,
+/// so a clock left running would fail a stream whose answer was sitting in the
+/// buffer.
+@visibleForTesting
+Stream<T> firstEventWithin<T>(
+  Stream<T> source,
+  Duration limit,
+  Object Function() onTimeout,
+) {
+  late final StreamController<T> controller;
+  StreamSubscription<T>? subscription;
+  Timer? deadline;
+  var answered = false;
+
+  void arm() {
+    if (answered) return;
+    deadline?.cancel();
+    deadline = Timer(limit, () {
+      controller.addError(onTimeout());
+      subscription?.cancel();
+      controller.close();
+    });
+  }
+
+  controller = StreamController<T>(
+    onListen: () {
+      subscription = source.listen(
+        (event) {
+          answered = true;
+          deadline?.cancel();
+          controller.add(event);
+        },
+        onError: controller.addError,
+        onDone: () {
+          deadline?.cancel();
+          controller.close();
+        },
+      );
+      arm();
+    },
+    onPause: () {
+      deadline?.cancel();
+      subscription?.pause();
+    },
+    onResume: () {
+      subscription?.resume();
+      arm();
+    },
+    onCancel: () {
+      deadline?.cancel();
+      return subscription?.cancel();
+    },
+  );
+  return controller.stream;
+}
 
 /// Full detail (compose YAML/ENV) for a single stack.
 final dockgeStackDetailProvider = FutureProvider.autoDispose

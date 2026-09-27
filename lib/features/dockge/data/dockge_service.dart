@@ -17,11 +17,16 @@ class DockgeService {
     if (client.latestStacks.isNotEmpty) {
       return client.latestStacks;
     }
+    // A silent server is not an empty one. Answering the deadline with `[]`
+    // put "0 stacks" on the card for a Dockge that never said how many it had.
     final next = client.stackListStream.first.timeout(
       const Duration(seconds: 10),
-      onTimeout: () => const <DockgeStack>[],
+      onTimeout: () =>
+          throw const DockgeException('Dockge did not return its stack list'),
     );
-    await client.requestStackList();
+    // Only the push counts; the acknowledgement carries nothing, and a failed
+    // one surfaces as the missing push above.
+    client.requestStackList().ignore();
     return next;
   }
 
