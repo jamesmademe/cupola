@@ -29,11 +29,11 @@ import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/service_routes.dart';
-import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/content_card.dart';
+import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/section_header.dart';
@@ -743,28 +743,28 @@ class _DecisionControls extends ConsumerWidget {
     }
 
     final required = decision.requiresService;
-    final settings = ref.watch(currentSettingsProvider);
-    final unavailable =
-        required != null && !settings.isServiceConfigured(required);
+    final label = decisionActionLabel(decision.kind, target: required);
+    if (required == null) {
+      return _DecisionActionButton(
+        label: label,
+        onPressed: () => _runDecision(context, ref, decision),
+      );
+    }
 
-    return _DecisionActionButton(
-      label: decisionActionLabel(decision.kind, target: required),
-      // Dimmed but tappable, never `Semantics(enabled: false)`. Hiding or
-      // disabling the control would hide the fact with it, and the fact — that
-      // this stall can only be touched in a client this stack has no connection
-      // to — is what the page is for.
-      dimmed: unavailable,
-      hint: unavailable ? decisionUnavailableHint(required) : null,
-      onPressed: () {
-        if (unavailable) {
-          SnackBarHelper.info(
-            context,
-            decisionUnavailableToast(decision.kind, required),
-          );
-          return;
-        }
-        _runDecision(context, ref, decision);
-      },
+    // Dimmed but tappable, never `Semantics(enabled: false)`: the shared
+    // cross-service cell. Hiding or disabling the control would hide the fact
+    // with it, and the fact — that this stall can only be touched in a client
+    // this stack has no connection to — is what the page is for. Its toast's
+    // one action opens that client's settings.
+    return CrossServiceAction.builder(
+      target: required,
+      blockedMessage: decisionUnavailableToast(decision.kind, required),
+      onTap: () => _runDecision(context, ref, decision),
+      builder: (context, onPressed, annotate) => _DecisionActionButton(
+        label: label,
+        onPressed: onPressed,
+        annotate: annotate,
+      ),
     );
   }
 }
@@ -844,17 +844,15 @@ class _DecisionActionButton extends StatelessWidget {
   const _DecisionActionButton({
     required this.label,
     required this.onPressed,
-    this.dimmed = false,
-    this.hint,
+    this.annotate,
   });
 
   final String label;
   final VoidCallback onPressed;
 
-  /// Drawn at the dimmed foreground because its target is not configured. It
-  /// keeps its 44pt target and stays in the accessibility tree.
-  final bool dimmed;
-  final String? hint;
+  /// The dim and hint of a cross-service gate, applied to the label inside
+  /// the button. Null for a decision with no other service to reach.
+  final Widget Function(Widget content)? annotate;
 
   @override
   Widget build(BuildContext context) {
@@ -866,9 +864,7 @@ class _DecisionActionButton extends StatelessWidget {
       style: TextButton.styleFrom(
         // Brand indigo, never the fault's amber: the cure must not be painted
         // as alarming as the disease.
-        foregroundColor: dimmed
-            ? colorScheme.onSurfaceVariant
-            : colorScheme.primary,
+        foregroundColor: colorScheme.primary,
         // No `visualDensity: compact` here, unlike the alert band's pair: the
         // density is applied *to* the minimum size, so compact turns a declared
         // 44 into a measured 40 and quietly drops the control under both
@@ -881,9 +877,8 @@ class _DecisionActionButton extends StatelessWidget {
       // above it either creates a second node the reader has to step through or
       // is dropped entirely; an annotation on its child merges into the button's
       // own node, which is where "requires qBittorrent" has to be heard.
-      child: Semantics(
-        hint: hint,
-        child: Text(
+      child: (annotate ?? (content) => content)(
+        Text(
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

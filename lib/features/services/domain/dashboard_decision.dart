@@ -231,15 +231,11 @@ String decisionActionLabel(DecisionKind kind, {ServiceKey? target}) =>
       DecisionKind.pendingRequest => 'Approve',
     };
 
-/// The hint on a control whose target service is not set up.
+/// The toast a decision control opens when its target service is not set up.
 ///
-/// The control stays in the tree, stays tappable and keeps its 44pt target; this
-/// is what it says instead of working. Hiding it would hide the fact with it,
-/// and the fact is what this page is for.
-String decisionUnavailableHint(ServiceKey required) =>
-    'requires ${required.title}';
-
-/// The toast that control opens.
+/// The control stays in the tree, stays tappable and keeps its 44pt target
+/// (`CrossServiceAction`, whose default hint is `requires <Service>`); this is
+/// what it says instead of working.
 String decisionUnavailableToast(DecisionKind kind, ServiceKey required) {
   final what = switch (kind) {
     DecisionKind.stalledDownload => 'open this transfer',

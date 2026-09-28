@@ -150,10 +150,6 @@ void main() {
 
     test('an unavailable control says what it needs, and offers a way', () {
       expect(
-        decisionUnavailableHint(ServiceKey.qbittorrent),
-        'requires qBittorrent',
-      );
-      expect(
         decisionUnavailableToast(
           DecisionKind.stalledDownload,
           ServiceKey.qbittorrent,
