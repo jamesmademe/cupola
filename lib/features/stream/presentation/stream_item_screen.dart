@@ -203,8 +203,12 @@ class _HandoffButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(currentSettingsProvider);
-    final baseUrl = settings.urlFor(service);
+    // The connection the lens is on, not the first one saved: with two
+    // Jellyfins the item on screen came from the one the lens chose, and the
+    // handoff has to open that server.
+    final baseUrl =
+        ref.watch(activeInstanceProvider(service))?.url ??
+        ref.watch(currentSettingsProvider).urlFor(service);
 
     // Plex's web client addresses an item by server identity as well as by key, so
     // without the machine identifier there is no URL to build. The button is absent
