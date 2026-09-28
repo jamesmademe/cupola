@@ -24,6 +24,8 @@ The tone colour is always `statusToneColor(colorScheme, tone)`: success, warning
 | neutral (the backlog) | Missing, Upgrade available, Deleted, Not released, Paused, Unmonitored, Unknown |
 | `primary` | Not requested |
 
+A Seerr request reads the same five arms, in Seerr's own words: Available and Completed are `success`; Pending, Approved, Processing and Partially available are `info` — a request awaiting approval is in line, not broken; Failed is `warning`; Declined and Deleted are neutral, a closed decision.
+
 Labels are sentence case: "Import pending", "Client unavailable", "Not requested", "Upgrade available". A service may override the label with its own wording (for example Seerr's "Available to request").
 
 ## Consumer provides
