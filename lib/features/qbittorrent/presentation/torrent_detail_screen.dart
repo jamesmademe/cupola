@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/service_theme.dart';
@@ -399,7 +400,7 @@ class _EditableInfoRow extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(DesignTokens.radiusXs2),
       child: Padding(
         padding: const EdgeInsets.symmetric(
           vertical: AppSpacing.xs,

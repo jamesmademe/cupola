@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 
@@ -50,7 +51,7 @@ class ConnectionBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: _tintAlpha),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(DesignTokens.radiusXs2),
         border: Border.all(color: accent.withValues(alpha: 0.34)),
       ),
       child: Text(label.toUpperCase(), style: AppTheme.eyebrow(ink)),

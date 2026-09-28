@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -368,7 +369,7 @@ class _AutostartBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: AppColors.truenas.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(DesignTokens.radiusXs2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

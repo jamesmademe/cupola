@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -1326,7 +1327,7 @@ class DecisionRowSkeleton extends StatelessWidget {
             ShimmerPlaceholder(
               width: 38,
               height: 54,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(DesignTokens.radiusXs2),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(

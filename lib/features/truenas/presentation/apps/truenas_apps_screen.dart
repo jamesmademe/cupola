@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -207,7 +208,7 @@ class _UpgradeBadge extends StatelessWidget {
           colorScheme,
           StatusTone.info,
         ).withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(DesignTokens.radiusXs2),
       ),
       child: Text(
         'Update',
