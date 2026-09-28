@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/media_prose_section.dart';
 
 import 'catalog.dart';
@@ -74,23 +75,33 @@ Widget _pair(List<Widget> children) => Row(
   ],
 );
 
+const _radarr = AppColors.radarr;
+const _sonarr = AppColors.sonarr;
+
 void main() {
   catalogCard(
     'MediaProseSection',
     width: 1100,
     scenes: [
       CatalogScene(
-        'MediaProseSection · phone column, clamped at six lines, then '
-        'expanded · Show more appears because the clamp bites, and reads Show '
-        'less once open',
+        'MediaProseSection(accent: radarr) · phone column, clamped at six '
+        'lines, then expanded · Show more appears because the clamp bites, '
+        'reads Show less once open, and draws in the page\'s accent walked '
+        'against the surface',
         (_) => _pair([
-          _slot(358, const MediaProseSection(text: _overview)),
-          _slot(358, const _Pressed(child: MediaProseSection(text: _overview))),
+          _slot(358, const MediaProseSection(text: _overview, accent: _radarr)),
+          _slot(
+            358,
+            const _Pressed(
+              child: MediaProseSection(text: _overview, accent: _radarr),
+            ),
+          ),
         ]),
       ),
       CatalogScene(
-        'MediaProseSection · a two-line overview, then maxLines: 3 · no '
-        'control when nothing is hidden; the clamp is the caller\'s to set',
+        'MediaProseSection · a two-line overview, then maxLines: 3 with no '
+        'accent · no control when nothing is hidden; the clamp is the '
+        'caller\'s to set; with no service owning the page the verb is primary',
         (_) => _pair([
           _slot(358, const MediaProseSection(text: _short)),
           _slot(358, const MediaProseSection(text: _overview, maxLines: 3)),
@@ -107,11 +118,13 @@ void main() {
         ),
       ),
       CatalogScene(
-        'MediaProseSection · a 1000 wide track, expanded · the measure caps '
-        'at 640, leading-aligned, however wide the slot',
+        'MediaProseSection(accent: sonarr) · a 1000 wide track, expanded · '
+        'the measure caps at 640, leading-aligned, however wide the slot',
         (_) => _slot(
           1000,
-          const _Pressed(child: MediaProseSection(text: _overview)),
+          const _Pressed(
+            child: MediaProseSection(text: _overview, accent: _sonarr),
+          ),
         ),
         platform: CatalogPlatform.desktop,
       ),

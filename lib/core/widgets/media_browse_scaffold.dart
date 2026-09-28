@@ -507,6 +507,7 @@ class _MediaBrowseScaffoldState<T>
     );
 
     return RefreshIndicator(
+      color: _spinnerInk(context),
       onRefresh: () async {
         ref.invalidate(widget.libraryProvider);
         widget.onRefresh?.call(ref);
@@ -514,6 +515,9 @@ class _MediaBrowseScaffoldState<T>
       child: AsyncValueWidget<List<T>>(
         value: libraryAsync,
         serviceName: widget.serviceName,
+        loadingWidget: Center(
+          child: CircularProgressIndicator(color: _spinnerInk(context)),
+        ),
         onRetry: () {
           ref.invalidate(widget.libraryProvider);
           widget.onRefresh?.call(ref);
@@ -528,6 +532,21 @@ class _MediaBrowseScaffoldState<T>
     );
   }
 
+  /// The service's accent for this screen's progress spinners, walked against
+  /// the page surface; the theme's indigo only when no service owns the page.
+  ///
+  /// The service being operated supplies the light: a spinner drawn in
+  /// `primary` put Seerr's indigo in Radarr's amber room.
+  Color? _spinnerInk(BuildContext context) {
+    final accent = widget.accentColor;
+    if (accent == null) return null;
+    return ServiceTheme.onTint(
+      accent,
+      surface: Theme.of(context).colorScheme.surface,
+      tintAlpha: 0,
+    );
+  }
+
   Widget _buildSearchResults(BuildContext context) {
     final searchResultsAsync = ref.watch(widget.searchResultsProvider);
     final (url, apiKey) = ref.watch(
@@ -535,7 +554,8 @@ class _MediaBrowseScaffoldState<T>
     );
 
     return searchResultsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () =>
+          Center(child: CircularProgressIndicator(color: _spinnerInk(context))),
       error: (error, stack) => Center(child: Text('Error: $error')),
       data: (results) {
         if (results == null || results.isEmpty) {

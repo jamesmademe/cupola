@@ -5,6 +5,7 @@ import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 
@@ -33,6 +34,12 @@ class ContentCard extends StatelessWidget {
     this.onTap,
   });
 
+  /// Reach of the badge's shadow radial, as a fraction of the card's shorter
+  /// side (its width). Half the width is about the reach the old badge-sized
+  /// box had on a phone grid tile, and below 1.0 the radial reaches zero before
+  /// it meets any edge of the card, so it can never be cut off.
+  static const double badgeGlowRadius = 0.5;
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -47,24 +54,37 @@ class ContentCard extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           // Image
-          _buildImage(context, colorScheme),
+          _buildImage(),
 
-          // Gradient overlay for better badge visibility
-          if (badge != null)
+          // Shadow ink behind the badge, so it stays legible over bright
+          // artwork. Painted across the whole card and fading to nothing
+          // well inside it — never in a box the size of the badge: that box
+          // clipped the radial while it was still a third of its strength,
+          // which drew a hard-edged grey rectangle around the badge wherever
+          // the ground was not dark artwork (a placeholder, a light poster).
+          if (badge != null) ...[
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  key: const ValueKey('content-card-badge-glow'),
+                  decoration: BoxDecoration(
+                    gradient: AppGradients.serviceGlow(
+                      colorScheme.shadow,
+                      radius: badgeGlowRadius,
+                    ),
+                  ),
+                ),
+              ),
+            ),
             Positioned(
               top: 0,
               right: 0,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: AppGradients.serviceGlow(
-                    colorScheme.shadow,
-                    radius: 1.5,
-                  ),
-                ),
+              child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 child: badge!,
               ),
             ),
+          ],
         ],
       ),
     );
@@ -74,9 +94,9 @@ class ContentCard extends StatelessWidget {
     return PressableScale(onTap: onTap, child: card);
   }
 
-  Widget _buildImage(BuildContext context, ColorScheme colorScheme) {
+  Widget _buildImage() {
     if (imageUrl == null || imageUrl!.isEmpty) {
-      return _buildPlaceholder(colorScheme);
+      return _buildPlaceholder();
     }
 
     return CachedNetworkImage(
@@ -89,27 +109,32 @@ class ContentCard extends StatelessWidget {
       // most visible.
       placeholder: (context, url) =>
           const ShimmerPlaceholder(height: double.infinity),
-      errorWidget: (context, url, error) => _buildErrorPlaceholder(colorScheme),
+      errorWidget: (context, url, error) => _buildErrorPlaceholder(),
     );
   }
 
-  Widget _buildPlaceholder(ColorScheme colorScheme) {
+  // The plate, not the theme — the same well as MediaPosterCard's fallback.
+  // This rectangle stands in for artwork, and a grid tile is the source of the
+  // Hero flight into a detail page whose poster is a MediaPosterCard: painted
+  // `surfaceContainer` it was a white tile in light theme that turned into a
+  // dark well mid-flight. See `AppColors.plateSurface`.
+  Widget _buildPlaceholder() {
     return Container(
-      color: colorScheme.surfaceContainer,
-      child: Icon(
+      color: AppColors.plateSurface,
+      child: const Icon(
         Icons.movie_outlined,
-        color: colorScheme.onSurfaceVariant,
+        color: AppColors.plateDimInk,
         size: 32,
       ),
     );
   }
 
-  Widget _buildErrorPlaceholder(ColorScheme colorScheme) {
+  Widget _buildErrorPlaceholder() {
     return Container(
-      color: colorScheme.surfaceContainerHighest,
-      child: Icon(
+      color: AppColors.plateSurface,
+      child: const Icon(
         Icons.broken_image_outlined,
-        color: colorScheme.onSurfaceVariant,
+        color: AppColors.plateDimInk,
         size: 32,
       ),
     );

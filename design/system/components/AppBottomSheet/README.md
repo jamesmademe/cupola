@@ -20,7 +20,7 @@ Rendered from `lib/core/widgets/app_bottom_sheet.dart` (`AppSheetHandle`, `AppSh
 
 ## The consumer provides
 
-Title, subtitle, icon, accent, trailing, close, and the body. Option rows and form content are the caller's: `MediaValueOptionRow` draws a picker option with an 18pt `check_circle_rounded` / `circle_outlined` and a `bodyLarge` label, 600 and in the accent walked against the surface when selected, 500 otherwise; the Add torrent submit is the caller's `FilledButton` in the qBittorrent accent, minimum height 46.
+Title, subtitle, icon, accent, trailing, close, and the body. Option rows and form content are the caller's: `MediaValueOptionRow` draws a picker option with an 18pt `check_circle_rounded` / `circle_outlined` and a `bodyLarge` label, 600 and in the accent walked against the surface when selected, 500 otherwise; the Add torrent submit is the caller's `FilledButton` in the qBittorrent accent, minimum height 46, its glyph and label in one ink, `ServiceTheme.foregroundOn(accent)`, with the label's `label-large` 600 set as the button's `textStyle` — never on the `Text`, where the theme's text colour overrides the foreground.
 
 ## Semantics
 

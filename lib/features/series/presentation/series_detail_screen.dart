@@ -411,7 +411,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         if (viewModel.overview.isNotEmpty)
           MediaDetailSlot.box(
             label: 'Overview',
-            child: MediaProseSection(text: viewModel.overview),
+            child: MediaProseSection(text: viewModel.overview, accent: accent),
           ),
       ],
       reference: [

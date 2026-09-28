@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
+import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -442,6 +446,77 @@ void main() {
       expect(find.byType(MediaGrid<String>), findsNothing);
     });
 
+    // Drawn in the theme's `primary`, the search spinner put Seerr's indigo in
+    // Radarr's amber room while every other control there took the accent.
+    testWidgets('the search spinner draws in the service accent', (
+      tester,
+    ) async {
+      final searchQueryProvider = StateProvider<String>((ref) => 'nos');
+      final pending = Completer<List<String>?>();
+      final searchResultsProvider = FutureProvider<List<String>?>(
+        (ref) => pending.future,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: testLibraryProvider,
+          searchQueryProvider: searchQueryProvider,
+          searchResultsProvider: searchResultsProvider,
+          accentColor: AppColors.radarr,
+        ),
+      );
+      await tester.pump();
+
+      final spinner = find.byType(CircularProgressIndicator);
+      expect(spinner, findsOneWidget);
+      final surface = Theme.of(tester.element(spinner)).colorScheme.surface;
+      expect(
+        tester.widget<CircularProgressIndicator>(spinner).color,
+        ServiceTheme.onTint(AppColors.radarr, surface: surface, tintAlpha: 0),
+      );
+    });
+
+    testWidgets('the library spinner draws in the service accent too', (
+      tester,
+    ) async {
+      final pending = Completer<List<String>>();
+      final libraryProvider = FutureProvider<List<String>>(
+        (ref) => pending.future,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: libraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+          accentColor: AppColors.radarr,
+        ),
+      );
+      await tester.pump();
+
+      final spinner = find.byType(CircularProgressIndicator);
+      expect(spinner, findsOneWidget);
+      final surface = Theme.of(tester.element(spinner)).colorScheme.surface;
+      expect(
+        tester.widget<CircularProgressIndicator>(spinner).color,
+        ServiceTheme.onTint(AppColors.radarr, surface: surface, tintAlpha: 0),
+      );
+    });
+
     testWidgets(
       'navigation refresh clears search query and invalidates library provider',
       (tester) async {
@@ -788,6 +863,7 @@ Widget _buildCustomTestApp({
   List<MediaBrowseSort<String>> sorts = const [],
   Set<int>? cutoffUnmetIds,
   MediaBrowseTileShape tileShape = MediaBrowseTileShape.poster,
+  Color? accentColor,
 }) {
   return UncontrolledProviderScope(
     container: container,
@@ -814,6 +890,7 @@ Widget _buildCustomTestApp({
         sorts: sorts,
         cutoffUnmetIds: cutoffUnmetIds,
         tileShape: tileShape,
+        accentColor: accentColor,
       ),
     ),
   );

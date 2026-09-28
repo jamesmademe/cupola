@@ -279,6 +279,29 @@ void main() {
       expect(find.text('Delete'), findsNothing);
     });
 
+    testWidgets('while busy the promoted button keeps its fill, so the '
+        'spinner it carries stays legible', (tester) async {
+      await _pumpActions(
+        tester,
+        status: const MediaStatusInfo(availability: MediaAvailability.missing),
+        isBusy: true,
+      );
+
+      final button = tester.widget<ButtonStyleButton>(_primary);
+      expect(button.onPressed, isNull, reason: 'busy takes no second tap');
+      final fill = button.style!.backgroundColor!.resolve({
+        WidgetState.disabled,
+      })!;
+      final spinner = tester.widget<CircularProgressIndicator>(
+        find.descendant(
+          of: _primary,
+          matching: find.byType(CircularProgressIndicator),
+        ),
+      );
+      expect(fill, ServiceKey.radarr.accent);
+      expect(_contrast(spinner.color!, fill), greaterThanOrEqualTo(3));
+    });
+
     testWidgets('an in-flight download promotes the queue', (tester) async {
       await _pumpActions(
         tester,
@@ -755,4 +778,12 @@ Future<void> _pumpActions(
     ),
   );
   await tester.pump();
+}
+
+double _contrast(Color a, Color b) {
+  final la = a.computeLuminance();
+  final lb = b.computeLuminance();
+  final hi = la > lb ? la : lb;
+  final lo = la > lb ? lb : la;
+  return (hi + 0.05) / (lo + 0.05);
 }

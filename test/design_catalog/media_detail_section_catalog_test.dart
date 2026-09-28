@@ -83,7 +83,7 @@ Widget _radarrPage() {
       synopsis: [
         MediaDetailSlot.box(
           label: 'Overview',
-          child: const MediaProseSection(text: _overview),
+          child: MediaProseSection(text: _overview, accent: accent),
         ),
       ],
       reference: [
@@ -200,10 +200,11 @@ Widget _sonarrPage() {
       synopsis: [
         MediaDetailSlot.box(
           label: 'Overview',
-          child: const MediaProseSection(
+          child: MediaProseSection(
             text:
                 'Fifteen two-reel adaptations of the Conan Doyle stories, '
                 'with Eille Norwood as Holmes and Hubert Willis as Watson.',
+            accent: accent,
           ),
         ),
       ],
@@ -312,7 +313,7 @@ void main() {
         'MediaDetailSectionLabel · plain, with a count, with a trailing '
         'control, a long label on two lines, and 1.5× reading size · the '
         'page accent walked for text on the surface; the control drops under '
-        'the label past 1.4×',
+        'the label past 1.4×, leading-aligned',
         _labels,
       ),
       CatalogScene(

@@ -357,7 +357,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
         if (viewModel.overview.isNotEmpty)
           MediaDetailSlot.box(
             label: 'Overview',
-            child: MediaProseSection(text: viewModel.overview),
+            child: MediaProseSection(text: viewModel.overview, accent: accent),
           ),
       ],
       reference: [

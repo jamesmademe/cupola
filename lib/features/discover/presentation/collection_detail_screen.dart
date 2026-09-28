@@ -123,7 +123,10 @@ class CollectionDetailScreen extends ConsumerWidget {
               if ((collection.overview ?? '').isNotEmpty)
                 MediaDetailSlot.box(
                   label: 'Overview',
-                  child: MediaProseSection(text: collection.overview!),
+                  child: MediaProseSection(
+                    text: collection.overview!,
+                    accent: ServiceKey.seerr.accent,
+                  ),
                 ),
             ],
           ),

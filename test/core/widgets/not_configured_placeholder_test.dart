@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -73,4 +74,53 @@ void main() {
 
     expect(location, '/settings');
   });
+
+  group('on a service page the action takes the service light', () {
+    for (final (name, theme) in [
+      ('dark', AppTheme.darkTheme()),
+      ('light', AppTheme.lightTheme()),
+    ]) {
+      for (final service in ServiceKey.values) {
+        testWidgets('${service.name}, $name: a tonal accent fill whose label '
+            'reads at 4.5:1', (tester) async {
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: theme,
+              home: Scaffold(
+                body: NotConfiguredPlaceholder.forService(service),
+              ),
+            ),
+          );
+          final button = tester.widget<ButtonStyleButton>(
+            find.byWidgetPredicate((w) => w is FilledButton),
+          );
+          final fill = button.style!.backgroundColor!.resolve({})!;
+          final ink = button.style!.foregroundColor!.resolve({})!;
+          expect(fill.a, lessThan(1), reason: 'a tonal fill, not the accent');
+          final ground = Color.alphaBlend(fill, theme.colorScheme.surface);
+          expect(_contrast(ink, ground), greaterThanOrEqualTo(4.5));
+        });
+      }
+    }
+  });
+
+  testWidgets('the generic form keeps the theme primary', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: NotConfiguredPlaceholder(serviceName: 'Bazarr')),
+      ),
+    );
+    final button = tester.widget<ButtonStyleButton>(
+      find.byWidgetPredicate((w) => w is FilledButton),
+    );
+    expect(button.style, isNull);
+  });
+}
+
+double _contrast(Color a, Color b) {
+  final la = a.computeLuminance();
+  final lb = b.computeLuminance();
+  final hi = la > lb ? la : lb;
+  final lo = la > lb ? lb : la;
+  return (hi + 0.05) / (lo + 0.05);
 }

@@ -134,8 +134,9 @@ void main() {
       ),
       CatalogScene(
         'ContentCard() · loading, no URL, failed load · shimmer, then '
-        'surface-container with movie_outlined, then surface-container-highest '
-        'with broken_image_outlined — theme surfaces, glyph 32',
+        'the plate with movie_outlined, then the plate with '
+        'broken_image_outlined — MediaPosterCard\'s well in both themes, '
+        'glyph 32',
         (_) {
           _servePending();
           return Wrap(
@@ -150,7 +151,8 @@ void main() {
       ),
       CatalogScene(
         'ContentCard(badge:) · no URL and failed load with a badge · the '
-        'corner radial over a placeholder instead of artwork',
+        'corner radial over a placeholder instead of artwork, fading out '
+        'inside the card with no edge',
         (_) => Wrap(
           spacing: 16,
           children: [

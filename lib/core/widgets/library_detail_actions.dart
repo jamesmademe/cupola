@@ -664,6 +664,9 @@ class LibraryDetailActions extends StatelessWidget {
       );
     }
 
+    // The promoted button is only ever disabled by [isBusy], and then it carries
+    // the spinner: it keeps its fill and ink, because in Material's disabled
+    // grey the spinner — still drawn in [onAccent] — all but vanished.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -682,6 +685,8 @@ class LibraryDetailActions extends StatelessWidget {
             style: HeaderActionRow.expandedButtonStyle(
               foregroundColor: onAccent,
               backgroundColor: accent,
+              disabledForegroundColor: onAccent,
+              disabledBackgroundColor: accent,
             ),
           ),
           trailing: trailing,

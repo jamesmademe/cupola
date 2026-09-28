@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/widgets/media_detail_body_metrics.dart';
 
 /// Running prose on a detail page — an overview, a biography — clamped to a
@@ -22,7 +23,22 @@ class MediaProseSection extends StatefulWidget {
   /// Lines shown before the reader asks for the rest.
   final int maxLines;
 
-  const MediaProseSection({super.key, required this.text, this.maxLines = 6});
+  /// The page's service accent, for Show more / Show less.
+  ///
+  /// The service being operated supplies the light: on a service page the
+  /// section's own control draws in that service's accent, walked against the
+  /// page surface, like every other section action there. Without it the
+  /// button fell back to the theme's indigo on every page — Radarr's amber
+  /// room with a Seerr-coloured verb in it. Null only where no service owns
+  /// the surface, which keeps `primary`.
+  final Color? accent;
+
+  const MediaProseSection({
+    super.key,
+    required this.text,
+    this.maxLines = 6,
+    this.accent,
+  });
 
   @override
   State<MediaProseSection> createState() => _MediaProseSectionState();
@@ -43,6 +59,17 @@ class _MediaProseSectionState extends State<MediaProseSection> {
     final style = theme.textTheme.bodyLarge!.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
     );
+    final accent = widget.accent;
+    // Text on the page surface, not on a wash: `tintAlpha: 0` walks the
+    // accent's lightness until it clears 4.5:1 there, the same walk the
+    // region label above this paragraph makes.
+    final actionInk = accent == null
+        ? null
+        : ServiceTheme.onTint(
+            accent,
+            surface: theme.colorScheme.surface,
+            tintAlpha: 0,
+          );
 
     // `Align` before the `ConstrainedBox`, not instead of it: a slot arrives
     // with a *tight* width from the spine's `Padding`, and
@@ -88,6 +115,9 @@ class _MediaProseSectionState extends State<MediaProseSection> {
                   Align(
                     alignment: AlignmentDirectional.centerStart,
                     child: TextButton(
+                      style: actionInk == null
+                          ? null
+                          : TextButton.styleFrom(foregroundColor: actionInk),
                       onPressed: () => setState(() => _expanded = !_expanded),
                       child: Text(_expanded ? 'Show less' : 'Show more'),
                     ),

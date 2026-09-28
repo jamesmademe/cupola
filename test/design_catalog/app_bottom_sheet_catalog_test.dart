@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/media_detail_value_row.dart';
@@ -93,20 +94,19 @@ Widget _addTorrent() => AppBottomSheet(
         FilledButton(
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.qbittorrent,
+            foregroundColor: ServiceTheme.foregroundOn(AppColors.qbittorrent),
+            textStyle: Theme.of(
+              context,
+            ).textTheme.labelLarge!.weight(FontWeight.w600),
             minimumSize: const Size.fromHeight(46),
           ),
           onPressed: () {},
-          child: Row(
+          child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.add_rounded, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                'Add torrent',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge!.weight(FontWeight.w600),
-              ),
+              Icon(Icons.add_rounded, size: 18),
+              SizedBox(width: 8),
+              Text('Add torrent'),
             ],
           ),
         ),

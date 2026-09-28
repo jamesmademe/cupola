@@ -191,6 +191,11 @@ const _kpis = AsyncValue<List<ServiceKpi>>.data([
 
 final _results = [for (final query in _queries) _resultsFor(query)];
 
+/// A search that never answers, to show the spinner it draws meanwhile.
+final _pendingResults = FutureProvider<List<_Film>?>(
+  (ref) => Completer<List<_Film>?>().future,
+);
+
 Widget _scaffold(
   int phone, {
   FutureProvider<List<_Film>>? library,
@@ -199,6 +204,7 @@ Widget _scaffold(
   Set<int>? cutoff = const {5},
   MediaBrowseTileShape shape = MediaBrowseTileShape.poster,
   String title = 'Movies',
+  FutureProvider<List<_Film>?>? results,
 }) {
   return MediaBrowseScaffold<_Film>(
     title: title,
@@ -211,7 +217,7 @@ Widget _scaffold(
     searchHeroTagPrefix: 'movie_search',
     libraryProvider: library ?? _libraryProvider,
     searchQueryProvider: _queries[phone],
-    searchResultsProvider: _results[phone],
+    searchResultsProvider: results ?? _results[phone],
     titleExtractor: (film) => film.title,
     subtitleExtractor: (film) => '${film.year}',
     sortTitleExtractor: (film) => film.sortTitle,
@@ -338,6 +344,16 @@ void main() {
           _Typed(text: 'Nosferatu', child: _scaffold(4)),
           _Typed(text: 'Wisborg', child: _scaffold(5)),
           _scaffold(6, library: _emptyProvider),
+        ]),
+      ),
+      CatalogScene(
+        'MediaBrowseScaffold · searching, results pending · the spinner in '
+        'the service accent walked against the surface, never primary',
+        (_) => _phones([
+          _Typed(
+            text: 'Nosferatu',
+            child: _scaffold(11, results: _pendingResults),
+          ),
         ]),
       ),
       CatalogScene(

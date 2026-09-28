@@ -153,7 +153,10 @@ class PersonDetailScreen extends ConsumerWidget {
                   // never rendered it, so this string was silently discarded.
                   // As a slot label it finally appears.
                   label: 'Biography',
-                  child: MediaProseSection(text: person.biography!),
+                  child: MediaProseSection(
+                    text: person.biography!,
+                    accent: ServiceKey.seerr.accent,
+                  ),
                 ),
             ],
             reference: [

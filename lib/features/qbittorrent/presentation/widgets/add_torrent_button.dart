@@ -187,6 +187,17 @@ class AddTorrentButton extends ConsumerWidget {
                 FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.qbittorrent,
+                    // One ink for the glyph and the label, measured against
+                    // the fill. The label's weight lives here too, not on the
+                    // Text: a `labelLarge` style on the Text carries the
+                    // theme's own text colour and overrode this — near-black
+                    // on qBittorrent blue in light theme beside a white +.
+                    foregroundColor: ServiceTheme.foregroundOn(
+                      AppColors.qbittorrent,
+                    ),
+                    textStyle: Theme.of(
+                      ctx2,
+                    ).textTheme.labelLarge!.weight(FontWeight.w600),
                     minimumSize: const Size.fromHeight(46),
                   ),
                   onPressed: () async {
@@ -249,12 +260,7 @@ class AddTorrentButton extends ConsumerWidget {
                     children: [
                       const Icon(Icons.add_rounded, size: 18),
                       const SizedBox(width: 8),
-                      Text(
-                        'Add torrent',
-                        style: Theme.of(
-                          ctx2,
-                        ).textTheme.labelLarge!.weight(FontWeight.w600),
-                      ),
+                      const Text('Add torrent'),
                     ],
                   ),
                 ),

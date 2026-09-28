@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/media_chip_section.dart';
 import 'package:cupola/core/widgets/media_detail_body_metrics.dart';
@@ -256,6 +257,48 @@ void main() {
       await tester.pump();
       expect(tester.takeException(), isNull);
       expect(find.text('Show less'), findsOneWidget);
+    });
+
+    // The widget took no accent, so Show more / Show less drew in the theme's
+    // indigo on every service page — a Seerr-coloured verb in Sonarr's room.
+    testWidgets('Show more draws in the page accent, walked for its ground', (
+      tester,
+    ) async {
+      for (final brightness in Brightness.values) {
+        await tester.pumpWidget(
+          _wrap(
+            const MediaProseSection(text: longText, accent: AppColors.sonarr),
+            brightness: brightness,
+          ),
+        );
+        final context = tester.element(find.text('Show more'));
+        final surface = Theme.of(context).colorScheme.surface;
+        final ink = DefaultTextStyle.of(context).style.color!;
+        expect(
+          ink,
+          ServiceTheme.onTint(AppColors.sonarr, surface: surface, tintAlpha: 0),
+          reason: '$brightness',
+        );
+        final hi = ink.computeLuminance() > surface.computeLuminance()
+            ? ink.computeLuminance()
+            : surface.computeLuminance();
+        final lo = ink.computeLuminance() > surface.computeLuminance()
+            ? surface.computeLuminance()
+            : ink.computeLuminance();
+        expect((hi + 0.05) / (lo + 0.05), greaterThanOrEqualTo(4.5));
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+    });
+
+    testWidgets('with no service owning the page, Show more stays primary', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap(const MediaProseSection(text: longText)));
+      final context = tester.element(find.text('Show more'));
+      expect(
+        DefaultTextStyle.of(context).style.color,
+        Theme.of(context).colorScheme.primary,
+      );
     });
 
     testWidgets('holds prose to its own measure inside a wide column', (
