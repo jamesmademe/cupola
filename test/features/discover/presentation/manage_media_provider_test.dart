@@ -189,7 +189,7 @@ void main() {
       expect(notifier.showMediaSection, isFalse);
     });
 
-    test('showMediaSection false when service not configured', () {
+    test('an item in an unconfigured arr still shows its Media section', () {
       final args = _buildArgs(
         mediaInfo: {'externalServiceId': 42, 'requests': const []},
       );
@@ -198,7 +198,10 @@ void main() {
         settings: const SettingsModel(),
       ).read(manageMediaProvider(args).notifier);
 
-      expect(notifier.showMediaSection, isFalse);
+      // The section's jumps are cross-service cells that answer for
+      // themselves; hiding it would hide the fact that Radarr is not set up.
+      expect(notifier.showMediaSection, isTrue);
+      expect(notifier.isServiceConfigured, isFalse);
     });
 
     test('deleteRequest removes request from state', () async {

@@ -8,6 +8,8 @@ import 'package:cupola/features/discover/domain/models/discover_detail_model.dar
 import 'package:cupola/features/discover/presentation/widgets/discover_action_buttons.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import '../../../../test_helpers/settings_scope.dart';
+
 /// `FilledButton.icon` builds a private subclass, so an exact type finder
 /// misses it.
 final Finder _request = find.byWidgetPredicate(
@@ -165,9 +167,14 @@ Future<void> _pumpButtons(
   bool isAvailable = false,
   Map<String, dynamic>? mediaInfo,
   double textScale = 1.0,
+  List<ServiceKey> configured = const [ServiceKey.radarr, ServiceKey.sonarr],
 }) async {
+  // The Open jump is a cross-service control and reads whether its arr is set
+  // up; both are by default, as they are wherever this row can offer Open.
+  final overrides = await settingsScopeOverrides(configured: configured);
   await tester.pumpWidget(
     ProviderScope(
+      overrides: overrides,
       child: MaterialApp(
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(

@@ -53,12 +53,16 @@ void main() {
       expect(find.text('movie:7'), findsOneWidget);
     });
 
-    testWidgets('shows configuration dialog by default', (tester) async {
+    testWidgets('an arr that is not set up opens nothing and asks nothing', (
+      tester,
+    ) async {
+      final radarrService = _FakeRadarr(movie: buildMovie(id: 7));
       final result = ValueNotifier<bool?>(null);
 
       await _pumpHarness(
         tester,
         settings: const SettingsModel(),
+        radarrService: radarrService,
         onPressed: (context, ref) async {
           result.value = await openMediaInService(
             context: context,
@@ -72,22 +76,23 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
+      // The caller's CrossServiceAction owns this answer; no second, modal one.
       expect(result.value, isFalse);
-      expect(find.text('Radarr not set up'), findsOneWidget);
-      expect(
-        find.text('Please configure Radarr in Settings to use this feature.'),
-        findsOneWidget,
-      );
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(radarrService.getMovieByTmdbIdCallCount, 0);
     });
 
-    testWidgets('can skip configuration alert and use custom movie message', (
+    testWidgets('a movie the arr does not track reads the custom message', (
       tester,
     ) async {
       final result = ValueNotifier<bool?>(null);
 
       await _pumpHarness(
         tester,
-        settings: const SettingsModel(),
+        settings: settingsWith(
+          radarrUrl: 'https://radarr.example.com',
+          radarrApiKey: 'key',
+        ),
         radarrService: _FakeRadarr(),
         onPressed: (context, ref) async {
           result.value = await openMediaInService(
@@ -95,7 +100,6 @@ void main() {
             ref: ref,
             mediaType: 'movie',
             tmdbId: 123,
-            showConfigurationAlert: false,
             movieNotFoundMessage: 'Movie not found in Radarr',
           );
         },
@@ -109,14 +113,17 @@ void main() {
       expect(find.text('Movie not found in Radarr'), findsOneWidget);
     });
 
-    testWidgets('can skip configuration alert and use custom series message', (
+    testWidgets('a series the arr does not track reads the custom message', (
       tester,
     ) async {
       final result = ValueNotifier<bool?>(null);
 
       await _pumpHarness(
         tester,
-        settings: const SettingsModel(),
+        settings: settingsWith(
+          sonarrUrl: 'https://sonarr.example.com',
+          sonarrApiKey: 'key',
+        ),
         sonarrService: _FakeSonarr(),
         onPressed: (context, ref) async {
           result.value = await openMediaInService(
@@ -125,7 +132,6 @@ void main() {
             mediaType: 'tv',
             tmdbId: 123,
             tvdbId: 555,
-            showConfigurationAlert: false,
             seriesNotFoundMessage: 'Series not found in Sonarr',
           );
         },

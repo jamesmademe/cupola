@@ -6,7 +6,9 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
+import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 class RequestsSection extends StatelessWidget {
   final List<SeerrRequest> requests;
@@ -301,6 +303,8 @@ class MediaSection extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final serviceName = isMovie ? 'Radarr' : 'Sonarr';
+    final target = isMovie ? ServiceKey.radarr : ServiceKey.sonarr;
+    final noun = isMovie ? 'movie' : 'series';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,28 +314,41 @@ class MediaSection extends StatelessWidget {
           style: theme.textTheme.titleMedium?.weight(FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.md),
+        // Both are jumps into the arr, so both are cross-service cells:
+        // dimmed but tappable when that arr is not set up here, and their
+        // toast opens its settings.
         SizedBox(
           width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: hasExternalService ? onOpen : null,
-            icon: const Icon(Icons.open_in_new),
-            label: Text('Open in $serviceName'),
+          child: CrossServiceAction.builder(
+            target: target,
+            blockedMessage: 'Connect $serviceName to open this $noun',
+            onTap: onOpen ?? () {},
+            builder: (context, onPressed, annotate) => OutlinedButton.icon(
+              onPressed: hasExternalService ? onPressed : null,
+              icon: annotate(const Icon(Icons.open_in_new)),
+              label: annotate(Text('Open in $serviceName')),
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: hasExternalService && !isDeleting ? onRemove : null,
-            icon: isDeleting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.delete_outline),
-            label: Text('Remove from $serviceName'),
-            style: _destructiveFill(colorScheme),
+          child: CrossServiceAction.builder(
+            target: target,
+            blockedMessage: 'Connect $serviceName to remove this $noun',
+            onTap: onRemove ?? () {},
+            builder: (context, onPressed, annotate) => ElevatedButton.icon(
+              onPressed: hasExternalService && !isDeleting ? onPressed : null,
+              icon: isDeleting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : annotate(const Icon(Icons.delete_outline)),
+              label: annotate(Text('Remove from $serviceName')),
+              style: _destructiveFill(colorScheme),
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),

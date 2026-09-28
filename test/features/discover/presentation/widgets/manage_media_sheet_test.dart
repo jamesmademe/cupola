@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/widgets/cross_service_action.dart';
+
 import 'package:cupola/features/discover/presentation/widgets/manage_media_sheet.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -60,31 +62,55 @@ void main() {
       expect(onDataChangedCount, 0);
     });
 
-    testWidgets('Media section is hidden when radarr is not configured', (
-      tester,
-    ) async {
-      await _pumpSheet(tester, settings: const SettingsModel());
+    testWidgets(
+      'an unconfigured Radarr keeps the Media section, dimmed but tappable',
+      (tester) async {
+        await _pumpSheet(tester, settings: const SettingsModel());
 
-      expect(find.text('Requests'), findsOneWidget);
-      expect(find.text('Open in Radarr'), findsNothing);
-      expect(find.text('Remove from Radarr'), findsNothing);
-    });
+        expect(find.text('Requests'), findsOneWidget);
+        // Hiding the section hid the fact with it: both jumps stay on screen,
+        // drained, and answer with a toast that leads to Radarr's settings.
+        expect(find.text('Open in Radarr'), findsOneWidget);
+        expect(find.text('Remove from Radarr'), findsOneWidget);
+        expect(
+          find.ancestor(
+            of: find.text('Open in Radarr'),
+            matching: find.byWidgetPredicate(
+              (w) => w is Opacity && w.opacity == GatedAffordance.dimmedOpacity,
+            ),
+          ),
+          findsOneWidget,
+        );
 
-    testWidgets('Media section is hidden when sonarr is not configured', (
-      tester,
-    ) async {
-      await _pumpSheet(
-        tester,
-        mediaType: 'tv',
-        mediaTitle: 'Series',
-        tvdbId: 555,
-        settings: const SettingsModel(),
-      );
+        await tester.tap(find.text('Open in Radarr'));
+        await tester.pump();
+        expect(find.text('Connect Radarr to open this movie'), findsOneWidget);
+        expect(find.text('Settings'), findsOneWidget);
+      },
+    );
 
-      expect(find.text('Requests'), findsOneWidget);
-      expect(find.text('Open in Sonarr'), findsNothing);
-      expect(find.text('Remove from Sonarr'), findsNothing);
-    });
+    testWidgets(
+      'an unconfigured Sonarr keeps the Media section and names Sonarr',
+      (tester) async {
+        await _pumpSheet(
+          tester,
+          mediaType: 'tv',
+          mediaTitle: 'Series',
+          tvdbId: 555,
+          settings: const SettingsModel(),
+        );
+
+        expect(find.text('Open in Sonarr'), findsOneWidget);
+        expect(find.text('Remove from Sonarr'), findsOneWidget);
+
+        await tester.tap(find.text('Remove from Sonarr'));
+        await tester.pump();
+        expect(
+          find.text('Connect Sonarr to remove this series'),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets(
       'Media section is shown when movie has externalServiceId and radarr is configured',

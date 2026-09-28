@@ -298,6 +298,13 @@ class HeaderActionButton extends StatelessWidget {
   /// The work just landed; holds a success check.
   final bool isConfirmed;
 
+  /// The dim and hint of a gated control (`CrossServiceAction.builder`,
+  /// `CapabilityGatedAction.builder`), applied to the glyph and caption
+  /// *inside* the button. Wrapping the whole button instead would put the hint
+  /// on a node Material drops, and would dim the plate the 44pt target lives
+  /// in. Null for an ungated button.
+  final Widget Function(Widget content)? annotate;
+
   const HeaderActionButton({
     super.key,
     required this.icon,
@@ -306,6 +313,7 @@ class HeaderActionButton extends StatelessWidget {
     this.onPressed,
     this.isBusy = false,
     this.isConfirmed = false,
+    this.annotate,
   });
 
   /// Measure the caption wraps inside.
@@ -335,6 +343,7 @@ class HeaderActionButton extends StatelessWidget {
     // instead of eliding one.
     final scaler = TextScaleMetrics.clampedScalerOf(context);
     final foreground = colorScheme.onSurfaceVariant;
+    final annotateContent = annotate ?? (Widget content) => content;
 
     return SizedBox(
       width: captionMeasure,
@@ -350,11 +359,13 @@ class HeaderActionButton extends StatelessWidget {
                 backgroundColor: colorScheme.onSurface.withValues(alpha: 0.06),
                 borderColor: colorScheme.outlineVariant,
               ),
-              child: ActionStateGlyph(
-                icon: icon,
-                label: semanticLabel ?? label,
-                isBusy: isBusy,
-                isConfirmed: isConfirmed,
+              child: annotateContent(
+                ActionStateGlyph(
+                  icon: icon,
+                  label: semanticLabel ?? label,
+                  isBusy: isBusy,
+                  isConfirmed: isConfirmed,
+                ),
               ),
             ),
           ),
@@ -366,17 +377,22 @@ class HeaderActionButton extends StatelessWidget {
           ExcludeSemantics(
             child: MediaQuery(
               data: MediaQuery.of(context).copyWith(textScaler: scaler),
-              child: Text(
-                label,
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                // Ellipsis is the floor, not the behaviour: two lines in a
-                // measure that grows to 1.6x holds every caption this app
-                // ships.
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall!
-                    .weight(FontWeight.w600)
-                    .copyWith(color: foreground),
+              // Dimmed with the glyph, so the caption never reads as live
+              // beside a drained icon. Its hint, inside ExcludeSemantics, is
+              // not spoken twice.
+              child: annotateContent(
+                Text(
+                  label,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  // Ellipsis is the floor, not the behaviour: two lines in a
+                  // measure that grows to 1.6x holds every caption this app
+                  // ships.
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall!
+                      .weight(FontWeight.w600)
+                      .copyWith(color: foreground),
+                ),
               ),
             ),
           ),

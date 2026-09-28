@@ -4,12 +4,15 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
-import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+/// Opens a Seerr item in the Radarr or Sonarr that tracks it.
+///
+/// The jump is a cross-service control: callers draw it with
+/// `CrossServiceAction`, which answers the not-set-up case itself.
 Future<bool> openMediaInService({
   required BuildContext context,
   required WidgetRef ref,
@@ -17,7 +20,6 @@ Future<bool> openMediaInService({
   required int tmdbId,
   int? tvdbId,
   VoidCallback? dismissSheet,
-  bool showConfigurationAlert = true,
   String movieNotFoundMessage = 'Movie not found in Radarr',
   String seriesNotFoundMessage = 'Series not found in Sonarr',
 }) async {
@@ -27,7 +29,6 @@ Future<bool> openMediaInService({
       ref: ref,
       tmdbId: tmdbId,
       dismissSheet: dismissSheet,
-      showConfigurationAlert: showConfigurationAlert,
       notFoundMessage: movieNotFoundMessage,
     );
   }
@@ -37,7 +38,6 @@ Future<bool> openMediaInService({
     ref: ref,
     tvdbId: tvdbId,
     dismissSheet: dismissSheet,
-    showConfigurationAlert: showConfigurationAlert,
     notFoundMessage: seriesNotFoundMessage,
   );
 }
@@ -47,15 +47,15 @@ Future<bool> _openMovieInService({
   required WidgetRef ref,
   required int tmdbId,
   VoidCallback? dismissSheet,
-  required bool showConfigurationAlert,
   required String notFoundMessage,
 }) async {
-  if (showConfigurationAlert) {
-    final settings = ref.read(currentSettingsProvider);
-    if (!settings.isServiceConfigured(ServiceKey.radarr)) {
-      _showNotConfiguredDialog(context, 'Radarr');
-      return false;
-    }
+  // Callers gate this jump with `CrossServiceAction`, whose toast is the
+  // not-set-up answer; reaching here unconfigured is a race, and it opens
+  // nothing rather than stacking a second, modal answer on the first.
+  if (!ref
+      .read(currentSettingsProvider)
+      .isServiceConfigured(ServiceKey.radarr)) {
+    return false;
   }
 
   try {
@@ -96,15 +96,15 @@ Future<bool> _openSeriesInService({
   required WidgetRef ref,
   required int? tvdbId,
   VoidCallback? dismissSheet,
-  required bool showConfigurationAlert,
   required String notFoundMessage,
 }) async {
-  if (showConfigurationAlert) {
-    final settings = ref.read(currentSettingsProvider);
-    if (!settings.isServiceConfigured(ServiceKey.sonarr)) {
-      _showNotConfiguredDialog(context, 'Sonarr');
-      return false;
-    }
+  // Callers gate this jump with `CrossServiceAction`, whose toast is the
+  // not-set-up answer; reaching here unconfigured is a race, and it opens
+  // nothing rather than stacking a second, modal answer on the first.
+  if (!ref
+      .read(currentSettingsProvider)
+      .isServiceConfigured(ServiceKey.sonarr)) {
+    return false;
   }
 
   if (tvdbId == null) {
@@ -143,14 +143,4 @@ Future<bool> _openSeriesInService({
     );
     return false;
   }
-}
-
-void _showNotConfiguredDialog(BuildContext context, String serviceName) {
-  showAppConfirmDialog(
-    context: context,
-    title: '$serviceName not set up',
-    message: 'Please configure $serviceName in Settings to use this feature.',
-    confirmLabel: 'OK',
-    cancelLabel: 'Cancel',
-  );
 }

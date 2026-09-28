@@ -160,20 +160,42 @@ class DiscoverActionButtons extends ConsumerWidget {
               : () => DiscoverVideosButton.show(context, videos),
         ),
         const SizedBox(width: AppSpacing.sm),
-        HeaderActionButton(
-          icon: hasManageableMedia
-              ? Icons.settings_outlined
-              : Icons.open_in_new_rounded,
-          label: hasManageableMedia ? 'Manage' : 'Open',
-          semanticLabel: hasManageableMedia
-              ? 'Manage ${_normalizedMediaType == 'movie' ? 'movie' : 'series'}'
-              : 'Open in $serviceName',
-          onPressed: hasManageAction
-              ? hasManageableMedia
-                    ? () => _showManageSheet(context, ref)
-                    : () => _openInService(context, ref)
-              : null,
-        ),
+        if (hasManageableMedia)
+          HeaderActionButton(
+            icon: Icons.settings_outlined,
+            label: 'Manage',
+            semanticLabel:
+                'Manage ${_normalizedMediaType == 'movie' ? 'movie' : 'series'}',
+            onPressed: () => _showManageSheet(context, ref),
+          )
+        else if (hasManageAction)
+          // A jump into Radarr or Sonarr is a cross-service control: dimmed
+          // but tappable when that service is not set up, hinted with what it
+          // needs, and its toast leads to that service's own settings — not a
+          // modal that names the problem and offers no way to the fix.
+          CrossServiceAction.builder(
+            target: _normalizedMediaType == 'movie'
+                ? ServiceKey.radarr
+                : ServiceKey.sonarr,
+            blockedMessage:
+                'Connect $serviceName to open this '
+                '${_normalizedMediaType == 'movie' ? 'movie' : 'series'}',
+            onTap: () => _openInService(context, ref),
+            builder: (context, onPressed, annotate) => HeaderActionButton(
+              icon: Icons.open_in_new_rounded,
+              label: 'Open',
+              semanticLabel: 'Open in $serviceName',
+              onPressed: onPressed,
+              annotate: annotate,
+            ),
+          )
+        else
+          // Not tracked by the arr: a withheld state of its own, not a gate.
+          HeaderActionButton(
+            icon: Icons.open_in_new_rounded,
+            label: 'Open',
+            semanticLabel: 'Open in $serviceName',
+          ),
       ],
     );
   }

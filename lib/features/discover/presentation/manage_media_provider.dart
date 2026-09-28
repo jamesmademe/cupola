@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/features/settings/domain/service_key.dart';
+
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -80,17 +82,22 @@ class ManageMediaNotifier extends Notifier<ManageMediaState> {
 
   bool get hasExternalService => externalServiceId != null;
 
+  /// Whether the arr this item lives in is set up — through the registry's own
+  /// check, not the flat first-instance projections (`radarrUrl`,
+  /// `radarrApiKey`), which answered for one connection when the settings
+  /// model can hold several.
   bool get isServiceConfigured {
     final settings = ref.read(currentSettingsProvider);
-
-    if (arg.mediaType == 'movie') {
-      return settings.radarrUrl.isNotEmpty && settings.radarrApiKey.isNotEmpty;
-    }
-
-    return settings.sonarrUrl.isNotEmpty && settings.sonarrApiKey.isNotEmpty;
+    return settings.isServiceConfigured(
+      arg.mediaType == 'movie' ? ServiceKey.radarr : ServiceKey.sonarr,
+    );
   }
 
-  bool get showMediaSection => hasExternalService && isServiceConfigured;
+  /// The Media section is drawn whenever the item is in an arr. It used to be
+  /// hidden when that arr was not set up here, which hid the fact with it: the
+  /// section's controls are cross-service jumps, drawn dimmed but tappable,
+  /// and their toast leads to the settings that would make them work.
+  bool get showMediaSection => hasExternalService;
 
   Future<String?> deleteRequest(int requestId) async {
     try {

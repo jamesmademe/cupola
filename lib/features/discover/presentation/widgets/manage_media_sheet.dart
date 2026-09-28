@@ -212,7 +212,6 @@ class ManageMediaSheet extends ConsumerWidget {
       tmdbId: tmdbId,
       tvdbId: tvdbId,
       dismissSheet: () => Navigator.pop(context),
-      showConfigurationAlert: true,
       movieNotFoundMessage: 'Movie not found in Radarr',
       seriesNotFoundMessage: 'Series not found in Sonarr',
     );
