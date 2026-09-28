@@ -86,6 +86,11 @@ class DownloadQueueTile extends StatelessWidget {
   /// applied here rather than re-argued per client.
   final StatusTone statusTone;
 
+  /// The widest the state chip may grow, as a share of the title line (title,
+  /// chip and percentage). Past it the label ellipsises, so the title always
+  /// keeps the larger part of the line.
+  static const double chipMaxFraction = 0.4;
+
   /// The bottom figure row — transfer rates, ratios, whatever the client
   /// measures. Empty on the Usenet pair, which says everything it has in
   /// [subtitle].
@@ -203,43 +208,55 @@ class DownloadQueueTile extends StatelessWidget {
                     children: [
                       Expanded(
                         child: ExcludeSemantics(
-                          child: Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  title,
-                                  style: theme.textTheme.bodyMedium!.weight(
-                                    FontWeight.w600,
+                          child: LayoutBuilder(
+                            builder: (context, line) => Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    title,
+                                    style: theme.textTheme.bodyMedium!.weight(
+                                      FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              if (statusLabel != null) ...[
-                                const SizedBox(width: AppSpacing.sm),
-                                // Flexible so a long state label — or any label
-                                // at a large text scale — shrinks instead of
-                                // overflowing the row.
-                                Flexible(
-                                  child: _StatusChip(
-                                    label: statusLabel!,
-                                    tone: statusTone,
+                                if (statusLabel != null) ...[
+                                  const SizedBox(width: AppSpacing.sm),
+                                  // The title is the one flexible child;
+                                  // the chip keeps its natural width up to
+                                  // a cap, so a long state label (or any
+                                  // label at a large text scale) ellipsises
+                                  // instead of overflowing or starving the
+                                  // title. A Flexible here split the free
+                                  // width in half and ellipsised names
+                                  // beside empty space.
+                                  ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxWidth:
+                                          line.maxWidth *
+                                          DownloadQueueTile.chipMaxFraction,
+                                    ),
+                                    child: _StatusChip(
+                                      label: statusLabel!,
+                                      tone: statusTone,
+                                    ),
                                   ),
+                                ],
+                                const SizedBox(width: AppSpacing.sm),
+                                Text(
+                                  percentage == null ? '—' : '$percentage%',
+                                  style: theme.textTheme.labelMedium!
+                                      .weight(FontWeight.w600)
+                                      .tabular
+                                      // One plate, four clients, every service
+                                      // accent: the percentage is the only
+                                      // accent-coloured *text* on the row, so it
+                                      // is the one that has to clear the surface.
+                                      .copyWith(color: ink),
                                 ),
                               ],
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(
-                                percentage == null ? '—' : '$percentage%',
-                                style: theme.textTheme.labelMedium!
-                                    .weight(FontWeight.w600)
-                                    .tabular
-                                    // One plate, four clients, every service
-                                    // accent: the percentage is the only
-                                    // accent-coloured *text* on the row, so it
-                                    // is the one that has to clear the surface.
-                                    .copyWith(color: ink),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       ),

@@ -45,6 +45,29 @@ class SelectionPills<T> extends StatelessWidget {
   /// first.
   final Color? accent;
 
+  /// The inset inside the scrolling row.
+  ///
+  /// The default puts the first pill on the screen gutter while the row itself
+  /// runs edge to edge, so a scrolled pill bleeds off the screen instead of
+  /// clipping at the column — right for a host that spans the screen. A host
+  /// that already sits on the gutter (a detail slot, a padded card) passes
+  /// [SelectionPills.flush], or its pills land a second gutter in from the
+  /// label and summary above and below them.
+  final EdgeInsetsGeometry padding;
+
+  /// The screen-gutter inset, for a row that spans the screen.
+  static const EdgeInsetsGeometry gutter = EdgeInsets.fromLTRB(
+    AppSpacing.lg,
+    0,
+    AppSpacing.lg,
+    AppSpacing.sm,
+  );
+
+  /// No side inset, for a row whose host is already on the gutter.
+  static const EdgeInsetsGeometry flush = EdgeInsets.only(
+    bottom: AppSpacing.sm,
+  );
+
   const SelectionPills({
     super.key,
     required this.values,
@@ -52,6 +75,7 @@ class SelectionPills<T> extends StatelessWidget {
     required this.labelBuilder,
     required this.onSelected,
     this.accent,
+    this.padding = gutter,
   });
 
   @override
@@ -60,12 +84,7 @@ class SelectionPills<T> extends StatelessWidget {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.sm,
-      ),
+      padding: padding,
       child: Row(
         children: [
           for (final value in values)

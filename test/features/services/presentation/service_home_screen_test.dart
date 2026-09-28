@@ -5,6 +5,7 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -82,6 +83,38 @@ void main() {
 
     expect(router.state.uri.toString(), '/dashboard');
     expect(find.text('Dashboard home'), findsOneWidget);
+  });
+
+  testWidgets('the activity action sits on the gutter, not short of it', (
+    tester,
+  ) async {
+    // A Flexible title beside a Spacer split the free width in half and kept
+    // what it did not use, so the action sat ~56pt in from the edge on a
+    // 390pt phone in Inter. The test font's glyphs are a full em wide, so the
+    // bar is widened until the title is shorter than its half again.
+    tester.view.physicalSize = const Size(600, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final router = _buildRouter('/dashboard/plex');
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final action = tester.getRect(
+      find.ancestor(
+        of: find.byTooltip('Activity'),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(action.right, closeTo(600 - AppSpacing.lg, 0.5));
   });
 }
 

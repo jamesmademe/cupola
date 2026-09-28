@@ -9,7 +9,7 @@ Rendered from `lib/core/widgets/service_record_row.dart` by `test/design_catalog
 - A `Row` centred on the cross axis.
 - Leading icon at the theme's default 24pt, in the tone colour (`statusToneColor` against `surface`), then `AppSpacing.md` (12).
 - Body (`Expanded`): the title in `AppTheme.rowTitle` (15, w600, 1.3), up to two lines; `AppSpacing.xs` (4); the detail in `bodySmall` in `CupolaThemeColors.dimText`, up to three lines. Both ellipsise.
-- `AppSpacing.sm` (8), then the trailing figure in `AppTheme.data` (13, w500, 1.3) in the tone colour, `TextAlign.end`, up to two lines, ellipsised. It is `Flexible` beside the `Expanded` body, so the two share the width left after the icon: a long figure wraps within its share rather than pushing the title out.
+- `AppSpacing.sm` (8), then the trailing figure in `AppTheme.data` (13, w500, 1.3) in the tone colour, `TextAlign.end`, up to two lines, ellipsised. It takes its natural width on the trailing edge, capped at `ServiceRecordRow.trailingMaxFraction` (40%) of the row's content width; the `Expanded` body gets everything else. A long figure wraps and then ellipsises within its cap rather than pushing the title out. (It was once `Flexible` beside the body, which handed a short figure half the row and floated it mid-card.)
 
 ## Consumer provides
 

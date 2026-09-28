@@ -125,5 +125,40 @@ void main() {
       final label = tester.widget<Text>(find.text('history'));
       expect(label.style?.color, isNot(accent));
     });
+
+    testWidgets('sits on the screen gutter by default, flush when asked', (
+      tester,
+    ) async {
+      // A host already on the gutter (a detail slot) takes `flush`; the default
+      // inset there drew the pills a second gutter in from the column.
+      Future<double> firstPillLeft(EdgeInsetsGeometry padding) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SelectionPills<_Segment>(
+                values: _Segment.values,
+                selected: _Segment.history,
+                labelBuilder: (value) => value.name,
+                onSelected: (_) {},
+                padding: padding,
+              ),
+            ),
+          ),
+        );
+        return tester
+            .getTopLeft(
+              find
+                  .descendant(
+                    of: find.byType(SelectionPills<_Segment>),
+                    matching: find.byType(Row),
+                  )
+                  .first,
+            )
+            .dx;
+      }
+
+      expect(await firstPillLeft(SelectionPills.gutter), 16);
+      expect(await firstPillLeft(SelectionPills.flush), 0);
+    });
   });
 }

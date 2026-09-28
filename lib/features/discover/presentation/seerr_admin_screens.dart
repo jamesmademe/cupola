@@ -42,13 +42,10 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
       emptyTitle: 'No issues',
       emptyMessage: 'Seerr has no issues in this view.',
       topPadding: widget.topPadding + MediaQuery.paddingOf(context).top,
+      // Top only: the pills carry the gutter themselves, so a side inset here
+      // put them a second gutter in from the rows below.
       header: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.lg,
-          0,
-        ),
+        padding: const EdgeInsets.only(top: AppSpacing.md),
         child: SelectionPills<SeerrIssueFilter>(
           values: SeerrIssueFilter.values,
           selected: _filter,

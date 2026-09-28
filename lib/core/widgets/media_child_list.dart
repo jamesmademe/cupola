@@ -659,6 +659,9 @@ class _GroupSelector extends StatelessWidget {
                   labelBuilder: (id) =>
                       groups.firstWhere((group) => group.id == id).shortLabel,
                   onSelected: onSelected,
+                  // The slot is already on the gutter; the default inset put
+                  // the pills a second gutter in from the label above them.
+                  padding: SelectionPills.flush,
                 ),
               ),
               // The jump-to exists only where the rail genuinely cannot serve.

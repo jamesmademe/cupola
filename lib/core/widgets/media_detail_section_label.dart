@@ -136,8 +136,14 @@ class MediaDetailSectionLabel extends StatelessWidget {
             children: [
               headline,
               const SizedBox(height: AppSpacing.xs),
-              // Full width, so a trailing control that wraps internally can.
-              SizedBox(width: double.infinity, child: action!),
+              // Leading-aligned under the label, offered the full width so a
+              // control that wraps internally still can. A tight full-width box
+              // (`SizedBox(width: double.infinity)`) centred an IconButton's
+              // glyph in the middle of the line, under nothing.
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: action!,
+              ),
             ],
           )
         : Row(

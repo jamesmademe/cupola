@@ -112,8 +112,13 @@ class _CommandDeckState extends ConsumerState<CommandDeck> {
       },
       child: Focus(
         autofocus: true,
+        // Both columns stretch: the panel hangs off the field and keeps its
+        // width whatever it holds, and the footer (and its hairline) spans the
+        // panel. Centred, the footer drew as a strip narrower than the panel
+        // and an empty result shrank the whole panel to the footer's width.
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _DeckField(
               controller: _controller,
@@ -134,6 +139,7 @@ class _CommandDeckState extends ConsumerState<CommandDeck> {
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Flexible(
                       child: results.isEmpty
@@ -141,6 +147,7 @@ class _CommandDeckState extends ConsumerState<CommandDeck> {
                               padding: EdgeInsets.all(AppSpacing.xl),
                               child: Text(
                                 'Nothing by that name.',
+                                textAlign: TextAlign.center,
                                 style: AppTheme.chrome(
                                   context,
                                   size: 12,

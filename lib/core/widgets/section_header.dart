@@ -152,8 +152,13 @@ class SectionHeader extends StatelessWidget {
     // rather than a `LayoutBuilder` on purpose: a `LayoutBuilder` cannot report
     // intrinsic dimensions, and this widget sits inside callers that ask for
     // them.
+    //
+    // Only a real [trailing] stacks. The implicit chevron is a glyph, not a
+    // label: it never competes with the title for the line, and stacked it was
+    // left alone on a line of its own under a plain tappable header.
     final stacked =
-        end != null && MediaQuery.textScalerOf(context).scale(14) > 14 * 1.4;
+        trailing != null &&
+        MediaQuery.textScalerOf(context).scale(14) > 14 * 1.4;
 
     final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),

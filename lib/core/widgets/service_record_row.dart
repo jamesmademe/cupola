@@ -44,6 +44,11 @@ class ServiceRecordRow extends StatelessWidget {
   /// The whole sentence the row speaks. The parts are silenced beneath it.
   final String semanticLabel;
 
+  /// The widest the trailing figure may grow, as a share of the row's content
+  /// width. Past it the figure wraps (two lines) and then ellipsises, so the
+  /// title always keeps the larger part of the row.
+  static const double trailingMaxFraction = 0.4;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -54,43 +59,56 @@ class ServiceRecordRow extends StatelessWidget {
       child: ExcludeSemantics(
         child: AppCard.outlined(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTheme.rowTitle(theme.brightness),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      detail,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: CupolaThemeColors.of(context).dimText,
+          child: LayoutBuilder(
+            builder: (context, constraints) => Row(
+              children: [
+                Icon(icon, color: color),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTheme.rowTitle(theme.brightness),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        detail,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: CupolaThemeColors.of(context).dimText,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Flexible(
-                child: Text(
-                  trailing,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  style: AppTheme.data(theme.brightness).copyWith(color: color),
+                const SizedBox(width: AppSpacing.sm),
+                // Not Flexible: beside an Expanded body a Flexible of the same
+                // flex is handed half the free width whether it fills it or
+                // not, which floated a short figure mid-row and wrapped the
+                // title early. The figure takes its natural width, on the
+                // trailing edge, up to a cap so a long one cannot crush the
+                // title.
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: constraints.maxWidth * trailingMaxFraction,
+                  ),
+                  child: Text(
+                    trailing,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: AppTheme.data(
+                      theme.brightness,
+                    ).copyWith(color: color),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

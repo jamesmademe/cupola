@@ -68,8 +68,8 @@ void main() {
         ),
       ),
       CatalogScene(
-        'MediaInfoCard · under 320 of content width · one column, cells '
-        'space-md apart',
+        'MediaInfoCard · a 360pt phone, 296 of grid width · under two 144pt '
+        'columns it folds to one, cells space-md apart',
         (_) => _hosted(
           const MediaInfoCard(
             groups: [
@@ -78,7 +78,7 @@ void main() {
               MediaInfoGroup(title: 'Language', child: Text('German')),
             ],
           ),
-          width: 320,
+          width: 360 - 32,
         ),
       ),
       CatalogScene(
@@ -142,11 +142,12 @@ void main() {
         ),
       ),
       CatalogScene(
-        'MediaInfoCard(rows:) · desktop, the 380 side track · the row opens '
-        'an anchored select instead of a sheet',
+        'MediaInfoCard(rows:) · desktop, the 380 side track (348 inside its '
+        'gutters, 316 of grid) · two 150pt columns, as the boards draw; the '
+        'row opens an anchored select instead of a sheet',
         (_) => _hosted(
           MediaInfoCard(rows: [_profileRow()], groups: _details),
-          width: 380,
+          width: 380 - 32,
         ),
         platform: CatalogPlatform.desktop,
       ),

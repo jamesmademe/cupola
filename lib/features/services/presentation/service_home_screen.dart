@@ -152,18 +152,29 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
             // rather than global. "Nginx Proxy Manager" at titleLarge/w800 and
             // an accessibility text scale overflowed the Row before any of this
             // existed.
-            Flexible(
-              child: Text(
-                service.title,
-                key: ValueKey('service-home-title-${service.routeParam}'),
-                style: titleStyle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
+            //
+            // The name and badge share one Expanded, so the name is the only
+            // flexible child of its own row. A Flexible title beside a Spacer
+            // was handed half the free width and kept what it did not use,
+            // parking the trailing action ~56pt short of the gutter on a
+            // phone.
+            Expanded(
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      service.title,
+                      key: ValueKey('service-home-title-${service.routeParam}'),
+                      style: titleStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
+                  InstanceLensBadge(service: service),
+                ],
               ),
             ),
-            InstanceLensBadge(service: service),
-            const Spacer(),
             if (trailingAction != null)
               trailingAction!
             else

@@ -102,11 +102,26 @@ class _InfoGrid extends StatelessWidget {
 
   const _InfoGrid({required this.cells});
 
+  /// The narrowest a column may get before the grid folds to one column.
+  ///
+  /// A column floor, not a window width. The fold used to sit at a bare 320 of
+  /// grid width, which reads like a device width but is measured inside the
+  /// gutter and the host card's padding, and it missed the desktop side track
+  /// by 4pt: 380 − 2 × 16 − 2 × 16 = 316, so the Details grid there always drew
+  /// one column, although every `Detail*` board draws two in that track and
+  /// `MediaDetailMetrics.sideTrackWidth` was widened to 380 precisely so the
+  /// Details grid's value column would fit. 144 admits the side track's 150pt
+  /// columns (and a 375pt phone's 147) and still folds a 360pt phone, whose
+  /// 140pt columns would ellipsise a studio or a release label.
+  static const double _minColumnWidth = 144;
+  static const double _columnGap = AppSpacing.lg;
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final useSingleColumn = constraints.maxWidth < 320;
+        final useSingleColumn =
+            constraints.maxWidth < 2 * _minColumnWidth + _columnGap;
 
         if (useSingleColumn) {
           return Column(
@@ -132,7 +147,7 @@ class _InfoGrid extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(child: cells[i]),
-                const SizedBox(width: AppSpacing.lg),
+                const SizedBox(width: _columnGap),
                 Expanded(child: right ?? const SizedBox.shrink()),
               ],
             ),

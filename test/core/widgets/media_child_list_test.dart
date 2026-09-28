@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/widgets/media_child_list.dart';
+import 'package:cupola/core/widgets/selection_pills.dart';
 
 void main() {
   group('MediaChildGroupSliver selection', () {
@@ -62,6 +63,25 @@ void main() {
       expect(find.text('Show fewer'), findsNothing);
       expect(find.text('S2E9'), findsNothing);
     });
+  });
+
+  testWidgets('the pills share the column edge with the summary below them', (
+    tester,
+  ) async {
+    // The slot is already on the gutter, and SelectionPills added a second
+    // one of its own: the pills sat 16pt in from the label and the summary.
+    await _pumpGroups(tester, groupCount: 3, childCount: 3);
+
+    final pills = tester.getTopLeft(
+      find
+          .descendant(
+            of: find.byType(SelectionPills<int>),
+            matching: find.byType(Row),
+          )
+          .first,
+    );
+    final summary = tester.getTopLeft(find.text('Season 1'));
+    expect(pills.dx, closeTo(summary.dx, 0.5));
   });
 }
 

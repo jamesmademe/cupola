@@ -6,7 +6,7 @@ Rendered from `lib/core/widgets/selection_pills.dart` by `test/design_catalog/se
 
 ## Anatomy
 
-- Row: `SingleChildScrollView` scrolling horizontally, padding `AppSpacing.lg` leading and trailing, `AppSpacing.sm` trailing under the row; pills `AppSpacing.sm` apart.
+- Row: `SingleChildScrollView` scrolling horizontally; `padding` defaults to `SelectionPills.gutter` — `AppSpacing.lg` leading and trailing inside a row that runs edge to edge, so the first pill sits on the screen gutter and a scrolled pill bleeds off the screen — with `AppSpacing.sm` under the row; pills `AppSpacing.sm` apart. A host already on the gutter (a detail slot, a padded header) passes `SelectionPills.flush` (no side inset, `AppSpacing.sm` under), never wraps the default in a second side padding.
 - Pill: minimum height 48 (the stricter of the two platform minimums), padding `AppSpacing.lg` horizontal × `AppSpacing.sm` vertical, `AppRadius.borderRadiusPill` — the same radius the navigation bar's selected state uses, and deliberately not `AppRadius.full`, which means metadata elsewhere in this system. Sized by its label, not fixed, so a pill grows with the reading size or a long label instead of overflowing.
 - Label in `textTheme.labelMedium` at weight 600.
 - Unselected: `colorScheme.surfaceContainer` fill, 1px `outlineVariant` border, `onSurfaceVariant` label.

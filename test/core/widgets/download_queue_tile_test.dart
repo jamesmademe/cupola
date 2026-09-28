@@ -4,8 +4,10 @@ import 'dart:ui' show Tristate;
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/download_queue_tile.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 
 void main() {
   Widget host(Widget child) => MaterialApp(
@@ -214,6 +216,82 @@ void main() {
 
       expect(find.text('Pause'), findsOneWidget);
       expect(find.text('Resume'), findsNothing);
+    });
+
+    // The title is the line's one flexible child. Two Flexibles of the same
+    // flex split the free width in half, so a name ellipsised with ~100pt of
+    // the line empty and the percentage floated short of the edge.
+    testWidgets('the title takes the free width; chip and figure trail', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 390,
+              child: DownloadQueueTile(
+                title: 'Dune.Part.Two.2024.2160p.WEB-DL-GROUP',
+                subtitle: 'Paused · movies',
+                statusLabel: 'Paused',
+                progress: 0.63,
+                percentage: 63,
+                accent: Colors.teal,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final tile = tester.getRect(find.byType(DownloadQueueTile));
+      final title = tester.getRect(
+        find.text('Dune.Part.Two.2024.2160p.WEB-DL-GROUP'),
+      );
+      final chip = tester.getRect(find.text('Paused'));
+      final figure = tester.getRect(find.text('63%'));
+
+      // The figure ends on the plate's inset (16) and padding (12), not short
+      // of them.
+      expect(
+        tile.right - figure.right,
+        closeTo(AppSpacing.lg + AppSpacing.md, 1),
+      );
+      // And the title runs right up to the chip's gap.
+      expect(chip.left - title.right, lessThan(AppSpacing.sm + 7 + 1));
+    });
+
+    testWidgets('a long state label is capped instead of starving the title', (
+      tester,
+    ) async {
+      const label = 'Error: tracker returned an unregistered torrent';
+      await tester.pumpWidget(
+        host(
+          const Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 390,
+              child: DownloadQueueTile(
+                title: 'Dune.Part.Two.2024.2160p.WEB-DL-GROUP',
+                subtitle: 'Errored · movies',
+                statusLabel: label,
+                statusTone: StatusTone.warning,
+                progress: 0.63,
+                percentage: 63,
+                accent: Colors.teal,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final tile = tester.getRect(find.byType(DownloadQueueTile));
+      final line = tile.width - 2 * (AppSpacing.lg + AppSpacing.md);
+      final chipText = tester.getRect(find.text(label));
+      expect(
+        chipText.width,
+        lessThanOrEqualTo(line * DownloadQueueTile.chipMaxFraction),
+      );
+      expect(tester.takeException(), isNull);
     });
   });
 

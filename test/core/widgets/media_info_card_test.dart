@@ -35,6 +35,46 @@ void main() {
       expect(find.text('Studio'), findsOneWidget);
       expect(find.text('Warner'), findsOneWidget);
     });
+
+    // The grid folded at a bare 320 of its own width, and the desktop side
+    // track leaves it 316 (380 − 32 gutter − 32 card padding), so Radarr's
+    // Details drew one column exactly where the boards draw two.
+    Future<Offset> studioOffset(WidgetTester tester, double width) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: width,
+                child: const MediaInfoCard(
+                  groups: [
+                    MediaInfoGroup(title: 'Monitored', child: Text('Yes')),
+                    MediaInfoGroup(title: 'Studio', child: Text('Prana')),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final monitored = tester.getTopLeft(find.text('Monitored'));
+      return tester.getTopLeft(find.text('Studio')) - monitored;
+    }
+
+    testWidgets('the side track\'s 316pt draws two columns', (tester) async {
+      final delta = await studioOffset(tester, 316);
+      expect(delta.dy, 0);
+      expect(delta.dx, greaterThan(0));
+    });
+
+    testWidgets('a 360pt phone\'s 296pt still folds to one column', (
+      tester,
+    ) async {
+      final delta = await studioOffset(tester, 296);
+      expect(delta.dx, 0);
+      expect(delta.dy, greaterThan(0));
+    });
   });
 
   group('MediaFactsList', () {

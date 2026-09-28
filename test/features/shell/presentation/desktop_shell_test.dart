@@ -239,6 +239,37 @@ void main() {
     });
   });
 
+  testWidgets('the deck panel keeps the field\'s width with no results', (
+    tester,
+  ) async {
+    // Its columns centred their children, so the footer and its hairline drew
+    // as a strip narrower than the panel, and an empty result shrank the whole
+    // panel to the footer's width.
+    await onPlatform(TargetPlatform.macOS, () async {
+      await _pumpShell(tester, overrides: await _world());
+      await _press(tester, LogicalKeyboardKey.keyK, meta: true);
+
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(CommandDeck),
+          matching: find.byType(EditableText),
+        ),
+        'zzzz nothing',
+      );
+      await tester.pump();
+      expect(find.text('Nothing by that name.'), findsOneWidget);
+
+      final deck = tester.getRect(find.byType(CommandDeck));
+      final footer = tester.getRect(
+        find.byWidgetPredicate(
+          (w) => w.runtimeType.toString() == '_DeckFooter',
+        ),
+      );
+      // The panel hangs 16 in from each side of the deck, inside a 1px border.
+      expect(footer.width, closeTo(deck.width - 2 * 16 - 2, 1));
+    });
+  });
+
   testWidgets('⌘R dates the sample in the deck', (tester) async {
     await onPlatform(TargetPlatform.macOS, () async {
       await _pumpShell(tester, overrides: await _world());
