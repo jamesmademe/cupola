@@ -13,12 +13,12 @@ Rendered from `lib/core/theme.dart` (`filledButtonTheme`, `outlinedButtonTheme`,
 
 ## Size
 
-The theme sets padding, not a height, so the painted height is the label's line plus its padding, and the tap target is whatever the platform's density adds around it.
+The theme sets padding, not a height, so the painted height is the label's line plus its padding. The three button themes and the icon-button theme pin `VisualDensity.standard`: the desktop's default compact density would take 8 off each (a 32pt button), so buttons paint the same height on every platform and only the tap target differs. A bare `IconButton` is 40 on a desktop, padded to 48 on a phone.
 
 | Platform | Filled | Outlined | Text | Tap target |
 | --- | --- | --- | --- | --- |
 | iOS, Android | 41 | 41 | 40 | padded to 48 (`MaterialTapTargetSize.padded`) |
-| macOS, Windows, Linux | 32 | 32 | 32 | the painted box: desktop density is compact (−2, −2) and targets shrink-wrap |
+| macOS, Windows, Linux | 41 | 41 | 40 | the painted box (targets shrink-wrap on a desktop) — 38 is the floor for a pointer-only control |
 
 ## The consumer provides
 

@@ -101,6 +101,11 @@ class HeaderActionRow extends StatelessWidget {
   }) => FilledButton.styleFrom(
     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
     minimumSize: const Size(double.infinity, buttonHeight),
+    // Standard density on every platform: the desktop's compact density takes
+    // 8 off `minimumSize`, which painted this button 40 tall beside the 48pt
+    // discs (`fixedSize`, which density does not touch) — two heights in one
+    // band.
+    visualDensity: VisualDensity.standard,
     foregroundColor: foregroundColor,
     backgroundColor: backgroundColor,
     disabledForegroundColor: disabledForegroundColor,
@@ -129,6 +134,8 @@ class HeaderActionRow extends StatelessWidget {
   }) => OutlinedButton.styleFrom(
     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
     minimumSize: const Size(double.infinity, buttonHeight),
+    // See [expandedButtonStyle]: the band keeps one height on the desktop.
+    visualDensity: VisualDensity.standard,
     foregroundColor: foregroundColor,
     backgroundColor: backgroundColor,
     side: BorderSide(color: borderColor),

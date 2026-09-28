@@ -759,9 +759,16 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusSm),
       ),
 
+      // Buttons keep standard density on every platform. The theme leaves
+      // `visualDensity` to Flutter, which picks compact (-2, -2) on the
+      // desktop: that took 8 off every button's height and painted Material
+      // buttons 32pt tall there, under the 38pt floor for pointer-only
+      // controls. The rest of the desktop keeps its compact density.
+      //
       // FilledButton
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          visualDensity: VisualDensity.standard,
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           textStyle: labelLarge.weight(FontWeight.w600),
@@ -776,6 +783,7 @@ class AppTheme {
       // OutlinedButton
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          visualDensity: VisualDensity.standard,
           foregroundColor: colorScheme.primary,
           textStyle: labelLarge.weight(FontWeight.w600),
           side: BorderSide(color: colorScheme.outline),
@@ -790,9 +798,16 @@ class AppTheme {
       // TextButton
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
+          visualDensity: VisualDensity.standard,
           foregroundColor: colorScheme.primary,
           textStyle: labelLarge.weight(FontWeight.w600),
         ),
+      ),
+
+      // IconButton: the same floor. Compact density shrank a bare icon button
+      // to 32pt on the desktop.
+      iconButtonTheme: const IconButtonThemeData(
+        style: ButtonStyle(visualDensity: VisualDensity.standard),
       ),
 
       // Input Decoration
