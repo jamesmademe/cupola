@@ -48,6 +48,13 @@ class FloatingNavDestination {
     this.badgeCount = 0,
     this.badgeSemanticLabel,
   });
+
+  /// What the badge prints: the count, or `9+` past nine.
+  ///
+  /// One rule for every surface that draws [badgeCount] — the phone's bar and
+  /// the desktop rail — because both badges sit on a 20pt glyph, and a third
+  /// digit is wider than the glyph it annotates.
+  String get badgeLabel => badgeCount > 9 ? '9+' : '$badgeCount';
 }
 
 /// Constants for FloatingBottomNavBar dimensions.
@@ -744,6 +751,17 @@ class _NavBarItem extends StatelessWidget {
   /// pills so "this one is active" reads the same in both places.
   static const double itemRadius = AppRadius.pill;
   static const double _labelGap = 6.0;
+
+  /// How far a count badge reaches past the icon's right edge.
+  static const double badgeOverhang = 6.0;
+
+  /// Gap between the icon and the selected label.
+  ///
+  /// A badge overhangs the icon, so the label moves out of its way by the same
+  /// amount: measured at the plain gap, the badge's collar landed on the
+  /// label's first letter.
+  static double labelGapFor(FloatingNavDestination destination) =>
+      _labelGap + (destination.badgeCount > 0 ? badgeOverhang : 0);
   static const double _selectedWidthSlack = 6.0;
   static const double minSelectedWidth = 84.0;
 
@@ -815,7 +833,7 @@ class _NavBarItem extends StatelessWidget {
 
     return _itemHorizontalPadding * 2 +
         iconSize +
-        _labelGap +
+        labelGapFor(destination) +
         painter.width +
         _selectedWidthSlack;
   }
@@ -901,6 +919,7 @@ class _NavBarItem extends StatelessWidget {
                   children: [
                     _BadgedIcon(
                       count: destination.badgeCount,
+                      label: destination.badgeLabel,
                       accent: destination.accentColor,
                       child: AnimatedSwitcher(
                         duration: AppAnimation.durationSm,
@@ -924,7 +943,9 @@ class _NavBarItem extends StatelessWidget {
                         alignment: Alignment.centerLeft,
                         child: isSelected
                             ? Padding(
-                                padding: const EdgeInsets.only(left: _labelGap),
+                                padding: EdgeInsets.only(
+                                  left: labelGapFor(destination),
+                                ),
                                 child: AnimatedDefaultTextStyle(
                                   duration: AppAnimation.durationSm,
                                   // The same style the pill was measured with.
@@ -964,13 +985,19 @@ class _NavBarItem extends StatelessWidget {
 class _BadgedIcon extends StatelessWidget {
   const _BadgedIcon({
     required this.count,
+    required this.label,
     required this.accent,
     required this.child,
   });
 
   final int count;
+  final String label;
   final Color accent;
   final Widget child;
+
+  /// The badge's height at the default reading size.
+  static const double _minSize = 15.0;
+  static const double _collarWidth = 1.5;
 
   @override
   Widget build(BuildContext context) {
@@ -983,19 +1010,31 @@ class _BadgedIcon extends StatelessWidget {
           child,
           Positioned(
             top: -4,
-            right: -6,
+            right: -_NavBarItem.badgeOverhang,
             child: Container(
-              constraints: const BoxConstraints(minWidth: 15),
-              height: 15,
+              key: const ValueKey('floating-nav-badge'),
+              // A floor, not a height: the numeral grows with the bar's own
+              // clamped reading size, and a fixed 15pt box clipped it to an
+              // unreadable sliver at 2x.
+              constraints: const BoxConstraints(
+                minWidth: _minSize,
+                minHeight: _minSize,
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 4),
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: accent,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: colorScheme.surface, width: 1.5),
+                borderRadius: BorderRadius.circular(AppRadius.full),
+                border: Border.all(
+                  color: colorScheme.surface,
+                  width: _collarWidth,
+                ),
               ),
               child: Text(
-                count > 9 ? '9+' : '$count',
+                label,
+                // The label's clamp, so the count grows with the reading size
+                // exactly as far as the bar around it does — and no further.
+                textScaler: FloatingNavBarMetrics.effectiveTextScaler(context),
                 style: Theme.of(context).textTheme.labelSmall
                     ?.weight(FontWeight.w600)
                     .tabular

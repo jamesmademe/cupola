@@ -143,9 +143,14 @@ class _RailItemState extends State<_RailItem> {
             alignment: Alignment.center,
             children: [
               glyph,
+              // Anchored by its LEFT edge, just right of the glyph's centre,
+              // so a wider count grows away from the glyph instead of across
+              // it: the badge only ever sits on the glyph's top-right corner.
+              // Anchored by its right edge 2pt past the glyph's, the 18pt badge
+              // covered most of a 20pt glyph and "12" hid it outright.
               Positioned(
-                top: -2,
-                right: -2,
+                top: _RailBadge.top,
+                left: _RailBadge.left,
                 child: _RailBadge(destination: destination),
               ),
             ],
@@ -211,10 +216,20 @@ class _RailBadge extends StatelessWidget {
 
   final FloatingNavDestination destination;
 
+  /// Offset of the badge's top-left corner from the 20pt glyph's.
+  ///
+  /// With the widest label a badge can print (`9+`, see
+  /// [FloatingNavDestination.badgeLabel]) the badge still ends inside the 56pt
+  /// rail, short of its hairline; the glyph keeps its left half and its whole
+  /// lower half.
+  static const double left = 12;
+  static const double top = -8;
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
+      key: const ValueKey('desktop-rail-badge'),
       // 18, not the 15 this was. DESIGN.md's type floor is enforced rather than
       // asserted, and it records that this badge grew precisely so it would not
       // need a 9px numeral — the phone's did, and the rail's was left behind.
@@ -231,7 +246,7 @@ class _RailBadge extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          '${destination.badgeCount}',
+          destination.badgeLabel,
           style: AppTheme.chrome(
             context,
             size: 11,

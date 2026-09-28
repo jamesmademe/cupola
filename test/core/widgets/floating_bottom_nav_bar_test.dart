@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/app_spacing.dart';
@@ -314,6 +315,122 @@ void main() {
             reason: 'scale $scale',
           );
         }
+      });
+    });
+
+    group('badge', () {
+      Future<void> pumpBadged(
+        WidgetTester tester, {
+        required int selectedIndex,
+        required int count,
+        double textScale = 1.0,
+      }) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme(),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(textScale)),
+              child: child!,
+            ),
+            home: Scaffold(
+              bottomNavigationBar: FloatingBottomNavBar(
+                selectedIndex: selectedIndex,
+                onDestinationSelected: (_) {},
+                destinations: [
+                  const FloatingNavDestination(
+                    icon: Icons.view_list_outlined,
+                    selectedIcon: Icons.view_list_rounded,
+                    label: 'Dashboard',
+                    accentColor: AppColors.seerr,
+                  ),
+                  FloatingNavDestination(
+                    icon: Icons.bolt_outlined,
+                    selectedIcon: Icons.bolt_rounded,
+                    label: 'Activity',
+                    accentColor: AppColors.radarr,
+                    badgeCount: count,
+                  ),
+                  const FloatingNavDestination(
+                    icon: Icons.search_outlined,
+                    selectedIcon: Icons.search_rounded,
+                    label: 'Search',
+                    accentColor: AppColors.sonarr,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      Finder badge() => find.byKey(const ValueKey('floating-nav-badge'));
+
+      // A fixed 15pt box squeezed the numeral's line box to 12pt while the
+      // glyph asked for 22pt at 2x: the count was drawn clipped to a sliver.
+      testWidgets('the count is never squeezed below its own line height', (
+        tester,
+      ) async {
+        for (final scale in [1.0, 1.3, 2.0, 3.0]) {
+          for (final count in [3, 12]) {
+            await pumpBadged(
+              tester,
+              selectedIndex: 2,
+              count: count,
+              textScale: scale,
+            );
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.descendant(of: badge(), matching: find.byType(RichText)),
+            );
+            final wanted = paragraph.getMaxIntrinsicHeight(double.infinity);
+            expect(
+              paragraph.size.height,
+              greaterThanOrEqualTo(wanted - 0.01),
+              reason: 'count $count at ${scale}x',
+            );
+            // And it grows only as far as the bar's own clamp.
+            final labelSmall = AppTheme.lightTheme().textTheme.labelSmall!;
+            expect(
+              wanted,
+              lessThanOrEqualTo(
+                labelSmall.fontSize! *
+                        FloatingNavBarMetrics.maxTextScaleFactor +
+                    0.01,
+              ),
+              reason: 'count $count at ${scale}x',
+            );
+          }
+        }
+      });
+
+      testWidgets('the selected label keeps clear of the badge', (
+        tester,
+      ) async {
+        for (final scale in [1.0, 1.3, 2.0]) {
+          await pumpBadged(
+            tester,
+            selectedIndex: 1,
+            count: 3,
+            textScale: scale,
+          );
+          final badgeRect = tester.getRect(badge());
+          final labelRect = tester.getRect(find.text('Activity'));
+          expect(
+            labelRect.left - badgeRect.right,
+            greaterThanOrEqualTo(4),
+            reason: 'at ${scale}x the badge ring touched the label',
+          );
+        }
+      });
+
+      testWidgets('past nine the badge reads 9+', (tester) async {
+        await pumpBadged(tester, selectedIndex: 0, count: 12);
+        expect(
+          find.descendant(of: badge(), matching: find.text('9+')),
+          findsOneWidget,
+        );
       });
     });
   });

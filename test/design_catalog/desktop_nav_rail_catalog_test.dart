@@ -60,8 +60,8 @@ void main() {
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
-        'DesktopNavRail · Settings selected, twelve searches waiting · a '
-        'two-digit badge grows sideways from its 18pt minimum',
+        'DesktopNavRail · Settings selected, twelve searches waiting · past '
+        'nine the badge reads 9+ and grows away from the glyph, not across it',
         (_) => _rail(NavTab.settings.index, searchesWaiting: 12),
         width: DesktopNavRail.width,
         height: 360,

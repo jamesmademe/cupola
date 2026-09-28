@@ -420,8 +420,9 @@ class _RailBadgedIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     if (destination.badgeCount <= 0) return Icon(icon);
     return ExcludeSemantics(
-      child: Badge.count(
-        count: destination.badgeCount,
+      child: Badge(
+        // The same "9+" cap as the floating bar and the desktop rail.
+        label: Text(destination.badgeLabel),
         backgroundColor: destination.accentColor,
         textColor: ServiceTheme.foregroundOn(destination.accentColor),
         child: Icon(icon),
