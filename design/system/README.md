@@ -26,7 +26,7 @@ A near-black stage with one saturated light source. Dark is the primary theme; l
 | Green | `success` | available, complete | — |
 | Amber | `warning` | a **fault**: failing, stalled, errored, stopped unexpectedly, expiring | missing, wanted, paused |
 | Red | `error` | **unreachable**, and nothing else (one exception below) | failed download, missing file, a rejected release |
-| Blue | `info` | queued, informational | — |
+| Blue | `info` | queued, informational — including a request awaiting approval | — |
 | Neutral | `on-surface-variant` | the **backlog**: missing, wanted, cutoff unmet, not aired, deliberately paused, deleted | — |
 
 **The one exception is an action, never a status.** A destructive confirmation — the Delete fill, its glyph, its *cannot be undone* line — is red, because red on an action means irreversible. It never leaks back into status: a rejected release, a negative custom-format score or a failed import is not red.

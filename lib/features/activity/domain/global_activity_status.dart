@@ -306,12 +306,14 @@ MediaStatusInfo resolveWantedStatus(
 /// the language the user sees in Seerr itself — while the tone comes from the
 /// request's display kind.
 ///
-/// `pending` is the one row in the app the tone rule does not settle, and it is
-/// warning on purpose: it is not backlog (nothing is waiting on a server) and
-/// it is not a fault (nothing is broken) — it is waiting on a *human*, which is
-/// the only thing this screen can act on. The Dashboard draws the same request
-/// neutral inside its decisions list, where the presence of the row is already
-/// the signal and the colour would be noise.
+/// `pending` is blue — queued, waiting its turn — like every other thing in
+/// the app that is in line and not broken. It used to be amber on the argument
+/// that it waits on a *human*, but amber is the fault arm and a request awaiting
+/// approval is not a fault: painting it amber put the alarm colour on the
+/// normal resting state of a request list, which is exactly the mistake the
+/// tone rule exists to stop. (Decided 2026-09-28.) The Dashboard still draws
+/// the same request neutral inside its decisions list, where the presence of
+/// the row is already the signal.
 MediaStatusInfo resolveRequestStatus(SeerrRequest request) {
   final display = request.displayStatus;
   final tone = switch (display.kind) {
@@ -319,8 +321,8 @@ MediaStatusInfo resolveRequestStatus(SeerrRequest request) {
     SeerrRequestDisplayKind.completed => StatusTone.success,
     SeerrRequestDisplayKind.processing ||
     SeerrRequestDisplayKind.partiallyAvailable ||
-    SeerrRequestDisplayKind.approved => StatusTone.info,
-    SeerrRequestDisplayKind.pending => StatusTone.warning,
+    SeerrRequestDisplayKind.approved ||
+    SeerrRequestDisplayKind.pending => StatusTone.info,
     // Seerr answered; it just answered no. A declined or deleted request is a
     // closed decision, and a failed one is a fault the service reported —
     // neither is a connection that did not answer.

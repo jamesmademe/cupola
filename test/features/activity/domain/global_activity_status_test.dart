@@ -344,14 +344,13 @@ void main() {
       expect(status.label, 'Declined');
     });
 
-    // `pending` is the one row the tone rule does not settle, and it is amber
-    // on purpose: not backlog (no server is working on it) and not a fault
-    // (nothing is broken) — it is waiting on a *human*, which is the only thing
-    // this screen can act on.
-    test('a pending request warns and an approved one is in-flight', () {
+    // A request awaiting approval is in line, not broken: blue, like an
+    // approved one. Amber is the fault arm, and a pending request is the normal
+    // resting state of a request list.
+    test('a pending request is queued, like an approved one', () {
       expect(
         resolveRequestStatus(requestWith(RequestStatus.pendingApproval)).tone,
-        StatusTone.warning,
+        StatusTone.info,
       );
       expect(
         resolveRequestStatus(requestWith(RequestStatus.approved)).tone,
