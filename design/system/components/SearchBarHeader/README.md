@@ -2,17 +2,26 @@
 
 The always-visible search field at the top of a browsable screen, with the page's accent on the magnifier and a clear button once there is a query.
 
-Hand-written from `lib/core/widgets/search_bar_header.dart` (a Material 3 `SearchBar`). Hints are real: *Search movies & TV shows...* (Seerr), *Search torrents...* (qBittorrent), *Movies, shows, artists...* (Search tab); the query is illustrative.
+Rendered from `lib/core/widgets/search_bar_header.dart` (a Material 3 `SearchBar`) by `test/design_catalog/search_bar_header_catalog_test.dart`. Hints are the callers' real strings: *Search movies & TV shows...* (Seerr Discover), *Search torrents...* (qBittorrent), *Movies, shows, artists...* (Search tab), *Search movies...* / *Search TV series...* / *Search artists...* (the library screens); the default is *Search...*.
 
-- Outer padding `space-sm` top, `space-lg` sides, `space-lg` bottom.
-- Field: min height 52, `surface-container`, 1px `outline-variant`, `radius-md` (12px), the radius every input in the theme takes, elevation 0, inner padding `space-sm`.
-- Leading: `space-sm`, then a 24px `search` glyph in the accent walked against `surface-container` (`onTint`, tint 0) — the accent is ink here, so Lidarr's pink and the `nav-search` purple are measured, not painted.
-- Text `body-large` in `on-surface`; hint `body-large` in `on-surface-variant`; `space-sm` either side of the input.
-- Trailing, only with text: a 48px `close` button in `on-surface-variant`.
-- Input is debounced 400ms and trimmed; clearing reports an empty query at once. On a desktop window the field registers as the screen's ⌘F target.
+- Outer padding `AppSpacing.sm` top, `AppSpacing.lg` sides, `AppSpacing.lg` bottom.
+- Field: minimum height 52, `surfaceContainer` fill, 1px `outlineVariant` side, `AppRadius.borderRadiusMd` (12) — the radius every input in the theme takes — elevation 0, horizontal padding `AppSpacing.sm`.
+- Leading: `AppSpacing.sm`, then a 24pt `search_rounded` glyph in the accent walked against `surfaceContainer` (`ServiceTheme.onTint`, `tintAlpha: 0`). The accent is ink here, so Lidarr's pink and the Search tab's purple are measured, not painted: on the light theme's white field they walk darker until they clear.
+- Text and hint are the `SearchBar` defaults: `bodyLarge` in `onSurface`, the hint in `onSurfaceVariant`, with `SearchBar`'s own 8pt either side of the input. A query longer than the field scrolls inside it.
+- Trailing, only while there is text: an `IconButton` with a `close_rounded` glyph in `onSurfaceVariant`.
+- Input is debounced (`debounceDuration`, 400 ms by default) and trimmed; clearing reports an empty query at once.
+- On a desktop window drawing the desktop shell the field registers itself as the screen's ⌘F target (`ScreenSearchTarget`); a phone build takes no provider dependency.
 
-The consumer provides `onQueryChanged`, `hintText`, an optional `initialQuery`, `autofocus` and the accent (the page's service or section accent; default `primary`).
+## The consumer provides
 
-Speaks as *Search*, hint *Type &lt;hint&gt;*; the clear button speaks *Clear search*, hint *Remove the current search query*.
+`onQueryChanged`, `hintText`, an optional `initialQuery`, `autofocus`, `debounceDuration`, and the `accent` — the page's service or section accent; without one the magnifier takes `primary`.
 
-Do pass the page accent so the magnifier says whose search this is. Don't round the field into a pill — that is the metadata shape.
+## Semantics
+
+The field speaks as *Search*, hint *Type &lt;hintText&gt;*. The clear button is one node: button, *Clear search*, hint *Remove the current search query*.
+
+## Do / don't
+
+- Do pass the page accent so the magnifier says whose search this is.
+- Don't round the field into a pill — that is the metadata shape.
+- Don't debounce again in the caller; the value arrives settled.

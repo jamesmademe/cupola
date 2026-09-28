@@ -2,7 +2,7 @@
 
 The one way a media item's state is shown: a tone glyph plus a word, so colour is never the only channel.
 
-Hand-written from `lib/core/widgets/status_badge.dart`. The status arrives resolved as `MediaStatusInfo` (from a per-service resolver in the feature's `domain/` layer); the badge never derives it.
+Rendered from `lib/core/widgets/status_badge.dart` by `test/design_catalog/status_badge_catalog_test.dart`. The status arrives resolved as `MediaStatusInfo` (from a per-service resolver in the feature's `domain/` layer); the badge never derives it.
 
 ## Variants
 

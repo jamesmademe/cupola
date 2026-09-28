@@ -2,30 +2,34 @@
 
 A horizontal rail of instrument readouts under a service's app bar: glyph, figure, word.
 
-Hand-written from `lib/core/widgets/service_kpi_peek.dart`.
+Rendered from `lib/core/widgets/service_kpi_peek.dart` by `test/design_catalog/service_kpi_peek_catalog_test.dart`, with figures shaped like the ones `lib/features/services/presentation/service_kpi_provider.dart` builds.
 
 ## Values
 
-- Rail: 78 tall (grown with reading size through `TextScaleMetrics`, text scale clamped), padding `space-lg` / `space-xs` / `space-lg` / `space-md`, tiles `space-sm` apart, scrolling horizontally.
-- Tile: min 92 wide, `surface-container`, 1px `outline-variant`, `radius-md`, `level-1`, padding `space-md` × `space-sm`, content centred vertically.
-- Figure row: a 14px glyph, `space-xs`, then the figure in `title-medium` at 700, tabular, 1.1 leading, in `on-surface`. The figure rolls on change (`ReelLine`, `ReelMotion.figure`).
-- Glyph colour: the service accent walked for `surface-container`; a status figure takes `statusToneColor(tone, surface: surface-container)` instead.
-- Label: 3 below, `eyebrow` in `on-surface-variant`, uppercased, one line, ellipsized.
+- **Rail**: 78 tall at the default reading size, grown by the text share (34pt) of that height up to the 1.6× clamp (`TextScaleMetrics.boxHeight`), and painted under the same clamped scaler so the text never outgrows its box. Padding `AppSpacing.lg` / `AppSpacing.xs` / `AppSpacing.lg` / `AppSpacing.md` (overridable with `padding`), cards `AppSpacing.sm` apart, scrolling horizontally.
+- **Card**: at least 92 wide and growing with its figure, `surfaceContainer`, 1px `outlineVariant`, `AppRadius.borderRadiusMd`, `AppElevation.level1`, padding `AppSpacing.md` × `AppSpacing.sm`, content centred vertically.
+- **Figure row**: a 14pt glyph, `AppSpacing.xs`, then the figure in `titleMedium` at 700, tabular, 1.1 leading, in `onSurface`. The figure rolls on change (`ReelLine`, `ReelMotion.figure`).
+- **Glyph colour**: the service accent walked against `surfaceContainer` (`ServiceTheme.onTint`, `tintAlpha: 0`); a figure with a tone takes `statusToneColor(tone, surface: surfaceContainer)` instead.
+- **Label**: 3pt below, `AppTheme.eyebrow` in `onSurfaceVariant`, uppercased, one line, ellipsised. A `note`, when there is one, takes the label's place.
+
+## Tones
+
+The rule is the app's tone rule. A backlog figure (Missing, Pending) is `StatusTone.neutral`; bytes moving or someone watching is `StatusTone.info`; only a fault — a pool past 80%, an active alert, a transcode — is `StatusTone.warning`. A figure with nothing to say carries no tone and wears the accent.
 
 ## States
 
-- **Loading** — four skeleton tiles, 100 wide with no shadow: a 44 × 16 and a 64 × 9 shimmer line, 6 apart.
-- **Unavailable figure** — `ServiceKpi.unavailable`: the figure is an em dash in `on-surface-variant`, the glyph goes `on-surface-variant`, and the label becomes its note. Never `0`.
-- **Source failed** — one unavailable tile replaces the rail: label "Figures", note "not answering", glyph `remove`.
-- **Not configured** or **no figures** — the rail collapses to nothing.
+- **Loading** — four skeleton cards, 100 wide with no shadow: a 44 × 16 and a 64 × 9 shimmer line, 6 apart.
+- **Unavailable figure** — `ServiceKpi.unavailable`: the figure is an em dash in `onSurfaceVariant`, the glyph goes `onSurfaceVariant`, and the note (e.g. *Radarr not answering*) replaces the label. The rail keeps the same cards, so a reader sees which figure is missing. Never `0`.
+- **Source failed** — one unavailable card replaces the rail: glyph `remove_rounded`, label *Figures*, note *not answering*.
+- **Not configured** (an error containing `not configured`) or **no figures** — the rail collapses to nothing; the page below answers for it.
 
-## Consumer provides
+## The consumer provides
 
-An `AsyncValue<List<ServiceKpi>>` (label, value, icon, optional tone, optional note, semantic label) and the service accent. Real labels include Movies, Monitored, Missing, Queue, Series, Episodes, Streams, Transcodes, Seeding, Requests, Pending.
+An `AsyncValue<List<ServiceKpi>>` (label, value, icon, optional tone, optional note) and the service `accent`. Real labels include Movies, Monitored, Missing, Queue; Active, Down, Up, Seeding, Downloading; Streams, Transcodes, Libraries; Requests, Pending, Processing, Available; Pools, Used, Alerts.
 
 ## Semantics
 
-Each tile is one container node speaking `ServiceKpi.semanticLabel`; the glyph, figure and eyebrow are excluded.
+Each card is one container node speaking `ServiceKpi.semanticLabel` — *Movies: 1,284*, or *Movies: unavailable, Radarr not answering*; the glyph, figure and eyebrow are excluded.
 
 ## Do / don't
 

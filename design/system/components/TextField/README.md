@@ -2,26 +2,26 @@
 
 A filled input with no border at rest — the fill draws the boundary.
 
-Hand-written from `lib/core/theme.dart` (`inputDecorationTheme`). Every `TextField` / `TextFormField` in the app takes this theme; none restyles it locally.
+Rendered from `lib/core/theme.dart` (`inputDecorationTheme`) by `test/design_catalog/text_field_catalog_test.dart`. Every `TextField` / `TextFormField` in the app takes this theme; the one deliberate exception is the Dockge compose editor, which pins its own fill and border because its panel stays dark-toned in both app themes (see `dockge_stack_edit_screen.dart`).
 
 ## Values
 
-- Fill `surface-container-highest`, `radius-md`, content padding `space-lg` horizontal × `space-md` vertical.
-- Text `body-medium` in `on-surface`; hint `body-medium` in `on-surface-variant` (clears AA on the fill in both themes).
-- Rest and enabled: no border.
-- Focused: a 2px `primary` border.
-- Error: a 1px `error` border at rest, 2px when focused, and the validation message under the field in `body-small`.
+- Fill `colorScheme.surfaceContainerHighest`, `AppRadius.borderRadiusMd`, content padding `AppSpacing.lg` horizontal × `AppSpacing.md` vertical.
+- Hint in `textTheme.bodyMedium`, coloured `onSurfaceVariant`.
+- Rest and enabled: no border (`BorderSide.none`).
+- Focused: a 2px `colorScheme.primary` border.
+- Error: a 1px `colorScheme.error` border at rest, 2px when focused, and the validation message under the field.
 
 ## Consumer provides
 
-The hint, the value, the keyboard type and the validation message.
+The label, the hint, the value, the keyboard type and the validation or error message. The settings forms wrap each field in its own `Semantics(label:, hint:)` rather than relying on the visible label/hint alone, so a screen reader hears the field's purpose stated plainly (e.g. "Enter your API key") rather than reading the on-screen hint text verbatim.
 
 ## Semantics
 
-The hint doubles as the field's accessible name when no label is given, so write it as the name of the value ("Base URL", "API key"), not as an instruction.
+Give every field a `labelText`; a field with only a hint loses its floating label the moment it fills, and VoiceOver/TalkBack read a hint as placeholder text, not as the field's name.
 
 ## Do / don't
 
-- Do obscure secrets (API keys, passwords); they are stored only in the device keychain.
-- Do show credentials and certificate fingerprints in `mono`.
-- Don't add an outline at rest or a local fill colour: the theme owns both.
+- Do obscure secrets (API keys, passwords) and pair `obscureText` with a reveal action rather than putting the value on the clipboard to check it.
+- Do keep `keyboardType: TextInputType.visiblePassword` on obscured fields — it is what stops the platform offering autocorrect and word suggestions on a secret.
+- Don't add an outline at rest or a local fill colour: the theme owns both, outside the one documented exception above.

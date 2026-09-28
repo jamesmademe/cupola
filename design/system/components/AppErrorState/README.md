@@ -2,7 +2,7 @@
 
 The two failure leaves beneath the FaultBand: `AppErrorState`, the centred full-page state for a cold open with nothing retained, and `InlineErrorRetry`, the one-line notice for a single section.
 
-Hand-written from `lib/core/widgets/app_error_state.dart` and `lib/core/widgets/inline_error_retry.dart`; routing from `async_value_widget.dart`. Exception strings are illustrative; the inline messages are Unraid's.
+Rendered from `lib/core/widgets/app_error_state.dart` and `lib/core/widgets/inline_error_retry.dart` by `test/design_catalog/app_error_state_catalog_test.dart`; routing from `async_value_widget.dart`. Exception strings are illustrative; the inline messages are Unraid's.
 
 ## How the four relate
 

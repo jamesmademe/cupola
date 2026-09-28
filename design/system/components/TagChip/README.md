@@ -2,7 +2,7 @@
 
 Metadata pills — counts, qualities and genres. Pills are metadata, never controls.
 
-Hand-written from `lib/core/widgets/tag_chip.dart`.
+Rendered from `lib/core/widgets/tag_chip.dart` by `test/design_catalog/tag_chip_catalog_test.dart`.
 
 ## Variants
 

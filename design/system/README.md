@@ -1,6 +1,6 @@
 **The Lit Control Room.** Cupola is a dark operator's console for a self-hosted media stack and its infrastructure — seventeen services, one native client, five platforms. The room stays quiet and near-black; the service being operated supplies the light. Radarr brings amber, Sonarr violet, TrueNAS utility blue. That tint is orientation, not decoration: it says where you are before you read a title.
 
-Calm at rest, tactile on touch, honest when something breaks. The product is a Flutter app; these tokens and renditions are its specification, and every value here is the one the code ships. The values themselves live in `design/tokens/` and are generated into the app and into `tokens.json` — edit them there, never here.
+Calm at rest, tactile on touch, honest when something breaks. The product is a Flutter app; these rules, the tokens and the pictures its own widgets render (the design catalog) are its specification, and every value here is the one the code ships. The values themselves live in `design/tokens/` and are generated into the app and into `tokens.json` — edit them there, never here.
 
 ## Content fundamentals
 
@@ -120,10 +120,10 @@ Binding, not best effort. WCAG AA in both themes, checked against the ground eac
 
 Two families, and they never swap roles.
 
-- **Service marks** — each service is drawn with its own mark from the `CupolaServices` font (U+E001–U+E011; the SVG sources are in **Icons**). A mark identifies a service and nothing else. It takes the service's accent, walked with `onTint` against its soft container (accent at 14%), and it never carries a status. TrueNAS, Unraid and Plex are deliberately not their logos (trademark policy): a drive rack, a hard disk, a film strip.
+- **Service marks** — each service is drawn with its own mark from the `CupolaServices` font (U+E001–U+E011; SVG sources in `tool/service_glyphs/svg/`, usage in `assets/README.md`). A mark identifies a service and nothing else. It takes the service's accent, walked with `onTint` against its soft container (accent at 14%), and it never carries a status. TrueNAS, Unraid and Plex are deliberately not their logos (trademark policy): a drive rack, a hard disk, a film strip.
 - **Interface glyphs** — Flutter's Material Icons, **rounded** variant, for everything that is not a service: actions, states, navigation on phones. The outlined variant is the unselected pose of a navigation destination (`monitor_heart` outlined → rounded when Activity is selected). The **desktop rail** alone draws Material Symbols Rounded at weight 300, because Material Icons' single stroke reads heavier than the type beside it on a desktop.
 
-No emoji, no custom illustration. The brand mark — the cupola seen from above, six lit panes around a round window — lives in **Logos**. It is never redrawn, recoloured or placed on a light ground without its dark body.
+No emoji, no custom illustration. The brand mark — the cupola seen from above, six lit panes around a round window — lives in `assets/brand/` (usage in `assets/README.md`). It is never redrawn, recoloured or placed on a light ground without its dark body.
 
 ## Do and don't
 

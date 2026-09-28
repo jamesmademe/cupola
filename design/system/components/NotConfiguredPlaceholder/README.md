@@ -2,7 +2,7 @@
 
 What a service screen shows when that service has no address or credentials saved — a calm empty state with one door to the fix, never alarm chrome.
 
-Hand-written from `lib/core/widgets/not_configured_placeholder.dart`, built on `AppEmptyState` (see that card).
+Rendered from `lib/core/widgets/not_configured_placeholder.dart`, built on `AppEmptyState` (see that card), by `test/design_catalog/not_configured_placeholder_catalog_test.dart`.
 
 - `AppEmptyState` full: 72px circular well in `surface-container-high`, 34px `settings` outlined glyph in `on-surface-variant`, `space-lg`, title `title-medium` 600, `space-sm`, message `body-medium` `on-surface-variant`, `space-xl`, action. Padding `space-xxl` × 40px.
 - Title *&lt;Service&gt; is not set up*; message *Add its address and credentials in Settings.* ("credentials", because four services sign in through a WebUI and have no API key).

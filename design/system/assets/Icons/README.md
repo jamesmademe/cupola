@@ -1,7 +1,0 @@
-The seventeen service marks — one per service, the glyph `ServiceKey.icon` draws. The same outlines ship as the `CupolaServices` font (`assets/fonts/CupolaServices.otf`, codepoints U+E001–U+E011, `ServiceGlyphs.<name>` in Dart); these SVGs are the sources the font is built from (`tool/service_glyphs/build_font.py`).
-
-- Single ink, one filled shape on a `0 0 24 24` box, drawn in **black** here. In the app the ink is always the service's own accent token (`radarr`, `truenas`…), walked with `ServiceTheme.onTint` against the soft container it sits on (accent at 14%). An `<img>` cannot take that colour — render the font glyph when the mark must be tinted.
-- Sources: Simple Icons (CC0 1.0) for Radarr, Sonarr, qBittorrent, Transmission, Nginx Proxy Manager, Jellyfin; drawn from each project's own logo for Seerr, Lidarr, Readarr, Prowlarr, Bazarr, SABnzbd, NZBGet, Dockge; drawn for Cupola and deliberately **not** the logo for TrueNAS (a drive rack), Unraid (a hard disk) and Plex (a film strip), because their trademark policies rule the logo out.
-- Every mark belongs to its owner and only identifies the service Cupola connects to. Never recolour a mark into another service's accent, never use one decoratively, never redraw a logo from memory.
-
-The SVG sources live in `tool/service_glyphs/svg/` and the built font in `assets/fonts/CupolaServices.otf`; they are not duplicated here. Rebuild the font with `python3 tool/service_glyphs/build_font.py` after changing a source.

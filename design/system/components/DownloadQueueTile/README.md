@@ -2,38 +2,43 @@
 
 One row of a download client's queue: name, state chip, percentage, a thin bar and a counting-down line, shared by qBittorrent, Transmission, SABnzbd and NZBGet.
 
-Hand-written from `lib/core/widgets/download_queue_tile.dart`; the qBittorrent mapping is `lib/features/qbittorrent/presentation/widgets/torrent_tile.dart`. Torrent names, sizes and rates are illustrative.
+Rendered from `lib/core/widgets/download_queue_tile.dart`, with the qBittorrent mapping in `lib/features/qbittorrent/presentation/widgets/torrent_tile.dart`, by `test/design_catalog/download_queue_tile_catalog_test.dart`. Release names, sizes and rates in the catalog are illustrative.
 
 ## Values
 
-- Outer padding `space-lg` × `space-xs`. Plate: `surface`, 1px `outline-variant`, `radius-md`, inner padding `space-md`. Selected: accent at 8% with a 40% accent border.
-- First line: title `body-medium` 600, one line, ellipsized; `space-sm`; state chip (sentence case: *Downloading*, *Seeding*, *Paused*); title and chip are each `Flexible`, so a long label shrinks instead of overflowing; `space-sm`; percentage `label-medium` 600, tabular, in the client accent walked with `onTint` against `surface` (the only accent-coloured text on the row); then the optional trailing menu.
-- Chip: padding 7 × 2, `radius-xs`, fill = the tone colour at 12%, label `label-small` 600 walked against that 12% composite. The tone goes through `statusToneColor`; the plate takes a `StatusTone`, never a colour.
-- Bar (only when `progress` is non-null): `space-xs` above, 4 tall, `radius-xs`, track `surface-container-highest`, value in the accent.
-- Second line: `space-xs` above, `body-small` tabular in `on-surface-variant` — status, ETA and remaining size, counting down.
-- Metrics (optional): `space-xs` above, `space-md` apart; an 8px dot plus `label-small` tabular, both in the walked accent when `accented`, else `on-surface-variant`.
+- Outer padding `AppSpacing.lg` (16) horizontal × `AppSpacing.xs` (4) vertical. Plate: a `Material` in `surface` with a 1px `outlineVariant` side, `AppRadius.md`, inner padding `AppSpacing.md` (12). Selected: accent at 8% with a 40% accent side. The ink splash exists only when the row has a tap or long-press.
+- First line: title in `bodyMedium` w600, one line, ellipsised; `AppSpacing.sm` (8); the state chip; 8; the percentage in `labelMedium` w600 with tabular figures, in the client accent walked by `ServiceTheme.onTint` against `surface` (the only accent-coloured text on the row), or `—` when the percentage is null; then the optional trailing `actions`. Title and chip are each `Flexible`, so a long label shrinks instead of overflowing.
+- Chip: padding 7 × 2, `AppRadius.xs`, fill the tone's `statusToneColor` at 12%, label in `labelSmall` w600 walked against that 12% composite. The row takes a `StatusTone`, never a colour.
+- Bar (only when `progress` is non-null): 4 above, a 4pt `LinearProgressIndicator` clipped to `AppRadius.xs`, track `surfaceContainerHighest`, value in the accent.
+- Second line: 4 above, `bodySmall` with tabular figures in `onSurfaceVariant`, one line, ellipsised — whatever the client counts down (status, ETA, remaining size).
+- Metrics (optional): 4 above, 12 apart; an 8pt dot, 4, and the value in `labelSmall` tabular, both in the walked accent when `accented`, else `onSurfaceVariant`.
+- Menu (`DownloadQueueActionsMenu`, the Usenet pair): a `PopupMenuButton` with an 18pt `more_vert_rounded`, tooltip *Job actions*, offering *Pause* or *Resume*, then *Delete*.
 
 ## States
 
 As qBittorrent maps them (the tone rule, applied once in `_toneFor`):
 
-- **Downloading** (also *Fetching metadata* and *Checking*) — `info`, bar in the accent, `↓` rate accented and `↑` rate neutral.
+- **Downloading**, **Fetching metadata**, **Checking** — `info`; the bar in the accent, `↓` rate accented and `↑` rate neutral.
 - **Stalled** and **Error** — `warning`: a fault the client reported. An errored torrent draws no bar.
-- **Paused** and **Queued** — neutral: a deliberate stop and the backlog. Queued draws no bar; qBittorrent's unknown ETA prints `∞`.
+- **Paused** and **Queued** — neutral: a deliberate stop and the backlog. Paused keeps its bar and prints no ETA; Queued draws no bar, and qBittorrent's unknown ETA prints `∞`.
 - **Seeding** (complete) — `success`, no bar (a full bar would say "finishing").
-- **Stale** (`sampleAge` set) — the second line becomes *as of 6 min ago* and the bar keeps its position but drains to `on-surface-variant`.
-- Usenet rows (SABnzbd, NZBGet) carry no chip and no metrics: the state sits at the head of the second line (*Downloading · 0:12:00 · 1.2 GB left of 3.4 GB*, SABnzbd passing its raw `timeleft`), and a `more_vert` 18px menu (Pause or Resume, Delete) sits in a 48pt button.
+
+Across clients:
+
+- **Stale** (`sampleAge` set) — the second line becomes *as of 6 min ago* (`formatDurationAge`) and the bar keeps its position but drains to `onSurfaceVariant`.
+- **Transmission** prints the remaining size while downloading and *Ratio …* while seeding, and a blocking error (the client's own error string) or *Stalled* replaces the chip's label.
+- **Usenet rows** (SABnzbd, NZBGet) carry no chip and no metrics: the state heads the second line (SABnzbd *Downloading · 0:12:00 · 1.2 GB left of 3.4 GB*, passing its raw `timeleft`; NZBGet *status · category · remaining*, or *progress unknown* with a null percentage and no bar), and `DownloadQueueActionsMenu` trails the first line.
 
 ## Consumer provides
 
-Title, subtitle, progress (null = no bar, which is different from 0), percentage (null prints `—`), accent, chip label and tone, metrics, `sampleAge`, selection and the callbacks. 
+`title`, `subtitle`, `progress` (null draws no bar, which is different from 0), `percentage` (null prints `—`), `accent`, `statusLabel` and `statusTone`, `metrics` (`DownloadQueueMetric`: `label`, `accented`, `spoken`), `sampleAge`, `selected`, `actions` and the `onTap` / `onLongPress` callbacks.
 
 ## Semantics
 
-The row is one container that speaks one sentence — *title, state, 63 per cent, second line, metrics* (metric `spoken` text replaces arrows: *downloading at 25 MB/s*) — reports selection as a state, and carries tap and long-press itself; the menu is the only child left on the reader's path. Long-press starts selection and is never the menu.
+The row is one container that speaks one sentence — *title, state, 63 per cent, second line, metrics* (a null percentage says *progress unavailable*; a metric's `spoken` text replaces the arrow: *downloading at 25 MB/s*) — reports selection as a state when it is interactive, and carries tap and long-press itself; `actions` is the only child left on the reader's path. Long-press starts selection and is never the menu.
 
 ## Do / don't
 
 - Do pass `null` progress for a job that has not started.
-- Don't pass colours: the plate takes a `StatusTone`.
+- Don't pass colours: the chip takes a `StatusTone`, a metric takes a flag.
 - Don't put the row's commands behind long-press.

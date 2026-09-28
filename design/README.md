@@ -1,45 +1,49 @@
 # Design
 
-Cupola's design system, kept as plain files so it can be read and edited with any
-editor or design tool, reviewed like code, and never drift from the app.
+Cupola's design system, kept as plain files beside the code so it can be read and changed with any
+editor, reviewed like code, and never drift from the app.
 
-| Folder | What it holds | Edited by hand? |
+| Path | What it holds | Edited by hand? |
 |---|---|---|
-| `tokens/` | The design tokens — colour, spacing, radius, type, motion, elevation — in the W3C Design Tokens format, as token sets that Tokens Studio and Penpot read directly. **The single source of every value the app paints.** | Yes |
-| `system/` | The design system: `README.md` (the brand book — voice, colour, type, layout, shape, depth, motion, failure states, accessibility, iconography), one card per component under `components/<Card>/` (`preview.html`, a static rendition of the Flutter widget, and `README.md`, its guidelines), the shared card stylesheet and contrast helpers, and the notes on the brand assets. | Yes, except `tokens.json` |
-| `system/tokens.json` | The tokens flattened for the cards and for any tool that wants one file. | No — generated |
+| `tokens/` | The design tokens — colour, spacing, radius, type, motion, elevation — in the W3C Design Tokens format, as token sets Tokens Studio and Penpot read directly. **The single source of every value the app paints.** | Yes |
+| `system/README.md` | The brand book: voice, colour, type, layout, shape, depth, motion, failure states, credential scope, accessibility, iconography. **The single statement of the design rules.** | Yes |
+| `system/components/` | One card per widget: `<Card>/README.md` is its guide (variants, tokens, what the caller provides, semantics, do and don't); `README.md` indexes them by group. | Yes |
+| `system/motion/` | Ten animated cards for the app's motion, the one place the system re-draws the app instead of rendering it. | Yes |
+| `system/assets/` | How to use the brand and service marks, and the sample artwork the catalog draws with. | Yes |
+| `system/tokens.json` | The tokens flattened for the motion cards and for any tool that wants one file. | No — generated |
 
-## Changing a value
+The widgets themselves are the pictures. `test/design_catalog/` renders every card from the real
+widget — one `*_catalog_test.dart` per card, the harness in `catalog.dart` — into
+`build/design_catalog/<Card>/<phone|desktop>.<dark|light>.png`. The pictures are built, never
+committed: they are deterministic on one machine, not across hosts, and a picture that can go stale
+is exactly what the catalog replaces.
 
-1. Edit `tokens/core.json` or `tokens/theme/{dark,light}.json` — in an editor, through Tokens
-   Studio's GitHub sync pointed at `design/tokens/`, or by importing the sets into Penpot.
-2. Regenerate the Dart constants and `system/tokens.json`:
-
-   ```sh
-   dart run tool/design_tokens/generate.dart
-   ```
-
-3. Commit the token sets and the generated files together. The test suite fails when they
-   disagree (`test/tool/design_tokens_test.dart`).
-
-The app never hard-codes a token value: `lib/core/theme.dart`, `app_spacing.dart`,
-`app_radius.dart`, `app_elevation.dart` and the rest read them from
-`lib/core/generated/design_tokens.g.dart`, and keep only the behaviour — curves, the contrast walk,
-the tracking curve — that a token cannot express.
-
-## Looking at the cards
+## Seeing it
 
 ```sh
-python3 tool/design_system/gallery.py --serve
+python3 tool/design_system/gallery.py --render --serve
 ```
 
-builds `build/design_system/index.html` — every card in dark and light at the width it is drawn
-for — and serves it on `http://127.0.0.1:8765/`. Artwork in the cards (`__POSTER__`,
-`__BACKDROP__`) comes from `system/assets/Imagery/`. The brand marks and service glyphs are not
-copied here: they are `assets/brand/` and `tool/service_glyphs/svg/`.
+renders the catalog (`flutter test --tags catalog --run-skipped test/design_catalog`), builds
+`build/design_system/index.html` — the brand book, then every card's guide beside its pictures, then
+the motion cards playing in dark and light — and serves it on `http://127.0.0.1:8765/`. Drop
+`--render` to rebuild the page from the pictures already there.
 
-## What the cards are, and are not
+## Changing it
 
-A card recreates a widget in HTML and CSS so the design can be read outside the Flutter code.
-The widget is the truth: when a card and `lib/` disagree, the code is right and the card is
-out of date.
+- **A value** — edit `tokens/core.json` or `tokens/theme/{dark,light}.json` (by hand, through Tokens
+  Studio's GitHub sync pointed at `design/tokens/`, or by importing the sets into Penpot), then run
+  `dart run tool/design_tokens/generate.dart` and commit the sets and the generated files together.
+  The suite fails when they disagree (`test/tool/design_tokens_test.dart`).
+- **A widget** — change it in `lib/`, re-render its card
+  (`flutter test --tags catalog --run-skipped test/design_catalog/<card>_catalog_test.dart`), look at
+  the pictures, and update the card's `README.md` in the same change. A new variant or state gets a
+  scene; a new widget gets a card, a catalog test and a row in `system/components/README.md`.
+- **A rule** — change `system/README.md`. Where a rule can be checked mechanically it is also a test
+  (the weight ceiling, touch targets, accent contrast, the tone rule), and the test changes with it.
+- **Motion** — change the constants in the Dart source and in the motion card together; both name
+  them.
+
+The app never hard-codes a token value: `lib/core/theme.dart`, `app_spacing.dart`, `app_radius.dart`,
+`app_elevation.dart` and the rest read them from `lib/core/generated/design_tokens.g.dart`, and keep
+only the behaviour — curves, the contrast walk, the tracking curve — that a token cannot express.

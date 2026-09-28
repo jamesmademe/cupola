@@ -1,24 +1,24 @@
 # FaultNote
 
-A failure sentence with no recovery verb of its own — the smallest member of the FaultBand family, for places that already offer the retry elsewhere.
+A failure sentence with no recovery verb of its own — the smallest member of the `FaultBand` family, for places that already offer the retry elsewhere.
 
-Hand-written from `lib/core/widgets/fault_note.dart`.
+Rendered from `lib/core/widgets/fault_note.dart` by `test/design_catalog/fault_note_catalog_test.dart`.
 
 ## Anatomy
 
-- A row sized to its content, top-aligned: 16px glyph, `space-sm` gap, then the sentence (wraps, flexible).
-- Sentence `body-small` in `on-surface-variant`. The tone is spent on the glyph alone, never on the words.
-- Glyph colour is `statusToneColor(tone, surface:)`, walked against the ground the note sits on (default `surface`).
+- A row sized to its content, top-aligned: 16px glyph, `AppSpacing.sm` gap, then the sentence in a `Flexible` (wraps).
+- Sentence in `textTheme.bodySmall`, coloured `onSurfaceVariant`. The tone is spent on the glyph alone, never on the words.
+- Glyph colour is `statusToneColor(colorScheme, tone, surface: surface)`, walked against the ground the note sits on (default `colorScheme.surface`).
 - No fill, no border, no padding of its own — the host places it.
 
 ## Variants
 
-- `FaultNote.unreachable` — `error`, `error_outline`: the source did not answer (a load that never came back).
-- `FaultNote.fault` — `warning`, `warning_amber`: the source answered and said no, or the operation failed after it started.
+- `FaultNote.unreachable` — error tone, `error_outline_rounded`: the source did not answer (a load that never came back).
+- `FaultNote.fault` — warning tone, `warning_amber_rounded`: the source answered and said no, or the operation failed after it started.
 
 ## The consumer provides
 
-`message` and, when the note is not on the scaffold, `surface` — the sheet or card colour it lands on (a request sheet passes `surface-container`).
+`message` and, when the note is not on the scaffold, `surface` — the sheet or card colour it lands on (a request sheet passes `surfaceContainer`).
 
 ## Semantics
 

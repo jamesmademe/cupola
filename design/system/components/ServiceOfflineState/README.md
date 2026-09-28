@@ -2,7 +2,7 @@
 
 The leaf for a configured service that has never answered in this session: a glyph, a fact, an age, and the recovery.
 
-Hand-written from `lib/core/widgets/service_offline_state.dart`. Used by TrueNAS, Unraid, SABnzbd, Transmission, NZBGet and Nginx Proxy Manager.
+Rendered from `lib/core/widgets/service_offline_state.dart` by `test/design_catalog/service_offline_state_catalog_test.dart`. Used by TrueNAS, Unraid, SABnzbd, Transmission, NZBGet and Nginx Proxy Manager.
 
 ## Values
 

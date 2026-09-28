@@ -2,21 +2,21 @@
 
 The lit room behind every screen: an opaque floor with two soft radials of the current service's accent, and glass app-bar bands that let the light run through them.
 
-Hand-written from `lib/core/widgets/ambient_scaffold.dart`, `ambient_background.dart` and `glass_app_bar.dart`; the service band from `features/services/presentation/service_home_screen.dart` and `service_tab_scaffold.dart`. Region blocks are placeholders.
+Rendered from `lib/core/widgets/ambient_scaffold.dart`, `ambient_background.dart` and `glass_app_bar.dart`, with the service band from `lib/features/services/presentation/service_home_screen.dart` and `service_tab_scaffold.dart`, by `test/design_catalog/ambient_scaffold_catalog_test.dart`. The page bodies in the catalog are representative content.
 
 ## Anatomy
 
-- **Room** (`AmbientBackground`): `surface`, then two `RadialGradient`s of the accent — 16% dark / 10% light (`DesignTokens.opacityAmbientGlow`) at the centre → transparent, radius 1.4 × the box's shortest side. One centred at `Alignment(-0.7, -0.9)`, one at `Alignment(0.95, 0.75)`, same strength. No accent → `primary`.
-- **Drift**: an accent change tweens over 300 ms on the standard curve — the same beat as the page transition. Under Reduce Motion the room is simply the new colour.
+- **Room** (`AmbientBackground`): `surface`, then two `AppGradients.ambientBackground` radials of the accent — 16% dark / 10% light (`opacityAmbientGlow`) at the centre → transparent, radius 1.4 × the box's shortest side. One centred at `Alignment(-0.7, -0.9)`, one at `Alignment(0.95, 0.75)`, same strength. No accent → `primary`.
+- **Drift**: an accent change tweens over 300ms (`AppAnimation.durationMd`) on the standard curve — the same beat as the page transition. Under Reduce Motion the room is simply the new colour.
+- **Scaffold**: a transparent `Scaffold` inside the room, `extendBody` on by default. On the desktop shell the body sits in `DesktopContentWell` (centred, at most `AppBreakpoints.contentWell`, 1140, unless `contentWell: false` or another `contentWellWidth`); the room and the bars never do.
 - **Glass** (`GlassSurface`): a top-down gradient of `surface` at 55% → 28% at 55% of the height → 0 (light 60% → 32% → 0). No blur, no border, no elevation.
-- **Service band (touch)**: 56 tall plus the top inset, `space-lg` sides — `chevron_left` in `on-surface-variant` (48 target, tooltip *Back to Dashboard*), 8px accent dot, 6px gap, the service name in `title-large` 700 `on-surface` (ellipsises first), the instance lens badge, then a trailing action (default `monitor_heart` outlined, tooltip *Activity*, the accent walked against `surface`). The tab band (44) is a second `GlassSurface` directly under it.
-- **Desktop**: there is no band; the service's whole header is `ServiceTabBar.header`, which is **not** glass — it paints its own opaque band, the accent at 12% over `surface` with a bloom in its lower edge, so its ink can be measured (see ServiceTabBar).
-- **GlassAppBar**: a transparent `AppBar` over `GlassSurface` for screens without the service band (TrueNAS hub, Settings pages); title `title-large` 700.
-- The Scaffold is transparent; the body sits in the desktop content well (`bp-content-well`), the room and bars never do.
+- **Service band (touch)** (`ServiceHomeScreen`): `kToolbarHeight` (56) plus the top inset, 16 sides, over a `GlassSurface` — `chevron_left_rounded` in `onSurfaceVariant` (48 target, tooltip *Back to Dashboard*), an 8pt accent dot, 6, the service name in the app bar's title style (`titleLarge` w700 `onSurface`, one line, ellipsised), the instance lens badge, then the trailing action (default `monitor_heart_outlined`, tooltip *Activity*, the accent walked against `surface`). The tab bar (`ServiceTabBar`, 44) is a second `GlassSurface` directly under it (`ServiceTabScaffold`). A tab's body clears both with 100 of top padding.
+- **Desktop**: for a tabbed service there is no glass band; the whole header is `ServiceTabBar.header`, which is **not** glass — it paints its own band, the accent at 12% over `surface` with a bloom in its lower edge, so its ink can be measured (see ServiceTabBar). The branch body is lifted by the 56 the band would have taken.
+- **GlassAppBar**: a transparent `AppBar` over `GlassSurface` for screens without the service band (TrueNAS hub, Settings pages); title `titleLarge` w700.
 
 ## The consumer provides
 
-The accent (a `ServiceKey` accent, never a status tone), the body and optionally an app bar.
+`body`, the `accent` (a `ServiceKey` accent, never a status tone) and optionally `appBar`, `floatingActionButton`, `bottomNavigationBar`, `extendBodyBehindAppBar`, `resizeToAvoidBottomInset` and the content-well settings.
 
 ## Do / don't
 

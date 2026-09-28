@@ -2,7 +2,7 @@
 
 The bar of views belonging to one service: a start-aligned, scrollable row of text tabs with an accent rule under the selected one, and on a desktop window the service's whole lit header.
 
-Hand-written from `lib/core/widgets/service_tab_bar.dart`; tabs from `serviceTabs` in `lib/features/services/domain/service_tab.dart`. On the phone it is hosted on a `GlassSurface` band by `ServiceTabScaffold` (see AmbientScaffold); the preview shows it on a plain `surface` frame.
+Rendered from `lib/core/widgets/service_tab_bar.dart` by `test/design_catalog/service_tab_bar_catalog_test.dart`; tabs from `serviceTabs` in `lib/features/services/domain/service_tab.dart`. On the phone it is hosted on a `GlassSurface` band by `ServiceTabScaffold` (see AmbientScaffold); the catalog draws it on plain `surface`.
 
 ## Default bar
 
