@@ -10,3 +10,10 @@
 tags:
   e2e:
     skip: "requires Docker instances: run with `flutter test --tags e2e --run-skipped`"
+  # The design catalog (test/design_catalog/) renders every documented widget
+  # to PNGs under build/design_catalog/. It asserts nothing and writes files,
+  # so it stays out of the default gate:
+  #
+  #   flutter test --tags catalog --run-skipped
+  catalog:
+    skip: "writes the design catalog: run with `flutter test --tags catalog --run-skipped`"
