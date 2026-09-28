@@ -1,0 +1,92 @@
+<!-- @dsCard group="Service surfaces" height=632 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ServiceOverview — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-service-overview-stage">
+  <!-- Column 1: top of Radarr's Overview tab, scrolled to rest -->
+  <div class="cp-service-overview-col">
+    <div class="cp-service-overview-region">
+      <div class="cp-service-overview-identity" aria-label="Radarr, radarr.home.lan, v5.14.0, Answering, 4K">
+        <span class="cp-service-overview-facts">radarr.home.lan · v5.14.0</span>
+        <span class="cp-service-overview-status" data-ontint="success" data-surface="surface" data-alpha="0"><span class="cp-icon" aria-hidden="true">cloud_done</span>Answering</span>
+        <span class="cp-service-overview-lens" data-ontint="radarr" data-surface="surface" data-alpha="0">4K</span>
+      </div>
+      <span class="cp-service-overview-tag">Identity</span>
+    </div>
+    <div class="cp-service-overview-region">
+      <div class="cp-kpi-rail" style="overflow:hidden">
+        <div class="cp-kpi"><div class="cp-kpi__value"><span class="cp-icon" data-ontint="radarr" data-surface="surface-container" data-alpha="0" aria-hidden="true">movie</span>1,284</div><div class="cp-kpi__label">Movies</div></div>
+        <div class="cp-kpi"><div class="cp-kpi__value"><span class="cp-icon" data-ontint="radarr" data-surface="surface-container" data-alpha="0" aria-hidden="true">visibility</span>1,190</div><div class="cp-kpi__label">Monitored</div></div>
+        <div class="cp-kpi"><div class="cp-kpi__value"><span class="cp-icon" style="color:var(--on-surface-variant)" aria-hidden="true">report_gmailerrorred</span>37</div><div class="cp-kpi__label">Missing</div></div>
+        <div class="cp-kpi"><div class="cp-kpi__value"><span class="cp-icon" data-ontint="radarr" data-surface="surface-container" data-alpha="0" aria-hidden="true">download</span>3</div><div class="cp-kpi__label">Queue</div></div>
+      </div>
+      <span class="cp-service-overview-tag">KPI rail — ServiceKpiPeek</span>
+    </div>
+    <div class="cp-service-overview-region cp-service-overview-section">
+      <div class="cp-section" role="button" aria-label="Coming up, next 7 days, 2 releases" aria-description="opens the Radarr Calendar tab"><div><h2 class="cp-section__title">Coming up</h2><div class="cp-section__sub">next 7 days · 2 releases</div></div><span class="cp-service-overview-link" data-ontint="radarr" data-surface="surface" data-alpha="0" aria-hidden="true">Calendar →</span></div>
+      <div class="cp-service-overview-body">
+        <div class="cp-service-overview-row" aria-label="Today, Mickey 17, digital release, monitored"><span class="cp-service-overview-day">Today</span><div class="cp-service-overview-row__main"><div class="cp-service-overview-row__title">Mickey 17</div><div class="cp-service-overview-row__detail">digital release · monitored</div></div></div>
+        <div class="cp-service-overview-row" aria-label="Thu 25, The Monkey, in cinemas, unmonitored"><span class="cp-service-overview-day">Thu 25</span><div class="cp-service-overview-row__main"><div class="cp-service-overview-row__title">The Monkey</div><div class="cp-service-overview-row__detail">in cinemas · unmonitored</div></div></div>
+      </div>
+      <span class="cp-service-overview-tag">Section → Calendar</span>
+    </div>
+    <div class="cp-service-overview-region cp-service-overview-section">
+      <div class="cp-section"><div><h2 class="cp-section__title">Needs attention</h2><div class="cp-section__sub">3</div></div></div>
+      <div class="cp-service-overview-body">
+        <div class="cp-service-overview-row"><span class="cp-icon" data-ontint="warning" data-surface="surface-container-low" data-alpha="0" aria-hidden="true">sync_problem</span><div class="cp-service-overview-row__main"><div class="cp-service-overview-row__title" data-ontint="warning" data-surface="surface-container-low" data-alpha="0">Stalled · The Brutalist</div><div class="cp-service-overview-row__detail">qBittorrent · No seeds available · 2 h ago</div></div></div>
+        <div class="cp-service-overview-row"><span class="cp-icon" data-ontint="warning" data-surface="surface-container-low" data-alpha="0" aria-hidden="true">file_download_off</span><div class="cp-service-overview-row__main"><div class="cp-service-overview-row__title" data-ontint="warning" data-surface="surface-container-low" data-alpha="0">Import failed · Anora</div><div class="cp-service-overview-row__detail">Not an upgrade for existing movie file · 40 min ago</div></div></div>
+        <div class="cp-service-overview-row"><span class="cp-icon" style="color:var(--on-surface-variant)" aria-hidden="true">upgrade</span><div class="cp-service-overview-row__main"><div class="cp-service-overview-row__title" style="color:var(--on-surface-variant)">12 films below your quality cutoff</div><div class="cp-service-overview-row__detail">Radarr keeps searching for an upgrade</div></div></div>
+      </div>
+      <span class="cp-service-overview-tag">Section, no link</span>
+    </div>
+    <div class="cp-service-overview-region cp-service-overview-section">
+      <div class="cp-section"><div><h2 class="cp-section__title">History</h2><div class="cp-section__sub">today</div></div><span class="cp-service-overview-link" data-ontint="radarr" data-surface="surface" data-alpha="0" aria-hidden="true">History →</span></div>
+      <div class="cp-service-overview-body"><div class="cp-inline-note" style="padding:0"><span class="cp-icon" aria-hidden="true">history</span><div><div class="cp-w600">Nothing yet today</div></div></div></div>
+      <span class="cp-service-overview-tag">ServiceOverviewEmpty</span>
+    </div>
+  </div>
+
+  <!-- Column 2: further down the page, then the region states -->
+  <div class="cp-service-overview-col">
+    <div class="cp-service-overview-region cp-service-overview-section">
+      <div class="cp-section"><div><h2 class="cp-section__title">Recently added</h2></div><span class="cp-service-overview-link" data-ontint="radarr" data-surface="surface" data-alpha="0" aria-hidden="true">Library →</span></div>
+      <div class="cp-service-overview-body is-bleed">
+        <div class="cp-service-overview-rail">
+          <div class="cp-service-overview-tile" role="button" aria-label="Nosferatu, 1922"><div class="cp-service-overview-poster"><img src="__POSTER__" alt=""></div><div class="cp-service-overview-tile__title">Nosferatu</div><div class="cp-service-overview-tile__year">1922</div></div>
+          <div class="cp-service-overview-tile" role="button" aria-label="Conclave, 2024"><div class="cp-service-overview-poster"><span class="cp-icon outlined" aria-hidden="true">movie</span></div><div class="cp-service-overview-tile__title">Conclave</div><div class="cp-service-overview-tile__year">2024</div></div>
+          <div class="cp-service-overview-tile" role="button" aria-label="Flow, 2024"><div class="cp-service-overview-poster"><span class="cp-icon outlined" aria-hidden="true">movie</span></div><div class="cp-service-overview-tile__title">Flow</div><div class="cp-service-overview-tile__year">2024</div></div>
+                    <div class="cp-service-overview-tile" role="button" aria-label="Sing Sing, 2024"><div class="cp-service-overview-poster"><span class="cp-icon outlined" aria-hidden="true">movie</span></div><div class="cp-service-overview-tile__title">Sing Sing</div><div class="cp-service-overview-tile__year">2024</div></div>
+        </div>
+      </div>
+      <span class="cp-service-overview-tag">Section.bleed → Library</span>
+    </div>
+    <div class="cp-service-overview-region cp-service-overview-section">
+      <div class="cp-section"><div><h2 class="cp-section__title">History</h2><div class="cp-section__sub">today</div></div><span class="cp-service-overview-link" data-ontint="radarr" data-surface="surface" data-alpha="0" aria-hidden="true">History →</span></div>
+      <div class="cp-service-overview-body">
+        <div class="cp-service-overview-row"><span class="cp-service-overview-dot" data-ontint="success" data-surface="surface-container-low" data-alpha="0"></span><div class="cp-service-overview-row__main"><div class="cp-service-overview-row__title">Conclave · imported</div><div class="cp-service-overview-row__detail">Bluray-1080p · 11.2 GB · 3 h ago</div></div></div>
+        <div class="cp-service-overview-row"><span class="cp-service-overview-dot" style="color:var(--on-surface-variant)"></span><div class="cp-service-overview-row__main"><div class="cp-service-overview-row__title">The Brutalist · grabbed</div><div class="cp-service-overview-row__detail">WEBDL-2160p · 24.8 GB · 5 h ago</div></div></div>
+      </div>
+      <span class="cp-service-overview-tag">Section → History</span>
+    </div>
+    <div class="cp-service-overview-region">
+      <div class="cp-service-overview-identity"><span class="cp-service-overview-facts">radarr.home.lan · —</span><span class="cp-service-overview-status" data-ontint="error" data-surface="surface" data-alpha="0"><span class="cp-icon" aria-hidden="true">cloud_off</span>Unreachable</span></div>
+      <span class="cp-service-overview-tag">Identity, unreachable</span>
+    </div>
+    <div class="cp-service-overview-region cp-service-overview-section">
+      <div class="cp-section"><div><h2 class="cp-section__title">Needs attention</h2><div class="cp-section__sub">—</div></div></div>
+      <div class="cp-service-overview-body">
+        <div class="cp-service-overview-ghost"><i style="width:180px;height:14px"></i><i style="width:120px;height:10px"></i></div>
+        <div class="cp-service-overview-ghost"><i style="width:180px;height:14px"></i><i style="width:120px;height:10px"></i></div>
+      </div>
+      <span class="cp-service-overview-tag">RowsSkeleton</span>
+    </div>
+  </div>
+</div>
+<script>window.Cupola && window.Cupola.refresh();</script>
+</body>
+</html>

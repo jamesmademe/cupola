@@ -1,0 +1,155 @@
+<!-- @dsCard group="Motion" height=250 subtitle="StatusBadge.animated: cross-fade on a state change, a swept progress ring" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>StatusBadgeAnimated — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-motion cp-status-badge-animated" data-reduce="false">
+  <div class="cp-motion-bar">
+    <div class="cp-motion-bar-title"><b>StatusBadge.animated</b><span class="cp-caption">Queued → Downloading (six polls) → Importing → Available, as the detail hero sees it.</span></div>
+    <button type="button" class="cp-motion-btn" data-replay><span class="cp-icon" aria-hidden="true">replay</span>Replay</button>
+    <button type="button" class="cp-motion-btn" data-next><span class="cp-icon" aria-hidden="true">skip_next</span>Next change</button>
+    <button type="button" class="cp-motion-switch" role="switch" aria-checked="false" data-reduce-switch><span class="cp-motion-switch-track" aria-hidden="true"></span>Reduce motion</button>
+  </div>
+  <div class="cp-motion-row">
+    <div class="cp-status-badge-animated-stage">
+      <div class="cp-status-badge-animated-hero"><img src="__BACKDROP__" alt=""><span class="cp-status-badge-animated-badge" data-badge role="status"></span></div>
+      <span class="cp-status-badge-animated-badge is-zoom" data-badge aria-hidden="true"></span>
+    </div>
+    <div class="cp-motion-col" style="flex:1 1 240px">
+      <dl class="cp-motion-readout">
+        <dt>status</dt><dd data-out="state">—</dd>
+        <dt>key</dt><dd data-out="key">—</dd>
+        <dt>fade</dt><dd data-out="fade">200 ms · in easeOutCubic · out linear</dd>
+        <dt>ring</dt><dd data-out="ring">300 ms · standardCurve</dd>
+        <dt>ring at</dt><dd data-out="value">—</dd>
+      </dl>
+      <p class="cp-motion-note">A poll that only moves the percentage keeps the key, so nothing fades: the digits snap, the arc sweeps. The ×2 copy is the same badge, magnified.</p>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var root = document.querySelector('.cp-status-badge-animated');
+  function cubic(a, b, c, d) {
+    function ev(p, q, m) { return 3 * p * (1 - m) * (1 - m) * m + 3 * q * (1 - m) * m * m + m * m * m; }
+    return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; var lo = 0, hi = 1; for (;;) { var m = (lo + hi) / 2, x = ev(a, c, m); if (Math.abs(t - x) < 0.001) return ev(b, d, m); if (x < t) lo = m; else hi = m; } };
+  }
+  function threePoint(a1, b1, mid, a2, b2) {
+    var sx1 = mid[0], sy1 = mid[1], sx2 = 1 - mid[0], sy2 = 1 - mid[1];
+    var f1 = cubic(a1[0] / sx1, a1[1] / sy1, b1[0] / sx1, b1[1] / sy1), f2 = cubic((a2[0] - mid[0]) / sx2, (a2[1] - mid[1]) / sy2, (b2[0] - mid[0]) / sx2, (b2[1] - mid[1]) / sy2);
+    return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; return t < mid[0] ? f1(t / sx1) * sy1 : f2((t - mid[0]) / sx2) * sy2 + mid[1]; };
+  }
+  var standard = threePoint([0.05, 0], [0.133333, 0.06], [0.166666, 0.4], [0.208333, 0.82], [0.25, 1]);
+  var easeOutCubic = cubic(0.215, 0.61, 0.355, 1);
+  var SWITCH_MS = 200, RING_MS = 300, REDUCED = 0.05;
+  /* The walk: pipeline + progress, as MediaStatusInfo would resolve it. */
+  var STEPS = [
+    { label: 'Queued', pipeline: 'queued', tone: 'info', icon: 'schedule' },
+    { label: 'Downloading', pipeline: 'downloading', tone: 'info', progress: 0.08 },
+    { label: 'Downloading', pipeline: 'downloading', tone: 'info', progress: 0.23 },
+    { label: 'Downloading', pipeline: 'downloading', tone: 'info', progress: 0.41 },
+    { label: 'Downloading', pipeline: 'downloading', tone: 'info', progress: 0.57 },
+    { label: 'Downloading', pipeline: 'downloading', tone: 'info', progress: 0.76 },
+    { label: 'Downloading', pipeline: 'downloading', tone: 'info', progress: 0.94 },
+    { label: 'Importing', pipeline: 'importing', tone: 'info', icon: 'drive_file_move' },
+    { label: 'Available', pipeline: null, availability: 'available', tone: 'success', icon: 'check_circle' }
+  ];
+  var DWELL = [900, 600, 600, 600, 600, 600, 700, 1100];
+  var badges = [].slice.call(root.querySelectorAll('[data-badge]'));
+  var out = {}; root.querySelectorAll('[data-out]').forEach(function (el) { out[el.dataset.out] = el; });
+  var probe = document.createElement('span'); probe.style.display = 'none'; root.appendChild(probe);
+  function rgb(token) { probe.style.color = 'var(--' + token + ')'; var m = getComputedStyle(probe).color.match(/[\d.]+/g) || [0, 0, 0]; return { r: +m[0], g: +m[1], b: +m[2] }; }
+  function toneColor(tone) {
+    if (tone === 'neutral') return 'var(--on-surface-variant)';
+    var c = window.Cupola.onTint(rgb(tone), rgb('surface'), 0);
+    return 'rgb(' + Math.round(c.r) + ',' + Math.round(c.g) + ',' + Math.round(c.b) + ')';
+  }
+  function reduce() { return root.dataset.reduce === 'true'; }
+  function keyOf(s) { return (s.availability || 'missing') + '-' + s.pipeline + '-' + s.label; }
+  var R = 5, C = 2 * Math.PI * R;
+  function rowFor(s) {
+    var row = document.createElement('span');
+    row.className = 'cp-status-badge-animated-row';
+    var color = toneColor(s.tone), lead;
+    if (s.progress != null) {
+      lead = '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="none" stroke="' + color + '" stroke-opacity=".25" stroke-width="2"/>' +
+        '<circle class="arc" cx="6" cy="6" r="5" fill="none" stroke="' + color + '" stroke-width="2" stroke-dasharray="' + C + '" stroke-dashoffset="' + C + '" transform="rotate(-90 6 6)"/></svg>';
+    } else lead = '<span class="cp-icon" aria-hidden="true" style="color:' + color + '">' + s.icon + '</span>';
+    row.innerHTML = lead + '<span class="is-label">' + s.label + '</span>' + (s.progress != null ? '<span class="is-pct">' + Math.round(s.progress * 100) + '%</span>' : '');
+    return row;
+  }
+  var index = 0, current = null, ringValue = 0, ringTween = 0, timer = 0;
+  function paintRing(v) {
+    badges.forEach(function (b) { b.querySelectorAll('.arc').forEach(function (a) { a.setAttribute('stroke-dashoffset', (C * (1 - v)).toFixed(3)); }); });
+    out.value.textContent = s0().progress != null ? v.toFixed(3) : '—';
+  }
+  function s0() { return STEPS[index]; }
+  function tweenRing(to) {
+    /* TweenAnimationBuilder(end: progress): each new value sweeps from wherever the arc is. */
+    cancelAnimationFrame(ringTween);
+    if (reduce()) { ringValue = to; paintRing(to); return; }
+    var from = ringValue, t0 = performance.now();
+    (function f(now) { var p = Math.min(1, (now - t0) / RING_MS); ringValue = from + (to - from) * standard(p); paintRing(ringValue); if (p < 1) ringTween = requestAnimationFrame(f); })(t0);
+  }
+  function show(i, instant) {
+    index = i;
+    var s = STEPS[i], key = keyOf(s);
+    out.state.textContent = s.label + (s.progress != null ? ' ' + Math.round(s.progress * 100) + '%' : '');
+    out.key.textContent = key;
+    var animate = !reduce() && !instant;
+    badges.forEach(function (b) {
+      var sw = b.querySelector('.cp-status-badge-animated-switch');
+      if (!sw) { sw = document.createElement('span'); sw.className = 'cp-status-badge-animated-switch'; b.appendChild(sw); }
+      var live = sw.querySelector('.cp-status-badge-animated-row:not(.is-leaving)');
+      if (live && live.dataset.key === key) {
+        /* Same key: the Row rebuilds in place; only the percentage text changes. */
+        var pct = live.querySelector('.is-pct'); if (pct) pct.textContent = Math.round(s.progress * 100) + '%';
+        return;
+      }
+      var row = rowFor(s); row.dataset.key = key;
+      if (!animate) { sw.innerHTML = ''; sw.appendChild(row); return; }
+      if (live) {
+        live.classList.add('is-leaving');
+        var from = parseFloat(live.style.opacity || '1'), t0 = performance.now();
+        (function f(now) { var p = Math.min(1, (now - t0) / SWITCH_MS); live.style.opacity = String(from * (1 - p)); if (p < 1) requestAnimationFrame(f); else live.remove(); })(t0);
+      }
+      row.style.opacity = '0'; sw.appendChild(row);
+      var t1 = performance.now();
+      (function g(now) { var p = Math.min(1, (now - t1) / SWITCH_MS); row.style.opacity = String(easeOutCubic(p)); if (p < 1) requestAnimationFrame(g); })(t1);
+    });
+    if (s.progress != null) {
+      /* Tween(end: progress) has no begin: a freshly mounted ring starts AT its value, and only later polls sweep. */
+      if (current == null || current.progress == null) { cancelAnimationFrame(ringTween); ringValue = s.progress; }
+      else tweenRing(s.progress);
+    }
+    current = s;
+    if (s.progress != null) paintRing(ringValue);
+  }
+  function play() {
+    clearTimeout(timer);
+    show(0, true);
+    var i = 0;
+    (function next() { if (i >= DWELL.length) return; timer = setTimeout(function () { i++; show(i); next(); }, DWELL[i]); })();
+  }
+  root.querySelector('[data-replay]').addEventListener('click', play);
+  root.querySelector('[data-next]').addEventListener('click', function () { clearTimeout(timer); show((index + 1) % STEPS.length, index + 1 >= STEPS.length); });
+  var sw = root.querySelector('[data-reduce-switch]');
+  function applyOut() {
+    out.fade.textContent = reduce() ? 'none: no AnimatedSwitcher' : '200 ms · in easeOutCubic · out linear';
+    out.ring.textContent = reduce() ? 'snaps: no TweenAnimationBuilder' : '300 ms · standardCurve';
+  }
+  function setReduce(v) { root.dataset.reduce = v ? 'true' : 'false'; sw.setAttribute('aria-checked', v ? 'true' : 'false'); applyOut(); }
+  sw.addEventListener('click', function () { setReduce(!reduce()); });
+  var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (mq.addEventListener) mq.addEventListener('change', function (e) { setReduce(e.matches); });
+  setReduce(mq.matches);
+  new MutationObserver(function () { badges.forEach(function (b) { b.innerHTML = ''; }); var i = index; current = null; show(i, true); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  play();
+})();
+</script>
+</body>
+</html>

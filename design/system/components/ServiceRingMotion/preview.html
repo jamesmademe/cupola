@@ -1,0 +1,233 @@
+<!-- @dsCard group="Motion" height=360 subtitle="ServiceRing: 400ms node transitions and the 96s ambient sweep" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ServiceRingMotion — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-motion cp-service-ring-motion" data-reduce="false">
+  <div class="cp-motion-bar">
+    <div class="cp-motion-bar-title"><b>ServiceRing</b><span class="cp-caption">Replay walks a setup; click a node to step it unlit → picked → connected → silent. The dial turns once every 96 s.</span></div>
+    <button type="button" class="cp-motion-btn" data-replay><span class="cp-icon" aria-hidden="true">replay</span>Replay</button>
+    <button type="button" class="cp-motion-btn" data-spin aria-pressed="true"><span class="cp-icon" aria-hidden="true">autorenew</span>Spin</button>
+    <button type="button" class="cp-motion-btn" data-fast aria-pressed="false"><span class="cp-icon" aria-hidden="true">fast_forward</span>Sweep ×32</button>
+    <button type="button" class="cp-motion-switch" role="switch" aria-checked="false" data-reduce-switch><span class="cp-motion-switch-track" aria-hidden="true"></span>Reduce motion</button>
+  </div>
+  <div class="cp-motion-row">
+    <svg class="cp-service-ring-motion-svg" viewBox="0 0 268 268" role="img" data-svg>
+      <defs data-defs></defs>
+      <g data-track></g>
+      <path data-progress fill="none" stroke-width="1.5" stroke-linecap="round"/>
+      <g data-spokes></g>
+      <circle class="cp-service-ring-motion-mark" cx="134" cy="134" r="56.28"/>
+      <text class="cp-service-ring-motion-mark-label" x="134" y="131" text-anchor="middle">Cupola mark</text>
+      <text class="cp-service-ring-motion-mark-label" x="134" y="146" text-anchor="middle">see Logos</text>
+      <g data-halos></g><g data-nodes></g><g data-collars></g><g data-hits></g>
+    </svg>
+    <div class="cp-service-ring-motion-panel">
+      <dl class="cp-motion-readout">
+        <dt>spoken</dt><dd data-out="spoken">—</dd>
+        <dt>transition</dt><dd data-out="t">idle · 400 ms · easeOutCubic</dd>
+        <dt>sweep</dt><dd data-out="sweep">0.0° · 96 s per turn, linear</dd>
+        <dt>last change</dt><dd data-out="last">—</dd>
+      </dl>
+      <div class="cp-service-ring-motion-legend">
+        <span><b>unlit</b> · 4 px, on-surface-variant 55% (80% light)</span>
+        <span><b>picked</b> · 5 px, accent 78%</span>
+        <span><b>connected</b> · 6 px, accent, halo, spoke</span>
+        <span><b>silent</b> · 5 px drained, 1 px collar</span>
+        <span><b>active</b> · + halo, collar accent 60% at r + 4</span>
+        <span><b>progress</b> · 1.5 px arc, indigo 50%</span>
+      </div>
+      <p class="cp-motion-note">Every node property interpolates from the frame last painted, so a change mid-transition bends instead of restarting. Reduce Motion removes the animator (the new frame paints at once) and stops the sweep.</p>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var root = document.querySelector('.cp-service-ring-motion');
+  function cubic(a, b, c, d) {
+    function ev(p, q, m) { return 3 * p * (1 - m) * (1 - m) * m + 3 * q * (1 - m) * m * m + m * m * m; }
+    return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; var lo = 0, hi = 1; for (;;) { var m = (lo + hi) / 2, x = ev(a, c, m); if (Math.abs(t - x) < 0.001) return ev(b, d, m); if (x < t) lo = m; else hi = m; } };
+  }
+  var easeOutCubic = cubic(0.215, 0.61, 0.355, 1);
+  var TRANSITION_MS = 400, SPIN_MS = 96000, NS = 'http://www.w3.org/2000/svg';
+  /* ServiceRing.order: ServiceDomain.values → services, in registry order. */
+  var DOMAINS = [
+    ['seerr', 'radarr', 'sonarr', 'lidarr', 'bazarr', 'readarr'],
+    ['qbittorrent', 'transmission', 'prowlarr', 'sabnzbd', 'nzbget'],
+    ['jellyfin', 'plex'],
+    ['truenas', 'dockge', 'unraid', 'nginx-proxy-manager']
+  ];
+  var NAMES = { 'nginx-proxy-manager': 'Nginx Proxy Manager', qbittorrent: 'qBittorrent', sabnzbd: 'SABnzbd', nzbget: 'NZBGet', truenas: 'TrueNAS' };
+  var ORDER = [].concat.apply([], DOMAINS), N = ORDER.length, GAP = 1.7;
+  var UNIT = Math.PI * 2 / (N + GAP * DOMAINS.length);
+  var ANGLES = [], STARTS = [], slot = GAP / 2, s2 = 0;
+  DOMAINS.forEach(function (d) { d.forEach(function () { ANGLES.push(-Math.PI / 2 + UNIT * (slot + 0.5)); slot += 1; }); slot += GAP; STARTS.push(-Math.PI / 2 + UNIT * s2); s2 += d.length + GAP; });
+  var C = 134, RADIUS = 268 / 2 - 14, ENTRANCE = 1;
+  var q = function (s) { return root.querySelector(s); };
+  var out = {}; root.querySelectorAll('[data-out]').forEach(function (el) { out[el.dataset.out] = el; });
+  var probe = document.createElement('span'); probe.style.display = 'none'; root.appendChild(probe);
+  var cache = {};
+  function rgb(token, a) {
+    var c = cache[token];
+    if (!c) { probe.style.color = 'var(--' + token + ')'; var m = getComputedStyle(probe).color.match(/[\d.]+/g) || [0, 0, 0]; c = cache[token] = { r: +m[0], g: +m[1], b: +m[2] }; }
+    return { r: c.r, g: c.g, b: c.b, a: a == null ? 1 : a };
+  }
+  function withA(c, a) { return { r: c.r, g: c.g, b: c.b, a: a }; }
+  function lerpC(a, b, t) { return { r: a.r + (b.r - a.r) * t, g: a.g + (b.g - a.g) * t, b: a.b + (b.b - a.b) * t, a: a.a + (b.a - a.a) * t }; } /* Color.lerp: straight channels */
+  function css(c) { return 'rgb(' + Math.round(c.r) + ' ' + Math.round(c.g) + ' ' + Math.round(c.b) + ' / ' + Math.max(0, Math.min(1, c.a)).toFixed(3) + ')'; }
+  function isDark() { return document.documentElement.getAttribute('data-theme') !== 'light'; }
+  function reduce() { return root.dataset.reduce === 'true'; }
+  /* _RingFrame.resolve */
+  function resolve(states, active, progress) {
+    var dark = isDark(), osv = rgb('on-surface-variant');
+    var unlit = withA(osv, dark ? 0.55 : 0.80), glowAlpha = dark ? 0.34 : 0.42, spokeAlpha = dark ? 0.55 : 0.70;
+    return {
+      track: withA(osv, 0.30), progress: progress,
+      nodes: ORDER.map(function (key) {
+        var acc = rgb(key), st = states[key] || 'unlit', on = active === key;
+        if (st === 'picked') return { accent: acc, radius: 5, color: withA(acc, 0.78), glow: on ? glowAlpha : 0, spoke: 0, collar: on ? 1 : 0, collarColor: withA(acc, 0.6), spokeAlpha: spokeAlpha };
+        if (st === 'connected') return { accent: acc, radius: 6, color: acc, glow: glowAlpha, spoke: 1, collar: on ? 1 : 0, collarColor: withA(acc, 0.6), spokeAlpha: spokeAlpha };
+        if (st === 'silent') return { accent: acc, radius: 5, color: osv, glow: on ? glowAlpha : 0, spoke: 0, collar: 1, collarColor: on ? withA(acc, 0.6) : withA(osv, 0.35), spokeAlpha: spokeAlpha };
+        return { accent: acc, radius: 4, color: unlit, glow: 0, spoke: 0, collar: 0, collarColor: acc, spokeAlpha: spokeAlpha };
+      })
+    };
+  }
+  function lerpFrame(a, b, t) {
+    return {
+      track: lerpC(a.track, b.track, t), progress: a.progress + (b.progress - a.progress) * t,
+      nodes: b.nodes.map(function (n, i) {
+        var m = a.nodes[i] || n;
+        return { accent: lerpC(m.accent, n.accent, t), radius: m.radius + (n.radius - m.radius) * t, color: lerpC(m.color, n.color, t), glow: m.glow + (n.glow - m.glow) * t, spoke: m.spoke + (n.spoke - m.spoke) * t, collar: m.collar + (n.collar - m.collar) * t, collarColor: lerpC(m.collarColor, n.collarColor, t), spokeAlpha: m.spokeAlpha + (n.spokeAlpha - m.spokeAlpha) * t };
+      })
+    };
+  }
+  /* SVG scaffolding, one element per painted primitive */
+  function el(tag, attrs, parent) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+  var defs = q('[data-defs]'), gTrack = q('[data-track]'), gSp = q('[data-spokes]'), gHalo = q('[data-halos]'), gNode = q('[data-nodes]'), gCol = q('[data-collars]'), gHit = q('[data-hits]');
+  var trackCircle = el('circle', { cx: C, cy: C, r: RADIUS, fill: 'none', 'stroke-width': 1 }, gTrack);
+  var ticks = STARTS.map(function () { return el('line', { 'stroke-width': 1 }, gTrack); });
+  var progressPath = q('[data-progress]');
+  var P = ORDER.map(function (key, i) {
+    var lg = el('linearGradient', { id: 'cp-srm-s' + i, gradientUnits: 'userSpaceOnUse' }, defs);
+    var ls0 = el('stop', { offset: 0 }, lg), ls1 = el('stop', { offset: 1 }, lg);
+    var rg = el('radialGradient', { id: 'cp-srm-h' + i }, defs);
+    var rs0 = el('stop', { offset: 0 }, rg), rs1 = el('stop', { offset: 1 }, rg);
+    var spoke = el('line', { stroke: 'url(#cp-srm-s' + i + ')', 'stroke-width': 1.5, 'stroke-linecap': 'round' }, gSp);
+    var halo = el('circle', { fill: 'url(#cp-srm-h' + i + ')' }, gHalo);
+    var node = el('circle', {}, gNode);
+    var collar = el('circle', { fill: 'none', 'stroke-width': 1 }, gCol);
+    var hit = el('circle', { r: 11, class: 'is-hit', tabindex: 0, role: 'button', 'aria-label': (NAMES[key] || key.charAt(0).toUpperCase() + key.slice(1)) }, gHit);
+    var title = el('title', {}, hit); title.textContent = NAMES[key] || key;
+    return { key: key, lg: lg, ls0: ls0, ls1: ls1, rs0: rs0, rs1: rs1, spoke: spoke, halo: halo, node: node, collar: collar, hit: hit };
+  });
+  function paint(frame, sweep) {
+    trackCircle.setAttribute('stroke', css(frame.track));
+    STARTS.forEach(function (a0, i) {
+      var a = a0 + sweep, dx = Math.cos(a), dy = Math.sin(a);
+      ticks[i].setAttribute('x1', C + dx * (RADIUS - 5)); ticks[i].setAttribute('y1', C + dy * (RADIUS - 5));
+      ticks[i].setAttribute('x2', C + dx * (RADIUS + 5)); ticks[i].setAttribute('y2', C + dy * (RADIUS + 5));
+      ticks[i].setAttribute('stroke', css(frame.track));
+    });
+    var pr = Math.max(0, Math.min(1, frame.progress));
+    if (pr <= 0) progressPath.setAttribute('d', '');
+    else {
+      var a0 = -Math.PI / 2 + sweep, a1 = a0 + Math.PI * 2 * Math.min(pr, 0.99999), large = pr > 0.5 ? 1 : 0;
+      progressPath.setAttribute('d', 'M' + (C + Math.cos(a0) * RADIUS) + ' ' + (C + Math.sin(a0) * RADIUS) + 'A' + RADIUS + ' ' + RADIUS + ' 0 ' + large + ' 1 ' + (C + Math.cos(a1) * RADIUS) + ' ' + (C + Math.sin(a1) * RADIUS));
+      progressPath.setAttribute('stroke', css(withA(rgb('seerr'), 0.5)));
+    }
+    frame.nodes.forEach(function (n, i) {
+      var p = P[i], a = ANGLES[i] + sweep, dx = Math.cos(a), dy = Math.sin(a);
+      var x = C + dx * RADIUS * ENTRANCE, y = C + dy * RADIUS * ENTRANCE;
+      if (n.spoke > 0.001) {
+        var full = RADIUS * ENTRANCE - 9, sx = C + dx * RADIUS * 0.34, sy = C + dy * RADIUS * 0.34;
+        var ex = C + dx * (RADIUS * 0.34 + (full - RADIUS * 0.34) * n.spoke), ey = C + dy * (RADIUS * 0.34 + (full - RADIUS * 0.34) * n.spoke);
+        p.spoke.setAttribute('x1', sx); p.spoke.setAttribute('y1', sy); p.spoke.setAttribute('x2', ex); p.spoke.setAttribute('y2', ey);
+        p.lg.setAttribute('x1', sx); p.lg.setAttribute('y1', sy); p.lg.setAttribute('x2', ex); p.lg.setAttribute('y2', ey);
+        p.ls0.setAttribute('stop-color', css(withA(n.accent, 0.05 * n.spoke))); p.ls1.setAttribute('stop-color', css(withA(n.accent, n.spokeAlpha * n.spoke)));
+        p.spoke.style.display = '';
+      } else p.spoke.style.display = 'none';
+      if (n.glow > 0.001) {
+        p.halo.setAttribute('cx', x); p.halo.setAttribute('cy', y); p.halo.setAttribute('r', n.radius * 3.4);
+        p.rs0.setAttribute('stop-color', css(withA(n.accent, n.glow))); p.rs1.setAttribute('stop-color', css(withA(n.accent, 0)));
+        p.halo.style.display = '';
+      } else p.halo.style.display = 'none';
+      p.node.setAttribute('cx', x); p.node.setAttribute('cy', y); p.node.setAttribute('r', n.radius); p.node.setAttribute('fill', css(n.color));
+      if (n.collar > 0.001) {
+        p.collar.setAttribute('cx', x); p.collar.setAttribute('cy', y); p.collar.setAttribute('r', n.radius + 4);
+        p.collar.setAttribute('stroke', css(withA(n.collarColor, n.collarColor.a * n.collar))); p.collar.style.display = '';
+      } else p.collar.style.display = 'none';
+      p.hit.setAttribute('cx', x); p.hit.setAttribute('cy', y);
+    });
+  }
+  /* _ServiceRingState: _transition (400 ms) + _spinner (repeat, 96 s) */
+  var states = {}, active = null, progress = 0, from = null, painted = null, tStart = 0, spinning = true, fast = 1;
+  var spinPhase = 0, spinT0 = performance.now(), raf = 0;
+  function sweepNow(now) { return spinning && !reduce() ? (spinPhase + (now - spinT0) * fast / SPIN_MS) % 1 : spinPhase; }
+  function spoken() {
+    var v = ORDER.map(function (k) { return states[k] || 'unlit'; });
+    var picked = v.filter(function (s) { return s !== 'unlit'; }).length, conn = v.filter(function (s) { return s === 'connected'; }).length, sil = v.filter(function (s) { return s === 'silent'; }).length;
+    if (!picked) return N + ' services, none set up yet';
+    var parts = [picked + ' of ' + N + ' chosen']; if (conn) parts.push(conn + ' answering'); if (sil) parts.push(sil + ' not answering');
+    return parts.join(', ');
+  }
+  function frame(now) {
+    raf = 0;
+    var target = resolve(states, active, progress), f = target, busy = false;
+    if (from) {
+      var p = Math.min(1, (now - tStart) / TRANSITION_MS), t = easeOutCubic(p);
+      f = lerpFrame(from, target, t); busy = p < 1;
+      out.t.textContent = (busy ? 't ' + t.toFixed(3) : 'idle') + ' · 400 ms · easeOutCubic';
+      if (!busy) from = null;
+    }
+    var sw = sweepNow(now);
+    painted = f; paint(f, sw * Math.PI * 2);
+    out.sweep.textContent = (sw * 360).toFixed(1) + '° · ' + (spinning && !reduce() ? '96 s per turn, linear' + (fast > 1 ? ' (×32 here)' : '') : 'stopped');
+    if (busy || (spinning && !reduce())) raf = requestAnimationFrame(frame);
+  }
+  function kick() { if (!raf) raf = requestAnimationFrame(frame); }
+  function change(fn, label) {
+    fn();
+    q('[data-svg]').setAttribute('aria-label', spoken()); out.spoken.textContent = spoken(); out.last.textContent = label;
+    if (reduce()) { from = null; out.t.textContent = 'none: the frame paints at once'; }
+    else { from = painted; tStart = performance.now(); }
+    kick();
+  }
+  var CYCLE = ['unlit', 'picked', 'connected', 'silent'];
+  P.forEach(function (p) {
+    function step() { change(function () { var s = states[p.key] || 'unlit'; states[p.key] = CYCLE[(CYCLE.indexOf(s) + 1) % 4]; active = null; }, (NAMES[p.key] || p.key) + ' → ' + CYCLE[(CYCLE.indexOf(states[p.key] || 'unlit') + 1) % 4]); }
+    p.hit.addEventListener('click', step);
+    p.hit.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); step(); } });
+  });
+  var walk = [];
+  var SCRIPT = [
+    [function () { states = {}; active = null; progress = 0; }, 'reset: nothing set up'],
+    [function () { ['seerr', 'radarr', 'sonarr', 'qbittorrent', 'prowlarr', 'jellyfin'].forEach(function (k) { states[k] = 'picked'; }); active = 'radarr'; progress = 0.17; }, 'six picked · configuring Radarr'],
+    [function () { states.radarr = 'connected'; active = 'sonarr'; progress = 0.33; }, 'Radarr answers · configuring Sonarr'],
+    [function () { states.sonarr = 'connected'; active = 'qbittorrent'; progress = 0.5; }, 'Sonarr answers · configuring qBittorrent'],
+    [function () { states.qbittorrent = 'connected'; active = 'prowlarr'; progress = 0.67; }, 'qBittorrent answers · configuring Prowlarr'],
+    [function () { states.prowlarr = 'silent'; active = 'jellyfin'; progress = 0.83; }, 'Prowlarr silent · configuring Jellyfin'],
+    [function () { states.jellyfin = 'connected'; active = null; progress = 1; }, 'Jellyfin answers · done']
+  ];
+  function replay() { walk.forEach(clearTimeout); walk = []; SCRIPT.forEach(function (s, i) { walk.push(setTimeout(function () { change(s[0], s[1]); }, i * 700)); }); }
+  q('[data-replay]').addEventListener('click', replay);
+  var spinBtn = q('[data-spin]'), fastBtn = q('[data-fast]');
+  function rebase() { var now = performance.now(); spinPhase = sweepNow(now); spinT0 = now; }
+  spinBtn.addEventListener('click', function () { rebase(); spinning = !spinning; spinBtn.setAttribute('aria-pressed', spinning ? 'true' : 'false'); kick(); });
+  fastBtn.addEventListener('click', function () { rebase(); fast = fast === 1 ? 32 : 1; fastBtn.setAttribute('aria-pressed', fast > 1 ? 'true' : 'false'); kick(); });
+  var sw = q('[data-reduce-switch]');
+  function setReduce(v) { rebase(); root.dataset.reduce = v ? 'true' : 'false'; sw.setAttribute('aria-checked', v ? 'true' : 'false'); if (v) from = null; kick(); }
+  sw.addEventListener('click', function () { setReduce(!reduce()); });
+  var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (mq.addEventListener) mq.addEventListener('change', function (e) { setReduce(e.matches); });
+  setReduce(mq.matches);
+  new MutationObserver(function () { cache = {}; from = null; kick(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  change(function () {}, '—');
+  replay();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!-- @dsCard group="Media detail" height=320 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RatingChip — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-col" style="padding:var(--space-lg);gap:var(--space-sm)">
+  <div class="cp-caption">RatingChipsRow — Radarr, each source on its own scale</div>
+  <div class="cp-rating-chip-row">
+    <span class="cp-rating-chip-target" aria-label="IMDb rating 8.6 out of 10, 512300 votes"><span class="cp-rating-chip-chip" style="--accent:var(--radarr)" data-ontint="radarr" data-alpha="0.12"><span>IMDb</span><span class="cp-rating-chip-score">8.6/10 (512.3k)</span></span></span>
+    <span class="cp-rating-chip-target" aria-label="TMDB rating 8.2 out of 10, 5120 votes"><span class="cp-rating-chip-chip" style="--accent:var(--radarr)" data-ontint="radarr" data-alpha="0.12"><span>TMDB</span><span class="cp-rating-chip-score">8.2/10 (5.1k)</span></span></span>
+    <span class="cp-rating-chip-target" aria-label="Metacritic rating 79 out of 100"><span class="cp-rating-chip-chip" style="--accent:var(--radarr)" data-ontint="radarr" data-alpha="0.12"><span>Metacritic</span><span class="cp-rating-chip-score">79/100</span></span></span>
+    <span class="cp-rating-chip-target" aria-label="Rotten Tomatoes rating 92 percent"><span class="cp-rating-chip-chip" style="--accent:var(--radarr)" data-ontint="radarr" data-alpha="0.12"><span>Rotten Tomatoes</span><span class="cp-rating-chip-score">92%</span></span></span>
+  </div>
+  <div class="cp-caption" style="margin-top:var(--space-sm)">Sonarr — a single-source payload, one pill</div>
+  <div class="cp-rating-chip-row">
+    <span class="cp-rating-chip-target"><span class="cp-rating-chip-chip" style="--accent:var(--sonarr)" data-ontint="sonarr" data-alpha="0.12"><span>TVDB</span><span class="cp-rating-chip-score">8.4/10 (1.2k)</span></span></span>
+  </div>
+  <div class="cp-caption" style="margin-top:var(--space-sm)">No accent passed — brand primary</div>
+  <div class="cp-rating-chip-row">
+    <span class="cp-rating-chip-target"><span class="cp-rating-chip-chip" data-ontint="primary" data-alpha="0.12"><span>TMDB</span><span class="cp-rating-chip-score">7.1/10 (842)</span></span></span>
+  </div>
+  <div class="cp-caption" style="margin-top:var(--space-sm)">MediaMetadataLine — the hero's facts, one line</div>
+  <div class="cp-rating-chip-meta">2024 · 2h 46m</div>
+</div>
+<script>window.Cupola && window.Cupola.refresh();</script>
+</body>
+</html>

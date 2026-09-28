@@ -1,0 +1,17 @@
+# MediaChildList
+
+The one `container → children` vocabulary: a season or album selector over dense child rows — episodes, tracks, albums — each carrying its status as a tone and, when it matters, as a word.
+
+Hand-written from `lib/core/widgets/media_child_list.dart` (`MediaChildTile`, `MediaChildGroupSliver`, `_GroupSelector`, `_CollapseToggle`, `mediaStatusWord`), hosted by `MediaDetailSlot.lazy` in region 3. Selector pills are `SelectionPills`.
+
+- **Selector** (more than one container) — `SelectionPills` in the page accent (selected: accent 16% dark / 13% light, border 27%, label walked by `onTint`; `radius-pill`, min 48). Over six containers, or past 1.4× reading size, the rail ends in a 48 icon button (`unfold_more`, 18px, `on-surface-variant`, tooltip *All 7 seasons*) that opens a sheet of numbered rows titled *Seasons*.
+- **Summary** — the container label in `title-small` 600, `space-xs`, the manifest gap in `label-small` tabular `dim-text` (*4 of 6 episodes*, *8 of 10 aired · 12 total*); trailing a full `StatusBadge` and the caller's action (a search menu). Past 1.4× reading size the trailing half drops under the text. A 3px progress bar follows (`radius-xs`, `surface-container-highest` track, the status tone) only when strictly between 0 and 1; `space-sm` closes the block.
+- **Rows** — `AppCard.filled` (`surface-container`, `radius-md`), padding `space-sm` × `space-md`, `space-xs` apart, dipping to 0.97 on press instead of flooding a ripple. **`.numbered`**: ordinal in `label-small` 600 tabular `on-surface-variant`, min 30 wide (grows with reading size), `space-sm`. **`.stacked`**: a leading artwork (Lidarr: 38 × 54, `radius-sm`, `BoxFit.cover`), `space-md`, and an optional 3px progress bar under the text. Title `body-medium` 600, two lines; facts `body-medium` `on-surface-variant` joined ` • `, two lines. Then `space-sm` and the status: an 8px dot on `.numbered`, a compact badge on `.stacked`; then `space-xs` and the trailing control.
+- **Status word** — `mediaStatusWord` puts the pipeline state (*Downloading 42%*) or the label (*Missing*) into the facts whenever the row is not plainly available; a wall of green dots carries no text.
+- **Collapse** — eight rows, then a full-width text button (min 48): `keyboard_arrow_down` 18 + *Show all 25 episodes*; expanded, *Show fewer*. Switching container collapses again. Its label and glyph are the accent walked by `onTint` against the page surface, not the raw byte.
+
+The consumer provides `groups` (id, short label `S3` / `Sp`, label, resolved status, summary, progress), `childCount`, `childBuilder`, `childNoun`, `pickerLabel`, `pickerTitle`, an empty state and optional `groupAction` / `childOverride`. Titles, dates and counts shown are illustrative; the one loaded cover is the *Nosferatu* (1922) poster standing in for album art, and the second album shows Lidarr's no-cover placeholder (`surface-container-highest`, `album` in `outline`).
+
+Semantics: a row is one button speaking *Episode 6, Ellen's Vigil, Feb 21, 2025, Missing* with the status as its value; the dot or badge is silenced. The trailing search menu keeps its own node. The toggle's name carries the noun (*Show fewer episodes*).
+
+Do: resolve the status in the feature's domain layer and pass a status word in `facts` for anything not available. Don't: build the whole list in a `Column` — it is a sliver so a 250-episode season builds the rows on screen.

@@ -1,0 +1,69 @@
+<!-- @dsCard group="Loading" height=580 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Skeleton — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-skeleton-grid" aria-busy="true">
+  <div class="cp-skeleton-cell">
+    <span class="cp-caption">AppSkeleton.listRows · 104pt rows, radius-md, 8 apart</span>
+    <div class="cp-skeleton-well cp-skeleton-list">
+      <div class="cp-skeleton-block cp-skeleton-card" style="height:104px"></div>
+      <div class="cp-skeleton-block cp-skeleton-card" style="height:104px"></div>
+    </div>
+    <span class="cp-caption">ListRowsShimmer · 60pt rows, square corners</span>
+    <div class="cp-skeleton-well cp-skeleton-rows">
+      <div class="cp-skeleton-block" style="height:60px"></div>
+      <div class="cp-skeleton-block" style="height:60px"></div>
+      <div class="cp-skeleton-block" style="height:60px"></div>
+    </div>
+  </div>
+
+  <div class="cp-skeleton-cell">
+    <span class="cp-caption">AppSkeleton.detailBody</span>
+    <div class="cp-skeleton-well">
+      <div class="cp-skeleton-block" style="height:220px"></div>
+      <div style="padding:var(--space-lg)">
+        <div class="cp-skeleton-detail-head">
+          <div class="cp-skeleton-block cp-skeleton-card" style="width:96px;height:144px;flex:none"></div>
+          <div>
+            <div class="cp-skeleton-block cp-skeleton-text" style="width:100%;max-width:200px;height:22px"></div>
+            <div class="cp-skeleton-block cp-skeleton-text" style="width:120px;margin-top:var(--space-md)"></div>
+            <div class="cp-skeleton-block cp-skeleton-text" style="width:100%;max-width:160px;margin-top:var(--space-sm)"></div>
+          </div>
+        </div>
+        <div class="cp-skeleton-block cp-skeleton-text" style="margin-top:var(--space-xl)"></div>
+        <div class="cp-skeleton-block cp-skeleton-text" style="margin-top:var(--space-sm)"></div>
+        <div class="cp-skeleton-block cp-skeleton-text" style="width:240px;max-width:100%;margin-top:var(--space-sm)"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cp-skeleton-cell">
+    <span class="cp-caption">AppSkeleton.posterRow · 112 × 168, 12 apart</span>
+    <div class="cp-skeleton-well">
+      <div class="cp-skeleton-posters">
+        <div class="cp-skeleton-block cp-skeleton-card"></div>
+        <div class="cp-skeleton-block cp-skeleton-card"></div>
+        <div class="cp-skeleton-block cp-skeleton-card"></div>
+      </div>
+    </div>
+    <span class="cp-caption">One 1500ms cycle, easeInOutSine, v from −1 to 2</span>
+    <div class="cp-skeleton-well cp-skeleton-sweep">
+      <div class="cp-skeleton-sweep-row"><span class="cp-caption">v −0.5</span><div class="cp-skeleton-block" style="--at:-0.5"></div></div>
+      <div class="cp-skeleton-sweep-row"><span class="cp-caption">v 0.25</span><div class="cp-skeleton-block" style="--at:0.25"></div></div>
+      <div class="cp-skeleton-sweep-row"><span class="cp-caption">v 1.0</span><div class="cp-skeleton-block" style="--at:1"></div></div>
+      <div class="cp-skeleton-sweep-row"><span class="cp-caption">v 1.75</span><div class="cp-skeleton-block" style="--at:1.75"></div></div>
+    </div>
+    <span class="cp-caption">Reduce Motion · the flat base, no sweep</span>
+    <div class="cp-skeleton-well cp-skeleton-list">
+      <div class="cp-skeleton-block cp-skeleton-card is-flat" style="height:104px"></div>
+    </div>
+  </div>
+</div>
+<script>window.Cupola && window.Cupola.refresh();</script>
+</body>
+</html>

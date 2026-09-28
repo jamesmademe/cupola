@@ -1,0 +1,59 @@
+<!-- @dsCard group="Service surfaces" height=606 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AmbientScaffold — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-ambient-scaffold-stage">
+  <div class="cp-col" style="gap:var(--space-sm)">
+    <div class="cp-ambient-scaffold-room" style="--accent:var(--radarr)">
+      <div class="cp-ambient-scaffold-glass cp-ambient-scaffold-appbar">
+        <div class="cp-ambient-scaffold-appbar__row">
+          <span class="cp-ambient-scaffold-back" aria-label="Back to Dashboard"><span class="cp-icon" aria-hidden="true">chevron_left</span></span>
+          <span class="cp-ambient-scaffold-dot"></span>
+          <span class="cp-ambient-scaffold-title">Radarr</span>
+          <span class="cp-ambient-scaffold-action" aria-label="Activity"><span class="cp-icon outlined" data-ontint="radarr" data-surface="surface" data-alpha="0" aria-hidden="true">monitor_heart</span></span>
+        </div>
+      </div>
+      <div class="cp-ambient-scaffold-glass cp-ambient-scaffold-tabband">
+        <div class="cp-service-tab-bar" role="tablist" aria-label="Radarr">
+          <span class="cp-service-tab-bar-tab is-selected" role="tab" aria-selected="true" data-ontint="radarr" data-surface="surface" data-alpha="0">Overview</span>
+          <span class="cp-service-tab-bar-tab" role="tab">Library</span>
+          <span class="cp-service-tab-bar-tab" role="tab">Calendar</span>
+          <span class="cp-service-tab-bar-tab" role="tab">Queue</span>
+        </div>
+      </div>
+      <div class="cp-ambient-scaffold-content">
+        <div class="cp-ambient-scaffold-block">Region</div>
+        <div class="cp-ambient-scaffold-block">Region</div>
+        <div class="cp-ambient-scaffold-block">Region</div>
+        <div class="cp-ambient-scaffold-block">Region</div>
+        <div class="cp-ambient-scaffold-block">Region</div>
+        <div class="cp-ambient-scaffold-block">Region</div>
+        <div class="cp-ambient-scaffold-block">Region</div>
+      </div>
+    </div>
+    <span class="cp-caption">Radarr service home on touch · two GlassSurface bands (app bar 56, tab bar 44), content mid-scroll</span>
+  </div>
+  <div class="cp-col" style="gap:var(--space-sm)">
+    <div class="cp-ambient-scaffold-room" style="--accent:var(--truenas)">
+      <div class="cp-ambient-scaffold-glass cp-ambient-scaffold-appbar">
+        <div class="cp-ambient-scaffold-appbar__row"><span class="cp-ambient-scaffold-title">TrueNAS</span></div>
+      </div>
+      <div class="cp-ambient-scaffold-content" style="padding-top:64px"></div>
+    </div>
+    <span class="cp-caption">TrueNAS hub · GlassAppBar at rest over the bare room</span>
+  </div>
+  <div class="cp-col" style="gap:var(--space-sm);max-width:200px">
+    <span class="cp-eyebrow" style="color:var(--on-surface-variant)">The room</span>
+    <span class="cp-body-small" style="color:var(--on-surface-variant)">Opaque surface, then two accent radials: 16% dark / 10% light at the centre, fading to transparent over 1.4 × the shortest side. One anchored top left, one bottom right, the same strength.</span>
+    <span class="cp-eyebrow" style="color:var(--on-surface-variant);margin-top:var(--space-sm)">The glass</span>
+    <span class="cp-body-small" style="color:var(--on-surface-variant)">surface at 55% → 28% at 55% of the height → 0 (light 60% → 32% → 0). No blur, no border.</span>
+  </div>
+</div>
+<script>window.Cupola && window.Cupola.refresh();</script>
+</body>
+</html>

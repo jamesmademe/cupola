@@ -1,0 +1,22 @@
+<!-- @dsCard group="Feedback" height=250 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FaultNote — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-fault-note-stage">
+  <div class="cp-fault-note-ground" style="background:var(--surface-container)">
+    <span class="cp-fault-note-label">.unreachable · in a request sheet (surface-container)</span>
+    <div class="cp-fault-note"><span class="cp-icon" data-ontint="error" data-surface="surface-container" aria-hidden="true">error_outline</span><span class="cp-fault-note__msg">Failed to load servers: the connection timed out.</span></div>
+  </div>
+  <div class="cp-fault-note-ground" style="background:var(--surface-container-low)">
+    <span class="cp-fault-note-label">.fault · in a purchase sheet</span>
+    <div class="cp-fault-note"><span class="cp-icon" data-ontint="warning" data-surface="surface-container-low" aria-hidden="true">warning_amber</span><span class="cp-fault-note__msg">Purchase failed. You have not been charged.</span></div>
+  </div>
+</div>
+<script>window.Cupola && window.Cupola.refresh();</script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!-- @dsCard group="Motion" height=480 subtitle="The five durations and two curves, raced" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MotionTokens — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-motion cp-motion-tokens" data-reduce="false">
+  <div class="cp-motion-bar">
+    <div class="cp-motion-bar-title"><b>AppAnimation</b><span class="cp-caption">Each bar runs 0 → 1 over its duration on the chosen curve; the shorter ones finish first.</span></div>
+    <div class="cp-motion-seg" role="group" aria-label="Curve">
+      <button type="button" data-curve="standard" aria-pressed="false">standardCurve</button>
+      <button type="button" data-curve="emphasized" aria-pressed="true">emphasizedCurve</button>
+    </div>
+    <button type="button" class="cp-motion-btn" data-replay><span class="cp-icon" aria-hidden="true">replay</span>Replay</button>
+    <button type="button" class="cp-motion-switch" role="switch" aria-checked="false" data-reduce-switch><span class="cp-motion-switch-track" aria-hidden="true"></span>Reduce motion</button>
+  </div>
+  <div class="cp-motion-tokens-grid">
+    <div class="cp-motion-tokens-lanes" data-lanes></div>
+    <div class="cp-motion-col">
+      <svg class="cp-motion-tokens-plot" viewBox="0 0 272 272" role="img" aria-label="Plot of standardCurve and emphasizedCurve, progress against time">
+        <path class="grid" d="M30 193H258M30 136H258M30 79H258M87 250V22M144 250V22M201 250V22"/>
+        <path class="axis" d="M30 22V250H258"/>
+        <path class="std" data-path="standard"/>
+        <path class="emp" data-path="emphasized"/>
+        <circle class="dot" r="4" cx="30" cy="250" data-dot/>
+        <text x="30" y="264">0</text><text x="252" y="264">t 1</text><text x="8" y="26">1</text>
+      </svg>
+      <div class="cp-motion-key">
+        <span><i style="background:var(--primary)"></i>standardCurve · easeInOutCubicEmphasized</span>
+        <span><i style="background:var(--nav-settings)"></i>emphasizedCurve · easeOutCubic</span>
+      </div>
+      <p class="cp-motion-note">The dot rides the selected curve on the 500ms lane. CSS renders <code>easeInOutCubicEmphasized</code> as a 26-stop <code>linear()</code> (max error 0.004); no single <code>cubic-bezier</code> gets closer than 0.07.</p>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var root = document.querySelector('.cp-motion-tokens');
+  /* Flutter's Cubic.transform: bisection to within 0.001 (curves.dart). */
+  function cubic(a, b, c, d) {
+    function ev(p, q, m) { return 3 * p * (1 - m) * (1 - m) * m + 3 * q * (1 - m) * m * m + m * m * m; }
+    return function (t) {
+      if (t <= 0) return 0; if (t >= 1) return 1;
+      var lo = 0, hi = 1;
+      for (;;) { var m = (lo + hi) / 2, x = ev(a, c, m); if (Math.abs(t - x) < 0.001) return ev(b, d, m); if (x < t) lo = m; else hi = m; }
+    };
+  }
+  /* Curves.easeInOutCubicEmphasized = ThreePointCubic((0.05,0),(0.133333,0.06),(0.166666,0.4),(0.208333,0.82),(0.25,1)). */
+  function threePoint(a1, b1, mid, a2, b2) {
+    var sx1 = mid[0], sy1 = mid[1], sx2 = 1 - mid[0], sy2 = 1 - mid[1];
+    var first = cubic(a1[0] / sx1, a1[1] / sy1, b1[0] / sx1, b1[1] / sy1);
+    var second = cubic((a2[0] - mid[0]) / sx2, (a2[1] - mid[1]) / sy2, (b2[0] - mid[0]) / sx2, (b2[1] - mid[1]) / sy2);
+    return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; return t < mid[0] ? first(t / sx1) * sy1 : second((t - mid[0]) / sx2) * sy2 + mid[1]; };
+  }
+  var CURVES = {
+    standard: threePoint([0.05, 0], [0.133333, 0.06], [0.166666, 0.4], [0.208333, 0.82], [0.25, 1]),
+    emphasized: cubic(0.215, 0.61, 0.355, 1)
+  };
+  var sine = cubic(0.445, 0.05, 0.55, 0.95);
+  var linear = function (t) { return t; };
+  /* AnimationController under disableAnimations: 5% of the duration (animation_controller.dart:651). */
+  var REDUCED = 0.05;
+  var LANES = [
+    { name: 'durationXs', ms: 100, use: 'press dip · nav scale bump' },
+    { name: 'durationSm', ms: 200, use: 'nav pill · badge · reel roll' },
+    { name: 'durationMd', ms: 300, use: 'progress-ring sweep' },
+    { name: 'durationLg', ms: 400, use: 'ring node states · portal nominal' },
+    { name: 'durationXl', ms: 500, use: 'nav bar spring-back' },
+    { sep: true },
+    { name: 'shimmerDuration', ms: 1500, kind: 'sine', use: 'easeInOutSine · repeats' },
+    { name: 'confirmationHold', ms: 1600, kind: 'hold', use: 'a Timer, not a curve' }
+  ];
+  var host = root.querySelector('[data-lanes]');
+  LANES.forEach(function (l) {
+    if (l.sep) { var s = document.createElement('div'); s.className = 'cp-motion-tokens-sep'; host.appendChild(s); return; }
+    var row = document.createElement('div');
+    row.className = 'cp-motion-tokens-lane' + (l.kind ? ' is-' + l.kind : '');
+    var reduced = l.kind === 'sine' ? 'stopped' : l.kind === 'hold' ? l.ms + ' ms' : Math.round(l.ms * REDUCED) + ' ms';
+    row.innerHTML = '<div class="cp-motion-tokens-lane-name"><b>' + l.name + '</b><span>' + l.use + '</span></div>' +
+      '<div class="cp-motion-tokens-track"><div class="cp-motion-tokens-fill"></div>' +
+      (l.kind === 'sine' ? '<div class="cp-motion-tokens-flat">Reduce Motion: flat base, no sweep</div>' : '') +
+      (l.kind === 'hold' ? '<div class="cp-motion-tokens-flat" style="display:flex"><span class="cp-motion-tokens-held"><span class="cp-icon" aria-hidden="true">search</span><span>idle</span></span></div>' : '') +
+      '</div><div class="cp-motion-tokens-ms"><span class="is-full">' + l.ms + ' ms</span><span class="is-reduced">' + reduced + '</span></div>';
+    l.fill = row.querySelector('.cp-motion-tokens-fill');
+    l.held = row.querySelector('.cp-motion-tokens-held');
+    host.appendChild(row);
+  });
+  function pathFor(f) {
+    var d = '';
+    for (var i = 0; i <= 160; i++) { var x = i / 160; d += (i ? 'L' : 'M') + (30 + 228 * x).toFixed(2) + ' ' + (250 - 228 * f(x)).toFixed(2); }
+    return d;
+  }
+  root.querySelector('[data-path="standard"]').setAttribute('d', pathFor(CURVES.standard));
+  root.querySelector('[data-path="emphasized"]').setAttribute('d', pathFor(CURVES.emphasized));
+  var dot = root.querySelector('[data-dot]');
+  var curveName = 'emphasized';
+  var segButtons = root.querySelectorAll('[data-curve]');
+  function paintSeg() {
+    segButtons.forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.curve === curveName ? 'true' : 'false'); });
+    root.querySelector('[data-path="standard"]').classList.toggle('dim', curveName !== 'standard');
+    root.querySelector('[data-path="emphasized"]').classList.toggle('dim', curveName !== 'emphasized');
+  }
+  segButtons.forEach(function (b) { b.addEventListener('click', function () { curveName = b.dataset.curve; paintSeg(); race(); }); });
+  var raf = 0, start = 0;
+  function reduce() { return root.dataset.reduce === 'true'; }
+  function frame(now) {
+    var el = now - start, busy = false, r = reduce(), curve = CURVES[curveName];
+    LANES.forEach(function (l) {
+      if (l.sep) return;
+      var ms = l.kind === 'hold' ? l.ms : l.ms * (r ? REDUCED : 1);
+      var p = Math.min(1, el / ms), v;
+      if (l.kind === 'sine') { if (r) { l.fill.style.transform = 'scaleX(0)'; return; } v = sine(p); }
+      else if (l.kind === 'hold') {
+        v = linear(p);
+        l.held.innerHTML = p < 1 ? '<span class="cp-icon" aria-hidden="true">check</span><span>held</span>' : '<span class="cp-icon" aria-hidden="true">search</span><span>reverted</span>';
+      } else v = curve(p);
+      l.fill.style.transform = 'scaleX(' + v + ')';
+      if (l.name === 'durationXl') { dot.setAttribute('cx', (30 + 228 * p).toFixed(2)); dot.setAttribute('cy', (250 - 228 * v).toFixed(2)); }
+      if (p < 1) busy = true;
+    });
+    if (busy) raf = requestAnimationFrame(frame);
+  }
+  function race() { cancelAnimationFrame(raf); start = performance.now(); raf = requestAnimationFrame(frame); }
+  root.querySelector('[data-replay]').addEventListener('click', race);
+  /* Reduce Motion follows the OS setting; the switch simulates it. */
+  var sw = root.querySelector('[data-reduce-switch]');
+  function setReduce(v) { root.dataset.reduce = v ? 'true' : 'false'; sw.setAttribute('aria-checked', v ? 'true' : 'false'); }
+  sw.addEventListener('click', function () { setReduce(!reduce()); race(); });
+  var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (mq.addEventListener) mq.addEventListener('change', function (e) { setReduce(e.matches); race(); });
+  setReduce(mq.matches);
+  paintSeg();
+  race();
+})();
+</script>
+</body>
+</html>

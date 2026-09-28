@@ -1,0 +1,27 @@
+<!-- @dsCard group="Status" height=192 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ConnectionBadge — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-connection-badge-stage">
+  <div class="cp-connection-badge-row">
+    <span class="cp-connection-badge" style="--accent:var(--radarr)" data-ontint="radarr" data-alpha="0.14">4K</span>
+    <span class="cp-connection-badge" style="--accent:var(--radarr)" data-ontint="radarr" data-alpha="0.14">Main</span>
+    <span class="cp-connection-badge" style="--accent:var(--sonarr)" data-ontint="sonarr" data-alpha="0.14">Anime</span>
+    <span class="cp-connection-badge" style="--accent:var(--qbittorrent)" data-ontint="qbittorrent" data-alpha="0.14">Seedbox</span>
+    <span class="cp-caption">Connection names are illustrative — they are the user's own labels</span>
+  </div>
+  <div class="cp-col" style="gap:0">
+    <div class="cp-connection-badge-feed"><span class="cp-connection-badge-feed__title">Dune: Part Two (2024)</span><span class="cp-badge"><span class="cp-icon" data-ontint="info" aria-hidden="true">downloading</span>Downloading</span><span class="cp-connection-badge" style="--accent:var(--radarr)" data-ontint="radarr" data-alpha="0.14">4K</span></div>
+    <div class="cp-connection-badge-feed"><span class="cp-connection-badge-feed__title">Oppenheimer (2023)</span><span class="cp-badge"><span class="cp-icon" data-ontint="success" aria-hidden="true">check_circle</span>Imported</span><span class="cp-connection-badge" style="--accent:var(--radarr)" data-ontint="radarr" data-alpha="0.14">Main</span></div>
+    <div class="cp-connection-badge-feed"><span class="cp-connection-badge-feed__title">Severance · S02E04</span><span class="cp-badge"><span class="cp-icon" data-ontint="info" aria-hidden="true">downloading</span>Downloading</span></div>
+    <span class="cp-caption">Activity rows · two Radarr connections interleave, so each row says which; Sonarr has one connection and draws no badge</span>
+  </div>
+</div>
+<script>window.Cupola && window.Cupola.refresh();</script>
+</body>
+</html>

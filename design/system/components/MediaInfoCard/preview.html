@@ -1,0 +1,47 @@
+<!-- @dsCard group="Media detail" height=480 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MediaInfoCard — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-stage" style="align-items:flex-start;gap:var(--space-xl)">
+  <div class="cp-col" style="gap:var(--space-sm);width:358px">
+    <div class="cp-caption">Details — editable row, then the two-column fact grid</div>
+    <div class="cp-card cp-card--surface-outlined">
+      <div class="cp-media-detail-section-value" role="button" aria-label="Quality profile, HD-1080p"><div class="cp-media-detail-section-value-text"><span class="cp-media-detail-section-value-label">Quality profile</span><span class="cp-media-detail-section-value-value">HD-1080p</span></div><span class="cp-icon" aria-hidden="true">expand_more</span></div>
+      <div class="cp-media-info-card-rows-gap"></div>
+      <div class="cp-media-info-card-grid">
+        <div class="cp-media-info-card-pair"><div class="cp-media-info-card-cell"><span class="cp-media-info-card-cell-label">Monitored</span><span class="cp-media-info-card-cell-value">Yes</span></div><div class="cp-media-info-card-cell"><span class="cp-media-info-card-cell-label">Profile</span><span class="cp-media-info-card-cell-value">HD-1080p</span></div></div>
+        <div class="cp-media-info-card-pair"><div class="cp-media-info-card-cell"><span class="cp-media-info-card-cell-label">In Cinemas</span><span class="cp-media-info-card-cell-value">Mar 4, 1922</span></div><div class="cp-media-info-card-cell"><span class="cp-media-info-card-cell-label">Digital</span><span class="cp-media-info-card-cell-value">Dec 3, 2022</span></div></div>
+        <div class="cp-media-info-card-pair"><div class="cp-media-info-card-cell"><span class="cp-media-info-card-cell-label">Physical</span><span class="cp-media-info-card-cell-value">Jan 10, 2023</span></div><div class="cp-media-info-card-cell"><span class="cp-media-info-card-cell-label">Studio</span><span class="cp-media-info-card-cell-value">Prana Film</span></div></div>
+        <div class="cp-media-info-card-pair"><div class="cp-media-info-card-cell"><span class="cp-media-info-card-cell-label">Certification</span><span class="cp-media-info-card-cell-value">Not Rated</span></div><div class="cp-media-info-card-cell"><span class="cp-media-info-card-cell-label">Language</span><span class="cp-media-info-card-cell-value">German</span></div></div>
+      </div>
+    </div>
+    <div class="cp-caption" style="margin-top:var(--space-sm)">Under 320 of content width — one column, 12 apart</div>
+    <div class="cp-card cp-card--surface-outlined" style="width:300px">
+      <div class="cp-media-info-card-grid is-single">
+        <div class="cp-media-info-card-cell"><span class="cp-media-info-card-cell-label">Monitored</span><span class="cp-media-info-card-cell-value">Yes</span></div>
+        <div class="cp-media-info-card-cell"><span class="cp-media-info-card-cell-label">Profile</span><span class="cp-media-info-card-cell-value">HD-1080p</span></div>
+        <div class="cp-media-info-card-cell"><span class="cp-media-info-card-cell-label">Studio</span><span class="cp-media-info-card-cell-value">Prana Film</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="cp-col" style="gap:var(--space-sm);width:358px">
+    <div class="cp-caption">FileInfoSection — a file on disk</div>
+    <div class="cp-media-info-card-file">
+      <div class="cp-media-info-card-file-well"><span class="cp-icon" data-ontint="radarr" data-surface="surface-container-highest" data-alpha="0" aria-hidden="true">storage</span></div>
+      <div class="cp-media-info-card-file-text" aria-label="Nosferatu (1922) Bluray-2160p.mkv, /data/media/movies/Nosferatu (1922)"><span class="cp-media-info-card-file-title">Nosferatu (1922) Bluray-2160p.mkv</span><span class="cp-media-info-card-file-sub">/data/media/movies/Nosferatu (1922)</span></div>
+    </div>
+    <div class="cp-caption" style="margin-top:var(--space-sm)">FileInfoSection.missing — tracked, nothing on disk</div>
+    <div class="cp-media-info-card-file">
+      <div class="cp-media-info-card-file-well"><span class="cp-icon" data-ontint="radarr" data-surface="surface-container-highest" data-alpha="0" aria-hidden="true">drive_folder_upload</span></div>
+      <div class="cp-media-info-card-file-text"><span class="cp-media-info-card-file-title">Import a file you already have</span><span class="cp-media-info-card-file-sub is-two">Manual import is in the actions menu.</span></div>
+    </div>
+  </div>
+</div>
+<script>window.Cupola && window.Cupola.refresh();</script>
+</body>
+</html>

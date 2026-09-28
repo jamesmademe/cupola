@@ -1,0 +1,119 @@
+<!-- @dsCard group="Motion" height=300 subtitle="Press and hold: the 0.97 dip" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PressableScale — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-motion cp-pressable-scale" data-reduce="false">
+  <div class="cp-motion-bar">
+    <div class="cp-motion-bar-title"><b>PressableScale</b><span class="cp-caption">Press and hold a tile. The dip starts 100ms after the finger lands; release returns on the same curve.</span></div>
+    <button type="button" class="cp-motion-btn" data-replay><span class="cp-icon" aria-hidden="true">touch_app</span>Play a tap</button>
+    <button type="button" class="cp-motion-btn" data-slow aria-pressed="false"><span class="cp-icon" aria-hidden="true">slow_motion_video</span>Slow ×10</button>
+    <button type="button" class="cp-motion-switch" role="switch" aria-checked="false" data-reduce-switch><span class="cp-motion-switch-track" aria-hidden="true"></span>Reduce motion</button>
+  </div>
+  <div class="cp-motion-row">
+    <div class="cp-pressable-scale-stage">
+      <div class="cp-pressable-scale-target cp-pressable-scale-poster" role="button" tabindex="0" aria-label="Nosferatu">
+        <div class="cp-pressable-scale-art"><img src="__POSTER__" alt=""></div>
+        <span class="cp-label-medium" style="color:var(--on-surface)">Nosferatu</span>
+      </div>
+      <div class="cp-pressable-scale-target cp-pressable-scale-row" role="button" tabindex="0" aria-label="Radarr, 12 missing">
+        <span class="cp-icon outlined" aria-hidden="true">movie</span>
+        <div><span class="cp-label-large cp-w600" style="color:var(--on-surface)">Radarr</span><span class="cp-caption">12 missing · 3 queued</span></div>
+        <span class="cp-icon" aria-hidden="true">chevron_right</span>
+      </div>
+    </div>
+    <div class="cp-pressable-scale-panel">
+      <dl class="cp-motion-readout">
+        <dt>scale</dt><dd data-out="scale">1.000</dd>
+        <dt>state</dt><dd data-out="state">idle</dd>
+        <dt>pressedScale</dt><dd>0.97</dd>
+        <dt>duration</dt><dd data-out="dur">100 ms · durationXs</dd>
+        <dt>curve</dt><dd>easeOutCubic, down and up</dd>
+        <dt>tap down</dt><dd>after kPressTimeout 100 ms</dd>
+      </dl>
+      <span class="cp-motion-haptic" data-haptic><span class="cp-icon" aria-hidden="true">vibration</span>HapticFeedback.lightImpact</span>
+      <p class="cp-motion-note">A tap shorter than 100ms fires down and up in one frame: no dip is painted, the haptic still fires. Under Reduce Motion the scale stays 1.0 and the duration is zero; the haptic is unchanged.</p>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var root = document.querySelector('.cp-pressable-scale');
+  var PRESSED = 0.97, DUR = 100, PRESS_TIMEOUT = 100, SLOP = 18; /* kPressTimeout, kTouchSlop */
+  var slow = false;
+  var out = {};
+  root.querySelectorAll('[data-out]').forEach(function (el) { out[el.dataset.out] = el; });
+  var haptic = root.querySelector('[data-haptic]');
+  function reduce() { return root.dataset.reduce === 'true'; }
+  function applyDur() {
+    var ms = reduce() ? 0 : DUR * (slow ? 10 : 1);
+    root.querySelectorAll('.cp-pressable-scale-target').forEach(function (t) { t.style.setProperty('--dur', ms + 'ms'); });
+    out.dur.textContent = reduce() ? '0 ms · Duration.zero' : ms + ' ms · durationXs' + (slow ? ' ×10' : '');
+  }
+  var raf = 0;
+  function watch(el) {
+    cancelAnimationFrame(raf);
+    var until = performance.now() + DUR * 10 + 120;
+    (function f(now) {
+      var m = getComputedStyle(el).transform, s = 1;
+      if (m && m !== 'none') s = parseFloat(m.slice(7));
+      out.scale.textContent = s.toFixed(3);
+      if (now < until) raf = requestAnimationFrame(f);
+    })(performance.now());
+  }
+  function fire() {
+    haptic.classList.add('is-firing');
+    clearTimeout(haptic._t);
+    haptic._t = setTimeout(function () { haptic.classList.remove('is-firing'); }, 650);
+  }
+  function setPressed(el, v) {
+    /* animate = !disableAnimations: under Reduce Motion the target scale is 1.0 either way. */
+    el.classList.toggle('is-pressed', v && !reduce());
+    watch(el);
+  }
+  root.querySelectorAll('.cp-pressable-scale-target').forEach(function (el) {
+    var timer = 0, down = null, pressed = false;
+    function begin(x, y) {
+      down = { x: x, y: y }; pressed = false;
+      out.state.textContent = 'pointer down, waiting for press timeout';
+      timer = setTimeout(function () { timer = 0; pressed = true; setPressed(el, true); out.state.textContent = 'onTapDown → pressed'; }, PRESS_TIMEOUT);
+    }
+    function end(cancel) {
+      if (!down) return;
+      down = null;
+      if (timer) { clearTimeout(timer); timer = 0; }
+      if (cancel) { out.state.textContent = 'onTapCancel → released, no haptic'; setPressed(el, false); return; }
+      out.state.textContent = pressed ? 'onTapUp → released · onTap' : 'down + up in one frame · onTap';
+      setPressed(el, false);
+      fire();
+    }
+    el.addEventListener('pointerdown', function (e) { el.setPointerCapture(e.pointerId); begin(e.clientX, e.clientY); });
+    el.addEventListener('pointermove', function (e) { if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > SLOP) end(true); });
+    el.addEventListener('pointerup', function () { end(false); });
+    el.addEventListener('pointercancel', function () { end(true); });
+    el.addEventListener('keydown', function (e) { if ((e.key === ' ' || e.key === 'Enter') && !down && !e.repeat) { e.preventDefault(); begin(0, 0); } });
+    el.addEventListener('keyup', function (e) { if (e.key === ' ' || e.key === 'Enter') end(false); });
+    el._begin = begin; el._end = end;
+  });
+  root.querySelector('[data-replay]').addEventListener('click', function () {
+    var el = root.querySelector('.cp-pressable-scale-poster');
+    el._end(true);
+    el._begin(0, 0);
+    setTimeout(function () { el._end(false); }, slow ? 1400 : 420);
+  });
+  var slowBtn = root.querySelector('[data-slow]');
+  slowBtn.addEventListener('click', function () { slow = !slow; slowBtn.setAttribute('aria-pressed', slow ? 'true' : 'false'); applyDur(); });
+  var sw = root.querySelector('[data-reduce-switch]');
+  function setReduce(v) { root.dataset.reduce = v ? 'true' : 'false'; sw.setAttribute('aria-checked', v ? 'true' : 'false'); applyDur(); }
+  sw.addEventListener('click', function () { setReduce(!reduce()); });
+  var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (mq.addEventListener) mq.addEventListener('change', function (e) { setReduce(e.matches); });
+  setReduce(mq.matches);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!-- @dsCard group="Motion" height=680 subtitle="The Portal: drag the bar up, fling, and let the spring decide" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ServicePortalPhysics — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-motion cp-service-portal-physics" data-reduce="false">
+  <div class="cp-motion-bar">
+    <div class="cp-motion-bar-title"><b>ServicePortalController</b><span class="cp-caption">Drag the floating bar upward. Past 75 the card jumps to your finger; let go past 140, or flick up faster than 700 px/s, and it opens.</span></div>
+    <button type="button" class="cp-motion-btn" data-replay><span class="cp-icon" aria-hidden="true">replay</span>Demo bounce</button>
+    <button type="button" class="cp-motion-btn" data-coach><span class="cp-icon" aria-hidden="true">tips_and_updates</span>Coach mark arrives</button>
+    <button type="button" class="cp-motion-switch" role="switch" aria-checked="false" data-reduce-switch><span class="cp-motion-switch-track" aria-hidden="true"></span>Reduce motion</button>
+  </div>
+  <div class="cp-motion-row">
+    <div class="cp-service-portal-phone cp-service-portal-physics-phone" data-phone>
+      <div class="cp-service-portal-backdrop" data-backdrop></div>
+      <div class="cp-service-portal-card" data-card><div class="cp-service-portal-page" aria-hidden="true"><i class="is-bar"></i><i class="is-kpis"></i><i class="is-row"></i><i class="is-row"></i><i class="is-row"></i><i class="is-row"></i></div></div>
+      <div class="cp-service-portal-floor" data-floor>
+        <div class="cp-service-portal-physics-spacer" data-spacer></div>
+        <div class="cp-service-portal-fade" data-fade></div>
+        <div class="cp-service-portal-panel" data-panel>
+          <div class="cp-service-portal-matrix" data-matrix><span class="cp-caption cp-service-portal-matrix-label">ServiceMatrix · picker role</span><div role="button" tabindex="0" aria-label="Radarr"></div><div role="button" tabindex="0" aria-label="Sonarr"></div><div role="button" tabindex="0" aria-label="qBittorrent"></div><div role="button" tabindex="0" aria-label="Prowlarr"></div><div role="button" tabindex="0" aria-label="Jellyfin"></div><div role="button" tabindex="0" aria-label="TrueNAS"></div></div>
+        </div>
+      </div>
+      <div class="cp-service-portal-coach" data-coach-fade>
+        <div class="cp-service-portal-physics-coach" data-coach-box role="note"><span class="cp-label-large cp-w600" style="color:var(--on-surface)">Swipe up to open the Portal</span><button type="button" class="cp-service-portal-coach-x cp-service-portal-physics-coach-x" data-coach-x aria-label="Turn this hint off"><span class="cp-icon" aria-hidden="true">close</span></button></div>
+      </div>
+      <div class="cp-service-portal-physics-nav" data-nav>
+        <div class="cp-navbar-wrap"><nav class="cp-navbar" aria-label="Main" data-bar>
+          <span class="cp-nav-item is-selected" data-ontint="nav-dashboard" data-alpha="0.16" data-alpha-light="0.13" data-tab><span class="cp-icon" aria-hidden="true">view_list</span>Dashboard</span>
+          <span class="cp-nav-item" data-tab><span class="cp-icon outlined" aria-hidden="true">monitor_heart</span></span>
+          <span class="cp-nav-item" data-tab><span class="cp-icon outlined" aria-hidden="true">search</span></span>
+          <span class="cp-nav-item" data-tab><span class="cp-icon outlined" aria-hidden="true">settings</span></span>
+        </nav></div>
+      </div>
+    </div>
+    <div class="cp-service-portal-physics-panel">
+      <span class="cp-caption">Finger travel · trigger 75 · safe zone 140</span>
+      <div class="cp-service-portal-physics-meter" aria-hidden="true"><i data-raw></i><b style="left:25%"></b><b style="left:46.667%"></b></div>
+      <span class="cp-caption">Portal value t</span>
+      <div class="cp-service-portal-physics-meter" aria-hidden="true"><i data-tbar></i><b style="left:70%"></b><b style="left:90%"></b></div>
+      <dl class="cp-motion-readout">
+        <dt>t</dt><dd data-out="t">0.000</dd>
+        <dt>mode</dt><dd data-out="mode">at rest</dd>
+        <dt>bar lift</dt><dd data-out="lift">0.0 · resistance 0.60 ÷ (1 + lift ÷ 7)</dd>
+        <dt>finger</dt><dd data-out="raw">0.0</dd>
+        <dt>card</dt><dd data-out="card">top 0.0 · scale 1.000 · radius 0.0</dd>
+        <dt>release</dt><dd data-out="release">—</dd>
+        <dt>spring</dt><dd data-out="spring">k 520 · ζ 0.95 · m 1</dd>
+        <dt>blends</dt><dd data-out="blends">engage 160 · disengage 220 · bar home 260 · spring-back 500</dd>
+      </dl>
+      <div class="cp-service-portal-physics-haptics">
+        <span class="cp-motion-haptic" data-haptic="lightImpact"><span class="cp-icon" aria-hidden="true">vibration</span>lightImpact</span>
+        <span class="cp-motion-haptic" data-haptic="selectionClick"><span class="cp-icon" aria-hidden="true">vibration</span>selectionClick</span>
+        <span class="cp-motion-haptic" data-haptic="mediumImpact"><span class="cp-icon" aria-hidden="true">vibration</span>mediumImpact</span>
+      </div>
+      <p class="cp-motion-note" data-note>Close it with a tab, a tap on the card or the gap above the matrix, a matrix cell, or by dragging the bar back down.</p>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var root = document.querySelector('.cp-service-portal-physics');
+  function cubic(a, b, c, d) {
+    function ev(p, q, m) { return 3 * p * (1 - m) * (1 - m) * m + 3 * q * (1 - m) * m * m + m * m * m; }
+    return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; var lo = 0, hi = 1; for (;;) { var m = (lo + hi) / 2, x = ev(a, c, m); if (Math.abs(t - x) < 0.001) return ev(b, d, m); if (x < t) lo = m; else hi = m; } };
+  }
+  var easeOutCubic = cubic(0.215, 0.61, 0.355, 1);
+  function elasticOut(t) { if (t <= 0) return 0; if (t >= 1) return 1; return Math.pow(2, -10 * t) * Math.sin((t - 0.1) * (Math.PI * 2) / 0.4) + 1; }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  /* PortalPhysics (service_portal.dart) — hand-tuned literals, not motion tokens. */
+  var PP = { threshold: 75, baseResistance: 0.60, falloff: 7, cardAnticipation: 0.80, safeZone: 140, springStiffness: 520, springDampingRatio: 0.95, flickGate: 700, cardTopInset: 34, cardScale: 0.42, cardCornerRadius: 22, engageBlend: 160, disengageBlend: 220, barHome: 260, barSpringBack: 500 };
+  var NAV_MAX_DRAG = 15, NAV_RESISTANCE = 0.15, NAV_FALLOFF = 30, NAV_SPRING = 500;
+  var REDUCED = 0.05; /* AnimationController.forward/animateTo under disableAnimations; animateWith (the spring) is not scaled */
+  var H = 580;
+  var q = function (s) { return root.querySelector(s); };
+  var phone = q('[data-phone]'), card = q('[data-card]'), backdrop = q('[data-backdrop]'), floor = q('[data-floor]'), spacer = q('[data-spacer]'), fade = q('[data-fade]'), panel = q('[data-panel]');
+  var nav = q('[data-nav]'), bar = q('[data-bar]'), coachFade = q('[data-coach-fade]'), coachBox = q('[data-coach-box]');
+  var out = {}; root.querySelectorAll('[data-out]').forEach(function (el) { out[el.dataset.out] = el; });
+  function reduce() { return root.dataset.reduce === 'true'; }
+  function scaled(ms) { return ms * (reduce() ? REDUCED : 1); }
+  function haptic(name) { var el = q('[data-haptic="' + name + '"]'); el.classList.add('is-firing'); clearTimeout(el._t); el._t = setTimeout(function () { el.classList.remove('is-firing'); }, 650); }
+  /* ---- a tiny AnimationController: value, tween (forward/animateTo) or simulation (animateWith) ---- */
+  function Controller(onTick) { this.value = 0; this.raf = 0; this.onTick = onTick || function () {}; this.animating = false; }
+  Controller.prototype.stop = function () { cancelAnimationFrame(this.raf); this.raf = 0; this.animating = false; };
+  Controller.prototype.set = function (v) { this.stop(); this.value = clamp(v, 0, 1); this.onTick(); };   /* the value setter stops the ticker */
+  Controller.prototype.tween = function (from, to, ms, curve, done) {
+    var self = this; this.stop(); this.animating = true; var t0 = performance.now();
+    function f(now) {
+      var p = ms <= 0 ? 1 : clamp((now - t0) / ms, 0, 1);
+      self.value = from + (to - from) * (curve ? curve(p) : p); self.onTick();
+      if (p < 1) self.raf = requestAnimationFrame(f); else { self.raf = 0; self.animating = false; if (done) done(); }
+    }
+    this.raf = requestAnimationFrame(f);
+  };
+  Controller.prototype.animateWith = function (sim, done) {
+    var self = this; this.stop(); this.animating = true; var t0 = performance.now();
+    function f(now) {
+      var s = (now - t0) / 1000;
+      self.value = clamp(sim.x(s), 0, 1); self.onTick();
+      if (!sim.done(s)) self.raf = requestAnimationFrame(f); else { self.raf = 0; self.animating = false; if (done) done(); }
+    }
+    this.raf = requestAnimationFrame(f);
+  };
+  /* SpringSimulation(SpringDescription.withDampingRatio(mass 1, stiffness 520, ratio 0.95)) — underdamped solution, Tolerance 1e-3 */
+  function spring(start, end, velocity) {
+    var m = 1, k = PP.springStiffness, c = PP.springDampingRatio * 2 * Math.sqrt(m * k);
+    var r = -c / (2 * m), w = Math.sqrt(4 * m * k - c * c) / (2 * m), c1 = start - end, c2 = (velocity - r * c1) / w;
+    function x(t) { return Math.exp(r * t) * (c1 * Math.cos(w * t) + c2 * Math.sin(w * t)); }
+    function dx(t) { var p = Math.exp(r * t); return p * (c2 * w * Math.cos(w * t) - c1 * w * Math.sin(w * t)) + r * p * (c2 * Math.sin(w * t) + c1 * Math.cos(w * t)); }
+    return { x: function (t) { return end + x(t); }, done: function (t) { return Math.abs(x(t)) < 1e-3 && Math.abs(dx(t)) < 1e-3; } };
+  }
+  /* ---- ServicePortalController, line for line ---- */
+  var finalBottom = PP.cardTopInset + H * PP.cardScale, travel = H - finalBottom;
+  var portal = new Controller(render), barSpring = new Controller(), blend = new Controller(onBlendTick);
+  var lift = 0, rawUp = 0, dragStartY = 0, engageLift = 0, blendFrom = 0, engaged = false, closing = false, springTarget = null;
+  function tCalm(raw) { return clamp(PP.cardAnticipation * raw / travel, 0, 1); }
+  function tGlued(raw) { var bottom = clamp(dragStartY - raw, finalBottom, H); return clamp((H - bottom) / travel, 0, 1); }
+  function liveT() { return engaged ? tGlued(rawUp) : tCalm(rawUp); }
+  function switchMode(engage) { blendFrom = portal.value; blend.tween(0, 1, scaled(engage ? PP.engageBlend : PP.disengageBlend), null); }
+  function onBlendTick() { if (closing) return; var k = easeOutCubic(blend.value); portal.set(lerp(blendFrom, liveT(), k)); }
+  function runBarAnim(ms, curve, end) {
+    end = end || 0; if (lift === end) return;
+    stopBarAnim(); var from = lift;
+    barSpring.onTick = function () { lift = lerp(from, end, curve(barSpring.value)); render(); };
+    barSpring.tween(0, 1, scaled(ms), null);
+  }
+  function stopBarAnim() { barSpring.stop(); barSpring.onTick = function () {}; }
+  function onBarDragStart(y) {
+    portal.stop(); stopBarAnim(); blend.stop();
+    springTarget = null; closing = portal.value > 0.5; dragStartY = y; engaged = false; rawUp = 0;
+    mode(closing ? 'dragging the open Portal' : 'lifting the bar');
+  }
+  function onBarDragDelta(dy) {
+    if (closing) { portal.set(clamp(portal.value - dy / travel, 0, 1)); return; }
+    rawUp = Math.max(0, rawUp - dy);
+    if (!engaged && rawUp >= PP.threshold) {
+      engaged = true; engageLift = lift; haptic('lightImpact');
+      runBarAnim(PP.barHome, easeOutCubic); switchMode(true); mode('engaged: card glued to the finger');
+    } else if (engaged && rawUp <= engageLift) {
+      engaged = false; haptic('selectionClick'); stopBarAnim(); lift = rawUp; switchMode(false); mode('re-grabbed the bar');
+    }
+    if (engaged) {
+      var approach = clamp((PP.threshold - rawUp) / Math.max(1, PP.threshold - engageLift), 0, 1), l = engageLift * approach;
+      if (l > lift || !barSpring.animating) { stopBarAnim(); lift = l; }
+    } else if (dy < 0) {
+      var resistance = PP.baseResistance / (1 + lift / PP.falloff);
+      lift = clamp(lift - dy * resistance, 0, PP.threshold);
+    } else if (lift > 0) lift = Math.max(0, lift - dy);
+    var k = blend.animating ? easeOutCubic(blend.value) : 1;
+    portal.set(lerp(blendFrom, liveT(), k));
+  }
+  function releaseTarget(vUp, positionSaysOpen) { if (vUp <= -PP.flickGate) return 0; if (vUp >= PP.flickGate) return 1; return positionSaysOpen ? 1 : 0; }
+  function onBarDragEnd(velocityY) {
+    var vUp = -velocityY; blend.stop();
+    if (closing) { closing = false; var tg = releaseTarget(vUp, portal.value > 0.6); release(vUp, tg); springTo(tg, vUp / travel); return; }
+    var commit = engaged && releaseTarget(vUp, rawUp >= PP.safeZone) === 1;
+    engaged = false;
+    if (lift !== 0) runBarAnim(PP.barSpringBack, elasticOut);
+    if (commit) haptic('mediumImpact');
+    release(vUp, commit ? 1 : 0);
+    springTo(commit ? 1 : 0, vUp / travel);
+  }
+  function springTo(target, velocity) {
+    springTarget = target;
+    mode(target ? 'spring → open' : 'spring → closed');
+    portal.animateWith(spring(portal.value, target, velocity), function () {
+      /* A spring stops within an epsilon of its target, never on it. */
+      if (!portal.animating && !engaged && !closing && Math.abs(portal.value - target) < 0.05) { portal.value = target; render(); }
+      mode(portal.value >= 1 ? 'open' : portal.value <= 0 ? 'at rest' : 'settled');
+    });
+  }
+  function closeFromUi() {
+    if (springTarget === 0 && !engaged && !closing) return;
+    blend.stop(); closing = false; engaged = false;
+    if (lift !== 0) runBarAnim(PP.barSpringBack, elasticOut);
+    springTo(0, 0);
+  }
+  var demoTimer = 0;
+  function playDemoBounce() {
+    if (engaged || closing || portal.animating || portal.value > 0) return;
+    var anticipation = clamp(9 / travel, 0, 0.05);
+    mode('demo bounce');
+    runBarAnim(240, easeOutCubic, 12);
+    var from = portal.value;
+    portal.tween(from, anticipation, scaled(240), easeOutCubic, function () {
+      demoTimer = setTimeout(function () {
+        if (engaged || closing) return;
+        runBarAnim(PP.barSpringBack, elasticOut); springTo(0, 0);
+      }, 140);
+    });
+  }
+  /* ---- the bar's own elastic (dx only: the vertical axis belongs to the delegate) ---- */
+  var dx = 0, dxSpring = new Controller();
+  function resist(delta, cur) { return delta * (NAV_RESISTANCE / (1 + Math.abs(cur) / NAV_FALLOFF)); }
+  /* ---- VelocityTracker: quadratic least squares over the last 100 ms, stop after 40 ms still ---- */
+  var samples = [];
+  function velocityY(now) {
+    if (!samples.length || now - samples[samples.length - 1].t > 40) return 0;
+    var newest = samples[samples.length - 1], pts = [];
+    for (var i = samples.length - 1, prev = newest; i >= 0; i--) { var s = samples[i]; if (newest.t - s.t > 100 || Math.abs(prev.t - s.t) > 40) break; pts.push(s); prev = s; }
+    if (pts.length < 3) return 0;
+    var S = [0, 0, 0, 0, 0], T = [0, 0, 0];
+    pts.forEach(function (p) { var t = p.t - newest.t, y = p.y; var pw = 1; for (var k = 0; k < 5; k++) { S[k] += pw; if (k < 3) T[k] += pw * y; pw *= t; } });
+    var A = [[S[0], S[1], S[2]], [S[1], S[2], S[3]], [S[2], S[3], S[4]]];
+    function det3(m) { return m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]); }
+    var D = det3(A); if (Math.abs(D) < 1e-12) return 0;
+    var A1 = A.map(function (r, i) { return [r[0], T[i], r[2]]; });
+    var v = det3(A1) / D * 1000, dist = Math.abs(newest.y - pts[pts.length - 1].y);
+    if (Math.abs(v) <= 50 || dist <= (pointerKind === 'mouse' ? 1 : 18)) return 0;   /* isFlingGesture */
+    return clamp(v, -8000, 8000);
+  }
+  var pan = null, pointerKind = 'mouse';
+  function localY(e) { return e.clientY - phone.getBoundingClientRect().top; }
+  nav.addEventListener('pointerdown', function (e) {
+    pointerKind = e.pointerType; nav.setPointerCapture(e.pointerId);
+    pan = { id: e.pointerId, x: e.clientX, y: e.clientY, accepted: false, slop: e.pointerType === 'mouse' ? 2 : 36, tab: e.target.closest('[data-tab]') };
+    samples = [{ t: performance.now(), y: e.clientY }];
+  });
+  nav.addEventListener('pointermove', function (e) {
+    if (!pan || e.pointerId !== pan.id) return;
+    samples.push({ t: performance.now(), y: e.clientY }); if (samples.length > 20) samples.shift();
+    var ddx = e.clientX - pan.x, ddy = e.clientY - pan.y;
+    if (!pan.accepted) {
+      if (Math.hypot(ddx, ddy) <= pan.slop) return;
+      pan.accepted = true; pan.x = e.clientX; pan.y = e.clientY; nav.classList.add('is-dragging');
+      dxSpring.stop(); onBarDragStart(localY(e)); return;
+    }
+    pan.x = e.clientX; pan.y = e.clientY;
+    dx = clamp(dx + resist(ddx, dx), -NAV_MAX_DRAG, NAV_MAX_DRAG);
+    onBarDragDelta(ddy);
+  });
+  function endPan(e, cancel) {
+    if (!pan || e.pointerId !== pan.id) return;
+    var p = pan; pan = null; nav.classList.remove('is-dragging');
+    if (!p.accepted) { if (!cancel && p.tab) { haptic('selectionClick'); closeFromUi(); } return; }   /* a tab tap closes the Portal */
+    var from = dx;
+    dxSpring.onTick = function () { dx = from * (1 - elasticOut(dxSpring.value)); render(); };
+    dxSpring.tween(0, 1, scaled(NAV_SPRING), null);
+    onBarDragEnd(cancel ? 0 : velocityY(performance.now()));
+  }
+  nav.addEventListener('pointerup', function (e) { endPan(e, false); });
+  nav.addEventListener('pointercancel', function (e) { endPan(e, true); });
+  /* closes: a tap on the card (t > 0.9), the spacer, a matrix cell */
+  card.addEventListener('click', function () { if (portal.value > 0.9) closeFromUi(); });
+  spacer.addEventListener('click', closeFromUi);
+  q('[data-matrix]').querySelectorAll('div').forEach(function (c) {
+    c.addEventListener('click', closeFromUi);
+    c.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeFromUi(); } });
+  });
+  /* ---- coach mark ---- */
+  var coachVisible = true;
+  function setCoach(v) { coachVisible = v; coachBox.classList.toggle('is-hidden', !v); }
+  q('[data-coach-x]').addEventListener('click', function (e) { e.stopPropagation(); haptic('selectionClick'); setCoach(false); });
+  q('[data-coach]').addEventListener('click', function () {
+    /* PortalCoachMark: the words arrive, then one bounce on the next frame. Under Reduce Motion
+       (and a screen reader) the bounce is skipped and the pill fades in place, with no slide. */
+    var r = reduce();
+    coachBox.classList.toggle('is-still', r);
+    setCoach(false); void coachBox.offsetWidth;
+    requestAnimationFrame(function () {
+      setCoach(true);
+      if (r) { mode('coach fades in place · bounce skipped (Reduce Motion)'); return; }
+      requestAnimationFrame(playDemoBounce);
+    });
+  });
+  q('[data-replay]').addEventListener('click', function () {
+    /* ShellScreen._armDemoBounce: skipped under Reduce Motion, otherwise 700 ms after the first frame. */
+    clearTimeout(demoTimer);
+    if (reduce()) { mode('demo bounce skipped (Reduce Motion)'); return; }
+    mode('demo bounce armed · 700 ms');
+    demoTimer = setTimeout(playDemoBounce, 700);
+  });
+  /* ---- paint ---- */
+  var lastRelease = '—';
+  function release(vUp, target) { lastRelease = 'vUp ' + vUp.toFixed(0) + ' px/s · finger ' + rawUp.toFixed(0) + ' → ' + (target ? 'open' : 'close'); }
+  var modeText = 'at rest';
+  function mode(m) { modeText = m; }
+  function render() {
+    var t = portal.value;
+    var top = PP.cardTopInset * t, bottom = H - t * (H - finalBottom);
+    var scale = clamp((bottom - top) / H, PP.cardScale, 1), radius = lerp(0, PP.cardCornerRadius, clamp(t * 3, 0, 1));
+    card.style.setProperty('--t', t); card.style.setProperty('--top', top + 'px'); card.style.setProperty('--scale', scale); card.style.setProperty('--r', radius + 'px');
+    card.classList.toggle('is-lifted', t > 0);
+    var vis = clamp((t - 0.08) / 0.5, 0, 1);
+    backdrop.style.display = t > 0 ? 'block' : 'none'; backdrop.style.opacity = vis;
+    floor.style.display = t > 0 ? 'block' : 'none'; floor.style.opacity = vis;
+    floor.classList.toggle('is-live', t >= 0.7);
+    var sp = bottom + 12;
+    spacer.style.height = sp + 'px'; fade.style.top = sp + 'px'; panel.style.top = (sp + 56) + 'px';
+    coachFade.style.opacity = clamp(1 - t * 3, 0, 1);
+    bar.style.transform = 'translate(' + dx.toFixed(2) + 'px,' + (-lift).toFixed(2) + 'px)';
+    q('[data-raw]').style.width = clamp(rawUp / 300 * 100, 0, 100) + '%';
+    q('[data-tbar]').style.width = (t * 100) + '%';
+    out.t.textContent = t.toFixed(3) + (t > 0 ? ' · backdrop ' + vis.toFixed(2) + (t >= 0.7 ? ' · floor live' : '') : '');
+    out.mode.textContent = modeText;
+    out.lift.textContent = lift.toFixed(1) + ' · resistance 0.60 ÷ (1 + lift ÷ 7)';
+    out.raw.textContent = rawUp.toFixed(1) + (engaged ? ' · glued' : '');
+    out.card.textContent = 'top ' + top.toFixed(1) + ' · scale ' + scale.toFixed(3) + ' · radius ' + radius.toFixed(1);
+    out.release.textContent = lastRelease;
+  }
+  function applyK() {
+    var r = reduce();
+    root.style.setProperty('--k', r ? String(REDUCED) : '1');
+    out.blends.textContent = r ? 'engage 8 · disengage 11 · bar home 13 · spring-back 25 (5%)' : 'engage 160 · disengage 220 · bar home 260 · spring-back 500';
+    out.spring.textContent = 'k 520 · ζ 0.95 · m 1' + (r ? ' · unscaled under Reduce Motion' : '');
+  }
+  var sw = q('[data-reduce-switch]');
+  function setReduce(v) { root.dataset.reduce = v ? 'true' : 'false'; sw.setAttribute('aria-checked', v ? 'true' : 'false'); applyK(); render(); }
+  sw.addEventListener('click', function () { setReduce(!reduce()); });
+  var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (mq.addEventListener) mq.addEventListener('change', function (e) { setReduce(e.matches); });
+  setReduce(mq.matches);
+  window.Cupola && window.Cupola.refresh();
+  render();
+  /* Expose the controller to the harness only through events; nothing global. */
+  root._portal = { onBarDragStart: onBarDragStart, onBarDragDelta: onBarDragDelta, onBarDragEnd: onBarDragEnd, state: function () { return { t: portal.value, lift: lift, rawUp: rawUp, engaged: engaged, animating: portal.animating }; } };
+})();
+</script>
+</body>
+</html>

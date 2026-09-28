@@ -1,0 +1,19 @@
+# MediaDetailHero
+
+The collapsing stage at the top of every media detail page: backdrop, room light, scrim and poster row at rest, folding into a 52-high glass title bar as the body scrolls.
+
+Hand-written from the header of `lib/core/widgets/media_detail_view.dart` (`mediaDetailHeaderSliver`, `_MediaDetailHeader`), with `media_detail_header_metrics.dart`, `media_detail_poster_row.dart`, `media_detail_hero_summary.dart`, `media_detail_back_button.dart`, `media_detail_figure_plate.dart` and `GlassSurface` from `glass_app_bar.dart`.
+
+- **Extents** — expanded 236, collapsed 52, both plus the top safe area and both grown with reading size (hero on the 1.6× clamp, bar on the 1.3× single-line clamp). Collapse range 184. Everything is driven by one progress `t` on staged intervals: scrim deepens 0–0.80, bar reveals 0.62–0.92 (ease-out cubic), poster scales 1 → 0.86 over 0.20–0.90, room light 0.22 → 0.12 over 0.30–0.75. The poster row itself is never faded — it is clipped out of the header's box as the sliver collapses, the same Hero source it always was.
+- **Art group** — the backdrop (artwork `cover`, shown as a `plate-well` stand-in) stops one gutter (`space-lg`) short of the header's bottom, parallaxes at 0.35 of scroll, and carries the room light: `serviceGlow(accent, topRight, radius 1.3)`. No backdrop: `surface-container-highest` → `surface`, the page's glyph at 90px in `on-surface-variant` at 22%, then `surface` 4% → `surface` over it.
+- **Scrim** — `AppGradients.heroScrim`: bottom-up `surface` → `surface` 85% at 0.35 → clear; at full collapse the mid stop is opaque and the top holds 35%. Below it a 16px **seam** fades `surface` to nothing so the room's ambient glow reads through (same RGB both stops, alpha only). Never a blur.
+- **Poster row** — inset `space-lg` left/right/bottom, bottom-aligned: the 82 × 123 poster (`MediaPosterCard`, or 92 × 92 `.circular`), `space-md`, then the summary: status badge (`StatusBadge.animated`), `space-xs`, title in `title-large` 600 at 1.15 leading (two lines, then ellipsis), `space-xs`, metadata in `body-medium` `on-surface-variant` (one line), `space-sm`, at most three chips wrapping at `space-xs`. The whole row lays out on the 1.6× hero clamp.
+- **Figure plate** (posterless pages, Bazarr) — the same 82 × 123 slot: `surface-container-high`, `radius-md`, `serviceGlow(accent, topLeft, 1.2, 0.14)`; the figure in `headline-small` 700 tabular, walked by `onTint` for that surface at 0.14; `space-xs`; the `eyebrow` in `on-surface-variant`. Silent to screen readers.
+- **Back button** — 36 disc inside a 48 target, plate edge on the 16 gutter (left inset 10). Over art: `surface` at 0.62 (the computed AA floor over any artwork) with a 22px `chevron_left` in `on-surface`, top 12. In the bar: centred ((52 − 48) / 2 = 2), plate released to nothing from reveal 0.82. The glyph never inverts.
+- **Collapsed bar** — `GlassSurface`: `surface` 55% → 28% at 0.55 → clear (light 60% / 32%). Title centred in `title-medium` 600, one line, ellipsised, clearing 70 each side (10 + 48 + 12).
+
+The consumer provides `posterRow` (a `MediaDetailPosterRow` with badge, title, metadata items, chips and a poster or figure plate), `backdropUrl`, `title`, `accent` and a required `heroFallbackIcon`. Titles, years and counts shown are illustrative; the artwork is the *Nosferatu* (1922, 94 min) backdrop and poster, and the Bazarr stage keeps the no-backdrop fallback on purpose.
+
+Semantics: exactly one title is spoken at a time — the hero title and the bar title are both headers and hand off on the same `barReveal ≥ 0.5` threshold. The poster is excluded (the title names the region). Reduce Motion flattens parallax, stretch and poster scale; scrim, bar and glow still track the finger.
+
+Do: pass the page's service accent and its own fallback glyph. Don't: wrap the poster row in an `Opacity` (it is a Hero source), or add a blur behind the bar.

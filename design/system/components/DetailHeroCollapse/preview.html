@@ -1,0 +1,146 @@
+<!-- @dsCard group="Motion" height=640 subtitle="Scroll the phone: the 236 → 52 hero folds into its glass bar" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DetailHeroCollapse — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-motion cp-detail-hero-collapse" data-reduce="false">
+  <div class="cp-motion-bar">
+    <div class="cp-motion-bar-title"><b>Media detail hero</b><span class="cp-caption">Scroll inside the phone. Every value is a function of one collapse progress t; nothing runs on a clock.</span></div>
+    <button type="button" class="cp-motion-btn" data-replay><span class="cp-icon" aria-hidden="true">swipe_up</span>Scroll demo</button>
+    <button type="button" class="cp-motion-switch" role="switch" aria-checked="false" data-reduce-switch><span class="cp-motion-switch-track" aria-hidden="true"></span>Reduce motion</button>
+  </div>
+  <div class="cp-motion-row">
+    <div class="cp-motion-phone cp-detail-hero-collapse-phone">
+      <div class="cp-detail-hero-collapse-scroll" data-scroll tabindex="0" aria-label="Detail page, scrollable">
+        <div style="height:236px" aria-hidden="true"></div>
+        <div class="cp-detail-hero-collapse-body">
+          <span class="cp-eyebrow" style="color:var(--dim-text)">Overview</span>
+          <p class="cp-body-medium" style="color:var(--on-surface-variant)">Count Orlok summons the estate agent Hutter to his castle in the Carpathians, and follows him home with the plague.</p>
+          <i style="height:64px"></i>
+          <span class="cp-eyebrow" style="color:var(--dim-text)">File</span>
+          <i style="height:96px"></i><i style="height:72px"></i>
+          <span class="cp-eyebrow" style="color:var(--dim-text)">History</span>
+          <i style="height:56px"></i><i style="height:56px"></i><i style="height:56px"></i><i style="height:56px"></i>
+        </div>
+      </div>
+      <div class="cp-detail-hero-collapse-header" data-header>
+        <div class="cp-detail-hero-collapse-art">
+          <div class="cp-detail-hero-collapse-backdrop" data-backdrop><img src="__BACKDROP__" alt=""><div class="cp-detail-hero-collapse-glow" data-glow></div></div>
+          <div class="cp-detail-hero-collapse-scrim" data-scrim></div>
+        </div>
+        <div class="cp-detail-hero-collapse-seam"></div>
+        <div class="cp-detail-hero-collapse-row" data-row>
+          <div class="cp-detail-hero-collapse-poster"><img src="__POSTER__" alt=""></div>
+          <div class="cp-detail-hero-collapse-summary" data-hero-title>
+            <span class="cp-badge" style="align-self:flex-start"><span class="cp-icon" data-ontint="success" aria-hidden="true">check_circle</span>Available</span>
+            <span class="cp-title-large">Nosferatu</span>
+            <span class="cp-body-medium" style="color:var(--on-surface-variant)">1922 • 94 min</span>
+          </div>
+        </div>
+        <div class="cp-detail-hero-collapse-bar" data-bar><span class="cp-title-medium">Nosferatu</span></div>
+        <div class="cp-detail-hero-collapse-back" data-back aria-hidden="true"><span><span class="cp-icon">chevron_left</span></span></div>
+      </div>
+    </div>
+    <div class="cp-detail-hero-collapse-panel">
+      <div class="cp-detail-hero-collapse-meter" aria-hidden="true"><i data-meter></i></div>
+      <dl class="cp-motion-readout">
+        <dt>header height</dt><dd data-out="h">236.0</dd>
+        <dt>t</dt><dd data-out="t">0.000</dd>
+        <dt>scrimDepth</dt><dd data-out="scrim">0.000 · seg 0 – 0.80</dd>
+        <dt>scrim stops</dt><dd data-out="stops">1 · 0.85 · 0</dd>
+        <dt>barReveal</dt><dd data-out="bar">0.000 · easeOutCubic(seg 0.62 – 0.92)</dd>
+        <dt>posterScale</dt><dd data-out="scale">1.000 · 1 → 0.86 over 0.20 – 0.90</dd>
+        <dt>parallax</dt><dd data-out="parallax">0.0 px · 0.35 × scroll</dd>
+        <dt>poster row</dt><dd data-out="exit">bottom 16.0 · exit 0.7 × scroll</dd>
+        <dt>glowAlpha</dt><dd data-out="glow">0.220 · 0.22 → 0.12 over 0.30 – 0.75</dd>
+        <dt>back plate</dt><dd data-out="plate">α 0.620 · top 12.0</dd>
+        <dt>spoken title</dt><dd data-out="owner">hero summary</dd>
+      </dl>
+      <p class="cp-motion-note" data-note>Reduce Motion flattens the parallax, the poster scale, the exit push and the overscroll stretch. The scrim, the bar and the room light still track the finger.</p>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var root = document.querySelector('.cp-detail-hero-collapse');
+  function cubic(a, b, c, d) {
+    function ev(p, q, m) { return 3 * p * (1 - m) * (1 - m) * m + 3 * q * (1 - m) * m * m + m * m * m; }
+    return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; var lo = 0, hi = 1; for (;;) { var m = (lo + hi) / 2, x = ev(a, c, m); if (Math.abs(t - x) < 0.001) return ev(b, d, m); if (x < t) lo = m; else hi = m; } };
+  }
+  var easeOutCubic = cubic(0.215, 0.61, 0.355, 1);
+  /* media_detail_header_metrics.dart (top safe area 0 in this frame) */
+  var MAX = 236, MIN = 52, RANGE = Math.max(1, MAX - MIN), GUTTER = 16, TARGET = 48;
+  function seg(t, a, b) { return Math.max(0, Math.min(1, (t - a) / (b - a))); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  var q = function (s) { return root.querySelector(s); };
+  var scroller = q('[data-scroll]'), header = q('[data-header]'), backdrop = q('[data-backdrop]'), glow = q('[data-glow]'), scrim = q('[data-scrim]');
+  var row = q('[data-row]'), bar = q('[data-bar]'), back = q('[data-back]'), plate = back.firstElementChild, meter = q('[data-meter]');
+  var out = {}; root.querySelectorAll('[data-out]').forEach(function (el) { out[el.dataset.out] = el; });
+  function reduce() { return root.dataset.reduce === 'true'; }
+  function mix(token, a) { return 'color-mix(in srgb, var(--' + token + ') ' + (a * 100).toFixed(2) + '%, transparent)'; }
+  function paint() {
+    var shrink = scroller.scrollTop, r = reduce();
+    var h = Math.max(MIN, MAX - shrink);
+    var t = Math.max(0, Math.min(1, (MAX - h) / RANGE));
+    /* MediaDetailHeroPhase */
+    var scrimDepth = seg(t, 0, 0.8);
+    var barReveal = easeOutCubic(seg(t, 0.62, 0.92));
+    var posterScale = r ? 1 : lerp(1, 0.86, seg(t, 0.2, 0.9));
+    var parallaxFactor = r ? 0 : 0.35;
+    var exitFactor = r ? 1 : 0.7;
+    var glowAlpha = lerp(0.22, 0.12, seg(t, 0.3, 0.75));
+    header.style.height = h + 'px';
+    backdrop.style.top = -(t * RANGE * parallaxFactor) + 'px';
+    /* AppGradients.serviceGlow(accent, topRight, radius 1.3, alpha) */
+    /* RadialGradient.radius is a fraction of the paint box's shortest side (the 236-tall art group). */
+    var glowR = 1.3 * Math.min(backdrop.clientWidth || 320, MAX);
+    glow.style.background = 'radial-gradient(circle ' + glowR.toFixed(1) + 'px at 100% 0%, ' + mix('radarr', glowAlpha) + ', ' + mix('radarr', 0) + ')';
+    /* AppGradients.heroScrim(surface, depth): bottom → top */
+    var mid = lerp(0.85, 1, scrimDepth), top = lerp(0, 0.35, scrimDepth);
+    scrim.style.background = 'linear-gradient(to top, var(--surface) 0%, ' + mix('surface', mid) + ' 35%, ' + mix('surface', top) + ' 100%)';
+    row.style.bottom = (GUTTER - t * RANGE * exitFactor) + 'px';
+    row.style.transform = 'scale(' + posterScale + ')';
+    bar.style.opacity = String(barReveal);
+    /* MediaDetailBackButton: plate held until reveal 0.82, then released; top 12 → (52 − 48) / 2 */
+    var release = seg(barReveal, 0.82, 1), plateA = 0.62 * (1 - release);
+    plate.style.background = mix('surface', plateA);
+    back.style.top = lerp(12, Math.max(0, (MIN - TARGET) / 2), barReveal) + 'px';
+    meter.style.width = (t * 100) + '%';
+    out.h.textContent = h.toFixed(1);
+    out.t.textContent = t.toFixed(3);
+    out.scrim.textContent = scrimDepth.toFixed(3) + ' · seg 0 – 0.80';
+    out.stops.textContent = '1 · ' + mid.toFixed(2) + ' · ' + top.toFixed(2);
+    out.bar.textContent = barReveal.toFixed(3) + ' · easeOutCubic(seg 0.62 – 0.92)';
+    out.scale.textContent = posterScale.toFixed(3) + (r ? ' · held at 1 (Reduce Motion)' : ' · 1 → 0.86 over 0.20 – 0.90');
+    out.parallax.textContent = (t * RANGE * parallaxFactor).toFixed(1) + ' px · ' + parallaxFactor + ' × scroll';
+    out.exit.textContent = 'bottom ' + (GUTTER - t * RANGE * exitFactor).toFixed(1) + ' · exit ' + exitFactor + ' × scroll';
+    out.glow.textContent = glowAlpha.toFixed(3) + ' · 0.22 → 0.12 over 0.30 – 0.75';
+    out.plate.textContent = 'α ' + plateA.toFixed(3) + ' · top ' + parseFloat(back.style.top).toFixed(1);
+    out.owner.textContent = barReveal >= 0.5 ? 'collapsed bar (barReveal ≥ 0.5)' : 'hero summary';
+  }
+  var pending = 0;
+  scroller.addEventListener('scroll', function () { if (!pending) pending = requestAnimationFrame(function () { pending = 0; paint(); }); }, { passive: true });
+  var demo = [];
+  root.querySelector('[data-replay]').addEventListener('click', function () {
+    demo.forEach(clearTimeout); demo = [];
+    var how = reduce() ? 'auto' : 'smooth';
+    scroller.scrollTo({ top: 0, behavior: 'auto' });
+    demo.push(setTimeout(function () { scroller.scrollTo({ top: 120, behavior: how }); }, 250));
+    demo.push(setTimeout(function () { scroller.scrollTo({ top: 260, behavior: how }); }, 1300));
+    demo.push(setTimeout(function () { scroller.scrollTo({ top: 0, behavior: how }); }, 2600));
+  });
+  var sw = root.querySelector('[data-reduce-switch]');
+  function setReduce(v) { root.dataset.reduce = v ? 'true' : 'false'; sw.setAttribute('aria-checked', v ? 'true' : 'false'); paint(); }
+  sw.addEventListener('click', function () { setReduce(!reduce()); });
+  var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (mq.addEventListener) mq.addEventListener('change', function (e) { setReduce(e.matches); });
+  setReduce(mq.matches);
+  window.Cupola && window.Cupola.refresh();
+})();
+</script>
+</body>
+</html>

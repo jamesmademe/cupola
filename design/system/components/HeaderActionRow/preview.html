@@ -1,0 +1,61 @@
+<!-- @dsCard group="Actions" height=300 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HeaderActionRow — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-header-action-row-stage">
+  <div class="cp-header-action-row-col">
+    <div>
+      <div class="cp-header-action-row">
+        <div class="cp-header-action-row__expanded"><button class="cp-header-action-row-primary" style="--accent:var(--radarr)" data-on="radarr"><span class="cp-icon" aria-hidden="true">saved_search</span>Automatic search</button></div>
+        <div class="cp-header-action-row__trail">
+          <button class="cp-header-action-row-disc" aria-label="Interactive search"><span class="cp-icon" aria-hidden="true">search</span></button>
+          <button class="cp-header-action-row-disc" aria-label="More actions"><span class="cp-icon" aria-hidden="true">more_horiz</span></button>
+        </div>
+      </div>
+      <div class="cp-header-action-row-consequence">Radarr is hunting a release for this title.</div>
+    </div>
+    <div>
+      <div class="cp-header-action-row">
+        <div class="cp-header-action-row__expanded"><button class="cp-header-action-row-tonal">Interactive search</button><button class="cp-header-action-row-tonal">Automatic search</button></div>
+        <div class="cp-header-action-row__trail"><button class="cp-header-action-row-disc" aria-label="More actions"><span class="cp-icon" aria-hidden="true">more_horiz</span></button></div>
+      </div>
+      <div class="cp-header-action-row-consequence">Radarr has everything it expects, so it isn't searching.</div>
+    </div>
+    <div>
+      <div class="cp-header-action-row">
+        <div class="cp-header-action-row__expanded"><button class="cp-header-action-row-primary" style="--accent:var(--sonarr)" data-on="sonarr"><span class="cp-header-action-row-spinner" aria-hidden="true"></span>Automatic search</button></div>
+        <div class="cp-header-action-row__trail">
+          <button class="cp-header-action-row-disc" aria-label="Interactive search" disabled style="background:transparent;color:color-mix(in srgb, var(--on-surface) 38%, transparent)"><span class="cp-icon" aria-hidden="true">search</span></button>
+          <button class="cp-header-action-row-disc" aria-label="More actions" disabled style="background:transparent;color:color-mix(in srgb, var(--on-surface) 38%, transparent)"><span class="cp-icon" aria-hidden="true">more_horiz</span></button>
+        </div>
+      </div>
+      <div class="cp-header-action-row-consequence">Busy: the glyph is a 16px spinner for this control only; the secondaries stay in place, disabled.</div>
+    </div>
+  </div>
+  <div class="cp-header-action-row-col" style="width:420px">
+    <div>
+      <div class="cp-header-action-row is-top">
+        <div class="cp-header-action-row__expanded"><button class="cp-header-action-row-primary" style="--accent:var(--lidarr)" data-on="lidarr"><span class="cp-icon" data-ontint="success" data-surface="lidarr" data-alpha="0" aria-label="Automatic search complete">check</span>Automatic search</button></div>
+        <div class="cp-header-action-row__trail"><button class="cp-header-action-row-disc" aria-label="More actions"><span class="cp-icon" aria-hidden="true">more_horiz</span></button></div>
+      </div>
+      <div class="cp-header-action-row-consequence">Confirmed: a success check walked against the accent fill, held 1600ms.</div>
+    </div>
+    <div class="cp-header-action-row is-top">
+      <div class="cp-header-action-row__expanded"><button class="cp-header-action-row-primary" style="--accent:var(--seerr)" data-on="seerr"><span class="cp-icon" aria-hidden="true">add_circle_outline</span>Request</button></div>
+      <div class="cp-header-action-row__trail">
+        <div class="cp-header-action-row-captioned"><button class="cp-header-action-row-disc" aria-label="Trailers and teasers"><span class="cp-icon" aria-hidden="true">play_circle_outline</span></button><span class="cp-header-action-row-caption" aria-hidden="true">Trailers</span></div>
+        <div class="cp-header-action-row-captioned"><button class="cp-header-action-row-disc" aria-label="Manage movie"><span class="cp-icon outlined" aria-hidden="true">settings</span></button><span class="cp-header-action-row-caption" aria-hidden="true">Manage</span></div>
+        <div class="cp-header-action-row-captioned"><button class="cp-header-action-row-disc" aria-label="Open in Radarr" aria-description="requires Radarr"><span class="cp-icon cp-header-action-row-dim" aria-hidden="true">open_in_new</span></button><span class="cp-header-action-row-caption cp-header-action-row-dim" aria-hidden="true">Open</span></div>
+      </div>
+    </div>
+    <span class="cp-caption">Seerr discover detail · HeaderActionButton captions hang below, tops aligned · Open is gated on Radarr (dimmed, still tappable)</span>
+  </div>
+</div>
+<script>window.Cupola && window.Cupola.refresh();</script>
+</body>
+</html>

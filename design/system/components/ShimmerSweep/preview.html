@@ -1,0 +1,85 @@
+<!-- @dsCard group="Motion" height=320 subtitle="The 1500ms loading sweep, and its flat Reduce Motion base" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ShimmerSweep — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-motion cp-shimmer-sweep" data-reduce="false" aria-busy="true">
+  <div class="cp-motion-bar">
+    <div class="cp-motion-bar-title"><b>ShimmerPlaceholder</b><span class="cp-caption">Loops for as long as the page loads, as the app does. Each block carries its own band.</span></div>
+    <button type="button" class="cp-motion-switch" role="switch" aria-checked="false" data-reduce-switch><span class="cp-motion-switch-track" aria-hidden="true"></span>Reduce motion</button>
+  </div>
+  <div class="cp-shimmer-sweep-grid">
+    <div class="cp-motion-col">
+      <span class="cp-caption">ShimmerList · .card blocks, 104 tall, 8 apart</span>
+      <div class="cp-shimmer-sweep-list">
+        <div class="cp-shimmer-sweep-block cp-shimmer-sweep-card" style="height:104px"></div>
+        <div class="cp-shimmer-sweep-block cp-shimmer-sweep-card" style="height:104px"></div>
+      </div>
+    </div>
+    <div class="cp-motion-col">
+      <span class="cp-caption">.text lines and a poster row</span>
+      <div class="cp-shimmer-sweep-block cp-shimmer-sweep-text" style="width:100%;max-width:200px;height:22px"></div>
+      <div class="cp-shimmer-sweep-block cp-shimmer-sweep-text" style="width:120px"></div>
+      <div class="cp-shimmer-sweep-block cp-shimmer-sweep-text" style="width:160px"></div>
+      <div class="cp-shimmer-sweep-posters" style="margin-top:var(--space-sm)">
+        <div class="cp-shimmer-sweep-block cp-shimmer-sweep-card"></div>
+        <div class="cp-shimmer-sweep-block cp-shimmer-sweep-card"></div>
+        <div class="cp-shimmer-sweep-block cp-shimmer-sweep-card"></div>
+      </div>
+    </div>
+    <div class="cp-motion-col">
+      <span class="cp-caption">The band against its block (dashed)</span>
+      <div class="cp-shimmer-sweep-meter" aria-hidden="true"><i data-band></i></div>
+      <dl class="cp-motion-readout">
+        <dt>cycle</dt><dd>1500 ms · shimmerDuration</dd>
+        <dt>curve</dt><dd>easeInOutSine</dd>
+        <dt>v</dt><dd data-out="v">−1.00</dd>
+        <dt>gradient</dt><dd>Alignment(v−1) → (v)</dd>
+        <dt>base</dt><dd>surfaceContainerHigh</dd>
+        <dt>band</dt><dd>surfaceContainer</dd>
+      </dl>
+      <p class="cp-motion-note" data-note>Reduce Motion: the controller stops and the block paints its flat base.</p>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var root = document.querySelector('.cp-shimmer-sweep');
+  function cubic(a, b, c, d) {
+    function ev(p, q, m) { return 3 * p * (1 - m) * (1 - m) * m + 3 * q * (1 - m) * m * m + m * m * m; }
+    return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; var lo = 0, hi = 1; for (;;) { var m = (lo + hi) / 2, x = ev(a, c, m); if (Math.abs(t - x) < 0.001) return ev(b, d, m); if (x < t) lo = m; else hi = m; } };
+  }
+  var sine = cubic(0.445, 0.05, 0.55, 0.95), CYCLE = 1500;
+  var band = root.querySelector('[data-band]'), vOut = root.querySelector('[data-out="v"]');
+  var t0 = performance.now(), raf = 0;
+  function reduce() { return root.dataset.reduce === 'true'; }
+  /* The readout follows the CSS loop: every block restarted together, as the controllers do on mount. */
+  function frame(now) {
+    if (reduce()) return;
+    var anims = (document.getAnimations ? document.getAnimations() : []).filter(function (a) { return a.animationName === 'cp-shimmer-sweep-v'; });
+    var ct = anims.length && anims[0].currentTime != null ? anims[0].currentTime : now - t0;
+    var v = -1 + 3 * sine((ct % CYCLE) / CYCLE);
+    vOut.textContent = (v < 0 ? '−' : '') + Math.abs(v).toFixed(2);
+    band.style.left = ((v + 1) / 4 * 100).toFixed(2) + '%';
+    raf = requestAnimationFrame(frame);
+  }
+  function restart() {
+    cancelAnimationFrame(raf);
+    band.style.display = reduce() ? 'none' : '';
+    if (reduce()) { vOut.textContent = 'stopped'; return; }
+    raf = requestAnimationFrame(frame);
+  }
+  var sw = root.querySelector('[data-reduce-switch]');
+  function setReduce(v) { root.dataset.reduce = v ? 'true' : 'false'; sw.setAttribute('aria-checked', v ? 'true' : 'false'); restart(); }
+  sw.addEventListener('click', function () { setReduce(!reduce()); });
+  var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (mq.addEventListener) mq.addEventListener('change', function (e) { setReduce(e.matches); });
+  setReduce(mq.matches);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!-- @dsCard group="Media detail" height=400 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MediaDetailHero — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-stage" style="align-items:flex-start;gap:var(--space-xl)">
+  <div class="cp-col" style="gap:var(--space-sm)">
+    <div class="cp-caption">Expanded, t = 0 — 236 plus the top safe area (0 here) · Radarr</div>
+    <div class="cp-media-detail-hero-frame is-expanded" style="--accent:var(--radarr)">
+      <div class="cp-media-detail-hero-art">
+        <div class="cp-media-detail-hero-backdrop"><img class="cp-media-detail-hero-img" src="__BACKDROP__" alt=""><div class="cp-media-detail-hero-glow"></div></div>
+        <div class="cp-media-detail-hero-scrim"></div>
+      </div>
+      <div class="cp-media-detail-hero-seam"></div>
+      <div class="cp-media-detail-hero-row">
+        <div class="cp-media-poster-card-poster"><img class="cp-media-poster-card-img" src="__POSTER__" alt=""></div>
+        <div class="cp-media-detail-hero-summary">
+          <span class="cp-badge"><span class="cp-icon" style="color:var(--on-surface-variant)" aria-hidden="true">cancel</span>Missing</span>
+          <h2 class="cp-media-detail-hero-title">Nosferatu</h2>
+          <div class="cp-media-detail-hero-meta">1922 • 1h 34m</div>
+          <div class="cp-media-detail-hero-tags"><span class="cp-tag" style="--accent:var(--radarr)">No file</span></div>
+        </div>
+      </div>
+      <div class="cp-media-detail-hero-back"><button class="cp-media-detail-hero-disc" aria-label="Back"><span class="cp-icon" aria-hidden="true">chevron_left</span></button></div>
+    </div>
+  </div>
+  <div class="cp-col" style="gap:var(--space-sm)">
+    <div class="cp-caption">Collapsed, t = 1 — the 52 glass bar</div>
+    <div class="cp-media-detail-hero-frame is-collapsed" style="--accent:var(--radarr)">
+      <div class="cp-media-detail-hero-art">
+        <div class="cp-media-detail-hero-backdrop"><img class="cp-media-detail-hero-img" src="__BACKDROP__" alt=""><div class="cp-media-detail-hero-glow"></div></div>
+        <div class="cp-media-detail-hero-scrim"></div>
+      </div>
+      <div class="cp-media-detail-hero-seam"></div>
+      <div class="cp-media-detail-hero-glass"><h2 class="cp-media-detail-hero-bar-title">Nosferatu</h2></div>
+      <div class="cp-media-detail-hero-back"><button class="cp-media-detail-hero-disc" aria-label="Back"><span class="cp-icon" aria-hidden="true">chevron_left</span></button></div>
+    </div>
+    <div class="cp-caption" style="margin-top:var(--space-sm)">No backdrop, no poster — fallback stage + figure plate · Bazarr</div>
+    <div class="cp-media-detail-hero-frame is-expanded" style="--accent:var(--bazarr)">
+      <div class="cp-media-detail-hero-art">
+        <div class="cp-media-detail-hero-backdrop cp-media-detail-hero-fallback"><span class="cp-icon outlined" aria-hidden="true">subtitles</span><div class="cp-media-detail-hero-glow"></div></div>
+        <div class="cp-media-detail-hero-scrim"></div>
+      </div>
+      <div class="cp-media-detail-hero-seam"></div>
+      <div class="cp-media-detail-hero-row">
+        <div class="cp-media-detail-hero-figure" aria-hidden="true"><span class="cp-media-detail-hero-figure-value" data-ontint="bazarr" data-surface="surface-container-high" data-alpha="0.14" data-alpha-light="0.14">12</span><span class="cp-eyebrow">Missing</span></div>
+        <div class="cp-media-detail-hero-summary">
+          <span class="cp-badge"><span class="cp-icon" data-ontint="success" aria-hidden="true">check_circle</span>Monitored</span>
+          <h2 class="cp-media-detail-hero-title">Nosferatu</h2>
+          <div class="cp-media-detail-hero-meta">1922</div>
+          <div class="cp-media-detail-hero-tags"><span class="cp-tag" style="--accent:var(--bazarr)">12 missing</span></div>
+        </div>
+      </div>
+      <div class="cp-media-detail-hero-back"><button class="cp-media-detail-hero-disc" aria-label="Back"><span class="cp-icon" aria-hidden="true">chevron_left</span></button></div>
+    </div>
+  </div>
+</div>
+<script>window.Cupola && window.Cupola.refresh();</script>
+</body>
+</html>

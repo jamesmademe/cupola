@@ -1,0 +1,17 @@
+# MediaBrowseScaffold
+
+The library wall shared by Movies, Series and Music: glass app bar, search field, KPI peek, filter chips with a pinned sort control, and a lettered poster wall that becomes a result grid while searching.
+
+Hand-written from `lib/core/widgets/media_browse_scaffold.dart` (with `_MediaBrowseFilterChips`, `_MediaBrowseSortControl`, `_BrowsePosterTile`) and `lib/core/widgets/search_bar_header.dart`; results are `MediaGrid`, the peek is `ServiceKpiPeek`.
+
+- **App bar** — `GlassAppBar` (the `GlassSurface` gradient, no blur), 56 high, title in `title-large` 700 `on-surface`, one action: `history` → the service's Activity. While searching a leading `arrow_back` exits search.
+- **Search** — padding `space-sm` / `space-lg` / `space-lg`. Field min 52, `radius-md`, `surface-container`, 1px `outline-variant`, padding `space-sm`; a leading `search_rounded` (24, inset `space-sm`) in the accent walked by `onTint` against `surface-container`; hint and text in Material's search-bar `body-large`. With text, a trailing `close_rounded` clear button in `on-surface-variant`. Input is debounced 400ms.
+- **Header** (hidden while searching) — the KPI peek, then the filter strip: padding `space-sm` / `space-lg` / `space-md`. Chips scroll, `space-sm` apart: padding `space-sm` × `space-md`, `radius-pill`, `label-medium` 600. Selected: solid accent, label by `foregroundOn`. Unselected: accent 12% wash with the accent walked by `onTint` against the page surface as the label, so it clears contrast on paper too. Chips: All, Available, Missing, In queue, Cutoff unmet (only when the service reports a cutoff set), Unmonitored. The sort control does not scroll: min 44 × 44, padding `space-sm`, `swap_vert` 18 + `space-xs` + the order name (`chrome` 11 / 600) in `on-surface-variant`; shown only with two or more orders (Title A–Z, Date added, Year, Size).
+- **Wall** — list padding `space-sm` top, `space-lg` sides. Under Title A–Z each letter (or `#`) is a section heading in `title-large` 600 with `space-md` below; sections `space-xl` apart; any other order is one unheaded run. Tiles: columns from the 130 floor (never fewer than 3), 12 between columns, 16 between rows; each tile is a 2 : 3 `ContentCard`, an 8px status dot at 6 / 6 bottom-left, `space-xs`, title `label-small` 600 `on-surface` and year `label-small` `on-surface-variant`, one line each. Lidarr's wall is circular (`MediaPosterCard.circular`, no dot; the caption carries completeness).
+- **Searching** — `MediaGrid`: padding `space-lg`, 12 gaps, compact badges top-right, no captions. Empty: *No results found*; filtered-empty library: *No items found*.
+
+The consumer provides title (`Movies`), `searchHint` (`Search movies...`), service name and accent, the library / search providers, extractors for title, year, images, id and status, the orders it can answer, the cutoff id set and the KPI rail. Titles, years and figures are illustrative: the one loaded artwork is the *Nosferatu* (1922) poster, and the other tiles show the shimmer, no-URL and failed-load states rather than borrowing it; the room glow of `AmbientScaffold` behind the page is not drawn here.
+
+Semantics: a tile is one button named by its title, with *year, status* as its value. Chips are buttons carrying a selected state. The sort control's hint rides on its child (*Sorted by Title A–Z*).
+
+Do: declare only the orders your model can answer. Don't: pin a tile width — the row resolves the count first and the tiles take what is left.

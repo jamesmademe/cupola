@@ -1,0 +1,65 @@
+<!-- @dsCard group="Overlays" height=560 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AppBottomSheet — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-app-bottom-sheet-stage">
+  <div class="cp-col" style="gap:var(--space-sm)">
+    <div class="cp-app-bottom-sheet-frame">
+      <section class="cp-app-bottom-sheet-sheet" style="--accent:var(--sonarr)" aria-label="Series type">
+        <div class="cp-app-bottom-sheet-glow"></div>
+        <div class="cp-app-bottom-sheet-handle"></div>
+        <header class="cp-app-bottom-sheet-header">
+          <div class="cp-app-bottom-sheet-tile"><span class="cp-icon" data-ontint="sonarr" data-surface="surface-container" data-alpha="0.14" aria-hidden="true">tv</span></div>
+          <div class="cp-app-bottom-sheet-titles">
+            <h2 class="cp-app-bottom-sheet-title">Series type</h2>
+            <p class="cp-app-bottom-sheet-subtitle">How Sonarr reads episode numbers out of a release name</p>
+          </div>
+        </header>
+        <div class="cp-app-bottom-sheet-body">
+          <div class="cp-app-bottom-sheet-option is-selected" role="button" aria-pressed="true">
+            <div class="cp-app-bottom-sheet-option-text"><span class="cp-app-bottom-sheet-option-label" data-ontint="sonarr" data-alpha="0">Standard</span><span class="cp-app-bottom-sheet-option-desc">Episodes numbered by season, S01E02</span></div>
+            <span class="cp-icon" data-ontint="sonarr" data-alpha="0" aria-hidden="true">check</span>
+          </div>
+          <div class="cp-app-bottom-sheet-option" role="button">
+            <div class="cp-app-bottom-sheet-option-text"><span class="cp-app-bottom-sheet-option-label">Daily</span><span class="cp-app-bottom-sheet-option-desc">Episodes identified by air date</span></div>
+          </div>
+          <div class="cp-app-bottom-sheet-option" role="button">
+            <div class="cp-app-bottom-sheet-option-text"><span class="cp-app-bottom-sheet-option-label">Anime</span><span class="cp-app-bottom-sheet-option-desc">Episodes numbered absolutely, from one</span></div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <span class="cp-caption">AppBottomSheet.show · icon, accent, subtitle · picker body</span>
+  </div>
+
+  <div class="cp-col" style="gap:var(--space-sm)">
+    <div class="cp-app-bottom-sheet-frame">
+      <section class="cp-app-bottom-sheet-sheet" style="--accent:var(--qbittorrent)" aria-label="Add torrent">
+        <div class="cp-app-bottom-sheet-glow"></div>
+        <div class="cp-app-bottom-sheet-handle"></div>
+        <header class="cp-app-bottom-sheet-header">
+          <div class="cp-app-bottom-sheet-tile"><span class="cp-icon" data-ontint="qbittorrent" data-surface="surface-container" data-alpha="0.14" aria-hidden="true">add_link</span></div>
+          <div class="cp-app-bottom-sheet-titles"><h2 class="cp-app-bottom-sheet-title">Add torrent</h2></div>
+        </header>
+        <div class="cp-app-bottom-sheet-body">
+          <div class="cp-app-bottom-sheet-form">
+            <div class="cp-app-bottom-sheet-field">Magnet / URL</div>
+            <button class="cp-btn cp-btn--outlined cp-app-bottom-sheet-wide cp-app-bottom-sheet-pick"><span class="cp-icon" aria-hidden="true">attach_file</span>Pick .torrent files</button>
+            <div class="cp-app-bottom-sheet-field">Category (optional)</div>
+            <div class="cp-app-bottom-sheet-field">Save path (optional)</div>
+            <button class="cp-btn cp-btn--filled cp-app-bottom-sheet-wide cp-app-bottom-sheet-submit"><span class="cp-icon" aria-hidden="true">add</span>Add torrent</button>
+          </div>
+        </div>
+      </section>
+    </div>
+    <span class="cp-caption">No subtitle · form body; the filled button is the caller's, in the qBittorrent accent</span>
+  </div>
+</div>
+<script>window.Cupola && window.Cupola.refresh();</script>
+</body>
+</html>

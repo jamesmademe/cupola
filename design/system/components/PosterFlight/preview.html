@@ -1,0 +1,237 @@
+<!-- @dsCard group="Motion" height=640 subtitle="Tap a poster: the shared-element flight, lifted to level-3 mid-air" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PosterFlight — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-motion cp-poster-flight" data-reduce="false">
+  <div class="cp-motion-bar">
+    <div class="cp-motion-bar-title"><b>Poster Hero flight</b><span class="cp-caption">Tap a poster to push its detail page; the back button pops it. The page slides, the poster flies over both.</span></div>
+    <button type="button" class="cp-motion-btn" data-replay><span class="cp-icon" aria-hidden="true">replay</span>Replay</button>
+    <button type="button" class="cp-motion-btn" data-slow aria-pressed="false"><span class="cp-icon" aria-hidden="true">slow_motion_video</span>Slow ×4</button>
+    <button type="button" class="cp-motion-switch" role="switch" aria-checked="false" data-reduce-switch><span class="cp-motion-switch-track" aria-hidden="true"></span>Reduce motion</button>
+  </div>
+  <div class="cp-motion-row">
+    <div class="cp-motion-phone cp-poster-flight-phone" data-phone>
+      <div class="cp-poster-flight-page" data-grid-page>
+        <div class="cp-poster-flight-appbar"><span class="cp-title-medium">Library</span></div>
+        <div class="cp-poster-flight-grid" data-grid></div>
+      </div>
+      <div class="cp-poster-flight-page cp-poster-flight-detail" data-detail-page style="transform:translateX(100%)" aria-hidden="true">
+        <div class="cp-poster-flight-hero">
+          <div class="cp-poster-flight-backdrop"><div data-settle><img src="__BACKDROP__" alt=""></div></div>
+          <div class="cp-poster-flight-slot" data-slot><img src="__POSTER__" alt=""></div>
+          <div class="cp-poster-flight-summary">
+            <span class="cp-badge" style="align-self:flex-start"><span class="cp-icon" data-ontint="success" aria-hidden="true">check_circle</span>Available</span>
+            <span class="cp-title-large" style="line-height:1.15;color:var(--on-surface)">Nosferatu</span>
+            <span class="cp-body-medium" style="color:var(--on-surface-variant)">1922 • 94 min</span>
+          </div>
+          <button type="button" class="cp-poster-flight-back" data-back aria-label="Back"><span><span class="cp-icon" aria-hidden="true">chevron_left</span></span></button>
+        </div>
+        <div class="cp-poster-flight-sections" data-sections><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="cp-poster-flight-shuttle" data-shuttle><img src="__POSTER__" alt=""></div>
+    </div>
+    <div class="cp-poster-flight-panel">
+      <svg class="cp-poster-flight-plot" viewBox="0 0 360 96" preserveAspectRatio="none" aria-hidden="true">
+        <path class="axis" d="M0 88H360"/>
+        <path data-plot="page" style="stroke:var(--on-surface-variant)"/>
+        <path data-plot="hero" style="stroke:var(--primary)"/>
+        <path data-plot="lift" style="stroke:var(--nav-activity)"/>
+        <line data-plot="now" x1="0" x2="0" y1="0" y2="88" style="stroke:var(--on-surface);stroke-width:1"/>
+      </svg>
+      <div class="cp-motion-key">
+        <span><i style="background:var(--on-surface-variant)"></i>page slide · fastEaseInToSlowEaseOut</span>
+        <span><i style="background:var(--primary)"></i>flight · fastOutSlowIn</span>
+        <span><i style="background:var(--nav-activity)"></i>lift · easeOut(1 − |2a − 1|)</span>
+      </div>
+      <dl class="cp-motion-readout">
+        <dt>route</dt><dd data-out="route">0.000 · 500 ms CupertinoPage</dd>
+        <dt>flight a</dt><dd data-out="a">0.000</dd>
+        <dt>path</dt><dd>MaterialRectArcTween (MaterialApp's HeroController)</dd>
+        <dt>shadow</dt><dd data-out="shadow">level-2</dd>
+        <dt>backdrop</dt><dd data-out="settle">opacity 0 · scale 1.060</dd>
+        <dt>sections</dt><dd data-out="sections">wait for the push, then 45 ms apart</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var root = document.querySelector('.cp-poster-flight');
+  function cubic(a, b, c, d) {
+    function ev(p, q, m) { return 3 * p * (1 - m) * (1 - m) * m + 3 * q * (1 - m) * m * m + m * m * m; }
+    return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; var lo = 0, hi = 1; for (;;) { var m = (lo + hi) / 2, x = ev(a, c, m); if (Math.abs(t - x) < 0.001) return ev(b, d, m); if (x < t) lo = m; else hi = m; } };
+  }
+  function threePoint(a1, b1, mid, a2, b2) {
+    var sx1 = mid[0], sy1 = mid[1], sx2 = 1 - mid[0], sy2 = 1 - mid[1];
+    var f1 = cubic(a1[0] / sx1, a1[1] / sy1, b1[0] / sx1, b1[1] / sy1), f2 = cubic((a2[0] - mid[0]) / sx2, (a2[1] - mid[1]) / sy2, (b2[0] - mid[0]) / sx2, (b2[1] - mid[1]) / sy2);
+    return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; return t < mid[0] ? f1(t / sx1) * sy1 : f2((t - mid[0]) / sx2) * sy2 + mid[1]; };
+  }
+  function flipped(f) { return function (t) { return 1 - f(1 - t); }; }
+  /* Flutter curves.dart */
+  var fastOutSlowIn = cubic(0.4, 0, 0.2, 1);
+  var fastEaseInToSlowEaseOut = threePoint([0.056, 0.024], [0.108, 0.3085], [0.198, 0.541], [0.3655, 1], [0.5465, 0.989]);
+  var linearToEaseOut = cubic(0.35, 0.91, 0.33, 0.97), easeInToLinear = cubic(0.67, 0.03, 0.65, 0.09);
+  var easeOut = cubic(0.25, 0.1, 0.25, 1), easeOutCubic = cubic(0.215, 0.61, 0.355, 1);
+  var ROUTE_MS = 500, REDUCED = 0.05, STEP = 45, ENTER_MS = 300, ENTER_OFFSET = 16;
+  var slow = 1;
+  var q = function (s) { return root.querySelector(s); };
+  var phone = q('[data-phone]'), gridPage = q('[data-grid-page]'), detail = q('[data-detail-page]'), grid = q('[data-grid]');
+  var slot = q('[data-slot]'), shuttle = q('[data-shuttle]'), settle = q('[data-settle]'), sections = [].slice.call(q('[data-sections]').children);
+  var out = {}; root.querySelectorAll('[data-out]').forEach(function (el) { out[el.dataset.out] = el; });
+  function reduce() { return root.dataset.reduce === 'true'; }
+  for (var i = 0; i < 9; i++) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'cp-poster-flight-cell'; b.setAttribute('aria-label', 'Nosferatu, opens details');
+    b.innerHTML = '<img src="' + slot.querySelector('img').getAttribute('src') + '" alt="">';
+    grid.appendChild(b);
+  }
+  var cells = [].slice.call(grid.children);
+  /* ---- MaterialPointArcTween / MaterialRectArcTween (material/arc.dart), ported ---- */
+  function pointArc(b, e) {
+    var dx = e.x - b.x, dy = e.y - b.y, ax = Math.abs(dx), ay = Math.abs(dy), dist = Math.hypot(dx, dy), s = { b: b, e: e };
+    var c = { x: e.x, y: b.y };
+    function sweep() { return 2 * Math.asin(dist / (2 * s.r)); }
+    if (ax > 2 && ay > 2) {
+      if (ax < ay) {
+        s.r = dist * dist / Math.hypot(c.x - b.x, c.y - b.y) / 2;
+        s.c = { x: e.x + s.r * Math.sign(b.x - e.x), y: e.y };
+        if (b.x < e.x) { s.a0 = sweep() * Math.sign(b.y - e.y); s.a1 = 0; } else { s.a0 = Math.PI + sweep() * Math.sign(e.y - b.y); s.a1 = Math.PI; }
+      } else {
+        s.r = dist * dist / Math.hypot(c.x - e.x, c.y - e.y) / 2;
+        s.c = { x: b.x, y: b.y + Math.sign(e.y - b.y) * s.r };
+        if (b.y < e.y) { s.a0 = -Math.PI / 2; s.a1 = s.a0 + sweep() * Math.sign(e.x - b.x); } else { s.a0 = Math.PI / 2; s.a1 = s.a0 + sweep() * Math.sign(b.x - e.x); }
+      }
+    }
+    return function (t) {
+      if (t === 0) return b; if (t === 1) return e;
+      if (s.a0 == null) return { x: b.x + dx * t, y: b.y + dy * t };
+      var a = s.a0 + (s.a1 - s.a0) * t; return { x: s.c.x + Math.cos(a) * s.r, y: s.c.y + Math.sin(a) * s.r };
+    };
+  }
+  function corner(r, id) { return { x: id & 1 ? r.x + r.w : r.x, y: id & 2 ? r.y + r.h : r.y }; }
+  var DIAGONALS = [[0, 3], [3, 0], [1, 2], [2, 1]]; /* TL→BR, BR→TL, TR→BL, BL→TR */
+  function rectArc(b, e) {
+    var cv = { x: (e.x + e.w / 2) - (b.x + b.w / 2), y: (e.y + e.h / 2) - (b.y + b.h / 2) }, best = null, bestK = -Infinity;
+    DIAGONALS.forEach(function (d) {
+      var p = corner(b, d[0]), q2 = corner(b, d[1]), dx = q2.x - p.x, dy = q2.y - p.y, len = Math.hypot(dx, dy), k = cv.x * dx / len + cv.y * dy / len;
+      if (k > bestK) { bestK = k; best = d; }
+    });
+    var A = pointArc(corner(b, best[0]), corner(e, best[0])), B = pointArc(corner(b, best[1]), corner(e, best[1]));
+    return function (t) {
+      if (t === 0) return b; if (t === 1) return e;
+      var p = A(t), r = B(t); return { x: Math.min(p.x, r.x), y: Math.min(p.y, r.y), w: Math.abs(p.x - r.x), h: Math.abs(p.y - r.y) };
+    };
+  }
+  function box(el) {
+    /* Hero measures each end inside its own route, without the page slide. */
+    var page = el.closest('.cp-poster-flight-page'), saved = page.style.transform;
+    page.style.transform = 'none';
+    var r = el.getBoundingClientRect(), p = phone.getBoundingClientRect();
+    page.style.transform = saved;
+    return { x: r.left - p.left, y: r.top - p.top, w: r.width, h: r.height };
+  }
+  /* AppElevation.level2 / level3 per theme, lerped shadow-by-shadow like BoxShadow.lerpList. */
+  function shadows(k) {
+    var light = document.documentElement.getAttribute('data-theme') === 'light', ink = light ? '17,24,39' : '0,0,0';
+    var L2 = light ? [[4, 10, 0.08], [10, 22, 0.05]] : [[4, 10, 0.34], [10, 22, 0.22]];
+    var L3 = light ? [[6, 16, 0.10], [18, 36, 0.07]] : [[6, 16, 0.40], [18, 36, 0.26]];
+    return L2.map(function (s, i) { var t = L3[i]; return '0 ' + (s[0] + (t[0] - s[0]) * k).toFixed(2) + 'px ' + (s[1] + (t[1] - s[1]) * k).toFixed(2) + 'px rgba(' + ink + ',' + (s[2] + (t[2] - s[2]) * k).toFixed(3) + ')'; }).join(', ');
+  }
+  var W = 360, state = { value: 0, pushed: false, raf: 0, cell: null, tween: null, t0: 0, from: 0, to: 0, dir: 'push', reduced: false };
+  function paintPages(v, dir) {
+    var prim = dir === 'push' ? fastEaseInToSlowEaseOut(v) : flipped(fastEaseInToSlowEaseOut)(v);
+    var sec = dir === 'push' ? linearToEaseOut(v) : easeInToLinear(v);
+    detail.style.transform = 'translateX(' + ((1 - prim) * W).toFixed(2) + 'px)';
+    detail.style.visibility = v > 0 ? 'visible' : 'hidden';
+    gridPage.style.transform = 'translateX(' + (-sec * W / 3).toFixed(2) + 'px)';
+    if (!state.reduced) {
+      /* Destination settle: FadeTransition + ScaleTransition(1.06 → 1) on routeAnimation · easeOutCubic */
+      var s = easeOutCubic(v);
+      settle.style.opacity = String(s); settle.style.transform = 'scale(' + (1.06 + (1 - 1.06) * s) + ')';
+      out.settle.textContent = 'opacity ' + s.toFixed(3) + ' · scale ' + (1.06 - 0.06 * s).toFixed(3);
+    } else { settle.style.opacity = '1'; settle.style.transform = 'none'; out.settle.textContent = 'no settle (Reduce Motion)'; }
+    return prim;
+  }
+  function paintFlight(v, dir) {
+    var a = dir === 'push' ? fastOutSlowIn(v) : flipped(fastOutSlowIn)(v);   /* manifest.animation */
+    var p = dir === 'push' ? a : 1 - a;                                      /* pop runs ReverseAnimation over it */
+    var r = state.tween(p);
+    shuttle.style.left = r.x + 'px'; shuttle.style.top = r.y + 'px'; shuttle.style.width = r.w + 'px'; shuttle.style.height = r.h + 'px';
+    if (state.reduced) { shuttle.style.boxShadow = shadows(0); out.shadow.textContent = 'level-2, static shuttle (Reduce Motion)'; }
+    else { var lift = 1 - Math.abs(2 * a - 1), k = easeOut(lift); shuttle.style.boxShadow = shadows(k); out.shadow.textContent = 'level-2 → level-3 · blend ' + k.toFixed(3); }
+    out.a.textContent = a.toFixed(3);
+    return a;
+  }
+  function plot() {
+    var d = { page: '', hero: '', lift: '' };
+    for (var i = 0; i <= 120; i++) {
+      var v = i / 120, x = (v * 360).toFixed(1), a = fastOutSlowIn(v);
+      d.page += (i ? 'L' : 'M') + x + ' ' + (88 - 80 * fastEaseInToSlowEaseOut(v)).toFixed(1);
+      d.hero += (i ? 'L' : 'M') + x + ' ' + (88 - 80 * a).toFixed(1);
+      d.lift += (i ? 'L' : 'M') + x + ' ' + (88 - 80 * easeOut(1 - Math.abs(2 * a - 1))).toFixed(1);
+    }
+    Object.keys(d).forEach(function (k) { q('[data-plot="' + k + '"]').setAttribute('d', d[k]); });
+  }
+  function enterSections(on) {
+    sections.forEach(function (el, i) {
+      clearTimeout(el._t); cancelAnimationFrame(el._r);
+      if (!on) { el.style.opacity = '0'; el.style.transform = 'translateY(' + ENTER_OFFSET + 'px)'; return; }
+      if (state.reduced) { el.style.opacity = '1'; el.style.transform = 'none'; return; }
+      /* StaggeredEntrance: delay = route.transitionDuration (mounted mid-push) + 45 ms × index; 300 ms easeOutCubic */
+      el._t = setTimeout(function () {
+        var t0 = performance.now();
+        (function f(now) { var p = Math.max(0, Math.min(1, (now - t0) / (ENTER_MS * slow))), s = easeOutCubic(p); el.style.opacity = String(s); el.style.transform = 'translateY(' + ((1 - s) * ENTER_OFFSET) + 'px)'; if (p < 1) el._r = requestAnimationFrame(f); })(t0);
+      }, (ROUTE_MS + STEP * i) * slow);
+    });
+  }
+  function run(dir, cell) {
+    cancelAnimationFrame(state.raf);
+    state.reduced = reduce(); state.dir = dir;
+    if (cell) state.cell = cell;
+    var from = box(state.cell), to = box(slot);
+    state.tween = dir === 'push' ? rectArc(from, to) : rectArc(to, from);
+    state.cell.classList.add('is-flying'); slot.classList.add('is-flying');
+    shuttle.style.display = 'block';
+    detail.setAttribute('aria-hidden', dir === 'push' ? 'false' : 'true');
+    if (dir === 'push') enterSections(true);
+    var ms = ROUTE_MS * (state.reduced ? REDUCED : 1) * slow, start = state.value, target = dir === 'push' ? 1 : 0, t0 = performance.now();
+    var span = ms * Math.abs(target - start);
+    (function f(now) {
+      var p = span <= 0 ? 1 : Math.max(0, Math.min(1, (now - t0) / span));
+      var v = start + (target - start) * p; state.value = v;
+      paintPages(v, dir); paintFlight(v, dir);
+      out.route.textContent = v.toFixed(3) + (state.reduced ? ' · 25 ms (5% of 500)' : ' · 500 ms CupertinoPage');
+      q('[data-plot="now"]').setAttribute('x1', v * 360); q('[data-plot="now"]').setAttribute('x2', v * 360);
+      if (p < 1) { state.raf = requestAnimationFrame(f); return; }
+      shuttle.style.display = 'none'; state.cell.classList.remove('is-flying'); slot.classList.remove('is-flying');
+      state.pushed = dir === 'push';
+      detail.inert = !state.pushed; gridPage.inert = state.pushed;
+      if (dir === 'pop') enterSections(false);
+    })(t0);
+  }
+  cells.forEach(function (c) { c.addEventListener('click', function () { if (!state.pushed && state.value === 0) run('push', c); }); });
+  q('[data-back]').addEventListener('click', function () { if (state.cell) run('pop'); });
+  q('[data-replay]').addEventListener('click', function () {
+    cancelAnimationFrame(state.raf); state.value = 0; paintPages(0, 'push'); enterSections(false);
+    shuttle.style.display = 'none'; cells.forEach(function (c) { c.classList.remove('is-flying'); }); slot.classList.remove('is-flying');
+    state.pushed = false; run('push', cells[4]);
+    setTimeout(function () { run('pop'); }, (ROUTE_MS + 1100) * slow);
+  });
+  var slowBtn = q('[data-slow]');
+  slowBtn.addEventListener('click', function () { slow = slow === 1 ? 4 : 1; slowBtn.setAttribute('aria-pressed', slow > 1 ? 'true' : 'false'); });
+  var sw = q('[data-reduce-switch]');
+  function setReduce(v) { root.dataset.reduce = v ? 'true' : 'false'; sw.setAttribute('aria-checked', v ? 'true' : 'false'); }
+  sw.addEventListener('click', function () { setReduce(!reduce()); });
+  var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (mq.addEventListener) mq.addEventListener('change', function (e) { setReduce(e.matches); });
+  setReduce(mq.matches);
+  plot(); paintPages(0, 'push'); enterSections(false); detail.inert = true;
+  window.Cupola && window.Cupola.refresh();
+})();
+</script>
+</body>
+</html>

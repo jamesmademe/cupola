@@ -1,0 +1,18 @@
+<!-- @dsCard group="Feedback" height=300 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FaultBand — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-col" style="padding:var(--space-md) 0;gap:var(--space-sm)">
+  <div class="cp-fault" role="status" aria-label="TrueNAS has not answered for 6 minutes. Everything below is what it said last."><span class="cp-icon" data-ontint="error" aria-hidden="true">cloud_off</span><span class="cp-fault__msg" aria-hidden="true">TrueNAS has not answered for 6 minutes. Everything below is what it said last.</span><button class="cp-fault__verb">Retry</button><button class="cp-fault__verb">Settings</button></div>
+  <div class="cp-fault" role="status" aria-label="Radarr is answering. qBittorrent, the download client it hands grabs to, is not — so the queue is missing from this page."><span class="cp-icon" data-ontint="error" aria-hidden="true">link_off</span><span class="cp-fault__msg" aria-hidden="true">Radarr is answering. qBittorrent, the download client it hands grabs to, is not — so the queue is missing from this page.</span><button class="cp-fault__verb">Retry</button></div>
+  <div class="cp-fault" role="status" aria-label="These figures are 6 min ago. TrueNAS live metrics have not returned."><span class="cp-icon" data-ontint="warning" aria-hidden="true">history_toggle_off</span><span class="cp-fault__msg" aria-hidden="true">These figures are 6 min ago. TrueNAS live metrics have not returned.</span><button class="cp-fault__verb">Refresh</button></div>
+  <div class="cp-fault" role="status" aria-label="Radarr stopped answering while this page was open. Everything here is the last render; a write will fail until it is back."><span class="cp-icon" data-ontint="error" aria-hidden="true">cloud_off</span><span class="cp-fault__msg" aria-hidden="true">Radarr stopped answering while this page was open. Everything here is the last render; a write will fail until it is back.</span><button class="cp-fault__verb">Retry</button><button class="cp-fault__verb">Open Radarr</button></div>
+</div>
+<script>window.Cupola && window.Cupola.refresh();</script>
+</body>
+</html>

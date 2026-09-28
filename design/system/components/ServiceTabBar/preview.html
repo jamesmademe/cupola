@@ -1,0 +1,76 @@
+<!-- @dsCard group="Navigation" height=380 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ServiceTabBar — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-service-tab-bar-stage">
+  <div class="cp-col" style="gap:var(--space-xs)">
+    <div class="cp-service-tab-bar-frame"><div class="cp-service-tab-bar" role="tablist" aria-label="Radarr">
+      <span class="cp-service-tab-bar-tab is-selected" role="tab" aria-selected="true" data-ontint="radarr" data-surface="surface" data-alpha="0">Overview</span>
+      <span class="cp-service-tab-bar-tab" role="tab">Library</span>
+      <span class="cp-service-tab-bar-tab" role="tab">Calendar</span>
+      <span class="cp-service-tab-bar-tab" role="tab">Queue</span>
+      <span class="cp-service-tab-bar-tab" role="tab">Wanted</span>
+      <span class="cp-service-tab-bar-tab" role="tab">History</span>
+    </div></div>
+    <span class="cp-caption" style="padding-left:var(--space-lg)">Radarr · Overview selected — the four *arr share this exact bar</span>
+  </div>
+  <div class="cp-col" style="gap:var(--space-xs)">
+    <div class="cp-service-tab-bar-frame"><div class="cp-service-tab-bar" role="tablist" aria-label="Radarr">
+      <span class="cp-service-tab-bar-tab" role="tab">Overview</span>
+      <span class="cp-service-tab-bar-tab" role="tab">Library</span>
+      <span class="cp-service-tab-bar-tab" role="tab">Calendar</span>
+      <span class="cp-service-tab-bar-tab is-selected" role="tab" aria-selected="true" data-ontint="radarr" data-surface="surface" data-alpha="0">Queue</span>
+      <span class="cp-service-tab-bar-tab" role="tab">Wanted</span>
+      <span class="cp-service-tab-bar-tab" role="tab">History</span>
+    </div></div>
+    <span class="cp-caption" style="padding-left:var(--space-lg)">Radarr · Queue selected — the rule spans the padded cell, drawn without shifting the row</span>
+  </div>
+  <div class="cp-col" style="gap:var(--space-xs)">
+    <div class="cp-service-tab-bar-frame"><div class="cp-service-tab-bar" role="tablist" aria-label="Nginx Proxy Manager">
+      <span class="cp-service-tab-bar-tab" role="tab">Overview</span>
+      <span class="cp-service-tab-bar-tab" role="tab">Proxy hosts</span>
+      <span class="cp-service-tab-bar-tab is-selected" role="tab" aria-selected="true" data-ontint="nginx-proxy-manager" data-surface="surface" data-alpha="0">Certificates</span>
+      <span class="cp-service-tab-bar-tab" role="tab">Access lists</span>
+      <span class="cp-service-tab-bar-tab" role="tab">Audit log</span>
+    </div></div>
+    <span class="cp-caption" style="padding-left:var(--space-lg)">Nginx Proxy Manager · wider than the frame, so it scrolls from the start — never squeezed, never centred. TrueNAS draws no bar at all.</span>
+  </div>
+  <div class="cp-col" style="gap:var(--space-xs)">
+    <div class="cp-service-tab-bar-frame is-header"><div class="cp-service-tab-bar-header" style="--accent:var(--radarr)">
+      <span class="cp-service-tab-bar-well" style="--accent:var(--radarr)" aria-hidden="true"><span class="cp-svc" data-ontint="radarr" data-surface="surface" data-alpha="0.2432">&#xE002;</span></span>
+      <h2 class="cp-service-tab-bar-name">Radarr</h2>
+      <span class="cp-service-tab-bar-divider" aria-hidden="true"></span>
+      <div class="cp-service-tab-bar" role="tablist" aria-label="Radarr">
+        <span class="cp-service-tab-bar-tab" role="tab">Overview</span>
+        <span class="cp-service-tab-bar-tab is-selected" role="tab" aria-selected="true" data-ontint="radarr" data-surface="surface" data-alpha="0.12">Library</span>
+        <span class="cp-service-tab-bar-tab" role="tab">Calendar</span>
+        <span class="cp-service-tab-bar-tab" role="tab">Queue</span>
+        <span class="cp-service-tab-bar-tab" role="tab">Wanted</span>
+        <span class="cp-service-tab-bar-tab" role="tab">History</span>
+      </div>
+    </div></div>
+    <span class="cp-caption" style="padding-left:var(--space-lg)">.header — the desktop window's variant, lit with the room light: the accent at 12% over surface across the whole band, a 30% bloom in its lower 11px, no border</span>
+  </div>
+  <div class="cp-col" style="gap:var(--space-xs)">
+    <div class="cp-service-tab-bar-frame is-header"><div class="cp-service-tab-bar-header" style="--accent:var(--transmission)">
+      <span class="cp-service-tab-bar-well" style="--accent:var(--transmission)" aria-hidden="true"><span class="cp-svc" data-ontint="transmission" data-surface="surface" data-alpha="0.2432">&#xE006;</span></span>
+      <h2 class="cp-service-tab-bar-name">Transmission</h2>
+      <span class="cp-service-tab-bar-divider" aria-hidden="true"></span>
+      <div class="cp-service-tab-bar" role="tablist" aria-label="Transmission">
+        <span class="cp-service-tab-bar-tab" role="tab">Overview</span>
+        <span class="cp-service-tab-bar-tab is-selected" role="tab" aria-selected="true" data-ontint="transmission" data-surface="surface" data-alpha="0.12">Queue</span>
+        <span class="cp-service-tab-bar-tab" role="tab">Labels</span>
+        <span class="cp-service-tab-bar-tab" role="tab">Session</span>
+      </div>
+    </div></div>
+    <span class="cp-caption" style="padding-left:var(--space-lg)">Transmission · the bloom's floor case: the selected rule still holds 3:1 over it. Labels and the mark resolve against the lit band, not bare surface</span>
+  </div>
+</div>
+<script>window.Cupola && window.Cupola.refresh();</script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!-- @dsCard group="Motion" height=300 subtitle="The floating bar: the pill slides and grows, the bar springs back" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NavPillTransition — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-motion cp-nav-pill-transition" data-reduce="false">
+  <div class="cp-motion-bar">
+    <div class="cp-motion-bar-title"><b>FloatingBottomNavBar</b><span class="cp-caption">Click a destination; drag the bar in any direction and let go.</span></div>
+    <button type="button" class="cp-motion-btn" data-replay><span class="cp-icon" aria-hidden="true">replay</span>Replay</button>
+    <button type="button" class="cp-motion-switch" role="switch" aria-checked="false" data-reduce-switch><span class="cp-motion-switch-track" aria-hidden="true"></span>Reduce motion</button>
+  </div>
+  <div class="cp-motion-row">
+    <div class="cp-nav-pill-transition-well">
+      <div class="cp-nav-pill-transition-page" aria-hidden="true"><i style="width:55%"></i><i style="width:80%"></i><i style="width:68%"></i></div>
+      <div class="cp-nav-pill-transition-wrap" data-wrap>
+        <div class="cp-nav-pill-transition-bar" data-bar>
+          <nav class="cp-nav-pill-transition-inner" aria-label="Main" data-inner>
+            <div class="cp-nav-pill-transition-ind" data-ind aria-hidden="true"></div>
+          </nav>
+        </div>
+      </div>
+    </div>
+    <div class="cp-nav-pill-transition-panel">
+      <dl class="cp-motion-readout">
+        <dt>item widths</dt><dd data-out="widths">—</dd>
+        <dt>pill</dt><dd data-out="pill">—</dd>
+        <dt>geometry</dt><dd data-out="geo">200 ms · easeOutCubic</dd>
+        <dt>scale bump</dt><dd data-out="bump">1.02 · 100 ms · easeOutCubic</dd>
+        <dt>icon · label</dt><dd data-out="swap">fade 200 ms · size 200 ms</dd>
+        <dt>drag offset</dt><dd data-out="drag">0.0, 0.0</dd>
+        <dt>spring-back</dt><dd data-out="spring">500 ms · elasticOut(0.4)</dd>
+      </dl>
+      <span class="cp-motion-haptic" data-haptic><span class="cp-icon" aria-hidden="true">vibration</span>HapticFeedback.selectionClick</span>
+      <p class="cp-motion-note">The pill's fill swaps to the new accent at once; only its geometry animates. Drag: resistance 0.15 ÷ (1 + |offset| ÷ 30), clamped to ±15 on each axis.</p>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var root = document.querySelector('.cp-nav-pill-transition');
+  var D = [
+    { label: 'Dashboard', icon: 'view_list', accent: 'nav-dashboard' },
+    { label: 'Activity', icon: 'monitor_heart', accent: 'nav-activity' },
+    { label: 'Search', icon: 'search', accent: 'nav-search' },
+    { label: 'Settings', icon: 'settings', accent: 'nav-settings' }
+  ];
+  /* floating_bottom_nav_bar.dart: _NavBarItem + _NavBarLayoutMetrics, at text scale 1.0. */
+  var ICON = 20, PAD = 14, LABEL_GAP = 6, SLACK = 6, MIN_SELECTED = 84, COMPACT = 52, COMPACT_MIN = 48, BREAKPOINT = 360, EXTRA_SHARE = 0.6, SURFACE_PAD = 6, BORDER = 1;
+  var MAX_DRAG = 15, BASE_RESISTANCE = 0.15, FALLOFF = 30, SPRING_MS = 500;
+  var REDUCED = 0.05; /* AnimationController under disableAnimations (animation_controller.dart:651) */
+  var inner = root.querySelector('[data-inner]'), ind = root.querySelector('[data-ind]'), bar = root.querySelector('[data-bar]'), wrap = root.querySelector('[data-wrap]');
+  var out = {}; root.querySelectorAll('[data-out]').forEach(function (el) { out[el.dataset.out] = el; });
+  var haptic = root.querySelector('[data-haptic]');
+  var probe = document.createElement('span'); probe.style.display = 'none'; root.appendChild(probe);
+  function rgb(token) { probe.style.color = 'var(--' + token + ')'; var m = getComputedStyle(probe).color.match(/[\d.]+/g) || [0, 0, 0]; return { r: +m[0], g: +m[1], b: +m[2] }; }
+  function css(c) { return 'rgb(' + Math.round(c.r) + ',' + Math.round(c.g) + ',' + Math.round(c.b) + ')'; }
+  function isLight() { return document.documentElement.getAttribute('data-theme') === 'light'; }
+  function tintAlpha() { return isLight() ? 0.13 : 0.16; }
+  var ctx = document.createElement('canvas').getContext('2d');
+  function textWidth(s) { ctx.font = '600 12px Inter, system-ui, sans-serif'; if ('letterSpacing' in ctx) ctx.letterSpacing = '0.01px'; return ctx.measureText(s).width; }
+  function selectedWidth(i) { return PAD * 2 + ICON + LABEL_GAP + D[i].w + SLACK; }
+  function sum(a) { return a.reduce(function (s, v) { return s + v; }, 0); }
+  function preferredInner() {
+    var sel = D.reduce(function (m, d, i) { return Math.max(m, Math.max(MIN_SELECTED, selectedWidth(i))); }, MIN_SELECTED);
+    var n = D.length, regular = sel + COMPACT * (n - 1) + (8 - 2) * (n - 1);
+    return regular >= BREAKPOINT ? regular : sel + COMPACT * (n - 1) + 4 * (n - 1);
+  }
+  function resolve(avail, sel) {
+    var n = D.length, gap = avail < BREAKPOINT ? 4 : 6, area = Math.max(0, avail - gap * (n - 1));
+    var w = D.map(function () { return COMPACT; });
+    w[sel] = Math.max(MIN_SELECTED, selectedWidth(sel));
+    var delta = area - sum(w);
+    if (delta >= 0) {
+      var se = delta * EXTRA_SHARE, ce = (delta - se) / (n - 1);
+      w = w.map(function (v, i) { return v + (i === sel ? se : ce); });
+    } else {
+      var deficit = -delta, cap = (COMPACT - COMPACT_MIN) * (n - 1), cr = Math.min(Math.max(deficit, 0), cap);
+      w = w.map(function (v, i) { return i === sel ? v : v - cr / (n - 1); });
+      deficit -= cr;
+      if (deficit > 0) { var sr = Math.min(deficit, Math.max(0, w[sel] - MIN_SELECTED)); w[sel] -= sr; deficit -= sr; }
+      if (deficit > 0) { var mins = D.map(function (d, i) { return i === sel ? MIN_SELECTED : COMPACT_MIN; }), f = area / sum(mins); w = mins.map(function (v) { return v * f; }); }
+    }
+    w[sel] += area - sum(w);
+    var lefts = [], x = 0; w.forEach(function (v) { lefts.push(x); x += v + gap; });
+    return { widths: w, lefts: lefts, gap: gap };
+  }
+  var selected = 0, items = [], layoutAvail = 0;
+  function reduce() { return root.dataset.reduce === 'true'; }
+  function build() {
+    D.forEach(function (d) { d.w = textWidth(d.label); });
+    var surface = Math.min(preferredInner() + SURFACE_PAD * 2, wrap.clientWidth - 32);
+    bar.style.width = surface + 'px';
+    layoutAvail = surface - SURFACE_PAD * 2 - BORDER * 2;
+    D.forEach(function (d, i) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'cp-nav-pill-transition-item';
+      b.setAttribute('aria-label', d.label + ', Tab ' + (i + 1) + ' of ' + D.length);
+      b.innerHTML = '<span class="cp-nav-pill-transition-content"><span class="cp-nav-pill-transition-icon"></span><span class="cp-nav-pill-transition-label"><span></span></span></span>';
+      b.addEventListener('click', function () { if (!b._suppress) select(i, true); b._suppress = false; });
+      inner.appendChild(b);
+      items.push({ el: b, icon: b.querySelector('.cp-nav-pill-transition-icon'), label: b.querySelector('.cp-nav-pill-transition-label'), text: b.querySelector('.cp-nav-pill-transition-label > span'), sel: null });
+    });
+    paint(true);
+  }
+  function itemColor(i, sel) {
+    if (!sel) return 'var(--on-surface-variant)';
+    return css(window.Cupola.onTint(rgb(D[i].accent), rgb('surface'), tintAlpha()));
+  }
+  function swapIcon(it, i, sel, instant) {
+    /* AnimatedSwitcher(durationSm), keyed by isSelected: the old glyph fades out as the new fades in. */
+    var ms = 200 * (reduce() ? REDUCED : 1);
+    it.icon.querySelectorAll('span').forEach(function (old) { old.style.opacity = '0'; setTimeout(function () { old.remove(); }, ms + 20); });
+    var s = document.createElement('span');
+    s.className = 'cp-icon' + (sel ? '' : ' outlined'); s.setAttribute('aria-hidden', 'true');
+    s.textContent = D[i].icon; s.style.color = itemColor(i, sel); s.style.opacity = instant ? '1' : '0';
+    it.icon.appendChild(s);
+    if (!instant) { void s.offsetWidth; s.style.opacity = '1'; }
+  }
+  function paint(instant) {
+    var L = resolve(layoutAvail, selected);
+    inner.style.gap = L.gap + 'px';
+    if (instant) root.style.setProperty('--k', '0');
+    items.forEach(function (it, i) {
+      var sel = i === selected;
+      it.el.style.width = L.widths[i] + 'px';
+      it.el.classList.toggle('is-selected', sel);
+      it.el.setAttribute('aria-current', sel ? 'page' : 'false');
+      if (it.sel !== sel) {
+        swapIcon(it, i, sel, instant);
+        /* AnimatedSize: the child swaps at once, the box animates; a new label is revealed by the clip. */
+        if (sel) { it.text.textContent = D[i].label; it.text.style.color = itemColor(i, true); it.label.style.width = (LABEL_GAP + D[i].w) + 'px'; }
+        else { it.text.textContent = ''; it.label.style.width = '0px'; }
+        it.sel = sel;
+      }
+    });
+    var indW = Math.min(selectedWidth(selected), L.widths[selected]);
+    var indL = L.lefts[selected] + (L.widths[selected] - indW) / 2;
+    var acc = D[selected].accent;
+    ind.style.left = indL + 'px'; ind.style.width = indW + 'px';
+    ind.style.background = 'color-mix(in srgb, var(--' + acc + ') ' + (tintAlpha() * 100) + '%, transparent)';
+    ind.style.border = '1px solid color-mix(in srgb, var(--' + acc + ') 27%, transparent)';
+    out.widths.textContent = L.widths.map(function (v) { return v.toFixed(1); }).join(' · ') + '  gap ' + L.gap;
+    out.pill.textContent = 'left ' + indL.toFixed(1) + ' · width ' + indW.toFixed(1) + ' · 36 tall';
+    if (instant) { void inner.offsetWidth; applyK(); }
+  }
+  function select(i, tap) {
+    if (tap) { haptic.classList.add('is-firing'); clearTimeout(haptic._t); haptic._t = setTimeout(function () { haptic.classList.remove('is-firing'); }, 650); }
+    if (i === selected) return;
+    selected = i; paint(false);
+  }
+  function applyK() {
+    var r = reduce();
+    root.style.setProperty('--k', r ? String(REDUCED) : '1');
+    out.geo.textContent = r ? '10 ms (5% of 200) · easeOutCubic' : '200 ms · easeOutCubic';
+    out.bump.textContent = r ? '1.02 · 5 ms' : '1.02 · 100 ms · easeOutCubic';
+    out.swap.textContent = r ? 'fade 10 ms · size 10 ms' : 'fade 200 ms · size 200 ms';
+    out.spring.textContent = r ? '25 ms · elasticOut(0.4)' : '500 ms · elasticOut(0.4)';
+  }
+  /* ---- elastic drag: _applyElasticResistance, clamp, then Tween(offset → 0) on elasticOut ---- */
+  var off = { x: 0, y: 0 }, spring = 0, pan = null;
+  function elasticOut(t) { if (t <= 0) return 0; if (t >= 1) return 1; var s = 0.4 / 4; return Math.pow(2, -10 * t) * Math.sin((t - s) * (Math.PI * 2) / 0.4) + 1; }
+  function paintDrag() { bar.style.transform = 'translate(' + off.x + 'px,' + off.y + 'px)'; out.drag.textContent = off.x.toFixed(1) + ', ' + off.y.toFixed(1); }
+  function resist(delta, cur) { return delta * (BASE_RESISTANCE / (1 + Math.abs(cur) / FALLOFF)); }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  wrap.addEventListener('pointerdown', function (e) {
+    pan = { id: e.pointerId, x: e.clientX, y: e.clientY, accepted: false, slop: e.pointerType === 'mouse' ? 2 : 36, target: e.target.closest('.cp-nav-pill-transition-item') };
+    wrap.setPointerCapture(e.pointerId);
+  });
+  wrap.addEventListener('pointermove', function (e) {
+    if (!pan || e.pointerId !== pan.id) return;
+    var dx = e.clientX - pan.x, dy = e.clientY - pan.y;
+    if (!pan.accepted) {
+      if (Math.hypot(dx, dy) <= pan.slop) return;
+      pan.accepted = true; pan.x = e.clientX; pan.y = e.clientY; /* DragStartBehavior.start: the slop is swallowed */
+      cancelAnimationFrame(spring); wrap.classList.add('is-dragging');
+      if (pan.target) pan.target._suppress = true;
+      return;
+    }
+    pan.x = e.clientX; pan.y = e.clientY;
+    off.x = clamp(off.x + resist(dx, off.x), -MAX_DRAG, MAX_DRAG);
+    off.y = clamp(off.y + resist(dy, off.y), -MAX_DRAG, MAX_DRAG);
+    paintDrag();
+  });
+  function endPan(e) {
+    if (!pan || e.pointerId !== pan.id) return;
+    var accepted = pan.accepted; pan = null; wrap.classList.remove('is-dragging');
+    if (!accepted) return;
+    var from = { x: off.x, y: off.y }, ms = SPRING_MS * (reduce() ? REDUCED : 1), t0 = performance.now();
+    cancelAnimationFrame(spring);
+    (function f(now) {
+      var p = Math.min(1, (now - t0) / ms), k = elasticOut(p);
+      off.x = from.x * (1 - k); off.y = from.y * (1 - k); paintDrag();
+      if (p < 1) spring = requestAnimationFrame(f);
+    })(t0);
+  }
+  wrap.addEventListener('pointerup', endPan);
+  wrap.addEventListener('pointercancel', endPan);
+  root.querySelector('[data-replay]').addEventListener('click', function () {
+    var seq = [2, 1, 3, 0], k = 0;
+    (function step() { select(seq[k], false); k++; if (k < seq.length) setTimeout(step, 520); })();
+  });
+  var sw = root.querySelector('[data-reduce-switch]');
+  function setReduce(v) { root.dataset.reduce = v ? 'true' : 'false'; sw.setAttribute('aria-checked', v ? 'true' : 'false'); applyK(); }
+  sw.addEventListener('click', function () { setReduce(!reduce()); });
+  var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (mq.addEventListener) mq.addEventListener('change', function (e) { setReduce(e.matches); });
+  setReduce(mq.matches);
+  var go = function () { build(); };
+  if (document.fonts && document.fonts.load) document.fonts.load('600 12px Inter').then(go, go); else go();
+  new MutationObserver(function () { items.forEach(function (it, i) { it.sel = null; }); paint(true); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
+</body>
+</html>

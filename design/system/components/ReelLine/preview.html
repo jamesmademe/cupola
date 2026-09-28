@@ -1,0 +1,199 @@
+<!-- @dsCard group="Motion" height=284 subtitle="ReelLine and ReelCommandButton: changed glyphs roll, clipped to their line" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ReelLine — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+</head>
+<body>
+<div class="cp-motion cp-reel-line" data-reduce="false">
+  <div class="cp-motion-bar">
+    <div class="cp-motion-bar-title"><b>ReelMotion presets</b><span class="cp-caption">Only the glyphs that change roll; new faces drop in from above, old ones leave downward.</span></div>
+    <button type="button" class="cp-motion-btn" data-replay><span class="cp-icon" aria-hidden="true">replay</span>Replay</button>
+    <button type="button" class="cp-motion-btn" data-slow aria-pressed="false"><span class="cp-icon" aria-hidden="true">slow_motion_video</span>Slow ×5</button>
+    <button type="button" class="cp-motion-switch" role="switch" aria-checked="false" data-reduce-switch><span class="cp-motion-switch-track" aria-hidden="true"></span>Reduce motion</button>
+  </div>
+  <div class="cp-reel-line-grid">
+    <div class="cp-reel-line-cell">
+      <span class="cp-caption">ReelLine · ReelMotion.figure</span>
+      <span class="cp-reel-line-line cp-reel-line-figure" data-reel="figure" role="status"></span>
+      <div class="cp-reel-line-actions"><button type="button" class="cp-motion-btn" data-poll>Poll</button></div>
+      <dl class="cp-motion-readout"><dt>roll</dt><dd>200 ms · easeOutCubic</dd><dt>stagger</dt><dd>18 ms · exit +28 ms</dd><dt>bounce</dt><dd>0 · interrupts</dd></dl>
+    </div>
+    <div class="cp-reel-line-cell">
+      <span class="cp-caption">ReelLine · ReelMotion.word</span>
+      <span class="cp-reel-line-line cp-reel-line-word" data-reel="word" role="status"></span>
+      <div class="cp-reel-line-actions"><button type="button" class="cp-motion-btn" data-word>Next state</button></div>
+      <dl class="cp-motion-readout"><dt>roll</dt><dd>200 ms · easeOutCubic</dd><dt>stagger</dt><dd>22 ms · exit +34 ms</dd><dt>bounce</dt><dd>0 · interrupts</dd></dl>
+    </div>
+    <div class="cp-reel-line-cell">
+      <span class="cp-caption">ReelCommandButton · command + waiting</span>
+      <button type="button" class="cp-btn cp-btn--filled cp-reel-line-btn" data-command><span class="cp-reel-line-line is-center" data-reel="command"></span></button>
+      <div class="cp-reel-line-actions"><button type="button" class="cp-motion-btn" data-fail aria-pressed="false">Next press fails</button></div>
+      <dl class="cp-motion-readout"><dt>command</dt><dd>20 ms · +30 · 0.15 · queues</dd><dt>waiting</dt><dd>16 ms · +24 · tick 384 ms</dd></dl>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var root = document.querySelector('.cp-reel-line');
+  function cubic(a, b, c, d) {
+    function ev(p, q, m) { return 3 * p * (1 - m) * (1 - m) * m + 3 * q * (1 - m) * m * m + m * m * m; }
+    return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; var lo = 0, hi = 1; for (;;) { var m = (lo + hi) / 2, x = ev(a, c, m); if (Math.abs(t - x) < 0.001) return ev(b, d, m); if (x < t) lo = m; else hi = m; } };
+  }
+  var easeOutCubic = cubic(0.215, 0.61, 0.355, 1); /* AppAnimation.emphasizedCurve */
+  /* lib/core/reel_motion.dart */
+  var P = {
+    figure: { duration: 200, stagger: 18, exitOffset: 28, bounce: 0, interrupt: true },
+    word: { duration: 200, stagger: 22, exitOffset: 34, bounce: 0, interrupt: true },
+    command: { duration: 200, stagger: 20, exitOffset: 30, bounce: 0.15, interrupt: false },
+    waiting: { duration: 200, stagger: 16, exitOffset: 24, bounce: 0, interrupt: true }
+  };
+  /* ReelTextController._steadyStep: roll·(1 + bounce·0.45) + exitOffset + 160 */
+  var WAIT_STEP = Math.round(P.waiting.duration * (1 + P.waiting.bounce * 0.45)) + P.waiting.exitOffset + 160;
+  var slow = 1;
+  function reduce() { return root.dataset.reduce === 'true'; }
+  /* reel_text 0.4.3, reel_text_slot_plan.dart: the per-slot plan, verbatim. */
+  function wobble(i, salt) { var n = Math.sin((i + 1) * 12.9898 + salt * 78.233) * 43758.5453; return (n - Math.floor(n)) * 2 - 1; }
+  function lin(now, start, span) { if (span <= 0) return now >= start ? 1 : 0; return Math.max(0, Math.min(1, (now - start) / span)); }
+  function smooth(v) { var t = Math.max(0, Math.min(1, v)); return t * t * (3 - 2 * t); }
+  function plan(from, to, o) {
+    var n = Math.max(from.length, to.length), slots = [], order = 0, maxEnd = 1;
+    for (var i = 0; i < n; i++) {
+      var f = i < from.length ? from[i] : null, t = i < to.length ? to[i] : null;
+      var unchanged = (f || '') === (t || '') && (f !== null && t !== null);
+      var tail = t === null;
+      var dur = Math.max(1, Math.round(o.duration * (tail ? 0.75 : 1) * (1 + o.bounce * 0.45 * wobble(i, 1))));
+      var si = tail ? order * 0.5 : order;
+      var base = unchanged ? 0 : Math.max(0, Math.round(si * o.stagger * (1 + o.bounce * 0.25 * wobble(i, 2))));
+      var exit = f === null ? 0 : o.exitOffset;
+      if (!unchanged) { order++; maxEnd = Math.max(maxEnd, base + exit + dur + 80); }
+      slots.push({ from: f, to: t, changed: !unchanged, base: base, dur: dur, exit: exit, tilt: o.bounce * 5 * Math.PI / 180 * wobble(i, 3) });
+    }
+    return { slots: slots, total: maxEnd };
+  }
+  function Reel(el) {
+    this.el = el; this.text = ''; this.raf = 0; this.rolling = null; this.pending = null;
+    this.ctx = document.createElement('canvas').getContext('2d');
+  }
+  Reel.prototype.measure = function (ch) {
+    if (!ch) return 0;
+    var cs = getComputedStyle(this.el);
+    this.ctx.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    if ('letterSpacing' in this.ctx) this.ctx.letterSpacing = cs.letterSpacing === 'normal' ? '0px' : cs.letterSpacing;
+    if ('fontVariantNumeric' in cs && cs.fontVariantNumeric.indexOf('tabular') >= 0 && /[0-9]/.test(ch)) return this.ctx.measureText('0').width;
+    return this.ctx.measureText(ch).width;
+  };
+  Reel.prototype.still = function (text) {
+    cancelAnimationFrame(this.raf); this.rolling = null; this.text = text;
+    this.el.textContent = text; this.el.setAttribute('aria-label', text);
+  };
+  Reel.prototype.set = function (text, o) {
+    if (reduce()) { this.pending = null; this.still(text); return; } /* ReelLine: MediaQuery.disableAnimations → plain Text */
+    if (this.rolling) {
+      if (o.interrupt) { this.still(this.rolling.to); }         /* snap the in-flight roll to its target */
+      else { this.pending = { text: text, o: o }; return; }     /* interrupt: false → queue the latest */
+    }
+    if (text === this.text) return;
+    this.roll(this.text, text, o);
+  };
+  Reel.prototype.roll = function (fromText, toText, o) {
+    var self = this, from = Array.from(fromText), to = Array.from(toText), p = plan(from, to, o);
+    var h = this.el.clientHeight || parseFloat(getComputedStyle(this.el).lineHeight) || 20;
+    this.el.textContent = ''; this.el.setAttribute('aria-label', toText);
+    var nodes = p.slots.map(function (s) {
+      var slot = document.createElement('span'); slot.className = 'cp-reel-line-slot';
+      s.fw = self.measure(s.from); s.tw = self.measure(s.to);
+      if (!s.changed) { var st = document.createElement('span'); st.textContent = s.to; slot.appendChild(st); slot.style.width = s.tw + 'px'; }
+      else {
+        if (s.from !== null) { s.outEl = document.createElement('span'); s.outEl.textContent = s.from; slot.appendChild(s.outEl); }
+        if (s.to !== null) { s.inEl = document.createElement('span'); s.inEl.textContent = s.to; slot.appendChild(s.inEl); }
+      }
+      self.el.appendChild(slot); s.el = slot; return s;
+    });
+    this.rolling = { to: toText }; this.text = toText;
+    var t0 = performance.now(), k = slow;
+    function frame(nowAbs) {
+      var now = (nowAbs - t0) / k;
+      nodes.forEach(function (s) {
+        if (!s.changed) return;
+        var wt = s.to === null ? lin(now, s.base + Math.round(s.dur * 0.55), Math.max(140, Math.round(s.dur * 0.6)))
+          : s.from === null ? lin(now, s.base, Math.max(140, Math.round(s.dur * 0.45))) : lin(now, s.base, s.dur);
+        s.el.style.width = (s.fw + (s.tw - s.fw) * wt) + 'px';
+        if (s.outEl) {
+          var ot = easeOutCubic(lin(now, s.base, s.dur));
+          s.outEl.style.transform = 'translateY(' + (h * ot) + 'px) rotate(' + (-s.tilt * ot) + 'rad)';
+          s.outEl.style.opacity = String(1 - smooth((ot - 0.78) / 0.22));
+        }
+        if (s.inEl) {
+          var it = easeOutCubic(lin(now, s.base + s.exit, s.dur));
+          s.inEl.style.transform = 'translateY(' + (-h * (1 - it)) + 'px) rotate(' + (s.tilt * (1 - it)) + 'rad)';
+        }
+      });
+      if (now < p.total) { self.raf = requestAnimationFrame(frame); return; }
+      self.still(toText);
+      if (self.pending) { var q = self.pending; self.pending = null; self.set(q.text, q.o); }
+    }
+    this.raf = requestAnimationFrame(frame);
+  };
+  var reels = {};
+  root.querySelectorAll('[data-reel]').forEach(function (el) { reels[el.dataset.reel] = new Reel(el); });
+  /* figure */
+  var rates = ['12.4 MB/s', '12.9 MB/s', '9.87 MB/s', '10.1 MB/s', '38.2 MB/s', '4.06 MB/s'], ri = 0;
+  function poll() { ri = (ri + 1) % rates.length; reels.figure.set(rates[ri], P.figure); }
+  root.querySelector('[data-poll]').addEventListener('click', poll);
+  /* word */
+  var words = ['Queued', 'Downloading', 'Importing', 'Available'], wi = 0;
+  function nextWord() { wi = (wi + 1) % words.length; reels.word.set(words[wi], P.word); }
+  root.querySelector('[data-word]').addEventListener('click', nextWord);
+  /* ReelCommandButton: rest → busy + dots → settled; the slot is the widest label it can show. */
+  var btn = root.querySelector('[data-command]'), failBtn = root.querySelector('[data-fail]');
+  var cmd = { label: 'Test connection', busy: 'Testing', failure: 'Test again', success: 'Next service' }, busy = false, fail = false, rest = cmd.label;
+  function reserve() {
+    var r = reels.command, w = 0;
+    [cmd.label, cmd.busy, cmd.busy + '...', cmd.failure, cmd.success].forEach(function (s) { var x = Array.from(s).reduce(function (a, ch) { return a + r.measure(ch); }, 0); w = Math.max(w, x); });
+    r.el.style.width = Math.ceil(w) + 'px';
+  }
+  function press() {
+    if (busy) return;
+    busy = true; btn.disabled = true;
+    var r = reels.command, ticker = 0, tick = 0;
+    if (reduce()) r.still(cmd.busy);                      /* one settled "Testing", no dot timer */
+    else {
+      var frames = [cmd.busy, cmd.busy + '.', cmd.busy + '..', cmd.busy + '...'];
+      r.set(frames[0], P.waiting);
+      ticker = setInterval(function () { tick++; r.set(frames[tick % frames.length], P.waiting); }, WAIT_STEP * slow);
+    }
+    setTimeout(function () {
+      clearInterval(ticker);
+      rest = fail ? cmd.failure : cmd.success;
+      r.set(rest, P.command);
+      busy = false; btn.disabled = false;
+      if (fail) { fail = false; failBtn.setAttribute('aria-pressed', 'false'); }
+    }, 1900 * slow);
+  }
+  btn.addEventListener('click', press);
+  failBtn.addEventListener('click', function () { fail = !fail; failBtn.setAttribute('aria-pressed', fail ? 'true' : 'false'); });
+  var queued = [];
+  function replay() {
+    queued.forEach(clearTimeout); queued = [];
+    if (busy) return;
+    reels.figure.still(rates[0]); ri = 0; reels.word.still(words[0]); wi = 0; reels.command.still(cmd.label); rest = cmd.label;
+    [[poll, 250], [poll, 900], [nextWord, 400], [nextWord, 1300], [press, 600]].forEach(function (e) { queued.push(setTimeout(e[0], e[1] * slow)); });
+  }
+  root.querySelector('[data-replay]').addEventListener('click', replay);
+  var slowBtn = root.querySelector('[data-slow]');
+  slowBtn.addEventListener('click', function () { slow = slow === 1 ? 5 : 1; slowBtn.setAttribute('aria-pressed', slow > 1 ? 'true' : 'false'); });
+  var sw = root.querySelector('[data-reduce-switch]');
+  function setReduce(v) { root.dataset.reduce = v ? 'true' : 'false'; sw.setAttribute('aria-checked', v ? 'true' : 'false'); }
+  sw.addEventListener('click', function () { setReduce(!reduce()); });
+  var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (mq.addEventListener) mq.addEventListener('change', function (e) { setReduce(e.matches); });
+  setReduce(mq.matches);
+  function boot() { reels.figure.still(rates[0]); reels.word.still(words[0]); reels.command.still(cmd.label); reserve(); replay(); }
+  if (document.fonts && document.fonts.load) Promise.all([document.fonts.load('700 28px Inter'), document.fonts.load('600 14px Inter')]).then(boot, boot); else boot();
+})();
+</script>
+</body>
+</html>
