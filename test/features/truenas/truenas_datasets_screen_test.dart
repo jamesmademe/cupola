@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/domain/models/dataset.dart';
 import 'package:cupola/features/truenas/presentation/datasets/truenas_dataset_providers.dart';
 import 'package:cupola/features/truenas/presentation/datasets/truenas_datasets_screen.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
+
+import '../../test_helpers/capability_overrides.dart';
+import '../../test_helpers/settings_scope.dart';
 
 /// The floor a finger can reach: iOS's 44pt.
 const double _touchFloor = 44;
@@ -33,6 +37,10 @@ Future<void> _pump(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // The tree's writes are capability-gated and read the saved TrueNAS
+        // connection; every probe answers "unknown", i.e. live.
+        ...await settingsScopeOverrides(configured: const [ServiceKey.truenas]),
+        capabilityOverride(),
         truenasDatasetTreeProvider.overrideWith((ref) async => _tree),
         // The section chrome asks for the server version; the test has no
         // server.
