@@ -124,6 +124,56 @@ class _LoginFailsAdapter implements HttpClientAdapter {
   }
 }
 
+/// A WebUI whose login answers [loginStatus] with [loginBody], and whose
+/// data endpoint answers [dataStatus]. Counts requests by path.
+class _LoginAdapter implements HttpClientAdapter {
+  _LoginAdapter({required this.loginStatus, this.loginBody = ''});
+
+  int loginStatus;
+  String loginBody;
+  int dataStatus = 200;
+
+  /// When set, every request fails at the transport: the WebUI never saw it.
+  bool unreachable = false;
+
+  final List<String> paths = [];
+
+  int get logins => paths.where((p) => p == '/api/v2/auth/login').length;
+  int get dataCalls => paths.where((p) => p != '/api/v2/auth/login').length;
+
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    paths.add(options.path);
+    final isLogin = options.path == '/api/v2/auth/login';
+    if (unreachable) {
+      throw DioException.connectionError(
+        requestOptions: options,
+        reason: 'Connection refused',
+      );
+    }
+    return ResponseBody.fromBytes(
+      utf8.encode(isLogin ? loginBody : 'v5.1.0'),
+      isLogin ? loginStatus : dataStatus,
+      headers: {
+        Headers.contentTypeHeader: ['text/plain; charset=utf-8'],
+      },
+    );
+  }
+}
+
+Matcher _refusal(String fragment) => throwsA(
+  isA<QbittorrentException>()
+      .having((e) => e.reason, 'reason', ServiceFailureReason.unauthorized)
+      .having((e) => e.message, 'message', contains(fragment)),
+);
+
 void main() {
   group('QbittorrentClient baseUrl normalization', () {
     test('trims trailing slash', () {
@@ -416,27 +466,142 @@ void main() {
       });
     });
 
-    test('does not loop when login itself returns 403', () async {
-      // Every call → 403: the upfront login fails, the data call fails, and
-      // the interceptor's re-auth fails too. The original 403 is surfaced
-      // without ever retrying the data call.
+    test('a 403 on the login itself stops everything after one attempt', () {
+      // qBittorrent's login route answers 403 for one reason: the address is
+      // banned. This used to press on to the data call and re-authenticate
+      // from the interceptor — two logins per call against a WebUI that had
+      // already said no. Now the first 403 is held and nothing else is sent.
       final adapter = _ScriptableAdapter(script: [403, 403, 403, 403]);
       final c = _client(adapter, user: 'admin', pw: 'wrong');
 
-      await expectLater(c.getVersion(), throwsA(isA<DioException>()));
-      final dataCalls = adapter.requests
-          .where((r) => r.path == '/api/v2/app/version')
-          .toList();
-      final loginCalls = adapter.requests
-          .where((r) => r.path == '/api/v2/auth/login')
-          .toList();
-      expect(
-        dataCalls.length,
-        1,
-        reason: 'must not retry the data call when login itself fails',
+      return expectLater(c.getVersion(), _refusal('403')).then((_) {
+        final dataCalls = adapter.requests
+            .where((r) => r.path == '/api/v2/app/version')
+            .toList();
+        final loginCalls = adapter.requests
+            .where((r) => r.path == '/api/v2/auth/login')
+            .toList();
+        expect(dataCalls, isEmpty, reason: 'no data call after a refusal');
+        expect(loginCalls.length, 1, reason: 'one login attempt, then hold');
+        c.close();
+      });
+    });
+  });
+
+  // OPS-03. qBittorrent counts each failed login per address and bans it at
+  // `WebUIMaxAuthFailCount` (default 5) for `WebUIBanDuration` (default an
+  // hour). The rejection flag was reset at the start of every login, so it
+  // stopped nothing: a polling screen spent the five attempts in seconds, and
+  // behind a reverse proxy the banned address was everyone's.
+  group('a refused sign-in is held', () {
+    for (final (label, status, body) in const [
+      ('401 (qBittorrent 5.1+)', 401, ''),
+      ('200 Fails. (qBittorrent 5.0 and older)', 200, 'Fails.'),
+    ]) {
+      test('$label: the password is sent once, however often asked', () async {
+        final adapter = _LoginAdapter(loginStatus: status, loginBody: body);
+        final c = _client(adapter, user: 'admin', pw: 'wrong');
+        addTearDown(c.close);
+
+        for (var i = 0; i < 10; i++) {
+          await expectLater(c.getVersion(), _refusal('username or password'));
+        }
+        // The interceptor path and a direct authenticate() are held too.
+        expect(await c.authenticate(), isFalse);
+        await expectLater(
+          c.get('/api/v2/torrents/info'),
+          _refusal('username or password'),
+        );
+
+        expect(adapter.logins, 1, reason: 'one failed attempt, not ten');
+        expect(adapter.dataCalls, 0);
+        expect(c.loginRefused, isTrue);
+      });
+    }
+
+    test('a ban is named, and not tried again', () async {
+      final adapter = _LoginAdapter(
+        loginStatus: 403,
+        loginBody:
+            'Your IP address has been banned after too many failed '
+            'authentication attempts.',
       );
-      expect(loginCalls.length, 2, reason: 'upfront login plus one re-auth');
-      c.close();
+      final c = _client(adapter, user: 'admin', pw: 'whatever');
+      addTearDown(c.close);
+
+      await expectLater(c.getVersion(), _refusal('blocked this address'));
+      await expectLater(c.getVersion(), _refusal('blocked this address'));
+      expect(adapter.logins, 1);
+    });
+
+    test('a 403 in another locale, or from a proxy, is held as well', () async {
+      // The ban sentence is translated to the WebUI's locale, and a reverse
+      // proxy can refuse the route on its own. Neither is changed by retrying.
+      final adapter = _LoginAdapter(loginStatus: 403, loginBody: 'Forbidden');
+      final c = _client(adapter, user: 'admin', pw: 'whatever');
+      addTearDown(c.close);
+
+      await expectLater(c.getVersion(), _refusal('refused to sign in'));
+      await expectLater(c.getVersion(), _refusal('refused to sign in'));
+      expect(adapter.logins, 1);
+    });
+
+    test('an expired session with a changed password logs in once', () async {
+      // Signed in, then qBittorrent restarts with a new password: the data
+      // call gets 403 and the interceptor re-authenticates. That re-auth used
+      // to happen on every later request.
+      final adapter = _LoginAdapter(loginStatus: 200, loginBody: 'Ok.');
+      final c = _client(adapter, user: 'admin', pw: 'old');
+      addTearDown(c.close);
+      expect(await c.getVersion(), 'v5.1.0');
+
+      adapter
+        ..dataStatus = 403
+        ..loginStatus = 401;
+      await expectLater(c.getVersion(), throwsA(isA<DioException>()));
+      final loginsAfterExpiry = adapter.logins;
+
+      for (var i = 0; i < 5; i++) {
+        await expectLater(c.getVersion(), _refusal('username or password'));
+      }
+      expect(adapter.logins, loginsAfterExpiry);
+    });
+
+    test(
+      'an unreachable WebUI is not a refusal: the next call tries again',
+      () async {
+        // The WebUI never saw that attempt, so it counted nothing towards a ban
+        // and there is nothing to hold.
+        final adapter = _LoginAdapter(loginStatus: 200, loginBody: 'Ok.')
+          ..unreachable = true;
+        final c = _client(adapter, user: 'admin', pw: 'right');
+        addTearDown(c.close);
+
+        await expectLater(c.getVersion(), throwsA(isA<DioException>()));
+        expect(c.loginRefused, isFalse);
+
+        adapter.unreachable = false;
+        expect(await c.getVersion(), 'v5.1.0');
+        expect(adapter.logins, 2);
+      },
+    );
+
+    test('clearLoginRefusal allows exactly one more attempt', () async {
+      final adapter = _LoginAdapter(loginStatus: 401);
+      final c = _client(adapter, user: 'admin', pw: 'wrong');
+      addTearDown(c.close);
+
+      await expectLater(c.getVersion(), _refusal('username or password'));
+      c.clearLoginRefusal();
+      await expectLater(c.getVersion(), _refusal('username or password'));
+      await expectLater(c.getVersion(), _refusal('username or password'));
+      expect(adapter.logins, 2, reason: 'one per explicit retry, no more');
+
+      // The user fixed the password on the server and asks once more.
+      adapter.loginStatus = 204;
+      c.clearLoginRefusal();
+      expect(await c.getVersion(), 'v5.1.0');
+      expect(c.loginRefused, isFalse);
     });
   });
 }

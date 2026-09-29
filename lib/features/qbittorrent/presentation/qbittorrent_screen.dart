@@ -117,6 +117,7 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
       value: torrentsAsync,
       serviceName: 'qBittorrent',
       onRetry: () {
+        clearQbittorrentLoginRefusal(ref);
         ref.invalidate(allTorrentsProvider);
         ref.invalidate(torrentsProvider);
         ref.invalidate(transferInfoProvider);
@@ -128,6 +129,7 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
 
         return RefreshIndicator(
           onRefresh: () async {
+            clearQbittorrentLoginRefusal(ref);
             ref.invalidate(allTorrentsProvider);
             ref.invalidate(torrentsProvider);
             ref.invalidate(transferInfoProvider);

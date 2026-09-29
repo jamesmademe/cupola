@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/widgets/download_queue_tile.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
+import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_screen.dart';
@@ -28,7 +29,10 @@ Finder _buttonWithText(String label) => find.ancestor(
   matching: find.byWidgetPredicate((w) => w is FilledButton),
 );
 
-List<Override> _ambient({List<NzbgetGroup> queue = const []}) => [
+List<Override> _ambient({
+  List<NzbgetGroup> queue = const [],
+  bool withQueue = true,
+}) => [
   serviceSummaryProvider.overrideWith(
     (ref, service) async => ServiceSummary(
       service: service,
@@ -38,11 +42,34 @@ List<Override> _ambient({List<NzbgetGroup> queue = const []}) => [
     ),
   ),
   serviceKpiProvider.overrideWith((ref, service) async => const <ServiceKpi>[]),
-  nzbgetQueueProvider.overrideWith((ref) async => queue),
+  if (withQueue) nzbgetQueueProvider.overrideWith((ref) async => queue),
   nzbgetHistoryProvider.overrideWith(
     (ref) async => const <NzbgetHistoryItem>[],
   ),
 ];
+
+NzbgetGroup _group(int id) => NzbgetGroup.fromJson({
+  'NZBID': id,
+  'NZBName': 'Job.$id',
+  'Status': 'DOWNLOADING',
+  'Category': 'tv',
+  'FileSizeMB': 4800,
+  'RemainingSizeMB': 2400,
+});
+
+const _status = NzbgetStatus(
+  downloadRateBytes: 0,
+  remainingSizeMb: 0,
+  paused: false,
+);
+
+String? _queueSubtitle(WidgetTester tester) => tester
+    .widget<SectionHeader>(
+      find.byWidgetPredicate(
+        (w) => w is SectionHeader && w.title == 'Downloading',
+      ),
+    )
+    .subtitle;
 
 void main() {
   testWidgets('an unconfigured NZBGet renders the shared placeholder', (
@@ -142,5 +169,73 @@ void main() {
     expect(find.text('100%'), findsNothing);
     // And the row says why there is nothing to draw.
     expect(find.textContaining('progress unknown'), findsOneWidget);
+  });
+
+  // OPS-02. The Queue tab drew `take(5)` groups with no count and no way to
+  // reach the rest; `listgroups` had already returned every one of them.
+  group('the Queue tab is the whole queue', () {
+    test('the header count states the count, or nothing', () {
+      expect(nzbgetQueueCountLabel(null), isNull);
+      expect(nzbgetQueueCountLabel(0), '0 jobs');
+      expect(nzbgetQueueCountLabel(1), '1 job');
+      expect(nzbgetQueueCountLabel(8), '8 jobs');
+    });
+
+    testWidgets('every group is a reachable row, and the header counts them', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentSettingsProvider.overrideWith((ref) => _configured),
+            ..._ambient(queue: [for (var i = 1; i <= 8; i++) _group(i)]),
+            nzbgetStatusProvider.overrideWith((ref) async => _status),
+          ],
+          child: const MaterialApp(home: NzbgetScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_queueSubtitle(tester), '8 jobs');
+      final list = find.byType(Scrollable).first;
+      for (final name in ['Job.6', 'Job.7', 'Job.8']) {
+        await tester.scrollUntilVisible(find.text(name), 200, scrollable: list);
+        expect(find.text(name), findsOneWidget);
+      }
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is SectionHeader && w.title == 'History',
+          skipOffstage: false,
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('a queue still loading states no count, never zero', (
+      tester,
+    ) async {
+      final gate = Completer<List<NzbgetGroup>>();
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentSettingsProvider.overrideWith((ref) => _configured),
+            ..._ambient(withQueue: false),
+            nzbgetQueueProvider.overrideWith((ref) => gate.future),
+            nzbgetStatusProvider.overrideWith((ref) async => _status),
+          ],
+          child: const MaterialApp(home: NzbgetScreen()),
+        ),
+      );
+      await tester.pump();
+
+      expect(_queueSubtitle(tester), isNull);
+      expect(find.textContaining('0 jobs'), findsNothing);
+
+      gate.complete(const []);
+      await tester.pumpAndSettle();
+      expect(_queueSubtitle(tester), '0 jobs');
+    });
   });
 }

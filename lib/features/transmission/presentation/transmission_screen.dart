@@ -86,45 +86,143 @@ class _TransmissionDashboard extends ConsumerWidget {
       );
     }
 
+    // Split once, through the same `when` the rows draw with, so a header never
+    // counts a list its section is not showing: while the list loads or after
+    // it failed, both are null and the headers carry no figure at all.
+    final torrents = torrentsAsync.whenOrNull(data: (all) => all);
+    final incoming = torrents
+        ?.where((t) => t.status.isIncoming)
+        .toList(growable: false);
+    final resting = torrents
+        ?.where((t) => !t.status.isIncoming)
+        .toList(growable: false);
+
     return RefreshIndicator(
       onRefresh: () async {
         _invalidateAll(ref);
         await Future<void>.delayed(AppAnimation.durationMd);
       },
-      child: ListView(
+      // The whole list, built lazily. This tab used to draw the first five
+      // transfers and the first ten seeds with no count and no way to reach
+      // the rest, so a daemon with eight downloads read as one with five. The
+      // Queue tab *is* the queue: every torrent `torrent-get` returned is a
+      // row here, each header states how many there are, and only the rows on
+      // screen are built — a seedbox's two thousand seeds included.
+      child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
-        children: [
-          if (topPadding > 0) SizedBox(height: topPadding),
-          ServiceKpiPeek(
-            kpis: ref.watch(serviceKpiProvider(ServiceKey.transmission)),
-            accent: AppColors.transmission,
+        slivers: [
+          SliverList.list(
+            children: [
+              if (topPadding > 0) SizedBox(height: topPadding),
+              ServiceKpiPeek(
+                kpis: ref.watch(serviceKpiProvider(ServiceKey.transmission)),
+                accent: AppColors.transmission,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const _TransmissionActionsBar(),
+              const SizedBox(height: AppSpacing.sm),
+              SectionHeader(
+                title: 'Transferring',
+                subtitle: transmissionTorrentCountLabel(incoming?.length),
+                showChevron: false,
+              ),
+              const SizedBox(height: 2),
+            ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          const _TransmissionActionsBar(),
-          const SizedBox(height: AppSpacing.sm),
-          const SectionHeader(title: 'Transferring', showChevron: false),
-          const SizedBox(height: 2),
-          _TorrentList(
+          _torrentRows(
+            ref,
             torrentsAsync: torrentsAsync,
-            filter: (t) => t.status.isIncoming,
+            rows: incoming,
             emptyLabel: 'Nothing is downloading.',
           ),
-          const SizedBox(height: AppSpacing.sm),
-          const SectionHeader(title: 'Seeding and idle', showChevron: false),
-          const SizedBox(height: 2),
-          _TorrentList(
+          SliverList.list(
+            children: [
+              const SizedBox(height: AppSpacing.sm),
+              SectionHeader(
+                title: 'Seeding and idle',
+                subtitle: transmissionTorrentCountLabel(resting?.length),
+                showChevron: false,
+              ),
+              const SizedBox(height: 2),
+            ],
+          ),
+          _torrentRows(
+            ref,
             torrentsAsync: torrentsAsync,
-            filter: (t) => !t.status.isIncoming,
+            rows: resting,
             emptyLabel: 'Nothing is seeding.',
-            limit: 10,
+          ),
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+/// The count a Queue section header states, or null while there is nothing to
+/// count.
+///
+/// Null rather than `0 torrents` during a load or after a failure: a figure
+/// whose source did not answer is not a zero, and the header goes without a
+/// count until the daemon has said how many there are. Public so the rule is
+/// testable without a widget tree.
+String? transmissionTorrentCountLabel(int? count) {
+  if (count == null) return null;
+  return count == 1 ? '1 torrent' : '$count torrents';
+}
+
+/// One section's rows, as a sliver.
+///
+/// [rows] is the section's slice of the loaded list — null exactly when
+/// [torrentsAsync] is not in its data branch. The loading and failure states
+/// are drawn once per section, as before; only the data state changed, from
+/// the first N rows in a `Column` to every row in a lazily built list.
+Widget _torrentRows(
+  WidgetRef ref, {
+  required AsyncValue<List<TransmissionTorrent>> torrentsAsync,
+  required List<TransmissionTorrent>? rows,
+  required String emptyLabel,
+}) {
+  return torrentsAsync.when(
+    data: (_) {
+      final visible = rows ?? const <TransmissionTorrent>[];
+      if (visible.isEmpty) {
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+            child: Text(emptyLabel),
+          ),
+        );
+      }
+      return SliverList.builder(
+        itemCount: visible.length,
+        itemBuilder: (context, index) {
+          final torrent = visible[index];
+          return TransmissionTorrentTile(
+            torrent: torrent,
+            // The menu is built here rather than inside the tile: it
+            // dispatches through this screen's `ref`, and a plate that
+            // reached for a provider would stop being a plate.
+            actions: _TorrentMenu(torrent: torrent),
+          );
+        },
+      );
+    },
+    loading: () => const SliverToBoxAdapter(child: ListRowsShimmer()),
+    error: (error, _) => SliverToBoxAdapter(
+      child: InlineErrorRetry(
+        message: 'Failed to load torrents',
+        onRetry: () => ref.invalidate(transmissionTorrentsProvider),
+      ),
+    ),
+  );
 }
 
 /// Global controls: add a torrent, and the turtle toggle.
@@ -372,55 +470,4 @@ Future<void> _confirmRemove(
     failureMessage: 'Failed to remove the torrent',
     invalidate: _invalidateAfterAction,
   );
-}
-
-class _TorrentList extends ConsumerWidget {
-  const _TorrentList({
-    required this.torrentsAsync,
-    required this.filter,
-    required this.emptyLabel,
-    this.limit = 5,
-  });
-
-  final AsyncValue<List<TransmissionTorrent>> torrentsAsync;
-  final bool Function(TransmissionTorrent torrent) filter;
-  final String emptyLabel;
-  final int limit;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return torrentsAsync.when(
-      data: (torrents) {
-        final matching = torrents.where(filter).toList(growable: false);
-        if (matching.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
-            ),
-            child: Text(emptyLabel),
-          );
-        }
-        return Column(
-          children: matching
-              .take(limit)
-              .map(
-                (torrent) => TransmissionTorrentTile(
-                  torrent: torrent,
-                  // The menu is built here rather than inside the tile: it
-                  // dispatches through this screen's `ref`, and a plate that
-                  // reached for a provider would stop being a plate.
-                  actions: _TorrentMenu(torrent: torrent),
-                ),
-              )
-              .toList(),
-        );
-      },
-      loading: () => const ListRowsShimmer(),
-      error: (error, _) => InlineErrorRetry(
-        message: 'Failed to load torrents',
-        onRetry: () => ref.invalidate(transmissionTorrentsProvider),
-      ),
-    );
-  }
 }

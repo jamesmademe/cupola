@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
+import 'package:cupola/core/widgets/section_header.dart';
+import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_screen.dart';
@@ -26,6 +28,7 @@ final _configured = settingsWith(
 SabnzbdQueue _queue({
   bool paused = false,
   List<SabnzbdQueueSlot> slots = const [],
+  int? reportedSlots,
 }) => SabnzbdQueue(
   paused: paused,
   status: paused ? 'Paused' : 'Downloading',
@@ -34,11 +37,17 @@ SabnzbdQueue _queue({
   mb: 3000,
   timeLeft: '0:12:30',
   slots: slots,
+  reportedSlots: reportedSlots,
 );
 
-SabnzbdQueueSlot _slot({double mbLeft = 1024, double? mb}) => SabnzbdQueueSlot(
-  nzoId: 'SABnzbd_nzo_1',
-  filename: 'Dune.Part.Two.2024.2160p',
+SabnzbdQueueSlot _slot({
+  double mbLeft = 1024,
+  double? mb,
+  String id = '1',
+  String filename = 'Dune.Part.Two.2024.2160p',
+}) => SabnzbdQueueSlot(
+  nzoId: 'SABnzbd_nzo_$id',
+  filename: filename,
   status: 'Downloading',
   percentage: 50,
   category: 'movies',
@@ -46,6 +55,28 @@ SabnzbdQueueSlot _slot({double mbLeft = 1024, double? mb}) => SabnzbdQueueSlot(
   mbLeft: mbLeft,
   mb: mb,
 );
+
+/// Records the `limit` every queue request asked for.
+class _RecordingSabnzbd implements SabnzbdClient {
+  final limits = <int>[];
+
+  @override
+  Future<SabnzbdQueue> getQueue({int limit = 50}) async {
+    limits.add(limit);
+    return _queue();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+String? _queueSubtitle(WidgetTester tester) => tester
+    .widget<SectionHeader>(
+      find.byWidgetPredicate(
+        (w) => w is SectionHeader && w.title == 'Downloading',
+      ),
+    )
+    .subtitle;
 
 /// Finds the queue toggle by its label.
 ///
@@ -247,5 +278,135 @@ void main() {
     expect(find.text('Downloading · 0:12:30 · 1.0 GB left'), findsOneWidget);
     expect(find.textContaining('of 0 B'), findsNothing);
     expect(find.textContaining('—'), findsNothing);
+  });
+
+  // OPS-02. The Queue tab drew `take(5)` slots with no count and no way to
+  // reach the rest, over a provider that itself asked for a 50-slot page.
+  group('the Queue tab is the whole queue', () {
+    test('the queue provider asks SABnzbd for every job, not a page', () async {
+      final client = _RecordingSabnzbd();
+      final container = ProviderContainer(
+        overrides: [sabnzbdClientProvider.overrideWithValue(client)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(sabnzbdQueueProvider.future);
+
+      // SABnzbd's `queue_info` admits every job when `limit` is zero.
+      expect(client.limits, [SabnzbdClient.wholeQueue]);
+      expect(SabnzbdClient.wholeQueue, 0);
+    });
+
+    test('the header count reads the server, and never passes off a page', () {
+      expect(sabnzbdQueueCountLabel(null), isNull);
+      expect(sabnzbdQueueCountLabel(_queue()), '0 jobs');
+      expect(sabnzbdQueueCountLabel(_queue(slots: [_slot()])), '1 job');
+      expect(
+        sabnzbdQueueCountLabel(
+          _queue(
+            slots: [
+              _slot(),
+              _slot(id: '2'),
+            ],
+            reportedSlots: 2,
+          ),
+        ),
+        '2 jobs',
+      );
+      // A server that sent fewer slots than it counted is drawn as what it is.
+      expect(
+        sabnzbdQueueCountLabel(_queue(slots: [_slot()], reportedSlots: 12)),
+        '1 of 12 jobs shown',
+      );
+    });
+
+    testWidgets('every job is a reachable row, and the header counts them', (
+      tester,
+    ) async {
+      final slots = [
+        for (var i = 1; i <= 8; i++) _slot(id: '$i', filename: 'Job.$i'),
+      ];
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentSettingsProvider.overrideWith((ref) => _configured),
+            ..._ambient(),
+            sabnzbdQueueProvider.overrideWith(
+              (ref) async => _queue(slots: slots, reportedSlots: 8),
+            ),
+            sabnzbdCategoriesProvider.overrideWith(
+              (ref) async => const <String>[],
+            ),
+          ],
+          child: const MaterialApp(home: SabnzbdScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_queueSubtitle(tester), '8 jobs');
+      final list = find.byType(Scrollable).first;
+      // The sixth to eighth jobs are the rows the old cap cut off.
+      for (final name in ['Job.6', 'Job.7', 'Job.8']) {
+        await tester.scrollUntilVisible(find.text(name), 200, scrollable: list);
+        expect(find.text(name), findsOneWidget);
+      }
+    });
+
+    testWidgets('a queue still loading states no count, never zero', (
+      tester,
+    ) async {
+      final gate = Completer<SabnzbdQueue>();
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentSettingsProvider.overrideWith((ref) => _configured),
+            ..._ambient(),
+            sabnzbdQueueProvider.overrideWith((ref) => gate.future),
+            sabnzbdCategoriesProvider.overrideWith(
+              (ref) async => const <String>[],
+            ),
+          ],
+          child: const MaterialApp(home: SabnzbdScreen()),
+        ),
+      );
+      await tester.pump();
+
+      expect(_queueSubtitle(tester), isNull);
+      expect(find.textContaining('0 jobs'), findsNothing);
+
+      gate.complete(_queue());
+      await tester.pumpAndSettle();
+      expect(_queueSubtitle(tester), '0 jobs');
+    });
+
+    testWidgets('the capped history block is gone from the Queue tab', (
+      tester,
+    ) async {
+      // It was a ten-row copy of the History tab, capped without saying so.
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentSettingsProvider.overrideWith((ref) => _configured),
+            ..._ambient(),
+            sabnzbdQueueProvider.overrideWith((ref) async => _queue()),
+            sabnzbdCategoriesProvider.overrideWith(
+              (ref) async => const <String>[],
+            ),
+          ],
+          child: const MaterialApp(home: SabnzbdScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is SectionHeader && w.title == 'History',
+        ),
+        findsNothing,
+      );
+    });
   });
 }

@@ -97,13 +97,19 @@ class TransmissionClient {
     Dio? dio,
     String? certFingerprint,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
-       rpcPath = resolveRpcPath(url) {
+       rpcPath = resolveRpcPath(url),
+       rpcUrl = resolveRpcUrl(url) {
     // Redirects are followed by hand so the Basic credential is never replayed
     // to a host the user did not configure — `dart:io` copies `Authorization`
     // from a subdomain to its parent domain — and so a 303 cannot downgrade
     // this POST to a GET, which Transmission answers with 405.
+    //
+    // The transport is rooted at the **origin**, never at [baseUrl]: the path
+    // the user typed is already inside [rpcPath], and Dio joins a relative
+    // request path onto `baseUrl` by plain concatenation, so a base carrying
+    // `/tr` turned every call into `/tr/tr/rpc`.
     _dio = guardedDio(
-      baseUrl: baseUrl,
+      baseUrl: _originOf(baseUrl),
       injected: dio,
       certFingerprint: certFingerprint,
     );
@@ -112,7 +118,8 @@ class TransmissionClient {
   /// Header Transmission uses for its CSRF token, in both directions.
   static const sessionIdHeader = 'X-Transmission-Session-Id';
 
-  /// Where the RPC endpoint sits relative to [baseUrl].
+  /// Where the RPC endpoint sits on the configured host, as a path from the
+  /// origin.
   ///
   /// **Not a constant, because the server moves it.** Transmission's `rpc-url`
   /// setting (default `/transmission/`) relocates the endpoint wholesale, and a
@@ -125,24 +132,71 @@ class TransmissionClient {
   /// * `https://nas.local/tr` — a relocated `rpc-url`, so `/rpc` is appended.
   /// * `https://nas.local/tr/rpc` — the endpoint itself, used verbatim.
   ///
-  /// Static and pure so it can be tested without building a client.
+  /// Plus the one people paste most often without meaning to: the address bar
+  /// of the Web UI, `https://nas.local:9091/transmission/web/`. Transmission
+  /// always serves that page at `<rpc-url>web/`, so a trailing `web` segment is
+  /// the Web UI and its sibling `rpc` is the endpoint. A bare `/web` is left
+  /// alone (→ `/web/rpc`): at the root it is as likely to be a reverse-proxy
+  /// mount as the Web UI of a daemon whose `rpc-url` is `/`.
+  ///
+  /// The result is an **absolute path** from the origin, and exactly one:
+  /// [rpcUrl] is what actually goes on the wire. Static and pure so it can be
+  /// tested without building a client.
   static String resolveRpcPath(String rawUrl) {
     final normalized = UrlUtils.normalizeBaseUrl(rawUrl);
     if (normalized.isEmpty) return '/transmission/rpc';
 
-    var path = Uri.tryParse(normalized)?.path ?? '';
-    while (path.endsWith('/')) {
-      path = path.substring(0, path.length - 1);
+    // The raw (still percent-encoded) path, split by hand: `pathSegments`
+    // would decode `%20` and friends, and rejoining those would put characters
+    // on the wire the user never typed.
+    final segments = (Uri.tryParse(normalized)?.path ?? '')
+        .split('/')
+        .where((segment) => segment.isNotEmpty)
+        .toList();
+    if (segments.isEmpty) return '/transmission/rpc';
+    final last = segments.last.toLowerCase();
+    if (last == 'rpc') return '/${segments.join('/')}';
+    if (last == 'web' && segments.length > 1) {
+      segments[segments.length - 1] = 'rpc';
+      return '/${segments.join('/')}';
     }
-    if (path.isEmpty) return '/transmission/rpc';
-    if (path.toLowerCase().endsWith('/rpc')) return path;
-    return '$path/rpc';
+    return '/${[...segments, 'rpc'].join('/')}';
   }
 
+  /// The full RPC endpoint for [rawUrl]: its origin plus [resolveRpcPath].
+  ///
+  /// Posted as an absolute URL so the endpoint is independent of whatever
+  /// `baseUrl` the transport carries — Dio ignores `baseUrl` for a path that
+  /// starts with a scheme. That is what makes the path appear exactly once
+  /// whether the client built its own Dio or was handed one.
+  static String resolveRpcUrl(String rawUrl) {
+    final normalized = UrlUtils.normalizeBaseUrl(rawUrl);
+    return '${_originOf(normalized)}${resolveRpcPath(rawUrl)}';
+  }
+
+  /// `scheme://host[:port]` of an already-normalized address, with no path.
+  /// Empty in, empty out, so an unconfigured client still constructs.
+  static String _originOf(String normalized) {
+    if (normalized.isEmpty) return '';
+    final uri = Uri.tryParse(normalized);
+    if (uri == null || uri.host.isEmpty) return normalized;
+    return Uri(
+      scheme: uri.scheme,
+      host: uri.host,
+      port: uri.hasPort ? uri.port : null,
+    ).toString();
+  }
+
+  /// The configured address, normalized ([UrlUtils.normalizeBaseUrl]) — the
+  /// identity of this connection, path included. It is **not** the transport's
+  /// base: see the constructor.
   final String baseUrl;
 
   /// The resolved RPC endpoint path — see [resolveRpcPath].
   final String rpcPath;
+
+  /// The absolute RPC endpoint every call is posted to — see [resolveRpcUrl].
+  final String rpcUrl;
 
   final String? username;
   final String? password;
@@ -206,7 +260,7 @@ class TransmissionClient {
       final Response<dynamic> response;
       try {
         response = await _dio.post<dynamic>(
-          rpcPath,
+          rpcUrl,
           data: {'method': method, 'arguments': arguments, 'tag': ++_tag},
           options: Options(headers: _headers),
         );

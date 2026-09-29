@@ -67,8 +67,15 @@ SabnzbdClient _sabnzbdClient(Ref ref, {required String? instanceId}) {
 /// [nzbgetStatusProvider] states: the default retry holds the future through
 /// ten backing-off attempts, so a dark SABnzbd is a spinner for forty seconds
 /// instead of an unreachable band with a Retry on it.
+///
+/// **The whole queue**, not the client's default page. The Queue tab draws
+/// every job, and the Overview, the readout band and the dashboard card count
+/// from this same answer, so one request serves all of them and none can
+/// disagree with another about how deep the queue is.
 final sabnzbdQueueProvider = FutureProvider<SabnzbdQueue>((ref) async {
-  return ref.watch(sabnzbdClientProvider).getQueue();
+  return ref
+      .watch(sabnzbdClientProvider)
+      .getQueue(limit: SabnzbdClient.wholeQueue);
 }, retry: noProviderRetry);
 
 /// Recent completed/failed downloads.

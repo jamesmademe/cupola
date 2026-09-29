@@ -27,6 +27,13 @@ class QbittorrentService {
 
   Future<bool> authenticate() => _client.authenticate();
 
+  /// Whether the WebUI refused a sign-in and the client is holding it.
+  bool get loginRefused => _client.loginRefused;
+
+  /// For a user's explicit Retry only — see
+  /// [QbittorrentClient.clearLoginRefusal].
+  void clearLoginRefusal() => _client.clearLoginRefusal();
+
   Future<String> getVersion() => _client.getVersion();
 
   Future<List<Torrent>> getTorrents({

@@ -132,7 +132,15 @@ class SabnzbdClient {
     return (data['version'] ?? data['_raw'] ?? '').toString().trim();
   }
 
-  /// The active download queue.
+  /// The `limit` that asks `mode=queue` for every job rather than a page.
+  ///
+  /// SABnzbd's `NzbQueue.queue_info` admits a job when
+  /// `not limit or start <= n < start + limit`, so zero means "no page", not
+  /// "no rows" — and an absent `limit` parses to the same zero.
+  static const wholeQueue = 0;
+
+  /// The active download queue: the first [limit] jobs, or all of them for
+  /// [wholeQueue].
   Future<SabnzbdQueue> getQueue({int limit = 50}) async {
     final data = await _call('queue', extra: {'start': 0, 'limit': limit});
     final queue = (data['queue'] as Map?)?.cast<String, dynamic>();

@@ -5,6 +5,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/qbittorrent/domain/models/rss.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -37,6 +38,7 @@ class QbittorrentRssScreen extends ConsumerWidget {
         // answered. Each failure is drawn by the section watching it, so
         // neither can escape as an unhandled rejection here.
         onRefresh: () async {
+          clearQbittorrentLoginRefusal(ref);
           ref.invalidate(qbittorrentRssFeedsProvider);
           ref.invalidate(qbittorrentRssRulesProvider);
           await Future.wait([
@@ -90,7 +92,10 @@ class _FeedsSection extends ConsumerWidget {
       loading: () => const _LoadingRows(),
       error: (_, _) => InlineErrorRetry(
         message: 'qBittorrent did not return the RSS feeds.',
-        onRetry: () => ref.invalidate(qbittorrentRssFeedsProvider),
+        onRetry: () {
+          clearQbittorrentLoginRefusal(ref);
+          ref.invalidate(qbittorrentRssFeedsProvider);
+        },
       ),
       data: (feeds) {
         if (feeds.isEmpty) {
@@ -124,7 +129,10 @@ class _RulesSection extends ConsumerWidget {
       loading: () => const _LoadingRows(count: 2),
       error: (_, _) => InlineErrorRetry(
         message: 'qBittorrent did not return the RSS rules.',
-        onRetry: () => ref.invalidate(qbittorrentRssRulesProvider),
+        onRetry: () {
+          clearQbittorrentLoginRefusal(ref);
+          ref.invalidate(qbittorrentRssRulesProvider);
+        },
       ),
       data: (rules) {
         if (rules.isEmpty) {

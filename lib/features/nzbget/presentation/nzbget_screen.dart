@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_animation.dart';
-import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -16,8 +15,12 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// NZBGet dashboard: live queue and recent history. Read-only for the first
-/// release.
+/// NZBGet's Queue tab: every group in the download queue, with the controls
+/// that act on it.
+///
+/// History is not drawn here, for the reason the SABnzbd Queue tab states: it
+/// has its own tab and an Overview preview, and the ten-row block this page
+/// used to end with was a third, shorter copy of it, capped without saying so.
 class NzbgetScreen extends ConsumerWidget {
   const NzbgetScreen({super.key, this.showAppBar = true, this.topPadding = 0});
 
@@ -51,7 +54,6 @@ class _NzbgetDashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final queueAsync = ref.watch(nzbgetQueueProvider);
-    final historyAsync = ref.watch(nzbgetHistoryProvider);
     final summaryAsync = ref.watch(serviceSummaryProvider(ServiceKey.nzbget));
     final isOffline = summaryAsync.maybeWhen(
       data: (summary) => !summary.isOnline,
@@ -66,36 +68,89 @@ class _NzbgetDashboard extends ConsumerWidget {
       );
     }
 
+    // Through the same `when` the rows draw with, so the header never counts
+    // a queue its section is not showing.
+    final groups = queueAsync.whenOrNull(data: (groups) => groups);
+
     return RefreshIndicator(
       onRefresh: () async {
         _invalidateAll(ref);
         await Future<void>.delayed(AppAnimation.durationMd);
       },
-      child: ListView(
+      // The whole queue, built lazily. This tab used to draw the first five
+      // groups with no count and no way to reach the rest. `listgroups` returns
+      // every group, so every group is a row, the header says how many there
+      // are, and only the rows on screen are built.
+      child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
-        children: [
-          if (topPadding > 0) SizedBox(height: topPadding),
-          ServiceKpiPeek(
-            kpis: ref.watch(serviceKpiProvider(ServiceKey.nzbget)),
-            accent: AppColors.nzbget,
+        slivers: [
+          SliverList.list(
+            children: [
+              if (topPadding > 0) SizedBox(height: topPadding),
+              ServiceKpiPeek(
+                kpis: ref.watch(serviceKpiProvider(ServiceKey.nzbget)),
+                accent: AppColors.nzbget,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const _NzbgetActionsBar(),
+              const SizedBox(height: AppSpacing.sm),
+              SectionHeader(
+                title: 'Downloading',
+                subtitle: nzbgetQueueCountLabel(groups?.length),
+                showChevron: false,
+              ),
+              const SizedBox(height: 2),
+            ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          const _NzbgetActionsBar(),
-          const SizedBox(height: AppSpacing.sm),
-          const SectionHeader(title: 'Downloading', showChevron: false),
-          const SizedBox(height: 2),
-          _QueueList(queueAsync: queueAsync),
-          const SizedBox(height: AppSpacing.sm),
-          const SectionHeader(title: 'History', showChevron: false),
-          const SizedBox(height: 2),
-          _HistoryList(historyAsync: historyAsync),
+          _queueRows(ref, queueAsync),
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+            ),
+          ),
         ],
       ),
     );
   }
+}
+
+/// The count the Queue header states, or null while there is nothing to count.
+///
+/// Null rather than `0 jobs` during a load or after a failure: a figure whose
+/// source did not answer is not a zero.
+String? nzbgetQueueCountLabel(int? count) {
+  if (count == null) return null;
+  return count == 1 ? '1 job' : '$count jobs';
+}
+
+/// The queue's rows, as a sliver: every group, lazily built.
+Widget _queueRows(WidgetRef ref, AsyncValue<List<NzbgetGroup>> queueAsync) {
+  return queueAsync.when(
+    data: (groups) {
+      if (groups.isEmpty) {
+        return const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+            child: Text('Queue is empty.'),
+          ),
+        );
+      }
+      return SliverList.builder(
+        itemCount: groups.length,
+        itemBuilder: (context, index) => _QueueTile(group: groups[index]),
+      );
+    },
+    loading: () => const SliverToBoxAdapter(child: ListRowsShimmer()),
+    error: (error, _) => SliverToBoxAdapter(
+      child: InlineErrorRetry(
+        message: 'Failed to load the queue',
+        onRetry: () => ref.invalidate(nzbgetQueueProvider),
+      ),
+    ),
+  );
 }
 
 /// Providers refreshed after any NZBGet mutation.
@@ -220,40 +275,6 @@ Future<void> _showAddNzbDialog(BuildContext context, WidgetRef ref) async {
   );
 }
 
-class _QueueList extends ConsumerWidget {
-  const _QueueList({required this.queueAsync});
-
-  final AsyncValue<List<NzbgetGroup>> queueAsync;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return queueAsync.when(
-      data: (groups) {
-        if (groups.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
-            ),
-            child: Text('Queue is empty.'),
-          );
-        }
-        return Column(
-          children: groups
-              .take(5)
-              .map((group) => _QueueTile(group: group))
-              .toList(),
-        );
-      },
-      loading: () => const ListRowsShimmer(),
-      error: (error, _) => InlineErrorRetry(
-        message: 'Failed to load the queue',
-        onRetry: () => ref.invalidate(nzbgetQueueProvider),
-      ),
-    );
-  }
-}
-
 class _QueueTile extends ConsumerWidget {
   const _QueueTile({required this.group});
 
@@ -321,118 +342,5 @@ class _QueueTile extends ConsumerWidget {
           invalidate: _nzbgetInvalidateAfterAction,
         );
     }
-  }
-}
-
-class _HistoryList extends ConsumerWidget {
-  const _HistoryList({required this.historyAsync});
-
-  final AsyncValue<List<NzbgetHistoryItem>> historyAsync;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return historyAsync.when(
-      data: (items) {
-        if (items.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
-            ),
-            child: Text('No history yet.'),
-          );
-        }
-        return Column(
-          children: items
-              .take(10)
-              .map((item) => _HistoryTile(item: item))
-              .toList(),
-        );
-      },
-      loading: () => const ListRowsShimmer(),
-      error: (error, _) => InlineErrorRetry(
-        message: 'Failed to load history',
-        onRetry: () => ref.invalidate(nzbgetHistoryProvider),
-      ),
-    );
-  }
-}
-
-class _HistoryTile extends StatelessWidget {
-  const _HistoryTile({required this.item});
-
-  final NzbgetHistoryItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    // The service answered and told us the job failed: that is a fault, which
-    // is amber. Red is kept for a service that did not answer at all.
-    final color = statusToneColor(
-      colorScheme,
-      item.failed ? StatusTone.warning : StatusTone.success,
-    );
-    final icon = item.failed
-        ? Icons.error_outline_rounded
-        : Icons.check_circle_rounded;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xs,
-      ),
-      child: Material(
-        color: colorScheme.surface,
-        borderRadius: AppRadius.borderRadiusMd,
-        child: Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            border: Border.all(color: colorScheme.outlineVariant),
-            borderRadius: AppRadius.borderRadiusMd,
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: AppRadius.borderRadiusSm,
-                ),
-                alignment: Alignment.center,
-                child: Icon(icon, size: 16, color: color),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.name,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium!.weight(FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      [
-                        if (item.category.isNotEmpty) item.category,
-                        item.status,
-                      ].join(' · '),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

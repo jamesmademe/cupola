@@ -84,7 +84,10 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
     return AsyncValueWidget<List<Torrent>>(
       value: torrentAsync,
       serviceName: 'qBittorrent',
-      onRetry: () => ref.invalidate(qbittorrentTorrentsProvider(widget.hash)),
+      onRetry: () {
+        clearQbittorrentLoginRefusal(ref);
+        ref.invalidate(qbittorrentTorrentsProvider(widget.hash));
+      },
       data: (matches) {
         if (matches.isEmpty) {
           return Scaffold(
@@ -469,7 +472,10 @@ class _FilesTab extends ConsumerWidget {
     return AsyncValueWidget<List<TorrentFile>>(
       value: filesAsync,
       serviceName: 'qBittorrent',
-      onRetry: () => ref.invalidate(torrentFilesProvider(hash)),
+      onRetry: () {
+        clearQbittorrentLoginRefusal(ref);
+        ref.invalidate(torrentFilesProvider(hash));
+      },
       data: (files) {
         if (files.isEmpty) {
           return const Center(child: Text('No files'));
@@ -595,7 +601,10 @@ class _TrackersTab extends ConsumerWidget {
     return AsyncValueWidget<List<TorrentTracker>>(
       value: trackersAsync,
       serviceName: 'qBittorrent',
-      onRetry: () => ref.invalidate(torrentTrackersProvider(hash)),
+      onRetry: () {
+        clearQbittorrentLoginRefusal(ref);
+        ref.invalidate(torrentTrackersProvider(hash));
+      },
       data: (trackers) {
         if (trackers.isEmpty) {
           return const Center(child: Text('No trackers'));

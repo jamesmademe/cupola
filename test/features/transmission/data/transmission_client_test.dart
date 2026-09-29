@@ -63,6 +63,123 @@ void main() {
         TransmissionClient.resolveRpcPath('https://nas.local/tr/rpc'),
         '/tr/rpc',
       );
+      expect(
+        TransmissionClient.resolveRpcPath('https://nas.local/tr/rpc/'),
+        '/tr/rpc',
+      );
+    });
+
+    test('maps a pasted Web UI address onto its sibling endpoint', () {
+      // The address bar of the Web UI is what people copy. Transmission serves
+      // that page at `<rpc-url>web/`, and `/transmission/web/rpc` does not
+      // exist.
+      expect(
+        TransmissionClient.resolveRpcPath(
+          'http://nas.local:9091/transmission/web/',
+        ),
+        '/transmission/rpc',
+      );
+      expect(
+        TransmissionClient.resolveRpcPath('https://nas.local/tr/web'),
+        '/tr/rpc',
+      );
+      // At the root, `/web` is as likely a proxy mount as a Web UI: left alone.
+      expect(
+        TransmissionClient.resolveRpcPath('https://nas.local/web'),
+        '/web/rpc',
+      );
+    });
+  });
+
+  // OPS-01. Every test above this group injects a Dio rooted at the bare
+  // origin, which is exactly the one shape where joining `baseUrl` with a
+  // full path happens to come out right: the client stored the configured path
+  // in the transport's `baseUrl` *and* in `rpcPath`, and Dio concatenates the
+  // two, so `https://nas/tr` went on the wire as `/tr/tr/rpc`. These build the
+  // client through its real constructor — the transport it makes for itself —
+  // and only swap the socket underneath.
+  group('RPC endpoint on the wire', () {
+    Future<Uri> endpointFor(String url) async {
+      final client = TransmissionClient(url: url);
+      addTearDown(client.close);
+      final adapter = ScriptedHttpAdapter([
+        _ok({'version': '4.0.6'}),
+      ]);
+      client.dio.httpClientAdapter = adapter;
+
+      await client.session();
+
+      expect(adapter.callCount, 1);
+      return adapter.lastRequest.uri;
+    }
+
+    const cases = {
+      'https://nas.local': 'https://nas.local/transmission/rpc',
+      'https://nas.local/': 'https://nas.local/transmission/rpc',
+      'http://nas.local:9091': 'http://nas.local:9091/transmission/rpc',
+      'https://nas.local/tr': 'https://nas.local/tr/rpc',
+      'https://nas.local/tr/': 'https://nas.local/tr/rpc',
+      'https://nas.local/tr/rpc': 'https://nas.local/tr/rpc',
+      'https://nas.local:8443/proxy/torrents/rpc':
+          'https://nas.local:8443/proxy/torrents/rpc',
+      'http://nas.local:9091/transmission':
+          'http://nas.local:9091/transmission/rpc',
+      'http://nas.local:9091/transmission/web/':
+          'http://nas.local:9091/transmission/rpc',
+      'nas.local/tr': 'https://nas.local/tr/rpc',
+    };
+
+    for (final entry in cases.entries) {
+      test('${entry.key} posts to exactly ${entry.value}', () async {
+        expect((await endpointFor(entry.key)).toString(), entry.value);
+      });
+    }
+
+    test('the transport is rooted at the origin, not the path', () {
+      final client = TransmissionClient(url: 'https://nas.local/tr');
+      addTearDown(client.close);
+
+      expect(client.dio.options.baseUrl, 'https://nas.local');
+      expect(client.baseUrl, 'https://nas.local/tr');
+      expect(client.rpcUrl, 'https://nas.local/tr/rpc');
+    });
+
+    test(
+      'an injected Dio whose base carries the path still hits it once',
+      () async {
+        // The endpoint is posted as an absolute URL, so it no longer depends on
+        // what `baseUrl` the transport happens to carry.
+        final adapter = ScriptedHttpAdapter([
+          _ok({'version': '4.0.6'}),
+        ]);
+        final client = TransmissionClient(
+          url: 'https://nas.local/tr',
+          dio: _dio(adapter, base: 'https://nas.local/tr'),
+        );
+
+        await client.session();
+
+        expect(adapter.lastRequest.uri.toString(), 'https://nas.local/tr/rpc');
+      },
+    );
+
+    test('the 409 replay goes to the same single-path endpoint', () async {
+      final client = TransmissionClient(url: 'https://nas.local/tr/');
+      addTearDown(client.close);
+      final adapter = ScriptedHttpAdapter([
+        const ScriptedReply(
+          statusCode: 409,
+          headers: {
+            'x-transmission-session-id': ['abc123'],
+          },
+        ),
+        _ok({'version': '4.0.6'}),
+      ]);
+      client.dio.httpClientAdapter = adapter;
+
+      await client.session();
+
+      expect(adapter.requests.map((r) => r.uri.path), ['/tr/rpc', '/tr/rpc']);
     });
   });
 

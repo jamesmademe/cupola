@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_animation.dart';
-import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -16,8 +15,12 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// SABnzbd dashboard: live queue and recent history. Read-only for the first
-/// release.
+/// SABnzbd's Queue tab: the whole download queue, with the controls that act
+/// on it.
+///
+/// History is not drawn here. It has its own tab, and the Overview previews it
+/// with a link there; the ten-row block this page used to end with was a third,
+/// shorter copy of the same list, capped without saying so.
 class SabnzbdScreen extends ConsumerWidget {
   const SabnzbdScreen({super.key, this.showAppBar = true, this.topPadding = 0});
 
@@ -53,7 +56,6 @@ class _SabnzbdDashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final queueAsync = ref.watch(sabnzbdQueueProvider);
-    final historyAsync = ref.watch(sabnzbdHistoryProvider);
     final summaryAsync = ref.watch(serviceSummaryProvider(ServiceKey.sabnzbd));
     final isOffline = summaryAsync.maybeWhen(
       data: (summary) => !summary.isOnline,
@@ -68,36 +70,97 @@ class _SabnzbdDashboard extends ConsumerWidget {
       );
     }
 
+    // Through the same `when` the rows draw with, so the header never counts
+    // a queue its section is not showing.
+    final queue = queueAsync.whenOrNull(data: (queue) => queue);
+
     return RefreshIndicator(
       onRefresh: () async {
         _invalidateAll(ref);
         await Future<void>.delayed(AppAnimation.durationMd);
       },
-      child: ListView(
+      // The whole queue, built lazily. This tab used to draw the first five
+      // jobs with no count and no way to reach the rest, so a queue of eight
+      // read as a queue of five. Every slot `mode=queue` returned is a row
+      // here, the header states how many jobs there are, and only the rows on
+      // screen are built.
+      child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
-        children: [
-          if (topPadding > 0) SizedBox(height: topPadding),
-          ServiceKpiPeek(
-            kpis: ref.watch(serviceKpiProvider(ServiceKey.sabnzbd)),
-            accent: AppColors.sabnzbd,
+        slivers: [
+          SliverList.list(
+            children: [
+              if (topPadding > 0) SizedBox(height: topPadding),
+              ServiceKpiPeek(
+                kpis: ref.watch(serviceKpiProvider(ServiceKey.sabnzbd)),
+                accent: AppColors.sabnzbd,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _SabnzbdActionsBar(queueAsync: queueAsync),
+              const SizedBox(height: AppSpacing.sm),
+              SectionHeader(
+                title: 'Downloading',
+                subtitle: sabnzbdQueueCountLabel(queue),
+                showChevron: false,
+              ),
+              const SizedBox(height: 2),
+            ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          _SabnzbdActionsBar(queueAsync: queueAsync),
-          const SizedBox(height: AppSpacing.sm),
-          const SectionHeader(title: 'Downloading', showChevron: false),
-          const SizedBox(height: 2),
-          _QueueList(queueAsync: queueAsync),
-          const SizedBox(height: AppSpacing.sm),
-          const SectionHeader(title: 'History', showChevron: false),
-          const SizedBox(height: 2),
-          _HistoryList(historyAsync: historyAsync),
+          _queueRows(ref, queueAsync),
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+            ),
+          ),
         ],
       ),
     );
   }
+}
+
+/// The count the Queue header states, or null while there is nothing to count.
+///
+/// Null rather than `0 jobs` during a load or after a failure: a figure whose
+/// source did not answer is not a zero. The number is [SabnzbdQueue.jobCount] —
+/// the server's own `noofslots_total` — never the length of the page in hand,
+/// and should the server ever report more jobs than it sent, the header says
+/// how many of them are drawn instead of passing the page off as the queue.
+String? sabnzbdQueueCountLabel(SabnzbdQueue? queue) {
+  if (queue == null) return null;
+  final total = queue.jobCount;
+  final noun = total == 1 ? 'job' : 'jobs';
+  final shown = queue.slots.length;
+  if (shown < total) return '$shown of $total $noun shown';
+  return '$total $noun';
+}
+
+/// The queue's rows, as a sliver: every slot, lazily built.
+Widget _queueRows(WidgetRef ref, AsyncValue<SabnzbdQueue> queueAsync) {
+  return queueAsync.when(
+    data: (queue) {
+      if (queue.slots.isEmpty) {
+        return const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+            child: Text('Queue is empty.'),
+          ),
+        );
+      }
+      return SliverList.builder(
+        itemCount: queue.slots.length,
+        itemBuilder: (context, index) => _QueueTile(slot: queue.slots[index]),
+      );
+    },
+    loading: () => const SliverToBoxAdapter(child: ListRowsShimmer()),
+    error: (error, _) => SliverToBoxAdapter(
+      child: InlineErrorRetry(
+        message: 'Failed to load the queue',
+        onRetry: () => ref.invalidate(sabnzbdQueueProvider),
+      ),
+    ),
+  );
 }
 
 /// Providers refreshed after any SABnzbd mutation.
@@ -287,40 +350,6 @@ class _AddNzbDialogState extends ConsumerState<_AddNzbDialog> {
   }
 }
 
-class _QueueList extends ConsumerWidget {
-  const _QueueList({required this.queueAsync});
-
-  final AsyncValue<SabnzbdQueue> queueAsync;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return queueAsync.when(
-      data: (queue) {
-        if (queue.slots.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
-            ),
-            child: Text('Queue is empty.'),
-          );
-        }
-        return Column(
-          children: queue.slots
-              .take(5)
-              .map((slot) => _QueueTile(slot: slot))
-              .toList(),
-        );
-      },
-      loading: () => const ListRowsShimmer(),
-      error: (error, _) => InlineErrorRetry(
-        message: 'Failed to load the queue',
-        onRetry: () => ref.invalidate(sabnzbdQueueProvider),
-      ),
-    );
-  }
-}
-
 class _QueueTile extends ConsumerWidget {
   const _QueueTile({required this.slot});
 
@@ -383,117 +412,5 @@ class _QueueTile extends ConsumerWidget {
           invalidate: _sabnzbdInvalidateAfterAction,
         );
     }
-  }
-}
-
-class _HistoryList extends ConsumerWidget {
-  const _HistoryList({required this.historyAsync});
-
-  final AsyncValue<List<SabnzbdHistorySlot>> historyAsync;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return historyAsync.when(
-      data: (slots) {
-        if (slots.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
-            ),
-            child: Text('No history yet.'),
-          );
-        }
-        return Column(
-          children: slots
-              .take(10)
-              .map((slot) => _HistoryTile(slot: slot))
-              .toList(),
-        );
-      },
-      loading: () => const ListRowsShimmer(),
-      error: (error, _) => InlineErrorRetry(
-        message: 'Failed to load history',
-        onRetry: () => ref.invalidate(sabnzbdHistoryProvider),
-      ),
-    );
-  }
-}
-
-class _HistoryTile extends StatelessWidget {
-  const _HistoryTile({required this.slot});
-
-  final SabnzbdHistorySlot slot;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final color = statusToneColor(
-      colorScheme,
-      slot.failed ? StatusTone.warning : StatusTone.success,
-    );
-    final icon = slot.failed
-        ? Icons.error_outline_rounded
-        : Icons.check_circle_rounded;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xs,
-      ),
-      child: Material(
-        color: colorScheme.surface,
-        borderRadius: AppRadius.borderRadiusMd,
-        child: Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            border: Border.all(color: colorScheme.outlineVariant),
-            borderRadius: AppRadius.borderRadiusMd,
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: AppRadius.borderRadiusSm,
-                ),
-                alignment: Alignment.center,
-                child: Icon(icon, size: 16, color: color),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      slot.name,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium!.weight(FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      slot.failMessage ??
-                          [
-                            if (slot.category.isNotEmpty) slot.category,
-                            slot.status,
-                          ].join(' · '),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

@@ -374,9 +374,10 @@ SabnzbdQueueSection sabnzbdQueuePreview(
   return (
     rows: List.unmodifiable(rows),
     // The queue's own depth, which `mode=queue` states in `noofslots_total` and
-    // [SabnzbdQueue.jobCount] reads: the header says "62 jobs" over four rows
-    // rather than "50 jobs" — the size of the request — whenever the queue runs
-    // deeper than the client's 50-slot page.
+    // [SabnzbdQueue.jobCount] reads: the header says "62 jobs" over four rows.
+    // [sabnzbdQueueProvider] asks for the whole queue, so the page and the
+    // queue are the same size today; reading the server's figure rather than
+    // `slots.length` keeps the header honest for any caller that pages.
     total: queue.jobCount,
     sizeLeftLabel: queue.sizeLeftLabel,
     paused: queue.paused,

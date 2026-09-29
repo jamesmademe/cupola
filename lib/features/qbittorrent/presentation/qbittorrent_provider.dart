@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/lifecycle/gated_poll.dart'; // ignore: implementation_imports
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderBase;
 
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
@@ -67,6 +69,25 @@ final qbittorrentServiceForProvider =
       ref.onDispose(client.close);
       return QbittorrentService(client);
     });
+
+/// Call first in a user's explicit Retry, or pull-to-refresh, on a qBittorrent
+/// surface — before invalidating what it retries.
+///
+/// Forgets a sign-in refusal the client is holding (see [QbittorrentClient]),
+/// so the one attempt the person asked for is actually made: they fixed the
+/// password on the server, or waited out a ban. Poll ticks invalidate directly
+/// and never come through here — a timer that cleared the refusal would be the
+/// loop that gets the address banned.
+void clearQbittorrentLoginRefusal(WidgetRef ref) {
+  // Checked rather than caught: the service provider throws when qBittorrent is
+  // not configured, and every surface that offers a Retry has already gated on
+  // this same question.
+  if (ref
+      .read(currentSettingsProvider)
+      .isServiceConfigured(ServiceKey.qbittorrent)) {
+    ref.read(qbittorrentServiceProvider).clearLoginRefusal();
+  }
+}
 
 enum TorrentFilter { all, downloading, seeding, completed, paused, queued }
 
@@ -141,12 +162,25 @@ final torrentTrackerFilterProvider = StateProvider<String?>((ref) => null);
 
 final torrentSearchQueryProvider = StateProvider<String>((ref) => '');
 
+/// The whole torrent list.
+///
+/// **Every `FutureProvider` in this feature carries `retry: noProviderRetry`**,
+/// and this one is why. Riverpod's default re-runs a failed build ten times
+/// behind an exponential backoff, and while it does the state is an
+/// `AsyncLoading` that still holds the last value *and* the error — which
+/// `when` routes to `loading`. The list's three-second poll then invalidates
+/// before the tenth attempt, so a qBittorrent that went down stayed a spinner
+/// for as long as the page was open, and the last-known list with its fault
+/// band was never reached. Failing on the first attempt lands the error at
+/// once; the poll, or the user's Retry, is the retry. The providers derived
+/// from this one carry the flag too, or the derivation would quietly
+/// reintroduce the retry the source refused.
 final allTorrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   final service = ref.watch(qbittorrentServiceProvider);
   final sort = ref.watch(torrentSortProvider);
   final reverse = ref.watch(torrentSortReverseProvider);
   return service.getTorrents(sort: sort.apiValue, reverse: reverse);
-});
+}, retry: noProviderRetry);
 
 final availableCategoriesProvider = Provider<List<String>>((ref) {
   final torrents = ref.watch(allTorrentsProvider).asData?.value;
@@ -255,13 +289,17 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   }
 
   return torrents;
-});
+}, retry: noProviderRetry);
+
+// The four detail families below are polled every three seconds by
+// [torrentDetailPollingProvider], so they fail fast for the reason
+// [allTorrentsProvider] states.
 
 final qbittorrentTorrentsProvider =
     FutureProvider.family<List<Torrent>, String>((ref, hash) async {
       final service = ref.watch(qbittorrentServiceProvider);
       return service.getTorrents(hashes: hash);
-    });
+    }, retry: noProviderRetry);
 
 final torrentFilesProvider = FutureProvider.family<List<TorrentFile>, String>((
   ref,
@@ -269,24 +307,24 @@ final torrentFilesProvider = FutureProvider.family<List<TorrentFile>, String>((
 ) async {
   final service = ref.watch(qbittorrentServiceProvider);
   return service.getTorrentFiles(hash);
-});
+}, retry: noProviderRetry);
 
 final torrentTrackersProvider =
     FutureProvider.family<List<TorrentTracker>, String>((ref, hash) async {
       final service = ref.watch(qbittorrentServiceProvider);
       return service.getTorrentTrackers(hash);
-    });
+    }, retry: noProviderRetry);
 
 final torrentPropertiesProvider =
     FutureProvider.family<TorrentProperties, String>((ref, hash) async {
       final service = ref.watch(qbittorrentServiceProvider);
       return service.getTorrentProperties(hash);
-    });
+    }, retry: noProviderRetry);
 
 final transferInfoProvider = FutureProvider<TransferInfo>((ref) async {
   final service = ref.watch(qbittorrentServiceProvider);
   return service.getTransferInfo();
-});
+}, retry: noProviderRetry);
 
 final selectedTorrentHashesProvider = StateProvider.autoDispose<Set<String>>(
   (ref) => {},
@@ -302,13 +340,41 @@ final torrentPollingProvider = Provider.autoDispose<void>((ref) {
   ref.gatedPoll(
     id: 'qbittorrent.list',
     interval: _pollInterval,
-    onTick: () {
-      ref.invalidate(allTorrentsProvider);
-      ref.invalidate(torrentsProvider);
-      ref.invalidate(transferInfoProvider);
-    },
+    onTick: () => _refreshUnlessInFlight(ref, [
+      allTorrentsProvider,
+      torrentsProvider,
+      transferInfoProvider,
+    ]),
   );
 });
+
+/// Invalidates [providers] for a poll tick — except any whose last request
+/// has not answered yet.
+///
+/// The tick is three seconds and the transport's connect timeout is ten, so
+/// against a host that drops packets instead of refusing them, invalidating on
+/// every tick threw each request away before it could fail: the provider never
+/// left `loading`, the cold open was a spinner for as long as the page stayed
+/// open, and no error — hence no fault band — ever landed. A request still in
+/// flight is left to finish; the tick after it answers refreshes as usual.
+///
+/// All of them are inspected **before** any is invalidated: reading a provider
+/// whose dependency this tick has just invalidated would force it to rebuild
+/// on the spot, inside the tick. And only a provider that already exists is
+/// inspected, so a tick never creates one just to ask about it — the same
+/// no-op `invalidate` is for a provider nothing has read.
+void _refreshUnlessInFlight(
+  Ref ref,
+  List<ProviderBase<AsyncValue<Object?>>> providers,
+) {
+  final idle = [
+    for (final provider in providers)
+      if (!ref.exists(provider) || !ref.read(provider).isLoading) provider,
+  ];
+  for (final provider in idle) {
+    ref.invalidate(provider);
+  }
+}
 
 /// One torrent's own live refresh.
 ///
@@ -328,12 +394,12 @@ final torrentDetailPollingProvider = Provider.autoDispose.family<void, String>((
   ref.gatedPoll(
     id: 'qbittorrent.detail.$hash',
     interval: _pollInterval,
-    onTick: () {
-      ref.invalidate(qbittorrentTorrentsProvider(hash));
-      ref.invalidate(torrentFilesProvider(hash));
-      ref.invalidate(torrentTrackersProvider(hash));
-      ref.invalidate(torrentPropertiesProvider(hash));
-    },
+    onTick: () => _refreshUnlessInFlight(ref, [
+      qbittorrentTorrentsProvider(hash),
+      torrentFilesProvider(hash),
+      torrentTrackersProvider(hash),
+      torrentPropertiesProvider(hash),
+    ]),
   );
 });
 

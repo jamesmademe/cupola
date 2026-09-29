@@ -107,6 +107,7 @@ class _OverviewBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
       onRefresh: () async {
+        clearQbittorrentLoginRefusal(ref);
         invalidateServiceReadout(ref, ServiceKey.qbittorrent);
         // The two sources every region on this page is folded from. The four
         // derived providers below are invalidated too rather than left to
@@ -180,6 +181,7 @@ class _NeedsAttentionSection extends ConsumerWidget {
         serviceName: 'qBittorrent',
         loadingLabel: 'Loading what needs attention',
         onRetry: () {
+          clearQbittorrentLoginRefusal(ref);
           ref.invalidate(qbittorrentOverviewAttentionProvider);
           ref.invalidate(allTorrentsProvider);
         },
@@ -259,6 +261,7 @@ class _QueueSection extends ConsumerWidget {
         serviceName: 'qBittorrent',
         loadingLabel: 'Loading the queue',
         onRetry: () {
+          clearQbittorrentLoginRefusal(ref);
           ref.invalidate(qbittorrentOverviewTransfersProvider);
           ref.invalidate(allTorrentsProvider);
         },
@@ -342,6 +345,7 @@ class _CategoriesSection extends ConsumerWidget {
         serviceName: 'qBittorrent',
         loadingLabel: 'Loading categories',
         onRetry: () {
+          clearQbittorrentLoginRefusal(ref);
           ref.invalidate(qbittorrentOverviewCategoriesProvider);
           ref.invalidate(allTorrentsProvider);
         },
@@ -408,6 +412,7 @@ class _SessionSection extends ConsumerWidget {
         serviceName: 'qBittorrent',
         loadingLabel: 'Loading the session',
         onRetry: () {
+          clearQbittorrentLoginRefusal(ref);
           ref.invalidate(qbittorrentOverviewSessionProvider);
           ref.invalidate(transferInfoProvider);
         },

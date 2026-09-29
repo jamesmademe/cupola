@@ -36,6 +36,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
@@ -628,6 +629,11 @@ List<QbittorrentSessionFact> qbittorrentSessionFacts(TransferInfo info) {
 }
 
 // ─── Providers ──────────────────────────────────────────────────────────────
+//
+// Every one of these derives from [allTorrentsProvider] or
+// [transferInfoProvider], which fail on the first attempt; each carries
+// `retry: noProviderRetry` too, or the derivation would quietly re-run the
+// backoff the source refused and hold the section on its skeleton.
 
 /// The faults, from the list the Queue tab and the KPI rail already hold.
 ///
@@ -638,28 +644,28 @@ final qbittorrentOverviewAttentionProvider =
     FutureProvider.autoDispose<List<QbittorrentAttentionItem>>((ref) async {
       final torrents = await ref.watch(allTorrentsProvider.future);
       return qbittorrentFaultRows(torrents, now: DateTime.now());
-    });
+    }, retry: noProviderRetry);
 
 /// The Queue preview.
 final qbittorrentOverviewTransfersProvider =
     FutureProvider.autoDispose<List<QbittorrentTransferRow>>((ref) async {
       final torrents = await ref.watch(allTorrentsProvider.future);
       return qbittorrentTransferRows(torrents);
-    });
+    }, retry: noProviderRetry);
 
 /// The queue census behind the Queue header's subtitle.
 final qbittorrentOverviewCountsProvider =
     FutureProvider.autoDispose<QbittorrentQueueCounts>((ref) async {
       final torrents = await ref.watch(allTorrentsProvider.future);
       return qbittorrentQueueCounts(torrents);
-    });
+    }, retry: noProviderRetry);
 
 /// The categories, largest first.
 final qbittorrentOverviewCategoriesProvider =
     FutureProvider.autoDispose<List<QbittorrentCategoryRow>>((ref) async {
       final torrents = await ref.watch(allTorrentsProvider.future);
       return qbittorrentCategoryRows(torrents);
-    });
+    }, retry: noProviderRetry);
 
 /// How many distinct categories the library actually uses.
 ///
@@ -672,11 +678,11 @@ final qbittorrentOverviewCategoryCountProvider =
         torrents,
         limit: torrents.length + 1,
       ).length;
-    });
+    }, retry: noProviderRetry);
 
 /// The session facts, from `/transfer/info`.
 final qbittorrentOverviewSessionProvider =
     FutureProvider.autoDispose<List<QbittorrentSessionFact>>((ref) async {
       final info = await ref.watch(transferInfoProvider.future);
       return qbittorrentSessionFacts(info);
-    });
+    }, retry: noProviderRetry);
