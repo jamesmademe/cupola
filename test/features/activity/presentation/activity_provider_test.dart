@@ -320,6 +320,66 @@ void main() {
       ]);
     });
 
+    // APP-05: the merge that folds a connection's two Wanted halves together
+    // dropped their totals, so every connection on Wanted › All came out
+    // "unanswered" and its tile could only count loaded rows.
+    test('wanted adds the two halves\' totals for one connection', () async {
+      final container = createContainer(
+        radarrService: _TotalledWantedRadarrService(missing: 30, cutoff: 12),
+      );
+
+      final feed = await _loadPagedFeed(container, globalWantedFeedProvider);
+      final radarr = feed.results.singleWhere(
+        (result) => result.service == ServiceKey.radarr,
+      );
+
+      expect(radarr.items, hasLength(2));
+      expect(radarr.total, 42);
+    });
+
+    test('a half that named no total leaves the sum unsaid', () async {
+      final container = createContainer(
+        radarrService: _TotalledWantedRadarrService(missing: 30, cutoff: null),
+      );
+
+      final feed = await _loadPagedFeed(container, globalWantedFeedProvider);
+      final radarr = feed.results.singleWhere(
+        (result) => result.service == ServiceKey.radarr,
+      );
+
+      // Not 30: that is the known half stated as the whole.
+      expect(radarr.total, isNull);
+    });
+
+    test('a Seerr leg reports the size of its set', () async {
+      final container = createContainer(
+        requests: const [
+          SeerrRequest(
+            id: 1,
+            status: RequestStatus.pendingApproval,
+            media: RequestMedia(title: 'Shogun'),
+            createdAt: '2026-04-03T09:05:00Z',
+            type: 'tv',
+          ),
+          SeerrRequest(
+            id: 2,
+            status: RequestStatus.approved,
+            media: RequestMedia(title: 'Dune'),
+            createdAt: '2026-04-02T09:05:00Z',
+            type: 'movie',
+          ),
+        ],
+      );
+
+      final feed = await container.read(globalNowItemsProvider.future);
+      final seerr = feed.results.singleWhere(
+        (result) => result.service == ServiceKey.seerr,
+      );
+
+      // `getRequests` walks every page, so what arrived is the set.
+      expect(seerr.total, 2);
+    });
+
     test('history loads a window and reports hasMore on a full page', () async {
       final container = createContainer(
         radarrService: _PagedHistoryRadarrService(
@@ -635,6 +695,39 @@ class _MissingRadarrService extends FakeRadarrService {
           {'id': 3, 'title': 'Cool Movie', 'year': 2024, 'monitored': true},
         ]
       : const [];
+}
+
+/// A Radarr whose Wanted endpoints answer with the envelope's total, one half
+/// of which may be absent.
+class _TotalledWantedRadarrService extends FakeRadarrService {
+  _TotalledWantedRadarrService({required this.missing, required this.cutoff});
+
+  final int? missing;
+  final int? cutoff;
+
+  @override
+  Future<ArrRecordPage> getMissingPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => ArrRecordPage(
+    records: const [
+      {'title': 'Kingdom of the Planet of the Apes', 'year': 2024},
+    ],
+    total: missing,
+  );
+
+  @override
+  Future<ArrRecordPage> getCutoffPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => ArrRecordPage(
+    records: const [
+      {'title': 'Inception', 'year': 2010},
+    ],
+    total: cutoff,
+  );
 }
 
 Future<ActivityFeed> _loadPagedFeed(

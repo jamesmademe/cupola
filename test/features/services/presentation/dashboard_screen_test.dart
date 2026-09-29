@@ -19,12 +19,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
+import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
@@ -314,6 +316,76 @@ void main() {
       },
     );
 
+    // APP-04: a blocked import was filed as a stall — "Open in qBittorrent" —
+    // and eighteen of them were eighteen rows.
+    testWidgets('blocked imports are one row that offers a manual import', (
+      tester,
+    ) async {
+      await _pumpDashboard(
+        tester,
+        decisions: groupDecisions([
+          for (var i = 0; i < 18; i++)
+            _blocked('Episode $i', at: DateTime.utc(2024, 1, i + 1)),
+        ]),
+      );
+
+      expect(find.text('18 need a manual import'), findsOneWidget);
+      expect(find.text('Manual import'), findsOneWidget);
+      expect(find.textContaining('Open in'), findsNothing);
+      // The cap counts rows; the header counts what they stand for.
+      expect(find.text('See all 18 →'), findsOneWidget);
+      expect(find.text('18 items · blocked imports'), findsOneWidget);
+    });
+
+    testWidgets('manual import opens the wizard on the record\'s connection', (
+      tester,
+    ) async {
+      Uri? opened;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const DashboardScreen(),
+          ),
+          GoRoute(
+            path: '/import/browse',
+            builder: (context, state) {
+              opened = state.uri;
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await _pumpDashboard(
+        tester,
+        router: router,
+        decisions: [
+          _blocked(
+            'Dune: Part Two',
+            at: DateTime.utc(2024),
+            actionId: 12,
+            instanceId: 'radarr-hd',
+            importPath: '/downloads/Dune.Part.Two/Dune.Part.Two.mkv',
+          ),
+        ],
+      );
+
+      await tester.tap(find.text('Manual import'));
+      await tester.pumpAndSettle();
+
+      expect(opened, isNotNull);
+      expect(opened!.queryParameters, {
+        'service': 'radarr',
+        'targetId': '12',
+        'path': '/downloads/Dune.Part.Two',
+        // The `?i=` the import routes accept: the files go into the library
+        // the record came off, not into whichever one the lens is on.
+        'i': 'radarr-hd',
+      });
+    });
+
     testWidgets('a pending request keeps both of its decisions', (
       tester,
     ) async {
@@ -430,6 +502,60 @@ void main() {
       expect(find.text('Dune: Part Two'), findsOneWidget);
       expect(find.text('The Zone of Interest'), findsNothing);
       expect(find.textContaining('1 stalled'), findsOneWidget);
+    });
+
+    // APP-01: the eyebrow counted the five-row preview and printed it as the
+    // total.
+    testWidgets('the eyebrow counts every transfer, not the five it shows', (
+      tester,
+    ) async {
+      await _pumpDashboard(
+        tester,
+        queue: [
+          for (var i = 0; i < 8; i++)
+            _queueItem('Release $i', progress: (8 - i) / 10),
+        ],
+      );
+
+      await _scrollTo(tester, find.text('In flight'));
+
+      expect(find.textContaining('8 downloading'), findsOneWidget);
+      expect(find.textContaining('5 downloading'), findsNothing);
+      // The rows stay capped.
+      expect(find.text('Release 4'), findsOneWidget);
+      expect(find.text('Release 5'), findsNothing);
+    });
+
+    // APP-04: eighteen blocked imports and nothing downloading read "The queue
+    // is empty" over a footnote counting eighteen stalls.
+    testWidgets('blocked imports are not an empty queue, and are not stalls', (
+      tester,
+    ) async {
+      await _pumpDashboard(
+        tester,
+        // Every source answering: a dark one replaces the empty label with its
+        // own message, which is not what is under test.
+        instanceSummary: (key) => _summary(key.service, online: true),
+        summary: (service) => _summary(service, online: true),
+        queue: [
+          for (var i = 0; i < 18; i++)
+            _queueItem(
+              'Blocked $i',
+              progress: 1,
+              fault: InFlightFault.needsImport,
+            ),
+        ],
+      );
+
+      await _scrollTo(tester, find.text('In flight'));
+
+      expect(find.text('The queue is empty'), findsNothing);
+      expect(find.text('Nothing moving'), findsOneWidget);
+      expect(
+        find.text('18 need a manual import · under Needs a decision'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('stall'), findsNothing);
     });
 
     testWidgets('a figure the source did not report reads —, never 0', (
@@ -567,6 +693,7 @@ Future<void> _pumpDashboard(
   Future<ServiceSummary> Function(ServiceKey service)? summaryFuture,
   Future<ServiceSignalPair?> Function(ServiceKey service)? signalPairFuture,
   SharedPreferences? prefs,
+  GoRouter? router,
 }) async {
   final overrides = <Override>[
     if (prefs != null) sharedPreferencesProvider.overrideWithValue(prefs),
@@ -628,7 +755,9 @@ Future<void> _pumpDashboard(
   await tester.pumpWidget(
     ProviderScope(
       overrides: overrides,
-      child: const MaterialApp(home: DashboardScreen()),
+      child: router == null
+          ? const MaterialApp(home: DashboardScreen())
+          : MaterialApp.router(routerConfig: router),
     ),
   );
   await tester.pump();
@@ -706,6 +835,24 @@ DashboardDecision _stall(
   requiresService: requires,
 );
 
+DashboardDecision _blocked(
+  String title, {
+  required DateTime at,
+  int? actionId,
+  String instanceId = '',
+  String? importPath,
+}) => DashboardDecision(
+  kind: DecisionKind.importBlocked,
+  id: 'blocked-$title',
+  service: ServiceKey.radarr,
+  title: title,
+  detail: 'Import blocked · Radarr',
+  occurredAt: at,
+  actionId: actionId,
+  instanceId: instanceId,
+  importPath: importPath,
+);
+
 DashboardDecision _request(String title, {required DateTime at}) =>
     DashboardDecision(
       kind: DecisionKind.pendingRequest,
@@ -721,6 +868,7 @@ ServiceQueueItem _queueItem(
   String title, {
   required double progress,
   bool stalled = false,
+  InFlightFault? fault,
   int? rate,
 }) => ServiceQueueItem(
   service: ServiceKey.qbittorrent,
@@ -732,9 +880,10 @@ ServiceQueueItem _queueItem(
   totalBytes: 15 * 1024 * 1024 * 1024,
   etaSeconds: 180,
   clientLabel: 'qBittorrent',
+  clientService: ServiceKey.qbittorrent,
   clientRateBytesPerSecond: rate,
-  stalled: stalled,
-  stalledSince: stalled ? DateTime.utc(2024, 1, 1) : null,
+  fault: fault ?? (stalled ? InFlightFault.stalled : null),
+  stalledSince: stalled || fault != null ? DateTime.utc(2024, 1, 1) : null,
 );
 
 RecentlyAddedItem _imported(

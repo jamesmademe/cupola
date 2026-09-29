@@ -39,6 +39,7 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/services/domain/arr_import.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
+import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/request_ordering.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
@@ -941,12 +942,17 @@ class ServiceQueueItem {
     this.doneBytes,
     this.totalBytes,
     this.etaSeconds,
-    this.stalled = false,
+    this.fault,
     this.stalledSince,
     this.warning,
     this.clientRateBytesPerSecond,
     this.route,
     this.detail,
+    this.downloadId,
+    this.clientService,
+    this.instanceId = '',
+    this.mediaId,
+    this.outputPath,
   });
 
   final ServiceKey service;
@@ -975,10 +981,15 @@ class ServiceQueueItem {
   /// one that is transferring.
   final String clientLabel;
 
-  /// Stopped moving. Leaves this region entirely and becomes a decision.
-  final bool stalled;
+  /// Why this stopped being a transfer, or null while it still is one. A row
+  /// with a fault leaves this region entirely and becomes a decision — which
+  /// decision, and so which remedy, is what the value says. See
+  /// [InFlightFault].
+  final InFlightFault? fault;
 
-  /// When it stopped. Feeds the decision's "Stalled 42 min", and its ranking.
+  /// When it stopped being a transfer, as near as the source can date it —
+  /// qBittorrent's last activity, or the \*arr's `added`. Feeds the decision's
+  /// ranking.
   final DateTime? stalledSince;
 
   /// The source's own message about this row, when there is one.
@@ -1001,8 +1012,34 @@ class ServiceQueueItem {
   /// current rate, the arr's own warning.
   final String? detail;
 
+  /// The download client's id for the transfer an \*arr row is tracking — the
+  /// torrent hash, the SABnzbd `nzo_id`, the NZBGet id. The key
+  /// [joinQueueSources] joins an \*arr row to the client row moving the same
+  /// bytes on. Null on a client's own row, whose [id] already is that id.
+  final String? downloadId;
+
+  /// The connected client moving these bytes: itself on a client's own row,
+  /// and on an \*arr row only once [joinQueueSources] has matched it to one.
+  ///
+  /// What the eyebrow keys the rate on, since an \*arr row that absorbed a
+  /// torrent carries the torrent's client rate.
+  final ServiceKey? clientService;
+
+  /// The connection an \*arr row was read from, for a remedy that opens a flow
+  /// bound to one connection — the import wizard's `?i=`.
+  final String instanceId;
+
+  /// The library item an \*arr row belongs to — the movie, series, artist or
+  /// author — which a manual import is filed under. Null when the record names
+  /// none, or when several records folded into this row name different ones.
+  final int? mediaId;
+
+  /// Where the client is writing, as the \*arr reports it — what a manual
+  /// import is seeded from.
+  final String? outputPath;
+
   /// Whether this transfer is genuinely moving, or waiting to.
-  bool get isActive => !stalled;
+  bool get isActive => fault == null;
 }
 
 /// Everything currently transferring, across every configured source.
@@ -1062,29 +1099,35 @@ final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
     }
   }
 
-  final results = await Future.wait([
-    from(
+  final arrQueues = [
+    for (final service in const [
       ServiceKey.radarr,
-      () => _loadServiceQueueItems(ref, ServiceKey.radarr),
-    ),
-    from(
       ServiceKey.sonarr,
-      () => _loadServiceQueueItems(ref, ServiceKey.sonarr),
-    ),
-    from(
       ServiceKey.lidarr,
-      () => _loadServiceQueueItems(ref, ServiceKey.lidarr),
-    ),
-    from(
       ServiceKey.readarr,
-      () => _loadServiceQueueItems(ref, ServiceKey.readarr),
-    ),
+    ])
+      from(service, () => _loadServiceQueueItems(ref, service)),
+  ];
+  final clientQueues = [
     from(ServiceKey.qbittorrent, () => _loadQbittorrentQueueItems(ref)),
     from(ServiceKey.sabnzbd, () => _loadSabnzbdQueueItems(ref)),
     from(ServiceKey.nzbget, () => _loadNzbgetQueueItems(ref)),
-  ]);
+  ];
+  final results = await Future.wait([...arrQueues, ...clientQueues]);
 
-  final items = results.expand((items) => items).toList();
+  // One row per transfer, not one per source that can see it. A Radarr grab
+  // moving through qBittorrent is in both queues, and concatenating them drew
+  // it twice and counted it twice — and a stall in it became two decisions.
+  final items = joinQueueSources(
+    arr: results
+        .take(arrQueues.length)
+        .expand((items) => items)
+        .toList(growable: false),
+    clients: results
+        .skip(arrQueues.length)
+        .expand((items) => items)
+        .toList(growable: false),
+  );
 
   // Closest to landing first. An item whose client reports no progress sorts
   // last rather than as zero: unknown is not the same as "just started", and
@@ -1116,12 +1159,18 @@ final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
 
 /// The transfers the IN FLIGHT region draws, and the numbers above them.
 ///
-/// Active only: a stalled transfer is not in flight, it is a decision, and the
+/// Active only: a faulted transfer is not in flight, it is a decision, and the
 /// region says so in a footnote rather than silently showing a different count
 /// from the client's own queue.
+///
+/// [preview] and [activeCount] are two fields because they answer two
+/// questions. The rows are capped at [servicesQueuePreviewLimit]; the eyebrow
+/// states how many transfers there are, and it used to state it by counting
+/// the capped list — thirty downloads read "5 downloading".
 typedef ServicesInFlight = ({
-  List<ServiceQueueItem> active,
-  List<ServiceQueueItem> stalled,
+  List<ServiceQueueItem> preview,
+  int activeCount,
+  List<ServiceQueueItem> faults,
   int? rateBytesPerSecond,
   int clients,
 });
@@ -1129,25 +1178,108 @@ typedef ServicesInFlight = ({
 final servicesInFlightProvider = FutureProvider<ServicesInFlight>((ref) async {
   final items = await ref.watch(servicesQueueProvider.future);
   final active = items.where((item) => item.isActive).toList(growable: false);
-  final stalled = items.where((item) => item.stalled).toList(growable: false);
+  final faults = items.where((item) => !item.isActive).toList(growable: false);
 
   // Summed once per client, never once per row — see
-  // [ServiceQueueItem.clientRateBytesPerSecond].
+  // [ServiceQueueItem.clientRateBytesPerSecond]. Keyed on the client rather
+  // than on the row's service, because an \*arr row that absorbed a torrent
+  // carries that torrent's client rate.
   final rates = <ServiceKey, int>{};
   for (final item in items) {
     final rate = item.clientRateBytesPerSecond;
-    if (rate != null) rates[item.service] = rate;
+    final client = item.clientService;
+    if (rate != null && client != null) rates[client] = rate;
   }
 
   return (
-    active: active.take(servicesQueuePreviewLimit).toList(growable: false),
-    stalled: stalled,
+    preview: active.take(servicesQueuePreviewLimit).toList(growable: false),
+    activeCount: active.length,
+    faults: faults,
     rateBytesPerSecond: rates.isEmpty
         ? null
         : rates.values.fold(0, (sum, rate) => sum + rate),
     clients: rates.length,
   );
 });
+
+/// Joins the \*arr queues to the download-client queues, one row per transfer.
+///
+/// An \*arr queue record names the client's own id for the transfer it tracks
+/// in `downloadId` — the torrent hash (upper case; qBittorrent reports it in
+/// lower), the SABnzbd `nzo_id`, the NZBGet id — so the two rows for one grab
+/// are the same key in two spellings. The \*arr row wins: it knows the title,
+/// the quality and whether the file can be imported. The client row lends it
+/// what only the client measures — progress, bytes, time left, rate — and a
+/// stall the \*arr has not noticed yet. A client row no \*arr claims (a torrent
+/// added by hand) stays a row of its own.
+///
+/// Pure and top-level, so the rule is testable without a container.
+List<ServiceQueueItem> joinQueueSources({
+  required List<ServiceQueueItem> arr,
+  required List<ServiceQueueItem> clients,
+}) {
+  String key(String? id) => id?.trim().toLowerCase() ?? '';
+
+  final byId = <String, int>{};
+  for (var index = 0; index < clients.length; index++) {
+    final id = key(clients[index].id);
+    if (id.isNotEmpty) byId.putIfAbsent(id, () => index);
+  }
+
+  final claimed = <int>{};
+  final joined = <ServiceQueueItem>[];
+  for (final item in arr) {
+    final index = byId[key(item.downloadId)];
+    if (index == null || !claimed.add(index)) {
+      joined.add(item);
+      continue;
+    }
+    joined.add(_joinedQueueItem(item, clients[index]));
+  }
+
+  return [
+    ...joined,
+    for (var index = 0; index < clients.length; index++)
+      if (!claimed.contains(index)) clients[index],
+  ];
+}
+
+ServiceQueueItem _joinedQueueItem(
+  ServiceQueueItem arr,
+  ServiceQueueItem client,
+) {
+  // The \*arr's fault first: an import it refuses is the more specific truth.
+  // The client's stall second — the \*arr polls its client on a minute's delay
+  // and can still be calling a dead transfer "downloading".
+  final fault = arr.fault ?? client.fault;
+  final faultFromClient = arr.fault == null && client.fault != null;
+  // The byte pair travels together: one side's done over the other's total
+  // is a figure neither source reported.
+  final clientMeasured = client.totalBytes != null;
+
+  return ServiceQueueItem(
+    service: arr.service,
+    id: arr.id,
+    title: arr.title,
+    progress: client.progress ?? arr.progress,
+    clientLabel: arr.clientLabel,
+    quality: arr.quality,
+    doneBytes: clientMeasured ? client.doneBytes : arr.doneBytes,
+    totalBytes: clientMeasured ? client.totalBytes : arr.totalBytes,
+    etaSeconds: client.etaSeconds ?? arr.etaSeconds,
+    fault: fault,
+    stalledSince: faultFromClient ? client.stalledSince : arr.stalledSince,
+    warning: arr.warning ?? client.warning,
+    clientRateBytesPerSecond: client.clientRateBytesPerSecond,
+    route: arr.route,
+    detail: faultFromClient ? client.detail : arr.detail,
+    downloadId: arr.downloadId,
+    clientService: client.clientService,
+    instanceId: arr.instanceId,
+    mediaId: arr.mediaId,
+    outputPath: arr.outputPath,
+  );
+}
 
 /// Active torrents, as in-flight items.
 ///
@@ -1198,11 +1330,14 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(Ref ref) async {
           totalBytes: torrent.size > 0 ? torrent.size : null,
           etaSeconds: _qbEta(torrent.eta),
           clientLabel: ServiceKey.qbittorrent.title,
+          clientService: ServiceKey.qbittorrent,
           clientRateBytesPerSecond: clientRate,
           // A stalled transfer is the one qBittorrent state worth surfacing on a
           // hub: it looks identical to a slow download until you notice it has
           // not moved.
-          stalled: torrent.parsedState == TorrentState.stalled,
+          fault: torrent.parsedState == TorrentState.stalled
+              ? InFlightFault.stalled
+              : null,
           stalledSince: torrent.parsedState == TorrentState.stalled
               ? _epochSeconds(torrent.lastActivity)
               : null,
@@ -1247,6 +1382,7 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(Ref ref) async {
           totalBytes: null,
           etaSeconds: parseClockDuration(slot.timeLeft),
           clientLabel: ServiceKey.sabnzbd.title,
+          clientService: ServiceKey.sabnzbd,
           clientRateBytesPerSecond: rate,
           // A paused queue is stopped *on purpose*, which the tone rule files
           // under neutral — not a fault, and not a decision.
@@ -1283,6 +1419,7 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(Ref ref) async {
           // there is nothing to divide into an estimate. `—`, not a guess.
           etaSeconds: null,
           clientLabel: ServiceKey.nzbget.title,
+          clientService: ServiceKey.nzbget,
           route: ServiceRoutes.forService(ServiceKey.nzbget),
         ),
       )
@@ -1326,6 +1463,11 @@ Future<List<ServiceQueueItem>> _loadServiceQueueItems(
   ServiceKey service,
 ) async {
   try {
+    // The connection these records come off — the lens, which is what the
+    // service providers below resolve to. Stamped on each row so a remedy that
+    // opens a flow bound to one connection (the import wizard) opens it on
+    // this one, even if the lens has moved by the time the user taps.
+    final instanceId = ref.watch(activeInstanceProvider(service))?.id ?? '';
     final items = switch (service) {
       ServiceKey.radarr => await ref.watch(radarrServiceProvider).getQueue(),
       ServiceKey.sonarr => await ref.watch(sonarrServiceProvider).getQueue(),
@@ -1352,32 +1494,96 @@ Future<List<ServiceQueueItem>> _loadServiceQueueItems(
       ServiceKey.jellyfin ||
       ServiceKey.plex => const <dynamic>[],
     };
-    return items
-        .whereType<Map>()
-        .map((item) => _queueItemFromMap(service, item))
-        .toList(growable: false);
+    final records = items.whereType<Map>().map(stringKeyMap);
+    return [
+      for (final download in _groupQueueRecordsByDownload(records))
+        _queueItemFromRecords(service, download, instanceId: instanceId),
+    ];
   } catch (_) {
     return const [];
   }
 }
 
-ServiceQueueItem _queueItemFromMap(ServiceKey service, Map item) {
-  final typedItem = stringKeyMap(item);
-  final title =
-      arrPrimaryMediaTitle(typedItem) ??
-      arrReleaseTitle(typedItem) ??
-      'Unknown release';
+/// The records of one \*arr queue, one list per download.
+///
+/// A season pack is one torrent and **one record per episode** in Sonarr's
+/// queue, every one of them carrying the same `downloadId` and the same
+/// `size`/`sizeleft` — the torrent's. Drawn a row per record, one transfer
+/// read as ten, and "10 downloading" counted episodes rather than downloads.
+/// Records with no `downloadId` are each their own download: nothing says
+/// otherwise. First-seen order.
+List<List<Map<String, dynamic>>> _groupQueueRecordsByDownload(
+  Iterable<Map<String, dynamic>> records,
+) {
+  final groups = <List<Map<String, dynamic>>>[];
+  final byDownload = <String, List<Map<String, dynamic>>>{};
+  for (final record in records) {
+    final id = stringOrNull(record['downloadId'])?.trim().toLowerCase();
+    if (id == null || id.isEmpty) {
+      groups.add([record]);
+      continue;
+    }
+    final existing = byDownload[id];
+    if (existing != null) {
+      existing.add(record);
+      continue;
+    }
+    final group = [record];
+    byDownload[id] = group;
+    groups.add(group);
+  }
+  return groups;
+}
+
+/// Which fault wins when a download's records disagree: the one whose remedy
+/// is least likely to clear by itself.
+int _faultWeight(InFlightFault? fault) => switch (fault) {
+  InFlightFault.needsImport => 3,
+  InFlightFault.failed => 2,
+  InFlightFault.stalled => 1,
+  null => 0,
+};
+
+ServiceQueueItem _queueItemFromRecords(
+  ServiceKey service,
+  List<Map<String, dynamic>> records, {
+  required String instanceId,
+}) {
+  // One download, so its figures are the first record's: every record of a
+  // pack reports the pack's size, and summing them would multiply it.
+  final typedItem = records.first;
+  final title = records.length == 1
+      ? joinDisplayParts([
+          arrPrimaryMediaTitle(typedItem) ??
+              arrReleaseTitle(typedItem) ??
+              'Unknown release',
+          if (service == ServiceKey.sonarr) arrEpisodeCode(typedItem),
+        ])
+      : _packTitle(service, records);
   final size = intOrNull(typedItem['size']);
   final left = intOrNull(typedItem['sizeleft']);
-  final warning = arrQueueWarningMessage(typedItem);
+
+  // The download's fault is its worst record's: one blocked episode is a
+  // manual import for the pack.
+  InFlightFault? fault;
+  Map<String, dynamic> faulted = typedItem;
+  for (final record in records) {
+    final recordFault = arrQueueFault(record);
+    if (_faultWeight(recordFault) > _faultWeight(fault)) {
+      fault = recordFault;
+      faulted = record;
+    }
+  }
+  final warning =
+      stringOrNull(faulted['errorMessage']) ?? arrQueueWarningMessage(faulted);
+
+  final mediaIds = {for (final record in records) _queueMediaId(record)};
+  final mediaId = mediaIds.length == 1 ? mediaIds.single : null;
 
   return ServiceQueueItem(
     service: service,
     id: '${intOrNull(typedItem['id']) ?? 0}',
-    title: joinDisplayParts([
-      title,
-      if (service == ServiceKey.sonarr) arrEpisodeCode(typedItem),
-    ]),
+    title: title,
     progress: queueProgress(typedItem),
     quality: _queueQualityLabel(typedItem['quality']),
     // Derived from the two figures the record actually carries, and only when
@@ -1393,14 +1599,19 @@ ServiceQueueItem _queueItemFromMap(ServiceKey service, Map item) {
         stringOrNull(typedItem['downloadClient']) ??
         _queueTypeLabel(service) ??
         service.title,
-    // An \*arr flags a queue record it cannot make progress on — a stalled
-    // download, a file it could not import, a release it will not upgrade to.
-    // That is a transfer which has stopped being a transfer, so it leaves the
-    // in-flight region and becomes a decision, carrying the arr's own words.
-    stalled: warning != null,
+    // Classified by what the record *is* — stalled, blocked, failed — and not
+    // by whether it carries a warning. "Any warning is a stall" made a finished
+    // download the arr could not import into a stalled transfer, with a remedy
+    // in the one place that cannot fix it. A record merely carrying a warning
+    // while its bytes still move stays in flight.
+    fault: fault,
     stalledSince: parseAddedTimestamp(stringOrNull(typedItem['added'])),
     warning: warning,
     detail: warning,
+    downloadId: stringOrNull(typedItem['downloadId']),
+    instanceId: instanceId,
+    mediaId: mediaId,
+    outputPath: stringOrNull(typedItem['outputPath']),
     route: switch (service) {
       ServiceKey.radarr =>
         intOrNull(typedItem['movieId']) == null
@@ -1417,6 +1628,38 @@ ServiceQueueItem _queueItemFromMap(ServiceKey service, Map item) {
       _ => ServiceRoutes.forService(service),
     },
   );
+}
+
+/// The library item a queue record belongs to, or null when it names none.
+int? _queueMediaId(Map<String, dynamic> record) {
+  final id =
+      intOrNull(record['movieId']) ??
+      intOrNull(record['seriesId']) ??
+      intOrNull(record['artistId']) ??
+      intOrNull(record['authorId']);
+  return id == null || id <= 0 ? null : id;
+}
+
+/// `The Boys · 8 episodes` — one row for a download the \*arr filed as several
+/// records.
+String _packTitle(ServiceKey service, List<Map<String, dynamic>> records) {
+  final first = records.first;
+  final (name, unit) = switch (service) {
+    ServiceKey.sonarr => (arrSeriesTitle(first), 'episodes'),
+    ServiceKey.lidarr => (
+      arrArtistName(first) ?? arrAlbumTitle(first),
+      'albums',
+    ),
+    ServiceKey.readarr => (
+      arrAuthorName(first) ?? arrBookTitle(first),
+      'books',
+    ),
+    _ => (arrMovieTitle(first), 'movies'),
+  };
+  return joinDisplayParts([
+    name ?? arrReleaseTitle(first) ?? 'Unknown release',
+    '${records.length} $unit',
+  ]);
 }
 
 String? _queueTypeLabel(ServiceKey service) {
@@ -1494,11 +1737,11 @@ final dashboardDecisionsProvider = FutureProvider<List<DashboardDecision>>((
     ),
   ]);
 
-  // Not gated on one service: the stalls come from whichever of seven sources
+  // Not gated on one service: the faults come from whichever of seven sources
   // reported one, and the queue provider has already gated each of those.
   try {
     final inFlight = await ref.watch(servicesInFlightProvider.future);
-    decisions.addAll(inFlight.stalled.map(_stallDecision));
+    decisions.addAll(inFlight.faults.map(_queueFaultDecision));
   } catch (_) {}
 
   try {
@@ -1510,7 +1753,8 @@ final dashboardDecisionsProvider = FutureProvider<List<DashboardDecision>>((
     );
   } catch (_) {}
 
-  return rankDecisions(decisions);
+  // Folded before ranking, so a group ranks where its oldest member would have.
+  return rankDecisions(groupDecisions(decisions));
 });
 
 Future<List<DashboardDecision>> _pendingRequestDecisions(Ref ref) async {
@@ -1645,29 +1889,70 @@ String _certificateExpiry(NpmCertificate certificate, DateTime now) {
   return 'Certificate expires in $days days';
 }
 
-DashboardDecision _stallDecision(ServiceQueueItem item) => DashboardDecision(
-  kind: DecisionKind.stalledDownload,
-  id: 'stall-${item.service.routeParam}-${item.id}',
-  service: item.service,
-  title: item.title,
-  detail: joinDisplayParts([
-    item.warning ?? 'Stalled',
-    item.detail == item.warning ? null : item.detail,
-    item.clientLabel,
-  ]),
-  occurredAt: item.stalledSince,
-  route: item.route,
-  // The decision acts on the client, which may not be a service this user has
-  // set up at all — an \*arr can name a download client Cupola has no connection
-  // to. The control stays drawn and tappable either way; see the row.
-  requiresService: _clientServiceFor(item),
-);
+/// The decision a faulted transfer becomes, by what its fault is.
+///
+/// A blocked import is a manual import, filed under the library item and seeded
+/// with the download's folder, on the connection the record came off. A stall
+/// or a failure is a jump into the client. Before the fault had a kind, all
+/// three were the second.
+DashboardDecision _queueFaultDecision(ServiceQueueItem item) {
+  if (item.fault == InFlightFault.needsImport) {
+    return DashboardDecision(
+      kind: DecisionKind.importBlocked,
+      id: 'import-blocked-${item.service.routeParam}-${item.id}',
+      service: item.service,
+      title: item.title,
+      // The shape `_failedImportDecision` prints, so the two import faults read
+      // alike. No client: the bytes are on disk, and the client is not where
+      // this is fixed.
+      detail: joinDisplayParts([
+        'Import blocked',
+        item.service.title,
+        item.warning,
+      ]),
+      occurredAt: item.stalledSince,
+      route: item.route,
+      actionId: item.mediaId,
+      instanceId: item.instanceId,
+      importPath: item.outputPath,
+    );
+  }
+
+  return DashboardDecision(
+    kind: DecisionKind.stalledDownload,
+    id: 'stall-${item.service.routeParam}-${item.id}',
+    service: item.service,
+    title: item.title,
+    detail: joinDisplayParts([
+      item.warning ??
+          switch (item.fault) {
+            InFlightFault.failed => 'Failed',
+            InFlightFault.stalled ||
+            InFlightFault.needsImport ||
+            null => 'Stalled',
+          },
+      item.detail == item.warning ? null : item.detail,
+      item.clientLabel,
+    ]),
+    occurredAt: item.stalledSince,
+    route: item.route,
+    // The decision acts on the client, which may not be a service this user has
+    // set up at all — an \*arr can name a download client Cupola has no
+    // connection to. The control stays drawn and tappable either way; see the
+    // row.
+    requiresService: _clientServiceFor(item),
+  );
+}
 
 /// Which service the "open this transfer" control would jump to.
 ///
 /// Null when the row already *is* the client: qBittorrent's own stalled torrent
 /// opens in qBittorrent, which is not a cross-service jump and owes no hint.
+/// An \*arr row joined to its client's row knows the client exactly; otherwise
+/// the \*arr's own name for it is all there is.
 ServiceKey? _clientServiceFor(ServiceQueueItem item) {
+  final client = item.clientService;
+  if (client != null) return client == item.service ? null : client;
   if (item.service == ServiceKey.qbittorrent) return null;
   return switch (item.clientLabel.toLowerCase()) {
     final label when label.contains('qbittorrent') => ServiceKey.qbittorrent,

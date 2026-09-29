@@ -86,9 +86,8 @@ class ActivityServiceResult {
   ///
   /// **Null means unanswered, never none.** A caller that gets null must print
   /// a figure it can defend — "20 shown" — or no figure at all; falling back to
-  /// `items.length` reinstates the defect one layer up. A count surface that
-  /// still reads `items.length` (the service tiles' `_countFor`) is reporting
-  /// the window, not the set, and belongs on this.
+  /// `items.length` reinstates the defect one layer up. The service tiles read
+  /// this through `activityServiceCount`, and print `—` for null.
   final int? total;
 
   /// Non-null when the service was configured but did not answer.
@@ -972,11 +971,20 @@ ActivityFeed _merge(List<ActivityServiceResult> results) {
       order.add(key);
       continue;
     }
+    final existingTotal = existing.total;
+    final resultTotal = result.total;
     byConnection[key] = ActivityServiceResult(
       service: result.service,
       instanceId: result.instanceId,
       label: existing.label.isEmpty ? result.label : existing.label,
       items: [...existing.items, ...result.items],
+      // The two halves' sizes add up — Wanted asks one connection for missing
+      // and for cutoff unmet, which are disjoint sets. Dropped here, every
+      // merged connection came out "unanswered", and a half that did not say
+      // leaves the sum unsaid too rather than shrinking it to the other half.
+      total: existingTotal == null || resultTotal == null
+          ? null
+          : existingTotal + resultTotal,
       configured: existing.configured || result.configured,
       // Either half failing means the list for this connection is incomplete.
       error: existing.error ?? result.error,
@@ -1038,6 +1046,9 @@ Future<ActivityServiceResult> _loadRequestConnection(
       items: requests
           .map((request) => _requestItem(request, connection))
           .toList(growable: false),
+      // `getRequests` walks every page the server's own count names before it
+      // returns, so what arrived is the set — the same footing as the queue's.
+      total: requests.length,
       configured: true,
     );
   } catch (error) {

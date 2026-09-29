@@ -103,6 +103,125 @@ void main() {
     });
   });
 
+  // APP-04: eighteen blocked imports were eighteen rows, and the phone's three
+  // slots went to the first three of them.
+  group('groupDecisions', () {
+    test('identical faults fold into one row that counts them', () {
+      final grouped = groupDecisions([
+        for (var i = 0; i < 18; i++)
+          _decision(
+            DecisionKind.importBlocked,
+            'Episode $i',
+            at: DateTime.utc(2024, 1, 18 - i),
+            service: ServiceKey.sonarr,
+            instanceId: 'sonarr-1',
+            actionId: 7,
+            importPath: '/downloads/pack',
+          ),
+      ]);
+
+      expect(grouped, hasLength(1));
+      final row = grouped.single;
+      expect(row.kind, DecisionKind.importBlocked);
+      expect(row.count, 18);
+      expect(row.title, '18 need a manual import');
+      expect(row.detail, 'Sonarr · Episode 0, Episode 1 and 16 more');
+      // Ranks where its oldest member would have.
+      expect(row.occurredAt, DateTime.utc(2024, 1, 1));
+      // What every member agrees on travels with the group.
+      expect(row.actionId, 7);
+      expect(row.importPath, '/downloads/pack');
+      expect(row.instanceId, 'sonarr-1');
+      expect(row.route, '/dashboard/sonarr');
+      // Every count surface reads the members, not the rows.
+      expect(decisionItemCount(grouped), 18);
+      expect(decisionsEyebrow(grouped), '18 items · blocked imports');
+    });
+
+    test('a lone fault stays itself', () {
+      final lone = _decision(
+        DecisionKind.importBlocked,
+        'Dune',
+        at: DateTime.utc(2024),
+      );
+      expect(groupDecisions([lone]).single, same(lone));
+    });
+
+    test('a different service, connection or remedy is a different row', () {
+      final grouped = groupDecisions([
+        _decision(DecisionKind.importBlocked, 'a', at: null),
+        _decision(
+          DecisionKind.importBlocked,
+          'b',
+          at: null,
+          service: ServiceKey.sonarr,
+        ),
+        _decision(
+          DecisionKind.importBlocked,
+          'c',
+          at: null,
+          instanceId: 'radarr-4k',
+        ),
+        _decision(
+          DecisionKind.stalledDownload,
+          'd',
+          at: null,
+          requires: ServiceKey.qbittorrent,
+        ),
+        _decision(
+          DecisionKind.stalledDownload,
+          'e',
+          at: null,
+          requires: ServiceKey.sabnzbd,
+        ),
+      ]);
+
+      expect(grouped, hasLength(5));
+      expect(grouped.every((decision) => decision.count == 1), isTrue);
+    });
+
+    test('only a jump folds: Start, Test and Approve act on one item', () {
+      final grouped = groupDecisions([
+        _decision(DecisionKind.stoppedStack, 'media', at: null),
+        _decision(DecisionKind.stoppedStack, 'vpn', at: null),
+        _decision(DecisionKind.pendingRequest, 'Dune', at: null),
+        _decision(DecisionKind.pendingRequest, 'Alien', at: null),
+      ]);
+
+      expect(grouped.map((decision) => decision.title), [
+        'media',
+        'vpn',
+        'Dune',
+        'Alien',
+      ]);
+    });
+
+    test('a value the members disagree on is dropped, never borrowed', () {
+      final row = groupDecisions([
+        _decision(
+          DecisionKind.importBlocked,
+          'a',
+          at: null,
+          actionId: 1,
+          importPath: '/downloads/a',
+        ),
+        _decision(
+          DecisionKind.importBlocked,
+          'b',
+          at: null,
+          actionId: 2,
+          importPath: '/downloads/b',
+        ),
+      ]).single;
+
+      // Filing both under the first one's film, or seeding the wizard with
+      // its folder, would import the second into the wrong place.
+      expect(row.actionId, isNull);
+      expect(row.importPath, isNull);
+      expect(row.title, '2 need a manual import');
+    });
+  });
+
   group('decisionCapFor', () {
     test('three on the phone, four on the desktop, two at compact', () {
       expect(decisionCapFor(desktopShell: false, compact: false), 3);
@@ -148,6 +267,44 @@ void main() {
       expect(eyebrow, isNot(contains('certs')));
     });
 
+    test('a blocked import names its remedy, not the client', () {
+      // APP-04: filed as a stall, it said "Open in qBittorrent" — the one
+      // place that cannot import a file already on disk.
+      expect(
+        decisionActionLabel(
+          DecisionKind.importBlocked,
+          target: ServiceKey.sonarr,
+        ),
+        'Manual import',
+      );
+      // Readarr has no import wizard in this app; the control says where it
+      // actually goes rather than promising one.
+      expect(
+        decisionActionLabel(
+          DecisionKind.importBlocked,
+          target: ServiceKey.readarr,
+        ),
+        'Open in Readarr',
+      );
+      expect(DecisionKind.importBlocked.isFault, isTrue);
+    });
+
+    test(
+      'the control opens the other service, else the one that raised it',
+      () {
+        final ownStall = _decision(
+          DecisionKind.stalledDownload,
+          'a',
+          at: DateTime.utc(2024),
+        );
+        expect(ownStall.actionTarget, ServiceKey.radarr);
+        expect(
+          decisionActionLabel(ownStall.kind, target: ownStall.actionTarget),
+          'Open in Radarr',
+        );
+      },
+    );
+
     test('an unavailable control says what it needs, and offers a way', () {
       expect(
         decisionUnavailableToast(
@@ -164,11 +321,20 @@ DashboardDecision _decision(
   DecisionKind kind,
   String title, {
   required DateTime? at,
+  ServiceKey service = ServiceKey.radarr,
+  ServiceKey? requires,
+  String instanceId = '',
+  int? actionId,
+  String? importPath,
 }) => DashboardDecision(
   kind: kind,
   id: '$kind-$title',
-  service: ServiceKey.radarr,
+  service: service,
   title: title,
   detail: 'detail',
   occurredAt: at,
+  requiresService: requires,
+  instanceId: instanceId,
+  actionId: actionId,
+  importPath: importPath,
 );

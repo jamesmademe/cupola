@@ -215,6 +215,58 @@ void main() {
     });
   });
 
+  // APP-03: a blocked import was counted as "importing" in the Activity
+  // readout. It is a fault waiting on a human, not progress.
+  group('queueNeedsManualImport', () {
+    test('a blocked import needs a human, whatever else it carries', () {
+      expect(
+        queueNeedsManualImport(
+          pipeline: MediaPipeline.importBlocked,
+          hasWarning: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test("an older fork's pending import with a warning is the same ask", () {
+      final status = resolveQueueDisplayStatus(const {
+        'status': 'completed',
+        'trackedDownloadState': 'importPending',
+        'trackedDownloadStatus': 'warning',
+        'statusMessages': ['Unable to Import Automatically'],
+      });
+      expect(
+        queueNeedsManualImport(
+          pipeline: status.pipeline,
+          hasWarning: status.hasWarning,
+        ),
+        isTrue,
+      );
+    });
+
+    test('a pending import without a warning, or an import, is progress', () {
+      expect(
+        queueNeedsManualImport(
+          pipeline: MediaPipeline.importPending,
+          hasWarning: false,
+        ),
+        isFalse,
+      );
+      expect(
+        queueNeedsManualImport(
+          pipeline: MediaPipeline.importing,
+          hasWarning: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('the clause agrees with its number', () {
+      expect(needsManualImportClause(1), '1 needs a manual import');
+      expect(needsManualImportClause(18), '18 need a manual import');
+    });
+  });
+
   group('resolveQueueDisplayStatus', () {
     test('a failed queue record resolves to the fault tone', () {
       // The other half of the same bug: the queue row was painted in the service

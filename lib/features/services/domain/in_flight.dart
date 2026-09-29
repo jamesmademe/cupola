@@ -20,7 +20,67 @@
 /// formatter.
 library;
 
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/features/activity/domain/global_activity_status.dart';
+
+/// Why a transfer has left In flight to become a decision.
+///
+/// It used to be one `bool stalled`, set by **any** warning an \*arr attached to
+/// a queue record. A download the arr could not import — finished, sitting on
+/// disk, waiting for a human — therefore came out as a stalled transfer, its
+/// remedy became "Open in qBittorrent", and a queue of eighteen blocked imports
+/// printed "The queue is empty" over "18 stalls". Three faults with three
+/// different remedies are three values.
+enum InFlightFault {
+  /// Not moving: a stalled torrent, or an \*arr record reporting a stall.
+  /// Remedy: its download client.
+  stalled,
+
+  /// Downloaded, and the \*arr will not place it on its own. Remedy: a manual
+  /// import. See `queueNeedsManualImport`.
+  needsImport,
+
+  /// The download failed, the \*arr flagged it as an error, or its client is
+  /// unreachable. Remedy: its download client.
+  failed,
+}
+
+/// The fault an \*arr `/queue` record reports, or null while it is still a
+/// transfer.
+///
+/// Read through [ArrQueueEntry.fromQueueItem] — the parser the detail pages,
+/// the poster grids and Activity already share — rather than off the raw
+/// warning, which is what made every warning a stall. A record that is merely
+/// *carrying* a warning while its bytes still move (a quality the arr will not
+/// upgrade to, a client category it does not recognise) stays in flight.
+///
+/// A record the arr has already imported or ignored reports nothing either:
+/// the pipeline is done with it.
+InFlightFault? arrQueueFault(Map<String, dynamic> record) {
+  final entry = ArrQueueEntry.fromQueueItem(record);
+  if (entry == null) return null;
+  if (queueNeedsManualImport(
+    pipeline: entry.pipeline,
+    hasWarning: entry.hasWarning,
+  )) {
+    return InFlightFault.needsImport;
+  }
+  return switch (entry.pipeline) {
+    MediaPipeline.stalled => InFlightFault.stalled,
+    MediaPipeline.failed ||
+    MediaPipeline.clientUnavailable => InFlightFault.failed,
+    // An `error` is the service saying this download is broken, whatever
+    // phase it reports. A `warning` alone is not: see the doc above.
+    MediaPipeline.queued ||
+    MediaPipeline.downloading ||
+    MediaPipeline.importPending ||
+    MediaPipeline.importBlocked ||
+    MediaPipeline.importing ||
+    MediaPipeline.paused =>
+      entry.severity == ArrQueueSeverity.error ? InFlightFault.failed : null,
+  };
+}
 
 /// The em dash every absent figure in this region prints.
 ///
@@ -124,18 +184,39 @@ String inFlightEyebrow({
       'across $clients $noun';
 }
 
-/// The footnote under the region when stalls were moved out of it.
+/// The footnote under the region when faults were moved out of it:
+/// `18 need a manual import · 2 stalled · under Needs a decision`.
 ///
-/// The region shows active transfers only; a stalled one is a decision, not a
+/// The region shows active transfers only; a faulted one is a decision, not a
 /// transfer, and it lives in the region above. Saying so is what stops the
-/// count here disagreeing with the client's own queue depth without explanation.
-String? inFlightStalledFootnote(int stalled) {
-  if (stalled <= 0) return null;
-  final noun = stalled == 1 ? 'stall' : 'stalls';
-  return stalled == 1
-      ? '1 stalled · under a decision above'
-      : '$stalled $noun · under decisions above';
+/// count here disagreeing with the client's own queue depth without explanation
+/// — and naming each fault by what it is, rather than calling all of them
+/// stalls, is what stops the footnote sending the user to the wrong remedy.
+///
+/// Names the region by its heading rather than "under a decision": identical
+/// faults are folded into one row (`groupDecisions`), so how many *rows* the
+/// faults occupy is not something this count can say.
+String? inFlightFaultFootnote({
+  int stalled = 0,
+  int needsImport = 0,
+  int failed = 0,
+}) {
+  final clauses = [
+    if (needsImport > 0) needsManualImportClause(needsImport),
+    if (stalled > 0) '$stalled stalled',
+    if (failed > 0) '$failed failed',
+  ];
+  if (clauses.isEmpty) return null;
+  return '${clauses.join(' · ')} · under Needs a decision';
 }
+
+/// What the region says when nothing is moving.
+///
+/// "The queue is empty" only when it is. With eighteen blocked imports and
+/// nothing downloading, the queue holds eighteen records, and the region used to
+/// say it held none directly above a footnote counting them.
+String inFlightEmptyLabel({required int faults}) =>
+    faults > 0 ? 'Nothing moving' : 'The queue is empty';
 
 /// What one in-flight row announces after its title.
 ///

@@ -31,6 +31,9 @@
 /// loaded — see `dashboardDecisionsProvider`.
 library;
 
+import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// What kind of thing is waiting.
@@ -41,6 +44,15 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 enum DecisionKind {
   /// A download that has stopped moving. Action: open it in its client.
   stalledDownload,
+
+  /// A download an \*arr has finished and will not import on its own — a
+  /// queue record in `importBlocked`, or the older forks' `importPending`
+  /// with a warning. Action: manual import.
+  ///
+  /// Its own kind rather than a stall, which is what it used to be filed as:
+  /// the bytes are on disk, so "Open in qBittorrent" sent the user to the one
+  /// place that cannot fix it.
+  importBlocked,
 
   /// An \*arr history record whose import failed. Action: manual import.
   failedImport,
@@ -86,6 +98,9 @@ class DashboardDecision {
     this.requiresService,
     this.posterUrl = '',
     this.actionId,
+    this.count = 1,
+    this.instanceId = '',
+    this.importPath,
   });
 
   final DecisionKind kind;
@@ -134,8 +149,156 @@ class DashboardDecision {
   /// have no poster, and the row draws its service glyph instead.
   final String posterUrl;
 
+  /// How many items this row stands for. One, except for a row
+  /// [groupDecisions] folded identical faults into.
+  final int count;
+
+  /// The connection the action is bound to, for an action that opens a flow
+  /// bound to one — the import wizard. Empty means "whatever the lens is on".
+  final String instanceId;
+
+  /// Where the download sits on disk, for a manual import to be seeded from.
+  /// The queue record's `outputPath`, raw; the control derives the folder.
+  final String? importPath;
+
   bool get isFault => kind.isFault;
+
+  /// The service the trailing control would open: [requiresService] when the
+  /// decision acts on another service, otherwise the one that raised it.
+  ///
+  /// What [decisionActionLabel] should be told. Told nothing, a stall raised by
+  /// a Radarr that named no known client said "Open in client" and then opened
+  /// Radarr.
+  ServiceKey get actionTarget => requiresService ?? service;
 }
+
+/// Whether [kind] folds into one row when several share a remedy.
+///
+/// Only the kinds whose control is a *jump* — to the client, to the import
+/// wizard — can: the jump is the same for every item in the group. Test, Start
+/// and Approve act on one indexer, one stack, one request, and a grouped row
+/// would have nothing to call them on.
+bool _groups(DecisionKind kind) => switch (kind) {
+  DecisionKind.stalledDownload || DecisionKind.importBlocked => true,
+  DecisionKind.failedImport ||
+  DecisionKind.failingIndexer ||
+  DecisionKind.stoppedStack ||
+  DecisionKind.expiringCertificate ||
+  DecisionKind.pendingRequest => false,
+};
+
+/// Folds identical faults into one row: `18 need a manual import · Sonarr`.
+///
+/// Identical means the same kind, raised by the same service on the same
+/// connection, with the same remedy target. Eighteen blocked imports on one
+/// Sonarr are one decision — go and import them — and drawing them as eighteen
+/// rows spent the phone's three slots on the first three of them while saying
+/// nothing about the other fifteen.
+///
+/// A lone item stays itself, poster and title intact. A group keeps the oldest
+/// member's age, so it ranks where its worst member would have, and the
+/// [DashboardDecision.count] every count surface sums.
+List<DashboardDecision> groupDecisions(List<DashboardDecision> decisions) {
+  final buckets = <Object, List<DashboardDecision>>{};
+  final order = <Object>[];
+  for (final decision in decisions) {
+    final Object key = _groups(decision.kind)
+        ? (
+            decision.kind,
+            decision.service,
+            decision.instanceId,
+            decision.requiresService,
+          )
+        : decision;
+    final bucket = buckets[key];
+    if (bucket == null) {
+      buckets[key] = [decision];
+      order.add(key);
+    } else {
+      bucket.add(decision);
+    }
+  }
+
+  return [
+    for (final key in order)
+      if (buckets[key]!.length == 1)
+        buckets[key]!.single
+      else
+        _groupOf(buckets[key]!),
+  ];
+}
+
+DashboardDecision _groupOf(List<DashboardDecision> members) {
+  final first = members.first;
+  final count = members.fold<int>(0, (sum, member) => sum + member.count);
+
+  DateTime? oldest;
+  for (final member in members) {
+    final at = member.occurredAt;
+    if (at != null && (oldest == null || at.isBefore(oldest))) oldest = at;
+  }
+
+  // Carried only when every member agrees: a manual import seeded with the
+  // first member's folder or filed under its film would import the other
+  // seventeen into the wrong place.
+  T? shared<T>(T? Function(DashboardDecision member) read) {
+    final value = read(first);
+    return members.every((member) => read(member) == value) ? value : null;
+  }
+
+  return DashboardDecision(
+    kind: first.kind,
+    id: [
+      'group',
+      first.kind.name,
+      first.service.routeParam,
+      first.instanceId,
+      first.requiresService?.routeParam ?? '',
+    ].join('-'),
+    service: first.service,
+    title: _groupTitle(first.kind, count),
+    detail: joinDisplayParts([
+      first.service.title,
+      _titlesSummary([for (final member in members) member.title]),
+    ]),
+    occurredAt: oldest,
+    // The service that raised them, where the whole group is listed. No one
+    // member's page stands for the rest.
+    route: ServiceRoutes.forService(first.service),
+    requiresService: first.requiresService,
+    actionId: shared((member) => member.actionId),
+    count: count,
+    instanceId: first.instanceId,
+    importPath: shared((member) => member.importPath),
+  );
+}
+
+String _groupTitle(DecisionKind kind, int count) => switch (kind) {
+  DecisionKind.importBlocked => needsManualImportClause(count),
+  DecisionKind.stalledDownload => '$count stalled downloads',
+  // Never grouped — see [_groups]. Named anyway so the switch stays total.
+  DecisionKind.failedImport => '$count failed imports',
+  DecisionKind.failingIndexer => '$count failing indexers',
+  DecisionKind.stoppedStack => '$count stopped stacks',
+  DecisionKind.expiringCertificate => '$count expiring certificates',
+  DecisionKind.pendingRequest => '$count pending requests',
+};
+
+/// `Shogun, The Bear and 16 more` — the first two names, and how many others.
+String _titlesSummary(List<String> titles) {
+  final distinct = <String>[];
+  for (final title in titles) {
+    if (!distinct.contains(title)) distinct.add(title);
+  }
+  if (distinct.length <= 2) return distinct.join(', ');
+  return '${distinct.take(2).join(', ')} and ${distinct.length - 2} more';
+}
+
+/// How many items the region stands for, grouped rows counted by their
+/// members. What "See all" and the eyebrow print — the number of rows is a
+/// layout fact, not a count of anything.
+int decisionItemCount(List<DashboardDecision> decisions) =>
+    decisions.fold(0, (sum, decision) => sum + decision.count);
 
 /// Faults before backlog, oldest first inside a kind.
 ///
@@ -194,17 +357,19 @@ int decisionCapFor({required bool desktopShell, required bool compact}) {
 /// requests does not advertise stalls and certificates it does not have.
 String decisionsEyebrow(List<DashboardDecision> decisions) {
   if (decisions.isEmpty) return '';
-  final noun = decisions.length == 1 ? 'item' : 'items';
+  final total = decisionItemCount(decisions);
+  final noun = total == 1 ? 'item' : 'items';
   final kinds = <String>[];
   for (final decision in decisions) {
     final word = _kindNoun(decision.kind);
     if (!kinds.contains(word)) kinds.add(word);
   }
-  return '${decisions.length} $noun · ${kinds.join(', ')}';
+  return '$total $noun · ${kinds.join(', ')}';
 }
 
 String _kindNoun(DecisionKind kind) => switch (kind) {
   DecisionKind.stalledDownload => 'stalls',
+  DecisionKind.importBlocked => 'blocked imports',
   DecisionKind.failedImport => 'imports',
   DecisionKind.failingIndexer => 'faults',
   DecisionKind.stoppedStack => 'stacks',
@@ -220,6 +385,13 @@ String _kindNoun(DecisionKind kind) => switch (kind) {
 String decisionActionLabel(DecisionKind kind, {ServiceKey? target}) =>
     switch (kind) {
       DecisionKind.stalledDownload => 'Open in ${target?.title ?? 'client'}',
+      // The wizard exists for three arrs. Anywhere else the honest control is
+      // the service's own page, and it says so rather than promising a wizard
+      // that would refuse to start.
+      DecisionKind.importBlocked =>
+        target == null || target.supportsManualImport
+            ? 'Manual import'
+            : 'Open in ${target.title}',
       DecisionKind.failedImport => 'Fix',
       DecisionKind.failingIndexer => 'Test',
       DecisionKind.stoppedStack => 'Start',
@@ -239,6 +411,7 @@ String decisionActionLabel(DecisionKind kind, {ServiceKey? target}) =>
 String decisionUnavailableToast(DecisionKind kind, ServiceKey required) {
   final what = switch (kind) {
     DecisionKind.stalledDownload => 'open this transfer',
+    DecisionKind.importBlocked => 'import these files',
     DecisionKind.failedImport => 'fix this import',
     DecisionKind.failingIndexer => 'test this indexer',
     DecisionKind.stoppedStack => 'start this stack',

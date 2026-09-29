@@ -74,6 +74,34 @@ MediaStatusInfo resolveQueueDisplayStatus(Map<String, dynamic> item) {
   );
 }
 
+/// Whether a queue record is waiting on a human to import it.
+///
+/// Two shapes of the same request for help. `importBlocked` is the current
+/// \*arrs' own word for it. An `importPending` record that also carries a
+/// warning is how the older forks — Sonarr v3, Lidarr, Readarr — say the same
+/// thing ("Unable to Import Automatically", "No files found are eligible for
+/// import"): the file is on disk and the service will not place it on its own.
+///
+/// Neither clears by waiting, which is why neither is *importing*. The Activity
+/// readout used to count both as progress, so eighteen rows each reading
+/// "Import blocked" sat under a header that said "18 importing" — a fault
+/// summarised as good news. The Dashboard reads the same rule, so one record
+/// cannot be a decision on one tab and progress on the other.
+bool queueNeedsManualImport({
+  required MediaPipeline? pipeline,
+  required bool hasWarning,
+}) =>
+    pipeline == MediaPipeline.importBlocked ||
+    (pipeline == MediaPipeline.importPending && hasWarning);
+
+/// `1 needs a manual import`, `18 need a manual import`.
+///
+/// The one phrase for [queueNeedsManualImport], shared by the Activity readout
+/// and the Dashboard so the two surfaces name the fault in the same words — and
+/// name it by its remedy, which is the verb on the row.
+String needsManualImportClause(int count) =>
+    count == 1 ? '1 needs a manual import' : '$count need a manual import';
+
 /// Resolves a history record from its `eventType`.
 ///
 /// History describes something that already happened, so there is no live

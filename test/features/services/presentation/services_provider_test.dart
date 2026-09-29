@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/api_client.dart';
@@ -11,7 +12,11 @@ import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_album.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/services/domain/dashboard_decision.dart';
+import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -293,10 +298,12 @@ void main() {
         expect(items[0].clientLabel, isNotEmpty);
         expect(items[0].progress, 0.75);
         expect(items[1].service, ServiceKey.sonarr);
-        // An \*arr that flags a queue record has flagged a transfer that has
-        // stopped being one: it leaves the in-flight region and becomes a
-        // decision, carrying the arr's own words.
-        expect(items[1].stalled, isTrue);
+        // A warning on a record whose bytes are still moving is not a fault.
+        // "Any warning is a stall" was the rule that turned a blocked import
+        // into "Open in qBittorrent" (APP-04): the record keeps the arr's own
+        // words and stays in flight.
+        expect(items[1].fault, isNull);
+        expect(items[1].isActive, isTrue);
         expect(items[1].warning, isNotNull);
         expect(items[1].progress, 0.5);
         expect(items[2].progress, isNull);
@@ -345,9 +352,12 @@ void main() {
       expect(all, hasLength(8));
 
       final inFlight = await container.read(servicesInFlightProvider.future);
-      expect(inFlight.active, hasLength(servicesQueuePreviewLimit));
-      expect(inFlight.active.first.title, 'Release 7');
-      expect(inFlight.active.last.title, 'Release 3');
+      expect(inFlight.preview, hasLength(servicesQueuePreviewLimit));
+      expect(inFlight.preview.first.title, 'Release 7');
+      expect(inFlight.preview.last.title, 'Release 3');
+      // APP-01: the eyebrow's figure is the count, not the preview's length —
+      // eight transfers used to read "5 downloading".
+      expect(inFlight.activeCount, 8);
     });
 
     // The provider fans out to seven services at once, so what it watches
@@ -438,6 +448,236 @@ void main() {
       expect(items.single.service, ServiceKey.sonarr);
       expect(items.single.title, 'Shogun');
     });
+  });
+
+  // APP-02: the arr queues and the client queues were concatenated, so a
+  // Radarr grab moving through qBittorrent was two rows and two in the count.
+  group('one row per transfer', () {
+    final radarrAndQb = settingsWith(
+      radarrUrl: 'http://radarr.local:7878',
+      radarrApiKey: 'key',
+      qbittorrentUrl: 'http://qb.local:8080',
+      qbittorrentUsername: 'admin',
+      qbittorrentPassword: 'secret',
+    );
+
+    test(
+      'an arr grab and the torrent moving it are one row, counted once',
+      () async {
+        final container = _container(
+          settings: radarrAndQb,
+          radarrService: _QueueRadarrService([
+            {
+              'id': 1,
+              'title': 'Dune.Part.Two.2024.2160p.WEB-DL-GROUP',
+              'status': 'downloading',
+              'trackedDownloadState': 'downloading',
+              // The arr's spelling of the hash is upper case; qBittorrent's is
+              // lower. Same transfer.
+              'downloadId': 'ABCDEF0123456789',
+              'downloadClient': 'qBittorrent',
+              'size': 100,
+              'sizeleft': 50,
+              'movieId': 12,
+              'movie': {'title': 'Dune: Part Two'},
+              'quality': {
+                'quality': {'name': 'WEB-DL 2160p'},
+              },
+            },
+          ]),
+          overrides: [
+            allTorrentsProvider.overrideWith(
+              (ref) async => [
+                _torrent('abcdef0123456789', 'Dune.Part.Two.2024', 0.8),
+                // Added by hand: no arr claims it, so it stays a row of its own.
+                _torrent('0000feed', 'debian-12.iso', 0.3),
+              ],
+            ),
+          ],
+        );
+
+        final items = await container.read(servicesQueueProvider.future);
+
+        expect(items.map((item) => item.title), [
+          'Dune: Part Two',
+          'debian-12.iso',
+        ]);
+        final dune = items.first;
+        // The arr row wins — it knows the title and the quality …
+        expect(dune.service, ServiceKey.radarr);
+        expect(dune.quality, 'WEB-DL 2160p');
+        // … and the client lends it what only the client measures.
+        expect(dune.progress, 0.8);
+        expect(dune.clientService, ServiceKey.qbittorrent);
+
+        final inFlight = await container.read(servicesInFlightProvider.future);
+        expect(inFlight.activeCount, 2);
+        // One client, its rate summed once — not once per row it contributed.
+        expect(inFlight.clients, 1);
+        expect(inFlight.rateBytesPerSecond, 2048);
+      },
+    );
+
+    test(
+      'a stall only the client has noticed is one decision, not two',
+      () async {
+        final container = _container(
+          settings: radarrAndQb,
+          radarrService: _QueueRadarrService([
+            {
+              'id': 1,
+              'title': 'Furiosa.2024.1080p',
+              'status': 'downloading',
+              'trackedDownloadState': 'downloading',
+              'downloadId': 'CAFE',
+              'downloadClient': 'qBittorrent',
+              'movie': {'title': 'Furiosa'},
+            },
+          ]),
+          overrides: [
+            allTorrentsProvider.overrideWith(
+              (ref) async => [
+                _torrent('cafe', 'Furiosa.2024.1080p', 0.4, state: 'stalledDL'),
+              ],
+            ),
+          ],
+        );
+
+        final items = await container.read(servicesQueueProvider.future);
+        expect(items, hasLength(1));
+        expect(items.single.fault, InFlightFault.stalled);
+
+        final decisions = await container.read(
+          dashboardDecisionsProvider.future,
+        );
+        expect(decisions, hasLength(1));
+        expect(decisions.single.kind, DecisionKind.stalledDownload);
+        expect(decisions.single.title, 'Furiosa');
+        // The join names the client exactly, so the control opens it.
+        expect(decisions.single.requiresService, ServiceKey.qbittorrent);
+      },
+    );
+
+    test('a season pack is one download, not one row per episode', () async {
+      final container = _container(
+        settings: settingsWith(
+          sonarrUrl: 'http://sonarr.local:8989',
+          sonarrApiKey: 'key',
+        ),
+        sonarrService: _QueueSonarrService([
+          for (var episode = 1; episode <= 3; episode++)
+            {
+              'id': episode,
+              'title': 'The.Boys.S04.2160p',
+              'status': 'downloading',
+              'trackedDownloadState': 'downloading',
+              'downloadId': 'PACKHASH',
+              // Every record of a pack reports the pack's size.
+              'size': 300,
+              'sizeleft': 150,
+              'seriesId': 5,
+              'series': {'title': 'The Boys'},
+              'episode': {'seasonNumber': 4, 'episodeNumber': episode},
+            },
+        ]),
+      );
+
+      final items = await container.read(servicesQueueProvider.future);
+
+      expect(items, hasLength(1));
+      expect(items.single.title, 'The Boys · 3 episodes');
+      // The pack's figures once, never summed into three times its size.
+      expect(items.single.totalBytes, 300);
+      expect(items.single.progress, 0.5);
+      expect(items.single.mediaId, 5);
+    });
+  });
+
+  // APP-04: any arr warning used to mark a record stalled, so a finished
+  // download the arr would not import became "Open in qBittorrent", and a queue
+  // of blocked imports printed "The queue is empty".
+  group('a blocked import', () {
+    final sonarrOnly = settingsWith(
+      sonarrUrl: 'http://sonarr.local:8989',
+      sonarrApiKey: 'key',
+    );
+
+    Map<String, dynamic> blocked(int index, {int seriesId = 5}) => {
+      'id': index,
+      'title': 'Show.S01E${index.toString().padLeft(2, '0')}.1080p',
+      'status': 'completed',
+      'trackedDownloadState': 'importBlocked',
+      'trackedDownloadStatus': 'warning',
+      'statusMessages': ['No files found are eligible for import'],
+      'downloadId': 'HASH$index',
+      'downloadClient': 'qBittorrent',
+      'size': 100,
+      'sizeleft': 0,
+      'seriesId': seriesId,
+      'outputPath': '/downloads/Show.S01E$index/Show.S01E$index.mkv',
+      'series': {'title': 'Show'},
+      'episode': {'seasonNumber': 1, 'episodeNumber': index},
+    };
+
+    test('is a manual import, and eighteen of them are one decision', () async {
+      final container = _container(
+        settings: sonarrOnly,
+        sonarrService: _QueueSonarrService([
+          for (var i = 1; i <= 18; i++) blocked(i, seriesId: i),
+        ]),
+      );
+
+      final inFlight = await container.read(servicesInFlightProvider.future);
+      expect(inFlight.activeCount, 0);
+      expect(inFlight.faults, hasLength(18));
+      expect(
+        inFlight.faults.every(
+          (item) => item.fault == InFlightFault.needsImport,
+        ),
+        isTrue,
+      );
+
+      final decisions = await container.read(dashboardDecisionsProvider.future);
+      expect(decisions, hasLength(1));
+      final row = decisions.single;
+      expect(row.kind, DecisionKind.importBlocked);
+      expect(row.count, 18);
+      expect(row.title, '18 need a manual import');
+      // Not a client jump: the bytes are on disk.
+      expect(row.requiresService, isNull);
+      expect(
+        decisionActionLabel(row.kind, target: row.actionTarget),
+        'Manual import',
+      );
+      // Eighteen different series: no one of them files the group.
+      expect(row.actionId, isNull);
+      // Bound to the connection the records came off.
+      expect(
+        row.instanceId,
+        container.read(activeInstanceProvider(ServiceKey.sonarr))!.id,
+      );
+    });
+
+    test(
+      'alone, it is filed under its item and seeded with its folder',
+      () async {
+        final container = _container(
+          settings: sonarrOnly,
+          sonarrService: _QueueSonarrService([blocked(7)]),
+        );
+
+        final decisions = await container.read(
+          dashboardDecisionsProvider.future,
+        );
+        final row = decisions.single;
+        expect(row.kind, DecisionKind.importBlocked);
+        expect(row.count, 1);
+        expect(row.title, 'Show · S01E07');
+        expect(row.detail, contains('No files found are eligible for import'));
+        expect(row.actionId, 5);
+        expect(row.importPath, '/downloads/Show.S01E7/Show.S01E7.mkv');
+      },
+    );
   });
 
   group('servicesRecentlyAddedProvider', () {
@@ -728,9 +968,11 @@ ProviderContainer _container({
   LidarrService? lidarrService,
   BazarrService? bazarrService,
   ApiClient? statusClient,
+  List<Override> overrides = const [],
 }) {
   final container = ProviderContainer(
     overrides: [
+      ...overrides,
       currentSettingsProvider.overrideWith((ref) => settings),
       if (statusClient != null)
         serviceStatusClientFactoryProvider.overrideWith(
@@ -758,6 +1000,32 @@ ProviderContainer _container({
   addTearDown(container.dispose);
   return container;
 }
+
+/// A torrent in the only shape the queue loader reads.
+Torrent _torrent(
+  String hash,
+  String name,
+  double progress, {
+  String state = 'downloading',
+}) => Torrent(
+  hash: hash,
+  name: name,
+  size: 100,
+  progress: progress,
+  state: state,
+  parsedState: TorrentState.fromString(state),
+  dlSpeed: 1024,
+  upSpeed: 0,
+  eta: 60,
+  category: '',
+  tracker: '',
+  tags: const [],
+  ratio: 0,
+  addedOn: 0,
+  completed: 0,
+  leechers: 0,
+  seeders: 3,
+);
 
 class _MoviesRadarrService extends FakeRadarrService {
   _MoviesRadarrService(this.movies);

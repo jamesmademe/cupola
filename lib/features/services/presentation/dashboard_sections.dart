@@ -86,7 +86,9 @@ class DashboardDecisionsSection extends ConsumerWidget {
           // The ~30pt header InkWell the code already has. Raising it is a new
           // rule for code and canvas both, and not this region's to make.
           trailing: _SectionAction(
-            label: 'See all ${decisions.length}',
+            // Items, not rows: a folded row of eighteen blocked imports is
+            // eighteen things to see, and the row count is a layout fact.
+            label: 'See all ${decisionItemCount(decisions)}',
             color: Theme.of(context).colorScheme.primary,
             onTap: () => context.go('/activity'),
           ),
@@ -141,16 +143,24 @@ class ServicesInFlightSection extends ConsumerWidget {
 
     final inFlight = ref.watch(servicesInFlightProvider);
     final data = inFlight.asData?.value;
+    // The count, never the preview's length: the rows are capped and the
+    // eyebrow states a total.
     final eyebrow = data == null
         ? null
         : inFlightEyebrow(
-            active: data.active.length,
+            active: data.activeCount,
             rateBytesPerSecond: data.rateBytesPerSecond,
             clients: data.clients,
           );
+    int faultsOf(InFlightFault fault) =>
+        data?.faults.where((item) => item.fault == fault).length ?? 0;
     final footnote = data == null
         ? null
-        : inFlightStalledFootnote(data.stalled.length);
+        : inFlightFaultFootnote(
+            stalled: faultsOf(InFlightFault.stalled),
+            needsImport: faultsOf(InFlightFault.needsImport),
+            failed: faultsOf(InFlightFault.failed),
+          );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,19 +188,20 @@ class ServicesInFlightSection extends ConsumerWidget {
             serviceName: 'download queue',
             onRetry: () => ref.invalidate(servicesQueueProvider),
             data: (value) {
-              if (value.active.isEmpty) {
+              if (value.preview.isEmpty) {
                 return _SectionEmptyState(
                   // Not "Nothing downloading", which the header now says. An
                   // empty transfer list is a fact about the queue, so name the
-                  // queue.
-                  label: 'The queue is empty',
+                  // queue — and only call it empty when it is, rather than over
+                  // a footnote counting what it holds.
+                  label: inFlightEmptyLabel(faults: value.faults.length),
                   sources: sources,
                   onRetry: () => ref.invalidate(servicesQueueProvider),
                 );
               }
               return Column(
                 children: [
-                  for (final item in value.active)
+                  for (final item in value.preview)
                     _InFlightRow(
                       key: ValueKey('${item.service}-${item.id}'),
                       item: item,
@@ -635,7 +646,7 @@ class _DecisionRow extends ConsumerWidget {
           detail: decision.detail,
           actionLabel: decisionActionLabel(
             decision.kind,
-            target: decision.requiresService,
+            target: decision.actionTarget,
           ),
         ),
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -744,7 +755,10 @@ class _DecisionControls extends ConsumerWidget {
     }
 
     final required = decision.requiresService;
-    final label = decisionActionLabel(decision.kind, target: required);
+    final label = decisionActionLabel(
+      decision.kind,
+      target: decision.actionTarget,
+    );
     if (required == null) {
       return _DecisionActionButton(
         label: label,
@@ -789,8 +803,24 @@ Future<void> _runDecision(
     case DecisionKind.pendingRequest:
       return;
     case DecisionKind.stalledDownload:
-      context.go(
-        ServiceRoutes.forService(decision.requiresService ?? decision.service),
+      context.go(ServiceRoutes.forService(decision.actionTarget));
+    case DecisionKind.importBlocked:
+      // Where the wizard does not exist, the control said "Open in …" and
+      // goes there. Otherwise: the wizard, bound to the connection the record
+      // came off, filed under its library item and seeded with the folder the
+      // client wrote to — each only when the decision knows it.
+      if (!decision.service.supportsManualImport) {
+        context.go(ServiceRoutes.forService(decision.service));
+        return;
+      }
+      context.push(
+        manualImportLocation(
+          manualImportBrowsePath,
+          decision.service,
+          targetId: decision.actionId,
+          folderPath: manualImportFolderFromOutputPath(decision.importPath),
+          instanceId: decision.instanceId,
+        ),
       );
     case DecisionKind.failedImport:
       context.push(

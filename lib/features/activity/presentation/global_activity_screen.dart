@@ -24,6 +24,8 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/activity/domain/global_activity_status.dart'
+    show needsManualImportClause, queueNeedsManualImport;
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
@@ -399,11 +401,11 @@ const _readoutLineHeight = 14.0;
 /// was only reachable by counting rows.
 ///
 /// Drawn for **Now** only, and deliberately. The History and Wanted boards draw
-/// their own sub-lines (`4 blocklisted`, `63 wanted · 54 missing`), and those
-/// are totals the client does not hold: `getHistory`/`getMissing`/`getCutoff`
-/// return `records` and drop the `totalRecords` envelope, so the only figure
-/// available is "how many rows are loaded", which changes every time the user
-/// taps Show more. A number that moves while the data does not is worse than no
+/// their own sub-lines (`4 blocklisted`, `63 wanted · 54 missing`). Their
+/// totals now arrive with the page (`ActivityServiceResult.total`, which the
+/// service strip reads), but a server that sends no `totalRecords` leaves only
+/// "how many rows are loaded", which changes every time the user taps Show
+/// more — and a number that moves while the data does not is worse than no
 /// number.
 class _ActivityTitle extends ConsumerWidget {
   const _ActivityTitle();
@@ -419,7 +421,7 @@ class _ActivityTitle extends ConsumerWidget {
     final feed = section == _ActivitySection.now
         ? ref.watch(globalNowItemsProvider).value
         : null;
-    final readout = feed == null ? null : _nowReadout(feed);
+    final readout = feed == null ? null : nowReadout(feed);
 
     final title = Text(
       'Activity',
@@ -452,24 +454,39 @@ class _ActivityTitle extends ConsumerWidget {
   }
 }
 
-/// "6 in the queue · 2 stalled · 2 importing" — and only the clauses that are
-/// true. A readout that prints "0 stalled" spends a third of its width telling
-/// the user that nothing happened.
-String _nowReadout(ActivityFeed feed) {
+/// "20 in the queue · 18 need a manual import · 2 stalled · 1 importing" — and
+/// only the clauses that are true. A readout that prints "0 stalled" spends a
+/// third of its width telling the user that nothing happened.
+///
+/// Faults before progress, and a blocked import is a fault. It used to be
+/// counted with `importing` and `importPending`, so a queue of eighteen rows
+/// each reading "Import blocked" in amber sat under "18 importing": the one
+/// figure the user came for, stated as good news. It has its own clause now,
+/// named by its remedy — the verb on the row — and it leads.
+@visibleForTesting
+String nowReadout(ActivityFeed feed) {
   final queued = feed.items
       .where((i) => i.kind == GlobalActivityKind.queue)
       .toList(growable: false);
   if (queued.isEmpty) return 'Nothing in the queue';
 
+  var needsImport = 0;
   var stalled = 0;
   var importing = 0;
   for (final item in queued) {
-    switch (item.status.pipeline) {
+    final pipeline = item.status.pipeline;
+    if (queueNeedsManualImport(
+      pipeline: pipeline,
+      hasWarning: item.status.hasWarning,
+    )) {
+      needsImport++;
+      continue;
+    }
+    switch (pipeline) {
       case MediaPipeline.stalled:
         stalled++;
       case MediaPipeline.importing:
       case MediaPipeline.importPending:
-      case MediaPipeline.importBlocked:
         importing++;
       default:
         break;
@@ -478,6 +495,7 @@ String _nowReadout(ActivityFeed feed) {
 
   return [
     '${queued.length} in the queue',
+    if (needsImport > 0) needsManualImportClause(needsImport),
     if (stalled > 0) '$stalled stalled',
     if (importing > 0) '$importing importing',
   ].join(' · ');
@@ -1417,7 +1435,9 @@ class _ServiceStrip extends StatelessWidget {
             label: 'All',
             icon: Icons.all_inclusive_rounded,
             accent: Theme.of(context).colorScheme.primary,
-            count: feed?.items.length,
+            // The sum of the totals, not the loaded rows — the same rule as
+            // each service's tile below.
+            count: activityServiceCount(results),
             selected: selected == null,
             onTap: () => onSelected(null),
           ),
@@ -1430,7 +1450,7 @@ class _ServiceStrip extends StatelessWidget {
               // service — which connection a row came off is what the row says
               // — so this figure has to be the whole of what that service is
               // doing, not whichever connection was merged last.
-              count: _countFor(results, service),
+              count: activityServiceCount(results, service: service),
               // A service that did not answer shows that instead of a count, so
               // the number 0 never stands in for "no idea". Only when *nothing*
               // of it was reached: with one connection down and another
@@ -1447,14 +1467,35 @@ class _ServiceStrip extends StatelessWidget {
   }
 }
 
-/// [service]'s items across every connection, or null while none has answered.
-int? _countFor(List<ActivityServiceResult> results, ServiceKey service) {
+/// How many records [service] has in this bucket across its connections — or
+/// across every service when [service] is null — **as the servers reported
+/// it**, or null when that is not known.
+///
+/// Summed from [ActivityServiceResult.total], never from `items.length`. History
+/// and Wanted load fifty rows per connection and then page, so a count of the
+/// loaded rows said "Sonarr 50" over a backlog of 2 369, and "100" after one
+/// Show more — a number that moved while the data did not.
+///
+/// Null — drawn `—`, spoken as unavailable — until a connection has answered,
+/// and whenever one that answered did not say how many it has: a sum with an
+/// unknown term is unknown, and printing the known part as the whole is the
+/// defect this replaces. A connection that did not answer at all is left out,
+/// as before: with one of two down the figure is short but still a figure, and
+/// the health strip is what names the shortfall.
+@visibleForTesting
+int? activityServiceCount(
+  List<ActivityServiceResult> results, {
+  ServiceKey? service,
+}) {
   var total = 0;
   var any = false;
   for (final result in results) {
-    if (result.service != service || !result.configured) continue;
+    if (service != null && result.service != service) continue;
+    if (!result.reached) continue;
+    final count = result.total;
+    if (count == null) return null;
     any = true;
-    total += result.items.length;
+    total += count;
   }
   return any ? total : null;
 }
@@ -1511,10 +1552,16 @@ class _ServiceTile extends StatelessWidget {
         ? tone.withValues(alpha: 0.27)
         : colorScheme.outlineVariant;
 
-    final countLabel = failed ? '—' : (count?.toString() ?? '–');
+    // An em dash for "no figure", the same mark every other surface prints —
+    // and to the ear it is "unavailable", never "0 items": a count nobody
+    // could take is not zero.
+    final count = this.count;
+    final countLabel = failed || count == null ? '—' : '$count';
     final spoken = failed
         ? '$label, did not respond'
-        : '$label, ${count ?? 0} ${count == 1 ? 'item' : 'items'}';
+        : count == null
+        ? '$label, count unavailable'
+        : '$label, $count ${count == 1 ? 'item' : 'items'}';
 
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),

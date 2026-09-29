@@ -97,10 +97,113 @@ void main() {
     });
   });
 
-  test('a stall leaves this region and says so', () {
-    expect(inFlightStalledFootnote(0), isNull);
-    expect(inFlightStalledFootnote(1), '1 stalled · under a decision above');
-    expect(inFlightStalledFootnote(3), contains('under decisions above'));
+  group('a fault leaves this region and says what it is', () {
+    test('the footnote names each fault, blocked imports first', () {
+      expect(inFlightFaultFootnote(), isNull);
+      expect(
+        inFlightFaultFootnote(stalled: 1),
+        '1 stalled · under Needs a decision',
+      );
+      expect(
+        inFlightFaultFootnote(stalled: 2, needsImport: 18),
+        '18 need a manual import · 2 stalled · under Needs a decision',
+      );
+      expect(
+        inFlightFaultFootnote(needsImport: 1, failed: 1),
+        '1 needs a manual import · 1 failed · under Needs a decision',
+      );
+      // APP-04: eighteen blocked imports were footnoted "18 stalls", which
+      // named the wrong fault and so the wrong remedy.
+      expect(inFlightFaultFootnote(needsImport: 18), isNot(contains('stall')));
+    });
+
+    test('the queue is empty only when it holds nothing', () {
+      expect(inFlightEmptyLabel(faults: 0), 'The queue is empty');
+      // Eighteen records in the queue, none of them moving: not empty.
+      expect(inFlightEmptyLabel(faults: 18), 'Nothing moving');
+    });
+  });
+
+  group('arrQueueFault', () {
+    test('a blocked import is an import fault, not a stall', () {
+      expect(
+        arrQueueFault(const {
+          'status': 'completed',
+          'trackedDownloadState': 'importBlocked',
+          'trackedDownloadStatus': 'warning',
+          'statusMessages': ['No files found are eligible for import'],
+        }),
+        InFlightFault.needsImport,
+      );
+    });
+
+    test("an older fork's pending import with a warning is the same fault", () {
+      // Sonarr v3, Lidarr and Readarr say "blocked" this way.
+      expect(
+        arrQueueFault(const {
+          'status': 'completed',
+          'trackedDownloadState': 'importPending',
+          'trackedDownloadStatus': 'warning',
+          'statusMessages': ['Unable to Import Automatically'],
+        }),
+        InFlightFault.needsImport,
+      );
+    });
+
+    test('a pending import without a warning is still in flight', () {
+      // It clears itself within seconds; it is not a decision.
+      expect(
+        arrQueueFault(const {
+          'status': 'completed',
+          'trackedDownloadState': 'importPending',
+        }),
+        isNull,
+      );
+    });
+
+    test('a stall the arr reports in prose is a stall', () {
+      expect(
+        arrQueueFault(const {
+          'status': 'warning',
+          'trackedDownloadState': 'downloading',
+          'errorMessage': 'The download is stalled with no connections',
+        }),
+        InFlightFault.stalled,
+      );
+    });
+
+    test('a warning on a download that is still moving keeps it in flight', () {
+      // APP-04: "any warning is a stall" is the rule this replaces.
+      expect(
+        arrQueueFault(const {
+          'status': 'downloading',
+          'trackedDownloadState': 'downloading',
+          'trackedDownloadStatus': 'warning',
+          'statusMessages': ['Found matching series via grab history'],
+        }),
+        isNull,
+      );
+    });
+
+    test('a failed download, an error or a lost client is a failure', () {
+      expect(arrQueueFault(const {'status': 'failed'}), InFlightFault.failed);
+      expect(
+        arrQueueFault(const {'status': 'downloadClientUnavailable'}),
+        InFlightFault.failed,
+      );
+      expect(
+        arrQueueFault(const {
+          'status': 'downloading',
+          'trackedDownloadState': 'downloading',
+          'trackedDownloadStatus': 'error',
+        }),
+        InFlightFault.failed,
+      );
+    });
+
+    test('a record the arr already imported is nothing', () {
+      expect(arrQueueFault(const {'trackedDownloadState': 'imported'}), isNull);
+    });
   });
 
   test('the spoken row re-separates the dots and leads with progress', () {

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -393,6 +394,102 @@ void main() {
     expect(find.text('Manual Import'), findsNothing);
   });
 
+  // APP-03: every row read "Import blocked" in amber, and the bar above them
+  // said "18 importing".
+  testWidgets('the page bar calls a blocked import a fault, not progress', (
+    tester,
+  ) async {
+    Map<String, dynamic> blocked(String title) => {
+      'title': '$title.2024.2160p',
+      'status': 'completed',
+      'trackedDownloadState': 'importBlocked',
+      'trackedDownloadStatus': 'warning',
+      'statusMessages': ['No files found are eligible for import'],
+      'movie': {'title': title, 'year': 2024},
+    };
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...await settingsScopeOverrides(configured: activityServiceKeys),
+          requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
+          seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
+          radarrServiceProvider.overrideWith(
+            (ref) => _ActivityRadarrService(
+              queue: [
+                blocked('Dune'),
+                blocked('Alien'),
+                {
+                  'title': 'Heat.1995.1080p',
+                  'status': 'completed',
+                  'trackedDownloadState': 'importing',
+                  'movie': {'title': 'Heat', 'year': 1995},
+                },
+                {
+                  'title': 'Furiosa.2024.2160p.WEB-DL-GROUP',
+                  'status': 'downloading',
+                  'size': 100,
+                  'sizeleft': 25,
+                  'movie': {'title': 'Furiosa', 'year': 2024},
+                },
+              ],
+            ),
+          ),
+          sonarrServiceProvider.overrideWith((ref) => FakeSonarrService()),
+          lidarrServiceProvider.overrideWith((ref) => FakeLidarrService()),
+        ],
+        child: const MaterialApp(home: GlobalActivityScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('4 in the queue · 2 need a manual import · 1 importing'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('3 importing'), findsNothing);
+  });
+
+  // APP-05: the tiles counted loaded rows — 50, then 100 after Show more — and
+  // spoke an unknown count as "0 items".
+  testWidgets('a service tile states the server\'s total, and never speaks an '
+      'unknown as zero', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...await settingsScopeOverrides(configured: activityServiceKeys),
+          requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
+          seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
+          radarrServiceProvider.overrideWith(
+            (ref) => _TotalledHistoryRadarrService(total: 2369),
+          ),
+          // The shared fakes send no `totalRecords`: the size of their set is
+          // unknown, which is what the Sonarr tile has to say.
+          sonarrServiceProvider.overrideWith((ref) => FakeSonarrService()),
+          lidarrServiceProvider.overrideWith((ref) => FakeLidarrService()),
+        ],
+        child: const MaterialApp(home: GlobalActivityScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('History'));
+    await tester.pumpAndSettle();
+
+    // Fifty rows are loaded; the tile says how many there are.
+    expect(find.bySemanticsLabel('Radarr, 2369 items'), findsOneWidget);
+    expect(find.text('2369'), findsOneWidget);
+
+    expect(find.bySemanticsLabel('Sonarr, count unavailable'), findsOneWidget);
+    // A sum with an unknown term is unknown.
+    expect(find.bySemanticsLabel('All, count unavailable'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp(r', 0 items$')), findsNothing);
+    // The em dash, never the en dash the tile used to print.
+    expect(find.text('–'), findsNothing);
+    handle.dispose();
+  });
+
   testWidgets('pull-to-refresh belongs to the tab, including its custom bodies', (
     tester,
   ) async {
@@ -719,6 +816,31 @@ class _PagedScreenHistoryRadarrService extends FakeRadarrService {
     _served = end;
     return slice;
   }
+}
+
+/// A Radarr whose history answers with a real envelope: fifty rows of a set
+/// of [total].
+class _TotalledHistoryRadarrService extends FakeRadarrService {
+  _TotalledHistoryRadarrService({required this.total});
+
+  final int total;
+
+  @override
+  Future<ArrRecordPage> getHistoryPage({
+    int page = 1,
+    int pageSize = 20,
+    Map<String, dynamic>? queryParameters,
+  }) async => ArrRecordPage(
+    records: [
+      for (var i = 0; i < pageSize; i++)
+        {
+          'sourceTitle': 'Release $i',
+          'eventType': 'grabbed',
+          'date': '2026-04-02T11:18:00Z',
+        },
+    ],
+    total: total,
+  );
 }
 
 /// A Sonarr that is simply not there — the fact the health band exists for.
