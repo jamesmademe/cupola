@@ -1284,4 +1284,128 @@ void main() {
       expect(kind.lacksAdministrator, isFalse);
     });
   });
+  group('findByExternalId', () {
+    Map<String, dynamic> row(
+      String id,
+      String name, {
+      String type = 'Movie',
+      Map<String, String>? providerIds,
+    }) => {
+      'Id': id,
+      'Name': name,
+      'Type': type,
+      'ProductionYear': 1999,
+      'ProviderIds': ?providerIds,
+    };
+
+    test('asks for the ids it will check, and only films and shows', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {'Items': <dynamic>[], 'TotalRecordCount': 0},
+      );
+
+      await _client(
+        adapter,
+      ).findByExternalId(tmdbId: '603', kind: StreamItemKind.movie);
+
+      final query = adapter.lastUri!.queryParameters;
+      expect(query['anyProviderIdEquals'], 'tmdb.603');
+      // Without `ProviderIds` the answer cannot be checked at all.
+      expect(query['fields'], contains('ProviderIds'));
+      expect(query['includeItemTypes'], 'Movie');
+      // More than one row: the first is only whichever sorted first.
+      expect(int.parse(query['limit']!), greaterThan(1));
+    });
+
+    test('a kindless lookup still never asks for episodes', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {'Items': <dynamic>[], 'TotalRecordCount': 0},
+      );
+
+      await _client(adapter).findByExternalId(tvdbId: '81189');
+
+      expect(
+        adapter.lastUri!.queryParameters['includeItemTypes'],
+        'Movie,Series',
+      );
+    });
+
+    test('a server that ignored the filter links nothing', () async {
+      // What `anyProviderIdEquals` being dropped looks like: 200, and the first
+      // rows of the whole library, each with its own — different — ids.
+      final adapter = CapturingHttpAdapter(
+        response: {
+          'Items': [
+            row(
+              'a1',
+              'Alien',
+              providerIds: {'Tmdb': '348', 'Imdb': 'tt0078748'},
+            ),
+            row('a2', 'Amélie', providerIds: {'Tmdb': '194'}),
+          ],
+          'TotalRecordCount': 2,
+        },
+      );
+
+      expect(await _client(adapter).findByExternalId(tmdbId: '603'), isNull);
+    });
+
+    test('skips a wrong first row and returns the verified one', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {
+          'Items': [
+            row('a1', 'Alien', providerIds: {'Tmdb': '348'}),
+            // The key casing Jellyfin writes, read case-insensitively.
+            row(
+              'm1',
+              'The Matrix',
+              providerIds: {'Tmdb': '603', 'imdb': 'tt0133093'},
+            ),
+          ],
+          'TotalRecordCount': 2,
+        },
+      );
+
+      final item = await _client(adapter).findByExternalId(tmdbId: '603');
+
+      expect(item?.id, 'm1');
+      expect(
+        item?.externalIds,
+        const StreamExternalIds(tmdb: '603', imdb: 'tt0133093'),
+      );
+    });
+
+    test('a row that reports no ids is not taken on trust', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {
+          'Items': [row('m1', 'The Matrix')],
+          'TotalRecordCount': 1,
+        },
+      );
+
+      expect(await _client(adapter).findByExternalId(tmdbId: '603'), isNull);
+    });
+
+    test('a film sharing a show\'s TMDB number loses to the show', () async {
+      final adapter = CapturingHttpAdapter(
+        response: {
+          'Items': [
+            row('film', 'Some Film', providerIds: {'Tmdb': '1396'}),
+            row(
+              'show',
+              'Breaking Bad',
+              type: 'Series',
+              providerIds: {'Tmdb': '1396', 'Tvdb': '81189'},
+            ),
+          ],
+          'TotalRecordCount': 2,
+        },
+      );
+
+      final item = await _client(
+        adapter,
+      ).findByExternalId(tmdbId: '1396', tvdbId: '81189');
+
+      expect(item?.id, 'show');
+    });
+  });
 }

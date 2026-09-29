@@ -87,7 +87,63 @@ StreamItem? plexItemFromJson(Map<String, dynamic> json) {
     // untouched item.
     resumeOffsetMs: (viewOffset ?? 0) > 0 ? viewOffset : null,
     unplayedChildCount: unplayed != null && unplayed > 0 ? unplayed : null,
+    externalIds: plexExternalIds(json),
   );
+}
+
+/// The item's own external ids, from `Guid[]` (`imdb://tt0133093`,
+/// `tmdb://603`, `tvdb://169`) and, for an item still on a legacy agent, from
+/// its `guid` attribute (`com.plexapp.agents.themoviedb://603?lang=en`).
+///
+/// `Guid[]` only arrives with `includeGuids=1`, which only the arr join sends.
+/// It wins over the legacy attribute per provider: it is what the modern agents
+/// write and what `?guid=` filters on.
+///
+/// A legacy value with a path after the id is **not** the item's id and is
+/// skipped: an episode on the TVDB agent reads `thetvdb://81189/1/1`, and 81189
+/// is its *series*. Recording it would let that episode answer for the show.
+StreamExternalIds plexExternalIds(Map<String, dynamic> json) {
+  final found = <String, String>{};
+
+  final guids = json['Guid'];
+  if (guids is List) {
+    for (final entry in guids.whereType<Map>()) {
+      final parsed = _plexGuid(plexString(entry['id']));
+      if (parsed != null) found.putIfAbsent(parsed.$1, () => parsed.$2);
+    }
+  }
+
+  final legacy = _plexGuid(plexString(json['guid']));
+  if (legacy != null) found.putIfAbsent(legacy.$1, () => legacy.$2);
+
+  return StreamExternalIds(
+    tmdb: found['tmdb'],
+    tvdb: found['tvdb'],
+    imdb: found['imdb'],
+  );
+}
+
+/// `scheme://value[?query]` → `(provider, value)` for the three providers the
+/// arr join speaks, or null for anything else (`plex://movie/…`, `local://…`).
+(String, String)? _plexGuid(String? guid) {
+  if (guid == null) return null;
+  final separator = guid.indexOf('://');
+  if (separator <= 0) return null;
+
+  final provider = switch (guid.substring(0, separator).toLowerCase()) {
+    'tmdb' || 'com.plexapp.agents.themoviedb' => 'tmdb',
+    'tvdb' || 'com.plexapp.agents.thetvdb' => 'tvdb',
+    'imdb' || 'com.plexapp.agents.imdb' => 'imdb',
+    _ => null,
+  };
+  if (provider == null) return null;
+
+  var value = guid.substring(separator + 3);
+  final query = value.indexOf('?');
+  if (query >= 0) value = value.substring(0, query);
+  value = value.trim();
+  if (value.isEmpty || value.contains('/')) return null;
+  return (provider, value);
 }
 
 /// Maps Plex's `type` string onto the shared item vocabulary.

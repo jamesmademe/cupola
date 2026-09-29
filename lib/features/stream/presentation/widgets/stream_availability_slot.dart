@@ -39,15 +39,32 @@ import 'package:cupola/features/stream/presentation/stream_lookup_provider.dart'
 /// or Plex's. The data comes from the media server but the section belongs to the
 /// page it renders in, and one screen gets one accent. `ArrMediaExtrasSection`
 /// settled this for Seerr data and the rule is the same here.
+///
+/// [kind] is what the host's record is — [StreamItemKind.movie] on Radarr,
+/// [StreamItemKind.series] on Sonarr — and a host that knows it should pass it:
+/// TMDB numbers films and shows separately, so without it a Sonarr page could be
+/// answered with a *film* that shares the show's TMDB number. [title] and [year]
+/// are the host's own, and only settle a server row whose ids cannot be
+/// compared; they never start a lookup. See [streamMatchProvider].
 List<MediaDetailSlot> streamAvailabilitySlots(
   WidgetRef ref, {
   required Color accent,
   String? tmdbId,
   String? tvdbId,
   String? imdbId,
+  StreamItemKind? kind,
+  String? title,
+  int? year,
 }) {
   final matchAsync = ref.watch(
-    streamMatchProvider((tmdbId: tmdbId, tvdbId: tvdbId, imdbId: imdbId)),
+    streamMatchProvider((
+      tmdbId: tmdbId,
+      tvdbId: tvdbId,
+      imdbId: imdbId,
+      kind: kind,
+      title: title,
+      year: year,
+    )),
   );
 
   final match = matchAsync.value;

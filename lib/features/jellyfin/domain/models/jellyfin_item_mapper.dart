@@ -210,6 +210,32 @@ StreamItem jellyfinStreamItemFromJson(Map<String, dynamic> item) {
     isPlayed: userData['Played'] == true,
     resumeOffsetMs: _resumeOffsetMs(userData, runtimeTicks),
     unplayedChildCount: jellyfinInt(userData['UnplayedItemCount']),
+    externalIds: jellyfinExternalIds(item['ProviderIds']),
+  );
+}
+
+/// `ProviderIds` → [StreamExternalIds].
+///
+/// Only present when the request listed `ProviderIds` in `fields`, which only
+/// the arr join does. The keys are Jellyfin's provider names (`Tmdb`, `Tvdb`,
+/// `Imdb`) and are read case-insensitively, since plugins and older builds have
+/// not always agreed on the casing; `TmdbCollection` and the other composite
+/// keys are different ids and are ignored.
+StreamExternalIds jellyfinExternalIds(Object? raw) {
+  if (raw is! Map) return StreamExternalIds.none;
+  String? read(String provider) {
+    for (final entry in raw.entries) {
+      if (entry.key.toString().toLowerCase() != provider) continue;
+      final value = entry.value?.toString().trim() ?? '';
+      if (value.isNotEmpty) return value;
+    }
+    return null;
+  }
+
+  return StreamExternalIds(
+    tmdb: read('tmdb'),
+    tvdb: read('tvdb'),
+    imdb: read('imdb'),
   );
 }
 

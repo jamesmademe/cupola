@@ -104,6 +104,9 @@ class _ScriptedServer implements StreamServerClient {
     String? tmdbId,
     String? tvdbId,
     String? imdbId,
+    StreamItemKind? kind,
+    String? title,
+    int? year,
     CancelToken? cancelToken,
   }) async => null;
 

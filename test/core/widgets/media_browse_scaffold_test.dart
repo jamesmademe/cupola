@@ -785,7 +785,12 @@ void main() {
       // 46pt of it at phone width. The boards are `repeat(N, minmax(0, 1fr))`.
       await _pumpBrowseWall(tester, const Size(390, 900));
 
-      final wrap = tester.getRect(find.byType(Wrap).first);
+      // The row a tile sits in spans the wall's whole content width.
+      final wall = tester.getRect(
+        find.ancestor(of: find.text('A00'), matching: find.byType(Row)).first,
+      );
+      expect(wall.left, 16);
+      expect(wall.right, 390 - 16);
       final rows = _browseRows(tester, 12);
       final fullRows = rows.values.where(
         (row) => row.length == rows.values.first.length,
@@ -793,8 +798,8 @@ void main() {
 
       for (final row in fullRows) {
         row.sort((left, right) => left.left.compareTo(right.left));
-        expect(row.first.left, moreOrLessEquals(wrap.left, epsilon: 0.5));
-        expect(row.last.right, moreOrLessEquals(wrap.right, epsilon: 0.5));
+        expect(row.first.left, moreOrLessEquals(wall.left, epsilon: 0.5));
+        expect(row.last.right, moreOrLessEquals(wall.right, epsilon: 0.5));
       }
     });
 
@@ -819,6 +824,201 @@ void main() {
       }
     });
   });
+
+  group('the browse wall is built as it scrolls', () {
+    // The wall used to be one list item per section, each a `Wrap` of every
+    // tile in it — lazy across sections only. Any order but Title A–Z is ONE
+    // section, so a 2 000-title library built 2 000 tiles, and started 2 000
+    // poster loads, the moment the wall appeared.
+    testWidgets('a 2 000-title run builds a screenful, not the library', (
+      tester,
+    ) async {
+      await _pumpLargeWall(tester, count: 2000);
+
+      // Title A–Z over titles that all start with one letter: one section.
+      expect(find.text('A'), findsOneWidget);
+      final lettered = find.byType(ContentCard).evaluate().length;
+      expect(lettered, greaterThan(0));
+      expect(lettered, lessThan(60));
+
+      // An unheaded order: the whole library in one run, the audit's case.
+      await tester.tap(find.text('Title A–Z'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reverse').last);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('media-browse-section-flat')),
+        findsOneWidget,
+      );
+      final flat = find.byType(ContentCard).evaluate().length;
+      expect(flat, greaterThan(0));
+      expect(flat, lessThan(60));
+      expect(find.text('A1999'), findsOneWidget);
+      expect(find.text('A0000'), findsNothing);
+    });
+
+    testWidgets('the far end is still reachable, with its own hero tag', (
+      tester,
+    ) async {
+      final taps = <String>[];
+      await _pumpLargeWall(tester, count: 300, onTap: taps.add);
+
+      await tester.dragUntilVisible(
+        find.text('A0299'),
+        find.byType(NestedScrollView),
+        const Offset(0, -800),
+        maxIteration: 200,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A0299'));
+      await tester.pump();
+
+      // The index in the visible list, exactly as the eager wall numbered it.
+      expect(taps, ['A0299|test_${'A0299'.hashCode}_299']);
+      // And the top of the library has been let go.
+      expect(find.text('A0000'), findsNothing);
+    });
+
+    testWidgets('a row is one Wrap run: top-aligned, tallest tile, 16 apart', (
+      tester,
+    ) async {
+      for (final scale in const [1.0, 2.0]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await _pumpLargeWall(
+          tester,
+          count: 6,
+          textScale: scale,
+          // Only the first tile of each row carries a subtitle line.
+          subtitle: (item) => item == 'A0000' || item == 'A0003' ? '1922' : '',
+        );
+
+        final first = [
+          for (final title in const ['A0000', 'A0001', 'A0002'])
+            _tileRect(tester, title),
+        ];
+        final second = _tileRect(tester, 'A0003');
+
+        // Three across a 390 phone, filling the 358 row with two 12pt gaps.
+        const tileWidth = (358 - 2 * 12) / 3;
+        for (final (column, rect) in first.indexed) {
+          expect(rect.left, moreOrLessEquals(16 + column * (tileWidth + 12)));
+          expect(rect.width, moreOrLessEquals(tileWidth));
+          expect(rect.top, first.first.top, reason: 'top-aligned at $scale');
+        }
+        // A tile's height is its own content, and grows with the reading size.
+        expect(first[0].height, greaterThan(first[1].height));
+        // The next row starts 16 under the tallest tile of this one.
+        expect(second.top, moreOrLessEquals(first[0].bottom + 16));
+        expect(tester.takeException(), isNull);
+      }
+    });
+
+    testWidgets('a section heading keeps its gaps', (tester) async {
+      await _pumpLargeWall(tester, titles: const ['A0000', 'A0001', 'B0000']);
+
+      final headingA = tester.getRect(find.text('A'));
+      final headingB = tester.getRect(find.text('B'));
+      final tallestA = [
+        _tileRect(tester, 'A0000'),
+        _tileRect(tester, 'A0001'),
+      ].map((rect) => rect.bottom).reduce((a, b) => a > b ? a : b);
+
+      // space-md under a heading, space-xl between sections.
+      expect(_tileRect(tester, 'A0000').top, headingA.bottom + 12);
+      expect(headingB.top, tallestA + 24);
+    });
+
+    testWidgets('a screen reader counts tiles, not rows', (tester) async {
+      await _pumpLargeWall(tester, count: 9);
+
+      // The fourth tile opens the second row and is still item four.
+      final indexed = tester.widget<IndexedSemantics>(
+        find
+            .ancestor(
+              of: find.text('A0003'),
+              matching: find.byType(IndexedSemantics),
+            )
+            .first,
+      );
+      expect(indexed.index, 3);
+      expect(
+        tester.getSemantics(find.text('A0003')),
+        containsSemantics(label: 'A0003', isButton: true, hasTapAction: true),
+      );
+    });
+  });
+}
+
+Rect _tileRect(WidgetTester tester, String title) => tester.getRect(
+  find.ancestor(of: find.text(title), matching: find.byType(SizedBox)).first,
+);
+
+Future<void> _pumpLargeWall(
+  WidgetTester tester, {
+  int count = 0,
+  List<String>? titles,
+  double textScale = 1.0,
+  String Function(String item)? subtitle,
+  void Function(String tap)? onTap,
+}) async {
+  final library = [
+    ...?titles,
+    for (var index = 0; index < count; index++)
+      'A${index.toString().padLeft(4, '0')}',
+  ];
+  final libraryProvider = FutureProvider<List<String>>((ref) async => library);
+  final container = ProviderContainer(
+    overrides: [
+      currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+    ],
+  );
+  addTearDown(container.dispose);
+
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        home: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: MediaBrowseScaffold<String>(
+              title: 'Test Title',
+              searchHint: 'Search test...',
+              activityRoute: '/activity/test',
+              navigationSection: NavigationSection.dashboard,
+              serviceName: 'Test Service',
+              heroTagPrefix: 'test',
+              searchHeroTagPrefix: 'test_search',
+              libraryProvider: libraryProvider,
+              searchQueryProvider: testSearchQueryProvider,
+              searchResultsProvider: testSearchResultsProvider,
+              titleExtractor: (item) => item,
+              subtitleExtractor: subtitle ?? (_) => '',
+              imagesExtractor: (_) => null,
+              idExtractor: (item) => item.hashCode,
+              settingsSelector: (settings) =>
+                  (settings.radarrUrl, settings.radarrApiKey),
+              onItemTap: (_, item, heroTag) => onTap?.call('$item|$heroTag'),
+              sorts: [
+                MediaBrowseSort<String>(
+                  label: 'Reverse',
+                  compare: (left, right) => right.compareTo(left),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 Widget _buildTestApp() {

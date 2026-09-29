@@ -600,109 +600,197 @@ class _MediaBrowseScaffoldState<T>
     }
 
     final sections = _buildSections(visibleItems);
-    return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.only(
-        left: AppSpacing.lg,
-        right: AppSpacing.lg,
-        top: AppSpacing.sm,
-        bottom:
-            AppSpacing.lg +
-            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-      ),
-      itemCount: sections.length,
-      itemBuilder: (context, sectionIndex) {
-        final section = sections[sectionIndex];
-        return Padding(
-          key: ValueKey(
-            'media-browse-section-${section.label.isEmpty ? 'flat' : section.label}',
-          ),
-          padding: EdgeInsets.only(
-            bottom: sectionIndex == sections.length - 1
-                ? AppSpacing.lg
-                : AppSpacing.xl,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (section.label.isNotEmpty) ...[
-                Text(
-                  section.label,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge!.weight(FontWeight.w600),
-                ),
-                const SizedBox(height: AppSpacing.md),
-              ],
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  // One column math for the whole app, and the tiles fill the
-                  // row they are given.
-                  //
-                  // This used to pin a 96pt tile — under the 130pt floor every
-                  // other grid is held to — and then compute a spacing to
-                  // distribute the leftover, only to `.clamp(0, gridGap)` that
-                  // spacing away again. The slack it had just measured came
-                  // back as a ragged right edge: at 390pt, three 96pt tiles
-                  // and two 12pt gaps are 312 inside 358, so 46pt of dead
-                  // space sat at the end of every row. The boards draw
-                  // `repeat(N, minmax(0, 1fr))`: the count is resolved first,
-                  // then the tiles take what is left.
-                  final columns = MediaGrid.columnsFor(
-                    constraints.maxWidth,
-                    _minBrowseColumns,
-                  );
-                  final tileWidth = math.max(
-                    1.0,
-                    (constraints.maxWidth -
-                            (AppSpacing.gridGap * (columns - 1))) /
-                        columns,
-                  );
 
-                  return Wrap(
-                    spacing: AppSpacing.gridGap,
-                    runSpacing: AppSpacing.lg,
-                    children: [
-                      for (
-                        var itemIndex = 0;
-                        itemIndex < section.items.length;
-                        itemIndex++
-                      )
-                        _BrowsePosterTile(
-                          width: tileWidth,
-                          shape: widget.tileShape,
-                          title: widget.titleExtractor(
-                            section.items[itemIndex],
-                          ),
-                          subtitle: widget.subtitleExtractor(
-                            section.items[itemIndex],
-                          ),
-                          imageSource: ImageUtils.extractPosterUrl(
-                            widget.imagesExtractor(section.items[itemIndex]),
-                            baseUrl: baseUrl,
-                            apiKey: apiKey,
-                            coverTypes:
-                                widget.coverTypes ?? const ['poster', 'cover'],
-                          ),
-                          status: widget.statusExtractor?.call(
-                            section.items[itemIndex],
-                          ),
-                          heroTag:
-                              '${widget.heroTagPrefix}_${widget.idExtractor(section.items[itemIndex])}_${section.startIndex + itemIndex}',
-                          onTap: () => widget.onItemTap(
-                            context,
-                            section.items[itemIndex],
-                            '${widget.heroTagPrefix}_${widget.idExtractor(section.items[itemIndex])}_${section.startIndex + itemIndex}',
-                          ),
-                        ),
-                    ],
-                  );
-                },
-              ),
-            ],
+    // **Built a row at a time, as the rows scroll in.** This used to be one
+    // `ListView` item per section with every tile of the section in a `Wrap`,
+    // which is lazy only across sections — and any order but Title A–Z is ONE
+    // section, so a 2 000-title library built 2 000 tiles and started 2 000
+    // poster loads the moment the wall appeared. A `SliverGrid` is not the
+    // answer either: it gives every cell one fixed extent, and a tile's height
+    // is its own content — the caption lines grow with the reading size and an
+    // empty subtitle takes no line — so a grid would clip at 2x or leave air
+    // under a caption-less row. What the `Wrap` drew is kept exactly: a run is
+    // a top-aligned `Row` as tall as its tallest tile, `gridGap` between
+    // columns and `space-lg` between rows, `space-xl` after a section's last
+    // row. Only the building is lazy.
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      // The tiles are what a screen reader counts ("items 13 to 24 of 60"),
+      // not the rows or the headings the list happens to be built from.
+      semanticChildCount: visibleItems.length,
+      slivers: [
+        SliverPadding(
+          padding: EdgeInsets.only(
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+            top: AppSpacing.sm,
+            bottom:
+                AppSpacing.lg +
+                FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+          ),
+          sliver: SliverLayoutBuilder(
+            builder: (context, constraints) {
+              // One column math for the whole app, and the tiles fill the row
+              // they are given.
+              //
+              // This used to pin a 96pt tile — under the 130pt floor every
+              // other grid is held to — and then compute a spacing to
+              // distribute the leftover, only to `.clamp(0, gridGap)` that
+              // spacing away again. The slack it had just measured came back
+              // as a ragged right edge: at 390pt, three 96pt tiles and two
+              // 12pt gaps are 312 inside 358, so 46pt of dead space sat at the
+              // end of every row. The boards draw `repeat(N, minmax(0, 1fr))`:
+              // the count is resolved first, then the tiles take what is left.
+              final width = constraints.crossAxisExtent;
+              final columns = MediaGrid.columnsFor(width, _minBrowseColumns);
+              final tileWidth = math.max(
+                1.0,
+                (width - (AppSpacing.gridGap * (columns - 1))) / columns,
+              );
+              final entries = _browseEntries(sections, columns);
+
+              return SliverList.builder(
+                itemCount: entries.length,
+                // Indexed per tile inside each row instead; see
+                // `semanticChildCount` above.
+                addSemanticIndexes: false,
+                itemBuilder: (context, index) => _buildBrowseEntry(
+                  context: context,
+                  entry: entries[index],
+                  items: visibleItems,
+                  tileWidth: tileWidth,
+                  baseUrl: baseUrl,
+                  apiKey: apiKey,
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// The wall flattened into headings and rows for [columns] across.
+  ///
+  /// Cheap on purpose — a few integers per row, no widget and no extractor
+  /// call — because it runs over the whole library whenever the width changes.
+  /// Everything that costs anything is deferred to [_buildBrowseEntry], which
+  /// runs only for the rows on or near the screen.
+  static List<_BrowseEntry> _browseEntries(
+    List<_MediaBrowseSection> sections,
+    int columns,
+  ) {
+    final entries = <_BrowseEntry>[];
+    for (var sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
+      final section = sections[sectionIndex];
+      // The section's key rides on its first entry — the heading, or the first
+      // row of an unheaded run — so a section is still findable by the key it
+      // has always had, and still only once it has been built.
+      final sectionKey = ValueKey<String>(
+        'media-browse-section-${section.label.isEmpty ? 'flat' : section.label}',
+      );
+      if (section.label.isNotEmpty) {
+        entries.add(_BrowseEntry.heading(section.label, key: sectionKey));
+      }
+      final isLastSection = sectionIndex == sections.length - 1;
+      for (var start = section.start; start < section.end; start += columns) {
+        final end = math.min(start + columns, section.end);
+        final isLastRow = end == section.end;
+        entries.add(
+          _BrowseEntry.row(
+            start,
+            end,
+            // `runSpacing` inside a section, then the section's own foot:
+            // `space-xl` to the next heading, `space-lg` after the last one.
+            gapBelow: !isLastRow
+                ? AppSpacing.lg
+                : (isLastSection ? AppSpacing.lg : AppSpacing.xl),
+            key: section.label.isEmpty && start == section.start
+                ? sectionKey
+                : null,
           ),
         );
-      },
+      }
+    }
+    return entries;
+  }
+
+  Widget _buildBrowseEntry({
+    required BuildContext context,
+    required _BrowseEntry entry,
+    required List<T> items,
+    required double tileWidth,
+    required String baseUrl,
+    required String apiKey,
+  }) {
+    final label = entry.label;
+    if (label != null) {
+      return Column(
+        key: entry.key,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge!.weight(FontWeight.w600),
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+      );
+    }
+
+    return Padding(
+      key: entry.key,
+      padding: EdgeInsets.only(bottom: entry.gapBelow),
+      // Top-aligned and as tall as its tallest tile: exactly one `Wrap` run.
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: AppSpacing.gridGap,
+        children: [
+          for (var index = entry.start; index < entry.end; index++)
+            IndexedSemantics(
+              index: index,
+              child: _buildTile(
+                context: context,
+                item: items[index],
+                // The index in the visible list, as it always was: it keeps
+                // two rows with one id (search results can carry id 0) from
+                // sharing a Hero tag.
+                heroTag:
+                    '${widget.heroTagPrefix}_${widget.idExtractor(items[index])}_$index',
+                tileWidth: tileWidth,
+                baseUrl: baseUrl,
+                apiKey: apiKey,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTile({
+    required BuildContext context,
+    required T item,
+    required String heroTag,
+    required double tileWidth,
+    required String baseUrl,
+    required String apiKey,
+  }) {
+    return _BrowsePosterTile(
+      width: tileWidth,
+      shape: widget.tileShape,
+      title: widget.titleExtractor(item),
+      subtitle: widget.subtitleExtractor(item),
+      imageSource: ImageUtils.extractPosterUrl(
+        widget.imagesExtractor(item),
+        baseUrl: baseUrl,
+        apiKey: apiKey,
+        coverTypes: widget.coverTypes ?? const ['poster', 'cover'],
+      ),
+      status: widget.statusExtractor?.call(item),
+      heroTag: heroTag,
+      onTap: () => widget.onItemTap(context, item, heroTag),
     );
   }
 
@@ -761,24 +849,31 @@ class _MediaBrowseScaffoldState<T>
     return sortedItems;
   }
 
-  List<_MediaBrowseSection<T>> _buildSections(List<T> items) {
+  List<_MediaBrowseSection> _buildSections(List<T> items) {
     // One unlabelled run under any order but Title A–Z. The headings used to be
     // unconditional, so a date-added wall printed "A" over a section whose
     // first title happened to start with one.
     if (!_sortOptions[_sortIndex].lettered) {
-      final section = _MediaBrowseSection<T>(label: '', startIndex: 0);
-      section.items.addAll(items);
-      return [section];
+      return [_MediaBrowseSection(label: '', start: 0, end: items.length)];
     }
 
-    final sections = <_MediaBrowseSection<T>>[];
+    final sections = <_MediaBrowseSection>[];
+    var start = 0;
+    String? label;
     for (var index = 0; index < items.length; index++) {
-      final item = items[index];
-      final label = _sectionLabelFor(item);
-      if (sections.isEmpty || sections.last.label != label) {
-        sections.add(_MediaBrowseSection(label: label, startIndex: index));
+      final itemLabel = _sectionLabelFor(items[index]);
+      if (label != null && itemLabel != label) {
+        sections.add(
+          _MediaBrowseSection(label: label, start: start, end: index),
+        );
+        start = index;
       }
-      sections.last.items.add(item);
+      label = itemLabel;
+    }
+    if (label != null) {
+      sections.add(
+        _MediaBrowseSection(label: label, start: start, end: items.length),
+      );
     }
     return sections;
   }
@@ -801,13 +896,49 @@ class _MediaBrowseScaffoldState<T>
   }
 }
 
-class _MediaBrowseSection<T> {
+/// One run of the visible list, `[start, end)`, under one heading — or under
+/// none, when [label] is empty.
+///
+/// Indices rather than a copy of the items: the rows are cut from the same
+/// list the tiles read, so a library is never held twice.
+class _MediaBrowseSection {
   final String label;
-  final int startIndex;
-  final List<T> items;
+  final int start;
+  final int end;
 
-  _MediaBrowseSection({required this.label, required this.startIndex})
-    : items = <T>[];
+  const _MediaBrowseSection({
+    required this.label,
+    required this.start,
+    required this.end,
+  });
+}
+
+/// One entry of the lazily built wall: a section heading, or one row of tiles
+/// `[start, end)` of the visible list.
+class _BrowseEntry {
+  /// The heading's text; null for a row.
+  final String? label;
+
+  final int start;
+  final int end;
+
+  /// The space under a row: the run spacing inside a section, the section gap
+  /// after its last row.
+  final double gapBelow;
+
+  final Key? key;
+
+  const _BrowseEntry.heading(String this.label, {this.key})
+    : start = 0,
+      end = 0,
+      gapBelow = 0;
+
+  const _BrowseEntry.row(
+    this.start,
+    this.end, {
+    required this.gapBelow,
+    this.key,
+  }) : label = null;
 }
 
 class _MediaBrowseFilterChips extends StatelessWidget {

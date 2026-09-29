@@ -188,6 +188,15 @@ abstract interface class StreamServerClient {
   /// filter by provider id — both are "we cannot say it is watchable", and the
   /// caller renders nothing rather than a wrong claim.
   ///
+  /// **The answer is checked, never taken on trust.** An implementation returns
+  /// only a row that `streamExternalMatchScore` accepts against these same
+  /// arguments — the item's *own* reported ids agreeing with the ones asked
+  /// about, and [kind] (or, without it, "a film or a show") — and the
+  /// best-supported one when several do. The server returning a row is not
+  /// evidence it matched: one that ignores the filter answers 200 with the start
+  /// of the whole library. [title] and [year] only settle a row whose ids cannot
+  /// be compared at all; they are never a search key.
+  ///
   /// A missing viewer is **not** one of those cases. It costs the *watch state*
   /// — the slot reads "Ready to watch" instead of "34 min in" — but presence and
   /// a route to open the item are still facts, and they are the media server's
@@ -198,6 +207,9 @@ abstract interface class StreamServerClient {
     String? tmdbId,
     String? tvdbId,
     String? imdbId,
+    StreamItemKind? kind,
+    String? title,
+    int? year,
     CancelToken? cancelToken,
   });
 

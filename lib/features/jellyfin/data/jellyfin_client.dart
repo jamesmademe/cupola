@@ -15,6 +15,7 @@ import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
 import 'package:cupola/features/stream/domain/models/stream_search_group.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_external_match.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
 /// Jellyfin's implementation of [StreamServerClient].
@@ -600,6 +601,9 @@ class JellyfinClient implements StreamServerClient {
     String? tmdbId,
     String? tvdbId,
     String? imdbId,
+    StreamItemKind? kind,
+    String? title,
+    int? year,
     CancelToken? cancelToken,
   }) async {
     // `anyProviderIdEquals` takes `provider.value` pairs; passing several is an
@@ -611,6 +615,14 @@ class JellyfinClient implements StreamServerClient {
       if (imdbId != null && imdbId.isNotEmpty) 'imdb.$imdbId',
     ];
     if (pairs.isEmpty) return null;
+    final query = StreamExternalQuery(
+      tmdbId: tmdbId,
+      tvdbId: tvdbId,
+      imdbId: imdbId,
+      kind: kind,
+      title: title,
+      year: year,
+    );
 
     // A viewer is a bonus here, not a precondition. Without one `/Items` still
     // answers "is this in the library", which is the media server's own fact and
@@ -623,18 +635,39 @@ class JellyfinClient implements StreamServerClient {
       final items = await _fetchItems('/Items', {
         'recursive': true,
         'anyProviderIdEquals': pairs.join(','),
-        'limit': 1,
-        'fields': _browseFields,
+        // Only the two kinds an arr record can be. Without this an episode —
+        // which carries TVDB and IMDb ids of its own, in the same namespaces a
+        // series uses — is a legitimate hit for a Sonarr lookup.
+        'includeItemTypes': switch (kind) {
+          StreamItemKind.movie => 'Movie',
+          StreamItemKind.series => 'Series',
+          _ => 'Movie,Series',
+        },
+        // Several rows, not one: the filter is an OR, so a film sharing the
+        // series' TMDB number is a hit too, and the first row is simply
+        // whichever sorted first. The matcher picks among them.
+        'limit': _kExternalMatchCandidates,
+        // `ProviderIds` is what the answer is checked against. Without it the
+        // only evidence a row matched is that the server returned it — which is
+        // also what a server that ignored `anyProviderIdEquals` does, with the
+        // first rows of the whole library.
+        'fields': '$_browseFields,ProviderIds',
         // `UserData` is omitted from the response entirely unless both are
         // present, so they travel together or not at all.
         'userId': ?userId,
         if (userId != null) 'enableUserData': true,
       }, cancelToken: cancelToken);
-      return items.isEmpty ? null : items.first;
+      return bestStreamExternalMatch(items, query);
     } catch (_) {
       return null;
     }
   }
+
+  /// How many rows [findByExternalId] asks for. A real answer is one to three
+  /// (the title, the same title in a second library, a film sharing a TMDB
+  /// number); more only arrive when the filter was ignored, and then none of
+  /// them is verified anyway.
+  static const int _kExternalMatchCandidates = 10;
 
   @override
   Future<List<StreamItem>> getChildren(

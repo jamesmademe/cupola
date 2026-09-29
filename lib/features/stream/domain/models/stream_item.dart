@@ -66,6 +66,43 @@ enum StreamLibraryLens {
       this != StreamLibraryLens.recentlyAdded && this != StreamLibraryLens.all;
 }
 
+/// The external database ids a media server holds for one item — the other half
+/// of the join with the arrs, which know a title by the same ids.
+///
+/// Read from the item itself (Jellyfin's `ProviderIds`, Plex's `Guid[]`), never
+/// copied from the query that found it: they exist to *check* that query's
+/// answer, and an id echoed back from the request would check nothing.
+///
+/// Values are stored as the server sent them, trimmed; comparison is the
+/// matcher's business (`stream_external_match.dart`).
+@immutable
+class StreamExternalIds {
+  final String? tmdb;
+  final String? tvdb;
+  final String? imdb;
+
+  const StreamExternalIds({this.tmdb, this.tvdb, this.imdb});
+
+  /// An item the server reported no comparable id for.
+  static const StreamExternalIds none = StreamExternalIds();
+
+  bool get isEmpty => tmdb == null && tvdb == null && imdb == null;
+
+  @override
+  bool operator ==(Object other) =>
+      other is StreamExternalIds &&
+      other.tmdb == tmdb &&
+      other.tvdb == tvdb &&
+      other.imdb == imdb;
+
+  @override
+  int get hashCode => Object.hash(tmdb, tvdb, imdb);
+
+  @override
+  String toString() =>
+      'StreamExternalIds(tmdb: $tmdb, tvdb: $tvdb, imdb: $imdb)';
+}
+
 @immutable
 class StreamItem {
   /// Opaque server id — a Jellyfin GUID or a Plex `ratingKey`.
@@ -102,6 +139,12 @@ class StreamItem {
   /// Unwatched children, for a series or season badge.
   final int? unplayedChildCount;
 
+  /// The TMDB / TVDB / IMDb ids the server holds for this item, when the
+  /// request asked for them — see [StreamExternalIds]. Empty is "not reported",
+  /// never "has none": most reads do not ask, because only the arr join needs
+  /// them.
+  final StreamExternalIds externalIds;
+
   const StreamItem({
     required this.id,
     required this.title,
@@ -113,6 +156,7 @@ class StreamItem {
     required this.isPlayed,
     required this.resumeOffsetMs,
     required this.unplayedChildCount,
+    this.externalIds = StreamExternalIds.none,
   });
 
   /// Fraction watched, 0..1, or null when there is no resume point.

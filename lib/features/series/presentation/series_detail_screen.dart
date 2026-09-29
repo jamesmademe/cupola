@@ -15,6 +15,7 @@ import 'package:cupola/features/release_search/domain/release_search_target.dart
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/release_search/presentation/widgets/release_search_indicators.dart';
 import 'package:cupola/features/release_search/presentation/widgets/release_search_status_card.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_availability_slot.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
@@ -452,6 +453,9 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
           accent: accent,
           tvdbId: tvdbId == 0 ? null : '$tvdbId',
           tmdbId: tmdbId == 0 ? null : '$tmdbId',
+          kind: StreamItemKind.series,
+          title: viewModel.title,
+          year: int.tryParse(viewModel.year),
         ),
         ...arrMediaExtrasSlots(
           ref,

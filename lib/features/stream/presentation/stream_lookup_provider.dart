@@ -6,13 +6,24 @@ import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/stream_external_match.dart';
 
-/// The external ids an arr can offer for one title.
+/// The external ids an arr can offer for one title, and what it knows about
+/// that title to check a server's answer against.
 ///
 /// A record so the family key gets structural equality for free. At least one
-/// field must be non-null or the lookup is skipped — matching on a title would be
-/// a guess, and this exists to state a fact.
-typedef StreamLookupKey = ({String? tmdbId, String? tvdbId, String? imdbId});
+/// id must be non-null or the lookup is skipped — matching on a title would be
+/// a guess, and this exists to state a fact. [kind], [title] and [year] never
+/// start a lookup; they only narrow and verify what the ids found (see
+/// `StreamExternalQuery`).
+typedef StreamLookupKey = ({
+  String? tmdbId,
+  String? tvdbId,
+  String? imdbId,
+  StreamItemKind? kind,
+  String? title,
+  int? year,
+});
 
 /// Where a title sits on a media server, if it is there at all.
 typedef StreamMatch = ({ServiceKey service, StreamItem item});
@@ -30,6 +41,13 @@ typedef StreamMatch = ({ServiceKey service, StreamItem item});
 /// The first server that has it wins. Two media servers indexing the same file is
 /// a real setup, but "it is watchable, and you are 34 minutes in" is one fact, and
 /// showing it twice would be noise rather than information.
+///
+/// **"Has it" means the server's answer survived [streamExternalMatchScore]**,
+/// here as well as in the client. Each client already refuses an unverified row;
+/// this gate is the contract restated at the one place every answer passes, so
+/// a server client that forgets to check — or a new one — cannot put a wrong
+/// "On Jellyfin" card on an arr page. A refused answer counts as "not there", and
+/// the next server is asked.
 final streamMatchProvider = FutureProvider.autoDispose
     .family<StreamMatch?, StreamLookupKey>((ref, key) async {
       if ((key.tmdbId ?? '').isEmpty &&
@@ -38,6 +56,14 @@ final streamMatchProvider = FutureProvider.autoDispose
         return null;
       }
 
+      final query = StreamExternalQuery(
+        tmdbId: key.tmdbId,
+        tvdbId: key.tvdbId,
+        imdbId: key.imdbId,
+        kind: key.kind,
+        title: key.title,
+        year: key.year,
+      );
       final settings = ref.watch(currentSettingsProvider);
       final cancelToken = CancelToken();
       ref.onDispose(cancelToken.cancel);
@@ -52,9 +78,14 @@ final streamMatchProvider = FutureProvider.autoDispose
             tmdbId: key.tmdbId,
             tvdbId: key.tvdbId,
             imdbId: key.imdbId,
+            kind: key.kind,
+            title: key.title,
+            year: key.year,
             cancelToken: cancelToken,
           );
-          if (item != null) return (service: service, item: item);
+          if (item != null && streamExternalMatchScore(item, query) != null) {
+            return (service: service, item: item);
+          }
         } catch (_) {
           // An unreachable server is not evidence the title is missing, so it
           // yields nothing and the next one is tried. The section renders nothing

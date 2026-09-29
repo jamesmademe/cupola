@@ -16,6 +16,7 @@ import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
 import 'package:cupola/features/stream/domain/models/stream_search_group.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_external_match.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 
 /// Identifies Cupola to the user's server. Plex shows this in
@@ -777,41 +778,74 @@ class PlexClient implements StreamServerClient {
     String? tmdbId,
     String? tvdbId,
     String? imdbId,
+    StreamItemKind? kind,
+    String? title,
+    int? year,
     CancelToken? cancelToken,
   }) async {
     // Plex indexes external ids as `Guid[]` entries and filters on them through
     // `?guid=`, one value at a time — unlike Jellyfin's comma-delimited OR. So
-    // this tries each id in turn and stops at the first hit, cheapest identifier
-    // first: TMDB is what Radarr carries and what Plex's Movie agent writes.
+    // this tries each id in turn, cheapest identifier first: TMDB is what Radarr
+    // carries and what Plex's Movie agent writes.
     final guids = <String>[
       if (tmdbId != null && tmdbId.isNotEmpty) 'tmdb://$tmdbId',
       if (tvdbId != null && tvdbId.isNotEmpty) 'tvdb://$tvdbId',
       if (imdbId != null && imdbId.isNotEmpty) 'imdb://$imdbId',
     ];
+    final query = StreamExternalQuery(
+      tmdbId: tmdbId,
+      tvdbId: tvdbId,
+      imdbId: imdbId,
+      kind: kind,
+      title: title,
+      year: year,
+    );
 
+    // A hit is only a hit once the item's own `Guid[]` agrees — see
+    // `stream_external_match.dart`. A server that does not honour `?guid=`
+    // answers 200 with the whole library rather than an error, and a server that
+    // does can still hand back a film for a show's TMDB number, so neither the
+    // status nor the first row is evidence.
+    StreamItem? best;
+    var bestScore = -1;
     for (final guid in guids) {
       try {
         final container = await _container(
           '/library/all',
           queryParameters: {
             'guid': guid,
-            // Without this the response omits Guid entries and a caller cannot
-            // verify the match it just asked for.
+            // Without this the response omits Guid entries and a row could
+            // only be checked by its title.
             'includeGuids': 1,
+            // Bounded, because a server that ignores `?guid=` answers with the
+            // whole library, and none of it would be verified anyway. A real
+            // answer is one to three rows.
+            'X-Plex-Container-Start': 0,
+            'X-Plex-Container-Size': _kExternalMatchCandidates,
           },
           cancelToken: cancelToken,
         );
         final items = await _itemsFromAsync(container['Metadata']);
-        if (items.isNotEmpty) return items.first;
+        final match = bestStreamExternalMatch(items, query);
+        if (match == null) continue;
+        final score = streamExternalMatchScore(match, query) ?? -1;
+        // Confirmed by every id the arr offered: nothing a further round trip
+        // could find would be better supported.
+        if (score >= query.idCount) return match;
+        if (score > bestScore) {
+          best = match;
+          bestScore = score;
+        }
       } catch (_) {
-        // `?guid=` is not honoured by every server version, and an unfiltered
-        // fallback would return the whole library and pick something arbitrary.
-        // Silence is the correct answer: the caller renders nothing.
+        // An unanswered id is not evidence against the title; try the next.
         continue;
       }
     }
-    return null;
+    return best;
   }
+
+  /// How many rows one `?guid=` probe reads — see [findByExternalId].
+  static const int _kExternalMatchCandidates = 10;
 
   /// `GET /library/metadata/{ratingKey}/children` — show → seasons, season →
   /// episodes, album → tracks.
