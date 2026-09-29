@@ -6,6 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/lifecycle/gated_poll.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/lifecycle/poll_clock.dart';
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -104,7 +105,7 @@ final truenasDashboardInterfacesProvider = FutureProvider.autoDispose((
 ) async {
   ref.watch(truenasClientProvider);
   return ref.watch(truenasNetworkApiProvider).getInterfaces();
-});
+}, retry: noProviderRetry);
 
 /// Fetches the reporting graphs behind the gauges and the sparkline.
 ///
@@ -143,7 +144,7 @@ final truenasDashboardMetricsProvider =
             : network.series(0).map((p) => p.v ?? 0).toList(growable: false),
         answered: answered,
       );
-    });
+    }, retry: noProviderRetry);
 
 class TrueNasDashboardScreen extends ConsumerStatefulWidget {
   const TrueNasDashboardScreen({super.key});

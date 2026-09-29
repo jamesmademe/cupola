@@ -31,9 +31,24 @@ enum ProwlarrStatsWindow {
 ///
 /// Throws if Prowlarr is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.prowlarr)` before reading.
+///
+/// ## Retry: none, anywhere in this file
+///
+/// Every provider here carries `retry: noProviderRetry`, and one added later
+/// must too. Riverpod's default re-runs a failed build ten times over roughly
+/// forty seconds and reports *loading* throughout, so a Prowlarr that went
+/// dark was a spinner for most of a minute before any list could say so and
+/// offer its Retry. A provider derived from another (`…ByIdProvider`, the
+/// Overview's three regions, applications and download clients) carries it
+/// as well: it cannot settle before its source does, and without the policy
+/// on the source it waits out the source's retries. Retrying is the user's
+/// call: a Retry must invalidate the *source* a derived provider reads, since
+/// invalidating only the derivation re-reads the source's cached failure.
+///
+/// This build throws "not configured", which the default would retry too.
 final prowlarrServiceProvider = Provider<ProwlarrService>((ref) {
   return _prowlarrService(ref, instanceId: null);
-});
+}, retry: noProviderRetry);
 
 /// Prowlarr service bound to one named connection, independent of the lens.
 ///
@@ -49,7 +64,7 @@ final prowlarrServiceForProvider = Provider.family<ProwlarrService, String>((
     return ref.watch(prowlarrServiceProvider);
   }
   return _prowlarrService(ref, instanceId: instanceId);
-});
+}, retry: noProviderRetry);
 
 ProwlarrService _prowlarrService(Ref ref, {required String? instanceId}) {
   return ProwlarrService(
@@ -62,7 +77,7 @@ final prowlarrIndexersProvider = FutureProvider<List<ProwlarrIndexer>>((
   ref,
 ) async {
   return ref.watch(prowlarrServiceProvider).getIndexers();
-});
+}, retry: noProviderRetry);
 
 /// How far back the indexer readout reaches.
 ///
@@ -90,20 +105,20 @@ final prowlarrIndexerStatsProvider = FutureProvider<ProwlarrIndexerStats>((
         startDate: now.subtract(prowlarrStatsWindow).toIso8601String(),
         endDate: now.toIso8601String(),
       );
-});
+}, retry: noProviderRetry);
 
 /// Indexers currently disabled due to failures.
 final prowlarrIndexerStatusProvider =
     FutureProvider<List<ProwlarrIndexerStatus>>((ref) async {
       return ref.watch(prowlarrServiceProvider).getIndexerStatus();
-    });
+    }, retry: noProviderRetry);
 
 /// Current health issues.
 final prowlarrHealthProvider = FutureProvider<List<ProwlarrHealthIssue>>((
   ref,
 ) async {
   return ref.watch(prowlarrServiceProvider).getHealth();
-});
+}, retry: noProviderRetry);
 
 /// Most recent indexer activity for the dashboard.
 final prowlarrRecentHistoryProvider = FutureProvider<ProwlarrHistoryPage>((
@@ -112,14 +127,9 @@ final prowlarrRecentHistoryProvider = FutureProvider<ProwlarrHistoryPage>((
   return ref
       .watch(prowlarrServiceProvider)
       .getHistory(page: 1, pageSize: _defaultHistoryPageSize);
-});
+}, retry: noProviderRetry);
 
 /// Paged, optionally filtered history for the full History tab.
-///
-/// `noProviderRetry`, which the older providers in this file predate: a dark
-/// Prowlarr held behind ten backing-off attempts is a spinner for most of a
-/// minute before the page can say "unreachable" and offer the Retry it already
-/// draws.
 final prowlarrHistoryPageProvider = FutureProvider.autoDispose
     .family<ProwlarrHistoryPage, ProwlarrHistoryQuery>((ref, query) async {
       return ref
@@ -152,7 +162,7 @@ final prowlarrIndexerByIdProvider =
         if (indexer.id == id) return indexer;
       }
       return null;
-    });
+    }, retry: noProviderRetry);
 
 /// Per-indexer usage statistics resolved from [prowlarrIndexerStatsProvider].
 final prowlarrIndexerStatByIdProvider =
@@ -162,7 +172,7 @@ final prowlarrIndexerStatByIdProvider =
         if (stat.indexerId == id) return stat;
       }
       return null;
-    });
+    }, retry: noProviderRetry);
 
 /// Failure state for a single indexer, or null when it is healthy.
 final prowlarrIndexerStatusByIdProvider =
@@ -172,13 +182,13 @@ final prowlarrIndexerStatusByIdProvider =
         if (status.indexerId == id) return status;
       }
       return null;
-    });
+    }, retry: noProviderRetry);
 
 /// Recent history for a single indexer, filtered server-side.
 final prowlarrIndexerHistoryProvider =
     FutureProvider.family<List<ProwlarrHistoryItem>, int>((ref, id) async {
       return ref.watch(prowlarrServiceProvider).getIndexerHistory(id);
-    });
+    }, retry: noProviderRetry);
 
 /// Configured providers of one kind (apps, download clients, notifications,
 /// indexer proxies).
@@ -187,6 +197,7 @@ final prowlarrProvidersProvider =
       (ref, kind) async {
         return ref.watch(prowlarrServiceProvider).getProviders(kind);
       },
+      retry: noProviderRetry,
     );
 
 /// Implementations that can be added for one kind.
@@ -198,7 +209,7 @@ final prowlarrProviderSchemaProvider = FutureProvider.autoDispose
       kind,
     ) async {
       return ref.watch(prowlarrServiceProvider).getProviderSchema(kind);
-    });
+    }, retry: noProviderRetry);
 
 /// Applications Prowlarr syncs its indexers to.
 final prowlarrApplicationsProvider =
@@ -206,7 +217,7 @@ final prowlarrApplicationsProvider =
       return ref.watch(
         prowlarrProvidersProvider(ProwlarrProviderKind.application).future,
       );
-    });
+    }, retry: noProviderRetry);
 
 /// Download clients, offered per indexer in the edit form.
 final prowlarrDownloadClientsProvider =
@@ -214,26 +225,26 @@ final prowlarrDownloadClientsProvider =
       return ref.watch(
         prowlarrProvidersProvider(ProwlarrProviderKind.downloadClient).future,
       );
-    });
+    }, retry: noProviderRetry);
 
 /// Newznab categories, for the indexer category filter.
 final prowlarrCategoriesProvider = FutureProvider<List<ProwlarrCategory>>((
   ref,
 ) async {
   return ref.watch(prowlarrServiceProvider).getIndexerCategories();
-});
+}, retry: noProviderRetry);
 
 /// Tags with their usage, for the tag manager.
 final prowlarrTagDetailsProvider = FutureProvider<List<ProwlarrTagDetail>>((
   ref,
 ) async {
   return ref.watch(prowlarrServiceProvider).getTagDetails();
-});
+}, retry: noProviderRetry);
 
 /// Tags, used by the indexer filters and the edit form.
 final prowlarrTagsProvider = FutureProvider<List<ProwlarrTag>>((ref) async {
   return ref.watch(prowlarrServiceProvider).getTags();
-});
+}, retry: noProviderRetry);
 
 /// Tag labels by id, so a tile can render names instead of numbers.
 final prowlarrTagLabelsProvider = Provider<Map<int, String>>((ref) {
@@ -249,7 +260,7 @@ final prowlarrAppProfilesProvider = FutureProvider<List<ProwlarrAppProfile>>((
   ref,
 ) async {
   return ref.watch(prowlarrServiceProvider).getAppProfiles();
-});
+}, retry: noProviderRetry);
 
 /// Every definition Prowlarr can add.
 ///
@@ -258,4 +269,4 @@ final prowlarrAppProfilesProvider = FutureProvider<List<ProwlarrAppProfile>>((
 final prowlarrIndexerSchemaProvider =
     FutureProvider.autoDispose<List<ProwlarrIndexer>>((ref) async {
       return ref.watch(prowlarrServiceProvider).getIndexerSchema();
-    });
+    }, retry: noProviderRetry);

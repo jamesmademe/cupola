@@ -3,6 +3,7 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
@@ -46,7 +47,7 @@ final _reportingProvider = FutureProvider.autoDispose
       return ref
           .watch(truenasReportingApiProvider)
           .getGraphs(_graphNames, unit: query.unit);
-    });
+    }, retry: noProviderRetry);
 
 class TrueNasReportingScreen extends ConsumerStatefulWidget {
   const TrueNasReportingScreen({super.key});

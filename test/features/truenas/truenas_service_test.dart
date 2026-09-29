@@ -119,13 +119,25 @@ void main() {
       expect(uri.path, '/api/current');
     });
 
-    test('uses ws for an http base url and defaults the port', () {
+    test('a bare host means https, on the default port', () {
       final uri = TrueNasWsClient(
-        baseUrl: 'http://10.0.0.5',
+        baseUrl: '10.0.0.5',
         apiKey: 'k',
       ).resolveEndpoint();
-      expect(uri.scheme, 'ws');
-      expect(uri.port, 80);
+      expect(uri.scheme, 'wss');
+      expect(uri.port, 443);
+    });
+
+    test('refuses an http base url instead of resolving it to ws', () {
+      // It used to resolve to `ws://10.0.0.5:80`, and the login that followed
+      // sent the API key in cleartext to a server that revokes it for that.
+      for (final url in ['http://10.0.0.5', 'ws://10.0.0.5:8080']) {
+        expect(
+          TrueNasWsClient(baseUrl: url, apiKey: 'k').resolveEndpoint,
+          throwsA(isA<TrueNasInsecureTransportException>()),
+          reason: url,
+        );
+      }
     });
   });
 }

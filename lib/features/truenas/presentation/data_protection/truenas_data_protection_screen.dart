@@ -3,6 +3,7 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
@@ -21,7 +22,7 @@ final truenasProtectionTasksProvider = FutureProvider.autoDispose
     .family<List<TrueNasProtectionTask>, TrueNasTaskKind>((ref, kind) async {
       ref.watch(truenasClientProvider);
       return ref.watch(truenasDataProtectionApiProvider).getTasks(kind);
-    });
+    }, retry: noProviderRetry);
 
 class TrueNasDataProtectionScreen extends ConsumerWidget {
   const TrueNasDataProtectionScreen({super.key});

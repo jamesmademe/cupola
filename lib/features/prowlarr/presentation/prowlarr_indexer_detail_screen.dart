@@ -7,11 +7,14 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_history_format.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 class ProwlarrIndexerDetailScreen extends ConsumerWidget {
   const ProwlarrIndexerDetailScreen({super.key, required this.indexerId});
@@ -20,6 +23,30 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Before any provider: a deep link can land here with Prowlarr not set up,
+    // and the service provider's "not configured" throw would read as "Failed
+    // to load indexer" with a Retry that can never succeed.
+    final configured = ref.watch(
+      currentSettingsProvider.select(
+        (settings) => settings.isServiceConfigured(ServiceKey.prowlarr),
+      ),
+    );
+    if (!configured) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: AppColors.prowlarr.withValues(alpha: 0.12),
+          leading: IconButton(
+            icon: const Icon(Icons.chevron_left_rounded),
+            onPressed: () =>
+                RouteUtils.popOrGo(context, ServiceRoutes.prowlarrIndexers),
+            tooltip: 'Back',
+          ),
+          title: const Text('Indexer'),
+        ),
+        body: NotConfiguredPlaceholder.forService(ServiceKey.prowlarr),
+      );
+    }
+
     final indexerAsync = ref.watch(prowlarrIndexerByIdProvider(indexerId));
 
     return Scaffold(
@@ -99,8 +126,10 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
                 const Text('Failed to load indexer'),
                 const SizedBox(height: AppSpacing.md),
                 FilledButton(
-                  onPressed: () =>
-                      ref.invalidate(prowlarrIndexerByIdProvider(indexerId)),
+                  // The source, not the lookup: `prowlarrIndexerByIdProvider`
+                  // only re-reads the list, so invalidating it alone re-read
+                  // the list's cached failure and the Retry did nothing.
+                  onPressed: () => ref.invalidate(prowlarrIndexersProvider),
                   child: const Text('Retry'),
                 ),
               ],

@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/capability/permission_refusal.dart';
+import 'package:cupola/features/settings/data/service_verification.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 
 import '../../test_helpers/fixtures.dart';
@@ -13,17 +15,27 @@ import '../../test_helpers/fixtures.dart';
 /// A loopback JSON-RPC server standing in for TrueNAS middleware.
 ///
 /// Offline and deterministic — it never leaves the machine — but it is a real
-/// socket, which is the only way to exercise a transport bug: the client owns
-/// its `WebSocket.connect` call, so there is nothing to inject.
+/// socket, which is the only way to exercise a transport bug. It speaks plain
+/// `ws://`: a TLS fixture would put a private key in a public repository. So
+/// the tests that talk to it use [_LoopbackClient], which dials it through the
+/// production upgrade path with only the scheme lowered — and the ones about
+/// the cleartext refusal use the real client, which must never reach it.
 class _FakeMiddleware {
   _FakeMiddleware._(this._server);
 
   final HttpServer _server;
   final List<WebSocket> _sockets = [];
 
+  /// Every HTTP request that reached the server, upgrade or not. Zero is the
+  /// proof that a client refused to dial.
+  int requests = 0;
+
   /// How many times a client completed the WebSocket upgrade — i.e. how many
   /// connections it opened.
   int upgrades = 0;
+
+  /// Every text frame a client sent, verbatim — where an API key would show up.
+  final List<String> frames = [];
 
   /// Methods the server deliberately never answers, simulating a half-open
   /// connection (suspend, Wi-Fi→cellular handoff): the peer is gone but no
@@ -38,7 +50,11 @@ class _FakeMiddleware {
   final Map<String, Object?> errorMethods = {};
 
   int get port => _server.port;
-  String get url => 'http://127.0.0.1:$port';
+
+  /// The address a user would save: `https://`, so the client resolves it to
+  /// `wss://` and passes its own cleartext check before [_LoopbackClient]
+  /// lowers the scheme for the fixture.
+  String get url => 'https://127.0.0.1:$port';
 
   static Future<_FakeMiddleware> start() async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -49,6 +65,7 @@ class _FakeMiddleware {
 
   Future<void> _serve() async {
     await for (final request in _server) {
+      requests++;
       final socket = await WebSocketTransformer.upgrade(request);
       upgrades++;
       _sockets.add(socket);
@@ -62,6 +79,7 @@ class _FakeMiddleware {
 
   void _onFrame(WebSocket socket, dynamic frame) {
     if (frame is! String) return;
+    frames.add(frame);
     final message = jsonDecode(frame) as Map<String, dynamic>;
     final method = message['method'] as String;
     final id = message['id'];
@@ -104,6 +122,60 @@ class _FakeMiddleware {
   }
 }
 
+/// Answers every request with a redirect to [location], counting them.
+class _Redirector {
+  _Redirector._(this._server, this.location);
+
+  final HttpServer _server;
+  final String location;
+  int requests = 0;
+
+  int get port => _server.port;
+
+  static Future<_Redirector> start(String location) async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final redirector = _Redirector._(server, location);
+    unawaited(redirector._serve());
+    return redirector;
+  }
+
+  Future<void> _serve() async {
+    await for (final request in _server) {
+      requests++;
+      request.response
+        ..statusCode = HttpStatus.movedPermanently
+        ..headers.set(HttpHeaders.locationHeader, location);
+      await request.response.close();
+    }
+  }
+
+  Future<void> stop() => _server.close(force: true);
+}
+
+/// The real client, dialling the plain-`ws://` fixture.
+///
+/// Overrides [TrueNasWsClient.dial] and nothing else, and even that only lowers
+/// the scheme before calling the production dialer — so the endpoint
+/// resolution, the cleartext refusal, the redirect guard, the login and the
+/// RPC plumbing under test are all the shipping code.
+class _LoopbackClient extends TrueNasWsClient {
+  _LoopbackClient({
+    required super.baseUrl,
+    super.apiKey = 'key',
+    super.callTimeout,
+  });
+
+  @override
+  Future<WebSocket> dial(Uri endpoint, HttpClient client) {
+    expect(
+      endpoint.scheme,
+      'wss',
+      reason: 'the client resolved a cleartext URL',
+    );
+    return super.dial(endpoint.replace(scheme: 'ws'), client);
+  }
+}
+
 void main() {
   late _FakeMiddleware server;
 
@@ -117,9 +189,8 @@ void main() {
     // dead socket for the rest of the app session, and the 3s dashboard poll
     // stacked a fresh doomed timeout every tick.
     server.silentMethods.add('system.info');
-    final client = TrueNasWsClient(
+    final client = _LoopbackClient(
       baseUrl: server.url,
-      apiKey: 'key',
       callTimeout: const Duration(milliseconds: 300),
     );
     addTearDown(client.close);
@@ -145,9 +216,8 @@ void main() {
 
   test('in-flight calls fail when the connection is dropped', () async {
     server.silentMethods.addAll({'a.slow', 'b.slow'});
-    final client = TrueNasWsClient(
+    final client = _LoopbackClient(
       baseUrl: server.url,
-      apiKey: 'key',
       callTimeout: const Duration(milliseconds: 300),
     );
     addTearDown(client.close);
@@ -165,9 +235,8 @@ void main() {
     // slow call would churn the socket for no reason.
     server.silentMethods.add('very.slow');
     server.delayedMethods['keepalive'] = const Duration(milliseconds: 400);
-    final client = TrueNasWsClient(
+    final client = _LoopbackClient(
       baseUrl: server.url,
-      apiKey: 'key',
       callTimeout: const Duration(seconds: 1),
     );
     addTearDown(client.close);
@@ -189,7 +258,7 @@ void main() {
       server.errorMethods[method] = jsonFixtureMap(
         'truenas/$fixture.json',
       )['error'];
-      final client = TrueNasWsClient(baseUrl: server.url, apiKey: 'key');
+      final client = _LoopbackClient(baseUrl: server.url);
       addTearDown(client.close);
       return client
           .call(method)
@@ -231,6 +300,129 @@ void main() {
         'rpc_error_eperm_service',
       );
       expect((error as TrueNasException).forbidden, isFalse);
+    });
+  });
+
+  group('the API key never travels in cleartext', () {
+    const secret = 'truenas-secret-key';
+
+    // TrueNAS 25.04+ revokes a key that logs in over an insecure transport, so
+    // the regression is not "the key was visible on the wire" but "the first
+    // attempt destroyed it". The only acceptable number of requests is zero.
+    for (final scheme in ['http', 'ws', 'HTTP']) {
+      test(
+        'a $scheme:// address is refused before anything is dialled',
+        () async {
+          final client = TrueNasWsClient(
+            baseUrl: '$scheme://127.0.0.1:${server.port}',
+            apiKey: secret,
+          );
+          addTearDown(client.close);
+
+          final error = await client
+              .call('core.ping')
+              .then<Object>((_) => 'answered', onError: (Object e) => e);
+
+          expect(error, isA<TrueNasInsecureTransportException>());
+          expect(server.requests, 0);
+          expect(server.frames, isEmpty);
+
+          // Asking again is refused the same way: no state left half-set by the
+          // first attempt lets a second one through.
+          await expectLater(
+            client.call('pool.query'),
+            throwsA(isA<TrueNasInsecureTransportException>()),
+          );
+          expect(server.requests, 0);
+        },
+      );
+    }
+
+    test('the refusal names the fix, and nothing probes the address', () {
+      const error = TrueNasInsecureTransportException();
+
+      expect(classifyConnectionFailure(error), ServiceFailureReason.notFound);
+      expect(connectionFailureDetail(error), contains('https://'));
+      expect(error.toString(), isNot(contains('not configured')));
+      // `notFound` is chosen for these two: a certificate probe or a local
+      // network probe would dial the address the client just refused to dial.
+      expect(certProbeWorthwhile(ServiceFailureReason.notFound), isFalse);
+      expect(localNetworkCouldExplain(ServiceFailureReason.notFound), isFalse);
+    });
+
+    test('the connection test reports it, and sends nothing', () async {
+      final diagnosis = await diagnoseCredentials(
+        ServiceKey.truenas,
+        url: 'http://127.0.0.1:${server.port}',
+        apiKey: secret,
+      );
+
+      expect(diagnosis.isDisconnected, isTrue);
+      expect(diagnosis.reason, ServiceFailureReason.notFound);
+      expect(
+        diagnosis.messageFor(ServiceKey.truenas),
+        const TrueNasInsecureTransportException().failureDetail,
+      );
+      expect(server.requests, 0);
+    });
+
+    test('over https the key is sent, once, in the login frame', () async {
+      // The positive control for the counters above: the same fixture does see
+      // the key when the address is allowed to carry it.
+      final client = _LoopbackClient(baseUrl: server.url, apiKey: secret);
+      addTearDown(client.close);
+
+      expect(await client.call('core.ping'), 'ok');
+      final carrying = server.frames.where((f) => f.contains(secret)).toList();
+      expect(carrying, hasLength(1));
+      expect(
+        (jsonDecode(carrying.single) as Map<String, dynamic>)['method'],
+        'auth.login_with_api_key',
+      );
+    });
+
+    test('a redirect on the upgrade is refused, not followed', () async {
+      // `dart:io` follows a redirect on the upgrade GET, and the login frame
+      // then goes to whatever answered 101 at the end of the chain — here a
+      // cleartext socket on another port, after the scheme check had passed.
+      final redirector = await _Redirector.start(
+        'http://127.0.0.1:${server.port}/api/current',
+      );
+      addTearDown(redirector.stop);
+      final client = _LoopbackClient(
+        baseUrl: 'https://127.0.0.1:${redirector.port}',
+        apiKey: secret,
+      );
+      addTearDown(client.close);
+
+      await expectLater(
+        client.call('core.ping'),
+        throwsA(
+          isA<TrueNasException>().having(
+            (e) => e.reason,
+            'reason',
+            ServiceFailureReason.redirected,
+          ),
+        ),
+      );
+      expect(redirector.requests, 1);
+      expect(server.requests, 0);
+      expect(server.frames, isEmpty);
+    });
+
+    test('control: without the guard dart:io does follow it', () async {
+      // Proves the test above is not passing on a quirk of the fixture: a bare
+      // `WebSocket.connect` walks straight through the same redirect.
+      final redirector = await _Redirector.start(
+        'http://127.0.0.1:${server.port}/api/current',
+      );
+      addTearDown(redirector.stop);
+
+      final socket = await WebSocket.connect(
+        'ws://127.0.0.1:${redirector.port}/api/current',
+      );
+      addTearDown(socket.close);
+      expect(server.upgrades, 1);
     });
   });
 }

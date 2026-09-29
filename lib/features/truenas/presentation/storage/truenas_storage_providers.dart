@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/truenas/domain/models/pool.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 
@@ -9,11 +10,11 @@ final truenasPoolsProvider = FutureProvider.autoDispose<List<TrueNasPool>>((
 ) async {
   ref.watch(truenasClientProvider);
   return ref.watch(truenasStorageApiProvider).getPools();
-});
+}, retry: noProviderRetry);
 
 /// A single pool including topology, by name.
 final truenasPoolProvider = FutureProvider.autoDispose
     .family<TrueNasPool?, String>((ref, name) async {
       ref.watch(truenasClientProvider);
       return ref.watch(truenasStorageApiProvider).getPool(name);
-    });
+    }, retry: noProviderRetry);

@@ -191,7 +191,9 @@ Future<void> syncAppIndexersFlow(BuildContext context, WidgetRef ref) async {
       await Future<void>.delayed(const Duration(seconds: 1));
       command = await service.getCommand(queued.id);
     }
-    ref.invalidate(prowlarrApplicationsProvider);
+    // The source list, which the Apps screen reads directly: invalidating
+    // `prowlarrApplicationsProvider` alone only re-read its cached answer.
+    ref.invalidate(prowlarrProvidersProvider(ProwlarrProviderKind.application));
     if (!context.mounted) return;
 
     if (command.isFailed) {

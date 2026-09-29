@@ -19,6 +19,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
@@ -332,7 +333,7 @@ final prowlarrOverviewAttentionProvider =
         health,
         now: DateTime.now(),
       );
-    });
+    }, retry: noProviderRetry);
 
 /// The Overview's second region: the indexer table over
 /// [prowlarrStatsWindow].
@@ -342,11 +343,11 @@ final prowlarrOverviewIndexersProvider =
       final stats = await ref.watch(prowlarrIndexerStatsProvider.future);
       final statuses = await ref.watch(prowlarrIndexerStatusProvider.future);
       return prowlarrIndexerRows(indexers, stats, statuses);
-    });
+    }, retry: noProviderRetry);
 
 /// The Overview's third region: what happened lately.
 final prowlarrOverviewRecentProvider =
     FutureProvider.autoDispose<List<ProwlarrOverviewRow>>((ref) async {
       final page = await ref.watch(prowlarrRecentHistoryProvider.future);
       return prowlarrRecentRows(page.records, now: DateTime.now());
-    });
+    }, retry: noProviderRetry);

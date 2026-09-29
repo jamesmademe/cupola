@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/data/apps_api.dart';
@@ -27,6 +28,23 @@ import 'package:cupola/features/truenas/domain/truenas_version.dart';
 ///
 /// Moving the lens tears the socket down and opens another, which is exactly
 /// what editing the address already did.
+///
+/// ## Retry: none, anywhere in this feature
+///
+/// Every TrueNAS provider — this one, [truenasClientForProvider] and each
+/// `FutureProvider` under `presentation/` — carries `retry: noProviderRetry`.
+/// Riverpod's default re-runs a failed build ten times over roughly forty
+/// seconds, and for all of that time the provider reports *loading*, so a NAS
+/// that went dark drew a skeleton that never resolved instead of the offline
+/// well and its Retry. A section's own poll made it worse: each tick
+/// invalidated the provider, which cancelled the pending retry and started the
+/// count again, so the error state was never reached at all. Retrying is the
+/// user's call here: every well offers Retry and pull-to-refresh, and both
+/// invalidate the provider that failed. Nothing here derives from another
+/// `FutureProvider`, so a Retry always re-runs the call that failed.
+///
+/// The client throws "not configured" from this build, and would be retried
+/// for it like any other `Exception` — for a condition no waiting changes.
 final truenasClientProvider = Provider<TrueNasWsClient>((ref) {
   final transport = watchTransport(ref, ServiceKey.truenas);
   if (!transport.configured) {
@@ -39,7 +57,7 @@ final truenasClientProvider = Provider<TrueNasWsClient>((ref) {
   );
   ref.onDispose(client.close);
   return client;
-});
+}, retry: noProviderRetry);
 
 /// TrueNAS client bound to one configured connection id.
 ///
@@ -56,7 +74,7 @@ final truenasClientForProvider = Provider.family<TrueNasWsClient, String>((
     return ref.watch(truenasClientProvider);
   }
   return _truenasClient(ref, instanceId: instanceId);
-});
+}, retry: noProviderRetry);
 
 TrueNasWsClient _truenasClient(Ref ref, {required String? instanceId}) {
   final transport = watchTransport(
@@ -131,11 +149,11 @@ final truenasVersionProvider = FutureProvider.autoDispose<TrueNasVersion?>((
 ) async {
   final raw = await ref.watch(truenasSystemApiProvider).getVersion();
   return TrueNasVersion.parse(raw);
-});
+}, retry: noProviderRetry);
 
 /// The dashboard snapshot (system, pools, alerts, services).
 final truenasDashboardProvider = FutureProvider.autoDispose((ref) async {
   // Keep the client alive for the life of this fetch.
   ref.watch(truenasClientProvider);
   return ref.watch(truenasServiceProvider).loadDashboard();
-});
+}, retry: noProviderRetry);

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
 
@@ -83,6 +86,57 @@ void main() {
 
       expect(find.byType(ServiceOfflineState), findsOneWidget);
       expect(find.byType(AppErrorState), findsNothing);
+    });
+
+    testWidgets('an http:// address asks for https, and offers no Retry', (
+      tester,
+    ) async {
+      // The client refused to send the key, so a Retry could only be refused
+      // again: the one action is the settings page where the address lives.
+      String? landedOn;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => Scaffold(
+              body: TrueNasAsyncBody<String>(
+                value: AsyncValue.error(
+                  const TrueNasInsecureTransportException(),
+                  StackTrace.empty,
+                ),
+                onRetry: () {},
+                data: (d) => Text(d),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/settings/service/:service',
+            builder: (_, state) {
+              landedOn = state.uri.path;
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(child: MaterialApp.router(routerConfig: router)),
+      );
+      await tester.pump();
+
+      expect(find.text('TrueNAS needs https://'), findsOneWidget);
+      expect(
+        find.text(TrueNasInsecureTransportException.explanation),
+        findsOneWidget,
+      );
+      expect(find.text('Retry'), findsNothing);
+      expect(find.byType(AppErrorState), findsNothing);
+      expect(find.byType(ServiceOfflineState), findsNothing);
+      expect(find.byType(NotConfiguredPlaceholder), findsNothing);
+
+      await tester.tap(find.text('Open Settings'));
+      await tester.pumpAndSettle();
+      expect(landedOn, ServiceRoutes.settingsFor(ServiceKey.truenas));
     });
 
     testWidgets('a TLS refusal is the same fact as an unreachable host', (

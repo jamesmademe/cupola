@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 
 /// The connection well every TrueNAS section reads its failures through.
 ///
@@ -28,13 +32,17 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// *inside* a body this widget already resolved, so their sibling provider
 /// cannot reach a state the parent did not.
 ///
-/// Three outcomes, in the order they are tested:
+/// Four outcomes, in the order they are tested:
 ///
 ///  * **not configured** → [NotConfiguredPlaceholder.forService], which
 ///    deep-links to TrueNAS's own settings page rather than the Settings root.
 ///    [AsyncValueWidget] reaches the same state by string-matching the throw,
 ///    but only in its generic form, which lands the user on `/settings` and
 ///    leaves them to find the service.
+///  * **an `http://` address** ([TrueNasInsecureTransportException]) → a well
+///    that says TrueNAS needs https:// and opens its settings. Amber: it is a
+///    fault with one fix, in the form. It has no Retry, because retrying the
+///    same address can only be refused again — the client never dials it.
 ///  * **the host did not answer** ([ServiceFailureReason.unreachable],
 ///    [ServiceFailureReason.timeout], [ServiceFailureReason.tls],
 ///    [ServiceFailureReason.localNetworkBlocked]) → [ServiceOfflineState]. Red
@@ -92,6 +100,8 @@ class TrueNasAsyncBody<T> extends StatelessWidget {
     final Widget well;
     if (failure == _TrueNasWell.notConfigured) {
       well = NotConfiguredPlaceholder.forService(ServiceKey.truenas);
+    } else if (failure == _TrueNasWell.needsHttps) {
+      well = const _NeedsHttps();
     } else if (failure == _TrueNasWell.offline) {
       well = ServiceOfflineState(
         serviceName: ServiceKey.truenas.title,
@@ -141,6 +151,12 @@ class TrueNasAsyncBody<T> extends StatelessWidget {
     if (error.toString().contains('not configured')) {
       return _TrueNasWell.notConfigured;
     }
+    // Before the reason switch: it reports `notFound` only because the enum has
+    // no word for it, and the generic error card would offer a Retry that the
+    // client is bound to refuse.
+    if (error is TrueNasInsecureTransportException) {
+      return _TrueNasWell.needsHttps;
+    }
     if (error is! HasFailureReason) return null;
     return switch (error.reason) {
       ServiceFailureReason.unreachable ||
@@ -155,4 +171,32 @@ class TrueNasAsyncBody<T> extends StatelessWidget {
   }
 }
 
-enum _TrueNasWell { notConfigured, offline }
+enum _TrueNasWell { notConfigured, needsHttps, offline }
+
+/// The address is `http://`, and the client refused to send the API key over
+/// it (see [TrueNasInsecureTransportException]).
+///
+/// The one action is the fix: TrueNAS's own settings page, where the address
+/// is edited and the connection test offers to trust a self-signed certificate.
+class _NeedsHttps extends StatelessWidget {
+  const _NeedsHttps();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return AppEmptyState(
+      icon: Icons.no_encryption_outlined,
+      // A fault the user can fix, so the tone rule's amber — never red, which
+      // is kept for a host that did not answer; this one was never asked.
+      accentColor: statusToneColor(colorScheme, StatusTone.warning),
+      title: 'TrueNAS needs https://',
+      message: TrueNasInsecureTransportException.explanation,
+      action: FilledButton.tonalIcon(
+        onPressed: () =>
+            context.go(ServiceRoutes.settingsFor(ServiceKey.truenas)),
+        icon: const Icon(Icons.settings_outlined, size: 18),
+        label: const Text('Open Settings'),
+      ),
+    );
+  }
+}

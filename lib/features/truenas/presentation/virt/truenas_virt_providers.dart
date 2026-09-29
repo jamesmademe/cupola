@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/truenas/domain/models/virt_instance.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 
@@ -7,23 +8,23 @@ final truenasVirtGlobalProvider =
     FutureProvider.autoDispose<TrueNasVirtGlobalConfig>((ref) async {
       ref.watch(truenasClientProvider);
       return ref.watch(truenasVirtApiProvider).getGlobalConfig();
-    });
+    }, retry: noProviderRetry);
 
 /// Instances filtered by type (`CONTAINER` or `VM`).
 final truenasVirtInstancesProvider = FutureProvider.autoDispose
     .family<List<TrueNasVirtInstance>, String>((ref, type) async {
       ref.watch(truenasClientProvider);
       return ref.watch(truenasVirtApiProvider).getInstances(type);
-    });
+    }, retry: noProviderRetry);
 
 final truenasVirtInstanceProvider = FutureProvider.autoDispose
     .family<TrueNasVirtInstance?, String>((ref, id) async {
       ref.watch(truenasClientProvider);
       return ref.watch(truenasVirtApiProvider).getInstance(id);
-    });
+    }, retry: noProviderRetry);
 
 final truenasVirtDevicesProvider = FutureProvider.autoDispose
     .family<List<TrueNasVirtDevice>, String>((ref, id) async {
       ref.watch(truenasClientProvider);
       return ref.watch(truenasVirtApiProvider).getDevices(id);
-    });
+    }, retry: noProviderRetry);
