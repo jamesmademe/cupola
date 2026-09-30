@@ -78,12 +78,14 @@ void main() {
   });
 
   testWidgets(
-    'an unreachable Readarr reads Unreachable, and its version is —',
+    'an unreachable Readarr reads Did not answer, and its version is —',
     (tester) async {
       await _pump(tester, service: _scripted(), version: null);
 
       expect(
-        find.semantics.byLabel('Readarr, readarr.local:8787, —, Unreachable'),
+        find.semantics.byLabel(
+          'Readarr, readarr.local:8787, —, Did not answer',
+        ),
         findsOneWidget,
       );
     },

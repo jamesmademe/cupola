@@ -110,7 +110,7 @@ void main() {
       // The failing services are grouped by the state they are in and named,
       // and the state is spelled exactly as `describeConnection` spells it.
       expect(find.text('Radarr'), findsOneWidget);
-      expect(find.text('API key rejected'), findsOneWidget);
+      expect(find.text('Refused the key'), findsOneWidget);
     });
 
     testWidgets('tapping a promoted failure opens that service', (
@@ -170,7 +170,7 @@ void main() {
         // itself is still spoken, because on screen it is carried by a glyph
         // and a tint and nothing else.
         expect(
-          find.semantics.byLabel('Radarr, Unreachable'),
+          find.semantics.byLabel('Radarr, Did not answer'),
           containsSemantics(
             isButton: true,
             hasTapAction: true,

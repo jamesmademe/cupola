@@ -86,16 +86,17 @@ void main() {
     expect(find.text('Online'), findsNothing);
   });
 
-  testWidgets('an unreachable Bazarr reads Unreachable, and its version is —', (
-    tester,
-  ) async {
-    await _pump(tester, service: FakeBazarrService(), version: null);
+  testWidgets(
+    'an unreachable Bazarr reads Did not answer, and its version is —',
+    (tester) async {
+      await _pump(tester, service: FakeBazarrService(), version: null);
 
-    expect(
-      find.semantics.byLabel('Bazarr, bazarr.local, —, Unreachable'),
-      findsOneWidget,
-    );
-  });
+      expect(
+        find.semantics.byLabel('Bazarr, bazarr.local, —, Did not answer'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('a wanted row is spoken as a sentence, and reads as backlog', (
     tester,

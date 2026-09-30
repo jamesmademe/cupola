@@ -6,9 +6,46 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/truenas/domain/truenas_version.dart';
 
 void main() {
+  group('transportWarningFor', () {
+    test('a TrueNAS address over http:// is refused while it is typed', () {
+      expect(
+        transportWarningFor(ServiceKey.truenas, 'http://nas.home.arpa'),
+        const TrueNasInsecureTransportException().failureDetail,
+      );
+      expect(
+        transportWarningFor(ServiceKey.truenas, 'ws://192.168.1.10'),
+        isNotNull,
+      );
+      expect(
+        transportWarningFor(ServiceKey.truenas, 'https://nas.home.arpa'),
+        isNull,
+      );
+    });
+
+    test('SABnzbd off the local network names the key in the address', () {
+      expect(
+        transportWarningFor(ServiceKey.sabnzbd, 'http://sab.example.net:8080'),
+        contains('API key inside the address'),
+      );
+      // On the local network http:// is a supported setup, for SABnzbd too.
+      expect(
+        transportWarningFor(ServiceKey.sabnzbd, 'http://192.168.1.20:8080'),
+        isNull,
+      );
+    });
+
+    test('every other service leaves it to the general warning', () {
+      expect(
+        transportWarningFor(ServiceKey.radarr, 'http://radarr.example.net'),
+        isNull,
+      );
+    });
+  });
+
   group('describeServerVersion', () {
     test('says nothing when the server named nothing', () {
       expect(describeServerVersion(ServiceKey.truenas, null), isNull);
@@ -108,11 +145,9 @@ void main() {
       // of a reply, which is the only state the user cannot act on from the
       // form. A timeout is reached-then-silent and a 5xx is the service
       // talking — both used to be red, which put "your server is busy" beside
-      // "no route to host".
-      const red = {
-        ServiceFailureReason.unreachable,
-        ServiceFailureReason.unknown,
-      };
+      // "no route to host". A failure nobody can attribute is amber too: it is
+      // no evidence that the host is silent.
+      const red = {ServiceFailureReason.unreachable};
       for (final reason in ServiceFailureReason.values) {
         final presentation = describeConnection(
           ServiceKey.radarr,
@@ -125,6 +160,51 @@ void main() {
           reason: '$reason',
         );
       }
+    });
+
+    test('red reads "Did not answer", and a refusal says what it refused', () {
+      final silent = describeConnection(
+        ServiceKey.radarr,
+        status: ServiceConnectionStatus.disconnected,
+        reason: ServiceFailureReason.unreachable,
+      );
+      expect(silent.label, 'Did not answer');
+
+      String refused(ServiceKey service) => describeConnection(
+        service,
+        status: ServiceConnectionStatus.disconnected,
+        reason: ServiceFailureReason.unauthorized,
+      ).label;
+      expect(refused(ServiceKey.radarr), 'Refused the key');
+      expect(refused(ServiceKey.plex), 'Refused the token');
+      expect(refused(ServiceKey.qbittorrent), 'Refused the sign-in');
+    });
+
+    test('describeFailure names who, and the remedy the form holds', () {
+      final refused = describeFailure(
+        ServiceKey.radarr,
+        ServiceFailureReason.unauthorized,
+        subject: 'Radarr 4K',
+      );
+      expect(refused.headline, 'Radarr 4K answered but refused the key');
+      expect(refused.remedy, 'Paste the key again');
+      expect(refused.tone, StatusTone.warning);
+      expect(refused.didNotAnswer, isFalse);
+
+      final signIn = describeFailure(
+        ServiceKey.qbittorrent,
+        ServiceFailureReason.unauthorized,
+      );
+      expect(signIn.headline, 'qBittorrent answered but refused the sign-in');
+      expect(signIn.remedy, 'Sign in again');
+
+      final silent = describeFailure(
+        ServiceKey.jellyfin,
+        ServiceFailureReason.unreachable,
+      );
+      expect(silent.headline, 'Jellyfin did not answer');
+      expect(silent.remedy, isNull, reason: 'Retry is the remedy');
+      expect(silent.tone, StatusTone.error);
     });
 
     test('the failure vocabulary never says "slow"', () {

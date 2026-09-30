@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -189,7 +192,13 @@ class GlobalSearchServiceResults {
   ///   to this network — and red here sends the user auditing settings that are
   ///   already correct. Same argument `describeConnection` makes.
   factory GlobalSearchServiceResults.fault(SearchLeg leg, Object? error) {
-    final reason = classifyConnectionFailure(error);
+    // The lane's own deadline is the one bare timeout whose meaning is known:
+    // the search itself ran long on a server the rest of the app reaches. The
+    // shared classifier reads a bare deadline as "did not answer", because in
+    // general it cannot tell; here the lane can, so it says timed out.
+    final reason = error is TimeoutException
+        ? ServiceFailureReason.timeout
+        : classifyConnectionFailure(error);
     return GlobalSearchServiceResults(
       leg: leg,
       state: switch (reason) {
@@ -236,7 +245,9 @@ class GlobalSearchServiceResults {
     SearchLaneState.answered =>
       '${results.length} result${results.length == 1 ? '' : 's'}',
     SearchLaneState.timedOut => 'Did not answer in time',
-    SearchLaneState.unreachable => 'Unreachable',
+    SearchLaneState.unreachable => failureLabel(
+      ServiceFailureReason.unreachable,
+    ),
     SearchLaneState.failed => _failureWord,
   };
 
@@ -260,17 +271,14 @@ class GlobalSearchServiceResults {
   /// The words this app already uses for each refusal, so the search screen and
   /// the settings rows cannot describe one failure two different ways.
   String get _failureWord => switch (reason) {
-    ServiceFailureReason.unauthorized =>
-      service.usesApiKey ? 'API key rejected' : 'Sign-in rejected',
-    ServiceFailureReason.notFound => 'API not at this address',
-    ServiceFailureReason.redirected => 'Redirected elsewhere',
-    ServiceFailureReason.tls => 'Certificate not trusted',
-    ServiceFailureReason.localNetworkBlocked => 'Local network blocked',
-    ServiceFailureReason.serverError => 'Answered with an error',
     // Reached, failed, and nothing in the exception says why. Deliberately not
-    // "unreachable": claiming the box is off on the strength of an error nobody
-    // could read is the same lie one tone louder.
-    _ => 'Search failed',
+    // "did not answer": claiming the box is off on the strength of an error
+    // nobody could read is the same lie one tone louder.
+    null || ServiceFailureReason.unknown => 'Search failed',
+    final reason => failureLabel(
+      reason,
+      credential: refusedCredentialOf(service),
+    ),
   };
 }
 
@@ -313,7 +321,7 @@ String? searchLaneCensus(List<GlobalSearchServiceResults> lanes) {
     '$answered answered',
     if (searching > 0) '$searching still searching',
     if (timedOut > 0) '$timedOut timed out',
-    if (unreachable > 0) '$unreachable unreachable',
+    if (unreachable > 0) '$unreachable did not answer',
     if (failed > 0) '$failed failed',
   ].join(' · ');
 }

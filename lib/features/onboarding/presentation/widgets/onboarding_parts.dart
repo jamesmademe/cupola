@@ -1041,7 +1041,11 @@ class _OnboardingFieldState extends State<OnboardingField> {
     // network is a warning rather than an error: it is a supported choice, just
     // one worth naming — along with the routes that avoid it.
     final error = raw.trim().isEmpty ? null : UrlUtils.validateServiceHost(raw);
-    final warning = error == null ? _addressWarning(raw) : null;
+    // The service's own reason about the scheme wins over the general one: a
+    // TrueNAS address over http:// is refused, not merely risky.
+    final warning = error == null
+        ? (widget.warningFor?.call(raw) ?? _addressWarning(raw))
+        : null;
     if (error == _error && warning == _warning) return;
     setState(() {
       _error = error;

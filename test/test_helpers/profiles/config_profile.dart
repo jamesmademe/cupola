@@ -51,7 +51,9 @@ enum ConnectionBehaviour {
 
   /// The host never completes the handshake: `SocketException('Connection
   /// timed out')`, which Dio reports as `connectionTimeout`. Raised at once,
-  /// so a test never waits out a real deadline.
+  /// so a test never waits out a real deadline. The app classifies it as did
+  /// not answer, like [didNotAnswer]: the connection never completed. A
+  /// server reached and then slow is `withLatency` past the app's deadline.
   timesOut,
 
   /// The server answers and refuses the credential, each service in its own

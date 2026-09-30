@@ -4,6 +4,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 
 /// A premium error state with an optional retry affordance.
 ///
@@ -32,14 +33,20 @@ import 'package:cupola/core/widgets/status_badge.dart';
 ///
 /// ## Tone follows the cause
 ///
-/// Red only when nothing answered (or the failure cannot be attributed). A host
-/// that answered — a rejected key, a 5xx, a timeout, a certificate — is a
-/// **fault**, amber, because there is one concrete thing to go and fix; the
-/// split is [failureIsFault], the same one `describeConnection` makes.
+/// Red only when nothing answered. A host that answered — a refused key, a
+/// 5xx, a timeout after connecting, a reply nobody can read, a certificate — is
+/// a **fault**, amber, because there is one concrete thing to go and fix; and
+/// so is a failure nobody can attribute, because "did not answer" is a claim
+/// about the host that nothing supports. The split is [failureTone], the same
+/// one every other failure surface makes.
+///
+/// The state is said in words as well as tone: the classified label (`Did not
+/// answer`, `Refused the key`) sits under the headline in the state's tone,
+/// which is the one place the tone reaches text. There is **no well** behind
+/// the glyph — the brand book's Presence Rule: a fault is a quiet line, and a
+/// red fill is the disease drawn as chrome. The glyph alone carries the tone,
+/// measured against the ground it sits on.
 class AppErrorState extends StatelessWidget {
-  /// How strongly an amber well is washed over the surface.
-  static const double _faultWellAlpha = 0.16;
-
   final Object error;
   final VoidCallback? onRetry;
   final bool compact;
@@ -68,28 +75,10 @@ class AppErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final tone = failureIsFault(classifyConnectionFailure(error))
-        ? StatusTone.warning
-        : StatusTone.error;
-    // Red keeps its `error-container` well; amber gets its own tone as a wash,
-    // and each glyph is walked against the well it actually sits on.
-    final Color well;
-    final Color glyph;
-    if (tone == StatusTone.error) {
-      well = colorScheme.errorContainer;
-      glyph = statusToneColor(colorScheme, tone, surface: well);
-    } else {
-      well = Color.alphaBlend(
-        statusToneFill(colorScheme, tone).withValues(alpha: _faultWellAlpha),
-        colorScheme.surface,
-      );
-      glyph = statusToneColor(
-        colorScheme,
-        tone,
-        surface: colorScheme.surface,
-        tintAlpha: _faultWellAlpha,
-      );
-    }
+    final reason = classifyConnectionFailure(error);
+    // Walked against the ground the glyph and the label actually sit on: the
+    // page, with nothing behind them.
+    final toneInk = statusToneColor(colorScheme, failureTone(reason));
 
     return Center(
       child: Padding(
@@ -97,21 +86,23 @@ class AppErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(color: well, shape: BoxShape.circle),
-              child: Icon(
-                Icons.error_outline_rounded,
-                size: compact ? 26 : 32,
-                color: glyph,
-              ),
-            ),
+            Icon(failureIcon(reason), size: compact ? 26 : 32, color: toneInk),
             const SizedBox(height: AppSpacing.lg),
             Text(
               serviceName == null
                   ? "Couldn't load this"
                   : "Couldn't load $serviceName",
               style: theme.textTheme.titleMedium!.weight(FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            // The state in its tone: the one word on this leaf that is red,
+            // and only when nothing answered.
+            Text(
+              failureLabel(reason),
+              style: theme.textTheme.labelMedium
+                  ?.weight(FontWeight.w600)
+                  .copyWith(color: toneInk),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.xs),

@@ -72,16 +72,17 @@ void main() {
     expect(find.text('Online'), findsNothing);
   });
 
-  testWidgets('an unreachable NZBGet reads Unreachable, and its version is —', (
-    tester,
-  ) async {
-    await _pump(tester, online: false);
+  testWidgets(
+    'an unreachable NZBGet reads Did not answer, and its version is —',
+    (tester) async {
+      await _pump(tester, online: false);
 
-    expect(
-      find.semantics.byLabel('NZBGet, nzbget.local:6789, —, Unreachable'),
-      findsOneWidget,
-    );
-  });
+      expect(
+        find.semantics.byLabel('NZBGet, nzbget.local:6789, —, Did not answer'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('a queue row is spoken as one sentence', (tester) async {
     await _pump(

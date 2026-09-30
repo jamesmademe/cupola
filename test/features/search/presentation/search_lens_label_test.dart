@@ -105,7 +105,7 @@ void main() {
       ), const SocketException('no route to host'));
       expect(lane.state, SearchLaneState.unreachable);
       expect(lane.state.tone, StatusTone.error);
-      expect(lane.stateWord, 'Unreachable');
+      expect(lane.stateWord, 'Did not answer');
     });
 
     test('a refusal is a fault, not an outage', () {
@@ -125,7 +125,7 @@ void main() {
       expect(lane.state, SearchLaneState.failed);
       expect(lane.state.tone, StatusTone.warning);
       expect(lane.reason, ServiceFailureReason.unauthorized);
-      expect(lane.stateWord, 'API key rejected');
+      expect(lane.stateWord, 'Refused the key');
     });
 
     test('an answered lane counts, wears no pip and offers no Retry', () {
@@ -184,7 +184,7 @@ void main() {
       // is down.
       expect(
         searchLaneCensus([_lane(_fourK, state: SearchLaneState.unreachable)]),
-        '1 connection asked · 0 answered · 1 unreachable',
+        '1 connection asked · 0 answered · 1 did not answer',
       );
     });
   });

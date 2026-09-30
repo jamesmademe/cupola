@@ -90,10 +90,12 @@ void main() {
       );
     await _pump(tester, api);
 
-    expect(find.text('Radarr: API key rejected'), findsOneWidget);
+    expect(find.text('Radarr answered but refused the key'), findsOneWidget);
     expect(find.text('Radarr did not answer'), findsNothing);
     expect(
-      find.text('Reached Radarr, which rejected the API key.'),
+      find.text(
+        "Radarr answered, and does not accept this API key. Copy it again from Radarr's own settings.",
+      ),
       findsOneWidget,
     );
   });

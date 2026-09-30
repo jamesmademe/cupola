@@ -383,6 +383,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
         label: 'Address',
         controller: widget.urlController,
         isUrl: true,
+        warningFor: (raw) => transportWarningFor(service, raw),
         focusNode: _address,
         action: TextInputAction.next,
         onSubmitted: (_) => _pass(_credential),

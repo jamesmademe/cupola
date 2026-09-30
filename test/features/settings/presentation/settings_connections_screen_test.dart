@@ -185,9 +185,9 @@ void main() {
         diagnosis: ServiceDiagnosis.failed(_UnauthorizedFailure()),
       );
 
-      expect(find.text('API key rejected · radarr.local:7878'), findsOneWidget);
+      expect(find.text('Refused the key · radarr.local:7878'), findsOneWidget);
       expect(
-        find.semantics.byLabel('Radarr, API key rejected, radarr.local:7878'),
+        find.semantics.byLabel('Radarr, Refused the key, radarr.local:7878'),
         findsOneWidget,
       );
     });

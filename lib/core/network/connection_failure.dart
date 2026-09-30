@@ -3,17 +3,33 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
+import 'package:cupola/core/status/media_status.dart';
+
 /// Why a connection attempt failed.
 ///
 /// A bare "disconnected" cannot tell a wrong address apart from rejected
 /// credentials, which leaves the user with a single generic "could not
 /// connect" message and nothing to act on. This classifies the failure so the
 /// UI can name the actual cause.
+///
+/// ## Red is one reason
+///
+/// [unreachable] is the only reason nothing replied, and the only one painted
+/// red ([failureTone]). Every other reason is something that *answered* — a
+/// refusal, a 5xx, a reply nobody can read, a timeout after the connection was
+/// made — or a request the device itself would not send, and each of those is
+/// a **fault**: amber, with one concrete thing to go and fix. A surface decides
+/// nothing about tone or words on its own; it asks [failureTone],
+/// [failureLabel], [failureHeadline] and [failureRemedy].
 enum ServiceFailureReason {
-  /// The host never answered: DNS failure, connection refused, no route.
+  /// Nothing replied at the address: DNS failure, connection refused, no
+  /// route, a connection that never completed (Dio's connect timeout), or a
+  /// deadline that passed with no reply and no proof the host was ever reached.
   unreachable,
 
-  /// Reached the host, but it did not answer within the timeout.
+  /// Reached the host, then it did not answer within the timeout. Only a
+  /// timeout that proves the connection was made lands here — Dio's send and
+  /// receive timeouts, or a client that knows it was talking to the server.
   timeout,
 
   /// The TLS handshake failed — untrusted, expired or mismatched certificate.
@@ -40,6 +56,19 @@ enum ServiceFailureReason {
   /// The service answered with a 5xx.
   serverError,
 
+  /// Something answered, with a body nobody can read: not JSON where JSON was
+  /// asked for — typically a reverse proxy's HTML page.
+  invalidResponse,
+
+  /// The request was refused before it left the device because the address
+  /// would carry the credential in cleartext: an `http://` TrueNAS, whose key
+  /// the server revokes on sight when it arrives that way.
+  ///
+  /// Amber, and never red: nothing failed to answer, because nothing was
+  /// dialled. And never a certificate or local-network question either — both
+  /// probes would dial the very address this refused to dial.
+  insecureTransport,
+
   /// The host OS refused to let Cupola onto the local network at all, so the
   /// request never left the device.
   ///
@@ -51,7 +80,11 @@ enum ServiceFailureReason {
   /// because the address the user is being told to check was never dialled.
   localNetworkBlocked,
 
-  /// Reached, failed, and the cause cannot be attributed.
+  /// Reached, failed, and the cause cannot be attributed — a 4xx no other
+  /// reason covers, an error a client raised after the server replied.
+  ///
+  /// A fault, like everything that is not [unreachable]: "did not answer" is a
+  /// claim about the host, and nothing here supports it.
   unknown,
 }
 
@@ -80,10 +113,11 @@ abstract interface class HasFailureDetail {
 /// Unwraps one [DioException] level the same way [classifyConnectionFailure]
 /// does, because an interceptor's rejection reaches the caller wrapped.
 String? connectionFailureDetail(Object? error) {
-  if (error is HasFailureDetail) return error.failureDetail;
+  String? present(String detail) => detail.trim().isEmpty ? null : detail;
+  if (error is HasFailureDetail) return present(error.failureDetail);
   if (error is DioException) {
     final inner = error.error;
-    if (inner is HasFailureDetail) return inner.failureDetail;
+    if (inner is HasFailureDetail) return present(inner.failureDetail);
   }
   return null;
 }
@@ -99,10 +133,16 @@ ServiceFailureReason classifyConnectionFailure(
 }) {
   if (error is HasFailureReason) return error.reason;
   if (error is DioException) return _fromDio(error, fallback);
-  if (error is TimeoutException) return ServiceFailureReason.timeout;
+  // A deadline wrapped around a whole request (`future.timeout(…)`) cannot say
+  // whether the connection was ever made, and what it does know is that
+  // nothing came back. That is "did not answer". A timeout that proves the host
+  // was reached arrives as Dio's receive or send timeout, or from a client that
+  // knows, and only that one is the amber [ServiceFailureReason.timeout].
+  if (error is TimeoutException) return ServiceFailureReason.unreachable;
   // HandshakeException extends TlsException, so this covers both.
   if (error is TlsException) return ServiceFailureReason.tls;
   if (error is SocketException) return ServiceFailureReason.unreachable;
+  if (error is FormatException) return ServiceFailureReason.invalidResponse;
   return fallback;
 }
 
@@ -148,7 +188,11 @@ ServiceFailureReason _fromDio(
   if (wrapped is HasFailureReason) return wrapped.reason;
 
   switch (error.type) {
+    // The connection never completed: nothing replied at the address.
     case DioExceptionType.connectionTimeout:
+      return ServiceFailureReason.unreachable;
+    // The connection was made, then the exchange ran out of time: the host is
+    // there, and something in it is slow or stuck.
     case DioExceptionType.sendTimeout:
     case DioExceptionType.receiveTimeout:
       return ServiceFailureReason.timeout;
@@ -164,25 +208,164 @@ ServiceFailureReason _fromDio(
       final inner = error.error;
       if (inner is TlsException) return ServiceFailureReason.tls;
       if (inner is SocketException) return ServiceFailureReason.unreachable;
-      if (inner is TimeoutException) return ServiceFailureReason.timeout;
+      if (inner is TimeoutException) return ServiceFailureReason.unreachable;
+      // Dio decodes the body after the reply arrived, so a decode failure is
+      // an answer nobody could read — a proxy's HTML page, most often.
+      if (inner is FormatException) return ServiceFailureReason.invalidResponse;
       return error.type == DioExceptionType.connectionError
           ? ServiceFailureReason.unreachable
           : fallback;
   }
 }
 
+/// Whether [reason] means nothing replied at all — the one reason painted red.
+///
+/// The brand book's fourth rule as a function: red means `Did not answer` and
+/// nothing else. A refusal, or a failure that did answer, is amber.
+bool failureDidNotAnswer(ServiceFailureReason reason) =>
+    reason == ServiceFailureReason.unreachable;
+
 /// Whether [reason] is a **fault** — something answered, or the device
 /// refused to dial, so there is one concrete thing to go and fix — rather than
 /// silence.
 ///
-/// The same split `describeConnection` makes between amber and red, for the
-/// surfaces that have no service to hand it: red is the host that did not
-/// answer at all (and the failure nobody can attribute), everything else is
-/// amber.
-bool failureIsFault(ServiceFailureReason reason) => switch (reason) {
-  ServiceFailureReason.unreachable || ServiceFailureReason.unknown => false,
-  _ => true,
+/// The complement of [failureDidNotAnswer]. `unknown` is a fault too: the
+/// request failed and nobody can say why, and claiming the host is silent on
+/// the strength of an error nobody could read is the same lie one tone louder.
+bool failureIsFault(ServiceFailureReason reason) =>
+    !failureDidNotAnswer(reason);
+
+/// The tone a failure carries: red for [ServiceFailureReason.unreachable],
+/// amber for every fault. Resolve it to a colour through `statusToneColor`.
+StatusTone failureTone(ServiceFailureReason reason) =>
+    failureDidNotAnswer(reason) ? StatusTone.error : StatusTone.warning;
+
+/// What a refusal names as the thing refused, when nothing more specific is
+/// known.
+///
+/// `describeFailure` resolves the service's own word from the registry — `key`,
+/// `token` for Plex, `sign-in` for the services that take a username and a
+/// password. A surface with no service to name (a figures rail, a bare error
+/// state) says `key`, which is what most of the seventeen take.
+const String kRefusedCredential = 'key';
+
+/// The word for a refused username and password, which takes a different
+/// remedy (`Sign in again`) from a pasted secret (`Paste the key again`).
+const String kRefusedSignIn = 'sign-in';
+
+/// The state in a few words, for a list row, a status chip or a figure's
+/// note: `Did not answer`, `Refused the key`, `Timed out`.
+///
+/// One vocabulary for every surface. The settings rows, the Dashboard's cells
+/// and a service's header all read this, so a refused key cannot be "API key
+/// rejected" on one screen and "Unreachable" on the next.
+String failureLabel(
+  ServiceFailureReason reason, {
+  String credential = kRefusedCredential,
+}) => switch (reason) {
+  ServiceFailureReason.unreachable => 'Did not answer',
+  ServiceFailureReason.unauthorized => 'Refused the $credential',
+  ServiceFailureReason.timeout => 'Timed out',
+  ServiceFailureReason.tls => 'Certificate not trusted',
+  ServiceFailureReason.notFound => 'API not at this address',
+  ServiceFailureReason.redirected => 'Redirected elsewhere',
+  ServiceFailureReason.serverError => 'Answered with an error',
+  ServiceFailureReason.invalidResponse => 'Unreadable answer',
+  ServiceFailureReason.insecureTransport => 'Needs https://',
+  ServiceFailureReason.localNetworkBlocked => 'Local network blocked',
+  ServiceFailureReason.unknown => 'Did not complete',
 };
+
+/// What happened, as the title of a fault: `Radarr did not answer`, `Radarr
+/// answered but refused the key`.
+///
+/// [subject] is who: a service's name, or a connection's (`Radarr 4K`). This
+/// is the first part of the fault sentence; the *why* is
+/// [connectionFailureSentence] (or `connectionFailureMessage`, which can name
+/// the service), and the remedy is [failureRemedy].
+String failureHeadline(
+  ServiceFailureReason reason, {
+  required String subject,
+  String credential = kRefusedCredential,
+}) => switch (reason) {
+  ServiceFailureReason.unreachable => '$subject did not answer',
+  ServiceFailureReason.unauthorized =>
+    '$subject answered but refused the $credential',
+  ServiceFailureReason.timeout =>
+    '$subject was reached but did not reply in time',
+  ServiceFailureReason.tls =>
+    '$subject has a certificate Cupola does not trust',
+  ServiceFailureReason.notFound => '$subject is not at this address',
+  ServiceFailureReason.redirected =>
+    '$subject answered with a redirect Cupola will not follow',
+  ServiceFailureReason.serverError => '$subject answered with an error',
+  ServiceFailureReason.invalidResponse =>
+    '$subject answered with something Cupola cannot read',
+  ServiceFailureReason.insecureTransport =>
+    '$subject needs an https:// address',
+  ServiceFailureReason.localNetworkBlocked =>
+    'This device is keeping Cupola off the local network',
+  ServiceFailureReason.unknown => 'The request to $subject did not complete',
+};
+
+/// The verb that fixes this fault, when the fix is somewhere other than asking
+/// again: `Paste the key again`, `Check the address`. Null when `Retry` is the
+/// remedy — nothing answered, or the service answered with a failure of its
+/// own that the next request may not repeat.
+///
+/// Each of these leads to the connection's own form, which is where the key,
+/// the address and the certificate live.
+String? failureRemedy(
+  ServiceFailureReason reason, {
+  String credential = kRefusedCredential,
+}) => switch (reason) {
+  ServiceFailureReason.unauthorized =>
+    credential == kRefusedSignIn
+        ? 'Sign in again'
+        : 'Paste the $credential again',
+  ServiceFailureReason.notFound ||
+  ServiceFailureReason.redirected => 'Check the address',
+  ServiceFailureReason.tls => 'Check the certificate',
+  ServiceFailureReason.insecureTransport => 'Change the address',
+  ServiceFailureReason.unreachable ||
+  ServiceFailureReason.timeout ||
+  ServiceFailureReason.serverError ||
+  ServiceFailureReason.invalidResponse ||
+  ServiceFailureReason.localNetworkBlocked ||
+  ServiceFailureReason.unknown => null,
+};
+
+/// A failure that has already been classified, for a place that kept the
+/// verdict and lost the exception.
+///
+/// The Dashboard probe folds a connection into a summary; a surface that later
+/// hands that summary to a failure state still owes it the right words, and
+/// this carries the reason (and the sentence, when the original failure had
+/// one of its own) across without inventing an exception type per client.
+class ClassifiedFailure
+    implements Exception, HasFailureReason, HasFailureDetail {
+  const ClassifiedFailure(this.reason, {this.detail});
+
+  /// Classifies [error] once and keeps what the words need.
+  factory ClassifiedFailure.of(Object? error) => error is ClassifiedFailure
+      ? error
+      : ClassifiedFailure(
+          classifyConnectionFailure(error),
+          detail: connectionFailureDetail(error),
+        );
+
+  @override
+  final ServiceFailureReason reason;
+
+  /// The failure's own sentence, when it carried one ([HasFailureDetail]).
+  final String? detail;
+
+  @override
+  String get failureDetail => detail ?? '';
+
+  @override
+  String toString() => 'ClassifiedFailure(${reason.name})';
+}
 
 /// A failed read in one plain sentence, for a surface that has no service to
 /// name — `AppErrorState`, which only knows a display string.
@@ -205,13 +388,20 @@ String connectionFailureSentence(Object? error) {
       'The server was reached but did not answer in time.',
     ServiceFailureReason.tls => 'The HTTPS certificate could not be verified.',
     ServiceFailureReason.unauthorized =>
-      'The server answered and rejected the saved credentials.',
+      'The server answered and refused the saved credentials. Check them in '
+          'Settings.',
     ServiceFailureReason.notFound =>
       'Something answered, but the API is not at this address.',
     ServiceFailureReason.redirected =>
       'The server answered with a redirect Cupola will not follow.',
     ServiceFailureReason.serverError =>
       'The server answered with an error of its own. Its logs will say why.',
+    ServiceFailureReason.invalidResponse =>
+      'Something answered, but not with anything Cupola can read. A reverse '
+          'proxy page at this address is the usual cause.',
+    ServiceFailureReason.insecureTransport =>
+      'The address starts with http://, so Cupola did not send the key over '
+          'it. Change it to https://.',
     ServiceFailureReason.localNetworkBlocked =>
       'This device is blocking Cupola from reaching the local network.',
     ServiceFailureReason.unknown => 'The request did not complete.',

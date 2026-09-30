@@ -125,13 +125,15 @@ class TransmissionAddReport {
         ServiceFailureReason.localNetworkBlocked ||
         ServiceFailureReason.unauthorized ||
         ServiceFailureReason.notFound ||
-        ServiceFailureReason.redirected => TransmissionAddReport(
+        ServiceFailureReason.redirected ||
+        ServiceFailureReason.insecureTransport => TransmissionAddReport(
           TransmissionAddVerdict.notSent,
           'The torrent was not added',
           detail: error.message,
         ),
         ServiceFailureReason.timeout ||
         ServiceFailureReason.serverError ||
+        ServiceFailureReason.invalidResponse ||
         ServiceFailureReason.unknown => TransmissionAddReport(
           TransmissionAddVerdict.unconfirmed,
           _unconfirmed,

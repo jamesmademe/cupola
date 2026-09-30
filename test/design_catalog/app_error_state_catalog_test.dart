@@ -45,7 +45,7 @@ void main() {
       ),
       CatalogScene(
         'AppErrorState.compact() · no serviceName, no onRetry, a failure '
-        'nobody can attribute',
+        'nobody can attribute: amber, never read as silence',
         (_) => const AppErrorState.compact(error: 'Exception: parser'),
         width: 280,
       ),

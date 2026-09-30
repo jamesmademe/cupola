@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/media_status.dart';
 
 DioException _badResponse(int code) => DioException(
   requestOptions: RequestOptions(path: '/'),
@@ -79,9 +80,8 @@ void main() {
       );
     });
 
-    test('Dio timeouts map to timeout', () {
+    test('a timeout after connecting is a timeout', () {
       for (final type in [
-        DioExceptionType.connectionTimeout,
         DioExceptionType.sendTimeout,
         DioExceptionType.receiveTimeout,
       ]) {
@@ -91,6 +91,33 @@ void main() {
           reason: '$type should be a timeout',
         );
       }
+    });
+
+    test('a connection that never completed did not answer', () {
+      // Nothing replied at the address: the brand book's red, not the amber
+      // of a server that was reached and then ran out of time.
+      expect(
+        classifyConnectionFailure(
+          _wrapping(null, DioExceptionType.connectionTimeout),
+        ),
+        ServiceFailureReason.unreachable,
+      );
+    });
+
+    test('a body nobody can read is an invalid response, not silence', () {
+      expect(
+        classifyConnectionFailure(
+          _wrapping(
+            const FormatException('Unexpected character <'),
+            DioExceptionType.unknown,
+          ),
+        ),
+        ServiceFailureReason.invalidResponse,
+      );
+      expect(
+        classifyConnectionFailure(const FormatException('<html>')),
+        ServiceFailureReason.invalidResponse,
+      );
     });
 
     test('badCertificate is a TLS problem', () {
@@ -141,9 +168,11 @@ void main() {
         classifyConnectionFailure(const HandshakeException('expired')),
         ServiceFailureReason.tls,
       );
+      // A deadline around a whole request cannot prove the host was reached,
+      // and what it does know is that nothing came back.
       expect(
         classifyConnectionFailure(TimeoutException('slow')),
-        ServiceFailureReason.timeout,
+        ServiceFailureReason.unreachable,
       );
     });
 
@@ -312,7 +341,8 @@ void main() {
     test('names the fault a reachable server reported', () {
       expect(
         connectionFailureSentence(_badResponse(401)),
-        'The server answered and rejected the saved credentials.',
+        'The server answered and refused the saved credentials. Check them in '
+        'Settings.',
       );
       expect(
         connectionFailureSentence(_badResponse(503)),
@@ -336,20 +366,114 @@ void main() {
   });
 
   group('failureIsFault', () {
-    test('red is silence; everything that answered is amber', () {
+    test('red is silence and nothing else; everything else is amber', () {
       expect(failureIsFault(ServiceFailureReason.unreachable), isFalse);
-      expect(failureIsFault(ServiceFailureReason.unknown), isFalse);
-      for (final reason in const [
-        ServiceFailureReason.timeout,
-        ServiceFailureReason.tls,
-        ServiceFailureReason.unauthorized,
-        ServiceFailureReason.notFound,
-        ServiceFailureReason.redirected,
-        ServiceFailureReason.serverError,
-        ServiceFailureReason.localNetworkBlocked,
-      ]) {
+      expect(failureDidNotAnswer(ServiceFailureReason.unreachable), isTrue);
+      expect(failureTone(ServiceFailureReason.unreachable), StatusTone.error);
+      for (final reason in ServiceFailureReason.values.where(
+        (r) => r != ServiceFailureReason.unreachable,
+      )) {
+        // `unknown` included: a failure nobody can attribute is no evidence
+        // that the host is silent.
         expect(failureIsFault(reason), isTrue, reason: reason.name);
+        expect(failureDidNotAnswer(reason), isFalse, reason: reason.name);
+        expect(failureTone(reason), StatusTone.warning, reason: reason.name);
       }
+    });
+  });
+
+  group('the failure words', () {
+    test('"Did not answer" is the only red label, and never contracted', () {
+      expect(failureLabel(ServiceFailureReason.unreachable), 'Did not answer');
+      expect(
+        failureHeadline(ServiceFailureReason.unreachable, subject: 'Radarr'),
+        'Radarr did not answer',
+      );
+      for (final reason in ServiceFailureReason.values) {
+        final words = [
+          failureLabel(reason),
+          failureHeadline(reason, subject: 'Radarr'),
+          ?failureRemedy(reason),
+        ];
+        for (final word in words) {
+          expect(word, isNot(contains("n't")), reason: reason.name);
+          // The brand book's banned list, for the words this owns.
+          for (final banned in const [
+            'Unreachable',
+            'unreachable',
+            'Offline',
+            'Online',
+            'not answering',
+            'did not respond',
+            'Try again',
+            'Error 401',
+          ]) {
+            expect(word, isNot(contains(banned)), reason: reason.name);
+          }
+        }
+      }
+    });
+
+    test('a refusal says it answered, and names what it refused', () {
+      expect(
+        failureHeadline(ServiceFailureReason.unauthorized, subject: 'Radarr'),
+        'Radarr answered but refused the key',
+      );
+      expect(
+        failureRemedy(ServiceFailureReason.unauthorized),
+        'Paste the key again',
+      );
+      expect(
+        failureHeadline(
+          ServiceFailureReason.unauthorized,
+          subject: 'qBittorrent',
+          credential: kRefusedSignIn,
+        ),
+        'qBittorrent answered but refused the sign-in',
+      );
+      expect(
+        failureRemedy(
+          ServiceFailureReason.unauthorized,
+          credential: kRefusedSignIn,
+        ),
+        'Sign in again',
+      );
+    });
+
+    test('Retry is the remedy where the form cannot fix it', () {
+      for (final reason in const [
+        ServiceFailureReason.unreachable,
+        ServiceFailureReason.timeout,
+        ServiceFailureReason.serverError,
+      ]) {
+        expect(failureRemedy(reason), isNull, reason: reason.name);
+      }
+      expect(
+        failureRemedy(ServiceFailureReason.insecureTransport),
+        'Change the address',
+      );
+    });
+
+    test('a classified failure keeps its verdict and its own sentence', () {
+      final kept = ClassifiedFailure.of(
+        const _KnowsWhyAndSaysSo(
+          ServiceFailureReason.insecureTransport,
+          'TrueNAS needs an https:// address.',
+        ),
+      );
+      expect(
+        classifyConnectionFailure(kept),
+        ServiceFailureReason.insecureTransport,
+      );
+      expect(
+        connectionFailureDetail(kept),
+        'TrueNAS needs an https:// address.',
+      );
+      // Without a sentence of its own, it lends none: the reason's copy wins.
+      expect(
+        connectionFailureDetail(ClassifiedFailure.of(_badResponse(401))),
+        isNull,
+      );
     });
   });
 }

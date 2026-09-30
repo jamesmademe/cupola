@@ -615,7 +615,10 @@ bool localNetworkCouldExplain(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.notFound ||
   ServiceFailureReason.redirected ||
   ServiceFailureReason.serverError ||
+  ServiceFailureReason.invalidResponse ||
   ServiceFailureReason.tls ||
+  // Refused before dialling: the OS was never asked for anything.
+  ServiceFailureReason.insecureTransport ||
   // Already attributed; asking again would only re-confirm it.
   ServiceFailureReason.localNetworkBlocked => false,
   _ => true,
@@ -676,9 +679,13 @@ bool certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.notFound ||
   ServiceFailureReason.redirected ||
   ServiceFailureReason.serverError ||
+  ServiceFailureReason.invalidResponse ||
   // Nothing left the device, so there is no handshake to inspect: the probe
   // opens its own socket to the same blocked address and can only time out.
-  ServiceFailureReason.localNetworkBlocked => false,
+  ServiceFailureReason.localNetworkBlocked ||
+  // Refused before dialling, and the probe would dial the very address the
+  // refusal was protecting the key from.
+  ServiceFailureReason.insecureTransport => false,
   _ => true,
 };
 
@@ -715,11 +722,12 @@ String connectionFailureMessage(
 ) {
   switch (reason) {
     case ServiceFailureReason.unreachable:
-      return 'Could not reach the server. Check the address and port, and '
-          'that ${service.title} is running and reachable from this device.';
+      return 'Nothing answered at this address. Check the address and port, '
+          'and that ${service.title} is running and reachable from this '
+          'device.';
     case ServiceFailureReason.timeout:
-      return 'The server did not answer in time. Check the address, or try '
-          'again if the instance is just slow to wake up.';
+      return 'The server was reached, then did not answer in time. Retry, or '
+          'look at ${service.title} if it is still starting up.';
     case ServiceFailureReason.tls:
       // Never suggest downgrading to http:// here. A certificate that fails
       // to verify is the same signal an interception attack produces, and
@@ -729,9 +737,13 @@ String connectionFailureMessage(
           '${service.title} uses a self-signed certificate, test again and '
           'confirm the certificate when Cupola offers to trust it.';
     case ServiceFailureReason.unauthorized:
+      // The why, not the what again: the title above it already says the key
+      // was refused, so this says where the right one comes from.
       return service.usesApiKey
-          ? 'Reached ${service.title}, which rejected the API key.'
-          : 'Reached ${service.title}, which rejected the username or '
+          ? '${service.title} answered, and does not accept this '
+                '${service.credentialLabel}. Copy it again from '
+                "${service.title}'s own settings."
+          : '${service.title} answered, and does not accept this username and '
                 'password.';
     case ServiceFailureReason.notFound:
       return 'Reached the server, but the ${service.title} API is not at this '
@@ -749,6 +761,13 @@ String connectionFailureMessage(
     case ServiceFailureReason.serverError:
       return '${service.title} answered with a server error. Check the '
           'instance and its logs.';
+    case ServiceFailureReason.invalidResponse:
+      return 'Something answered at this address, but not with anything '
+          'Cupola can read as ${service.title}. A reverse proxy page, or '
+          'another app on this port, is the usual cause.';
+    case ServiceFailureReason.insecureTransport:
+      return 'The address starts with http://, so Cupola did not send the '
+          '${service.credentialLabel} over it. Change it to https://.';
     case ServiceFailureReason.localNetworkBlocked:
       // Names the device, not the server, and never mentions the address: the
       // request never left this phone, so everything in the form is still
@@ -759,7 +778,7 @@ String connectionFailureMessage(
           '${LocalNetworkPermission.remedy}';
     case ServiceFailureReason.unknown:
     case null:
-      return 'Could not verify the instance. Double-check the address and '
+      return 'The request did not complete. Double-check the address and '
           'credentials.';
   }
 }

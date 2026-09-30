@@ -72,16 +72,17 @@ void main() {
     expect(find.text('Online'), findsNothing);
   });
 
-  testWidgets('an unreachable Sonarr reads Unreachable, and its version is —', (
-    tester,
-  ) async {
-    await _pump(tester, service: _scripted(), version: null);
+  testWidgets(
+    'an unreachable Sonarr reads Did not answer, and its version is —',
+    (tester) async {
+      await _pump(tester, service: _scripted(), version: null);
 
-    expect(
-      find.semantics.byLabel('Sonarr, sonarr.local:8989, —, Unreachable'),
-      findsOneWidget,
-    );
-  });
+      expect(
+        find.semantics.byLabel('Sonarr, sonarr.local:8989, —, Did not answer'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('the week counts series, and says how many', (tester) async {
     await _pump(

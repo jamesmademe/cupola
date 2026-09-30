@@ -32,6 +32,7 @@ import 'package:cupola/features/search/presentation/arr_add_sheet.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
 import 'package:cupola/features/search/presentation/recent_searches_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class SearchScreen extends ConsumerWidget {
@@ -759,15 +760,7 @@ class _SearchLaneFault extends StatelessWidget {
   IconData get _glyph => switch (lane.state) {
     SearchLaneState.timedOut => Icons.timer_off_rounded,
     SearchLaneState.unreachable => Icons.cloud_off_rounded,
-    _ => switch (lane.reason) {
-      ServiceFailureReason.unauthorized => Icons.key_off_rounded,
-      ServiceFailureReason.notFound => Icons.wrong_location_rounded,
-      ServiceFailureReason.redirected => Icons.alt_route_rounded,
-      ServiceFailureReason.tls => Icons.gpp_bad_rounded,
-      ServiceFailureReason.localNetworkBlocked => Icons.wifi_lock_rounded,
-      ServiceFailureReason.serverError => Icons.report_gmailerrorred_rounded,
-      _ => Icons.error_outline_rounded,
-    },
+    _ => failureIcon(lane.reason ?? ServiceFailureReason.unknown),
   };
 }
 

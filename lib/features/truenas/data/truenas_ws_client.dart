@@ -47,18 +47,20 @@ class TrueNasException
 /// never opens a cleartext socket at all: this is raised while the endpoint is
 /// being resolved, before any connection, so no byte leaves the device.
 ///
-/// Reported as [ServiceFailureReason.notFound] because the closed vocabulary
-/// has no "insecure transport", and of the reasons it does have this is the
-/// one whose consequences are right: amber rather than red (nothing failed to
-/// answer), and neither the certificate probe nor the local-network probe
-/// runs after it (`certProbeWorthwhile`, `localNetworkCouldExplain`) — both
-/// would dial the very address this refused to dial. What the user reads is
-/// [failureDetail], which `ServiceDiagnosis.messageFor` prints in place of the
-/// generic copy, and which `TrueNasAsyncBody` gives a well of its own.
+/// Reported as [ServiceFailureReason.insecureTransport]: amber rather than red
+/// (nothing failed to answer, nothing was dialled), and neither the certificate
+/// probe nor the local-network probe runs after it (`certProbeWorthwhile`,
+/// `localNetworkCouldExplain`) — both would dial the very address this refused
+/// to dial. What the user reads is [failureDetail], which
+/// `ServiceDiagnosis.messageFor` prints in place of the generic copy, and which
+/// `TrueNasAsyncBody` gives a well of its own.
 class TrueNasInsecureTransportException extends TrueNasException
     implements HasFailureDetail {
   const TrueNasInsecureTransportException()
-    : super('$_headline $explanation', reason: ServiceFailureReason.notFound);
+    : super(
+        '$_headline $explanation',
+        reason: ServiceFailureReason.insecureTransport,
+      );
 
   // Never let either contain "not configured": `AsyncValueWidget` and
   // `TrueNasAsyncBody` string-match that phrase to mean "no address saved".

@@ -1136,7 +1136,11 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: _urlController,
       builder: (context, value, _) {
-        final warning = UrlUtils.cleartextWarning(value.text);
+        // The service's own reason first (TrueNAS refuses http:// outright),
+        // then the general one.
+        final warning =
+            transportWarningFor(service, value.text) ??
+            UrlUtils.cleartextWarning(value.text);
         return Semantics(
           label: 'Server URL',
           hint: 'Enter the ${service.title} server address',

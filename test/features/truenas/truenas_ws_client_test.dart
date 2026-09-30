@@ -341,13 +341,24 @@ void main() {
     test('the refusal names the fix, and nothing probes the address', () {
       const error = TrueNasInsecureTransportException();
 
-      expect(classifyConnectionFailure(error), ServiceFailureReason.notFound);
+      expect(
+        classifyConnectionFailure(error),
+        ServiceFailureReason.insecureTransport,
+      );
       expect(connectionFailureDetail(error), contains('https://'));
       expect(error.toString(), isNot(contains('not configured')));
-      // `notFound` is chosen for these two: a certificate probe or a local
-      // network probe would dial the address the client just refused to dial.
-      expect(certProbeWorthwhile(ServiceFailureReason.notFound), isFalse);
-      expect(localNetworkCouldExplain(ServiceFailureReason.notFound), isFalse);
+      // A fault, never silence: nothing failed to answer, nothing was dialled.
+      expect(failureDidNotAnswer(classifyConnectionFailure(error)), isFalse);
+      // And neither probe runs: a certificate probe or a local network probe
+      // would dial the address the client just refused to dial.
+      expect(
+        certProbeWorthwhile(ServiceFailureReason.insecureTransport),
+        isFalse,
+      );
+      expect(
+        localNetworkCouldExplain(ServiceFailureReason.insecureTransport),
+        isFalse,
+      );
     });
 
     test('the connection test reports it, and sends nothing', () async {
@@ -358,7 +369,7 @@ void main() {
       );
 
       expect(diagnosis.isDisconnected, isTrue);
-      expect(diagnosis.reason, ServiceFailureReason.notFound);
+      expect(diagnosis.reason, ServiceFailureReason.insecureTransport);
       expect(
         diagnosis.messageFor(ServiceKey.truenas),
         const TrueNasInsecureTransportException().failureDetail,

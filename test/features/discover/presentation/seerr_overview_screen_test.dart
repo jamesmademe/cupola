@@ -66,16 +66,17 @@ void main() {
     expect(find.text('Online'), findsNothing);
   });
 
-  testWidgets('an unreachable Seerr reads Unreachable, and its version is —', (
-    tester,
-  ) async {
-    await _pump(tester, service: _scripted(), version: null);
+  testWidgets(
+    'an unreachable Seerr reads Did not answer, and its version is —',
+    (tester) async {
+      await _pump(tester, service: _scripted(), version: null);
 
-    expect(
-      find.semantics.byLabel('Seerr, seerr.local:5055, —, Unreachable'),
-      findsOneWidget,
-    );
-  });
+      expect(
+        find.semantics.byLabel('Seerr, seerr.local:5055, —, Did not answer'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('a decision row is spoken as one sentence', (tester) async {
     final now = DateTime.now();

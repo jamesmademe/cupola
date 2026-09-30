@@ -76,12 +76,12 @@ void main() {
   });
 
   testWidgets(
-    'an unreachable qBittorrent reads Unreachable, and its version is —',
+    'an unreachable qBittorrent reads Did not answer, and its version is —',
     (tester) async {
       await _pump(tester, online: false);
 
       expect(
-        find.semantics.byLabel('qBittorrent, qbit.lan:8080, —, Unreachable'),
+        find.semantics.byLabel('qBittorrent, qbit.lan:8080, —, Did not answer'),
         findsOneWidget,
       );
     },

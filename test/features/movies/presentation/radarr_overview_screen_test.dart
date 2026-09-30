@@ -72,16 +72,17 @@ void main() {
     expect(find.text('Online'), findsNothing);
   });
 
-  testWidgets('an unreachable Radarr reads Unreachable, and its version is —', (
-    tester,
-  ) async {
-    await _pump(tester, service: _scripted(), version: null);
+  testWidgets(
+    'an unreachable Radarr reads Did not answer, and its version is —',
+    (tester) async {
+      await _pump(tester, service: _scripted(), version: null);
 
-    expect(
-      find.semantics.byLabel('Radarr, radarr.local:7878, —, Unreachable'),
-      findsOneWidget,
-    );
-  });
+      expect(
+        find.semantics.byLabel('Radarr, radarr.local:7878, —, Did not answer'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('a section whose source failed does not take the page with it', (
     tester,

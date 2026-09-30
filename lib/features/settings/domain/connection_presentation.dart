@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/truenas/domain/truenas_version.dart';
 
 /// A connection state resolved into everything the UI needs to render it: a
@@ -98,78 +100,157 @@ ConnectionPresentation describeConnection(
         needsAttention: false,
       );
     case ServiceConnectionStatus.disconnected:
-      return switch (reason) {
-        ServiceFailureReason.unauthorized => ConnectionPresentation(
-          tone: StatusTone.warning,
-          icon: Icons.key_off_rounded,
-          label: service.usesApiKey ? 'API key rejected' : 'Sign-in rejected',
-          needsAttention: true,
-        ),
-        ServiceFailureReason.notFound => const ConnectionPresentation(
-          tone: StatusTone.warning,
-          icon: Icons.wrong_location_rounded,
-          label: 'API not at this address',
-          needsAttention: true,
-        ),
-        // Amber, not red: the server answered and the handshake succeeded.
-        // Kept apart from `notFound` because the thing to go and fix is the
-        // proxy in front of the service, not the address in the form.
-        ServiceFailureReason.redirected => const ConnectionPresentation(
-          tone: StatusTone.warning,
-          icon: Icons.alt_route_rounded,
-          label: 'Redirected elsewhere',
-          needsAttention: true,
-        ),
-        // Amber, and never red: nothing is wrong with the address, the server
-        // or the credentials — the OS simply has not been told Cupola may talk
-        // to this network. Red here would send the user auditing settings that
-        // are already correct, which is the exact failure this state exists to
-        // stop.
-        ServiceFailureReason.localNetworkBlocked =>
-          const ConnectionPresentation(
-            tone: StatusTone.warning,
-            icon: Icons.wifi_lock_rounded,
-            label: 'Local network blocked',
-            needsAttention: true,
-          ),
-        ServiceFailureReason.tls => const ConnectionPresentation(
-          tone: StatusTone.warning,
-          icon: Icons.gpp_bad_rounded,
-          label: 'Certificate not trusted',
-          needsAttention: true,
-        ),
-        // Amber, not red: `timeout` means the host was *reached* and then ran
-        // out of time answering (see ServiceFailureReason.timeout). A box that
-        // is up but overloaded, indexing or behind a stalled proxy is a fault
-        // with somewhere to go; painting it red put it beside "no route to
-        // host", where the only advice is to check the cable.
-        ServiceFailureReason.timeout => const ConnectionPresentation(
-          tone: StatusTone.warning,
-          icon: Icons.timer_off_rounded,
-          label: 'Timed out',
-          needsAttention: true,
-        ),
-        // Amber for the same reason, more plainly: a 5xx is the service
-        // speaking. It answered, so it is reachable, configured and trusted —
-        // what is broken is inside it, and red would hide that the address and
-        // the key in the form are already right.
-        ServiceFailureReason.serverError => const ConnectionPresentation(
-          tone: StatusTone.warning,
-          icon: Icons.report_gmailerrorred_rounded,
-          label: 'Answered with an error',
-          needsAttention: true,
-        ),
-        ServiceFailureReason.unreachable ||
-        ServiceFailureReason.unknown ||
-        null => const ConnectionPresentation(
-          tone: StatusTone.error,
-          icon: Icons.cloud_off_rounded,
-          label: 'Unreachable',
-          needsAttention: true,
-        ),
-      };
+      // A disconnection nobody attributed is the host that did not answer:
+      // that is what the state meant before it carried reasons at all.
+      final failure = describeFailure(
+        service,
+        reason ?? ServiceFailureReason.unreachable,
+      );
+      return ConnectionPresentation(
+        tone: failure.tone,
+        icon: failure.icon,
+        label: failure.label,
+        needsAttention: true,
+      );
   }
 }
+
+/// What a refusal of [service]'s credential names as the thing refused:
+/// `key`, `token` (Plex), or `sign-in` for the services that take a username
+/// and a password.
+String refusedCredentialOf(ServiceKey service) {
+  if (!service.usesApiKey) return kRefusedSignIn;
+  return service == ServiceKey.plex ? 'token' : kRefusedCredential;
+}
+
+/// A failure resolved into everything a surface draws: its tone, a glyph, the
+/// short label, the fault sentence's title and its remedy.
+///
+/// The one place a failure turns into pixels and words. The Dashboard's cells,
+/// a service's header, the settings rows, Activity's band and a page's failure
+/// leaf all read this, so one failure is one set of words everywhere (the brand
+/// book's twelfth rule) and red is spent on nothing but a host that did not
+/// answer.
+class FailurePresentation {
+  const FailurePresentation({
+    required this.reason,
+    required this.tone,
+    required this.icon,
+    required this.label,
+    required this.headline,
+    required this.remedy,
+  });
+
+  final ServiceFailureReason reason;
+
+  /// Red for a host that did not answer, amber for every fault.
+  final StatusTone tone;
+
+  final IconData icon;
+
+  /// A few words: `Did not answer`, `Refused the key`.
+  final String label;
+
+  /// What happened, naming who: `Radarr answered but refused the key`.
+  final String headline;
+
+  /// The verb that fixes it in the connection's form (`Paste the key again`),
+  /// or null when `Retry` is the remedy.
+  final String? remedy;
+
+  /// Nothing replied — the only red state.
+  bool get didNotAnswer => failureDidNotAnswer(reason);
+}
+
+/// Describes [reason] for [service]. [subject] names who in the headline, and
+/// defaults to the service: pass a connection's name (`Radarr 4K`) when there
+/// is more than one.
+///
+/// The tone split is triage, not decoration. Amber is a **fault** — the host
+/// was reached, or the device would not dial, so there is one concrete thing to
+/// go and fix — and red is reserved for a host that did not answer at all.
+/// Everything that got a reply, however bad the reply was, is amber; red is the
+/// one word the user cannot act on from the form, so spending it on a fault
+/// costs the distinction. In particular:
+///
+///  * a **timeout** is amber because it means the host was *reached* and then
+///    ran out of time (see [ServiceFailureReason.timeout]); a connection that
+///    never completed is `unreachable`, and red;
+///  * a **5xx** is the service speaking — reachable, configured and trusted —
+///    so red would hide that the address and the key are already right;
+///  * a **blocked local network** is amber and never red: nothing is wrong with
+///    the address, the server or the credentials, and red would send the user
+///    auditing settings that are already correct.
+///
+/// "Slow" is not in the vocabulary: a request that ran out of time is reported
+/// as timed out, because "slow" invites the user to wait rather than to look.
+FailurePresentation describeFailure(
+  ServiceKey service,
+  ServiceFailureReason reason, {
+  String? subject,
+}) {
+  final credential = refusedCredentialOf(service);
+  return FailurePresentation(
+    reason: reason,
+    tone: failureTone(reason),
+    icon: failureIcon(reason),
+    label: failureLabel(reason, credential: credential),
+    headline: failureHeadline(
+      reason,
+      subject: subject ?? service.title,
+      credential: credential,
+    ),
+    remedy: failureRemedy(reason, credential: credential),
+  );
+}
+
+/// What an address field owes [service] before anything is sent, when the
+/// scheme itself is the problem — null when there is nothing specific to say
+/// (the general `UrlUtils.cleartextWarning` still applies).
+///
+/// The form-side half of [ServiceFailureReason.insecureTransport]. Two
+/// services have a reason of their own:
+///
+///  * **TrueNAS** refuses `http://` outright. 25.04 and later revoke a key
+///    that arrives over cleartext, so the client never dials it; the field says
+///    so while it is typed rather than after a test that sends nothing.
+///  * **SABnzbd** carries its key inside the address (`?apikey=`), so over
+///    `http://` off the local network the key is not only readable on the way
+///    but written into every proxy's access log.
+String? transportWarningFor(ServiceKey service, String rawUrl) {
+  final value = rawUrl.trim().toLowerCase();
+  final cleartext = value.startsWith('http://') || value.startsWith('ws://');
+  if (!cleartext) return null;
+  if (service == ServiceKey.truenas) {
+    return const TrueNasInsecureTransportException().failureDetail;
+  }
+  if (service == ServiceKey.sabnzbd &&
+      UrlUtils.cleartextWarning(rawUrl) != null) {
+    return 'This address is off your local network, and SABnzbd sends its '
+        'API key inside the address itself: over http:// it can be read on '
+        "the way and is kept in every proxy's log. Use https:// if the "
+        'instance supports it.';
+  }
+  return null;
+}
+
+/// The glyph beside a failure's words. Its colour is the failure's tone.
+IconData failureIcon(ServiceFailureReason reason) => switch (reason) {
+  ServiceFailureReason.unreachable => Icons.cloud_off_rounded,
+  ServiceFailureReason.unauthorized => Icons.key_off_rounded,
+  ServiceFailureReason.notFound => Icons.wrong_location_rounded,
+  // Kept apart from `notFound` because the thing to go and fix is the proxy in
+  // front of the service, not the address in the form.
+  ServiceFailureReason.redirected => Icons.alt_route_rounded,
+  ServiceFailureReason.localNetworkBlocked => Icons.wifi_lock_rounded,
+  ServiceFailureReason.tls => Icons.gpp_bad_rounded,
+  ServiceFailureReason.timeout => Icons.timer_off_rounded,
+  ServiceFailureReason.serverError => Icons.report_gmailerrorred_rounded,
+  ServiceFailureReason.invalidResponse => Icons.code_off_rounded,
+  ServiceFailureReason.insecureTransport =>
+    Icons.no_encryption_gmailerrorred_rounded,
+  ServiceFailureReason.unknown => Icons.error_outline_rounded,
+};
 
 /// The version a service reported during a connection test, resolved into a
 /// line to print under the outcome.

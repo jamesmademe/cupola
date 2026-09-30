@@ -61,7 +61,7 @@ classifiers turn it into a verdict.
 |---|---|
 | `answers` | Canned world data. |
 | `didNotAnswer` | `SocketException('Connection refused')` at dial time. The attempt is logged with `dialRefused`. |
-| `timesOut` | `SocketException('Connection timed out')`, which Dio reports as `connectionTimeout`. It is raised at once. |
+| `timesOut` | `SocketException('Connection timed out')`, which Dio reports as `connectionTimeout`. It is raised at once, and the app reads it as did not answer: the connection never completed. |
 | `refusesKey` | The arrs answer 401. Seerr answers 403. qBittorrent answers `200 Fails.` on login. SABnzbd answers `status: false`. TrueNAS answers `false` to the key login. Dockge answers `ok: false` to login. Public probes keep answering: Jellyfin `/System/Info/Public`, Plex `/identity`, NPM `/api/`, Seerr `/status` and SABnzbd `mode=version`. |
 | `readOnly` | Capability probes answer read-only: TrueNAS `auth.me`, NPM `users/me` and Unraid `me` all come from fixtures. Jellyfin behaves as a non-admin token and Plex as a non-owner token, so admin reads are refused. For every other service, writes get 403. |
 | `homeOnly` (flag) | The connection answers at home. Away, it refuses the connection. The flag combines with the behaviour: P7's TrueNAS is read-only and home-only. |

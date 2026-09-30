@@ -184,7 +184,7 @@ void main() {
   });
 
   group('timesOut', () {
-    test('fails as a timeout, at once', () async {
+    test('fails as a connect timeout, at once: it did not answer', () async {
       final harness = await ProfileHarness.start(
         Profiles.p3.withBehaviour(
           WorldIds.sonarr,
@@ -198,7 +198,12 @@ void main() {
         fail('expected a timeout');
       } on DioException catch (error) {
         expect(error.type, DioExceptionType.connectionTimeout);
-        expect(classifyConnectionFailure(error), ServiceFailureReason.timeout);
+        // The connection never completed, so nothing replied at the address:
+        // red, not the amber of a server reached and then slow.
+        expect(
+          classifyConnectionFailure(error),
+          ServiceFailureReason.unreachable,
+        );
       }
     });
   });

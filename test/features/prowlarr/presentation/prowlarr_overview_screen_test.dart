@@ -84,12 +84,14 @@ void main() {
   });
 
   testWidgets(
-    'an unreachable Prowlarr reads Unreachable, and its version is —',
+    'an unreachable Prowlarr reads Did not answer, and its version is —',
     (tester) async {
       await _pump(tester, version: null);
 
       expect(
-        find.semantics.byLabel('Prowlarr, prowlarr.local:9696, —, Unreachable'),
+        find.semantics.byLabel(
+          'Prowlarr, prowlarr.local:9696, —, Did not answer',
+        ),
         findsOneWidget,
       );
     },

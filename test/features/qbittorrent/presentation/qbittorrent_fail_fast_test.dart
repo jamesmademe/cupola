@@ -330,7 +330,7 @@ void main() {
       );
       expect(qb.count(_loginPath), 1);
       expect(
-        find.textContaining('rejected the saved credentials'),
+        find.textContaining('refused the saved credentials'),
         findsOneWidget,
       );
 

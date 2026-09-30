@@ -85,7 +85,7 @@ void main() {
       expect(find.text('Radarr did not answer'), findsOneWidget);
       expect(find.text('radarr.test'), findsOneWidget);
       expect(
-        find.textContaining('Could not reach the server.'),
+        find.textContaining('Nothing answered at this address.'),
         findsOneWidget,
       );
       expect(find.textContaining('Exception'), findsNothing);
@@ -111,13 +111,22 @@ void main() {
         ),
       );
 
-      expect(find.text('Radarr: API key rejected'), findsOneWidget);
+      expect(find.text('Radarr answered but refused the key'), findsOneWidget);
       expect(
-        find.text('Reached Radarr, which rejected the API key.'),
+        find.text(
+          "Radarr answered, and does not accept this API key. Copy it again "
+          "from Radarr's own settings.",
+        ),
         findsOneWidget,
       );
       final scheme = AppTheme.darkTheme().colorScheme;
       expect(_glyphColor(tester), statusToneColor(scheme, StatusTone.warning));
+      // The remedy is the verb on the way into the form, not "Settings".
+      expect(find.text('Paste the key again'), findsOneWidget);
+      expect(find.text('Settings'), findsNothing);
+      await tester.tap(find.text('Paste the key again'));
+      await tester.pumpAndSettle();
+      expect(find.text('Form radarr'), findsOneWidget);
     });
 
     testWidgets('a 5xx is a fault too, never "did not answer"', (tester) async {
@@ -130,7 +139,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Radarr: Answered with an error'), findsOneWidget);
+      expect(find.text('Radarr answered with an error'), findsOneWidget);
       expect(find.text('Radarr did not answer'), findsNothing);
     });
 
@@ -146,7 +155,7 @@ void main() {
 
       expect(
         find.semantics.byLabel(
-          RegExp(r'^Radarr did not answer\. radarr\.test\. Could not reach'),
+          RegExp(r'^Radarr did not answer\. radarr\.test\. Nothing answered'),
         ),
         findsOneWidget,
       );
@@ -179,35 +188,71 @@ void main() {
           .widget<Icon>(
             find.descendant(
               of: find.byType(AppErrorState),
-              matching: find.byIcon(Icons.error_outline_rounded),
+              matching: find.byType(Icon),
             ),
           )
           .color!;
+      Color? label(String text) =>
+          tester.widget<Text>(find.text(text)).style?.color;
 
       await _pump(tester, AppErrorState(error: _refused()));
-      expect(
-        glyph(),
-        statusToneColor(
-          scheme,
-          StatusTone.error,
-          surface: scheme.errorContainer,
-        ),
-      );
+      final red = statusToneColor(scheme, StatusTone.error);
+      expect(glyph(), red);
+      // The red words, in red, and never contracted.
+      expect(label('Did not answer'), red);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await _pump(tester, AppErrorState(error: _status(401)));
       expect(
-        find.text('The server answered and rejected the saved credentials.'),
+        find.text(
+          'The server answered and refused the saved credentials. Check them in '
+          'Settings.',
+        ),
         findsOneWidget,
       );
+      final amber = statusToneColor(scheme, StatusTone.warning);
+      expect(glyph(), amber);
+      expect(label('Refused the key'), amber);
+      expect(find.text('Did not answer'), findsNothing);
+    });
+
+    testWidgets('no red well: the glyph alone carries the tone', (
+      tester,
+    ) async {
+      final scheme = AppTheme.darkTheme().colorScheme;
+      await _pump(tester, AppErrorState(error: _refused()));
+
+      // The Presence Rule: no red fill behind a fault. The error container
+      // was a red disc behind every failure in the app.
+      final fills = tester
+          .widgetList<Container>(
+            find.descendant(
+              of: find.byType(AppErrorState),
+              matching: find.byType(Container),
+            ),
+          )
+          .map((c) => (c.decoration as BoxDecoration?)?.color)
+          .whereType<Color>();
+      expect(fills, isNot(contains(scheme.errorContainer)));
+    });
+
+    testWidgets('a failure nobody can attribute is not painted as silence', (
+      tester,
+    ) async {
+      final scheme = AppTheme.darkTheme().colorScheme;
+      await _pump(tester, AppErrorState(error: StateError('parser')));
+
+      expect(find.text('Did not complete'), findsOneWidget);
       expect(
-        glyph(),
-        statusToneColor(
-          scheme,
-          StatusTone.warning,
-          surface: scheme.surface,
-          tintAlpha: 0.16,
-        ),
+        tester
+            .widget<Icon>(
+              find.descendant(
+                of: find.byType(AppErrorState),
+                matching: find.byType(Icon),
+              ),
+            )
+            .color,
+        statusToneColor(scheme, StatusTone.warning),
       );
     });
   });

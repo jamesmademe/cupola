@@ -8,7 +8,6 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
-import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
@@ -48,11 +47,12 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// [ServiceOfflineState.failure] takes the service and the error a read threw,
 /// and says what the classification says rather than assuming silence: the
-/// title, glyph and tone come from `describeConnection`, the sentence from
-/// `connectionFailureMessage` (or the failure's own verbatim detail), and the
-/// address is the lens connection's host. Red only when nothing answered; a
-/// rejected key, a 5xx, a timeout or a certificate is a **fault**, amber, with
-/// Settings beside Retry because that is usually where the fix is. It never
+/// title (`Radarr answered but refused the key`), glyph and tone come from
+/// `describeFailure`, the sentence from `connectionFailureMessage` (or the
+/// failure's own verbatim detail), and the address is the lens connection's
+/// host. Red only when nothing answered; a refused key, a 5xx, a timeout or a
+/// certificate is a **fault**, amber, with its remedy beside Retry (`Paste the
+/// key again`, or `Settings`) because that is usually where the fix is. It never
 /// prints the exception — a class name and a library's message are
 /// diagnostics, and they were the whole detail line of every failed load.
 
@@ -125,13 +125,9 @@ class ServiceOfflineState extends StatelessWidget {
     }
 
     final reason = classifyConnectionFailure(_error);
-    final presentation = describeConnection(
-      service,
-      status: ServiceConnectionStatus.disconnected,
-      reason: reason,
-    );
+    final presentation = describeFailure(service, reason, subject: serviceName);
     final span = since == null ? null : formatElapsedSpan(since!);
-    final silent = !failureIsFault(reason);
+    final silent = presentation.didNotAnswer;
     final message =
         connectionFailureDetail(_error) ??
         connectionFailureMessage(service, reason);
@@ -148,15 +144,18 @@ class ServiceOfflineState extends StatelessWidget {
             Theme.of(context).colorScheme,
             presentation.tone,
           ),
-          title: silent
-              ? '$serviceName did not answer'
-              : '$serviceName: ${presentation.label}',
+          // What happened, naming who: `Radarr did not answer`, `Radarr
+          // answered but refused the key`.
+          title: presentation.headline,
           address: host == null || host.isEmpty ? null : host,
           body: [
             if (silent && span != null) 'No response for $span.',
             message,
           ].join(' '),
           onRetry: onRetry,
+          // The remedy's own verb when the fix lives in the form (`Paste the
+          // key again`), and the plain way in otherwise.
+          settingsLabel: presentation.remedy ?? 'Settings',
           onOpenSettings:
               onOpenSettings ??
               () => context.push('/settings/service/${service.routeParam}'),
@@ -175,11 +174,15 @@ class _OfflineLeaf extends StatelessWidget {
     required this.onRetry,
     this.address,
     this.onOpenSettings,
+    this.settingsLabel = 'Settings',
   });
 
   final IconData icon;
   final Color glyphColor;
   final String title;
+
+  /// The words on the second action: the remedy's verb, or `Settings`.
+  final String settingsLabel;
 
   /// Which server this is about, when a connection names one.
   final String? address;
@@ -262,7 +265,7 @@ class _OfflineLeaf extends StatelessWidget {
                         foregroundColor: colorScheme.primary,
                         minimumSize: const Size(56, 44),
                       ),
-                      child: const Text('Settings'),
+                      child: Text(settingsLabel),
                     ),
                   ],
                 ],

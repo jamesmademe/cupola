@@ -78,16 +78,17 @@ void main() {
     expect(find.text('Online'), findsNothing);
   });
 
-  testWidgets('an unreachable Dockge reads Unreachable, and its version is —', (
-    tester,
-  ) async {
-    await _pump(tester, online: false);
+  testWidgets(
+    'an unreachable Dockge reads Did not answer, and its version is —',
+    (tester) async {
+      await _pump(tester, online: false);
 
-    expect(
-      find.semantics.byLabel('Dockge, dockge.lan:5001, —, Unreachable'),
-      findsOneWidget,
-    );
-  });
+      expect(
+        find.semantics.byLabel('Dockge, dockge.lan:5001, —, Did not answer'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('an exited stack is a fault and speaks one sentence', (
     tester,

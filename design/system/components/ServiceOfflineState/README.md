@@ -16,11 +16,11 @@ Rendered from `lib/core/widgets/service_offline_state.dart` by `test/design_cata
 
 `ServiceOfflineState.failure(service:, error:, onRetry:)` classifies the error (`classifyConnectionFailure`) and says what the connection form would say, instead of assuming silence:
 
-- **Glyph** from `describeConnection` (`cloud_off`, `key_off`, `timer_off`, `gpp_bad`, `wrong_location`, `alt_route`, `report`, `wifi_lock`) at 32px, in the tone walked against `surface`: **red only when nothing answered** (or the cause cannot be attributed), **amber for a fault** — the server answered, so there is one thing to fix.
-- **Title** *&lt;Service&gt; did not answer* for silence; *&lt;Service&gt;: &lt;label&gt;* for a fault, with `describeConnection`'s label (*Radarr: API key rejected*, *Radarr: Answered with an error*).
+- **Glyph** from `describeFailure` (`cloud_off`, `key_off`, `timer_off`, `gpp_bad`, `wrong_location`, `alt_route`, `report`, `code_off`, `no_encryption`, `wifi_lock`) at 32px, in the tone walked against `surface`: **red only when nothing answered**, **amber for a fault** — the server answered (or the device would not dial), so there is one thing to fix.
+- **Title** — `describeFailure`'s headline, which names who: *Radarr did not answer* for silence; *Radarr answered but refused the key*, *Radarr answered with an error*, *Radarr was reached but did not reply in time* for a fault.
 - **Address** — the lens connection's host (`ServiceKey.extractHost`), `space-xs` under the title in `AppTheme.chrome` 12 `on-surface-variant`; dropped when the connection names none.
 - **Body** — `connectionFailureDetail(error)` if the failure carries its own sentence, else `connectionFailureMessage(service, reason)`; with a known first-failure age, *No response for 40 minutes.* leads it. Never the exception.
-- **Actions** — *Retry*, and *Settings* always: it defaults to `/settings/service/<routeParam>`, because after a failed read the address or the key is the likeliest fix.
+- **Actions** — *Retry*, and the way into the connection form always: it defaults to `/settings/service/<routeParam>`, because after a failed read the address or the key is the likeliest fix. It is labelled with the fault's remedy when the form holds one (*Paste the key again*, *Sign in again*, *Check the address*, *Check the certificate*, *Change the address*), and *Settings* otherwise.
 - Semantics speak *title. address. body* as one sentence.
 
 Used by the library walls (`MediaBrowseScaffold(service:)`), Readarr's author list, the Jellyfin/Plex Overview when the server is dark (one state for the page, not one per region), the Stream tabs that are one read each, and Activity's streaming feed when its only media server is dark.
