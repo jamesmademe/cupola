@@ -69,7 +69,8 @@ void main() {
           ),
           _answers('radarr', ServiceSummaryStatus.online),
           _answers('radarr-hd', ServiceSummaryStatus.offline),
-          _answers('sonarr', ServiceSummaryStatus.online),
+          // Answered, but refused the key: amber on the floor, and a fault.
+          _answers('sonarr', ServiceSummaryStatus.fault),
           // Never answers: the probe is still out.
           instanceSummaryProvider((
             service: ServiceKey.sabnzbd,
@@ -92,7 +93,11 @@ void main() {
             'two Radarr connections are two cells on the floor, and the '
             'half-filled Lidarr slot is not a cell at all',
       );
-      expect(census.faults, 1, reason: 'the Radarr that did not answer');
+      expect(
+        census.faults,
+        2,
+        reason: 'the Radarr that did not answer and the Sonarr that refused',
+      );
       expect(census.checking, 1, reason: 'the SABnzbd still being asked');
     });
   });

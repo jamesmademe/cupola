@@ -33,12 +33,11 @@ class PortalFloorCensus {
   /// them — so two Radarr connections are two.
   final int services;
 
-  /// Cells the floor draws in a fault.
-  ///
-  /// Today that is a connection that did not answer, the red pip: the picker
-  /// draws no amber state, so there is none to count, and a count of faults the
-  /// floor does not show would send the reader looking for them. A pending
-  /// request is never a fault, and the picker does not show one either.
+  /// Cells the floor draws in a fault: a connection that did not answer (the
+  /// red pip) and one that answered but refused (the amber pip). Only what the
+  /// floor shows is counted, since a fault the reader cannot find on the floor
+  /// would send them looking for it; a pending request is never a fault, and
+  /// the picker does not show one either.
   final int faults;
 
   /// Cells whose probe has not come back. Not a fault, and never counted as
@@ -67,6 +66,9 @@ final portalFloorCensusProvider = Provider<PortalFloorCensus>((ref) {
           break;
         case ServiceReachability.checking:
           checking++;
+        // A refused key and a service that did not answer are both faults
+        // the floor paints, amber and red.
+        case ServiceReachability.fault:
         case ServiceReachability.offline:
           faults++;
       }
