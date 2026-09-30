@@ -1206,7 +1206,8 @@ final servicesInFlightProvider = FutureProvider<ServicesInFlight>((ref) async {
 ///
 /// An \*arr queue record names the client's own id for the transfer it tracks
 /// in `downloadId` — the torrent hash (upper case; qBittorrent reports it in
-/// lower), the SABnzbd `nzo_id`, the NZBGet id — so the two rows for one grab
+/// lower), the SABnzbd `nzo_id`, the NZBGet job's `drone` parameter (its NZBID
+/// only when it has none) — so the two rows for one grab
 /// are the same key in two spellings. The \*arr row wins: it knows the title,
 /// the quality and whether the file can be imported. The client row lends it
 /// what only the client measures — progress, bytes, time left, rate — and a
@@ -1401,7 +1402,9 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(Ref ref) async {
       .map(
         (group) => ServiceQueueItem(
           service: ServiceKey.nzbget,
-          id: '${group.nzbId}',
+          // The key an \*arr row names this job by — its `drone` parameter,
+          // else the NZBID — so [joinQueueSources] can meet the two.
+          id: group.downloadId,
           title: group.name,
           progress: group.progress,
           // Both sizes are nullable now — NZBGet reporting neither the `*MB`

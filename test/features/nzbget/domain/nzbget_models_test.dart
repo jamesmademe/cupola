@@ -76,6 +76,68 @@ void main() {
     });
   });
 
+  // An \*arr records the job's `drone` parameter as its `downloadId`, never the
+  // NZBID, so a join on the NZBID never met the job an \*arr sent.
+  group('NzbgetGroup.downloadId', () {
+    test('is the drone parameter an arr tagged the job with', () {
+      final group = NzbgetGroup.fromJson({
+        'NZBID': 12,
+        'NZBName': 'Sintel.2010.2160p',
+        'Parameters': [
+          {'Name': '*Unpack:', 'Value': 'yes'},
+          {'Name': 'drone', 'Value': '0b1f0c7d4e5a4c1f9a3e2d6b8c7a9f01'},
+        ],
+      });
+
+      expect(group.droneId, '0b1f0c7d4e5a4c1f9a3e2d6b8c7a9f01');
+      expect(group.downloadId, '0b1f0c7d4e5a4c1f9a3e2d6b8c7a9f01');
+      // Actions still address the job by its NZBID.
+      expect(group.nzbId, 12);
+    });
+
+    test('falls back to the NZBID for a job no arr tagged', () {
+      for (final parameters in [
+        null,
+        const <Object>[],
+        [
+          {'Name': 'drone', 'Value': ''},
+        ],
+      ]) {
+        final group = NzbgetGroup.fromJson({
+          'NZBID': 12,
+          'NZBName': 'debian-12.iso',
+          'Parameters': ?parameters,
+        });
+
+        expect(group.droneId, isNull);
+        expect(group.downloadId, '12');
+      }
+    });
+  });
+
+  group('NzbgetStatus download rate', () {
+    test('reads the 64-bit Lo/Hi pair NZBGet 24.2 replaced it with', () {
+      final status = NzbgetStatus.fromJson({
+        // Deprecated since 24.2, and a 32-bit field cannot hold 5 GiB/s.
+        'DownloadRate': 2147483647,
+        'DownloadRateLo': 1073741824,
+        'DownloadRateHi': 1,
+        'RemainingSizeMB': 0,
+      });
+
+      expect(status.downloadRateBytes, 5 * 1024 * 1024 * 1024);
+    });
+
+    test('still reads DownloadRate from a daemon older than 24.2', () {
+      final status = NzbgetStatus.fromJson({
+        'DownloadRate': 2097152,
+        'RemainingSizeMB': 0,
+      });
+
+      expect(status.downloadRateBytes, 2097152);
+    });
+  });
+
   group('NZBGet RSS and messages', () {
     test('groups numbered feed settings, sorts them, and skips blank URLs', () {
       final feeds = nzbgetFeedsFromConfig(const [

@@ -12,6 +12,8 @@ import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_album.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
+import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
+import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
@@ -557,6 +559,70 @@ void main() {
         expect(decisions.single.requiresService, ServiceKey.qbittorrent);
       },
     );
+
+    // The arr records an NZBGet job by the `drone` parameter it tagged the job
+    // with; the join keyed the NZBGet row on its NZBID, so the two never met
+    // and one download read as two.
+    test('an arr grab and the NZBGet job moving it are one row', () async {
+      final container = _container(
+        settings: settingsWith(
+          radarrUrl: 'http://radarr.local:7878',
+          radarrApiKey: 'key',
+          nzbgetUrl: 'http://nzbget.local:6789',
+          nzbgetUsername: 'nzbget',
+          nzbgetPassword: 'secret',
+        ),
+        radarrService: _QueueRadarrService([
+          {
+            'id': 1,
+            'title': 'Sintel.2010.2160p.WEB-DL',
+            'status': 'downloading',
+            'trackedDownloadState': 'downloading',
+            'downloadId': '0b1f0c7d4e5a4c1f9a3e2d6b8c7a9f01',
+            'downloadClient': 'NZBGet',
+            'movieId': 3,
+            'movie': {'title': 'Sintel'},
+          },
+        ]),
+        overrides: [
+          nzbgetQueueProvider.overrideWith(
+            (ref) async => [
+              NzbgetGroup.fromJson({
+                'NZBID': 12,
+                'NZBName': 'Sintel.2010.2160p.WEB-DL',
+                'Status': 'DOWNLOADING',
+                'FileSizeMB': 1000,
+                'RemainingSizeMB': 250,
+                'Parameters': [
+                  {
+                    'Name': 'drone',
+                    'Value': '0b1f0c7d4e5a4c1f9a3e2d6b8c7a9f01',
+                  },
+                ],
+              }),
+              // Added by hand: no drone parameter, so its NZBID is its key, and
+              // no arr claims it.
+              NzbgetGroup.fromJson({
+                'NZBID': 13,
+                'NZBName': 'debian-12.iso',
+                'Status': 'DOWNLOADING',
+                'FileSizeMB': 600,
+                'RemainingSizeMB': 300,
+              }),
+            ],
+          ),
+        ],
+      );
+
+      final items = await container.read(servicesQueueProvider.future);
+
+      expect(items.map((item) => item.title), ['Sintel', 'debian-12.iso']);
+      final sintel = items.first;
+      expect(sintel.service, ServiceKey.radarr);
+      expect(sintel.clientService, ServiceKey.nzbget);
+      expect(sintel.progress, 0.75);
+      expect(items.last.id, '13');
+    });
 
     test('a season pack is one download, not one row per episode', () async {
       final container = _container(

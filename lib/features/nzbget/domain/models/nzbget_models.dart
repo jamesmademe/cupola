@@ -61,11 +61,27 @@ class NzbgetStatus {
         : combineHiLo(json['RemainingSizeHi'], json['RemainingSizeLo']) ~/
               (1024 * 1024);
     return NzbgetStatus(
-      downloadRateBytes: intOrNull(json['DownloadRate']) ?? 0,
+      downloadRateBytes: _downloadRate(json),
       remainingSizeMb: remainingMb,
       paused: boolOrFalse(json['DownloadPaused']),
     );
   }
+}
+
+/// The current download rate in bytes per second.
+///
+/// NZBGet 24.2 deprecated the 32-bit `DownloadRate` for the
+/// `DownloadRateLo`/`DownloadRateHi` pair, because a 32-bit rate tops out at
+/// 4 GiB/s — and a field NZBGet has deprecated is one it can stop sending. The
+/// pair wins whenever either half is there; older daemons, which send only
+/// `DownloadRate`, still read.
+int _downloadRate(Map<String, dynamic> json) {
+  final hi = json['DownloadRateHi'];
+  final lo = json['DownloadRateLo'];
+  if (intOrNull(hi) != null || intOrNull(lo) != null) {
+    return combineHiLo(hi, lo);
+  }
+  return intOrNull(json['DownloadRate']) ?? 0;
 }
 
 /// A queued NZB (`listgroups`).
@@ -77,9 +93,25 @@ class NzbgetGroup {
     required this.category,
     required this.fileSizeMb,
     required this.remainingSizeMb,
+    this.droneId,
   });
 
   final int nzbId;
+
+  /// The `drone` post-processing parameter, when the job carries one.
+  ///
+  /// Every \*arr that sends an NZB to NZBGet tags it with `drone=<guid>` and
+  /// records **that** as the queue record's `downloadId` — the NZBID only when
+  /// the job has no such parameter (Sonarr's `Nzbget.cs`, `GetQueue`: the id is
+  /// the drone value, else `NzbId`). Radarr, Lidarr and Readarr share the code.
+  final String? droneId;
+
+  /// The id an \*arr knows this job by: [droneId] first, the NZBID otherwise.
+  ///
+  /// The dashboard used to join on the NZBID alone, which is the one spelling
+  /// an \*arr never records for a job it sent — so an \*arr grab and the
+  /// NZBGet job moving it never met, and one download read as two.
+  String get downloadId => droneId ?? '$nzbId';
   final String name;
   final String status;
   final String category;
@@ -125,7 +157,20 @@ class NzbgetGroup {
       category: (json['Category'] ?? '').toString(),
       fileSizeMb: megabytesOrNull(json, 'FileSize'),
       remainingSizeMb: megabytesOrNull(json, 'RemainingSize'),
+      droneId: _droneParameter(json['Parameters']),
     );
+  }
+
+  /// `Parameters` is a list of `{Name, Value}` pairs.
+  static String? _droneParameter(Object? parameters) {
+    if (parameters is! List) return null;
+    for (final parameter in parameters) {
+      if (parameter is! Map) continue;
+      if (parameter['Name']?.toString().trim() != 'drone') continue;
+      final value = parameter['Value']?.toString().trim() ?? '';
+      return value.isEmpty ? null : value;
+    }
+    return null;
   }
 }
 
