@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
@@ -79,10 +80,10 @@ ConnectionPresentation describeConnection(
 }) {
   switch (status) {
     case ServiceConnectionStatus.notConfigured:
-      return const ConnectionPresentation(
+      return ConnectionPresentation(
         tone: StatusTone.neutral,
         icon: Icons.add_link_rounded,
-        label: 'Not set up',
+        label: StateWord.notSetUp.label,
         needsAttention: false,
       );
     case ServiceConnectionStatus.checking:
@@ -93,10 +94,10 @@ ConnectionPresentation describeConnection(
         needsAttention: false,
       );
     case ServiceConnectionStatus.connected:
-      return const ConnectionPresentation(
+      return ConnectionPresentation(
         tone: StatusTone.success,
         icon: Icons.cloud_done_rounded,
-        label: 'Answering',
+        label: StateWord.answering.label,
         needsAttention: false,
       );
     case ServiceConnectionStatus.disconnected:

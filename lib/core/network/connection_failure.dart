@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 
 /// Why a connection attempt failed.
@@ -329,7 +330,7 @@ String failureLabel(
   ServiceFailureReason reason, {
   String credential = kRefusedCredential,
 }) => switch (reason) {
-  ServiceFailureReason.unreachable => 'Did not answer',
+  ServiceFailureReason.unreachable => StateWord.didNotAnswer.label,
   ServiceFailureReason.unauthorized => 'Refused the $credential',
   ServiceFailureReason.timeout => 'Timed out',
   ServiceFailureReason.tls => 'Certificate not trusted',

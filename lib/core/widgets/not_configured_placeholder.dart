@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -48,7 +49,7 @@ class NotConfiguredPlaceholder extends StatelessWidget {
       icon: Icons.settings_outlined,
       // The same voice as the rest of the app's connection states, which say a
       // service "did not answer" rather than reporting a config condition.
-      title: '$serviceName is not set up',
+      title: Lexicon.isNotSetUp(serviceName),
       // "Credentials" rather than "the URL and API Key": four of the thirteen
       // services authenticate with a WebUI login and have no API key to paste, so
       // naming one told a third of the roster to look for a field that is not
