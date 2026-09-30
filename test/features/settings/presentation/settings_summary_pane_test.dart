@@ -31,10 +31,48 @@ void main() {
         ]) {
           expect(find.text(card), findsOneWidget, reason: '$card card missing');
         }
-        // The index's own groups belong to the narrow layout: beside the rail
-        // they would be a second copy of the rail.
+        // General belongs to the narrow layout: beside the rail its rows
+        // would be a second copy of the rail.
         expect(find.text('GENERAL'), findsNothing);
-        expect(find.text('DANGER ZONE'), findsNothing);
+      });
+    });
+
+    testWidgets('what the rail cannot carry is still reachable', (
+      tester,
+    ) async {
+      // About, Revisit onboarding and Reset are not pages, so the rail never
+      // had them — and while only the phone index built them, a window this
+      // wide had no door to the licence page, feedback, the donation sheet,
+      // the onboarding replay or Reset at all.
+      await _onDesktop(() async {
+        await _pumpHome(tester, size: const Size(1440, 2400));
+
+        for (final label in const ['ONBOARDING', 'ABOUT', 'DANGER ZONE']) {
+          expect(find.text(label), findsOneWidget, reason: '$label missing');
+        }
+        for (final row in const [
+          'Revisit onboarding',
+          'GitHub',
+          'Send feedback',
+          'Support development',
+          'Licenses & trademarks',
+          'Reset app data',
+        ]) {
+          expect(find.text(row), findsOneWidget, reason: '$row missing');
+        }
+
+        // Reset keeps its confirmation on this layout too.
+        await tester.tap(find.text('Reset app data'));
+        await tester.pumpAndSettle();
+        expect(find.text('Reset all data?'), findsOneWidget);
+        await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+        await tester.pumpAndSettle();
+        expect(find.text('Reset all data?'), findsNothing);
+
+        // And the licence page opens from here.
+        await tester.tap(find.text('Licenses & trademarks'));
+        await tester.pumpAndSettle();
+        expect(find.byType(LicensePage), findsOneWidget);
       });
     });
 

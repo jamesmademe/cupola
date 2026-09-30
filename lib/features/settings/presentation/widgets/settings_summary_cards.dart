@@ -19,6 +19,7 @@ import 'package:cupola/features/settings/domain/regions.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_app_rows.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:cupola/features/settings/presentation/widgets/test_all_connections_button.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
@@ -38,6 +39,14 @@ import 'package:cupola/features/shell/domain/portal_hints.dart';
 /// `statusToneColor`, for the reason the vocabulary exists: the summary, the
 /// connections list and the connection form must not describe one failure three
 /// different ways.
+///
+/// **After the six, three cards that are doors rather than readouts:**
+/// Onboarding, About and Danger zone. Those rows are not pages, so the rail
+/// cannot carry them, and while only the phone index built them a window this
+/// wide had no way to the licence page, the feedback address, the donation
+/// sheet, the onboarding replay or Reset. They are the phone's own rows
+/// (`settings_app_rows.dart`) under the phone's own labels, in the phone's
+/// order; Reset keeps its confirmation.
 class SettingsSummaryPane extends StatelessWidget {
   const SettingsSummaryPane({super.key, required this.padding});
 
@@ -59,8 +68,30 @@ class SettingsSummaryPane extends StatelessWidget {
         _AppearanceSummaryCard(),
         SizedBox(height: AppSpacing.xl),
         _HintsSummaryCard(),
+        SizedBox(height: AppSpacing.xl),
+        _SummaryCard(
+          label: 'Onboarding',
+          children: [SettingsRevisitOnboardingRow()],
+        ),
+        SizedBox(height: AppSpacing.xl),
+        _AboutSummaryCard(),
+        SizedBox(height: AppSpacing.xl),
+        _SummaryCard(
+          label: 'Danger zone',
+          children: [SettingsResetAppDataRow()],
+        ),
       ],
     );
+  }
+}
+
+/// About: the same four rows the phone index draws.
+class _AboutSummaryCard extends StatelessWidget {
+  const _AboutSummaryCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _SummaryCard(label: 'About', children: settingsAboutRows(context));
   }
 }
 
