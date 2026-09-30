@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -284,13 +283,51 @@ class _TransmissionActionsBar extends ConsumerWidget {
 
 /// Prompts for a magnet link or `.torrent` URL and hands it to the daemon.
 Future<void> _showAddTorrentDialog(BuildContext context, WidgetRef ref) async {
-  final controller = TextEditingController();
-  final submitted = await showDialog<bool>(
+  final value = (await showDialog<String>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => const _AddTorrentDialog(),
+  ))?.trim();
+  if (value == null || value.isEmpty || !context.mounted) return;
+
+  // Not [runTransmissionAction]: its yes/no cannot say "already there" or
+  // "may have been added", and this flow used to print "Torrent added" after
+  // the failure toast whatever the daemon said.
+  await runTransmissionAdd(
+    context,
+    ref,
+    value,
+    invalidate: _invalidateAfterAction,
+  );
+}
+
+/// The link field of the add flow. Pops with the text on Add, null on Cancel.
+///
+/// A widget of its own so the field's controller lives exactly as long as the
+/// field. It used to be disposed the moment `showDialog` returned — which is
+/// when the route *starts* its exit animation, with the field still on screen
+/// and still listening to it.
+class _AddTorrentDialog extends StatefulWidget {
+  const _AddTorrentDialog();
+
+  @override
+  State<_AddTorrentDialog> createState() => _AddTorrentDialogState();
+}
+
+class _AddTorrentDialogState extends State<_AddTorrentDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
       title: const Text('Add torrent'),
       content: TextField(
-        controller: controller,
+        controller: _controller,
         autofocus: true,
         keyboardType: TextInputType.url,
         decoration: const InputDecoration(
@@ -300,44 +337,14 @@ Future<void> _showAddTorrentDialog(BuildContext context, WidgetRef ref) async {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
+          onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
+          onPressed: () => Navigator.of(context).pop(_controller.text),
           child: const Text('Add'),
         ),
       ],
-    ),
-  );
-
-  if (submitted != true) {
-    controller.dispose();
-    return;
-  }
-  final value = controller.text.trim();
-  controller.dispose();
-  if (value.isEmpty || !context.mounted) return;
-
-  // The duplicate case is reported honestly rather than as a success:
-  // Transmission answers `result: "success"` with a `torrent-duplicate` key for
-  // a torrent it already had, and telling the user it was added would be wrong.
-  var wasDuplicate = false;
-  await runTransmissionAction(
-    context,
-    ref,
-    action: (c) async {
-      final outcome = await c.addTorrent(value);
-      wasDuplicate = outcome.isDuplicate;
-    },
-    successMessage: null,
-    failureMessage: 'Failed to add the torrent',
-    invalidate: _invalidateAfterAction,
-  );
-  if (context.mounted) {
-    SnackBarHelper.success(
-      context,
-      wasDuplicate ? 'Already in Transmission' : 'Torrent added',
     );
   }
 }

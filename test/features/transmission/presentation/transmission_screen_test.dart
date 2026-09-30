@@ -1,20 +1,26 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/transmission/data/transmission_client.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
+import 'package:cupola/features/transmission/presentation/transmission_actions.dart';
 import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
 import 'package:cupola/features/transmission/presentation/transmission_screen.dart';
 
+import '../../../test_helpers/scripted_http_adapter.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 final _configured = settingsWith(
@@ -159,5 +165,122 @@ void main() {
     await tester.pumpAndSettle();
     expect(_subtitleOf(tester, 'Transferring'), '1 torrent');
     expect(_subtitleOf(tester, 'Seeding and idle'), '0 torrents');
+  });
+
+  // The add flow ignored whether the add had worked and printed "Torrent
+  // added" after the failure toast, for a refused link and a dead daemon alike.
+  group('Add torrent', () {
+    Future<void> add(WidgetTester tester, List<ScriptedReply> replies) async {
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: 'https://transmission.test',
+          followRedirects: false,
+          validateStatus: allowRedirectStatus,
+        ),
+      )..httpClientAdapter = ScriptedHttpAdapter(replies);
+      await _pump(tester, [
+        transmissionTorrentsProvider.overrideWith((ref) async => const []),
+        transmissionClientProvider.overrideWith(
+          (ref) =>
+              TransmissionClient(url: 'https://transmission.test', dio: dio),
+        ),
+      ]);
+      await tester.tap(find.text('Add torrent'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'magnet:?xt=urn:btih:aa');
+      await tester.tap(find.text('Add'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a refused link says so, in the daemon words', (tester) async {
+      await add(tester, const [
+        ScriptedReply(body: {'result': 'invalid or corrupt torrent file'}),
+      ]);
+
+      expect(
+        find.text(
+          'Transmission refused the torrent\ninvalid or corrupt torrent file',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Torrent added'), findsNothing);
+    });
+
+    testWidgets('a duplicate is not reported as added', (tester) async {
+      await add(tester, const [
+        ScriptedReply(
+          body: {
+            'result': 'success',
+            'arguments': {
+              'torrent-duplicate': {
+                'id': 4,
+                'hashString': 'aa',
+                'name': 'Sintel',
+              },
+            },
+          },
+        ),
+      ]);
+
+      expect(find.text('Already in Transmission\nSintel'), findsOneWidget);
+      expect(find.textContaining('Torrent added'), findsNothing);
+    });
+
+    testWidgets('a request turned away says nothing was added', (tester) async {
+      await add(tester, const [ScriptedReply(statusCode: 401)]);
+
+      expect(
+        find.text(
+          'The torrent was not added\n'
+          'Transmission rejected the username or password.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Torrent added'), findsNothing);
+    });
+
+    testWidgets('an added torrent is the only one called added', (
+      tester,
+    ) async {
+      await add(tester, const [
+        ScriptedReply(
+          body: {
+            'result': 'success',
+            'arguments': {
+              'torrent-added': {'id': 5, 'hashString': 'aa', 'name': 'Sintel'},
+            },
+          },
+        ),
+      ]);
+
+      expect(find.text('Torrent added'), findsOneWidget);
+    });
+  });
+
+  group('TransmissionAddReport.from', () {
+    test('a timeout does not claim the torrent was added or not', () {
+      final report = TransmissionAddReport.from(
+        error: const TransmissionException(
+          'The connection timed out',
+          reason: ServiceFailureReason.timeout,
+        ),
+      );
+
+      expect(report.verdict, TransmissionAddVerdict.unconfirmed);
+      expect(report.message, contains('Check the queue'));
+    });
+
+    test('a host that never answered is a torrent not added', () {
+      final report = TransmissionAddReport.from(
+        error: const TransmissionException(
+          'Connection refused',
+          reason: ServiceFailureReason.unreachable,
+        ),
+      );
+
+      expect(report.verdict, TransmissionAddVerdict.notSent);
+      expect(report.message, 'The torrent was not added');
+      expect(report.detail, 'Connection refused');
+    });
   });
 }

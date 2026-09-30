@@ -20,12 +20,20 @@ class TransmissionException implements Exception, HasFailureReason {
   const TransmissionException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
+    this.rejectedByDaemon = false,
   });
 
   final String message;
 
   @override
   final ServiceFailureReason reason;
+
+  /// The daemon read the request and answered it with a `result` other than
+  /// `"success"` — "invalid or corrupt torrent file", "http error 404". The
+  /// request arrived and was refused, which is a different fact from one that
+  /// never arrived or whose answer never came back, and [message] is the
+  /// daemon's own words.
+  final bool rejectedByDaemon;
 
   @override
   String toString() => 'TransmissionException: $message';
@@ -379,6 +387,7 @@ class TransmissionClient {
     if (result != 'success') {
       throw TransmissionException(
         result.isEmpty ? 'Transmission rejected the request.' : result,
+        rejectedByDaemon: true,
       );
     }
 

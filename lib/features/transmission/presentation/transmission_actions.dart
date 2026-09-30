@@ -2,8 +2,10 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
+import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
 
 /// Runs a [TransmissionClient] mutation with the shared plumbing: resolve the
@@ -58,4 +60,143 @@ Future<bool> runTransmissionAction(
     }
     return false;
   }
+}
+
+/// What an attempt to add a torrent came to.
+enum TransmissionAddVerdict {
+  /// `torrent-added`.
+  added,
+
+  /// `torrent-duplicate`: `result` said `"success"`, and nothing was added.
+  duplicate,
+
+  /// The daemon read the request and refused it, in its own words.
+  refused,
+
+  /// The request never reached the RPC handler — no route, a TLS failure, the
+  /// credentials or a whitelist turned it away — so nothing can have been
+  /// added.
+  notSent,
+
+  /// The request may have arrived and no answer came back: a timeout, a 5xx,
+  /// a reply this app could not read. The torrent may or may not be there.
+  unconfirmed,
+}
+
+/// The sentence the Add torrent flow shows for a [TransmissionAddVerdict].
+@immutable
+class TransmissionAddReport {
+  const TransmissionAddReport(this.verdict, this.message, {this.detail});
+
+  /// Read from the add's outcome, or from what it threw.
+  ///
+  /// "Did it work" is not "did it throw" here, which is why this flow does not
+  /// go through [runTransmissionAction]: a duplicate is a success on the wire
+  /// and a failure to the user, and a timeout is a failure on the wire that may
+  /// still have added the torrent. Each gets its own sentence, and none of them
+  /// is "Torrent added".
+  factory TransmissionAddReport.from({
+    ({TransmissionTorrent? torrent, bool isDuplicate})? outcome,
+    Object? error,
+  }) {
+    if (error == null && outcome != null) {
+      return outcome.isDuplicate
+          ? TransmissionAddReport(
+              TransmissionAddVerdict.duplicate,
+              'Already in Transmission',
+              detail: outcome.torrent?.name,
+            )
+          : const TransmissionAddReport(
+              TransmissionAddVerdict.added,
+              'Torrent added',
+            );
+    }
+    if (error is TransmissionException) {
+      if (error.rejectedByDaemon) {
+        return TransmissionAddReport(
+          TransmissionAddVerdict.refused,
+          'Transmission refused the torrent',
+          detail: error.message,
+        );
+      }
+      return switch (error.reason) {
+        ServiceFailureReason.unreachable ||
+        ServiceFailureReason.tls ||
+        ServiceFailureReason.localNetworkBlocked ||
+        ServiceFailureReason.unauthorized ||
+        ServiceFailureReason.notFound ||
+        ServiceFailureReason.redirected => TransmissionAddReport(
+          TransmissionAddVerdict.notSent,
+          'The torrent was not added',
+          detail: error.message,
+        ),
+        ServiceFailureReason.timeout ||
+        ServiceFailureReason.serverError ||
+        ServiceFailureReason.unknown => TransmissionAddReport(
+          TransmissionAddVerdict.unconfirmed,
+          _unconfirmed,
+          detail: error.message,
+        ),
+      };
+    }
+    return TransmissionAddReport(
+      TransmissionAddVerdict.unconfirmed,
+      _unconfirmed,
+      detail: error?.toString(),
+    );
+  }
+
+  static const _unconfirmed =
+      'Transmission did not confirm the add. Check the queue before adding it '
+      'again.';
+
+  final TransmissionAddVerdict verdict;
+  final String message;
+
+  /// The daemon's words, the transport's, or the duplicate's name.
+  final String? detail;
+}
+
+/// Hands [link] to the daemon and says what came of it — see
+/// [TransmissionAddReport.from]. The queue is re-read whatever the outcome.
+Future<TransmissionAddVerdict> runTransmissionAdd(
+  BuildContext context,
+  WidgetRef ref,
+  String link, {
+  List<ProviderOrFamily> invalidate = const [],
+}) async {
+  TransmissionAddReport report;
+  try {
+    final client = ref.read(transmissionClientProvider);
+    try {
+      report = TransmissionAddReport.from(
+        outcome: await client.addTorrent(link),
+      );
+    } catch (e) {
+      report = TransmissionAddReport.from(error: e);
+    }
+  } catch (e) {
+    // No client, so no request left the device.
+    report = TransmissionAddReport(
+      TransmissionAddVerdict.notSent,
+      'The torrent was not added',
+      detail: e.toString(),
+    );
+  }
+  for (final provider in invalidate) {
+    ref.invalidate(provider);
+  }
+  if (context.mounted) {
+    switch (report.verdict) {
+      case TransmissionAddVerdict.added:
+        SnackBarHelper.success(context, report.message);
+      case TransmissionAddVerdict.duplicate:
+        SnackBarHelper.info(context, report.message, detail: report.detail);
+      case TransmissionAddVerdict.refused ||
+          TransmissionAddVerdict.notSent ||
+          TransmissionAddVerdict.unconfirmed:
+        SnackBarHelper.error(context, report.message, detail: report.detail);
+    }
+  }
+  return report.verdict;
 }
