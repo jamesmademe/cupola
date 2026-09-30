@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
@@ -169,7 +170,7 @@ class DiscoverActionButtons extends ConsumerWidget {
                 ? ServiceKey.radarr
                 : ServiceKey.sonarr,
             blockedMessage:
-                'Connect $serviceName to open this '
+                '${Lexicon.setUp(serviceName)} to open this '
                 '${_normalizedMediaType == 'movie' ? 'movie' : 'series'}',
             onTap: () => _openInService(context, ref),
             builder: (context, onPressed, annotate) => HeaderActionButton(

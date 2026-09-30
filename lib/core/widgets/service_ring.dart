@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The ring gives up size as the reading size grows, so the copy beside it never
@@ -207,7 +208,7 @@ class _ServiceRingState extends State<ServiceRing>
     }
     final parts = <String>['$picked of ${ServiceKey.values.length} chosen'];
     if (connected > 0) parts.add('$connected answering');
-    if (silent > 0) parts.add('$silent not answering');
+    if (silent > 0) parts.add('$silent ${StateWord.didNotAnswer.inline}');
     return parts.join(', ');
   }
 

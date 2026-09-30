@@ -51,7 +51,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(AppErrorState), findsOneWidget);
-      expect(find.text("Couldn't load Seerr"), findsOneWidget);
+      expect(
+        find.text('The request to Seerr did not complete'),
+        findsOneWidget,
+      );
       // The exception's own words never reach the screen; the detail is
       // the classified sentence (an unattributable failure here).
       expect(find.textContaining('Connection refused'), findsNothing);
@@ -82,7 +85,7 @@ void main() {
       expect(find.byType(AppEmptyState), findsOneWidget);
       expect(find.byType(AppErrorState), findsNothing);
       expect(find.text('No collection here'), findsOneWidget);
-      expect(find.text("Couldn't load Seerr"), findsNothing);
+      expect(find.text('The request to Seerr did not complete'), findsNothing);
       expect(find.text('Retry'), findsNothing);
     });
 

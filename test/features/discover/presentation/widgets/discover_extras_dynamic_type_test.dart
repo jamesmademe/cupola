@@ -405,7 +405,7 @@ void main() {
       await pumpSlots(tester, 3.0, extras: null);
       expect(find.text('Cast & collections'), findsOneWidget);
       expect(
-        find.text('Connect Seerr to see cast, collections and more.'),
+        find.text('Set up Seerr to see cast, collections and more.'),
         findsOneWidget,
       );
       final stackedWidth = tester.getSize(find.byType(FilledButton)).width;

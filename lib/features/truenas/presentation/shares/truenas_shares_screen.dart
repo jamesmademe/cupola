@@ -560,7 +560,7 @@ class _ShareRow extends ConsumerWidget {
             verbPhrase: 'delete $noun',
             // Neutral, like Edit beside it: the confirmation says what goes.
             icon: const Icon(Icons.delete_outline_rounded, size: 18),
-            tooltip: 'Delete',
+            tooltip: 'Delete share',
             onTap: onDelete,
           ),
           if (enabled != null && onToggle != null)

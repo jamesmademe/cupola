@@ -45,7 +45,7 @@ void main() {
 
       // Congratulating someone on connecting nothing reads as a bug; the empty
       // case is legitimate and gets copy that says what actually happened.
-      expect(find.text('Nothing connected yet.'), findsOneWidget);
+      expect(find.text('Nothing set up yet.'), findsOneWidget);
       expect(find.textContaining('Cupola will stay empty'), findsOneWidget);
       expect(_button('Enter Cupola'), findsOneWidget);
     });
@@ -194,7 +194,7 @@ void main() {
 
       await _tap(tester, 'Skip Sonarr');
       // Both skipped, so the close has nothing to report.
-      expect(find.text('Nothing connected yet.'), findsOneWidget);
+      expect(find.text('Nothing set up yet.'), findsOneWidget);
     });
 
     testWidgets(
@@ -254,7 +254,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 60));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Nothing connected'), findsOneWidget);
+      expect(find.textContaining('Nothing set up'), findsOneWidget);
       // And it never blocks the way out.
       expect(_button('Enter Cupola'), findsOneWidget);
     });
@@ -275,7 +275,7 @@ void main() {
 
       // Skipping after filling it in clears it, so this is the honest outcome:
       // the summary reports what is actually saved, never what was typed.
-      expect(find.text('Nothing connected yet.'), findsOneWidget);
+      expect(find.text('Nothing set up yet.'), findsOneWidget);
     });
 
     testWidgets('a configured service survives to the close and is named', (
@@ -431,7 +431,7 @@ void main() {
     testWidgets('Skip for now on the door reaches the close', (tester) async {
       await _pumpOnboarding(tester);
       await _tap(tester, 'Skip for now');
-      expect(find.text('Nothing connected yet.'), findsOneWidget);
+      expect(find.text('Nothing set up yet.'), findsOneWidget);
       expect(_button('Enter Cupola'), findsOneWidget);
     });
 
@@ -510,7 +510,7 @@ void main() {
       // Resumed already picked; untick it and walk out through the close.
       await _pick(tester, 'Sonarr');
       await _tap(tester, 'Continue');
-      expect(find.text('Nothing connected yet.'), findsOneWidget);
+      expect(find.text('Nothing set up yet.'), findsOneWidget);
 
       // Removing a connection is a confirmed action that lives in the settings
       // screen. Unticking a chip here means "not now".
@@ -560,7 +560,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(container.read(settingsProvider).sonarrUrl, isEmpty);
-      expect(find.text('Nothing connected yet.'), findsOneWidget);
+      expect(find.text('Nothing set up yet.'), findsOneWidget);
     });
 
     // ── A trust decision belongs to the host it was made against ──────────
@@ -925,7 +925,7 @@ void main() {
       // left stayed mounted and focused: the close arrived with the keyboard
       // still covering half of it, and keystrokes went into a field that was no
       // longer on screen.
-      expect(find.text('Nothing connected yet.'), findsOneWidget);
+      expect(find.text('Nothing set up yet.'), findsOneWidget);
       expect(tester.testTextInput.isVisible, isFalse);
       expect(
         find

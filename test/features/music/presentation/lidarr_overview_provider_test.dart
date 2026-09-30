@@ -73,7 +73,7 @@ void main() {
 
       expect(items, hasLength(1));
       expect(items.single.kind, LidarrAttentionKind.stalled);
-      expect(items.single.headline, 'Stalled · Alvvays, Blue Rev');
+      expect(items.single.headline, 'Stuck · Alvvays, Blue Rev');
       expect(items.single.detail, contains('qBittorrent'));
     });
 

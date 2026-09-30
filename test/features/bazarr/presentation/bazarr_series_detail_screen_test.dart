@@ -161,7 +161,7 @@ void main() {
     await _pumpScreen(tester, fake: fake, sonarrSeriesId: 7);
 
     expect(find.byType(AppErrorState), findsOneWidget);
-    expect(find.text("Couldn't load Bazarr"), findsOneWidget);
+    expect(find.text('The request to Bazarr did not complete'), findsOneWidget);
 
     fake
       ..throwOnCall = null

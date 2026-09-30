@@ -92,7 +92,7 @@ void main() {
     );
 
     expect(
-      find.semantics.byLabel('Linux, Every 15 min, No category, paused on add'),
+      find.semantics.byLabel('Linux, Every 15 min, No category, added stopped'),
       findsOneWidget,
     );
   });

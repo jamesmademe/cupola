@@ -66,7 +66,7 @@ void main() {
       ),
       CatalogScene(
         'Nothing set up (the Dashboard empty state, spin: true in the app) · '
-        'then a settled stack with one service not answering, progress 1',
+        'then a settled stack with one service that did not answer, progress 1',
         (_) => _pair([
           const ServiceRing(states: {}, diameter: 268),
           ServiceRing(states: _settled, diameter: 268, progress: 1),

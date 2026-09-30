@@ -8,6 +8,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
@@ -111,22 +112,10 @@ class ProwlarrProviderListScreen extends ConsumerWidget {
         },
         loading: () =>
             const ProwlarrListShimmer(count: 4, verticalPadding: AppSpacing.sm),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Failed to load the ${kind.title.toLowerCase()}'),
-                const SizedBox(height: AppSpacing.md),
-                FilledButton(
-                  onPressed: () =>
-                      ref.invalidate(prowlarrProvidersProvider(kind)),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
+        error: (error, _) => AppErrorState(
+          error: error,
+          serviceName: ServiceKey.prowlarr.title,
+          onRetry: () => ref.invalidate(prowlarrProvidersProvider(kind)),
         ),
       ),
     );
@@ -168,7 +157,7 @@ class ProwlarrProviderListScreen extends ConsumerWidget {
           // else, and the confirmation says what goes.
           ListTile(
             leading: const Icon(Icons.delete_outline_rounded),
-            title: const Text('Delete'),
+            title: Text('Delete ${kind.singular}'),
             onTap: () {
               Navigator.of(sheetContext).pop();
               deleteProviderFlow(context, ref, kind, resource);

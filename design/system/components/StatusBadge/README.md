@@ -18,15 +18,15 @@ The tone colour is always `statusToneColor(colorScheme, tone)`: success, warning
 | Arm | States |
 | --- | --- |
 | `success` | Available |
-| `info` | Downloading, Importing, Queued, Import pending, Partial |
-| `warning` (a fault) | Stalled, Import blocked, Failed |
+| `info` | Downloading, Importing, Queued, Waiting to import, Partial |
+| `warning` (a fault) | Stuck, Import blocked, Failed |
 | `error` (unreachable only) | Client unavailable |
-| neutral (the backlog) | Missing, Upgrade available, Deleted, Not released, Paused, Unmonitored, Unknown |
+| neutral (the backlog) | Missing, Upgrade available, Deleted, Not released, Stopped, Unmonitored, Unknown |
 | `primary` | Not requested |
 
-A Seerr request reads the same five arms, in Seerr's own words: Available and Completed are `success`; Pending, Approved, Processing and Partially available are `info` — a request awaiting approval is in line, not broken; Failed is `warning`; Declined and Deleted are neutral, a closed decision.
+A Seerr request reads the same five arms, in the lexicon's words: Available and Completed are `success`; Waiting for approval, Approved, Processing and Partially available are `info` — a request awaiting approval is in line, not broken; Failed is `warning`; Declined and Deleted are neutral, a closed decision.
 
-Labels are sentence case: "Import pending", "Client unavailable", "Not requested", "Upgrade available". A service may override the label with its own wording (for example Seerr's "Available to request").
+Labels are sentence case and come from the lexicon (`core/status/lexicon.dart`): "Waiting to import", "Client unavailable", "Not requested", "Upgrade available". A service may override the label with its own wording (for example Seerr's "Available to request").
 
 ## Consumer provides
 

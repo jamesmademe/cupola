@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/theme.dart';
@@ -230,7 +231,7 @@ class _InfoTab extends ConsumerWidget {
           valueOf: (p) => p.lastSeenFormatted,
         ),
         _PropRow(
-          label: 'Reannounce in',
+          label: 'Asks trackers again in',
           hash: hash,
           valueOf: (p) => p.reannounceFormatted,
         ),
@@ -745,7 +746,7 @@ class _ActionsTab extends ConsumerWidget {
             context,
             ref,
             action: (service) => service.pauseTorrents([torrent.hash]),
-            successMessage: 'Paused',
+            successMessage: StateWord.stopped.label,
             failureMessage: 'Failed to pause',
             invalidate: [torrentsProvider, allTorrentsProvider],
           ),
@@ -758,7 +759,7 @@ class _ActionsTab extends ConsumerWidget {
         FilledButton.icon(
           onPressed: () => _confirmDeleteSingle(context, ref, torrent),
           icon: const Icon(Icons.delete_outline_rounded, size: 18),
-          label: const Text('Delete'),
+          label: const Text('Delete torrent'),
         ),
         const SizedBox(height: AppSpacing.lg),
         OutlinedButton.icon(
@@ -814,7 +815,7 @@ class _ActionsTab extends ConsumerWidget {
         OutlinedButton.icon(
           onPressed: () => _reannounce(context, ref, torrent),
           icon: const Icon(Icons.campaign_rounded, size: 16),
-          label: const Text('Reannounce to trackers'),
+          label: const Text('Look for peers again'),
         ),
       ],
     );
@@ -839,8 +840,8 @@ class _ActionsTab extends ConsumerWidget {
       context,
       ref,
       action: (service) => service.reannounce([torrent.hash]),
-      successMessage: 'Reannounced to trackers',
-      failureMessage: 'Failed to reannounce',
+      successMessage: 'Asked the trackers for more peers',
+      failureMessage: 'Could not look for peers again',
     );
   }
 

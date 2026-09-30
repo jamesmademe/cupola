@@ -281,7 +281,7 @@ Widget _loose() => Column(
       ordinal: 'E14',
       ordinalLabel: 'Episode 14',
       title: 'The Priory School',
-      facts: const ['Apr 8, 1921', 'Stalled 61%'],
+      facts: const ['Apr 8, 1921', 'Stuck 61%'],
       status: const MediaStatusInfo(
         pipeline: MediaPipeline.stalled,
         progress: 0.61,

@@ -446,7 +446,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Job actions'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Delete'));
+      await tester.tap(find.text('Delete job'));
       await tester.pumpAndSettle();
       return client;
     }

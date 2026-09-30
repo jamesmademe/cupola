@@ -110,7 +110,7 @@ void main() {
 
       final kpis = await _seerrKpis([pendingButAvailable]);
 
-      expect(kpis['Pending'], '1');
+      expect(kpis['Waiting for approval'], '1');
       // Its media really is available, and that tile is about the media.
       expect(kpis['Available'], '1');
       expect(kpis['Requests'], '1');
@@ -121,7 +121,7 @@ void main() {
         _request(id: 1, status: RequestStatus.pendingApproval),
       ]);
 
-      expect(kpis['Pending'], '1');
+      expect(kpis['Waiting for approval'], '1');
       expect(kpis['Processing'], '0');
       expect(kpis['Available'], '0');
     });
@@ -141,7 +141,7 @@ void main() {
         _request(id: 3, status: RequestStatus.declined),
       ]);
 
-      expect(kpis['Pending'], '0');
+      expect(kpis['Waiting for approval'], '0');
       expect(kpis['Processing'], '1');
       expect(kpis['Available'], '1');
       expect(kpis['Requests'], '3');

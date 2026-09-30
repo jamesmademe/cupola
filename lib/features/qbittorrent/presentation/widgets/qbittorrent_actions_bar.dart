@@ -67,7 +67,7 @@ class QbittorrentOverflowMenu extends ConsumerWidget {
           context,
           ref,
           action: (service) => service.pauseTorrents(const ['all']),
-          successMessage: 'All torrents paused',
+          successMessage: 'All torrents stopped',
           failureMessage: 'Failed',
           invalidate: [torrentsProvider, allTorrentsProvider],
         );

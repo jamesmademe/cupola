@@ -55,7 +55,10 @@ void main() {
       );
 
       expect(find.byType(AppErrorState), findsOneWidget);
-      expect(find.text("Couldn't load Radarr"), findsOneWidget);
+      expect(
+        find.text('The request to Radarr did not complete'),
+        findsOneWidget,
+      );
       // The diagnostics stay on screen — a self-hoster can act on them — just
       // not as the opening line.
       // The exception's own words never reach the screen; the detail is

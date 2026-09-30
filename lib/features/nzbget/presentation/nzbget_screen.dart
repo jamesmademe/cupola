@@ -209,7 +209,7 @@ class _NzbgetActionsBar extends ConsumerWidget {
                             paused ? c.resumeDownload() : c.pauseDownload(),
                         successMessage: paused
                             ? 'Downloads resumed'
-                            : 'Downloads paused',
+                            : 'Downloads stopped',
                         failureMessage: paused
                             ? 'Failed to resume downloads'
                             : 'Failed to pause downloads',
@@ -324,7 +324,7 @@ class _QueueTile extends ConsumerWidget {
           context,
           ref,
           action: (c) => c.pauseGroup(group.nzbId),
-          successMessage: 'Job paused',
+          successMessage: 'Job stopped',
           failureMessage: 'Failed to pause the job',
           invalidate: _nzbgetInvalidateAfterAction,
         );

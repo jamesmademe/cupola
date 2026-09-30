@@ -29,6 +29,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
@@ -276,8 +277,8 @@ List<LidarrAttentionItem> lidarrQueueFaults(
       items.add(
         LidarrAttentionItem(
           kind: LidarrAttentionKind.stalled,
-          headline: 'Stalled · $title',
-          spokenHeadline: 'Stalled · $spokenTitle',
+          headline: '${StateWord.stuck.label} · $title',
+          spokenHeadline: '${StateWord.stuck.label} · $spokenTitle',
           detail: joinDisplayParts([
             stringOrNull(record['downloadClient']),
             message,

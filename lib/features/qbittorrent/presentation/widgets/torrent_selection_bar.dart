@@ -90,7 +90,7 @@ class TorrentSelectionBar extends ConsumerWidget {
                 // Neutral like its neighbours: the confirmation carries the
                 // weight, in words.
                 icon: const Icon(Icons.delete_outline_rounded),
-                tooltip: 'Delete',
+                tooltip: 'Delete selected torrents',
                 onPressed: onConfirmDelete,
               ),
             ],

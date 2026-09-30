@@ -119,7 +119,7 @@ void main() {
         queueEntry: const ArrQueueEntry(pipeline: MediaPipeline.importPending),
       );
 
-      expect(status.label, 'Import pending');
+      expect(status.label, 'Waiting to import');
       expect(status.availability, MediaAvailability.partial);
     });
   });

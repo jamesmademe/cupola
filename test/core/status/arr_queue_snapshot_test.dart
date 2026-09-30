@@ -179,7 +179,7 @@ void main() {
         }),
       );
 
-      expect(status.label, 'Stalled');
+      expect(status.label, 'Stuck');
       expect(status.isActive, isFalse);
       expect(status.showsProgress, isTrue);
       expect(status.progressPercent, 43);

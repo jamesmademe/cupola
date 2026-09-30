@@ -149,7 +149,7 @@ void main() {
       ], now: now);
 
       expect(items.single.kind, SonarrAttentionKind.stalled);
-      expect(items.single.headline, 'Stalled · Andor S02E03');
+      expect(items.single.headline, 'Stuck · Andor S02E03');
       expect(items.single.detail, contains('qBittorrent'));
       expect(items.single.detail, contains('3 h ago'));
     });

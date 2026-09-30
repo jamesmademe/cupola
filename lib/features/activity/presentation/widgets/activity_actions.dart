@@ -122,12 +122,12 @@ class ActivityActions {
   }) async {
     final result = await showAppConfirmDialog(
       context: context,
-      title: 'Blocklist and search?',
+      title: 'Try another download?',
       message:
-          '$title will be removed and blocklisted, then a new search runs for '
-          'a different release.',
+          '$title will be removed and never picked again, then a new search '
+          'looks for a different release.',
       icon: Icons.refresh_rounded,
-      confirmLabel: 'Blocklist and search',
+      confirmLabel: 'Try another download',
     );
 
     if (!result.confirmed) return;
@@ -140,8 +140,8 @@ class ActivityActions {
       action: () => ref
           .read(connectionArrServiceProvider((serviceType, instanceId)))
           .removeFromQueue(recordId, removeFromClient: true, blocklist: true),
-      successMessage: 'Blocklisted, searching for another release',
-      failureMessage: 'Could not blocklist this release',
+      successMessage: 'Looking for another download',
+      failureMessage: 'Could not try another download',
     );
   }
 

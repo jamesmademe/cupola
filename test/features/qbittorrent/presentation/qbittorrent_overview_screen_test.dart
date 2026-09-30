@@ -111,7 +111,7 @@ void main() {
     // four fragments a screen reader walks separately.
     expect(
       find.semantics.byLabel(
-        'Stalled, The.Zone.of.Interest.2023, 18%, idle 42 min, 3 seeds',
+        'Stuck, The.Zone.of.Interest.2023, 18%, idle 42 min, 3 seeds',
       ),
       findsOneWidget,
     );
@@ -140,7 +140,7 @@ void main() {
     // Four rows, in the worst-first order the fault kinds declare.
     expect(find.textContaining('Errored · '), findsOneWidget);
     expect(find.textContaining('Missing files · '), findsOneWidget);
-    expect(find.textContaining('Stalled · '), findsNWidgets(2));
+    expect(find.textContaining('Stuck · '), findsNWidgets(2));
   });
 
   testWidgets('a paused torrent is backlog: it is counted, never flagged', (
@@ -160,7 +160,7 @@ void main() {
     // …and not in the queue preview either, but present in the census the
     // header prints, as a plain figure in the ordinary ink.
     expect(
-      find.text('2 torrents · 1 downloading · 0 seeding · 1 paused'),
+      find.text('2 torrents · 1 downloading · 0 seeding · 1 stopped'),
       findsOneWidget,
     );
   });

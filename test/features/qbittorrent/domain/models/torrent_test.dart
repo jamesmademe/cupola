@@ -47,9 +47,9 @@ void main() {
       expect(TorrentState.downloading.label, 'Downloading');
       expect(TorrentState.metaDownloading.label, 'Fetching metadata');
       expect(TorrentState.seeding.label, 'Seeding');
-      expect(TorrentState.stalled.label, 'Stalled');
+      expect(TorrentState.stalled.label, 'Stuck');
       expect(TorrentState.checking.label, 'Checking');
-      expect(TorrentState.paused.label, 'Paused');
+      expect(TorrentState.paused.label, 'Stopped');
       expect(TorrentState.queuedUp.label, 'Queued');
       expect(TorrentState.queuedDl.label, 'Queued');
       expect(TorrentState.error.label, 'Error');

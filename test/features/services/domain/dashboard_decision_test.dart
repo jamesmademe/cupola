@@ -311,7 +311,7 @@ void main() {
           DecisionKind.stalledDownload,
           ServiceKey.qbittorrent,
         ),
-        'Connect qBittorrent to open this transfer.',
+        'Set up qBittorrent to open this transfer.',
       );
     });
   });

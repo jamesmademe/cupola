@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/media_detail_slot.dart';
@@ -128,7 +129,7 @@ class _ConnectSeerrCta extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Connect Seerr to see cast, collections and more.',
+          '${Lexicon.setUp('Seerr')} to see cast, collections and more.',
           style: theme.textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),

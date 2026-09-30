@@ -14,7 +14,10 @@ const _states = <MediaStatusInfo>[
   MediaStatusInfo(pipeline: MediaPipeline.queued),
   MediaStatusInfo(pipeline: MediaPipeline.importPending),
   // A Seerr request awaiting approval, as resolveRequestStatus returns it.
-  MediaStatusInfo(labelOverride: 'Pending', toneOverride: StatusTone.info),
+  MediaStatusInfo(
+    labelOverride: 'Waiting for approval',
+    toneOverride: StatusTone.info,
+  ),
   MediaStatusInfo(pipeline: MediaPipeline.stalled, progress: 0.61),
   MediaStatusInfo(pipeline: MediaPipeline.importBlocked),
   MediaStatusInfo(pipeline: MediaPipeline.failed),

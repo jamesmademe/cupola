@@ -135,7 +135,7 @@ void main() {
 
       final row = rows.single;
       expect(row.tone, StatusTone.warning);
-      expect(row.headline, 'Stalled · The.Zone.of.Interest.2023');
+      expect(row.headline, 'Stuck · The.Zone.of.Interest.2023');
       expect(row.detail, '18% · idle 42 min · 3 seeds');
     });
 
@@ -203,8 +203,8 @@ void main() {
       ], now: now);
 
       expect(rows.map((r) => r.headline), [
-        'Stalled · ancient',
-        'Stalled · recent',
+        'Stuck · ancient',
+        'Stuck · recent',
       ]);
     });
 
@@ -225,7 +225,7 @@ void main() {
 
       expect(
         rows.single.spoken,
-        'Stalled, Dune.Part.Two, 18%, idle 42 min, 3 seeds',
+        'Stuck, Dune.Part.Two, 18%, idle 42 min, 3 seeds',
       );
       expect(rows.single.spoken, isNot(contains('·')));
     });

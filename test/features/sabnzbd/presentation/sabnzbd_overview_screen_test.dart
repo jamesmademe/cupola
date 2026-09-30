@@ -128,7 +128,9 @@ void main() {
     final subtitles = tester
         .widgetList<SectionHeader>(find.byType(SectionHeader))
         .map((header) => header.subtitle);
-    expect(subtitles.last, 'not answering');
+    // Classified: an error nobody can attribute did not complete; only
+    // silence says "did not answer".
+    expect(subtitles.last, 'did not complete');
     // The em dash still belongs to the readout band, where `ServiceKpi`
     // speaks it as "unavailable" — never to a header a reader hears as a title
     // and a piece of punctuation.
@@ -149,7 +151,7 @@ void main() {
 
       // Stated, because pausing is the user's own decision — the one fact the
       // readout band cannot show now that Speed reads a legitimate 0 B/s.
-      expect(find.text('1 job · 1.0 GB · paused'), findsOneWidget);
+      expect(find.text('1 job · 1.0 GB · stopped'), findsOneWidget);
     },
   );
 
@@ -164,7 +166,7 @@ void main() {
     );
 
     expect(
-      find.semantics.byLabel('ETA: unavailable, queue paused'),
+      find.semantics.byLabel('ETA: unavailable, queue stopped'),
       findsOneWidget,
     );
     expect(find.text('0 min'), findsNothing);

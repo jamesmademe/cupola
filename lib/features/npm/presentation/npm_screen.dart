@@ -609,7 +609,7 @@ class _ProxyHostTile extends ConsumerWidget {
         ? (
             statusToneColor(colorScheme, StatusTone.success),
             Icons.check_circle_rounded,
-            'Online',
+            'Config loaded',
           )
         : (
             colorScheme.onSurfaceVariant,
@@ -812,13 +812,13 @@ Future<void> _confirmDisable(
 ) async {
   final confirmed = await confirmByTyping(
     context,
-    title: 'Take ${host.primaryDomain} offline?',
+    title: 'Stop serving ${host.primaryDomain}?',
     message:
         'Disabling this proxy host stops Nginx Proxy Manager serving that '
         'hostname. Anyone using it, not just this device, gets a connection '
         'error immediately, and nothing on the server warns them.',
     phrase: host.primaryDomain,
-    confirmLabel: 'Take offline',
+    confirmLabel: 'Stop serving',
   );
   if (!confirmed || !context.mounted) return;
 
@@ -827,7 +827,7 @@ Future<void> _confirmDisable(
     ref,
     resource: NpmResource.proxyHosts,
     action: (c) => c.setProxyHostEnabled(host.id, false),
-    successMessage: '${host.primaryDomain} is now offline',
+    successMessage: '${host.primaryDomain} is no longer served',
     failureMessage: 'Failed to disable ${host.primaryDomain}',
     invalidate: _invalidateAfterAction,
   );

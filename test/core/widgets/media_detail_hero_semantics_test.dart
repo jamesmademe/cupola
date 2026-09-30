@@ -251,7 +251,7 @@ void main() {
       await tester.pump();
 
       final order = _spokenOrder(tester);
-      expect(order.first, contains('Stalled'));
+      expect(order.first, contains('Stuck'));
       expect(order.first, contains('42 percent'));
       expect(
         order.first,
@@ -260,7 +260,7 @@ void main() {
       );
       // And the same words are painted, so a sighted user reading at 3x is not
       // relying on the amber either.
-      expect(find.text('Stalled'), findsOneWidget);
+      expect(find.text('Stuck'), findsOneWidget);
       expect(find.text('42%'), findsOneWidget);
       handle.dispose();
     });

@@ -6,6 +6,7 @@ import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/image_utils.dart';
@@ -1448,7 +1449,7 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(Ref ref) async {
           clientRateBytesPerSecond: rate,
           // A paused queue is stopped *on purpose*, which the tone rule files
           // under neutral — not a fault, and not a decision.
-          warning: queue.paused ? 'Paused' : null,
+          warning: queue.paused ? StateWord.stopped.label : null,
           route: ServiceRoutes.forService(ServiceKey.sabnzbd),
         ),
       )
@@ -1993,7 +1994,7 @@ DashboardDecision _queueFaultDecision(ServiceQueueItem item) {
             InFlightFault.failed => 'Failed',
             InFlightFault.stalled ||
             InFlightFault.needsImport ||
-            null => 'Stalled',
+            null => StateWord.stuck.label,
           },
       item.detail == item.warning ? null : item.detail,
       item.clientLabel,

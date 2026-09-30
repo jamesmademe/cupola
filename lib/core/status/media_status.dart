@@ -6,6 +6,8 @@
 /// are therefore modelled separately, and [MediaStatusInfo] combines them.
 library;
 
+import 'package:cupola/core/status/lexicon.dart';
+
 /// What the service currently holds on disk.
 enum MediaAvailability {
   /// The service is not tracking this item at all — nothing requested, nothing
@@ -89,11 +91,11 @@ enum MediaPipeline {
   String get label => switch (this) {
     MediaPipeline.queued => 'Queued',
     MediaPipeline.downloading => 'Downloading',
-    MediaPipeline.stalled => 'Stalled',
-    MediaPipeline.importPending => 'Import pending',
+    MediaPipeline.stalled => StateWord.stuck.label,
+    MediaPipeline.importPending => 'Waiting to import',
     MediaPipeline.importBlocked => 'Import blocked',
     MediaPipeline.importing => 'Importing',
-    MediaPipeline.paused => 'Paused',
+    MediaPipeline.paused => StateWord.stopped.label,
     MediaPipeline.clientUnavailable => 'Client unavailable',
     MediaPipeline.failed => 'Failed',
   };

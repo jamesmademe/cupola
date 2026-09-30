@@ -217,7 +217,7 @@ Widget _captionedBand() => Builder(
           const SizedBox(width: AppSpacing.sm),
           CrossServiceAction.builder(
             target: ServiceKey.radarr,
-            blockedMessage: 'Connect Radarr to open this movie',
+            blockedMessage: 'Set up Radarr to open this movie',
             onTap: () {},
             builder: (context, onPressed, annotate) => HeaderActionButton(
               icon: Icons.open_in_new_rounded,

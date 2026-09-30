@@ -192,7 +192,7 @@ class _VirtPane extends ConsumerWidget {
             padding: EdgeInsets.only(top: AppSpacing.xxl),
             child: AppEmptyState(
               icon: Icons.settings_suggest_rounded,
-              title: 'Virtualization not configured',
+              title: 'Virtualization is not set up on this TrueNAS',
               message:
                   'Choose a storage pool for instances in the '
                   'TrueNAS web UI (Virtualization) to get started.',

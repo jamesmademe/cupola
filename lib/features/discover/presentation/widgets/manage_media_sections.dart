@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
@@ -313,7 +314,7 @@ class MediaSection extends StatelessWidget {
           width: double.infinity,
           child: CrossServiceAction.builder(
             target: target,
-            blockedMessage: 'Connect $serviceName to open this $noun',
+            blockedMessage: '${Lexicon.setUp(serviceName)} to open this $noun',
             onTap: onOpen ?? () {},
             builder: (context, onPressed, annotate) => OutlinedButton.icon(
               onPressed: hasExternalService ? onPressed : null,
@@ -327,7 +328,8 @@ class MediaSection extends StatelessWidget {
           width: double.infinity,
           child: CrossServiceAction.builder(
             target: target,
-            blockedMessage: 'Connect $serviceName to remove this $noun',
+            blockedMessage:
+                '${Lexicon.setUp(serviceName)} to remove this $noun',
             onTap: onRemove ?? () {},
             builder: (context, onPressed, annotate) => ElevatedButton.icon(
               onPressed: hasExternalService && !isDeleting ? onPressed : null,

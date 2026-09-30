@@ -27,7 +27,9 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
     if (!settings.isServiceConfigured(ServiceKey.bazarr)) {
-      return const BazarrDetailErrorState(error: 'Bazarr is not configured');
+      // The missing-config marker, which the placeholder turns into
+      // "Bazarr is not set up".
+      return const BazarrDetailErrorState(error: 'Bazarr not configured');
     }
 
     final seriesAsync = ref.watch(bazarrSeriesByIdProvider(sonarrSeriesId));

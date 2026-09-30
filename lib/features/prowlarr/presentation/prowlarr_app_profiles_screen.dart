@@ -11,6 +11,7 @@ import 'package:cupola/core/utils/service_action.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -73,21 +74,10 @@ class ProwlarrAppProfilesScreen extends ConsumerWidget {
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Failed to load the sync profiles'),
-                const SizedBox(height: AppSpacing.md),
-                FilledButton(
-                  onPressed: () => ref.invalidate(prowlarrAppProfilesProvider),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
+        error: (error, _) => AppErrorState(
+          error: error,
+          serviceName: ServiceKey.prowlarr.title,
+          onRetry: () => ref.invalidate(prowlarrAppProfilesProvider),
         ),
       ),
     );

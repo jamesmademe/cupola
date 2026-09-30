@@ -218,7 +218,7 @@ class _SabnzbdActionsBar extends ConsumerWidget {
                         action: (c) => paused ? c.resume() : c.pause(),
                         successMessage: paused
                             ? 'Queue resumed'
-                            : 'Queue paused',
+                            : 'Queue stopped',
                         failureMessage: paused
                             ? 'Failed to resume the queue'
                             : 'Failed to pause the queue',
@@ -394,7 +394,7 @@ class _QueueTile extends ConsumerWidget {
           context,
           ref,
           action: (c) => c.pauseJob(slot.nzoId),
-          successMessage: 'Job paused',
+          successMessage: 'Job stopped',
           failureMessage: 'Failed to pause the job',
           invalidate: _sabnzbdInvalidateAfterAction,
         );

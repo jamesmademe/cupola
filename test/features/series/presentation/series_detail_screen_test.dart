@@ -94,7 +94,10 @@ void main() {
 
       // The headline names what failed; the exception stays on screen as the
       // demoted detail line, not as the message.
-      expect(find.text("Couldn't load Sonarr"), findsOneWidget);
+      expect(
+        find.text('The request to Sonarr did not complete'),
+        findsOneWidget,
+      );
       // The exception's own words never reach the screen; the detail is
       // the classified sentence (an unattributable failure here).
       expect(find.textContaining('Network error'), findsNothing);

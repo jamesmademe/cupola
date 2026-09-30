@@ -24,7 +24,7 @@ void main() {
 
     expect(find.text('All requests'), findsOneWidget);
     expect(find.text('All'), findsOneWidget);
-    expect(find.text('Pending'), findsOneWidget);
+    expect(find.text('Waiting for approval'), findsOneWidget);
     expect(find.text('Approved'), findsOneWidget);
     expect(find.text('Declined'), findsOneWidget);
     expect(find.text('A Quiet Place'), findsOneWidget);
@@ -50,12 +50,12 @@ void main() {
 
       // ...and Pending keeps neither, because media availability overrides the
       // request status: the available one reports `available`, not `pending`.
-      await tester.tap(find.text('Pending'));
+      await tester.tap(find.text('Waiting for approval'));
       await _settle(tester);
 
       expect(find.text('A Quiet Place'), findsNothing);
       expect(find.text('Shogun'), findsNothing);
-      expect(find.text('No pending requests'), findsOneWidget);
+      expect(find.text('No requests waiting for approval'), findsOneWidget);
     });
 
     testWidgets('the selected chip reports its state to a screen reader', (

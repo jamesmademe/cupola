@@ -5,6 +5,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// A premium error state with an optional retry affordance.
 ///
@@ -51,10 +52,14 @@ class AppErrorState extends StatelessWidget {
   final VoidCallback? onRetry;
   final bool compact;
 
-  /// What could not be loaded, for the headline: "Couldn't load Radarr".
+  /// Who the headline names: `Radarr did not answer`, `Radarr answered but
+  /// refused the key`.
   ///
-  /// Optional because a handful of callers sit on screens where the subject is
-  /// already unambiguous; those fall back to naming the surface generically.
+  /// A page may pass more than the service (`Seerr issues`, `Bazarr
+  /// history`); the headline names the service it starts with, because the
+  /// service is what did or did not answer. Optional because a handful of
+  /// callers sit on screens where the subject is already unambiguous; those,
+  /// and a name that is no service, fall back to naming the server.
   final String? serviceName;
 
   const AppErrorState({
@@ -70,6 +75,25 @@ class AppErrorState extends StatelessWidget {
     this.onRetry,
     this.serviceName,
   }) : compact = true;
+
+  /// The service [serviceName] names, when it names one.
+  ServiceKey? get _service {
+    final name = serviceName?.trim();
+    if (name == null || name.isEmpty) return null;
+    for (final service in ServiceKey.values) {
+      if (name == service.title || name.startsWith('${service.title} ')) {
+        return service;
+      }
+    }
+    return null;
+  }
+
+  String _headline(ServiceFailureReason reason) {
+    final service = _service;
+    if (service != null) return describeFailure(service, reason).headline;
+    final headline = failureHeadline(reason, subject: 'the server');
+    return headline[0].toUpperCase() + headline.substring(1);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,10 +112,11 @@ class AppErrorState extends StatelessWidget {
           children: [
             Icon(failureIcon(reason), size: compact ? 26 : 32, color: toneInk),
             const SizedBox(height: AppSpacing.lg),
+            // The classification's headline, never "Couldn't load Radarr":
+            // what happened, naming who, in the words every other failure
+            // surface uses.
             Text(
-              serviceName == null
-                  ? "Couldn't load this"
-                  : "Couldn't load $serviceName",
+              _headline(reason),
               style: theme.textTheme.titleMedium!.weight(FontWeight.w600),
               textAlign: TextAlign.center,
             ),

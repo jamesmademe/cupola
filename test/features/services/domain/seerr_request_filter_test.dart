@@ -20,10 +20,10 @@ SeerrRequest _request({
 
 void main() {
   group('chip labels', () {
-    test('reads All, Pending, Approved, Declined in order', () {
+    test('reads All, Waiting for approval, Approved, Declined in order', () {
       expect(SeerrRequestFilter.values.map((f) => f.label), [
         'All',
-        'Pending',
+        'Waiting for approval',
         'Approved',
         'Declined',
       ]);
@@ -135,7 +135,10 @@ void main() {
   group('emptyLabel', () {
     test('names the bucket so an empty screen explains itself', () {
       expect(SeerrRequestFilter.all.emptyLabel, 'No requests found');
-      expect(SeerrRequestFilter.pending.emptyLabel, 'No pending requests');
+      expect(
+        SeerrRequestFilter.pending.emptyLabel,
+        'No requests waiting for approval',
+      );
       expect(SeerrRequestFilter.declined.emptyLabel, 'No declined requests');
     });
   });

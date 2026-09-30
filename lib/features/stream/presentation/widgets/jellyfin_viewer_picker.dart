@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -78,8 +80,15 @@ class JellyfinViewerPicker extends ConsumerWidget {
           // Not an error state: the viewer list needs a working connection, and
           // the user may simply not have saved one yet. Saying so is more useful
           // than an exception they cannot act on from here.
-          error: (_, _) => Text(
-            'Connect first, then come back to choose a viewer.',
+          error: (error, _) => Text(
+            error.toString().contains('not configured')
+                ? '${Lexicon.setUp(ServiceKey.jellyfin.title)} first, then '
+                      'come back to choose a viewer.'
+                : sectionFailureMessage(
+                    ServiceKey.jellyfin,
+                    error,
+                    consequence: 'its viewers are not shown',
+                  ),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

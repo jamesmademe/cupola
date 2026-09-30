@@ -43,7 +43,7 @@ class MediaDetailPlaceholderView extends StatelessWidget {
   /// which nothing it means without overloading the headline.
   final String? message;
 
-  /// Names the subject in every state's copy ("Couldn't load Radarr").
+  /// Names the subject in every state's copy ("Radarr did not answer").
   final String serviceName;
 
   /// Per-service accent lighting the room, matching the loaded page.
@@ -93,7 +93,7 @@ class MediaDetailPlaceholderView extends StatelessWidget {
     } else {
       body = AppEmptyState(
         icon: icon ?? Icons.help_outline_rounded,
-        title: title ?? "Couldn't load $serviceName",
+        title: title ?? '$serviceName has no record of this',
         message: message,
         accentColor: accent,
         // Deliberately the same affordance [AppErrorState] renders, so the two

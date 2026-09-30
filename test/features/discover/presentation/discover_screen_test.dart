@@ -143,7 +143,10 @@ void main() {
       // A search Seerr did not complete is not "No results found": the leaf
       // says what happened, in the classified words, and never the
       // exception's own.
-      expect(find.text("Couldn't load Seerr"), findsOneWidget);
+      expect(
+        find.text('The request to Seerr did not complete'),
+        findsOneWidget,
+      );
       expect(find.text('Did not complete'), findsOneWidget);
       expect(find.text('No results'), findsNothing);
       expect(find.textContaining('Network error'), findsNothing);

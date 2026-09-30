@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
@@ -787,7 +788,7 @@ List<ServiceKpi> _seerrKpisFrom(List<SeerrRequest> requests) {
       icon: Icons.inbox_rounded,
     ),
     ServiceKpi(
-      label: 'Pending',
+      label: StateWord.waitingForApproval.label,
       value: '$pending',
       icon: Icons.hourglass_top_rounded,
       tone: _backlogIf(pending > 0),
@@ -1009,13 +1010,20 @@ Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
     authorsError = error;
   }
   int? queued;
+  Object? queueError;
   try {
     queued = (await ref.watch(readarrQueueProvider.future)).length;
-  } catch (_) {
+  } catch (error) {
     queued = null;
+    queueError = error;
   }
 
-  return _readarrKpisFrom(authors, queued, error: authorsError);
+  return _readarrKpisFrom(
+    authors,
+    queued,
+    error: authorsError,
+    queueError: queueError,
+  );
 }
 
 Future<List<ServiceKpi>> _readarrKpisFor(Ref ref, String instanceId) async {
@@ -1033,20 +1041,32 @@ Future<List<ServiceKpi>> _readarrKpisFor(Ref ref, String instanceId) async {
       return null;
     },
   );
+  Object? queueError;
   final queueFuture = service.getQueue().then<int?>(
     (value) => value.length,
-    onError: (_) => null,
+    onError: (Object error) {
+      queueError = error;
+      return null;
+    },
   );
 
   final authors = await authorsFuture;
-  return _readarrKpisFrom(authors, await queueFuture, error: authorsError);
+  final queued = await queueFuture;
+  return _readarrKpisFrom(
+    authors,
+    queued,
+    error: authorsError,
+    queueError: queueError,
+  );
 }
 
 /// [error] is why the library read failed, for the note; null when it did not.
+/// [queueError] is the same for the queue, which is its own fetch.
 List<ServiceKpi> _readarrKpisFrom(
   List<ReadarrAuthor>? authors,
   int? queued, {
   Object? error,
+  Object? queueError,
 }) {
   var books = 0;
   var have = 0;
@@ -1081,7 +1101,9 @@ List<ServiceKpi> _readarrKpisFrom(
       // Its own reason, because it is its own fetch: a Readarr whose library
       // reads fine and whose queue endpoint is down used to print `Queue 0` —
       // an idle downloader rather than an unread one.
-      note: queued == null ? 'queue not answering' : null,
+      note: queued == null
+          ? 'Queue · ${failureLabel(classifyConnectionFailure(queueError), credential: refusedCredentialOf(ServiceKey.readarr))}'
+          : null,
     ),
   ];
 }
@@ -1138,7 +1160,7 @@ List<ServiceKpi> _sabnzbdKpisFrom(
     ),
     ServiceKpi(
       label: 'Status',
-      value: queue.paused ? 'Paused' : 'Active',
+      value: queue.paused ? StateWord.stopped.label : 'Active',
       icon: queue.paused
           ? Icons.pause_circle_rounded
           : Icons.play_circle_rounded,
@@ -1205,7 +1227,7 @@ List<ServiceKpi> _nzbgetKpisFrom(
     ),
     ServiceKpi(
       label: 'Status',
-      value: status.paused ? 'Paused' : 'Active',
+      value: status.paused ? StateWord.stopped.label : 'Active',
       icon: status.paused
           ? Icons.pause_circle_rounded
           : Icons.play_circle_rounded,
@@ -1271,7 +1293,7 @@ List<ServiceKpi> _transmissionKpisFrom(
       icon: Icons.download_rounded,
     ),
     ServiceKpi(
-      label: 'Stalled',
+      label: StateWord.stuck.label,
       value: '$stalled',
       icon: Icons.report_gmailerrorred_rounded,
       tone: _faultIf(stalled > 0),
@@ -1322,7 +1344,7 @@ List<ServiceKpi> _npmKpisFrom(
 
   return [
     ServiceKpi(
-      label: 'Offline',
+      label: 'Config errors',
       value: '$broken',
       icon: Icons.error_outline_rounded,
       tone: _faultIf(broken > 0),

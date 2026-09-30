@@ -267,7 +267,7 @@ class _RootFolderChip extends StatelessWidget {
     final accent = service.accent;
     final freeSpace = folder.freeSpace;
     final subtitle = !folder.accessible
-        ? 'Unreachable'
+        ? '${service.title} cannot open it'
         : freeSpace == null
         ? null
         : '${formatImportBytes(freeSpace)} free';

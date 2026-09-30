@@ -460,7 +460,7 @@ class LibraryDetailActions extends StatelessWidget {
           // row of identical discs, which is what the previous band shipped.
           visibleRank: null,
           action: MediaOverflowAction.destructive(
-            label: 'Delete',
+            label: 'Delete from ${service.title}',
             icon: Icons.delete_outline_rounded,
             onInvoke: onDelete,
           ),

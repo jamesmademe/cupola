@@ -160,7 +160,7 @@ void main() {
       ], now: now);
 
       expect(items.single.kind, ReadarrAttentionKind.stalled);
-      expect(items.single.headline, 'Stalled · James');
+      expect(items.single.headline, 'Stuck · James');
       expect(items.single.detail, startsWith('qBittorrent · '));
     });
 

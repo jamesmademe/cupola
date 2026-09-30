@@ -204,7 +204,7 @@ void main() {
           posterRow: MediaDetailPosterRow(
             statusBadge: StatusBadge.animated(
               info: const MediaStatusInfo(
-                labelOverride: 'Pending',
+                labelOverride: 'Waiting for approval',
                 toneOverride: StatusTone.info,
               ),
             ),

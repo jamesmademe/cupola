@@ -28,6 +28,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
@@ -179,7 +180,7 @@ List<ReadarrAttentionItem> readarrQueueFaults(
       items.add(
         ReadarrAttentionItem(
           kind: ReadarrAttentionKind.stalled,
-          headline: 'Stalled · $title',
+          headline: '${StateWord.stuck.label} · $title',
           detail: joinDisplayParts([
             stringOrNull(record['downloadClient']),
             message,

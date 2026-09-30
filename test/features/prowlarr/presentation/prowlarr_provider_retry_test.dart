@@ -177,14 +177,14 @@ void main() {
       ),
     );
     await tester.pump(_settle);
-    expect(find.text('Failed to load indexer'), findsOneWidget);
+    expect(find.text('Prowlarr did not answer'), findsOneWidget);
     final attempts = api.getCallCount;
 
     await tester.tap(find.text('Retry'));
     await tester.pump(_settle);
 
     expect(api.getCallCount, attempts + 1);
-    expect(find.text('Failed to load indexer'), findsOneWidget);
+    expect(find.text('Prowlarr did not answer'), findsOneWidget);
   });
 
   testWidgets('the indexer page checks the configuration first', (
@@ -208,7 +208,7 @@ void main() {
     await tester.pump(_settle);
 
     expect(find.byType(NotConfiguredPlaceholder), findsOneWidget);
-    expect(find.text('Failed to load indexer'), findsNothing);
+    expect(find.text('Prowlarr did not answer'), findsNothing);
     expect(api.getCallCount, 0);
   });
 

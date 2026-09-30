@@ -415,7 +415,7 @@ void main() {
         requestWith(RequestStatus.pendingApproval),
       );
 
-      expect(status.label, 'Pending');
+      expect(status.label, 'Waiting for approval');
     });
   });
 

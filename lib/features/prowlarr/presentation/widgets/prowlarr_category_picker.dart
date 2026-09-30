@@ -5,6 +5,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -116,21 +117,10 @@ class _CategoryPickerState extends ConsumerState<_CategoryPicker> {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Could not load the categories'),
-              const SizedBox(height: AppSpacing.md),
-              FilledButton(
-                onPressed: () => ref.invalidate(prowlarrCategoriesProvider),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
+      error: (error, _) => AppErrorState(
+        error: error,
+        serviceName: ServiceKey.prowlarr.title,
+        onRetry: () => ref.invalidate(prowlarrCategoriesProvider),
       ),
     );
   }

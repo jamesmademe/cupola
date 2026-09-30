@@ -406,7 +406,7 @@ class _TorrentMenu extends ConsumerWidget {
               ref,
               action: (c) => c.reannounce(ids),
               successMessage: 'Asked the trackers for more peers',
-              failureMessage: 'Failed to reannounce',
+              failureMessage: 'Could not look for peers again',
               invalidate: _invalidateAfterAction,
             );
           case 'top':
@@ -428,7 +428,10 @@ class _TorrentMenu extends ConsumerWidget {
         else
           const PopupMenuItem(value: 'stop', child: Text('Stop')),
         const PopupMenuItem(value: 'verify', child: Text('Verify local data')),
-        const PopupMenuItem(value: 'reannounce', child: Text('Reannounce')),
+        const PopupMenuItem(
+          value: 'reannounce',
+          child: Text('Look for peers again'),
+        ),
         const PopupMenuItem(value: 'top', child: Text('Move to top')),
         const PopupMenuItem(value: 'remove', child: Text('Remove…')),
       ],

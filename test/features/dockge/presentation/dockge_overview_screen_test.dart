@@ -249,7 +249,7 @@ void main() {
     final agentsHeader = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Agents'),
     );
-    expect(agentsHeader.subtitle, '2 instances · 1 not answering');
+    expect(agentsHeader.subtitle, '2 instances · 1 did not answer');
     // No link and no picker: the lens is an app-bar control, and a second one
     // here would be two controls fighting over one piece of state.
     expect(agentsHeader.onTap, isNull);
@@ -324,7 +324,7 @@ void main() {
     final header = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Agents'),
     );
-    expect(header.subtitle, '7 instances · 2 not answering');
+    expect(header.subtitle, '7 instances · 2 did not answer');
     expect(find.text('f'), findsOneWidget);
   });
 

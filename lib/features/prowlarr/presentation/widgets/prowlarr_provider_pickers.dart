@@ -5,6 +5,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_field_inputs.dart';
@@ -217,23 +218,11 @@ class _ImplementationListState extends ConsumerState<_ImplementationList> {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Could not load the ${widget.kind.title}'),
-                    const SizedBox(height: AppSpacing.md),
-                    FilledButton(
-                      onPressed: () => ref.invalidate(
-                        prowlarrProviderSchemaProvider(widget.kind),
-                      ),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
+            error: (error, _) => AppErrorState(
+              error: error,
+              serviceName: ServiceKey.prowlarr.title,
+              onRetry: () =>
+                  ref.invalidate(prowlarrProviderSchemaProvider(widget.kind)),
             ),
           ),
         ),

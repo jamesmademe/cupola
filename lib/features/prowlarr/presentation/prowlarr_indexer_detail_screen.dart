@@ -7,6 +7,8 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
@@ -14,6 +16,7 @@ import 'package:cupola/features/prowlarr/presentation/prowlarr_history_format.da
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class ProwlarrIndexerDetailScreen extends ConsumerWidget {
@@ -117,24 +120,13 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Failed to load indexer'),
-                const SizedBox(height: AppSpacing.md),
-                FilledButton(
-                  // The source, not the lookup: `prowlarrIndexerByIdProvider`
-                  // only re-reads the list, so invalidating it alone re-read
-                  // the list's cached failure and the Retry did nothing.
-                  onPressed: () => ref.invalidate(prowlarrIndexersProvider),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
+        error: (error, _) => AppErrorState(
+          error: error,
+          serviceName: ServiceKey.prowlarr.title,
+          // The source, not the lookup: `prowlarrIndexerByIdProvider`
+          // only re-reads the list, so invalidating it alone re-read
+          // the list's cached failure and the Retry did nothing.
+          onRetry: () => ref.invalidate(prowlarrIndexersProvider),
         ),
       ),
     );
@@ -528,21 +520,15 @@ class _IndexerHistory extends ConsumerWidget {
         padding: EdgeInsets.all(AppSpacing.lg),
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (error, _) => Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.sm,
+      error: (error, _) => InlineErrorRetry(
+        message: sectionFailureMessage(
+          ServiceKey.prowlarr,
+          error,
+          consequence: 'its activity is not shown',
         ),
-        child: Row(
-          children: [
-            const Expanded(child: Text('Failed to load activity')),
-            TextButton(
-              onPressed: () =>
-                  ref.invalidate(prowlarrIndexerHistoryProvider(indexerId)),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
+        error: error,
+        onRetry: () =>
+            ref.invalidate(prowlarrIndexerHistoryProvider(indexerId)),
       ),
     );
   }

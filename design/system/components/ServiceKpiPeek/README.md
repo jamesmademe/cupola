@@ -14,7 +14,7 @@ Rendered from `lib/core/widgets/service_kpi_peek.dart` by `test/design_catalog/s
 
 ## Tones
 
-The rule is the app's tone rule. A backlog figure (Missing, Pending) is `StatusTone.neutral`; bytes moving or someone watching is `StatusTone.info`; only a fault — a pool past 80%, an active alert, a transcode — is `StatusTone.warning`. A figure with nothing to say carries no tone and is ink.
+The rule is the app's tone rule. A backlog figure (Missing, Waiting for approval) is `StatusTone.neutral`; bytes moving or someone watching is `StatusTone.info`; only a fault — a pool past 80%, an active alert, a transcode — is `StatusTone.warning`. A figure with nothing to say carries no tone and is ink.
 
 ## States
 
@@ -25,7 +25,7 @@ The rule is the app's tone rule. A backlog figure (Missing, Pending) is `StatusT
 
 ## The consumer provides
 
-An `AsyncValue<List<ServiceKpi>>` (label, value, icon, optional tone, optional note) and the service `accent` (the lamp, from `ServiceKey.accent`). Real labels include Movies, Monitored, Missing, Queue; Active, Down, Up, Seeding, Downloading; Streams, Transcodes, Libraries; Requests, Pending, Processing, Available; Pools, Used, Alerts.
+An `AsyncValue<List<ServiceKpi>>` (label, value, icon, optional tone, optional note) and the service `accent` (the lamp, from `ServiceKey.accent`). Real labels include Movies, Monitored, Missing, Queue; Active, Down, Up, Seeding, Downloading; Streams, Transcodes, Libraries; Requests, Waiting for approval, Processing, Available; Pools, Used, Alerts.
 
 ## Semantics
 

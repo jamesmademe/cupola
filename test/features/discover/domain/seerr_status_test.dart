@@ -15,7 +15,7 @@ void main() {
 
     final codeLabels = <int, String>{
       1: 'Unknown',
-      2: 'Pending',
+      2: 'Waiting for approval',
       3: 'Processing',
       4: 'Partially available',
       5: 'Available',

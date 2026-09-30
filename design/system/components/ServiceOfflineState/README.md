@@ -9,7 +9,7 @@ Rendered from `lib/core/widgets/service_offline_state.dart` by `test/design_cata
 - Centred column, padding `space-xl`. No fill behind the glyph.
 - `cloud_off` at 32px through `onTint` with the service's accent against `surface` (tint 0) — the lamp, which resolves to the primary ink.
 - `space-lg`, then the title *&lt;Service&gt; did not answer* in `title-medium` at 600.
-- `space-sm`, then the body in `body-small`, `on-surface-variant`: *No response for 40 minutes. Anything it holds is missing from this page.* When no first-failure time is known the span is dropped, not invented: *No response. Anything it holds is missing from this page.*
+- `space-sm`, then the body in `body-small`, `on-surface-variant`: *It has not answered for 40 minutes. Anything it holds is missing from this page.* When no first-failure time is known the span is dropped, not invented: *Anything it holds is missing from this page.*
 - `space-xl`, then the actions: *Retry* with an 18px `refresh` glyph as a filled button (the theme's `primary` / `on-primary`, `radius-md`), and optionally, `space-sm` after it, a text button *Settings* in `primary` with a 56 × 44 minimum target.
 
 ## `.failure` — the same leaf, told why
@@ -19,7 +19,7 @@ Rendered from `lib/core/widgets/service_offline_state.dart` by `test/design_cata
 - **Glyph** from `describeFailure` (`cloud_off`, `key_off`, `timer_off`, `gpp_bad`, `wrong_location`, `alt_route`, `report`, `code_off`, `no_encryption`, `wifi_lock`) at 32px, in the tone walked against `surface`: **red only when nothing answered**, **amber for a fault** — the server answered (or the device would not dial), so there is one thing to fix.
 - **Title** — `describeFailure`'s headline, which names who: *Radarr did not answer* for silence; *Radarr answered but refused the key*, *Radarr answered with an error*, *Radarr was reached but did not reply in time* for a fault.
 - **Address** — the lens connection's host (`ServiceKey.extractHost`), `space-xs` under the title in `AppTheme.chrome` 12 `on-surface-variant`; dropped when the connection names none.
-- **Body** — `connectionFailureDetail(error)` if the failure carries its own sentence, else `connectionFailureMessage(service, reason)`; with a known first-failure age, *No response for 40 minutes.* leads it. Never the exception.
+- **Body** — `connectionFailureDetail(error)` if the failure carries its own sentence, else `connectionFailureMessage(service, reason)`; with a known first-failure age, *It has not answered for 40 minutes.* leads it. Never the exception.
 - **Actions** — *Retry*, and the way into the connection form always: it defaults to `/settings/service/<routeParam>`, because after a failed read the address or the key is the likeliest fix. It is labelled with the fault's remedy when the form holds one (*Paste the key again*, *Sign in again*, *Check the address*, *Check the certificate*, *Change the address*), and *Settings* otherwise.
 - Semantics speak *title. address. body* as one sentence.
 
@@ -31,7 +31,7 @@ Used by the library walls (`MediaBrowseScaffold(service:)`), Readarr's author li
 
 ## Semantics
 
-The column speaks one sentence (*SABnzbd did not answer. No response for 40 minutes. …*); glyph, title and body are excluded under it, and the buttons remain separate controls.
+The column speaks one sentence (*SABnzbd did not answer. It has not answered for 40 minutes. …*); glyph, title and body are excluded under it, and the buttons remain separate controls.
 
 ## Do / don't
 

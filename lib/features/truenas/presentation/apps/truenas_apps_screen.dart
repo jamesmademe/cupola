@@ -296,7 +296,7 @@ class AppLifecycleControl extends ConsumerWidget {
               child: trueNasGatedMenuLabel(
                 ref: ref,
                 area: TrueNasCapabilityArea.apps.key,
-                text: 'Delete',
+                text: 'Delete app',
               ),
             ),
           ],

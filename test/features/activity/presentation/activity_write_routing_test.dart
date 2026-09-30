@@ -202,9 +202,9 @@ void main() {
 
     await tester.tap(find.text('On the second server'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Blocklist and search'));
+    await tester.tap(find.text('Try another download'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Blocklist and search'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Try another download'));
     await tester.pumpAndSettle();
 
     expect(other.removed, [7]);

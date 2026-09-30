@@ -155,7 +155,7 @@ void main() {
       expect(kpi.value, ServiceKpi.unavailableValue);
       expect(kpi.value, isNot('0'));
       expect(kpi.isUnavailable, isTrue);
-      expect(kpi.note, 'queue paused');
+      expect(kpi.note, 'queue stopped');
       // Untoned: the absence is not a fault of SABnzbd's.
       expect(kpi.tone, isNull);
     });
@@ -170,7 +170,7 @@ void main() {
 
     test('the em dash is spoken as a word, never as punctuation', () {
       final kpi = eta(_queue(paused: true, slots: [_slot()]));
-      expect(kpi.semanticLabel, 'ETA: unavailable, queue paused');
+      expect(kpi.semanticLabel, 'ETA: unavailable, queue stopped');
     });
 
     test('a zero the server actually answered is still printed', () {

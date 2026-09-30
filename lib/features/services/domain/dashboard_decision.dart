@@ -31,6 +31,7 @@
 /// loaded — see `dashboardDecisionsProvider`.
 library;
 
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
@@ -275,13 +276,13 @@ DashboardDecision _groupOf(List<DashboardDecision> members) {
 
 String _groupTitle(DecisionKind kind, int count) => switch (kind) {
   DecisionKind.importBlocked => needsManualImportClause(count),
-  DecisionKind.stalledDownload => '$count stalled downloads',
+  DecisionKind.stalledDownload => '$count stuck downloads',
   // Never grouped — see [_groups]. Named anyway so the switch stays total.
   DecisionKind.failedImport => '$count failed imports',
   DecisionKind.failingIndexer => '$count failing indexers',
   DecisionKind.stoppedStack => '$count stopped stacks',
   DecisionKind.expiringCertificate => '$count expiring certificates',
-  DecisionKind.pendingRequest => '$count pending requests',
+  DecisionKind.pendingRequest => '$count requests waiting for approval',
 };
 
 /// `Shogun, The Bear and 16 more` — the first two names, and how many others.
@@ -418,5 +419,5 @@ String decisionUnavailableToast(DecisionKind kind, ServiceKey required) {
     DecisionKind.expiringCertificate => 'renew this certificate',
     DecisionKind.pendingRequest => 'answer this request',
   };
-  return 'Connect ${required.title} to $what.';
+  return '${Lexicon.setUp(required.title)} to $what.';
 }

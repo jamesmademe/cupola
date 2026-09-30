@@ -139,7 +139,10 @@ void main() {
 
       await _openAlbum(tester);
 
-      expect(find.text("Couldn't load Lidarr"), findsOneWidget);
+      expect(
+        find.text('The request to Lidarr did not complete'),
+        findsOneWidget,
+      );
       expect(find.text('Retry'), findsOneWidget);
     });
 

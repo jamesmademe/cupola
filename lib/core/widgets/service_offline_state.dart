@@ -156,9 +156,9 @@ class ServiceOfflineState extends StatelessWidget {
         ),
         title: '$serviceName did not answer',
         body: span == null
-            ? 'No response. Anything it holds is missing from this page.'
-            : 'No response for $span. Anything it holds is missing from this '
-                  'page.',
+            ? 'Anything it holds is missing from this page.'
+            : 'It has not answered for $span. Anything it holds is missing '
+                  'from this page.',
         onRetry: onRetry,
         onOpenSettings: onOpenSettings,
       );
@@ -189,7 +189,7 @@ class ServiceOfflineState extends StatelessWidget {
           title: presentation.headline,
           address: host == null || host.isEmpty ? null : host,
           body: [
-            if (silent && span != null) 'No response for $span.',
+            if (silent && span != null) 'It has not answered for $span.',
             message,
           ].join(' '),
           onRetry: onRetry,

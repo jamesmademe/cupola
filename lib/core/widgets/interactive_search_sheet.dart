@@ -863,8 +863,8 @@ class _EmptyReleases extends StatelessWidget {
                 icon: Icons.search_off_rounded,
                 title: 'No releases found',
                 message:
-                    'No indexer returned a result for this search. Try again '
-                    'later or check your indexer settings.',
+                    'No indexer returned a result for this search. Search '
+                    'again later, or check your indexer settings.',
               ),
       ],
     );

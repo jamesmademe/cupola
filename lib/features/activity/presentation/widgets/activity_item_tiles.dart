@@ -702,7 +702,7 @@ enum _RowAction {
     destructive: false,
   ),
   blocklistAndRetry(
-    'Blocklist and search',
+    'Try another download',
     Icons.refresh_rounded,
     destructive: false,
   ),

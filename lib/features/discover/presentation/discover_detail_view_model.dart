@@ -1,3 +1,4 @@
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
@@ -289,7 +290,7 @@ class DiscoverDetailViewModel {
       case 1:
         return 'Unknown';
       case 2:
-        return 'Pending';
+        return StateWord.waitingForApproval.label;
       case 3:
         return 'Processing';
       case 4:

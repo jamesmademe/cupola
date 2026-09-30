@@ -14,6 +14,7 @@ import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -498,7 +499,7 @@ String nowReadout(ActivityFeed feed) {
   return [
     '${queued.length} in the queue',
     if (needsImport > 0) needsManualImportClause(needsImport),
-    if (stalled > 0) '$stalled stalled',
+    if (stalled > 0) '$stalled ${StateWord.stuck.inline}',
     if (importing > 0) '$importing importing',
   ].join(' · ');
 }
@@ -786,10 +787,10 @@ class _FeedBody extends StatelessWidget {
         bottomPadding: bottomPadding,
         child: AppEmptyState(
           icon: Icons.settings_ethernet_rounded,
-          title: 'No services connected',
+          title: 'Radarr, Sonarr, Lidarr and Seerr are not set up',
           message:
-              'Add Radarr, Sonarr, Lidarr or Seerr in Settings and their '
-              'activity will show up here.',
+              'Activity lists what they download and what people ask for. '
+              'Set one up and it shows up here.',
           action: FilledButton(
             onPressed: () => context.go('/settings'),
             child: const Text('Open Settings'),
@@ -1189,7 +1190,7 @@ class _FeedFooter extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            "Couldn't load more.",
+            'The next page did not arrive.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

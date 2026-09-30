@@ -13,6 +13,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/reel_motion.dart';
 import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -1110,7 +1111,7 @@ class _SearchEmptyState extends ConsumerWidget {
         Text(
           hasAny
               ? 'Search across every service'
-              : 'No searchable service connected',
+              : 'No searchable service is set up',
           textAlign: TextAlign.center,
           style: Theme.of(
             context,
@@ -1121,7 +1122,7 @@ class _SearchEmptyState extends ConsumerWidget {
           hasAny
               ? 'Enter a title, show, or artist to query '
                     '${_serviceList(searchable)}.'
-              : 'Connect ${_serviceList(globalSearchServices)} in Settings to '
+              : '${Lexicon.setUp(_serviceList(globalSearchServices))} to '
                     'search your libraries from here.',
           textAlign: TextAlign.center,
           style: Theme.of(

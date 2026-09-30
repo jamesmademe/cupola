@@ -102,11 +102,11 @@ void main() {
       expect(inFlightFaultFootnote(), isNull);
       expect(
         inFlightFaultFootnote(stalled: 1),
-        '1 stalled · under Needs a decision',
+        '1 stuck · under Needs a decision',
       );
       expect(
         inFlightFaultFootnote(stalled: 2, needsImport: 18),
-        '18 need a manual import · 2 stalled · under Needs a decision',
+        '18 need a manual import · 2 stuck · under Needs a decision',
       );
       expect(
         inFlightFaultFootnote(needsImport: 1, failed: 1),

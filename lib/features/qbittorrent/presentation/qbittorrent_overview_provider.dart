@@ -37,6 +37,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
@@ -224,7 +225,8 @@ List<QbittorrentAttentionItem> qbittorrentFaultRows(
       return QbittorrentAttentionItem(
         kind: kind,
         headline: switch (kind) {
-          QbittorrentFaultKind.stalled => 'Stalled · ${torrent.name}',
+          QbittorrentFaultKind.stalled =>
+            '${StateWord.stuck.label} · ${torrent.name}',
           QbittorrentFaultKind.missingFiles =>
             'Missing files · ${torrent.name}',
           QbittorrentFaultKind.errored => 'Errored · ${torrent.name}',

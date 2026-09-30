@@ -380,7 +380,7 @@ class TrueNasWsClient {
   Future<dynamic> _rawCall(String method, List<dynamic> params) {
     final socket = _socket;
     if (socket == null) {
-      return Future.error(const TrueNasException('Not connected'));
+      return Future.error(const TrueNasException('No open connection'));
     }
     final id = _nextId++;
     final completer = Completer<dynamic>();

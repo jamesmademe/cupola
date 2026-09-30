@@ -296,7 +296,7 @@ void main() {
       _toastScene(
         'Blocked tap on a cross-service jump · the caller\'s sentence, one '
             'action to that service\'s settings',
-        'Connect qBittorrent to open this transfer.',
+        'Set up qBittorrent to open this transfer.',
         'Settings',
       ),
       _toastScene(

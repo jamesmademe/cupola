@@ -501,7 +501,7 @@ void main() {
 
       expect(find.text('Dune: Part Two'), findsOneWidget);
       expect(find.text('The Zone of Interest'), findsNothing);
-      expect(find.textContaining('1 stalled'), findsOneWidget);
+      expect(find.textContaining('1 stuck'), findsOneWidget);
     });
 
     // APP-01: the eyebrow counted the five-row preview and printed it as the

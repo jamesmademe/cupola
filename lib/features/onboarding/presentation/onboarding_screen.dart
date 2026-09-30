@@ -482,11 +482,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     try {
       await ref.read(settingsProvider.notifier).updateSettings(updated);
       return true;
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return false;
       SnackBarHelper.error(
         context,
-        "Couldn't save your services. Please try again. ($e)",
+        "Couldn't save your services. Retry, and restart Cupola if it "
+        'keeps failing.',
       );
       return false;
     }
@@ -497,11 +498,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     HapticFeedback.mediumImpact();
     try {
       await markOnboardingComplete(ref);
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       SnackBarHelper.error(
         context,
-        "Couldn't finish setup. Please try again. ($e)",
+        "Couldn't finish setup. Retry, and restart Cupola if it keeps "
+        'failing.',
       );
     }
   }

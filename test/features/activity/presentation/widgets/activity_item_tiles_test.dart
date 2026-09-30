@@ -450,7 +450,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Import pending'), findsOneWidget);
+      expect(find.text('Waiting to import'), findsOneWidget);
       expect(find.text('Available'), findsNothing);
     });
 
@@ -604,7 +604,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Manual import'), findsOneWidget);
-        expect(find.text('Blocklist and search'), findsNothing);
+        expect(find.text('Try another download'), findsNothing);
         expect(find.text('Remove from queue'), findsNothing);
       },
     );

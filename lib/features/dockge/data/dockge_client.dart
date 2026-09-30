@@ -485,7 +485,7 @@ class DockgeClient {
   }) async {
     await ensureConnected();
     final socket = _socket;
-    if (socket == null) throw const DockgeException('Not connected');
+    if (socket == null) throw const DockgeException('No open connection');
 
     final completer = Completer<Map<String, dynamic>>();
     socket.emitWithAck(

@@ -102,7 +102,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.textContaining('Everything you connected is ready to use'),
+        find.textContaining('Everything you set up is ready to use'),
         findsOneWidget,
       );
     });

@@ -32,7 +32,7 @@ GlobalActivityItem _queueItem({required bool warning}) => GlobalActivityItem(
   title: 'Dune.Part.Two.2024',
   subtitle: '2.1 GB left',
   status: MediaStatusInfo(
-    labelOverride: warning ? 'Stalled' : 'Downloading',
+    labelOverride: warning ? 'Stuck' : 'Downloading',
     toneOverride: warning ? StatusTone.warning : StatusTone.info,
     hasWarning: warning,
     progress: 0.63,

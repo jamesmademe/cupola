@@ -1,4 +1,5 @@
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 
@@ -52,7 +53,7 @@ MediaStatusInfo seerrMediaStatus(
     labelOverride: entry != null
         ? entry.label
         : switch (code) {
-            2 => 'Pending',
+            2 => StateWord.waitingForApproval.label,
             3 => 'Processing',
             4 => 'Partially available',
             6 => 'Deleted',

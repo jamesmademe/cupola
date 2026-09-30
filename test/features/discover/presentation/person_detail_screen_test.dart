@@ -45,7 +45,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(AppErrorState), findsOneWidget);
-      expect(find.text("Couldn't load Seerr"), findsOneWidget);
+      expect(
+        find.text('The request to Seerr did not complete'),
+        findsOneWidget,
+      );
       expect(loads, 1);
 
       await tester.tap(find.text('Retry'));
@@ -66,7 +69,7 @@ void main() {
       expect(find.byType(AppEmptyState), findsOneWidget);
       expect(find.byType(AppErrorState), findsNothing);
       expect(find.text('No details for this person'), findsOneWidget);
-      expect(find.text("Couldn't load Seerr"), findsNothing);
+      expect(find.text('The request to Seerr did not complete'), findsNothing);
     });
 
     testWidgets('dates speak the detail pages one date voice', (tester) async {

@@ -77,6 +77,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -884,7 +885,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
         : faulted != null
         ? '${faulted.faulted} of ${faulted.total} with a fault'
         : switch (reachability) {
-            ServiceReachability.online => 'Answering',
+            ServiceReachability.online => StateWord.answering.label,
             ServiceReachability.checking => 'Checking',
             // The classification's own words: `Refused the key`, `Timed out`,
             // `Answered with an error` — the same the connection form says.

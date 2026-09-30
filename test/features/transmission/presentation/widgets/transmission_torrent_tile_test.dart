@@ -82,7 +82,7 @@ void main() {
         _torrent(isStalled: true, status: 4),
       );
       expect(stalled.statusTone, StatusTone.warning);
-      expect(stalled.statusLabel, 'Stalled');
+      expect(stalled.statusLabel, 'Stuck');
 
       final errored = await _plateFor(
         tester,

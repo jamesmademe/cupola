@@ -9,6 +9,7 @@ import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
@@ -235,7 +236,7 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
           // else, and the confirmation says what goes.
           ListTile(
             leading: const Icon(Icons.delete_outline_rounded),
-            title: const Text('Delete'),
+            title: const Text('Delete indexer'),
             onTap: () {
               Navigator.of(sheetContext).pop();
               deleteIndexerFlow(context, ref, indexer);
@@ -564,22 +565,10 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
                 ),
               ),
               error: (error, _) => AppScrollablePage(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.xl),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('Failed to load indexers'),
-                        const SizedBox(height: AppSpacing.md),
-                        FilledButton(
-                          onPressed: () =>
-                              ref.invalidate(prowlarrIndexersProvider),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
+                child: AppErrorState(
+                  error: error,
+                  serviceName: ServiceKey.prowlarr.title,
+                  onRetry: () => ref.invalidate(prowlarrIndexersProvider),
                 ),
               ),
             ),

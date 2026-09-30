@@ -477,7 +477,7 @@ void main() {
       // It printed `Error: SocketException: Connection refused`.
       expect(find.textContaining('Error:'), findsNothing);
       expect(find.textContaining('SocketException'), findsNothing);
-      expect(find.text("Couldn't load Test Service"), findsOneWidget);
+      expect(find.text('The server did not answer'), findsOneWidget);
       expect(find.text('Did not answer'), findsOneWidget);
       expect(find.text('No results'), findsNothing);
       expect(find.text('Retry'), findsOneWidget);

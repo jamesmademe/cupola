@@ -1,4 +1,5 @@
 import 'parse_utils.dart';
+import 'package:cupola/core/status/lexicon.dart';
 
 enum TorrentState {
   downloading,
@@ -21,11 +22,11 @@ enum TorrentState {
       case TorrentState.seeding:
         return 'Seeding';
       case TorrentState.stalled:
-        return 'Stalled';
+        return StateWord.stuck.label;
       case TorrentState.checking:
         return 'Checking';
       case TorrentState.paused:
-        return 'Paused';
+        return StateWord.stopped.label;
       case TorrentState.queuedUp:
       case TorrentState.queuedDl:
         return 'Queued';

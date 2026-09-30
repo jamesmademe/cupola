@@ -1,3 +1,5 @@
+import 'package:cupola/core/status/lexicon.dart';
+
 enum RequestStatus {
   pendingApproval,
   approved,
@@ -70,7 +72,7 @@ enum SeerrMediaAvailability {
       case SeerrMediaAvailability.unknown:
         return 'Unknown';
       case SeerrMediaAvailability.pending:
-        return 'Pending';
+        return StateWord.waitingForApproval.label;
       case SeerrMediaAvailability.processing:
         return 'Processing';
       case SeerrMediaAvailability.partiallyAvailable:
@@ -199,7 +201,10 @@ extension SeerrRequestDisplayStatusX on SeerrRequest {
         case SeerrMediaAvailability.deleted:
           return (label: 'Deleted', kind: SeerrRequestDisplayKind.deleted);
         case SeerrMediaAvailability.pending:
-          return (label: 'Pending', kind: SeerrRequestDisplayKind.pending);
+          return (
+            label: StateWord.waitingForApproval.label,
+            kind: SeerrRequestDisplayKind.pending,
+          );
         case SeerrMediaAvailability.unknown:
           break;
       }
@@ -207,7 +212,10 @@ extension SeerrRequestDisplayStatusX on SeerrRequest {
 
     switch (status) {
       case RequestStatus.pendingApproval:
-        return (label: 'Pending', kind: SeerrRequestDisplayKind.pending);
+        return (
+          label: StateWord.waitingForApproval.label,
+          kind: SeerrRequestDisplayKind.pending,
+        );
       case RequestStatus.approved:
         return (label: 'Approved', kind: SeerrRequestDisplayKind.approved);
       case RequestStatus.declined:

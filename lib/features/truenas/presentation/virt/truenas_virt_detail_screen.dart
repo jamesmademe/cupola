@@ -46,7 +46,7 @@ class TrueNasVirtDetailScreen extends ConsumerWidget {
           area: TrueNasCapabilityArea.virt.key,
           verbPhrase: 'delete instances',
           icon: const Icon(Icons.delete_outline_rounded),
-          tooltip: 'Delete',
+          tooltip: 'Delete instance',
           onTap: () async {
             final result = await showAppConfirmDialog(
               context: context,

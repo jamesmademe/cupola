@@ -86,7 +86,7 @@ void main() {
 
         await tester.tap(find.text('Open in Radarr'));
         await tester.pump();
-        expect(find.text('Connect Radarr to open this movie'), findsOneWidget);
+        expect(find.text('Set up Radarr to open this movie'), findsOneWidget);
         expect(find.text('Settings'), findsOneWidget);
       },
     );
@@ -108,7 +108,7 @@ void main() {
         await tester.tap(find.text('Remove from Sonarr'));
         await tester.pump();
         expect(
-          find.text('Connect Sonarr to remove this series'),
+          find.text('Set up Sonarr to remove this series'),
           findsOneWidget,
         );
       },

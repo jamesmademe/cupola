@@ -12,21 +12,21 @@ Rendered from `lib/core/widgets/download_queue_tile.dart`, with the qBittorrent 
 - Bar (only when `progress` is non-null): 4 above, a 4pt `LinearProgressIndicator` clipped to `AppRadius.xs`, track `surfaceContainerHighest`, value in the blue tone (in progress: `statusToneColor(info)` walked against the track); a stale sample (`sampleAge`) drains it to `onSurfaceVariant`.
 - Second line: 4 above, `bodySmall` with tabular figures in `onSurfaceVariant`, one line, ellipsised — whatever the client counts down (status, ETA, remaining size).
 - Metrics (optional): 4 above, 12 apart; an 8pt dot, 4, and the value in `labelSmall` tabular, both in the primary ink when `accented`, else `onSurfaceVariant`.
-- Menu (`DownloadQueueActionsMenu`, the Usenet pair): a `PopupMenuButton` with an 18pt `more_vert_rounded`, tooltip *Job actions*, offering *Pause* or *Resume*, then *Delete*.
+- Menu (`DownloadQueueActionsMenu`, the Usenet pair): a `PopupMenuButton` with an 18pt `more_vert_rounded`, tooltip *Job actions*, offering *Pause* or *Resume*, then *Delete job*.
 
 ## States
 
 As qBittorrent maps them (the tone rule, applied once in `_toneFor`):
 
 - **Downloading**, **Fetching metadata**, **Checking** — `info`; the bar in blue, `↓` rate accented (ink) and `↑` rate neutral.
-- **Stalled** and **Error** — `warning`: a fault the client reported. An errored torrent draws no bar.
-- **Paused** and **Queued** — neutral: a deliberate stop and the backlog. Paused keeps its bar and prints no ETA; Queued draws no bar, and qBittorrent's unknown ETA prints `∞`.
+- **Stuck** and **Error** — `warning`: a fault the client reported. An errored torrent draws no bar.
+- **Stopped** and **Queued** — neutral: a deliberate stop and the backlog. Stopped keeps its bar and prints no ETA; Queued draws no bar, and qBittorrent's unknown ETA prints `∞`.
 - **Seeding** (complete) — `success`, no bar (a full bar would say "finishing").
 
 Across clients:
 
 - **Stale** (`sampleAge` set) — the second line becomes *as of 6 min ago* (`formatDurationAge`) and the bar keeps its position but drains to `onSurfaceVariant`.
-- **Transmission** prints the remaining size while downloading and *Ratio …* while seeding, and a blocking error (the client's own error string) or *Stalled* replaces the chip's label.
+- **Transmission** prints the remaining size while downloading and *Ratio …* while seeding, and a blocking error (the client's own error string) or *Stuck* replaces the chip's label.
 - **Usenet rows** (SABnzbd, NZBGet) carry no chip and no metrics: the state heads the second line (SABnzbd *Downloading · 0:12:00 · 1.2 GB left of 3.4 GB*, passing its raw `timeleft`; NZBGet *status · category · remaining*, or *progress unknown* with a null percentage and no bar), and `DownloadQueueActionsMenu` trails the first line.
 
 ## Consumer provides

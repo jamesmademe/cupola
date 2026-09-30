@@ -11,6 +11,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 enum _BazarrWantedTabKind { episodes, movies }
@@ -225,9 +226,10 @@ class _BazarrWantedTabState extends ConsumerState<_BazarrWantedTab> {
     }
 
     if (_error != null && _items.isEmpty) {
-      return _BazarrWantedError(
+      return AppErrorState(
         key: ValueKey(_errorKey),
-        message: 'Failed to load wanted ${widget.kind.name}',
+        error: _error!,
+        serviceName: ServiceKey.bazarr.title,
         onRetry: _loadInitial,
       );
     }
@@ -259,7 +261,11 @@ class _BazarrWantedTabState extends ConsumerState<_BazarrWantedTab> {
                     ? const CircularProgressIndicator(strokeWidth: 2.4)
                     : Text(
                         _error != null
-                            ? 'Failed to load more'
+                            ? sectionFailureMessage(
+                                ServiceKey.bazarr,
+                                _error,
+                                consequence: 'the next page did not arrive',
+                              )
                             : 'Pull up to load more',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -433,46 +439,6 @@ class _BazarrWantedEmpty extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BazarrWantedError extends StatelessWidget {
-  const _BazarrWantedError({
-    super.key,
-    required this.message,
-    required this.onRetry,
-  });
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // A load that did not come back: red on the glyph alone, walked
-            // against the page it sits on.
-            Icon(
-              Icons.error_outline_rounded,
-              color: statusToneColor(colorScheme, StatusTone.error),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.md),
-            FilledButton.tonalIcon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Retry'),
             ),
           ],
         ),

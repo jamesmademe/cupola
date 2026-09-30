@@ -54,7 +54,9 @@ class _DonationSheetState extends State<DonationSheet> {
         if (mounted) {
           setState(() {
             _purchasing = false;
-            _errorMessage = 'Something went wrong. Please try again.';
+            _errorMessage =
+                'The store did not complete the purchase. You have not been '
+                'charged.';
           });
         }
       },

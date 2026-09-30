@@ -37,6 +37,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart'
     show joinDisplayParts;
@@ -134,7 +135,7 @@ String nzbgetGroupStageLabel(String rawStatus) {
   return switch (status) {
     'DOWNLOADING' => 'downloading',
     'FETCHING' => 'fetching the NZB',
-    'PAUSED' => 'paused',
+    'PAUSED' => StateWord.stopped.inline,
     'QUEUED' => 'queued',
     'PP_QUEUED' || 'PP_FINISHED' => 'post-processing',
     'LOADING_PARS' || 'VERIFYING_SOURCES' => 'par-check',

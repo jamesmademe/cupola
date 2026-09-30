@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_provider.dart';
@@ -9,6 +11,7 @@ import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of SABnzbd's service home.
@@ -132,6 +135,15 @@ class _OverviewBody extends ConsumerWidget {
 
 // ─── 1. Queue ───────────────────────────────────────────────────────────────
 
+/// A section's failure in the header's words: `did not answer`, `refused
+/// the key` — classified, so a refusal is never read as silence.
+String _failureWord(Object? error) => Lexicon.inline(
+  failureLabel(
+    classifyConnectionFailure(error),
+    credential: refusedCredentialOf(ServiceKey.sabnzbd),
+  ),
+);
+
 /// What is downloading now.
 ///
 /// The board labels this region `Queue 4 · drag to reorder`. The handle is
@@ -160,13 +172,13 @@ class _QueueSection extends ConsumerWidget {
       // or as "em dash" — where the job count is simply not known yet, saying
       // nothing is the truthful shape.
       subtitle: section.hasError && data == null
-          ? 'not answering'
+          ? _failureWord(section.error)
           : data == null
           ? null
           : joinDisplayParts([
               data.total == 1 ? '1 job' : '${data.total} jobs',
               data.sizeLeftLabel,
-              if (data.paused) 'paused',
+              if (data.paused) StateWord.stopped.inline,
             ]),
       destination: ServiceTab.queue,
       child: AsyncValueWidget<SabnzbdQueueSection>(
@@ -253,7 +265,7 @@ class _HistoryTodaySection extends ConsumerWidget {
       // failure clause disappears at zero: `0 failed` is the normal state of a
       // healthy day and does not deserve a place in a header.
       subtitle: section.hasError && data == null
-          ? 'not answering'
+          ? _failureWord(section.error)
           : data == null
           ? 'today'
           : joinDisplayParts([

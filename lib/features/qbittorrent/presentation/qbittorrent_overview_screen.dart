@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_provider.dart';
@@ -191,7 +192,7 @@ class _NeedsAttentionSection extends ConsumerWidget {
         // so is not an error state.
         emptyBuilder: const ServiceOverviewEmpty(
           icon: Icons.check_circle_outline_rounded,
-          label: 'Nothing stalled or errored',
+          label: 'Nothing stuck or errored',
         ),
         data: (data) => Column(
           children: [for (final item in data) _AttentionRow(item: item)],
@@ -253,7 +254,8 @@ class _QueueSection extends ConsumerWidget {
               counts.total == 1 ? '1 torrent' : '${counts.total} torrents',
               '${counts.downloading} downloading',
               '${counts.seeding} seeding',
-              if (counts.paused > 0) '${counts.paused} paused',
+              if (counts.paused > 0)
+                '${counts.paused} ${StateWord.stopped.inline}',
             ]),
       destination: ServiceTab.queue,
       child: AsyncValueWidget<List<QbittorrentTransferRow>>(

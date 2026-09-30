@@ -58,7 +58,10 @@ void main() {
         status: RequestStatus.approved,
         mediaStatus: SeerrMediaAvailability.pending,
       );
-      expect(approvedButMediaPending.displayStatus.label, 'Pending');
+      expect(
+        approvedButMediaPending.displayStatus.label,
+        'Waiting for approval',
+      );
 
       final decisions = await _resolve([approvedButMediaPending]);
 

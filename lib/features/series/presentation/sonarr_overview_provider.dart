@@ -25,6 +25,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
@@ -352,7 +353,7 @@ List<SonarrAttentionItem> sonarrQueueFaults(
       items.add(
         SonarrAttentionItem(
           kind: SonarrAttentionKind.stalled,
-          headline: 'Stalled · $subject',
+          headline: '${StateWord.stuck.label} · $subject',
           detail: joinDisplayParts([
             stringOrNull(record['downloadClient']),
             message,

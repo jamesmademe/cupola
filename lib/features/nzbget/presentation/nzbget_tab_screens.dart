@@ -136,10 +136,10 @@ class _FeedRow extends StatelessWidget {
       color: color,
       title: name,
       detail: '$interval · $category',
-      trailing: feed.pauseNzb ? 'Paused on add' : 'Active',
+      trailing: feed.pauseNzb ? 'Added stopped' : 'Active',
       semanticLabel:
           '$name, $interval, $category, '
-          '${feed.pauseNzb ? 'paused on add' : 'active'}',
+          '${feed.pauseNzb ? 'added stopped' : 'active'}',
     );
   }
 }

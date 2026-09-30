@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 
@@ -26,7 +27,7 @@ String torrentFilterLabel(TorrentFilter filter) {
     case TorrentFilter.completed:
       return 'Completed';
     case TorrentFilter.paused:
-      return 'Paused';
+      return StateWord.stopped.label;
     case TorrentFilter.queued:
       return 'Queued';
   }

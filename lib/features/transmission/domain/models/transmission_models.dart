@@ -1,3 +1,4 @@
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 
@@ -208,7 +209,9 @@ class TransmissionTorrent {
     if (errorKind.isBlocking) {
       return errorString.isEmpty ? 'Error' : errorString;
     }
-    if (isStalled && status == TransmissionStatus.download) return 'Stalled';
+    if (isStalled && status == TransmissionStatus.download) {
+      return StateWord.stuck.label;
+    }
     return null;
   }
 

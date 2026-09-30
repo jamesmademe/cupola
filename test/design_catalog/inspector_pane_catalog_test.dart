@@ -35,7 +35,7 @@ GlobalActivityItem _transfer(
   title: title,
   subtitle: subtitle,
   status: MediaStatusInfo(
-    labelOverride: stalled ? 'Stalled' : 'Downloading',
+    labelOverride: stalled ? 'Stuck' : 'Downloading',
     toneOverride: stalled ? StatusTone.warning : StatusTone.info,
     hasWarning: stalled,
     progress: progress,

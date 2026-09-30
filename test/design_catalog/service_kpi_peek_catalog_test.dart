@@ -34,7 +34,7 @@ const _radarrSilent = [
   ServiceKpi.unavailable(
     label: 'Movies',
     icon: Icons.movie_rounded,
-    note: 'Radarr not answering',
+    note: 'Radarr · Did not answer',
   ),
   ServiceKpi.unavailable(label: 'Monitored', icon: Icons.visibility_rounded),
   ServiceKpi.unavailable(
@@ -117,7 +117,7 @@ void main() {
         ServiceKey.radarr,
       ),
       _scene(
-        'Source failed · one card replaces the rail: Figures, not answering',
+        'Source failed · one card replaces the rail: Figures, did not answer',
         AsyncValue.error(Exception('timeout'), StackTrace.empty),
         ServiceKey.sonarr,
       ),

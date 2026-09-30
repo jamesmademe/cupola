@@ -110,7 +110,7 @@ class TrueNasDatasetDetailScreen extends ConsumerWidget {
                       child: trueNasGatedMenuLabel(
                         ref: ref,
                         area: TrueNasCapabilityArea.datasetDelete.key,
-                        text: 'Delete',
+                        text: 'Delete dataset',
                       ),
                     ),
                   ],

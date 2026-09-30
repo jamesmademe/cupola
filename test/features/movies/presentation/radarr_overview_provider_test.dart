@@ -356,7 +356,7 @@ void main() {
       ], now: now);
 
       expect(faults.single.kind, RadarrAttentionKind.stalled);
-      expect(faults.single.headline, 'Stalled · The Zone of Interest');
+      expect(faults.single.headline, 'Stuck · The Zone of Interest');
       expect(faults.single.detail, contains('qBittorrent'));
     });
 

@@ -1,6 +1,6 @@
 # InspectorPane
 
-The desktop window's right-hand column: the live queue, who is not answering, and what finished today, without leaving the page you are on.
+The desktop window's right-hand column: the live queue, who did not answer, and what finished today, without leaving the page you are on.
 
 Rendered from `lib/features/shell/presentation/desktop/inspector_pane.dart` (`InspectorPane`, `InspectorSplitHandle`) and `lib/features/shell/domain/inspector_state.dart` by `test/design_catalog/inspector_pane_catalog_test.dart`. Titles and figures are sample data.
 

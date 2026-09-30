@@ -15,7 +15,9 @@ import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 /// chip is asking for.
 enum SeerrRequestFilter {
   all('All'),
-  pending('Pending'),
+  // The label only: the filter still keys on Seerr's own request status,
+  // never on the display status the media's availability overrides.
+  pending('Waiting for approval'),
   approved('Approved'),
   declined('Declined');
 
@@ -54,7 +56,9 @@ enum SeerrRequestFilter {
   }
 
   /// The empty-state copy for this bucket.
-  String get emptyLabel => this == SeerrRequestFilter.all
-      ? 'No requests found'
-      : 'No ${label.toLowerCase()} requests';
+  String get emptyLabel => switch (this) {
+    SeerrRequestFilter.all => 'No requests found',
+    SeerrRequestFilter.pending => 'No requests waiting for approval',
+    _ => 'No ${label.toLowerCase()} requests',
+  };
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -423,8 +424,7 @@ class _AgentsSection extends ConsumerWidget {
       title: 'Agents',
       subtitle: joinDisplayParts([
         '${rows.length} instances',
-        if (offline > 0)
-          offline == 1 ? '1 not answering' : '$offline not answering',
+        if (offline > 0) '$offline ${StateWord.didNotAnswer.inline}',
       ]),
       child: Column(children: [for (final row in rows) _AgentRow(row: row)]),
     );

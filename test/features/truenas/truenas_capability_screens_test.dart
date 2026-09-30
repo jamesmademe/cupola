@@ -205,7 +205,7 @@ final _pages = <(String, Widget Function(), List<_Control> Function())>[
         menu: find.byType(PopupMenuButton<String>),
       ),
       _c(
-        find.text('Delete'),
+        find.text('Delete dataset'),
         'delete datasets',
         menu: find.byType(PopupMenuButton<String>),
       ),
@@ -222,7 +222,7 @@ final _pages = <(String, Widget Function(), List<_Control> Function())>[
     () => [
       _c(find.byType(Switch).first, 'start or stop the SMB service'),
       _c(find.byTooltip('Edit'), 'edit SMB shares'),
-      _c(find.byTooltip('Delete'), 'delete SMB shares'),
+      _c(find.byTooltip('Delete share'), 'delete SMB shares'),
       _c(find.byType(Switch).last, 'enable or disable SMB shares'),
       _c(find.byType(FloatingActionButton), 'create SMB shares'),
     ],
@@ -232,7 +232,7 @@ final _pages = <(String, Widget Function(), List<_Control> Function())>[
     () => const TrueNasDataProtectionScreen(),
     () => [
       _c(find.byTooltip('Run now'), 'run snapshot tasks'),
-      _c(find.byTooltip('Delete'), 'delete snapshot tasks'),
+      _c(find.byTooltip('Delete task'), 'delete snapshot tasks'),
       _c(find.byType(Switch), 'enable or disable snapshot tasks'),
     ],
   ),
@@ -248,7 +248,7 @@ final _pages = <(String, Widget Function(), List<_Control> Function())>[
     '8 Virtualization detail',
     () => const TrueNasVirtDetailScreen(id: 'web', type: 'CONTAINER'),
     () => [
-      _c(find.byTooltip('Delete'), 'delete instances'),
+      _c(find.byTooltip('Delete instance'), 'delete instances'),
       _c(find.byTooltip('Start web'), 'start instances'),
     ],
   ),

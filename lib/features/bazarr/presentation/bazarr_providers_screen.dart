@@ -211,10 +211,7 @@ class _ProviderSummaryCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
-          Text(
-            'Live provider status',
-            style: AppTheme.rowTitle(theme.brightness),
-          ),
+          Text('Provider status', style: AppTheme.rowTitle(theme.brightness)),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Bazarr reports throttled providers separately. A clear list means no provider currently needs attention; it is not a claim that no providers are configured.',

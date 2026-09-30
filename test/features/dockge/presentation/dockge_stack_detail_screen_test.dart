@@ -77,7 +77,7 @@ void main() {
         'Restart',
         'Update',
         'Down',
-        'Delete',
+        'Delete stack',
       ]) {
         final chip = find.ancestor(
           of: find.text(label),
@@ -135,7 +135,7 @@ void main() {
         tester.widget<Icon>(find.byIcon(Icons.play_arrow_rounded)).color,
       );
 
-      await tester.tap(find.text('Delete'));
+      await tester.tap(find.text('Delete stack'));
       await tester.pumpAndSettle();
       expect(find.text('Delete immich?'), findsOneWidget);
       expect(

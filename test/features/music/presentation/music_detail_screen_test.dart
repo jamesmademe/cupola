@@ -69,7 +69,10 @@ void main() {
 
       // The headline names what failed; the exception stays on screen as the
       // demoted detail line, not as the message.
-      expect(find.text("Couldn't load Lidarr"), findsOneWidget);
+      expect(
+        find.text('The request to Lidarr did not complete'),
+        findsOneWidget,
+      );
       // The exception's own words never reach the screen; the detail is
       // the classified sentence (an unattributable failure here).
       expect(find.textContaining('Network error'), findsNothing);
@@ -254,7 +257,10 @@ void main() {
       );
 
       expect(find.byType(AppErrorState), findsOneWidget);
-      expect(find.text("Couldn't load Lidarr"), findsOneWidget);
+      expect(
+        find.text('The request to Lidarr did not complete'),
+        findsOneWidget,
+      );
       expect(albumLoads, 1);
 
       await tester.tap(find.text('Retry'));

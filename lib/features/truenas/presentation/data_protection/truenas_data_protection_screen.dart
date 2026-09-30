@@ -177,7 +177,7 @@ class _TaskTile extends ConsumerWidget {
             verbPhrase: 'delete ${task.kind.label.toLowerCase()}',
             // Neutral: the confirmation says what goes, in words.
             icon: const Icon(Icons.delete_outline_rounded, size: 18),
-            tooltip: 'Delete',
+            tooltip: 'Delete task',
             onTap: () async {
               final result = await showAppConfirmDialog(
                 context: context,

@@ -171,7 +171,8 @@ void main() {
         AppErrorState(serviceName: 'Radarr', error: _refused(), onRetry: () {}),
       );
 
-      expect(find.text("Couldn't load Radarr"), findsOneWidget);
+      // The classification's headline, never "Couldn't load Radarr".
+      expect(find.text('Radarr did not answer'), findsOneWidget);
       expect(
         find.textContaining('Nothing answered at the saved address.'),
         findsOneWidget,

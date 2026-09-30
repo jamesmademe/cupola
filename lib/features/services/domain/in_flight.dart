@@ -21,6 +21,7 @@
 library;
 
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 
@@ -203,7 +204,7 @@ String? inFlightFaultFootnote({
 }) {
   final clauses = [
     if (needsImport > 0) needsManualImportClause(needsImport),
-    if (stalled > 0) '$stalled stalled',
+    if (stalled > 0) '$stalled ${StateWord.stuck.inline}',
     if (failed > 0) '$failed failed',
   ];
   if (clauses.isEmpty) return null;

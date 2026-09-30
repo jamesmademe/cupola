@@ -85,7 +85,7 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('Failed to load wanted episodes'), findsOneWidget);
+    expect(find.text('The request to Bazarr did not complete'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
   });
 
@@ -144,7 +144,10 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
-      expect(find.text('Failed to load library'), findsOneWidget);
+      expect(
+        find.text('The request to Bazarr did not complete'),
+        findsOneWidget,
+      );
       expect(find.text('Retry'), findsOneWidget);
     },
   );

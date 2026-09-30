@@ -855,7 +855,7 @@ class OnboardingClose extends StatelessWidget {
           : '${example.title} and the rest can be added any time in Settings, '
                 'or from any dark card on the Dashboard.';
       return '${connected.length}/${ServiceKey.values.length} services '
-          'answered. Everything you connected is ready to use. $rest';
+          'answered. Everything you set up is ready to use. $rest';
     }
     final names = silent.map((s) => s.title).join(', ');
     final verb = silent.length == 1 ? 'is' : 'are';
@@ -894,7 +894,7 @@ class OnboardingClose extends StatelessWidget {
               fallbackMaxLines: null,
             )
         else if (connected.isEmpty && silent.isEmpty)
-          Text('Nothing connected yet.', style: headlineStyle)
+          Text('Nothing set up yet.', style: headlineStyle)
         else
           _AccentedHeadline(
             before: 'Nothing left in the ',

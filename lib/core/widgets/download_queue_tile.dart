@@ -537,7 +537,7 @@ class DownloadQueueActionsMenu extends StatelessWidget {
           ),
         const PopupMenuItem(
           value: DownloadQueueCommand.delete,
-          child: Text('Delete'),
+          child: Text('Delete job'),
         ),
       ],
     );

@@ -106,7 +106,7 @@ void main() {
 
       expect(viewModel.title, 'Test Show');
       expect(viewModel.posterUrl, 'https://cdn.example.com/poster.jpg');
-      expect(viewModel.seerrStatus, 'Pending');
+      expect(viewModel.seerrStatus, 'Waiting for approval');
       expect(viewModel.year, '2021');
       expect(viewModel.numberOfSeasons, 3);
       expect(viewModel.networks, 'HBO, Max');
@@ -151,7 +151,7 @@ void main() {
         'Available to request',
       );
       expect(DiscoverDetailViewModel.mapSeerrStatus(1), 'Unknown');
-      expect(DiscoverDetailViewModel.mapSeerrStatus(2), 'Pending');
+      expect(DiscoverDetailViewModel.mapSeerrStatus(2), 'Waiting for approval');
       expect(DiscoverDetailViewModel.mapSeerrStatus(3), 'Processing');
       expect(DiscoverDetailViewModel.mapSeerrStatus(4), 'Partially available');
       expect(DiscoverDetailViewModel.mapSeerrStatus(5), 'Available');

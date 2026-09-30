@@ -277,10 +277,10 @@ class _NoStreamService extends StatelessWidget {
       children: [
         AppEmptyState(
           icon: Icons.play_circle_outline_rounded,
-          title: 'No media server yet',
+          title: 'Jellyfin and Plex are not set up',
           message:
-              'Connect Jellyfin or Plex to see who is watching what, and why '
-              'the box is working for it.',
+              'Set one up to see who is watching what, and why the box is '
+              'working for it.',
           action: FilledButton(
             onPressed: () => context.go(ServiceRoutes.dashboard),
             child: const Text('Set one up'),

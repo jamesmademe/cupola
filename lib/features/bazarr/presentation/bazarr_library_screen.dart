@@ -7,9 +7,9 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
-import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -228,9 +228,12 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
     }
 
     if (_error != null && _items.isEmpty) {
-      return _BazarrLibraryError(
+      // The classified leaf, never "Failed to load library" in red for a
+      // refused key.
+      return AppErrorState(
         key: ValueKey(_errorKey),
-        message: 'Failed to load library',
+        error: _error!,
+        serviceName: ServiceKey.bazarr.title,
         onRetry: _loadInitial,
       );
     }
@@ -401,45 +404,5 @@ class _BazarrLibraryRow extends StatelessWidget {
     } else {
       context.push(ServiceRoutes.bazarrMovie(entry.id));
     }
-  }
-}
-
-class _BazarrLibraryError extends StatelessWidget {
-  const _BazarrLibraryError({
-    super.key,
-    required this.message,
-    required this.onRetry,
-  });
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // A load that did not come back: red on the glyph alone, walked
-            // against the page it sits on.
-            Icon(
-              Icons.error_outline_rounded,
-              color: statusToneColor(colorScheme, StatusTone.error),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.md),
-            FilledButton.tonalIcon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Retry'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

@@ -465,7 +465,7 @@ class _TrackButtons extends StatelessWidget {
 }
 
 String _timeValue(String? isoValue) {
-  if (isoValue == null || isoValue.isEmpty) return 'Pending';
+  if (isoValue == null || isoValue.isEmpty) return 'Not yet';
   final parsed = DateTime.tryParse(isoValue)?.toLocal();
   if (parsed == null) return isoValue;
   final hour = parsed.hour.toString().padLeft(2, '0');

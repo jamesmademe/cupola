@@ -63,7 +63,10 @@ void main() {
 
       // The headline names what failed; the exception stays on screen as the
       // demoted detail line, not as the message.
-      expect(find.text("Couldn't load Radarr"), findsOneWidget);
+      expect(
+        find.text('The request to Radarr did not complete'),
+        findsOneWidget,
+      );
       // The exception's own words never reach the screen; the detail is
       // the classified sentence (an unattributable failure here).
       expect(find.textContaining('Network failure'), findsNothing);
@@ -489,7 +492,7 @@ void main() {
         find.widgetWithIcon(OutlinedButton, Icons.more_horiz_rounded),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Delete'));
+      await tester.tap(find.text('Delete from Radarr'));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);

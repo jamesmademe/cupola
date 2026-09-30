@@ -6,6 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_category_picker.dart';
@@ -218,22 +219,10 @@ class _AddIndexerBodyState extends ConsumerState<_AddIndexerBody> {
                 ProwlarrListShimmer(count: 6),
               ],
             ),
-            error: (error, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Could not load the indexer definitions'),
-                    const SizedBox(height: AppSpacing.md),
-                    FilledButton(
-                      onPressed: () =>
-                          ref.invalidate(prowlarrIndexerSchemaProvider),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
+            error: (error, _) => AppErrorState(
+              error: error,
+              serviceName: ServiceKey.prowlarr.title,
+              onRetry: () => ref.invalidate(prowlarrIndexerSchemaProvider),
             ),
           ),
         ),

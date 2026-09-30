@@ -276,7 +276,7 @@ void main() {
       expect(find.text('Automatic search'), findsOneWidget);
       expect(find.text('Interactive search'), findsNothing);
       expect(find.text('Manual import'), findsNothing);
-      expect(find.text('Delete'), findsNothing);
+      expect(find.text('Delete from Radarr'), findsNothing);
     });
 
     testWidgets('while busy the promoted button keeps its fill, so the '
@@ -407,7 +407,7 @@ void main() {
       // HD-1080p` used to sit here *and* claim a visible slot; it is a field,
       // and a field is edited on its own row in the Details card.
       expect(find.textContaining('Quality profile'), findsNothing);
-      expect(find.text('Delete'), findsOneWidget);
+      expect(find.text('Delete from Radarr'), findsOneWidget);
       // Automatic search is promoted; Interactive search took the visible slot.
       // Neither is a row in the sheet — the one 'Automatic search' on screen is the
       // primary button behind it.
@@ -471,7 +471,7 @@ void main() {
 
       final importY = tester.getCenter(find.text('Manual import')).dy;
       final dividerY = tester.getCenter(divider).dy;
-      final deleteY = tester.getCenter(find.text('Delete')).dy;
+      final deleteY = tester.getCenter(find.text('Delete from Radarr')).dy;
 
       // Delete sits below a divider, last, rather than roughly ten points from
       // Import in the same group told apart by hue alone.
@@ -500,8 +500,13 @@ void main() {
 
       // Red means unreachable and nothing else. Delete is set apart by where
       // it sits — below the divider, last — never by colour.
-      final scheme = Theme.of(tester.element(find.text('Delete'))).colorScheme;
-      final deleteLabel = tester.widget<Text>(find.text('Delete')).style?.color;
+      final scheme = Theme.of(
+        tester.element(find.text('Delete from Radarr')),
+      ).colorScheme;
+      final deleteLabel = tester
+          .widget<Text>(find.text('Delete from Radarr'))
+          .style
+          ?.color;
       final deleteGlyph = tester
           .widget<Icon>(find.byIcon(Icons.delete_outline_rounded))
           .color;
@@ -556,7 +561,7 @@ void main() {
       await tester.pumpAndSettle();
       // Interactive search took the visible slot, so the sheet's own rows are
       // what is left: check the top one and the destructive one.
-      for (final label in const ['Manual import', 'Delete']) {
+      for (final label in const ['Manual import', 'Delete from Radarr']) {
         expect(
           tester.getSize(_rowOf(tester, label)).height,
           greaterThanOrEqualTo(44),
@@ -616,7 +621,7 @@ void main() {
       expect(interactiveSearches, 0);
       // And the overflow sheet cannot be opened on top of a running write, so
       // Delete is out of reach while a delete is in flight.
-      expect(find.text('Delete'), findsNothing);
+      expect(find.text('Delete from Radarr'), findsNothing);
     });
 
     testWidgets('a secondary fires once under a triple tap', (tester) async {
@@ -688,7 +693,7 @@ void main() {
       PressableScale row(String label) =>
           tester.widget<PressableScale>(_rowOf(tester, label));
       expect(row('Manual import').onTap, isNull);
-      expect(row('Delete').onTap, isNull);
+      expect(row('Delete from Radarr').onTap, isNull);
 
       await tester.pumpAndSettle();
 
