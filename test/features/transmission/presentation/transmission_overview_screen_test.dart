@@ -282,10 +282,13 @@ Future<void> _pump(
   await tester.binding.setSurfaceSize(const Size(420, 3200));
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
-  // Two hours ago, so "finished today" holds wherever this suite runs —
-  // except across local midnight, where the rule under test says it should not.
+  // Two hours ago, but never before local midnight: "finished today" is the
+  // rule under test, so a fixture that slid into yesterday in the first two
+  // hours of the day made the suite fail by the clock.
   final now = DateTime.now();
-  final doneToday = now.subtract(const Duration(hours: 2));
+  final midnight = DateTime(now.year, now.month, now.day);
+  final twoHoursAgo = now.subtract(const Duration(hours: 2));
+  final doneToday = twoHoursAgo.isBefore(midnight) ? midnight : twoHoursAgo;
 
   final torrents = [
     _torrent(
