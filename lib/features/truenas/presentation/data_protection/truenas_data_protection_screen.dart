@@ -8,7 +8,6 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/section_header.dart';
-import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/truenas/domain/models/data_protection.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
@@ -109,7 +108,7 @@ class _TaskTile extends ConsumerWidget {
         message:
             'Scrubbing "${task.poolName}" reads the whole pool and can take '
             'hours.',
-        confirmLabel: 'Start',
+        confirmLabel: 'Start scrub',
       );
       if (!result.confirmed || !context.mounted) return;
     }
@@ -176,24 +175,16 @@ class _TaskTile extends ConsumerWidget {
             ref: ref,
             area: task.writeArea.key,
             verbPhrase: 'delete ${task.kind.label.toLowerCase()}',
-            icon: Icon(
-              Icons.delete_outline_rounded,
-              size: 18,
-              // The irreversible-action exception, walked against the card.
-              color: statusToneColor(
-                theme.colorScheme,
-                StatusTone.error,
-                surface: theme.colorScheme.surfaceContainer,
-              ),
-            ),
+            // Neutral: the confirmation says what goes, in words.
+            icon: const Icon(Icons.delete_outline_rounded, size: 18),
             tooltip: 'Delete',
             onTap: () async {
               final result = await showAppConfirmDialog(
                 context: context,
                 title: 'Delete task?',
-                message: '"${task.title}" will be removed.',
-                confirmLabel: 'Delete',
-                destructive: true,
+                message:
+                    '"${task.title}" will be removed. This cannot be undone.',
+                confirmLabel: 'Delete task',
               );
               if (!result.confirmed || !context.mounted) return;
               await runTrueNasAction(

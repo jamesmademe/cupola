@@ -78,7 +78,7 @@ void main() {
       await tester.pumpAndSettle();
       // The confirmation dialog's own action is a FilledButton, so it cannot
       // be confused with the card's TextButton trigger of the same label.
-      await tester.tap(find.widgetWithText(FilledButton, 'Forget'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Forget certificate'));
       await tester.pumpAndSettle();
 
       expect(

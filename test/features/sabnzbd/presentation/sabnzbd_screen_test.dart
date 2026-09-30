@@ -70,6 +70,19 @@ class _RecordingSabnzbd implements SabnzbdClient {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// Records what a job delete asked SABnzbd to do.
+class _DeletingSabnzbd implements SabnzbdClient {
+  final deletes = <({String id, bool deleteFiles})>[];
+
+  @override
+  Future<void> deleteJob(String nzoId, {bool deleteFiles = false}) async {
+    deletes.add((id: nzoId, deleteFiles: deleteFiles));
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 String? _queueSubtitle(WidgetTester tester) => tester
     .widget<SectionHeader>(
       find.byWidgetPredicate(
@@ -407,6 +420,80 @@ void main() {
         ),
         findsNothing,
       );
+    });
+  });
+
+  group('deleting a job', () {
+    Future<_DeletingSabnzbd> pumpAndOpen(WidgetTester tester) async {
+      final client = _DeletingSabnzbd();
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentSettingsProvider.overrideWith((ref) => _configured),
+            ..._ambient(),
+            sabnzbdClientProvider.overrideWith((ref) => client),
+            sabnzbdQueueProvider.overrideWith(
+              (ref) async => _queue(slots: [_slot()]),
+            ),
+            sabnzbdCategoriesProvider.overrideWith(
+              (ref) async => const <String>[],
+            ),
+          ],
+          child: const MaterialApp(home: SabnzbdScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Job actions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      return client;
+    }
+
+    testWidgets('asks first, and Cancel sends nothing', (tester) async {
+      // It fired on the menu tap, one row below Pause, and "Job removed" was
+      // the only word about it.
+      final client = await pumpAndOpen(tester);
+
+      expect(find.text('Delete this job?'), findsOneWidget);
+      expect(
+        find.textContaining(
+          'Dune.Part.Two.2024.2160p leaves the SABnzbd queue',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(client.deletes, isEmpty);
+      expect(find.text('Job removed'), findsNothing);
+    });
+
+    testWidgets('keeps the downloaded files unless asked to delete them', (
+      tester,
+    ) async {
+      final client = await pumpAndOpen(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete job'));
+      await tester.pumpAndSettle();
+
+      expect(client.deletes, [(id: 'SABnzbd_nzo_1', deleteFiles: false)]);
+      expect(find.text('Job removed'), findsOneWidget);
+    });
+
+    testWidgets('the files go only when the box is ticked', (tester) async {
+      final client = await pumpAndOpen(tester);
+      await tester.tap(find.text('Also delete downloaded files'));
+      await tester.pumpAndSettle();
+      // Ticking the box rewrites the verb, so the button says what goes.
+      expect(find.widgetWithText(FilledButton, 'Delete job'), findsNothing);
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Delete job and files'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(client.deletes, [(id: 'SABnzbd_nzo_1', deleteFiles: true)]);
+      expect(find.text('Job and its files deleted'), findsOneWidget);
     });
   });
 }

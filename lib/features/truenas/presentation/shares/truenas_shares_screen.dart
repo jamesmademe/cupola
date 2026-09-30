@@ -421,8 +421,7 @@ Future<void> _deleteShare(
     context: context,
     title: 'Delete "$name"?',
     message: 'The share definition is removed. Data on disk is not deleted.',
-    confirmLabel: 'Delete',
-    destructive: true,
+    confirmLabel: 'Delete share',
   );
   if (!result.confirmed || !context.mounted) return;
   await runTrueNasAction(
@@ -560,16 +559,8 @@ class _ShareRow extends ConsumerWidget {
             ref: ref,
             area: area,
             verbPhrase: 'delete $noun',
-            icon: Icon(
-              Icons.delete_outline_rounded,
-              size: 18,
-              // The irreversible-action exception, walked against the card.
-              color: statusToneColor(
-                theme.colorScheme,
-                StatusTone.error,
-                surface: theme.colorScheme.surfaceContainer,
-              ),
-            ),
+            // Neutral, like Edit beside it: the confirmation says what goes.
+            icon: const Icon(Icons.delete_outline_rounded, size: 18),
             tooltip: 'Delete',
             onTap: onDelete,
           ),

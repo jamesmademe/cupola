@@ -4,10 +4,69 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/features/import/domain/manual_import_models.dart';
 import 'package:cupola/features/import/presentation/manual_import_widgets.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
+  group('manualImportConfirmMessage', () {
+    test('says how the files are taken, and that it cannot be undone', () {
+      expect(
+        manualImportConfirmMessage(
+          service: ServiceKey.sonarr,
+          mode: ManualImportMode.move,
+          count: 3,
+          reimports: 0,
+        ),
+        'They are moved into the library folder. '
+        'Sonarr cannot undo an import.',
+      );
+      expect(
+        manualImportConfirmMessage(
+          service: ServiceKey.radarr,
+          mode: ManualImportMode.copy,
+          count: 1,
+          reimports: 0,
+        ),
+        'It is copied into the library; the original stays where it is. '
+        'Radarr cannot undo an import.',
+      );
+      expect(
+        manualImportConfirmMessage(
+          service: ServiceKey.sonarr,
+          mode: ManualImportMode.auto,
+          count: 2,
+          reimports: 0,
+        ),
+        'Sonarr decides whether to move or copy each one. '
+        'Sonarr cannot undo an import.',
+      );
+    });
+
+    test('names the re-imports, because they overwrite the library copy', () {
+      expect(
+        manualImportConfirmMessage(
+          service: ServiceKey.sonarr,
+          mode: ManualImportMode.move,
+          count: 4,
+          reimports: 2,
+        ),
+        'They are moved into the library folder. '
+        '2 of them replace the files already in the library. '
+        'Sonarr cannot undo an import.',
+      );
+      expect(
+        manualImportConfirmMessage(
+          service: ServiceKey.sonarr,
+          mode: ManualImportMode.move,
+          count: 1,
+          reimports: 1,
+        ),
+        contains('It replaces the file already in the library.'),
+      );
+    });
+  });
+
   group('formatImportBytes', () {
     test('keeps the "no size reported" sentinel', () {
       expect(formatImportBytes(0), 'Unknown size');

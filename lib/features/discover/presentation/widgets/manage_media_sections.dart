@@ -183,23 +183,15 @@ class _RequestCard extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Delete from library',
+            // It deletes the *request*: the file, if there is one, stays in
+            // the library. "Delete from library" named the one thing this
+            // button never touches.
+            tooltip: 'Delete request',
             onPressed: onDelete,
+            // Neutral: red means unreachable and nothing else, and the
+            // confirmation says what goes.
             icon: const Icon(Icons.delete_outline),
-            style: IconButton.styleFrom(
-              backgroundColor: statusToneFill(
-                colorScheme,
-                StatusTone.error,
-              ).withValues(alpha: 0.1),
-              // The irreversible-action exception, walked against the wash
-              // over the card it sits on.
-              foregroundColor: statusToneColor(
-                colorScheme,
-                StatusTone.error,
-                surface: colorScheme.surfaceContainer,
-                tintAlpha: 0.1,
-              ),
-            ),
+            color: colorScheme.onSurfaceVariant,
           ),
         ],
       ),
@@ -347,7 +339,6 @@ class MediaSection extends StatelessWidget {
                     )
                   : annotate(const Icon(Icons.delete_outline)),
               label: annotate(Text('Remove from $serviceName')),
-              style: _destructiveFill(colorScheme),
             ),
           ),
         ),
@@ -394,7 +385,6 @@ class AdvancedSection extends StatelessWidget {
             onPressed: !isDeleting ? onClear : null,
             icon: const Icon(Icons.cleaning_services_outlined),
             label: const Text('Clear data'),
-            style: _destructiveFill(colorScheme),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -409,15 +399,4 @@ class AdvancedSection extends StatelessWidget {
       ],
     );
   }
-}
-
-/// The red fill of an irreversible action, with its label measured against the
-/// fill rather than assumed: `onError` is white, which reads 3.5:1 on the light
-/// theme's red.
-ButtonStyle _destructiveFill(ColorScheme colorScheme) {
-  final fill = statusToneFill(colorScheme, StatusTone.error);
-  return ElevatedButton.styleFrom(
-    backgroundColor: fill,
-    foregroundColor: ServiceTheme.foregroundOn(fill),
-  );
 }

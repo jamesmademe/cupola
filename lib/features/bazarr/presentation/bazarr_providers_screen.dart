@@ -6,6 +6,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
@@ -94,7 +95,7 @@ class BazarrProvidersScreen extends ConsumerWidget {
               ),
               data: (items) => _ProviderStatusList(
                 items: items,
-                onReset: () => _resetStatuses(context, ref),
+                onReset: () => _confirmReset(context, ref, items.length),
               ),
             ),
           ],
@@ -113,6 +114,33 @@ class BazarrProvidersScreen extends ConsumerWidget {
   ) {
     final count = value.asData?.value.length;
     return count == null ? '—' : '$count';
+  }
+
+  /// Asks before the throttles are cleared.
+  ///
+  /// The button was the whole guard. Nothing is deleted, but the throttle is
+  /// how Bazarr stops asking a provider that has told it to wait, and it
+  /// cannot be put back once cleared — worth one question. [count] is the
+  /// whole list on screen, not a sample of it.
+  static Future<void> _confirmReset(
+    BuildContext context,
+    WidgetRef ref,
+    int count,
+  ) async {
+    final providers = count == 1
+        ? '1 throttled provider'
+        : '$count throttled providers';
+    final result = await showAppConfirmDialog(
+      context: context,
+      icon: Icons.refresh_rounded,
+      title: 'Reset provider throttles?',
+      message:
+          'Bazarr stops waiting out $providers and asks them again on its '
+          'next search. A provider still over its limit throttles again.',
+      confirmLabel: 'Reset throttles',
+    );
+    if (!result.confirmed || !context.mounted) return;
+    await _resetStatuses(context, ref);
   }
 
   static Future<void> _resetStatuses(

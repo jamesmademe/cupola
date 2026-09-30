@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_actions.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/widgets/torrent_delete_dialog.dart';
@@ -91,15 +90,9 @@ class TorrentSelectionBar extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                icon: Icon(
-                  Icons.delete_outline_rounded,
-                  // The irreversible-action exception, walked against the bar.
-                  color: statusToneColor(
-                    colorScheme,
-                    StatusTone.error,
-                    surface: colorScheme.surfaceContainerHigh,
-                  ),
-                ),
+                // Neutral like its neighbours: the confirmation carries the
+                // weight, in words.
+                icon: const Icon(Icons.delete_outline_rounded),
                 tooltip: 'Delete',
                 onPressed: onConfirmDelete,
               ),
@@ -119,9 +112,8 @@ Future<bool> confirmDeleteTorrents(
   final count = hashes.length;
   final result = await showTorrentDeleteDialog(
     context: context,
-    title: 'Delete torrents',
-    message:
-        'Delete $count torrent${count > 1 ? 's' : ''}? This action cannot be undone.',
+    title: count > 1 ? 'Delete $count torrents?' : 'Delete this torrent?',
+    message: count > 1 ? 'They leave qBittorrent.' : 'It leaves qBittorrent.',
     multi: count > 1,
   );
   if (!result.confirmed) return false;

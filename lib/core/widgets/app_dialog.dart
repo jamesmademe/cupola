@@ -2,27 +2,26 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/widgets/status_badge.dart';
 
 /// A toggleable option (checkbox) shown inside [showAppConfirmDialog].
+///
+/// An option that makes the action irreversible — *Delete files* — says so in
+/// its own [subtitle], in the same ink as every other line of the dialog. It
+/// used to take a `danger` flag that turned the option red and raised a red
+/// *cannot be undone* banner; red means unreachable and nothing else, so the
+/// flag went with it.
 class AppConfirmOption {
   final String key;
   final String label;
   final String? subtitle;
   final bool initialValue;
 
-  /// When a checked option is [danger], the dialog surfaces the "cannot be
-  /// undone" warning banner and tints the option red.
-  final bool danger;
-
   const AppConfirmOption({
     required this.key,
     required this.label,
     this.subtitle,
     this.initialValue = false,
-    this.danger = false,
   });
 }
 
@@ -38,32 +37,53 @@ class AppConfirmResult {
   bool option(String key) => options[key] ?? false;
 }
 
-/// One canonical confirmation dialog for the whole app.
+/// The confirm label for the options as they currently stand: `checked(key)`
+/// reads one of them.
+typedef AppConfirmLabelFor = String Function(bool Function(String key) checked);
+
+/// One canonical confirmation dialog for the whole app, and one style of it.
 ///
-/// Supports a plain confirm, a [destructive] variant (red confirm button +
-/// warning affordance), and optional [options] (checkboxes) — e.g. the
-/// "delete files" / "add exclusion" toggles used when removing media.
+/// Title, an optional sentence, optional [options] (checkboxes — e.g. the
+/// "delete files" / "add exclusion" toggles used when removing media), and a
+/// Cancel / confirm pair. The confirm is always the theme's own `FilledButton`.
 ///
-/// [destructive] is the one deliberate exception to the tone rule. Red in a
-/// **status** means unreachable and nothing else; red in an **action** means
-/// irreversible. A delete confirmation is an action, so it keeps its red — but
-/// every red glyph and line of text is still walked through [statusToneColor]
-/// against the dialog's own surface, and the red fill takes its label from
-/// [ServiceTheme.foregroundOn], because raw red as text measured 3.4:1 on the
-/// light dialog.
+/// **A destructive confirmation is not red.** Red in the tone rule means
+/// unreachable and nothing else — not "irreversible", not "careful". A delete
+/// used to fill its button red, turn its title and glyph red and add a red
+/// *cannot be undone* banner; now the weight is carried by words:
+///
+/// - [confirmLabel] is a verb that names what will happen — *Delete job*,
+///   *Take down*, *Remove from Radarr* — never *Confirm*, *OK*, *Yes* or a bare
+///   *Delete*. `test/core/theme/neutral_destructive_test.dart` scans `lib/`
+///   for that, and for any button or dialog painted with the error colour.
+/// - When an option changes what the action does, [confirmLabelFor] rewrites
+///   the label as it is ticked (*Delete movie* → *Delete movie and files*), so
+///   the button always says the whole of it. [confirmLabel] stays required and
+///   is asserted to be what [confirmLabelFor] returns for the options' initial
+///   values, so the call site reads true at a glance.
+/// - If the action cannot be undone, one neutral sentence says so — in
+///   [message], or in the subtitle of the option that makes it so.
+///
+/// There is no `destructive` flag any more: once it stopped painting red it
+/// did nothing true. Call sites that want a haptic already fire it themselves
+/// before the dialog opens.
 Future<AppConfirmResult> showAppConfirmDialog({
   required BuildContext context,
   required String title,
+  required String confirmLabel,
   String? message,
   IconData? icon,
-  String confirmLabel = 'Confirm',
+  AppConfirmLabelFor? confirmLabelFor,
   String cancelLabel = 'Cancel',
-  bool destructive = false,
   List<AppConfirmOption> options = const [],
-  String dangerNote = 'This cannot be undone.',
   bool useRootNavigator = true,
 }) async {
   final values = {for (final o in options) o.key: o.initialValue};
+  assert(
+    confirmLabelFor == null ||
+        confirmLabelFor((key) => values[key] ?? false) == confirmLabel,
+    'confirmLabel must be the label confirmLabelFor gives the initial options',
+  );
 
   final result = await showDialog<AppConfirmResult>(
     context: context,
@@ -72,38 +92,15 @@ Future<AppConfirmResult> showAppConfirmDialog({
       builder: (context, setState) {
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
-        // The ground every red ink here lands on — the dialog, not the page
-        // behind the barrier.
-        final dialogSurface =
-            theme.dialogTheme.backgroundColor ??
-            colorScheme.surfaceContainerHigh;
-        final errorFill = statusToneFill(colorScheme, StatusTone.error);
-        final errorColor = statusToneColor(
-          colorScheme,
-          StatusTone.error,
-          surface: dialogSurface,
-        );
-        // The danger note sits on its own 10% wash, so it is measured against
-        // that composite rather than the bare dialog.
-        final dangerNoteColor = statusToneColor(
-          colorScheme,
-          StatusTone.error,
-          surface: dialogSurface,
-          tintAlpha: 0.10,
-        );
-        final headerColor = destructive ? errorColor : colorScheme.onSurface;
-        final effectiveIcon =
-            icon ?? (destructive ? Icons.warning_amber_rounded : null);
-        final anyDangerChecked = options.any(
-          (o) => o.danger && (values[o.key] ?? false),
-        );
-        final showDanger = anyDangerChecked || (destructive && options.isEmpty);
+        final label =
+            confirmLabelFor?.call((key) => values[key] ?? false) ??
+            confirmLabel;
 
         return AlertDialog(
           title: Row(
             children: [
-              if (effectiveIcon != null) ...[
-                Icon(effectiveIcon, color: headerColor),
+              if (icon != null) ...[
+                Icon(icon, color: colorScheme.onSurface),
                 const SizedBox(width: AppSpacing.md),
               ],
               Expanded(
@@ -134,66 +131,22 @@ Future<AppConfirmResult> showAppConfirmDialog({
                     value: values[opt.key] ?? false,
                     onChanged: (v) =>
                         setState(() => values[opt.key] = v ?? false),
-                    title: Text(
-                      opt.label,
-                      // Restructured onto the role ListTile would have given
-                      // this title anyway: a bare TextStyle has no fontSize to
-                      // hang `wght` on, so the bold never reached the face.
-                      style: opt.danger && (values[opt.key] ?? false)
-                          ? theme.textTheme.bodyLarge!
-                                .weight(FontWeight.w600)
-                                .copyWith(color: errorColor)
-                          : null,
-                    ),
+                    title: Text(opt.label),
                     subtitle: opt.subtitle == null
                         ? null
-                        : Text(
-                            opt.subtitle!,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: opt.danger && (values[opt.key] ?? false)
-                                  ? errorColor
-                                  : null,
-                            ),
-                          ),
+                        : Text(opt.subtitle!, style: theme.textTheme.bodySmall),
                     contentPadding: EdgeInsets.zero,
                     controlAffinity: ListTileControlAffinity.leading,
                   ),
               ],
-              if (showDanger) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: errorFill.withValues(alpha: 0.10),
-                    borderRadius: AppRadius.borderRadiusSm,
-                    border: Border.all(
-                      color: errorFill.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_rounded,
-                        color: dangerNoteColor,
-                        size: 20,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          dangerNote,
-                          // Same restructure: `bodyMedium` is the dialog's own
-                          // content role, which this note is an emphasis of.
-                          style: theme.textTheme.bodyMedium!
-                              .weight(FontWeight.w600)
-                              .copyWith(color: dangerNoteColor),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ],
           ),
+          // A label that names the action (*Remove and delete files*) often
+          // no longer fits beside Cancel on a phone, and the pair stacks. The
+          // confirm goes on top — Material's stacked order — rather than
+          // Cancel floating above it.
+          actionsOverflowDirection: VerticalDirection.up,
+          actionsOverflowButtonSpacing: AppSpacing.sm,
           actions: [
             TextButton(
               onPressed: () =>
@@ -204,13 +157,7 @@ Future<AppConfirmResult> showAppConfirmDialog({
               onPressed: () => Navigator.of(
                 context,
               ).pop(AppConfirmResult(confirmed: true, options: Map.of(values))),
-              style: destructive
-                  ? FilledButton.styleFrom(
-                      backgroundColor: errorFill,
-                      foregroundColor: ServiceTheme.foregroundOn(errorFill),
-                    )
-                  : null,
-              child: Text(confirmLabel),
+              child: Text(label),
             ),
           ],
         );
@@ -219,4 +166,166 @@ Future<AppConfirmResult> showAppConfirmDialog({
   );
 
   return result ?? AppConfirmResult.cancelled;
+}
+
+/// The heavier gate: a confirmation whose button stays inert until [phrase] —
+/// a hostname, a domain — is typed out.
+///
+/// For the few actions whose blast radius leaves the device or cannot be
+/// reached back from it: shutting a TrueNAS host down, taking an NPM proxy host
+/// offline for everyone who uses it. A tap is calibrated for "are you sure";
+/// typing the name answers "do you know which one", which is the question that
+/// actually goes wrong on a small screen. Matching is trimmed and
+/// case-insensitive, because hostnames are, and demanding exact case would
+/// only teach people to copy-paste past the check.
+///
+/// It is [showAppConfirmDialog] with a text field: the same title row, the same
+/// neutral `FilledButton` and a [confirmLabel] held to the same rule. The two
+/// copies it replaces each painted the button red and put an amber warning
+/// glyph above the title — a fault tone on a dialog nothing had gone wrong in.
+Future<bool> showAppTypedConfirmDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String phrase,
+  required String confirmLabel,
+  IconData? icon,
+  bool useRootNavigator = true,
+}) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    useRootNavigator: useRootNavigator,
+    builder: (context) => _TypedConfirmDialog(
+      title: title,
+      message: message,
+      phrase: phrase,
+      confirmLabel: confirmLabel,
+      icon: icon,
+    ),
+  );
+  return confirmed ?? false;
+}
+
+/// The body of [showAppTypedConfirmDialog]. A widget of its own so the text
+/// controller lives exactly as long as the field: the two copies it replaced
+/// disposed theirs the moment the dialog's future completed, while the exit
+/// transition was still rebuilding the field that listens to it.
+class _TypedConfirmDialog extends StatefulWidget {
+  const _TypedConfirmDialog({
+    required this.title,
+    required this.message,
+    required this.phrase,
+    required this.confirmLabel,
+    this.icon,
+  });
+
+  final String title;
+  final String message;
+  final String phrase;
+  final String confirmLabel;
+  final IconData? icon;
+
+  @override
+  State<_TypedConfirmDialog> createState() => _TypedConfirmDialogState();
+}
+
+class _TypedConfirmDialogState extends State<_TypedConfirmDialog> {
+  final _controller = TextEditingController();
+  bool _matches = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_update);
+  }
+
+  void _update() {
+    final matches =
+        _controller.text.trim().toLowerCase() ==
+        widget.phrase.trim().toLowerCase();
+    if (matches != _matches) setState(() => _matches = matches);
+  }
+
+  @override
+  void dispose() {
+    _controller
+      ..removeListener(_update)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final icon = widget.icon;
+    return AlertDialog(
+      title: Row(
+        children: [
+          if (icon != null) ...[
+            Icon(icon, color: colorScheme.onSurface),
+            const SizedBox(width: AppSpacing.md),
+          ],
+          Expanded(
+            child: Text(
+              widget.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleLarge!.weight(FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.message, style: theme.textTheme.bodyMedium),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: AppRadius.borderRadiusSm,
+            ),
+            child: SelectableText(
+              widget.phrase,
+              style: theme.textTheme.bodyMedium?.weight(FontWeight.w600),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            autocorrect: false,
+            enableSuggestions: false,
+            decoration: const InputDecoration(labelText: 'Type it to confirm'),
+          ),
+        ],
+      ),
+      // Stacked like the plain confirm: the confirm on top.
+      actionsOverflowDirection: VerticalDirection.up,
+      actionsOverflowButtonSpacing: AppSpacing.sm,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _matches ? () => Navigator.of(context).pop(true) : null,
+          // On the child, not around the button: a disabled `FilledButton`
+          // publishes no hint of its own, and a `Semantics(hint:)` wrapped
+          // around a button is dropped.
+          child: Semantics(
+            hint: _matches ? null : 'Type ${widget.phrase} above to enable',
+            child: Text(widget.confirmLabel),
+          ),
+        ),
+      ],
+    );
+  }
 }

@@ -750,16 +750,6 @@ class _SheetActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    // Red here is the irreversible-action exception, walked against the sheet
-    // the buttons sit on rather than painted as the raw byte.
-    final destructiveInk = statusToneColor(
-      colorScheme,
-      StatusTone.error,
-      surface: colorScheme.surfaceContainer,
-    );
-
     void select(_RowAction action) {
       // Close the sheet first: the confirmation dialog is the thing that should
       // hold focus, and leaving the sheet up behind it stacks two modals over
@@ -772,17 +762,14 @@ class _SheetActions extends StatelessWidget {
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
       children: [
+        // A destructive action takes the quieter outlined shape, never red:
+        // red means unreachable and nothing else, and its confirmation says
+        // what will happen.
         for (final action in actions)
           action.destructive
               ? OutlinedButton.icon(
                   onPressed: () => select(action),
                   icon: Icon(action.icon, size: 18),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: destructiveInk,
-                    side: BorderSide(
-                      color: destructiveInk.withValues(alpha: 0.5),
-                    ),
-                  ),
                   label: Text(action.label),
                 )
               : FilledButton.icon(
@@ -831,27 +818,16 @@ List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
   BuildContext context,
   List<_RowAction> actions,
 ) {
-  final theme = Theme.of(context);
-  final colorScheme = theme.colorScheme;
-  // The irreversible-action exception, walked against the menu's own surface.
-  final destructiveInk = statusToneColor(
-    colorScheme,
-    StatusTone.error,
-    surface: theme.popupMenuTheme.color ?? colorScheme.surfaceContainer,
-  );
+  final colorScheme = Theme.of(context).colorScheme;
+  // One ink for every item, destructive or not: red means unreachable and
+  // nothing else, and the confirmation each one opens says what it does.
   return [
     for (final action in actions)
       PopupMenuItem<_RowAction>(
         value: action,
         child: Row(
           children: [
-            Icon(
-              action.icon,
-              size: 18,
-              color: action.destructive
-                  ? destructiveInk
-                  : colorScheme.onSurfaceVariant,
-            ),
+            Icon(action.icon, size: 18, color: colorScheme.onSurfaceVariant),
             const SizedBox(width: AppSpacing.md),
             // Flexible, because the longest label does not fit: a Material
             // 3 popup is capped at 280pt and "Remove from blocklist" plus
@@ -859,20 +835,7 @@ List<PopupMenuEntry<_RowAction>> _rowActionMenuItems(
             // and painted the debug stripe over the menu. Wrapping rather
             // than ellipsising — a menu item that reads "Remove from
             // blockli…" is worse than one that takes two lines.
-            Flexible(
-              child: Text(
-                action.label,
-                // Recoloured from the ambient row style, not built from
-                // scratch: a bare `TextStyle(color:)` only happened to keep
-                // the family and size because `Text` merges an inheriting
-                // style, which makes the base invisible at the call site.
-                style: action.destructive
-                    ? DefaultTextStyle.of(
-                        context,
-                      ).style.copyWith(color: destructiveInk)
-                    : null,
-              ),
-            ),
+            Flexible(child: Text(action.label)),
           ],
         ),
       ),

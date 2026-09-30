@@ -234,8 +234,19 @@ class SabnzbdClient {
   }
 
   /// Deletes a queued job by its NZO id.
-  Future<void> deleteJob(String nzoId) async {
-    await _call('queue', extra: {'name': 'delete', 'value': nzoId});
+  ///
+  /// SABnzbd keeps what it already downloaded for the job unless it is told
+  /// otherwise: `del_files=1` removes those files too. Off by default, the
+  /// server's own default, so the only way to lose the files is to ask.
+  Future<void> deleteJob(String nzoId, {bool deleteFiles = false}) async {
+    await _call(
+      'queue',
+      extra: {
+        'name': 'delete',
+        'value': nzoId,
+        if (deleteFiles) 'del_files': 1,
+      },
+    );
   }
 
   void close({bool force = false}) => _dio.close(force: force);

@@ -375,24 +375,15 @@ class _VmTile extends ConsumerWidget {
               ?.value
               .host ??
           'this Unraid host';
-      final confirmed = await showDialog<bool>(
+      // The shared confirmation, not a hand-built `AlertDialog`: the same
+      // title row, neutral button and verb-first label as every other one.
+      final result = await showAppConfirmDialog(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text('Stop ${vm.name}?'),
-          content: Text('This stops the VM on $host.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Stop'),
-            ),
-          ],
-        ),
+        title: 'Stop ${vm.name}?',
+        message: 'This stops the VM on $host.',
+        confirmLabel: 'Stop VM',
       );
-      if (confirmed != true || !context.mounted) return;
+      if (!result.confirmed || !context.mounted) return;
     }
     try {
       // **The boolean is the answer, not the absence of a throw.** Unraid

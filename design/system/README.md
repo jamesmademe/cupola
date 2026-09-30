@@ -25,11 +25,11 @@ A near-black stage with one saturated light source. Dark is the primary theme; l
 |---|---|---|---|
 | Green | `success` | available, complete | — |
 | Amber | `warning` | a **fault**: failing, stalled, errored, stopped unexpectedly, expiring | missing, wanted, paused |
-| Red | `error` | **unreachable**, and nothing else (one exception below) | failed download, missing file, a rejected release |
+| Red | `error` | **unreachable**, and nothing else | failed download, missing file, a rejected release, a destructive action |
 | Blue | `info` | queued, informational — including a request awaiting approval | — |
 | Neutral | `on-surface-variant` | the **backlog**: missing, wanted, cutoff unmet, not aired, deliberately paused, deleted | — |
 
-**The one exception is an action, never a status.** A destructive confirmation — the Delete fill, its glyph, its *cannot be undone* line — is red, because red on an action means irreversible. It never leaks back into status: a rejected release, a negative custom-format score or a failed import is not red.
+**A destructive action is never red.** There used to be an exception — "red on an action means irreversible" — and the app ended up with both styles at once. It is gone. A delete, a stop, a reset is a neutral control whose verb says exactly what will happen (*Delete job*, *Take down*, *Remove and delete files*); if it cannot be undone, one neutral sentence says so (*This cannot be undone.*). No red fill, no red glyph, no red warning banner — on the confirmation or on the button that opens it. A destructive row may still sit apart (below a divider, last) and carry a firmer haptic; it never changes colour. `test/core/theme/neutral_destructive_test.dart` holds this: no button style or dialog in `lib/` names the error colour, no delete control is red, and every confirm label is a verb with its object.
 
 Painting the backlog amber is the commonest way this breaks: in a media stack a list of things to fetch is the resting state, not damage. Something stopped on purpose is neutral; only an unexpected exit is amber. Every status also carries a word or icon — colour is never the only channel.
 

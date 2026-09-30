@@ -9,6 +9,7 @@ import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/widgets/download_queue_tile.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/section_header.dart';
+import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_screen.dart';
@@ -62,6 +63,20 @@ const _status = NzbgetStatus(
   remainingSizeMb: 0,
   paused: false,
 );
+
+/// Records which jobs NZBGet was asked to delete.
+class _DeletingNzbget implements NzbgetClient {
+  final deleted = <int>[];
+
+  @override
+  Future<bool> deleteGroup(int nzbId) async {
+    deleted.add(nzbId);
+    return true;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 String? _queueSubtitle(WidgetTester tester) => tester
     .widget<SectionHeader>(
@@ -237,5 +252,50 @@ void main() {
       await tester.pumpAndSettle();
       expect(_queueSubtitle(tester), '0 jobs');
     });
+  });
+
+  testWidgets('deleting a job asks first, and only a confirm sends it', (
+    tester,
+  ) async {
+    // It fired on the menu tap and toasted "Job removed". No files question
+    // here: `GroupDelete` is documented only as "delete and put to history".
+    final client = _DeletingNzbget();
+    await tester.pumpWidget(
+      ProviderScope(
+        retry: (_, _) => null,
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _configured),
+          ..._ambient(queue: [_group(12)]),
+          nzbgetClientProvider.overrideWith((ref) => client),
+          nzbgetStatusProvider.overrideWith((ref) async => _status),
+        ],
+        child: const MaterialApp(home: NzbgetScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> openDelete() async {
+      await tester.tap(find.byTooltip('Job actions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+    }
+
+    await openDelete();
+    expect(find.text('Delete this job?'), findsOneWidget);
+    expect(
+      find.textContaining('NZBGet moves it to its history'),
+      findsOneWidget,
+    );
+    expect(find.byType(CheckboxListTile), findsNothing);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(client.deleted, isEmpty);
+
+    await openDelete();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete job'));
+    await tester.pumpAndSettle();
+    expect(client.deleted, [12]);
+    expect(find.text('Job removed'), findsOneWidget);
   });
 }

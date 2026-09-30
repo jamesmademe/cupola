@@ -799,7 +799,7 @@ Future<void> _confirmDisable(
         'hostname. Anyone using it, not just this device, gets a connection '
         'error immediately, and nothing on the server warns them.',
     phrase: host.primaryDomain,
-    confirmLabel: 'Disable',
+    confirmLabel: 'Take offline',
   );
   if (!confirmed || !context.mounted) return;
 

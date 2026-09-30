@@ -233,12 +233,7 @@ class _StackQuickActions extends ConsumerWidget {
             onPressed: () => _confirmThenRun(
               context,
               ref,
-              title: 'Stop ${stack.name}?',
-              message:
-                  'The stack and its containers will be stopped until you '
-                  'start them again.',
-              confirmLabel: 'Stop',
-              destructive: true,
+              verb: DockgeStackLifecycle.stop,
               action: (c) => c.stopStack(stack.name),
               success: 'Stopped ${stack.name}',
               failure: 'Failed to stop ${stack.name}',
@@ -265,9 +260,7 @@ class _StackQuickActions extends ConsumerWidget {
           onPressed: () => _confirmThenRun(
             context,
             ref,
-            title: 'Restart ${stack.name}?',
-            message: 'The stack will be briefly unavailable while it restarts.',
-            confirmLabel: 'Restart',
+            verb: DockgeStackLifecycle.restart,
             action: (c) => c.restartStack(stack.name),
             success: 'Restarted ${stack.name}',
             failure: 'Failed to restart ${stack.name}',
@@ -284,23 +277,14 @@ class _StackQuickActions extends ConsumerWidget {
   Future<void> _confirmThenRun(
     BuildContext context,
     WidgetRef ref, {
-    required String title,
-    required String message,
-    required String confirmLabel,
+    required DockgeStackLifecycle verb,
     required Future<void> Function(DockgeClient client) action,
     required String success,
     required String failure,
-    bool destructive = false,
   }) async {
-    final result = await showAppConfirmDialog(
-      context: context,
-      title: title,
-      message: message,
-      confirmLabel: confirmLabel,
-      destructive: destructive,
-      dangerNote: '',
-    );
-    if (!result.confirmed || !context.mounted) return;
+    // The stack page asks with the same words: see `dockgeLifecycleCopy`.
+    final confirmed = await confirmDockgeLifecycle(context, verb, stack.name);
+    if (!confirmed || !context.mounted) return;
 
     await runDockgeStackAction(
       context,

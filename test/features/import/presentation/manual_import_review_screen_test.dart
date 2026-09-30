@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/import/data/manual_import_service.dart';
 import 'package:cupola/features/import/presentation/manual_import_review_screen.dart';
+import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
@@ -165,6 +167,49 @@ FakeApiClient _scanClientWithImported() {
     ],
   ]);
   return client;
+}
+
+/// The review screen inside a router, so the Import button can reach Track.
+Future<void> _pumpRoutedReview(
+  WidgetTester tester, {
+  required FakeApiClient client,
+}) async {
+  tester.view.physicalSize = const Size(500, 2600);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  final router = GoRouter(
+    initialLocation: manualImportReviewPath,
+    routes: [
+      GoRoute(
+        path: manualImportReviewPath,
+        builder: (_, _) =>
+            const ManualImportReviewScreen(service: ServiceKey.sonarr),
+      ),
+      GoRoute(
+        path: manualImportProgressPath,
+        builder: (_, _) => const Scaffold(body: Text('Track page')),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        manualImportServiceProvider(ServiceKey.sonarr).overrideWith(
+          (ref) => _FakeManualImportService(client, ServiceKey.sonarr),
+        ),
+      ],
+      child: MaterialApp.router(
+        theme: AppTheme.darkTheme(),
+        routerConfig: router,
+      ),
+    ),
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 50));
+  await tester.pump(const Duration(seconds: 1));
 }
 
 Future<void> _pumpReview(
@@ -641,5 +686,52 @@ void main() {
     await _pumpReview(tester);
     expect(find.text('Matched files'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  group('Import N files', () {
+    testWidgets('asks before spending the selection; Cancel sends nothing', (
+      tester,
+    ) async {
+      // It was the whole guard: one tap moved the files, and a ticked
+      // re-import overwrote the library copy, with no undo on the service.
+      final client = _scanClient()
+        ..postResponseData = {
+          'id': 91,
+          'name': 'ManualImport',
+          'status': 'queued',
+        };
+      await _pumpRoutedReview(tester, client: client);
+
+      await tester.tap(find.text('Import 5 files'));
+      await tester.pumpAndSettle();
+      expect(find.text('Import 5 files into Sonarr?'), findsOneWidget);
+      expect(
+        find.textContaining('Sonarr cannot undo an import.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(client.postCallCount, 0);
+      expect(find.text('Track page'), findsNothing);
+    });
+
+    testWidgets('a confirm sends the batch and opens Track', (tester) async {
+      final client = _scanClient()
+        ..postResponseData = {
+          'id': 91,
+          'name': 'ManualImport',
+          'status': 'queued',
+        };
+      await _pumpRoutedReview(tester, client: client);
+
+      await tester.tap(find.text('Import 5 files'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Import 5 files'));
+      await tester.pumpAndSettle();
+
+      expect(client.postCallCount, 1);
+      expect(find.text('Track page'), findsOneWidget);
+    });
   });
 }

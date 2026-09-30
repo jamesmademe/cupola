@@ -333,14 +333,36 @@ class _QueueTile extends ConsumerWidget {
           invalidate: _nzbgetInvalidateAfterAction,
         );
       case DownloadQueueCommand.delete:
-        runNzbgetAction(
-          context,
-          ref,
-          action: (c) => c.deleteGroup(group.nzbId),
-          successMessage: 'Job removed',
-          failureMessage: 'Failed to remove the job',
-          invalidate: _nzbgetInvalidateAfterAction,
-        );
+        _confirmDelete(context, ref);
     }
+  }
+
+  /// Asks before a job leaves the queue.
+  ///
+  /// It used to go on the tap. No "also delete files" choice, unlike SABnzbd:
+  /// `GroupDelete` is documented only as "delete groups and put to history",
+  /// and whether it clears what was already downloaded depends on the
+  /// server's own settings and version — a checkbox here would be a promise
+  /// this app cannot check. The sentence says only what the API does say.
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final result = await showAppConfirmDialog(
+      context: context,
+      icon: Icons.delete_outline_rounded,
+      title: 'Delete this job?',
+      message:
+          '${group.name} leaves the NZBGet queue and stops downloading. '
+          'NZBGet moves it to its history.',
+      confirmLabel: 'Delete job',
+    );
+    if (!result.confirmed || !context.mounted) return;
+
+    await runNzbgetAction(
+      context,
+      ref,
+      action: (c) => c.deleteGroup(group.nzbId),
+      successMessage: 'Job removed',
+      failureMessage: 'Failed to remove the job',
+      invalidate: _nzbgetInvalidateAfterAction,
+    );
   }
 }

@@ -790,7 +790,9 @@ void main() {
       // dialog with it.
       expect(find.text('Remove from queue?'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Remove and delete files'),
+      );
       await tester.pumpAndSettle();
 
       expect(radarr.removed, [42]);

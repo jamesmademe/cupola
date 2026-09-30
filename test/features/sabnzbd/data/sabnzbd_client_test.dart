@@ -213,6 +213,19 @@ void main() {
       await client.deleteJob('nzo_1');
       expect(adapter.lastUri!.queryParameters['name'], 'delete');
       expect(adapter.lastUri!.queryParameters['value'], 'nzo_1');
+      // SABnzbd keeps what it downloaded unless told otherwise.
+      expect(adapter.lastUri!.queryParameters, isNot(contains('del_files')));
+    });
+
+    test('deleteJob removes the downloaded files only when asked', () async {
+      final adapter = CapturingHttpAdapter(response: {'status': true});
+      final client = _client(adapter);
+
+      await client.deleteJob('nzo_1', deleteFiles: true);
+
+      expect(adapter.lastUri!.queryParameters['name'], 'delete');
+      expect(adapter.lastUri!.queryParameters['value'], 'nzo_1');
+      expect(adapter.lastUri!.queryParameters['del_files'], '1');
     });
   });
 }

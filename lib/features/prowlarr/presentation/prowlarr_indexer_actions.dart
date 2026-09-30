@@ -90,9 +90,9 @@ Future<bool> deleteIndexerFlow(
     context: context,
     title: 'Delete $name?',
     message:
-        'Prowlarr stops querying it and removes it from every app it syncs to.',
-    confirmLabel: 'Delete',
-    destructive: true,
+        'Prowlarr stops querying it and removes it from every app it syncs to. '
+        'This cannot be undone.',
+    confirmLabel: 'Delete indexer',
   );
   if (!result.confirmed || !context.mounted) return false;
 
@@ -296,9 +296,8 @@ Future<bool> bulkDeleteIndexersFlow(
     message:
         '${_indexerNames(indexers)}\n\n'
         'Prowlarr stops querying them and removes them from every app it '
-        'syncs to.',
-    confirmLabel: 'Delete',
-    destructive: true,
+        'syncs to. This cannot be undone.',
+    confirmLabel: 'Delete ${ids.length} $word',
   );
   if (!result.confirmed || !context.mounted) return false;
 

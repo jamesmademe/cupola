@@ -48,9 +48,10 @@ class TrueNasVirtDetailScreen extends ConsumerWidget {
             final result = await showAppConfirmDialog(
               context: context,
               title: 'Delete "$id"?',
-              message: 'This permanently deletes the instance and its disks.',
-              confirmLabel: 'Delete',
-              destructive: true,
+              message:
+                  'This permanently deletes the instance and its disks. '
+                  'This cannot be undone.',
+              confirmLabel: 'Delete instance',
             );
             if (!result.confirmed || !context.mounted) return;
             final ok = await runTrueNasAction(

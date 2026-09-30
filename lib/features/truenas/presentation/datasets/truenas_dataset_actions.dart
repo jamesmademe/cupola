@@ -107,17 +107,15 @@ Future<bool> deleteDatasetFlow(
     message:
         'This permanently destroys "${dataset.id}" and all its data. '
         'This cannot be undone.',
-    confirmLabel: 'Delete',
-    destructive: true,
-    dangerNote: dataset.children.isNotEmpty
-        ? 'This dataset has children that will also be destroyed.'
-        : 'This cannot be undone.',
+    confirmLabel: 'Delete dataset',
+    confirmLabelFor: (checked) =>
+        checked('recursive') ? 'Delete dataset and children' : 'Delete dataset',
     options: dataset.children.isNotEmpty
         ? const [
             AppConfirmOption(
               key: 'recursive',
               label: 'Delete child datasets recursively',
-              danger: true,
+              subtitle: 'Every dataset under this one is destroyed too.',
             ),
           ]
         : const [],

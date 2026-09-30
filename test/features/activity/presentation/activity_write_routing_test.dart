@@ -76,7 +76,10 @@ Future<void> _removeFromQueue(WidgetTester tester, String title) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('Remove from queue'));
   await tester.pumpAndSettle();
-  await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+  // The client-delete box starts ticked, so the button says both halves.
+  await tester.tap(
+    find.widgetWithText(FilledButton, 'Remove and delete files'),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -246,7 +249,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Remove from blocklist'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Remove from blocklist'),
+    );
     await tester.pumpAndSettle();
 
     expect(other.unblocked, [7]);

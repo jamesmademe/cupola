@@ -481,7 +481,7 @@ void main() {
       }
     });
 
-    testWidgets('a destructive row is toned by the walked error colour', (
+    testWidgets('a destructive row takes the same ink as every other row', (
       tester,
     ) async {
       await _pumpActions(
@@ -493,19 +493,30 @@ void main() {
       await tester.tap(find.byIcon(Icons.more_horiz_rounded));
       await tester.pumpAndSettle();
 
-      // Red in an action means irreversible, so the row keeps it — walked
-      // against the sheet it sits on rather than painted raw.
+      // Red means unreachable and nothing else. Delete is set apart by where
+      // it sits — below the divider, last — never by colour.
       final scheme = Theme.of(tester.element(find.text('Delete'))).colorScheme;
-      final error = statusToneColor(
-        scheme,
-        StatusTone.error,
-        surface: scheme.surfaceContainer,
-      );
-      expect(tester.widget<Text>(find.text('Delete')).style?.color, error);
+      final deleteLabel = tester.widget<Text>(find.text('Delete')).style?.color;
+      final deleteGlyph = tester
+          .widget<Icon>(find.byIcon(Icons.delete_outline_rounded))
+          .color;
+      expect(deleteLabel, scheme.onSurface);
+      expect(deleteGlyph, scheme.onSurfaceVariant);
       expect(
-        tester.widget<Icon>(find.byIcon(Icons.delete_outline_rounded)).color,
-        error,
+        deleteLabel,
+        tester.widget<Text>(find.text('Manual import')).style?.color,
       );
+      for (final red in [
+        scheme.error,
+        statusToneColor(
+          scheme,
+          StatusTone.error,
+          surface: scheme.surfaceContainer,
+        ),
+      ]) {
+        expect(deleteLabel, isNot(red));
+        expect(deleteGlyph, isNot(red));
+      }
     });
 
     testWidgets('every control clears the 44pt touch minimum', (tester) async {

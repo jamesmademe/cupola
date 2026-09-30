@@ -142,10 +142,9 @@ class _TrustedOriginCard extends ConsumerWidget {
           : 'The next connection from '
                 '${services.map((s) => s.title).join(', ')} will need to be '
                 'trusted again.',
-      confirmLabel: 'Forget',
-      destructive: true,
-      // Reversible — the next connection re-offers the trust prompt.
-      dangerNote: '',
+      // Reversible — the next connection re-offers the trust prompt — so no
+      // "cannot be undone" sentence.
+      confirmLabel: 'Forget certificate',
     );
     if (!result.confirmed || !context.mounted) return;
 

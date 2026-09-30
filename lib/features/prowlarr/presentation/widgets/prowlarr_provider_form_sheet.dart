@@ -6,7 +6,6 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
-import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_field_inputs.dart';
@@ -343,15 +342,9 @@ class _ProviderFormState extends ConsumerState<_ProviderForm> {
                       context,
                     ).pop(ProwlarrFormOutcome.deleteRequested),
               icon: const Icon(Icons.delete_outline_rounded, size: 18),
+              // The theme's own text button: red means unreachable and nothing
+              // else, and the confirmation this opens says what goes.
               label: Text('Delete ${widget.kind.singular}'),
-              // The irreversible-action exception, walked against the sheet.
-              style: TextButton.styleFrom(
-                foregroundColor: statusToneColor(
-                  colorScheme,
-                  StatusTone.error,
-                  surface: colorScheme.surfaceContainer,
-                ),
-              ),
             ),
           ],
         ],

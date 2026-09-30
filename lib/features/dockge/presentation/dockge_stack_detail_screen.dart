@@ -179,17 +179,10 @@ class _ActionBar extends ConsumerWidget {
     // blue Update, amber Down — which put the whole status vocabulary on a row
     // of *controls*. A tone describes a state; nothing here has a state. Amber
     // on "Down" claimed a fault about an action the user is about to take on
-    // purpose, and red on a status says "unreachable", which is the one thing
-    // red means on this canvas. So: the service accent for everything that is
-    // an ordinary operation, and red only for Delete, because red on an action
-    // means it cannot be undone. Stop used to be red too, and a stopped stack is
-    // one Start away from running again.
-    final destructive = statusToneColor(
-      colorScheme,
-      StatusTone.error,
-      surface: colorScheme.surface,
-      tintAlpha: 0.12,
-    );
+    // purpose, and red says "unreachable", which is the one thing red means on
+    // this canvas. So: the service accent for all six. Delete kept its red the
+    // longest, on the theory that red on an action meant "cannot be undone";
+    // it does not, and its confirmation says so in a sentence instead.
     final accent = ServiceTheme.onTint(
       AppColors.dockge,
       surface: colorScheme.surface,
@@ -216,97 +209,99 @@ class _ActionBar extends ConsumerWidget {
           icon: Icons.stop_rounded,
           label: 'Stop',
           color: accent,
-          onTap: () => runDockgeStackAction(
+          onTap: () => _confirmThenRun(
             context,
             ref,
+            DockgeStackLifecycle.stop,
             (c) => c.stopStack(name),
             'Stopped $name',
             'Failed to stop',
-            onSuccess: () => onRefresh(ref),
           ),
         ),
         _ActionChip(
           icon: Icons.restart_alt_rounded,
           label: 'Restart',
           color: accent,
-          onTap: () => runDockgeStackAction(
+          onTap: () => _confirmThenRun(
             context,
             ref,
+            DockgeStackLifecycle.restart,
             (c) => c.restartStack(name),
             'Restarted $name',
             'Failed to restart',
-            onSuccess: () => onRefresh(ref),
           ),
         ),
         _ActionChip(
           icon: Icons.system_update_alt_rounded,
           label: 'Update',
           color: accent,
-          onTap: () => runDockgeStackAction(
+          onTap: () => _confirmThenRun(
             context,
             ref,
+            DockgeStackLifecycle.update,
             (c) => c.updateStack(name),
             'Updated $name',
             'Failed to update',
-            onSuccess: () => onRefresh(ref),
           ),
         ),
         _ActionChip(
           icon: Icons.arrow_downward_rounded,
           label: 'Down',
           color: accent,
-          onTap: () => runDockgeStackAction(
+          onTap: () => _confirmThenRun(
             context,
             ref,
+            DockgeStackLifecycle.down,
             (c) => c.downStack(name),
             'Stack $name is down',
             'Failed to bring down',
-            onSuccess: () => onRefresh(ref),
           ),
         ),
         _ActionChip(
           icon: Icons.delete_outline_rounded,
           label: 'Delete',
-          color: destructive,
+          color: accent,
           onTap: () => _confirmDelete(context, ref),
         ),
       ],
     );
   }
 
+  /// Asks before a command that interrupts the running stack, then runs it.
+  ///
+  /// These four fired on the tap while the same Stop and Restart on the Stacks
+  /// list asked first — the page one level *deeper* was the careless one.
+  /// Start stays a single tap: it adds, it interrupts nothing.
+  Future<void> _confirmThenRun(
+    BuildContext context,
+    WidgetRef ref,
+    DockgeStackLifecycle verb,
+    Future<void> Function(DockgeClient client) action,
+    String success,
+    String failure,
+  ) async {
+    if (!await confirmDockgeLifecycle(context, verb, name)) return;
+    if (!context.mounted) return;
+    await runDockgeStackAction(
+      context,
+      ref,
+      action,
+      success,
+      failure,
+      onSuccess: () => onRefresh(ref),
+    );
+  }
+
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
+    final result = await showAppConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Delete $name?'),
-        content: const Text(
+      title: 'Delete $name?',
+      message:
           'This removes the stack and its compose files from Dockge. '
           'This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: statusToneFill(
-                Theme.of(ctx).colorScheme,
-                StatusTone.error,
-              ),
-              // Measured against the fill: `onError` white reads 3.5:1 on the
-              // light theme's red.
-              foregroundColor: ServiceTheme.foregroundOn(
-                statusToneFill(Theme.of(ctx).colorScheme, StatusTone.error),
-              ),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Delete stack',
     );
-    if (confirmed != true || !context.mounted) return;
+    if (!result.confirmed || !context.mounted) return;
     final ok = await runDockgeAction(
       context,
       ref,

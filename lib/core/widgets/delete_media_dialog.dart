@@ -30,8 +30,10 @@ enum DeleteMediaType {
 
 /// Shows a confirmation dialog for deleting media with optional checkboxes.
 ///
-/// Built on the shared [showAppConfirmDialog] so the destructive affordance
-/// (red confirm, "delete files" warning banner) matches every other dialog.
+/// Built on the shared [showAppConfirmDialog], so it looks like every other
+/// confirmation: neutral, with the verb saying what happens. Ticking *Delete
+/// files* turns *Delete movie* into *Delete movie and files*, and the option
+/// itself carries the one sentence saying that part cannot be undone.
 Future<DeleteMediaResult> showDeleteMediaDialog({
   required BuildContext context,
   required String title,
@@ -42,8 +44,10 @@ Future<DeleteMediaResult> showDeleteMediaDialog({
     title: 'Delete $title?',
     message:
         'This will remove this ${mediaType.label} from ${mediaType.serviceName}.',
-    destructive: true,
-    confirmLabel: 'Delete',
+    confirmLabel: 'Delete ${mediaType.label}',
+    confirmLabelFor: (checked) => checked('deleteFiles')
+        ? 'Delete ${mediaType.label} and files'
+        : 'Delete ${mediaType.label}',
     options: [
       AppConfirmOption(
         key: 'exclusion',
@@ -54,8 +58,8 @@ Future<DeleteMediaResult> showDeleteMediaDialog({
       const AppConfirmOption(
         key: 'deleteFiles',
         label: 'Delete files',
-        subtitle: 'Permanently delete downloaded files from disk',
-        danger: true,
+        subtitle:
+            'Deletes the downloaded files from disk. This cannot be undone.',
       ),
     ],
   );

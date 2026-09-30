@@ -161,7 +161,6 @@ class _ActionRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -201,10 +200,8 @@ class _ActionRow extends ConsumerWidget {
             },
             icon: const Icon(Icons.delete_outline_rounded, size: 18),
             tooltip: 'Delete indexer',
-            style: IconButton.styleFrom(
-              backgroundColor: colorScheme.errorContainer,
-              foregroundColor: colorScheme.onErrorContainer,
-            ),
+            // Neutral: the theme's own filled icon button. Red means
+            // unreachable and nothing else.
           ),
         ],
       ),

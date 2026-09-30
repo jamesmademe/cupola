@@ -31,7 +31,7 @@ Material's button node. A gated button keeps `enabled: true` and adds a hint (*r
 ## Do / don't
 
 - Do keep a 44pt minimum target wherever a finger can reach; never add `VisualDensity.compact` — it silently cancels `minimumSize`.
-- Do use a red fill only for an irreversible action (see AppDialog).
+- Don't use a red fill, not even for a delete: red means unreachable and nothing else. A destructive button is the theme's own, and its label says what it does (see AppDialog).
 - Don't paint a recovery verb in `error`.
 - Don't use a full-radius pill for a button: controls take the 12dp radius.
 - Don't put a second filled button on the same surface.

@@ -11,7 +11,6 @@ import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/section_header.dart';
-import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/truenas/domain/models/dataset.dart';
 import 'package:cupola/features/truenas/presentation/datasets/truenas_dataset_actions.dart';
@@ -294,24 +293,15 @@ class _SnapshotTile extends ConsumerWidget {
             ref: ref,
             area: TrueNasCapabilityArea.snapshotDelete.key,
             verbPhrase: 'delete snapshots',
-            icon: Icon(
-              Icons.delete_outline_rounded,
-              size: 18,
-              // The irreversible-action exception, walked against the card.
-              color: statusToneColor(
-                theme.colorScheme,
-                StatusTone.error,
-                surface: theme.colorScheme.surfaceContainer,
-              ),
-            ),
+            // Neutral: the confirmation says what goes, in words.
+            icon: const Icon(Icons.delete_outline_rounded, size: 18),
             tooltip: 'Delete snapshot',
             onTap: () async {
               final result = await showAppConfirmDialog(
                 context: context,
                 title: 'Delete snapshot?',
-                message: snapshot.id,
-                confirmLabel: 'Delete',
-                destructive: true,
+                message: '${snapshot.id} is destroyed. This cannot be undone.',
+                confirmLabel: 'Delete snapshot',
               );
               if (!result.confirmed || !context.mounted) return;
               await runTrueNasAction(

@@ -107,6 +107,19 @@ class ManageMediaSheet extends ConsumerWidget {
     ManageMediaArgs args,
     int requestId,
   ) async {
+    // The same question the Requests tab asks before the same write. This one
+    // fired on the tap, one row above Remove and Clear data, which both ask.
+    // Neutral, like every confirmation: red on this canvas is kept for what
+    // did not answer.
+    final result = await showAppConfirmDialog(
+      context: context,
+      title: 'Delete request?',
+      message: mediaTitle,
+      icon: Icons.delete_outline_rounded,
+      confirmLabel: 'Delete request',
+    );
+    if (!result.confirmed || !context.mounted) return;
+
     final notifier = ref.read(manageMediaProvider(args).notifier);
     final error = await notifier.deleteRequest(requestId);
     if (!context.mounted) {
@@ -132,14 +145,18 @@ class ManageMediaSheet extends ConsumerWidget {
       return;
     }
 
+    final service = mediaType == 'movie' ? 'Radarr' : 'Sonarr';
+    final noun = mediaType == 'movie' ? 'movie' : 'series';
+    // Neutral: the verb says the whole of it — the files go too — and the
+    // sentence says it cannot be undone. Red means unreachable and nothing
+    // else.
     final result = await showAppConfirmDialog(
       context: context,
-      title: 'Remove from ${mediaType == 'movie' ? 'Radarr' : 'Sonarr'}',
+      title: 'Remove from $service?',
       message:
-          'This will irreversibly remove this ${mediaType == 'movie' ? 'movie' : 'series'} from '
-          '${mediaType == 'movie' ? 'Radarr' : 'Sonarr'}, including all files.',
-      confirmLabel: 'Remove',
-      destructive: true,
+          'This removes this $noun from $service, including all of its '
+          'files. This cannot be undone.',
+      confirmLabel: 'Remove and delete files',
     );
 
     if (!result.confirmed || !context.mounted) {
@@ -176,13 +193,12 @@ class ManageMediaSheet extends ConsumerWidget {
 
     final result = await showAppConfirmDialog(
       context: context,
-      title: 'Clear data',
+      title: 'Clear data?',
       message:
           'This will irreversibly remove all data for this ${mediaType == 'movie' ? 'movie' : 'series'}, '
           'including any requests. If this item exists in your Jellyfin library, '
           'the media information will be recreated during the next scan.',
       confirmLabel: 'Clear data',
-      destructive: true,
     );
 
     if (!result.confirmed || !context.mounted) {

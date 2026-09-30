@@ -325,7 +325,7 @@ void main() {
     Future<void> tapGrab(WidgetTester tester) async {
       await tester.tap(find.byTooltip('Grab release').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Download'));
+      await tester.tap(find.text('Download release'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
     }

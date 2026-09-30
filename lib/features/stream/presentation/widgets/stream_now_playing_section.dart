@@ -238,17 +238,15 @@ class StreamNowPlayingSection extends ConsumerWidget {
     final result = await showAppConfirmDialog(
       context: context,
       title: 'Stop playback?',
-      message: streamStopSessionPrompt(
-        userName: session.userName,
-        title: session.title,
-      ),
+      // Both servers only *dispatch* a stop, and the viewer can simply press
+      // play again, so the sentence says that rather than anything about
+      // undoing. Overstating it would make an ordinary courtesy feel like a
+      // purge.
+      message:
+          '${streamStopSessionPrompt(userName: session.userName, title: session.title)} '
+          'They can start it again straight away.',
       icon: Icons.stop_circle_outlined,
-      confirmLabel: 'Stop',
-      destructive: true,
-      // The default note promises irreversibility, which is wrong here: both
-      // servers only *dispatch* a stop, and the viewer can simply press play
-      // again. Overstating it would make an ordinary courtesy feel like a purge.
-      dangerNote: 'They can start it again straight away.',
+      confirmLabel: 'Stop playback',
     );
     if (!result.confirmed || !context.mounted) return;
 

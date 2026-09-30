@@ -10,7 +10,6 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
-import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
@@ -232,16 +231,11 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
               toggleIndexerFlow(context, ref, indexer);
             },
           ),
-          // The irreversible-action exception, walked against the sheet.
+          // Neutral, like the rows above it: red means unreachable and nothing
+          // else, and the confirmation says what goes.
           ListTile(
-            leading: Icon(
-              Icons.delete_outline_rounded,
-              color: _destructiveInk(context),
-            ),
-            title: Text(
-              'Delete',
-              style: TextStyle(color: _destructiveInk(context)),
-            ),
+            leading: const Icon(Icons.delete_outline_rounded),
+            title: const Text('Delete'),
             onTap: () {
               Navigator.of(sheetContext).pop();
               deleteIndexerFlow(context, ref, indexer);
@@ -667,10 +661,8 @@ class _SelectionBar extends StatelessWidget {
               onPressed: onDelete,
               icon: const Icon(Icons.delete_outline_rounded, size: 18),
               tooltip: 'Delete $count selected',
-              style: IconButton.styleFrom(
-                backgroundColor: colorScheme.errorContainer,
-                foregroundColor: colorScheme.onErrorContainer,
-              ),
+              // Neutral: the theme's own filled icon button. Red means
+              // unreachable and nothing else.
             ),
           ],
         ),
@@ -871,15 +863,4 @@ class _FilterChip extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Red for the one irreversible row, measured against the `AppBottomSheet`
-/// ground (`surfaceContainer` in both themes) instead of painted raw.
-Color _destructiveInk(BuildContext context) {
-  final colorScheme = Theme.of(context).colorScheme;
-  return statusToneColor(
-    colorScheme,
-    StatusTone.error,
-    surface: colorScheme.surfaceContainer,
-  );
 }

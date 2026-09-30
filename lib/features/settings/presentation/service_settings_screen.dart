@@ -325,10 +325,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       title: 'Discard changes?',
       message:
           'Your edits to the ${service.title} settings have not been saved.',
-      confirmLabel: 'Discard',
+      confirmLabel: 'Discard changes',
       cancelLabel: 'Keep editing',
-      destructive: true,
-      dangerNote: '',
     );
     return result.confirmed;
   }
@@ -470,9 +468,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       title: 'Remove ${service.title}?',
       message:
           'This deletes the saved address and credentials for ${service.title}. '
-          'Nothing on the server itself is touched.',
-      confirmLabel: 'Remove',
-      destructive: true,
+          'Nothing on the server itself is touched. This cannot be undone.',
+      confirmLabel: 'Remove ${service.title}',
     );
     if (!result.confirmed || !mounted) return;
 
@@ -714,8 +711,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
     // Tonal rather than a saturated accent slab. Two reasons, and both hold for
     // all thirteen accents: a full-strength fill in Readarr's red or Unraid's
-    // orange reads as a destructive button — outshouting the genuinely
-    // destructive "Remove" row below it — and the accent cannot be its own
+    // orange reads as an alarm on a control nothing is wrong with — red means
+    // unreachable, amber a fault — and the accent cannot be its own
     // label colour over its own tint (Radarr amber measures ≈1.80:1 there in
     // light theme). The tint carries the identity, `onSurface` carries the
     // words.
@@ -1062,15 +1059,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   }
 
   Widget _buildRemoveRow(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return SettingsGroupCard(
       children: [
+        // The row's default accent, like every other settings row: red means
+        // unreachable and nothing else, and the confirmation says what goes.
         SettingsCard.grouped(
           leading: const Icon(Icons.link_off_rounded),
           title: 'Remove ${service.title}',
           subtitle: 'Deletes the saved address and credentials',
-          accentColor: colorScheme.error,
           onTap: _removeConnection,
         ),
       ],
@@ -1264,14 +1260,12 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       message: sharedWith.isEmpty
           ? 'The next connection to this address will need to be trusted '
                 'again.'
-          : 'This also affects ${sharedWith.map((s) => s.title).join(', ')} '
+          : 'This also affects ${sharedWith.map((s) => s.title).join(', ')}: '
                 'the next connection from any of them will need to be '
                 'trusted again.',
-      confirmLabel: 'Forget',
-      destructive: true,
-      // Reversible — the next connection re-offers the trust prompt — so the
-      // default "This cannot be undone." would overstate the stakes.
-      dangerNote: '',
+      // Reversible — the next connection re-offers the trust prompt — so no
+      // "cannot be undone" sentence: it would overstate the stakes.
+      confirmLabel: 'Forget certificate',
     );
     if (!result.confirmed || !mounted) return;
 

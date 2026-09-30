@@ -16,8 +16,8 @@ import 'package:cupola/features/discover/presentation/discover_provider.dart';
 /// problem it surfaced was to leave and open the service's web UI. These close
 /// that loop.
 ///
-/// Each one confirms first (destructive, and irreversible on the client side),
-/// reports the outcome, and bumps [activityRefreshVersionProvider] so every
+/// Each one confirms first — neutrally, with a verb that says what will happen,
+/// never in red, which means unreachable and nothing else — reports the outcome, and bumps [activityRefreshVersionProvider] so every
 /// bucket re-reads rather than leaving a removed row on screen.
 ///
 /// ## Every write takes the connection it acts on
@@ -58,15 +58,24 @@ class ActivityActions {
       title: 'Remove from queue?',
       message: title,
       icon: Icons.delete_outline_rounded,
-      confirmLabel: 'Remove',
-      destructive: true,
+      confirmLabel: 'Remove and delete files',
+      // The button names both decisions as they stand, so what it says is what
+      // the tap sends.
+      confirmLabelFor: (checked) =>
+          switch ((checked('removeFromClient'), checked('blocklist'))) {
+            (true, true) => 'Remove, delete files and blocklist',
+            (true, false) => 'Remove and delete files',
+            (false, true) => 'Remove and blocklist',
+            (false, false) => 'Remove from queue',
+          },
       options: const [
         AppConfirmOption(
           key: 'removeFromClient',
           label: 'Delete from download client',
-          subtitle: 'Also removes the files that have been downloaded so far.',
+          subtitle:
+              'Also removes the files that have been downloaded so far. This '
+              'cannot be undone.',
           initialValue: true,
-          danger: true,
         ),
         AppConfirmOption(
           key: 'blocklist',
@@ -116,7 +125,6 @@ class ActivityActions {
           'a different release.',
       icon: Icons.refresh_rounded,
       confirmLabel: 'Blocklist and search',
-      destructive: true,
     );
 
     if (!result.confirmed) return;
@@ -147,7 +155,7 @@ class ActivityActions {
       title: 'Remove from blocklist?',
       message: '$title becomes eligible to be grabbed again.',
       icon: Icons.playlist_add_check_rounded,
-      confirmLabel: 'Remove',
+      confirmLabel: 'Remove from blocklist',
     );
 
     if (!result.confirmed) return;
@@ -183,7 +191,7 @@ class ActivityActions {
       message:
           '$title goes to the service that handles it and starts downloading.',
       icon: Icons.check_circle_outline_rounded,
-      confirmLabel: 'Approve',
+      confirmLabel: 'Approve request',
     );
 
     if (!result.confirmed) return;
@@ -216,8 +224,7 @@ class ActivityActions {
           '$title will not be downloaded. The request stays on record as '
           'declined.',
       icon: Icons.cancel_outlined,
-      confirmLabel: 'Decline',
-      destructive: true,
+      confirmLabel: 'Decline request',
     );
 
     if (!result.confirmed) return;

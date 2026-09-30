@@ -358,19 +358,12 @@ class _RequestListRow extends ConsumerWidget {
                 child: Center(
                   child: IconButton.filledTonal(
                     icon: const Icon(Icons.delete_outline_rounded, size: 14),
-                    // The irreversible-action exception, walked against its
-                    // own wash over the row's card.
-                    color: statusToneColor(
-                      colorScheme,
-                      StatusTone.error,
-                      surface: colorScheme.surfaceContainer,
-                      tintAlpha: 0.10,
-                    ),
+                    // Neutral: the instrument-face plate chips sit on, and
+                    // the secondary ink. Red means unreachable and nothing
+                    // else; the confirmation says what the tap deletes.
+                    color: colorScheme.onSurfaceVariant,
                     style: IconButton.styleFrom(
-                      backgroundColor: statusToneFill(
-                        colorScheme,
-                        StatusTone.error,
-                      ).withValues(alpha: 0.10),
+                      backgroundColor: colorScheme.surfaceContainerHighest,
                       padding: EdgeInsets.zero,
                       // `minimumSize` as well as `fixedSize`: `fixedSize` is
                       // clamped into the resolved minimum, and IconButton's M3
@@ -404,8 +397,7 @@ class _RequestListRow extends ConsumerWidget {
       context: context,
       title: 'Delete request?',
       message: 'This removes the request for $title from Seerr.',
-      destructive: true,
-      confirmLabel: 'Delete',
+      confirmLabel: 'Delete request',
     );
     if (!result.confirmed || !context.mounted) return;
 

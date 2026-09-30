@@ -87,7 +87,7 @@ Future<void> _removeThisConnection(WidgetTester tester) async {
   );
   await tester.tap(find.text('Remove Radarr'));
   await tester.pumpAndSettle();
-  await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+  await tester.tap(find.widgetWithText(FilledButton, 'Remove Radarr'));
   await tester.pumpAndSettle();
 }
 
@@ -504,7 +504,7 @@ void main() {
     );
     await tester.tap(find.text('Remove Radarr'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Remove Radarr'));
     await tester.pumpAndSettle();
 
     final saved = container.read(currentSettingsProvider);

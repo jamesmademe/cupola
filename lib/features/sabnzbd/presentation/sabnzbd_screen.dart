@@ -403,14 +403,49 @@ class _QueueTile extends ConsumerWidget {
           invalidate: _sabnzbdInvalidateAfterAction,
         );
       case DownloadQueueCommand.delete:
-        runSabnzbdAction(
-          context,
-          ref,
-          action: (c) => c.deleteJob(slot.nzoId),
-          successMessage: 'Job removed',
-          failureMessage: 'Failed to remove the job',
-          invalidate: _sabnzbdInvalidateAfterAction,
-        );
+        _confirmDelete(context, ref);
     }
   }
+
+  /// Asks before a job leaves the queue.
+  ///
+  /// It used to go on the tap, toast "Job removed", and that was the only
+  /// word about it — on a menu row one slip of the finger from Pause. The
+  /// files question is SABnzbd's own: it keeps what it downloaded unless told
+  /// otherwise, so the box starts unticked, and ticking it is the one way here
+  /// to lose them.
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final result = await showAppConfirmDialog(
+      context: context,
+      icon: Icons.delete_outline_rounded,
+      title: 'Delete this job?',
+      message:
+          '${slot.filename} leaves the SABnzbd queue and stops downloading.',
+      confirmLabel: 'Delete job',
+      confirmLabelFor: (checked) =>
+          checked(_deleteFilesOption) ? 'Delete job and files' : 'Delete job',
+      options: const [
+        AppConfirmOption(
+          key: _deleteFilesOption,
+          label: 'Also delete downloaded files',
+          subtitle:
+              'What SABnzbd already fetched for this job. This cannot be '
+              'undone.',
+        ),
+      ],
+    );
+    if (!result.confirmed || !context.mounted) return;
+    final deleteFiles = result.option(_deleteFilesOption);
+
+    await runSabnzbdAction(
+      context,
+      ref,
+      action: (c) => c.deleteJob(slot.nzoId, deleteFiles: deleteFiles),
+      successMessage: deleteFiles ? 'Job and its files deleted' : 'Job removed',
+      failureMessage: 'Failed to remove the job',
+      invalidate: _sabnzbdInvalidateAfterAction,
+    );
+  }
 }
+
+const _deleteFilesOption = 'deleteFiles';

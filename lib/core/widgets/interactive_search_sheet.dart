@@ -353,7 +353,7 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
           : 'This release was rejected:\n\n'
                 '${rejections.map((r) => '• $r').join('\n')}\n\n'
                 'Download "$releaseTitle" anyway?',
-      confirmLabel: 'Download',
+      confirmLabel: 'Download release',
       cancelLabel: 'Cancel',
     );
 

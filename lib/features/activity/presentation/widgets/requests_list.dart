@@ -112,13 +112,6 @@ class _RequestCard extends ConsumerWidget {
     final title = request.media?.title ?? 'Unknown';
     final year = request.media?.year;
     final heading = year == null || year.isEmpty ? title : '$title ($year)';
-    // Delete and Decline are the irreversible-action exception, walked against
-    // the card they sit on rather than painted as the raw byte.
-    final destructiveInk = statusToneColor(
-      colorScheme,
-      StatusTone.error,
-      surface: colorScheme.surfaceContainer,
-    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -150,11 +143,13 @@ class _RequestCard extends ConsumerWidget {
                   const SizedBox(width: AppSpacing.sm),
                   const TagChip(text: '4K'),
                 ],
+                // Neutral, like Decline below: red means unreachable and
+                // nothing else, and each confirmation says what happens.
                 IconButton(
                   tooltip: 'Delete request',
                   icon: Icon(
                     Icons.delete_outline_rounded,
-                    color: destructiveInk,
+                    color: colorScheme.onSurfaceVariant,
                   ),
                   onPressed: () => _delete(context, ref),
                 ),
@@ -202,12 +197,6 @@ class _RequestCard extends ConsumerWidget {
                   OutlinedButton.icon(
                     onPressed: () => _decline(context, ref),
                     icon: const Icon(Icons.cancel_outlined, size: 18),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: destructiveInk,
-                      side: BorderSide(
-                        color: destructiveInk.withValues(alpha: 0.5),
-                      ),
-                    ),
                     label: const Text('Decline'),
                   ),
                 ],
@@ -244,7 +233,7 @@ class _RequestCard extends ConsumerWidget {
       title: 'Approve request?',
       message: request.media?.title,
       icon: Icons.check_circle_outline_rounded,
-      confirmLabel: 'Approve',
+      confirmLabel: 'Approve request',
     );
 
     if (!result.confirmed || !context.mounted) return;
@@ -266,8 +255,7 @@ class _RequestCard extends ConsumerWidget {
       title: 'Decline request?',
       message: request.media?.title,
       icon: Icons.cancel_outlined,
-      destructive: true,
-      confirmLabel: 'Decline',
+      confirmLabel: 'Decline request',
     );
 
     if (!result.confirmed || !context.mounted) return;
@@ -289,8 +277,7 @@ class _RequestCard extends ConsumerWidget {
       title: 'Delete request?',
       message: request.media?.title,
       icon: Icons.delete_outline_rounded,
-      destructive: true,
-      confirmLabel: 'Delete',
+      confirmLabel: 'Delete request',
     );
 
     if (!result.confirmed || !context.mounted) return;

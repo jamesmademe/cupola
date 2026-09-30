@@ -104,10 +104,9 @@ Future<bool> deleteProviderFlow(
     title: 'Delete $name?',
     message: kind == ProwlarrProviderKind.application
         ? 'Prowlarr stops syncing indexers to it. The app itself keeps the '
-              'indexers it already has.'
-        : 'Prowlarr stops using it straight away.',
-    confirmLabel: 'Delete',
-    destructive: true,
+              'indexers it already has. This cannot be undone.'
+        : 'Prowlarr stops using it straight away. This cannot be undone.',
+    confirmLabel: 'Delete ${kind.singular}',
   );
   if (!result.confirmed || !context.mounted) return false;
 

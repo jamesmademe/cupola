@@ -73,6 +73,23 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
   }
 
   Future<void> _resolve(SeerrIssue issue) async {
+    // Asked first: the check glyph sat at the end of every row and resolved
+    // on the tap, closing the issue for whoever reported it. It can be
+    // reopened, but only from Seerr's own web UI, so it is not a free click.
+    final reporter = issue.createdBy?.displayName;
+    final result = await showAppConfirmDialog(
+      context: context,
+      icon: Icons.check_circle_outline_rounded,
+      title: 'Resolve this issue?',
+      message: [
+        '${issue.media?.title ?? 'Unknown media'} · ${issue.issueTypeLabel}'
+            '${reporter == null ? '' : ', reported by $reporter'}.',
+        'Seerr marks it resolved; it can be reopened from Seerr.',
+      ].join('\n\n'),
+      confirmLabel: 'Resolve issue',
+    );
+    if (!result.confirmed || !mounted) return;
+
     // A write, so the failure surfaces. Unguarded, a token that had lost
     // `MANAGE_ISSUES` threw out of the button callback: nothing invalidated,
     // nothing said, and the row still open — indistinguishable from a tap that

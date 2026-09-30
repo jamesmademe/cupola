@@ -10,6 +10,7 @@ import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
+import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
 import 'package:cupola/features/import/presentation/manual_import_provider.dart';
@@ -529,6 +530,70 @@ String manualImportSelectionSummary({
   ].join(' · ');
 }
 
+/// What the import confirmation says before [count] files are handed over.
+///
+/// Pure so the sentence can be asserted without a dialog. It names how the
+/// service will take the files ([mode]), how many of them replace a file the
+/// library already has ([reimports]), and that the service cannot take it
+/// back — Sonarr and Radarr have no undo for an import, and a Move has already
+/// relocated the source by the time anything could be undone.
+String manualImportConfirmMessage({
+  required ServiceKey service,
+  required ManualImportMode mode,
+  required int count,
+  required int reimports,
+}) {
+  final them = count == 1 ? 'It is' : 'They are';
+  return [
+    switch (mode) {
+      ManualImportMode.move => '$them moved into the library folder.',
+      ManualImportMode.copy =>
+        '$them copied into the library; the '
+            '${count == 1 ? 'original stays' : 'originals stay'} where '
+            '${count == 1 ? 'it is' : 'they are'}.',
+      ManualImportMode.auto =>
+        '${service.title} decides whether to move or copy '
+            '${count == 1 ? 'it' : 'each one'}.',
+    },
+    if (reimports == 1 && count == 1)
+      'It replaces the file already in the library.'
+    else if (reimports == 1)
+      '1 of them replaces the file already in the library.'
+    else if (reimports > 1)
+      '$reimports of them replace the files already in the library.',
+    '${service.title} cannot undo an import.',
+  ].join(' ');
+}
+
+/// Asks before the selection is spent; true when the user confirmed.
+///
+/// The button used to be the whole guard: one tap moved (or, for a ticked
+/// re-import, overwrote) files that no one can put back. Neutral styling,
+/// because the tone rule keeps red for "unreachable" in a status, and the
+/// sentence carries the weight.
+Future<bool> confirmManualImport(
+  BuildContext context, {
+  required ServiceKey service,
+  required ManualImportMode mode,
+  required int count,
+  required int reimports,
+}) async {
+  final files = count == 1 ? '1 file' : '$count files';
+  final result = await showAppConfirmDialog(
+    context: context,
+    icon: Icons.move_to_inbox_rounded,
+    title: 'Import $files into ${service.title}?',
+    message: manualImportConfirmMessage(
+      service: service,
+      mode: mode,
+      count: count,
+      reimports: reimports,
+    ),
+    confirmLabel: 'Import $files',
+  );
+  return result.confirmed;
+}
+
 /// Review's pinned bottom bar: the import-mode menu plus the primary action.
 class ManualImportReviewFooter extends ConsumerWidget {
   final ServiceKey service;
@@ -650,6 +715,27 @@ class ManualImportReviewFooter extends ConsumerWidget {
                           final notifier = ref.read(
                             manualImportFlowProvider.notifier,
                           );
+                          // Only a batch that is actually going to be sent
+                          // asks: with everything already handed over, the
+                          // button is a way back to Track, not a submission.
+                          final pending = state.selectedItems
+                              .where(
+                                (item) =>
+                                    !state.blockedPaths.contains(item.path),
+                              )
+                              .toList(growable: false);
+                          if (pending.isNotEmpty) {
+                            final confirmed = await confirmManualImport(
+                              context,
+                              service: service,
+                              mode: state.importMode,
+                              count: pending.length,
+                              reimports: pending
+                                  .where((item) => item.isAlreadyImported)
+                                  .length,
+                            );
+                            if (!confirmed || !context.mounted) return;
+                          }
                           final command = await notifier.confirmImport();
                           if (command == null || !context.mounted) return;
                           // Await the pop: coming back from Track re-reads the

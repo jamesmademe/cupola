@@ -438,8 +438,9 @@ class _TorrentMenu extends ConsumerWidget {
 /// re-add it and it re-checks. Deleting its data is not: Transmission unlinks
 /// the files and nothing goes to a trash. Folding them into a single "Delete"
 /// button is how people lose a library, so the destructive half is a checkbox
-/// the user has to reach for, and the dialog escalates to its danger styling
-/// only once they do.
+/// the user has to reach for — and once they do, the button's own words change
+/// to *Remove and delete files*. Nothing turns red: red means unreachable and
+/// nothing else.
 Future<void> _confirmRemove(
   BuildContext context,
   WidgetRef ref,
@@ -452,15 +453,16 @@ Future<void> _confirmRemove(
     message:
         'It stops downloading and leaves the list. The files it has already '
         'written stay on disk unless you also tick the box below.',
-    confirmLabel: 'Remove',
-    destructive: true,
-    dangerNote: 'Deleting the downloaded files cannot be undone.',
+    confirmLabel: 'Remove torrent',
+    confirmLabelFor: (checked) =>
+        checked('deleteData') ? 'Remove and delete files' : 'Remove torrent',
     options: const [
       AppConfirmOption(
         key: 'deleteData',
         label: 'Also delete the downloaded files',
-        subtitle: 'Removes the data from the Transmission host permanently.',
-        danger: true,
+        subtitle:
+            'Removes the data from the Transmission host. This cannot be '
+            'undone.',
       ),
     ],
   );

@@ -57,9 +57,10 @@ Future<AppConfirmResult> _grab(BuildContext context) => showAppConfirmDialog(
   useRootNavigator: false,
   title: 'Grab release',
   message: 'Download "Nosferatu.1922.1080p.BluRay.x264"?',
-  confirmLabel: 'Download',
+  confirmLabel: 'Download release',
 );
 
+/// The Activity queue removal: two options, and a label that says both.
 Future<AppConfirmResult> _remove(
   BuildContext context, {
   bool deleteChecked = true,
@@ -69,15 +70,22 @@ Future<AppConfirmResult> _remove(
   title: 'Remove from queue?',
   message: 'Metropolis.1927.1080p.BluRay.x264',
   icon: Icons.delete_outline_rounded,
-  confirmLabel: 'Remove',
-  destructive: true,
+  confirmLabel: deleteChecked ? 'Remove and delete files' : 'Remove from queue',
+  confirmLabelFor: (checked) =>
+      switch ((checked('removeFromClient'), checked('blocklist'))) {
+        (true, true) => 'Remove, delete files and blocklist',
+        (true, false) => 'Remove and delete files',
+        (false, true) => 'Remove and blocklist',
+        (false, false) => 'Remove from queue',
+      },
   options: [
     AppConfirmOption(
       key: 'removeFromClient',
       label: 'Delete from download client',
-      subtitle: 'Also removes the files that have been downloaded so far.',
+      subtitle:
+          'Also removes the files that have been downloaded so far. This '
+          'cannot be undone.',
       initialValue: deleteChecked,
-      danger: true,
     ),
     const AppConfirmOption(
       key: 'blocklist',
@@ -92,9 +100,10 @@ Future<AppConfirmResult> _deleteSnapshot(BuildContext context) =>
       context: context,
       useRootNavigator: false,
       title: 'Delete snapshot?',
-      message: 'tank/media@auto-2026-09-22_00-00',
-      confirmLabel: 'Delete',
-      destructive: true,
+      message:
+          'tank/media@auto-2026-09-22_00-00 is destroyed. This cannot be '
+          'undone.',
+      confirmLabel: 'Delete snapshot',
     );
 
 Future<AppConfirmResult> _approve(BuildContext context) => showAppConfirmDialog(
@@ -105,7 +114,7 @@ Future<AppConfirmResult> _approve(BuildContext context) => showAppConfirmDialog(
       'Sherlock Jr. goes to the service that handles it and starts '
       'downloading.',
   icon: Icons.check_circle_outline_rounded,
-  confirmLabel: 'Approve',
+  confirmLabel: 'Approve request',
 );
 
 Future<AppConfirmResult> _longTitle(BuildContext context) =>
@@ -115,11 +124,27 @@ Future<AppConfirmResult> _longTitle(BuildContext context) =>
       title:
           'Delete The Cabinet of Dr. Caligari and every file Radarr holds '
           'for it?',
-      message: 'The Cabinet of Dr. Caligari (1920)',
-      confirmLabel: 'Delete',
-      destructive: true,
-      dangerNote: 'The files go too. Radarr can download them again later.',
+      message:
+          'The Cabinet of Dr. Caligari (1920). The files go too; Radarr can '
+          'download them again later.',
+      confirmLabel: 'Delete movie',
     );
+
+Future<AppConfirmResult> _shutDown(BuildContext context) async {
+  await showAppTypedConfirmDialog(
+    context,
+    useRootNavigator: false,
+    icon: Icons.power_settings_new_rounded,
+    title: 'Shut down nas?',
+    message:
+        'Everything on this host stops: apps, instances, the SMB · NFS · '
+        'iSCSI shares and this connection. Nothing in Cupola can bring it '
+        'back, only the power button or IPMI can.',
+    phrase: 'nas',
+    confirmLabel: 'Shut down server',
+  );
+  return AppConfirmResult.cancelled;
+}
 
 void main() {
   catalogCard(
@@ -128,7 +153,7 @@ void main() {
     scenes: [
       _scene(
         'Standard · the grab confirmation · Cancel as a TextButton, the '
-        'confirm as a primary FilledButton',
+        'confirm as the theme\'s FilledButton',
         _grab,
         height: 300,
       ),
@@ -138,33 +163,39 @@ void main() {
         height: 320,
       ),
       _scene(
-        'destructive, a danger option checked · the option and the note turn '
-        'red, each walked against the dialog',
+        'A delete, the files option ticked · the same neutral dialog; the '
+        'label says the whole of it and the subtitle says it cannot be undone',
         _remove,
         height: 560,
       ),
       _scene(
-        'destructive, the danger option unchecked · no note until it is '
-        'checked; the confirm stays red',
+        'The same, unticked · confirmLabelFor rewrites the verb as the '
+        'options change',
         (context) => _remove(context, deleteChecked: false),
-        height: 500,
+        height: 560,
       ),
       _scene(
-        'destructive, no options · the default icon and the danger note always '
-        'show',
+        'A delete with no options · the irreversibility is one sentence in '
+        'the message',
         _deleteSnapshot,
-        height: 360,
+        height: 340,
       ),
       _scene(
-        'Long title and a custom dangerNote · the title stops at two lines',
+        'Long title · the title stops at two lines',
         _longTitle,
         height: 380,
+      ),
+      _scene(
+        'Typed confirmation · showAppTypedConfirmDialog · the button stays '
+        'inert until the phrase is typed',
+        _shutDown,
+        height: 560,
       ),
       _scene(
         'On a desktop window · the same dialog under compact density',
         _remove,
         width: 832,
-        height: 480,
+        height: 520,
         platform: CatalogPlatform.desktop,
       ),
     ],

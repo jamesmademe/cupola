@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/cross_service_action.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
 
 import 'package:cupola/features/discover/presentation/widgets/manage_media_sheet.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
+import '../../../../test_helpers/fake_services.dart';
 import '../../../../test_helpers/settings_scope.dart';
 
 void main() {
@@ -144,7 +146,58 @@ void main() {
         expect(find.text('Remove from Radarr'), findsNothing);
       },
     );
+
+    testWidgets('deleting a request asks first, and only a confirm sends it', (
+      tester,
+    ) async {
+      // It fired on the tap, one row above Remove and Clear data, which both
+      // asked. The glyph's name said "Delete from library" — the one thing it
+      // never touches.
+      final seerr = _RecordingSeerr();
+      var changed = 0;
+      await _pumpSheet(
+        tester,
+        mediaTitle: 'Nosferatu',
+        mediaInfo: {
+          'requests': [
+            {
+              'id': 5,
+              'status': 2,
+              'createdAt': '2026-09-12T10:00:00Z',
+              'type': 'movie',
+              'requestedBy': {'id': 2, 'displayName': 'Nadia'},
+            },
+          ],
+        },
+        seerr: seerr,
+        onDataChanged: () => changed++,
+      );
+
+      await tester.tap(find.byTooltip('Delete request'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delete request?'), findsOneWidget);
+      expect(find.text('Nosferatu'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(seerr.deleted, isEmpty);
+      expect(changed, 0);
+
+      await tester.tap(find.byTooltip('Delete request'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete request'));
+      await tester.pumpAndSettle();
+      expect(seerr.deleted, [5]);
+      expect(changed, 1);
+      expect(find.text('Request deleted'), findsOneWidget);
+    });
   });
+}
+
+class _RecordingSeerr extends FakeSeerrService {
+  final deleted = <int>[];
+
+  @override
+  Future<void> deleteRequest(int requestId) async => deleted.add(requestId);
 }
 
 Future<void> _pumpSheet(
@@ -156,10 +209,14 @@ Future<void> _pumpSheet(
   int? tvdbId,
   VoidCallback? onDataChanged,
   SettingsModel settings = const SettingsModel(),
+  SeerrService? seerr,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [currentSettingsProvider.overrideWith((ref) => settings)],
+      overrides: [
+        currentSettingsProvider.overrideWith((ref) => settings),
+        if (seerr != null) seerrServiceProvider.overrideWith((ref) => seerr),
+      ],
       child: MaterialApp(
         home: Scaffold(
           body: SizedBox(

@@ -144,14 +144,11 @@ class StreamActivitySection extends ConsumerWidget {
     final result = await showAppConfirmDialog(
       context: context,
       title: 'Stop playback?',
-      message: streamStopSessionPrompt(
-        userName: row.session.userName,
-        title: row.session.title,
-      ),
+      message:
+          '${streamStopSessionPrompt(userName: row.session.userName, title: row.session.title)} '
+          'They can start it again straight away.',
       icon: Icons.stop_circle_outlined,
-      confirmLabel: 'Stop',
-      destructive: true,
-      dangerNote: 'They can start it again straight away.',
+      confirmLabel: 'Stop playback',
     );
     if (!result.confirmed || !context.mounted) return;
 

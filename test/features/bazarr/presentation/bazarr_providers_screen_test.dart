@@ -40,9 +40,25 @@ void main() {
       findsOneWidget,
     );
 
+    // Asks first, and Cancel sends nothing.
     await tester.tap(
       find.byKey(const ValueKey('bazarr-reset-provider-throttles')),
     );
+    await tester.pumpAndSettle();
+    expect(find.text('Reset provider throttles?'), findsOneWidget);
+    expect(
+      find.textContaining('stops waiting out 1 throttled provider'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(service.resetProviderStatusesCalled, isFalse);
+
+    await tester.tap(
+      find.byKey(const ValueKey('bazarr-reset-provider-throttles')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Reset throttles'));
     await tester.pumpAndSettle();
     expect(service.resetProviderStatusesCalled, isTrue);
     expect(find.text('Provider throttles reset'), findsOneWidget);

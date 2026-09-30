@@ -97,7 +97,7 @@ Future<void> _approve(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('Approve request'));
   await tester.pumpAndSettle();
-  await tester.tap(find.widgetWithText(FilledButton, 'Approve'));
+  await tester.tap(find.widgetWithText(FilledButton, 'Approve request'));
   await tester.pumpAndSettle();
 }
 
@@ -106,7 +106,7 @@ Future<void> _decline(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('Decline request'));
   await tester.pumpAndSettle();
-  await tester.tap(find.widgetWithText(FilledButton, 'Decline'));
+  await tester.tap(find.widgetWithText(FilledButton, 'Decline request'));
   await tester.pumpAndSettle();
 }
 

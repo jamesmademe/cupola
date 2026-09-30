@@ -281,7 +281,7 @@ void main() {
 
       await tester.tap(find.text('Remove Jellyfin'));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Remove Jellyfin'));
       await tester.pumpAndSettle();
 
       final updated = harness.container.read(settingsProvider);

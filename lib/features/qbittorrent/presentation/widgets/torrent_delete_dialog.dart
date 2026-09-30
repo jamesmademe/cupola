@@ -18,33 +18,36 @@ class TorrentDeleteResult {
   );
 }
 
-/// Shows a confirmation dialog for deleting one or more torrents with a
-/// warning banner when "Delete files" is selected. Returns
-/// [TorrentDeleteResult.cancelled] when the user dismisses the dialog.
+/// Shows a confirmation dialog for deleting one or more torrents, with the
+/// option to delete their files too. Returns [TorrentDeleteResult.cancelled]
+/// when the user dismisses the dialog.
 ///
-/// Built on the shared [showAppConfirmDialog] for a consistent destructive
-/// affordance across the app.
+/// Built on the shared [showAppConfirmDialog], so it is neutral like every
+/// other confirmation: the button says *Delete torrent* until *Delete files* is
+/// ticked and *Delete torrent and files* after, and the option's subtitle is
+/// the one sentence saying the files cannot come back.
 Future<TorrentDeleteResult> showTorrentDeleteDialog({
   required BuildContext context,
   required String title,
   required String message,
   bool multi = false,
 }) async {
+  final noun = multi ? 'torrents' : 'torrent';
   final result = await showAppConfirmDialog(
     context: context,
     title: title,
     message: message,
-    destructive: true,
-    confirmLabel: 'Delete',
-    dangerNote: multi
-        ? 'This cannot be undone. All selected torrents and their files will be permanently removed.'
-        : 'This cannot be undone. Files will be permanently removed from disk.',
-    options: const [
+    confirmLabel: 'Delete $noun',
+    confirmLabelFor: (checked) =>
+        checked('deleteFiles') ? 'Delete $noun and files' : 'Delete $noun',
+    options: [
       AppConfirmOption(
         key: 'deleteFiles',
         label: 'Delete files',
-        subtitle: 'Permanently delete downloaded files from disk',
-        danger: true,
+        subtitle: multi
+            ? 'Deletes every selected torrent\'s downloaded files from disk. '
+                  'This cannot be undone.'
+            : 'Deletes the downloaded files from disk. This cannot be undone.',
       ),
     ],
   );

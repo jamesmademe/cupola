@@ -159,16 +159,11 @@ class ProwlarrProviderListScreen extends ConsumerWidget {
               testProviderFlow(context, ref, kind, resource);
             },
           ),
-          // The irreversible-action exception, walked against the sheet.
+          // Neutral, like the rows above it: red means unreachable and nothing
+          // else, and the confirmation says what goes.
           ListTile(
-            leading: Icon(
-              Icons.delete_outline_rounded,
-              color: _destructiveInk(context),
-            ),
-            title: Text(
-              'Delete',
-              style: TextStyle(color: _destructiveInk(context)),
-            ),
+            leading: const Icon(Icons.delete_outline_rounded),
+            title: const Text('Delete'),
             onTap: () {
               Navigator.of(sheetContext).pop();
               deleteProviderFlow(context, ref, kind, resource);
@@ -302,14 +297,3 @@ String prowlarrSyncLevelLabel(String raw) => switch (raw) {
   'disabled' => 'No sync',
   _ => raw,
 };
-
-/// Red for the one irreversible row, measured against the `AppBottomSheet`
-/// ground (`surfaceContainer` in both themes) instead of painted raw.
-Color _destructiveInk(BuildContext context) {
-  final colorScheme = Theme.of(context).colorScheme;
-  return statusToneColor(
-    colorScheme,
-    StatusTone.error,
-    surface: colorScheme.surfaceContainer,
-  );
-}

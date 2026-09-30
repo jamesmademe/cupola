@@ -170,7 +170,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.delete_outline_rounded));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete request'));
     await tester.pumpAndSettle();
 
     expect(other.deleted, [42]);
@@ -198,7 +198,7 @@ void main() {
     // two apart once both are on screen.
     await tester.tap(find.text('Approve'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Approve'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Approve request'));
     await tester.pumpAndSettle();
 
     expect(other.approved, [42]);

@@ -66,9 +66,8 @@ Future<bool> appLifecycleAction(
     final result = await showAppConfirmDialog(
       context: context,
       title: 'Delete ${app.title}?',
-      message: 'This removes the app and its data.',
-      confirmLabel: 'Delete',
-      destructive: true,
+      message: 'This removes the app and its data. This cannot be undone.',
+      confirmLabel: 'Delete app',
     );
     if (!result.confirmed || !context.mounted) return false;
   }

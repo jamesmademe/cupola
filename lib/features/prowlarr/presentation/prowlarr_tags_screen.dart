@@ -10,7 +10,6 @@ import 'package:cupola/core/utils/service_action.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
-import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 
@@ -161,8 +160,7 @@ class ProwlarrTagsScreen extends ConsumerWidget {
           ? 'Nothing uses this tag.'
           : 'It is removed from ${_usageSentence(tag)}, which changes what '
                 'those apps receive.',
-      confirmLabel: 'Delete',
-      destructive: true,
+      confirmLabel: 'Delete tag',
     );
     if (!result.confirmed || !context.mounted) return;
 
@@ -293,12 +291,9 @@ class _TagRow extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.delete_outline_rounded, size: 18),
                   tooltip: 'Delete tag',
-                  // The irreversible-action exception, walked against the row.
-                  color: statusToneColor(
-                    colorScheme,
-                    StatusTone.error,
-                    surface: colorScheme.surface,
-                  ),
+                  // Neutral: red means unreachable and nothing else, and the
+                  // confirmation says what goes.
+                  color: colorScheme.onSurfaceVariant,
                   onPressed: onDelete,
                 ),
               ],

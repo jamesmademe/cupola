@@ -197,18 +197,14 @@ class _MediaOverflowRow extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final enabled = onInvoke != null;
-    // Red here is the irreversible-action exception, not a status: it is still
-    // walked against the sheet it sits on, where raw red read 3.4:1 on paper.
-    final destructiveInk = statusToneColor(
-      colorScheme,
-      StatusTone.error,
-      surface: colorScheme.surfaceContainer,
-    );
+    // One ink for every row. A destructive one is set apart by where it sits —
+    // below the divider, last — and by its haptic, never by red: red means
+    // unreachable and nothing else, and the confirmation says what goes.
     final glyphColor = enabled
-        ? (action.isDestructive ? destructiveInk : colorScheme.onSurfaceVariant)
+        ? colorScheme.onSurfaceVariant
         : colorScheme.onSurfaceVariant.withValues(alpha: 0.38);
     final labelColor = enabled
-        ? (action.isDestructive ? destructiveInk : colorScheme.onSurface)
+        ? colorScheme.onSurface
         : colorScheme.onSurface.withValues(alpha: 0.38);
 
     return PressableScale(

@@ -97,7 +97,7 @@ void main() {
       await tester.tap(find.byTooltip('Delete request for A Quiet Place'));
       await _settle(tester);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete request'));
       await _settle(tester);
 
       expect(seerr.deletedIds, [1]);
@@ -132,7 +132,7 @@ void main() {
 
       await tester.tap(find.byTooltip('Delete request for A Quiet Place'));
       await _settle(tester);
-      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete request'));
       await _settle(tester);
 
       // Both registers, in one node: the sentence the user acts on, and the

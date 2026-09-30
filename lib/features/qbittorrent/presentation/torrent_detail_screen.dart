@@ -758,17 +758,9 @@ class _ActionsTab extends ConsumerWidget {
           label: const Text('Pause'),
         ),
         const SizedBox(height: AppSpacing.sm),
+        // The theme's own fill, like Pause above it: red means unreachable
+        // and nothing else, and the confirmation says what Delete will do.
         FilledButton.icon(
-          style: FilledButton.styleFrom(
-            backgroundColor: statusToneFill(
-              Theme.of(context).colorScheme,
-              StatusTone.error,
-            ),
-            // The theme's `onPrimary` white reads 3.5:1 on the light red.
-            foregroundColor: ServiceTheme.foregroundOn(
-              statusToneFill(Theme.of(context).colorScheme, StatusTone.error),
-            ),
-          ),
           onPressed: () => _confirmDeleteSingle(context, ref, torrent),
           icon: const Icon(Icons.delete_outline_rounded, size: 18),
           label: const Text('Delete'),
@@ -908,8 +900,8 @@ class _ActionsTab extends ConsumerWidget {
   ) {
     showTorrentDeleteDialog(
       context: context,
-      title: 'Delete torrent',
-      message: 'Delete "${torrent.name}"? This action cannot be undone.',
+      title: 'Delete torrent?',
+      message: '"${torrent.name}" leaves qBittorrent.',
     ).then((result) async {
       if (!result.confirmed) return;
       if (!context.mounted) return;
