@@ -6,6 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
@@ -89,9 +90,11 @@ class DashboardScreen extends ConsumerWidget {
                     // box is what lifts it back onto the visible middle.
                     child: Padding(
                       padding: EdgeInsets.only(bottom: bottomPadding),
+                      // Not a `Set up X`: nothing is chosen yet, so the way
+                      // in is the list every service's setup form hangs off.
                       child: _ServicesEmptyState(
                         onSetUpServices: () =>
-                            context.go('/settings/connections'),
+                            context.go(ServiceRoutes.settingsConnections),
                       ),
                     ),
                   ),

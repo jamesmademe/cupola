@@ -15,7 +15,7 @@ Rendered from `lib/core/widgets/cross_service_action.dart` (`GatedAffordance`, `
 
 | Widget | Gated on | Hint | Blocked tap |
 |---|---|---|---|
-| `CrossServiceAction` — the cell, around a non-interactive child (a glyph, a caption) | `isServiceConfigured(target)`, never health | *requires qBittorrent* (`requires <Service>`, overridable with `hint`) | Toast with the caller's sentence (*Connect qBittorrent to open this transfer.*), action **Settings** → that service's own settings page |
+| `CrossServiceAction` — the cell, around a non-interactive child (a glyph, a caption) | `isServiceConfigured(target)`, never health | *requires qBittorrent* (`requires <Service>`, overridable with `hint`) | Toast with the caller's sentence (*Set up qBittorrent to open this transfer.*), action **Set up qBittorrent** → that service's own setup form (`ServiceRoutes.setUp`, where every *Set up X* goes) |
 | `CrossServiceAction.builder` — a control that is already a button | same | same | same |
 | `CapabilityGatedAction` / `.builder` | the connection's grant for `resource` | the feature's hint, e.g. *requires a key that can write VMs*; default *requires a read-write key* | Toast with the caller's sentence (*This Unraid key can't start or stop VMs.*), action **Update the key** (**Change account** for Nginx Proxy Manager) → that connection's settings |
 | `CapabilityGatedAction.icon` | same | on the icon inside the `IconButton` | same |

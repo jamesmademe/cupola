@@ -11,10 +11,15 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// This is the invariant that was silently lost when five dashboards' private
 /// not-configured cards were collapsed onto the shared widget: each private copy
 /// deep-linked to `/settings/service/<routeParam>`, and the generic constructor
-/// goes to the Settings root. A user who taps "Open Settings" from the SABnzbd
-/// dashboard should land on the SABnzbd form, not on a list to search.
+/// went to the Settings root. A user who taps "Set up SABnzbd" from the
+/// SABnzbd dashboard lands on the SABnzbd form, not on a list to search —
+/// the one place every `Set up X` goes.
 void main() {
-  Future<String> pumpAndTap(WidgetTester tester, Widget placeholder) async {
+  Future<String> pumpAndTap(
+    WidgetTester tester,
+    Widget placeholder, {
+    required String label,
+  }) async {
     final router = GoRouter(
       initialLocation: '/home',
       routes: [
@@ -34,7 +39,7 @@ void main() {
     addTearDown(router.dispose);
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
-    await tester.tap(find.text('Open Settings'));
+    await tester.tap(find.text(label));
     await tester.pumpAndSettle();
 
     return router.state.uri.toString();
@@ -46,6 +51,7 @@ void main() {
     final location = await pumpAndTap(
       tester,
       NotConfiguredPlaceholder.forService(ServiceKey.sabnzbd),
+      label: 'Set up SABnzbd',
     );
 
     expect(location, '/settings/service/${ServiceKey.sabnzbd.routeParam}');
@@ -58,18 +64,32 @@ void main() {
       MaterialApp(home: NotConfiguredPlaceholder.forService(ServiceKey.nzbget)),
     );
 
-    expect(find.textContaining(ServiceKey.nzbget.title), findsOneWidget);
+    expect(find.text('NZBGet is not set up'), findsOneWidget);
+    expect(find.text('Set up NZBGet'), findsOneWidget);
   });
 
-  testWidgets('the generic form falls back to the settings root', (
+  testWidgets('the generic form resolves the name to the same setup form', (
     tester,
   ) async {
     // AsyncValueWidget and MediaDetailPlaceholderView reach this state from a
-    // `<Service> not configured` throw and hold only the name, so the root is
-    // the only honest destination for them.
+    // `<Service> not configured` throw and hold only the name; the name is a
+    // service's title, so the way in is that service's form like any other.
     final location = await pumpAndTap(
       tester,
       const NotConfiguredPlaceholder(serviceName: 'Radarr'),
+      label: 'Set up Radarr',
+    );
+
+    expect(location, '/settings/service/${ServiceKey.radarr.routeParam}');
+  });
+
+  testWidgets('a name that is no service falls back to the settings root', (
+    tester,
+  ) async {
+    final location = await pumpAndTap(
+      tester,
+      const NotConfiguredPlaceholder(serviceName: 'This page'),
+      label: 'Open Settings',
     );
 
     expect(location, '/settings');

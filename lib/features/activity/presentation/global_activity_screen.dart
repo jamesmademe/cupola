@@ -713,6 +713,15 @@ class _RefreshingBar extends StatelessWidget {
   }
 }
 
+/// The services Activity reads, for its not-set-up state when the feed has
+/// not said which of them are missing.
+const _activitySources = [
+  ServiceKey.radarr,
+  ServiceKey.sonarr,
+  ServiceKey.lidarr,
+  ServiceKey.seerr,
+];
+
 /// Chooses between the four things a feed load can mean.
 ///
 /// The distinction that did not exist before: "every service I asked said
@@ -780,20 +789,43 @@ class _FeedBody extends StatelessWidget {
       );
     }
 
-    // Nothing is set up at all — the honest answer is "connect something",
-    // not "nothing is downloading".
+    // None of Activity's sources is set up — the honest answer is "set one
+    // up", not "nothing is downloading". Named, because a Jellyfin that is
+    // set up is not one of them: "No services connected" was false there.
     if (!feed.hasConfiguredService) {
+      final missing = {
+        for (final result in feed.unconfigured) result.service,
+      }.toList(growable: false);
+      final sources = missing.isEmpty ? _activitySources : missing;
       return _ScrollableState(
         bottomPadding: bottomPadding,
         child: AppEmptyState(
           icon: Icons.settings_ethernet_rounded,
-          title: 'Radarr, Sonarr, Lidarr and Seerr are not set up',
+          title:
+              '${Lexicon.names(sources.map((s) => s.title))} '
+              '${sources.length == 1 ? 'is' : 'are'} not set up',
           message:
               'Activity lists what they download and what people ask for. '
               'Set one up and it shows up here.',
-          action: FilledButton(
-            onPressed: () => context.go('/settings'),
-            child: const Text('Open Settings'),
+          // One `Set up X` per source, each to its own setup form.
+          action: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              for (final (index, service) in sources.indexed)
+                index == 0
+                    ? FilledButton(
+                        onPressed: () =>
+                            context.go(ServiceRoutes.setUp(service)),
+                        child: Text(Lexicon.setUp(service.title)),
+                      )
+                    : OutlinedButton(
+                        onPressed: () =>
+                            context.go(ServiceRoutes.setUp(service)),
+                        child: Text(Lexicon.setUp(service.title)),
+                      ),
+            ],
           ),
         ),
       );

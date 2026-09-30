@@ -378,7 +378,7 @@ void main() {
       // Unlabelled: it is a prompt about a missing integration, not a region of
       // this title's record.
       expect(slots.single.label, isNull);
-      expect(find.text('Connect'), findsOneWidget);
+      expect(find.text('Set up Seerr'), findsOneWidget);
 
       // The card's subject is Seerr but the page is Radarr's, and one screen
       // gets one accent — this used to paint `AppColors.seerr` on an amber page.
@@ -405,7 +405,7 @@ void main() {
       await pumpSlots(tester, 3.0, extras: null);
       expect(find.text('Cast & collections'), findsOneWidget);
       expect(
-        find.text('Set up Seerr to see cast, collections and more.'),
+        find.text('Seerr adds the cast, the collection and more.'),
         findsOneWidget,
       );
       final stackedWidth = tester.getSize(find.byType(FilledButton)).width;

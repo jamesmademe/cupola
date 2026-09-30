@@ -547,6 +547,15 @@ class ServiceRoutes {
   static String settingsFor(ServiceKey service) =>
       '$settings/service/${service.routeParam}';
 
+  /// Where every `Set up X` goes: the service's own setup form.
+  ///
+  /// One destination for one verb. The matrix cell and the not-set-up leaf
+  /// sent the user to the connections list, a cross-service control's toast
+  /// to the form, and Streaming's empty state to the Dashboard — three places
+  /// for the same tap. Every surface that says `Set up X` (the lexicon's
+  /// `Lexicon.setUp`) navigates here, and nowhere else.
+  static String setUp(ServiceKey service) => settingsFor(service);
+
   /// The settings form of one saved connection of [service] — where a
   /// too-narrow credential is replaced.
   ///

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/capability/capability_copy.dart';
 import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
@@ -235,7 +236,7 @@ class CrossServiceAction extends ConsumerWidget {
   /// button names itself.
   final String? label;
 
-  /// The toast, e.g. `Connect qBittorrent to open this transfer`.
+  /// The toast, e.g. `Set up qBittorrent to open this transfer`.
   final String blockedMessage;
 
   /// What the control does when [target] is configured.
@@ -262,11 +263,11 @@ class CrossServiceAction extends ConsumerWidget {
     void blocked() => SnackBarHelper.withAction(
       context,
       blockedMessage,
-      actionLabel: 'Settings',
-      // The action is the fix, and it is the *specific* fix: this service's
-      // own settings page, where its setup note is printed, rather than the
-      // settings root the user would then have to navigate.
-      onAction: () => context.go(ServiceRoutes.settingsFor(target)),
+      // The action is the fix, named as every other way in names it, and it
+      // is the *specific* fix: this service's own setup form, where its setup
+      // note is printed — the one place every `Set up X` goes.
+      actionLabel: Lexicon.setUp(target.title),
+      onAction: () => context.go(ServiceRoutes.setUp(target)),
     );
 
     final builder = this.builder;

@@ -757,7 +757,10 @@ class _NotSetUpCell extends StatelessWidget {
 
     return AppCard.surfaceOutlined(
       key: ValueKey('service-matrix-cell-${service.routeParam}'),
-      onTap: () => context.go('/settings/connections'),
+      // The service's own setup form, like every other `Set up X`: the
+      // connections list made the user find, a second time, the service
+      // they had just tapped.
+      onTap: () => context.go(ServiceRoutes.setUp(service)),
       pressFeedback: AppCardPressFeedback.scale,
       semanticLabel: service.title,
       semanticValue: servicesNotSetUpCellLabel,

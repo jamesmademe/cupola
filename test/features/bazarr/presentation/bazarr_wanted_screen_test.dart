@@ -32,7 +32,7 @@ void main() {
 
       expect(find.byType(NotConfiguredPlaceholder), findsOneWidget);
       expect(find.textContaining('is not set up'), findsOneWidget);
-      expect(find.text('Open Settings'), findsOneWidget);
+      expect(find.text('Set up Bazarr'), findsOneWidget);
     });
 
     testWidgets('its button lands on the Bazarr settings page', (tester) async {
@@ -72,7 +72,7 @@ void main() {
       );
       await tester.pump();
 
-      await tester.tap(find.text('Open Settings'));
+      await tester.tap(find.text('Set up Bazarr'));
       await tester.pumpAndSettle();
 
       expect(

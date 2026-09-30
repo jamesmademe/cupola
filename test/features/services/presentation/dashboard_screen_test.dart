@@ -22,6 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -458,6 +459,38 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(servicesNotSetUpCellLabel), findsWidgets);
+    });
+
+    testWidgets('a not-set-up cell opens that service setup form', (
+      tester,
+    ) async {
+      // The same place every `Set up X` goes. It opened the connections list,
+      // where the user had to find the service they had just tapped.
+      Uri? opened;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const DashboardScreen(),
+          ),
+          GoRoute(
+            path: '/settings/service/:service',
+            builder: (context, state) {
+              opened = state.uri;
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await _pumpDashboard(tester, router: router);
+      final cell = find.byKey(const ValueKey('service-matrix-cell-readarr'));
+      await tester.ensureVisible(cell);
+      await tester.tap(cell);
+      await tester.pumpAndSettle();
+
+      expect(opened?.path, ServiceRoutes.setUp(ServiceKey.readarr));
     });
 
     testWidgets('the region header counts the whole registry', (tester) async {

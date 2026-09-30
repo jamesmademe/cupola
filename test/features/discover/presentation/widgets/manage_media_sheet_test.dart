@@ -87,7 +87,7 @@ void main() {
         await tester.tap(find.text('Open in Radarr'));
         await tester.pump();
         expect(find.text('Set up Radarr to open this movie'), findsOneWidget);
-        expect(find.text('Settings'), findsOneWidget);
+        expect(find.text('Set up Radarr'), findsOneWidget);
       },
     );
 

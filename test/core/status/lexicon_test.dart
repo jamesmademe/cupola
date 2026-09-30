@@ -53,4 +53,13 @@ void main() {
     expect(Lexicon.isNotSetUp('Plex'), 'Plex is not set up');
     expect(Lexicon.retry, 'Retry');
   });
+
+  test('names join as a sentence says them', () {
+    expect(Lexicon.names(['Radarr']), 'Radarr');
+    expect(Lexicon.names(['Jellyfin', 'Plex']), 'Jellyfin and Plex');
+    expect(
+      Lexicon.names(['Radarr', 'Sonarr', 'Seerr']),
+      'Radarr, Sonarr and Seerr',
+    );
+  });
 }

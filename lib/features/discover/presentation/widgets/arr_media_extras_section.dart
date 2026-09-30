@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/media_detail_slot.dart';
 import 'package:cupola/features/discover/presentation/arr_media_extras_provider.dart';
@@ -129,7 +130,7 @@ class _ConnectSeerrCta extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          '${Lexicon.setUp('Seerr')} to see cast, collections and more.',
+          'Seerr adds the cast, the collection and more.',
           style: theme.textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
@@ -138,9 +139,8 @@ class _ConnectSeerrCta extends StatelessWidget {
     );
 
     final action = FilledButton(
-      onPressed: () =>
-          context.go('/settings/service/${ServiceKey.seerr.routeParam}'),
-      child: const Text('Connect'),
+      onPressed: () => context.go(ServiceRoutes.setUp(ServiceKey.seerr)),
+      child: Text(Lexicon.setUp(ServiceKey.seerr.title)),
     );
 
     // Past this reading size the button's own label is wide enough to squeeze

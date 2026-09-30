@@ -124,7 +124,7 @@ final _never = <String, RegExp>{
     r'\bnot configured\b',
     caseSensitive: false,
   ),
-  'Connect X → Set up X': RegExp(r'\bConnect (\S)'),
+  'Connect X → Set up X': RegExp(r'\bConnect (\S)|^Connect$'),
   'Try again → Retry': RegExp(r'\btry again\b', caseSensitive: false),
   'Paused → Stopped': RegExp(r'\bpaused\b', caseSensitive: false),
   'Stalled → Stuck': RegExp(r'\bstalled\b', caseSensitive: false),

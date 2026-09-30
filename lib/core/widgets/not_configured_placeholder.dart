@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -17,7 +18,9 @@ class NotConfiguredPlaceholder extends StatelessWidget {
   /// The generic form, for callers that know only the service's display name —
   /// notably [AsyncValueWidget] and [MediaDetailPlaceholderView], which reach
   /// this state by string-matching a `<Service> not configured` throw and so
-  /// never hold a [ServiceKey]. Its button lands on the Settings root.
+  /// never hold a [ServiceKey]. The name is resolved back to its service, so
+  /// its button is the same `Set up X` into the same form; only a name that is
+  /// no service's lands on the Settings root.
   const NotConfiguredPlaceholder({super.key, required this.serviceName})
     : service = null;
 
@@ -42,9 +45,21 @@ class NotConfiguredPlaceholder extends StatelessWidget {
   /// Null for the generic form; set by [NotConfiguredPlaceholder.forService].
   final ServiceKey? service;
 
+  /// The service this names: the key it was given, or the one whose title
+  /// the generic form was handed — `AsyncValueWidget` passes the name its
+  /// `<Service> not configured` throw carried.
+  ServiceKey? get _resolved {
+    final key = service;
+    if (key != null) return key;
+    for (final candidate in ServiceKey.values) {
+      if (candidate.title == serviceName) return candidate;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final key = service;
+    final key = _resolved;
     return AppEmptyState(
       icon: Icons.settings_outlined,
       // The same voice as the rest of the app's connection states, which say a
@@ -55,12 +70,14 @@ class NotConfiguredPlaceholder extends StatelessWidget {
       // naming one told a third of the roster to look for a field that is not
       // there. The "Please" went with it — the UI is not asking a favour.
       message: "Add its address and credentials in Settings.",
+      // `Set up X`, to the service's own setup form: the one place every
+      // way in goes. Only a name that is no service keeps the Settings root.
       action: FilledButton.icon(
         onPressed: () => context.go(
-          key == null ? '/settings' : '/settings/service/${key.routeParam}',
+          key == null ? ServiceRoutes.settings : ServiceRoutes.setUp(key),
         ),
-        icon: const Icon(Icons.settings_outlined, size: 18),
-        label: const Text('Open Settings'),
+        icon: const Icon(Icons.add_link_rounded, size: 18),
+        label: Text(key == null ? 'Open Settings' : Lexicon.setUp(key.title)),
       ),
     );
   }

@@ -71,8 +71,8 @@ class SnackBarHelper {
   /// The shape the design settles on for every "you cannot do that here yet"
   /// answer: four seconds, one sentence, **one** action, and the action
   /// resolves the sentence rather than acknowledging it. A cross-service jump
-  /// whose target is not configured prints *"Connect qBittorrent to open this
-  /// transfer"* with **Settings**; a write blocked by a read-only credential
+  /// whose target is not configured prints *"Set up qBittorrent to open this
+  /// transfer"* with **Set up qBittorrent**; a write blocked by a read-only credential
   /// prints what the key cannot do with **Update the key**.
   ///
   /// It is a toast and not a dialog because nothing was destroyed and nothing

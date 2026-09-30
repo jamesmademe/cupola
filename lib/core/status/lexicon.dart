@@ -89,6 +89,14 @@ abstract final class Lexicon {
   /// up`.
   static String isNotSetUp(String service) => '$service is not set up';
 
+  /// Names in a sentence: `Radarr`, `Radarr and Sonarr`, `Radarr, Sonarr and
+  /// Seerr`.
+  static String names(Iterable<String> names) {
+    final all = names.toList(growable: false);
+    if (all.length < 2) return all.join();
+    return '${all.sublist(0, all.length - 1).join(', ')} and ${all.last}';
+  }
+
   /// A label as it reads inside a sentence or after a count — `Refused the
   /// key` → `refused the key` — leaving an acronym alone (`API not at this
   /// address`).

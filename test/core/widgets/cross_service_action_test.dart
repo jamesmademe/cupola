@@ -46,7 +46,7 @@ void main() {
         child: CrossServiceAction(
           target: ServiceKey.qbittorrent,
           label: 'Open in qBittorrent',
-          blockedMessage: 'Connect qBittorrent to open this transfer',
+          blockedMessage: 'Set up qBittorrent to open this transfer',
           onTap: () {},
           child: const Icon(Icons.open_in_new),
         ),
@@ -78,7 +78,7 @@ void main() {
           child: CrossServiceAction(
             target: ServiceKey.qbittorrent,
             label: 'Open in qBittorrent',
-            blockedMessage: 'Connect qBittorrent to open this transfer',
+            blockedMessage: 'Set up qBittorrent to open this transfer',
             onTap: () {},
             child: const SizedBox(width: 8, height: 8),
           ),
@@ -100,7 +100,7 @@ void main() {
         child: CrossServiceAction(
           target: ServiceKey.qbittorrent,
           label: 'Open in qBittorrent',
-          blockedMessage: 'Connect qBittorrent to open this transfer',
+          blockedMessage: 'Set up qBittorrent to open this transfer',
           onTap: () => acted++,
           child: const Icon(Icons.open_in_new),
         ),
@@ -113,10 +113,14 @@ void main() {
       expect(acted, 0);
       // …and the user was told what would make it happen, with one door.
       expect(
-        find.text('Connect qBittorrent to open this transfer'),
+        find.text('Set up qBittorrent to open this transfer'),
         findsOneWidget,
       );
-      expect(find.widgetWithText(SnackBarAction, 'Settings'), findsOneWidget);
+      // The one verb every way in carries, to the one place it goes.
+      expect(
+        find.widgetWithText(SnackBarAction, 'Set up qBittorrent'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('is dimmed, and dimming is the only thing it loses', (
@@ -128,7 +132,7 @@ void main() {
         child: CrossServiceAction(
           target: ServiceKey.qbittorrent,
           label: 'Open in qBittorrent',
-          blockedMessage: 'Connect qBittorrent to open this transfer',
+          blockedMessage: 'Set up qBittorrent to open this transfer',
           onTap: () {},
           child: const Icon(Icons.open_in_new),
         ),
@@ -152,7 +156,7 @@ void main() {
         child: CrossServiceAction(
           target: ServiceKey.qbittorrent,
           label: 'Open in qBittorrent',
-          blockedMessage: 'Connect qBittorrent to open this transfer',
+          blockedMessage: 'Set up qBittorrent to open this transfer',
           onTap: () => acted++,
           child: const Icon(Icons.open_in_new),
         ),
@@ -183,7 +187,7 @@ void main() {
         child: CrossServiceAction(
           target: ServiceKey.qbittorrent,
           label: 'Open in qBittorrent',
-          blockedMessage: 'Connect qBittorrent to open this transfer',
+          blockedMessage: 'Set up qBittorrent to open this transfer',
           onTap: () => acted++,
           child: const Icon(Icons.open_in_new),
         ),
@@ -734,7 +738,7 @@ void _gatedVariants() {
         configured: const [],
         child: CrossServiceAction.builder(
           target: ServiceKey.radarr,
-          blockedMessage: 'Connect Radarr to open this movie',
+          blockedMessage: 'Set up Radarr to open this movie',
           onTap: () => acted++,
           builder: (context, onPressed, annotate) => TextButton(
             onPressed: onPressed,
@@ -754,7 +758,10 @@ void _gatedVariants() {
       await tester.tap(find.byType(TextButton));
       await tester.pump();
       expect(acted, 0);
-      expect(find.widgetWithText(SnackBarAction, 'Settings'), findsOneWidget);
+      expect(
+        find.widgetWithText(SnackBarAction, 'Set up Radarr'),
+        findsOneWidget,
+      );
     });
   });
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -281,9 +282,24 @@ class _NoStreamService extends StatelessWidget {
           message:
               'Set one up to see who is watching what, and why the box is '
               'working for it.',
-          action: FilledButton(
-            onPressed: () => context.go(ServiceRoutes.dashboard),
-            child: const Text('Set one up'),
+          // One `Set up X` per server, each to its own setup form — the
+          // Dashboard this used to open left the user to find it.
+          action: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              FilledButton(
+                onPressed: () =>
+                    context.go(ServiceRoutes.setUp(ServiceKey.jellyfin)),
+                child: Text(Lexicon.setUp(ServiceKey.jellyfin.title)),
+              ),
+              OutlinedButton(
+                onPressed: () =>
+                    context.go(ServiceRoutes.setUp(ServiceKey.plex)),
+                child: Text(Lexicon.setUp(ServiceKey.plex.title)),
+              ),
+            ],
           ),
         ),
       ],
