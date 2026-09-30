@@ -102,7 +102,7 @@ class PortalHintsNotifier extends Notifier<PortalHintsState> {
     _persist();
   }
 
-  /// A manual switch happened: `/services` → a service, Portal untouched.
+  /// A manual switch happened: `/dashboard` → a service, Portal untouched.
   void noteManualJourney() {
     state = state.copyWith(manualJourneys: state.manualJourneys + 1);
     _persist();

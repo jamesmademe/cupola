@@ -8,6 +8,7 @@ import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/settings_home_screen.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_summary_cards.dart';
 
 import '../../../test_helpers/settings_scope.dart';
 
@@ -129,6 +130,47 @@ void main() {
           findsNothing,
         );
       });
+    });
+  });
+
+  group('the Hints line', () {
+    testWidgets('the card counts the one gesture in the singular', (
+      tester,
+    ) async {
+      await _onDesktop(() async {
+        await _pumpHome(tester, size: const Size(1440, 2400));
+
+        expect(find.text('1 gesture introduces itself'), findsOneWidget);
+      });
+    });
+
+    test('reads right for one and for many', () {
+      // It used to read "1 of 1 gestures introduces itself", which is wrong at
+      // every count: the verb has to agree with the count.
+      expect(
+        gestureHintsLine(introducing: 1, total: 1),
+        '1 gesture introduces itself',
+      );
+      expect(
+        gestureHintsLine(introducing: 0, total: 1),
+        'No gesture introduces itself',
+      );
+      expect(
+        gestureHintsLine(introducing: 3, total: 3),
+        'All 3 gestures introduce themselves',
+      );
+      expect(
+        gestureHintsLine(introducing: 1, total: 3),
+        '1 of 3 gestures introduces itself',
+      );
+      expect(
+        gestureHintsLine(introducing: 2, total: 3),
+        '2 of 3 gestures introduce themselves',
+      );
+      expect(
+        gestureHintsLine(introducing: 0, total: 3),
+        'No gesture introduces itself',
+      );
     });
   });
 

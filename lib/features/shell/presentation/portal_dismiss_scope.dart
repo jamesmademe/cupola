@@ -16,7 +16,7 @@ import 'package:flutter/widgets.dart';
 /// standing on without knowing what that layer is or owning a reference to it.
 ///
 /// A callback rather than the controller itself, deliberately. The matrix is a
-/// `/services` widget that the Portal happens to reuse as its floor; handing it
+/// Dashboard widget that the Portal happens to reuse as its floor; handing it
 /// `ServicePortalController` would make the dashboard's own instrument depend
 /// on the shell's animation machine, and would close an import cycle between
 /// the two features besides.
@@ -32,7 +32,7 @@ class PortalDismissScope extends InheritedWidget {
 
   /// The dismisser above [context], or null when this widget is not on a
   /// dismissable layer — which is the ordinary case: the same matrix renders on
-  /// the `/services` dashboard, where there is nothing to close.
+  /// the Dashboard, where there is nothing to close.
   static VoidCallback? maybeOf(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<PortalDismissScope>()
       ?.onDismiss;

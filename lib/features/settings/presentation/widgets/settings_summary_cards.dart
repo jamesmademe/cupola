@@ -414,23 +414,36 @@ class _HintsSummaryCard extends ConsumerWidget {
     // (long-press to select is its own decision), and printing 5 would be the
     // summary inventing features the app does not have.
     final enabled = ref.watch(portalHintsProvider.select((s) => s.enabled));
-    const total = 1;
-    final introducing = enabled ? 1 : 0;
 
     return _SummaryCard(
       label: 'Hints',
       children: [
         SettingsCard.grouped(
           leading: const Icon(Icons.tips_and_updates_outlined),
-          title: introducing == total
-              ? '$total of $total gestures introduces itself'
-              : 'No gesture introduces itself',
+          title: gestureHintsLine(introducing: enabled ? 1 : 0, total: 1),
           semanticHint: 'opens the gesture hint switches',
           onTap: () => context.push('/settings/hints'),
         ),
       ],
     );
   }
+}
+
+/// `1 gesture introduces itself` · `2 of 3 gestures introduce themselves`.
+///
+/// A count and a verb, and the verb agrees with the count rather than with the
+/// noun after "of": the line used to read "1 of 1 gestures introduces itself",
+/// which is wrong at every count. All of them is said as all of them, and none
+/// as none.
+String gestureHintsLine({required int introducing, required int total}) {
+  if (introducing <= 0) return 'No gesture introduces itself';
+  final verb = introducing == 1 ? 'introduces itself' : 'introduce themselves';
+  if (introducing >= total) {
+    return total == 1
+        ? '1 gesture introduces itself'
+        : 'All $total gestures introduce themselves';
+  }
+  return '$introducing of $total gestures $verb';
 }
 
 /// A card: its eyebrow, an optional command of its own, and its rows.

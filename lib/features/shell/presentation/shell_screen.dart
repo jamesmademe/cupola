@@ -208,7 +208,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // TWO inputs, not one, and the second is the whole of this hook's
     // multi-instance story. The path is the obvious one. The other is the
     // LENS: a picker cell travelling from Radarr · 4K to Radarr · HD calls
-    // `go('/services/radarr')` both times, so `uri.path` is byte-identical
+    // `go('/dashboard/radarr')` both times, so `uri.path` is byte-identical
     // across a travel that changes every pixel under the card. Watched here
     // rather than solved at the cell, because this is already the one place
     // that decides the Portal closes because its content moved, and the badge
@@ -216,7 +216,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     //
     // The path comparison stays on the FULL path — never weaken it to the
     // service's routeParam. A hook keyed on the service alone would hold the
-    // Portal open across `/services/radarr` → `/services/radarr/movie/12`.
+    // Portal open across `/dashboard/radarr` → `/dashboard/radarr/movie/12`.
     //
     // And this hook is only half the story: it is REACTIVE, and closing on an
     // ACTION lives elsewhere. A picker cell closes the Portal itself, through

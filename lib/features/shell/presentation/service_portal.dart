@@ -1,5 +1,5 @@
 /// The Portal: drag the nav bar upward and the current screen recedes into a
-/// card, revealing the real Services matrix underneath — tap a card to travel.
+/// card, revealing the real service matrix underneath — tap a card to travel.
 ///
 /// ## The gesture, end to end
 ///
@@ -123,7 +123,13 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   final AnimationController portal;
 
   /// Freezes the receding screen to a texture so the scrub costs the same on
-  /// every page. Cleared whenever the content under the card changes.
+  /// every page.
+  ///
+  /// Taken on the first frame the Portal leaves 0 and dropped when it is back
+  /// at exactly 0 ([_onPortalTick]); nothing takes it again while the Portal is
+  /// up. A route or lens change under the card does not clear it — on purpose,
+  /// see [handleRouteChanged] — so a closing card still shows the page it
+  /// lifted.
   final SnapshotController snapshot = SnapshotController();
 
   final AnimationController _barSpring;
@@ -340,7 +346,7 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
       curve: Curves.easeOutCubic,
     );
     await Future<void>.delayed(const Duration(milliseconds: 140));
-    if (_engaged || _closing) return; // il dito è arrivato davvero
+    if (_engaged || _closing) return; // a real finger arrived mid-demo
     _runBarAnim(PortalPhysics.barSpringBack, Curves.elasticOut);
     _springTo(0, 0);
   }
