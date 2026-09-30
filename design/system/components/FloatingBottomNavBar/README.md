@@ -31,11 +31,11 @@ At `AppBreakpoints.touchRail` (840) and wider on a touch device, a `NavigationRa
 
 ## The consumer provides
 
-`selectedIndex`, `onDestinationSelected`, the `FloatingNavDestination`s (icon, selected icon, label, badge count and its spoken sentence — no colour: a destination has none), and optionally the vertical drag delegate.
+`selectedIndex`, `onDestinationSelected`, the `FloatingNavDestination`s (icon, selected icon, label, badge count and its spoken sentence, and any custom semantics actions — no colour: a destination has none), and optionally the vertical drag delegate.
 
 ## Semantics
 
-One node per item: button, selected state, and the label *Dashboard*, a new line, *Tab 1 of 4*. A badge joins the label as a sentence (*Activity, 3 finished searches to look at*); the painted count is excluded.
+One node per item: button, selected state, and the label *Dashboard*, a new line, *Tab 1 of 4*. A badge joins the label as a sentence (*Activity, 3 finished searches to look at*); the painted count is excluded. A destination's custom semantics actions ride on its node: the phone shell gives the Dashboard tab *Open the Portal*, the reader's way to the switcher the drag opens. The rails carry none.
 
 ## Do / don't
 

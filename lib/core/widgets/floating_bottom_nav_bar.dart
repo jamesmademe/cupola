@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_elevation.dart';
@@ -36,6 +37,14 @@ class FloatingNavDestination {
   /// to a screen reader.
   final String? badgeSemanticLabel;
 
+  /// Actions a screen reader offers on this destination beside activating it.
+  ///
+  /// The accessible door to something the bar otherwise reaches only by a
+  /// gesture — the shell hangs the Portal here, since a drag is exactly what a
+  /// screen reader cannot perform. Null for none. Only the bar reads it: the
+  /// rails have no gesture to stand in for.
+  final Map<CustomSemanticsAction, VoidCallback>? customSemanticsActions;
+
   const FloatingNavDestination({
     required this.icon,
     required this.selectedIcon,
@@ -43,6 +52,7 @@ class FloatingNavDestination {
     required this.label,
     this.badgeCount = 0,
     this.badgeSemanticLabel,
+    this.customSemanticsActions,
   });
 
   /// What the badge prints: the count, or `9+` past nine.
@@ -859,6 +869,7 @@ class _NavBarItem extends StatelessWidget {
       selected: isSelected,
       enabled: true,
       onTap: onTap,
+      customSemanticsActions: destination.customSemanticsActions,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,

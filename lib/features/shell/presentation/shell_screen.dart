@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,7 @@ import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_shell.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
+import 'package:cupola/features/shell/presentation/portal_announcement.dart';
 import 'package:cupola/features/shell/presentation/portal_coach_mark.dart';
 import 'package:cupola/features/shell/presentation/service_portal.dart';
 
@@ -37,6 +39,12 @@ class ShellScreen extends ConsumerStatefulWidget {
   final StatefulNavigationShell navigationShell;
 
   const ShellScreen({super.key, required this.navigationShell});
+
+  /// The tab bar's accessibility action that opens the Portal. Worded as the
+  /// coach mark words the gesture: *Swipe up to open the Portal*.
+  static const openPortalAction = CustomSemanticsAction(
+    label: 'Open the Portal',
+  );
 
   /// Width at or above which a *touch* shell moves its navigation from the
   /// bottom bar to a side rail. See [AppBreakpoints.touchRail] for the number
@@ -74,11 +82,23 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   void initState() {
     super.initState();
     _portal = ServicePortalController(vsync: this);
-    // Using the Portal is the proof the coach mark is no longer needed.
-    _portal.onOpened = () =>
-        ref.read(portalHintsProvider.notifier).notePortalUsed();
+    _portal.onOpened = _onPortalOpened;
     _portal.covering.addListener(_reportBackOwnership);
     WidgetsBinding.instance.addPostFrameCallback((_) => _armDemoBounce());
+  }
+
+  /// The Portal has committed to opening, by a finger or by the tab bar's
+  /// action.
+  void _onPortalOpened() {
+    // Using the Portal is the proof the coach mark is no longer needed.
+    ref.read(portalHintsProvider.notifier).notePortalUsed();
+    // One sentence, once, for whoever cannot see the floor arrive. At the
+    // commit rather than when the spring settles: the reader should hear what
+    // opened while it opens, and a settle can be cut short by a close.
+    announce(
+      context,
+      portalOpenedAnnouncement(ref.read(portalFloorCensusProvider)),
+    );
   }
 
   /// Back, while the Portal is up, means "put the page back" — never "leave
@@ -310,7 +330,12 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                     selectedIndex: selectedIndex,
                     onDestinationSelected: (int idx) =>
                         _onItemTapped(idx, context, selectedIndex),
-                    destinations: destinations,
+                    destinations: [
+                      for (final (index, destination) in destinations.indexed)
+                        NavTab.values[index] == NavTab.dashboard
+                            ? _withPortalAction(destination)
+                            : destination,
+                    ],
                     verticalDragDelegate: accessibleNav ? null : _portal,
                   ),
                 ),
@@ -383,6 +408,28 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // feedback. `goBranch`, not `go`: it restores the branch's own stack, which
     // is the entire point of the four navigators.
     widget.navigationShell.goBranch(index);
+  }
+
+  /// The screen reader's way into the Portal: an action on the Dashboard tab.
+  ///
+  /// A reader cannot perform the drag, so the bar offers the same way in as a
+  /// custom action — *Actions available: Open the Portal*. On the Dashboard tab
+  /// because that is where the services are: every room is inside it, so it is
+  /// also the tab that is selected whenever a service is on screen. Offered in
+  /// every mode the phone bar is in, not only under a screen reader: Voice
+  /// Control and Switch Access list custom actions too, and cannot drag either.
+  FloatingNavDestination _withPortalAction(FloatingNavDestination destination) {
+    return FloatingNavDestination(
+      icon: destination.icon,
+      selectedIcon: destination.selectedIcon,
+      railIcon: destination.railIcon,
+      label: destination.label,
+      badgeCount: destination.badgeCount,
+      badgeSemanticLabel: destination.badgeSemanticLabel,
+      customSemanticsActions: {
+        ShellScreen.openPortalAction: _portal.openFromUi,
+      },
+    );
   }
 
   FloatingNavDestination _destinationFor(NavTab tab, int searchesWaiting) {

@@ -93,6 +93,7 @@ import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/presentation/portal_dismiss_scope.dart';
 
 /// Reachability of one service, as the matrix paints it.
@@ -215,9 +216,7 @@ class ServiceMatrix extends ConsumerWidget {
           // client resolves through the lens, so a picker cell always reaches
           // the connection it names.
           else
-            for (final instance in settings.instancesOf(service))
-              if (instance.isConfigured)
-                (service: service, instanceId: instance.id),
+            ...pickerSubjectsOf(settings, service),
       ];
       if (subjects.isEmpty) continue;
 
@@ -366,7 +365,7 @@ class _DomainBand extends ConsumerWidget {
 
       final folded = ref.watch(foldedServiceHealthProvider(service));
       final summary = ref.watch(serviceSummaryProvider(service));
-      final reachability = _reachabilityOf(summary);
+      final reachability = serviceReachabilityOf(summary);
 
       if (folded.total > 1 &&
           folded.offline > 0 &&
@@ -469,7 +468,26 @@ class _DomainBand extends ConsumerWidget {
   }
 }
 
-ServiceReachability _reachabilityOf(AsyncValue<ServiceSummary> summary) =>
+/// The picker's cells for [service]: one per configured connection, in the
+/// user's order.
+///
+/// Public because the floor is not the only thing that has to count them: the
+/// Portal says how many services its floor holds when it opens, and a count
+/// taken any other way is a count that can disagree with the cells under the
+/// reader's finger.
+Iterable<InstanceRef> pickerSubjectsOf(
+  SettingsModel settings,
+  ServiceKey service,
+) => [
+  for (final instance in settings.configuredInstancesOf(service))
+    (service: service, instanceId: instance.id),
+];
+
+/// Reachability as the matrix paints it, from one summary.
+///
+/// Public for the reason [pickerSubjectsOf] is: whatever speaks about the
+/// floor's cells has to read their state the way the cells do.
+ServiceReachability serviceReachabilityOf(AsyncValue<ServiceSummary> summary) =>
     switch (summary) {
       AsyncData(:final value) =>
         value.isOnline
@@ -596,7 +614,7 @@ class ServiceMatrixCell extends ConsumerWidget {
         ? null
         : settings.instanceById(instanceId);
 
-    final reachability = _reachabilityOf(summary);
+    final reachability = serviceReachabilityOf(summary);
 
     // Folded across every connection of this service. With one it says exactly
     // what `summary` already said; with more it is the only thing that can

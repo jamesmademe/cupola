@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -21,6 +22,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/presentation/branch_transition.dart';
+import 'package:cupola/features/shell/presentation/portal_announcement.dart';
 import 'package:cupola/features/shell/presentation/service_portal.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
 
@@ -728,6 +730,121 @@ void main() {
     });
   });
 
+  // A screen reader cannot drag, so the drag is off under one and the tab bar
+  // carries the Portal as an action instead. Opening it — either way — says
+  // once what the floor holds.
+  group('the Portal without the gesture', () {
+    testWidgets('the Dashboard tab carries an action that opens it', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final announcements = SemanticsAnnouncementRecorder.install(tester);
+      // The reader is running, which is what takes the drag away.
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(
+            accessibleNavigation: true,
+            supportsAnnounce: true,
+          );
+      final harness = await _pumpShell(
+        tester,
+        initialLocation: '/dashboard/radarr/movie/42',
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+      // The Dashboard, where the app opens, has already asked every
+      // connection. Without that the sentence says what is true at that
+      // moment — "2 checking" — which the sentence's own test covers.
+      harness.container.listen(portalFloorCensusProvider, (_, _) {});
+      await tester.pumpAndSettle();
+
+      final dashboardTab = find.semantics.byLabel(RegExp(r'^Dashboard\n'));
+      expect(
+        tester.getSemantics(_navItem('Dashboard')),
+        containsSemantics(customActions: const [ShellScreen.openPortalAction]),
+      );
+      expect(
+        find.semantics.byPredicate(_offersPortal),
+        findsOne,
+        reason: 'one tab carries it, not four',
+      );
+
+      tester.semantics.customAction(dashboardTab, ShellScreen.openPortalAction);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ServiceMatrix), findsOneWidget);
+      expect(announcements.messages, [
+        'Portal open. 2 services, none with a fault.',
+      ]);
+
+      // The card is a picture of the page, and inert: the reader cannot walk
+      // into it. The floor's own way back is named instead.
+      expect(find.semantics.byLabel('MovieDetailPage'), findsNothing);
+      final close = find.semantics.byLabel('Close the Portal');
+      expect(close, findsOne);
+
+      // A second activation while open neither restarts it nor speaks again.
+      tester.semantics.customAction(dashboardTab, ShellScreen.openPortalAction);
+      await tester.pumpAndSettle();
+      expect(announcements.messages, hasLength(1));
+
+      tester.semantics.tap(close);
+      await tester.pumpAndSettle();
+      expect(find.byType(ServiceMatrix), findsNothing);
+      expect(find.semantics.byLabel('MovieDetailPage'), findsOne);
+      semantics.dispose();
+    });
+
+    testWidgets('a fault on the floor is counted in the sentence', (
+      tester,
+    ) async {
+      final announcements = SemanticsAnnouncementRecorder.install(tester);
+      await _pumpShell(
+        tester,
+        // The HD connection did not answer: the red pip on its cell.
+        overrides: await _lensOverrides(silent: {'radarr-hd11111'}),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+
+      await _openPortal(tester);
+
+      expect(announcements.messages, [
+        'Portal open. 2 services, 1 with a fault.',
+      ]);
+    });
+
+    testWidgets('opening by the finger announces once too', (tester) async {
+      final announcements = SemanticsAnnouncementRecorder.install(tester);
+      await _pumpShell(
+        tester,
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+
+      await _openPortal(tester);
+
+      expect(announcements.messages, [
+        'Portal open. 2 services, none with a fault.',
+      ]);
+    });
+
+    testWidgets('the rail offers no Portal to open', (tester) async {
+      // No Portal is drawn beside a rail, so there is nothing to promise.
+      final semantics = tester.ensureSemantics();
+      await _pumpShell(
+        tester,
+        overrides: await _lensOverrides(),
+        viewport: _railViewport,
+      );
+
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.semantics.byPredicate(_offersPortal), findsNothing);
+      semantics.dispose();
+    });
+  });
+
   // The single-animation half of the story above, asked of the machine rather
   // than of the tree: the tree only shows that it ended closed.
   group('ServicePortalController', () {
@@ -783,8 +900,9 @@ const _lensInstances = [
 ];
 
 /// Enough of a world for the Portal's floor to build: two connections, and a
-/// health answer for each so no cell reaches for a socket.
-Future<List<Override>> _lensOverrides() async {
+/// health answer for each so no cell reaches for a socket. The ids in [silent]
+/// answer that they did not answer.
+Future<List<Override>> _lensOverrides({Set<String> silent = const {}}) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   return [
@@ -800,7 +918,9 @@ Future<List<Override>> _lensOverrides() async {
       )).overrideWith(
         (ref) async => ServiceSummary(
           service: instance.service,
-          status: ServiceSummaryStatus.online,
+          status: silent.contains(instance.id)
+              ? ServiceSummaryStatus.offline
+              : ServiceSummaryStatus.online,
           host: 'somewhere',
           version: '5.0',
         ),
@@ -820,6 +940,13 @@ Future<void> _openPortal(WidgetTester tester) async {
   );
   await tester.pumpAndSettle();
 }
+
+/// Whether [node] offers the tab bar's way into the Portal.
+bool _offersPortal(SemanticsNode node) =>
+    node.getSemanticsData().customSemanticsActionIds?.contains(
+      CustomSemanticsAction.getIdentifier(ShellScreen.openPortalAction),
+    ) ??
+    false;
 
 /// The Android back button, sent down the channel the platform uses.
 Future<void> _systemBack(WidgetTester tester) async {

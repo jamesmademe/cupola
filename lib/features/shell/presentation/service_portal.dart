@@ -147,9 +147,10 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   /// Set by [PortalStage] each layout; the geometry has no other input.
   double screenHeight = 800;
 
-  /// Fired when a gesture actually commits the Portal open. The shell uses it
-  /// to reset the coach mark's need-counter — using the Portal is the proof
-  /// the hint is no longer needed.
+  /// Fired when the Portal commits to opening: a release past the safe zone,
+  /// or [openFromUi]. The shell uses it to reset the coach mark's need-counter —
+  /// using the Portal is the proof the hint is no longer needed — and to say,
+  /// once, what the floor holds.
   VoidCallback? onOpened;
 
   /// Whether the Portal is over the page under it.
@@ -345,6 +346,22 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   }
 
   // ------------------------------------------------------------------- APIs
+
+  /// Open without a finger: the tab bar's accessibility action.
+  ///
+  /// The same commit a release past the safe zone makes — [onOpened], then the
+  /// release spring from rest — with no haptic, because there was no gesture
+  /// for it to confirm. A no-op while the finger owns the Portal and while it is
+  /// already open or opening, so a second activation cannot restart the spring.
+  void openFromUi() {
+    if (_engaged || _closing || _springTarget == 1) return;
+    _blend.stop();
+    if (_lift.value != 0) {
+      _runBarAnim(PortalPhysics.barSpringBack, Curves.elasticOut);
+    }
+    onOpened?.call();
+    _springTo(1, 0);
+  }
 
   /// Close from any UI affordance: tab tap, tap on the receded card, floor
   /// pull-down, a picker cell being chosen. Safe to call when already closed,
@@ -558,10 +575,21 @@ class _PortalFloor extends StatelessWidget {
                   // shows through — is a real child, not padding: a tap there
                   // goes back, a drag there scrolls. (The scrollable is opaque
                   // to hits, so the card's own tap can't be reached anymore.)
-                  GestureDetector(
-                    behavior: HitTestBehavior.translucent,
+                  //
+                  // Named for a screen reader, which reaches it first: it is
+                  // the one way back that is on the floor itself, and on iOS
+                  // there is no back button to reach for instead.
+                  Semantics(
+                    container: true,
+                    button: true,
+                    label: 'Close the Portal',
                     onTap: controller.closeFromUi,
-                    child: SizedBox(height: spacerHeight),
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: controller.closeFromUi,
+                      excludeFromSemantics: true,
+                      child: SizedBox(height: spacerHeight),
+                    ),
                   ),
                   // The matrix rides its own panel: a soft-fading top edge
                   // and a near-opaque surface fill that scroll WITH the
@@ -663,6 +691,9 @@ class _PortalCard extends StatelessWidget {
           ..scaleByDouble(scale, scale, 1, 1),
         child: GestureDetector(
           onTap: t > 0.9 ? controller.closeFromUi : null,
+          // The floor's spacer is the reader's close, named; a second,
+          // nameless tap target on the card would be a stop that says nothing.
+          excludeFromSemantics: true,
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(radius),
@@ -674,7 +705,14 @@ class _PortalCard extends StatelessWidget {
               child: SnapshotWidget(
                 controller: controller.snapshot,
                 mode: SnapshotMode.permissive,
-                child: AbsorbPointer(absorbing: t > 0, child: child),
+                // Inert to the reader as it is to the finger. The card is a
+                // frozen picture of the page, and a screen reader walking into
+                // it would read a page it cannot act on — and, once a cell has
+                // been chosen, the new route mounting unseen beneath it.
+                child: ExcludeSemantics(
+                  excluding: t > 0,
+                  child: AbsorbPointer(absorbing: t > 0, child: child),
+                ),
               ),
             ),
           ),
