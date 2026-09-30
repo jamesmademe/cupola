@@ -1,136 +1,298 @@
-**The Lit Control Room.** Cupola is a dark operator's console for a self-hosted media stack and its infrastructure — seventeen services, one native client, five platforms. The room stays quiet and near-black; the service being operated supplies the light. Radarr brings amber, Sonarr violet, TrueNAS utility blue. That tint is orientation, not decoration: it says where you are before you read a title.
+**The room takes its light from the title.** Cupola is a native client for a self-hosted media stack and the machines under it — seventeen services, five platforms. The artwork of whatever leads a screen lights the room behind it, the way a television's ambient light spills onto the wall; everything else is quiet. The interface itself is monochrome: colour reaches it from two sources only, **the content** (as light) and **the state of things** (as five tones). Never from decoration, never from a service's brand.
 
-Calm at rest, tactile on touch, honest when something breaks. The product is a Flutter app; these rules, the tokens and the pictures its own widgets render (the design catalog) are its specification, and every value here is the one the code ships. The values themselves live in `design/tokens/` and are generated into the app and into `tokens.json` — edit them there, never here.
+Calm at rest, tactile on touch, honest when something breaks. These rules, the tokens and the pictures the app's own widgets render (the design catalog) are the specification, and every value quoted here is the one the code ships. The values live in `design/tokens/` and are generated into the app and into `tokens.json` — edit them there, never here. Where the code does not yet do what the direction asks, the line says **Today** and **Direction** plainly.
 
-## Content fundamentals
+## Principles
 
-- **English only, on purpose.** No localisation layer; copy is written once, in plain English.
-- **Sentence case everywhere** — section headers, buttons, tabs, empty-state titles: `Needs attention`, `Pool health`, `No results found`, `Not set up`. Uppercase appears only in the `eyebrow` style (`QUEUE`, `MISSING`, `NOT ANSWERING`), set by transforming the text.
-- **Name the service, not the mechanism.** `Open in qBittorrent`; *Sonarr lists nothing under Specials yet.* A cross-service control whose target is not configured stays tappable and names the service in its hint.
-- **The lexicon is fixed.** `Answering` / `Not set up` / `Retry` / relative ages as `2 h ago`. A stack line counts itself in: `13 of 16 answering · 3 unreachable`.
-- **Facts are joined with a middot** and hair spaces: `Cupola 1.0.0 · Apache-2.0`, `Last known · 12 min ago`.
-- **A figure nobody could read is an em dash, never `0`.** `0` asserts the queue is empty; `—` says the source did not answer. Never count inside a capped or paged response and state it as a total.
-- **No emoji, no exclamation marks, no marketing voice.** A fault is a whole sentence and a verb: *TrueNAS did not answer. Everything below is what it said last.* — `Retry`. An empty state says what is true and, if useful, what to try: *No results found — Try a different title or spelling.*
-- **Promise only what works.** Better to delete a control than ship one that fails.
+In order of precedence: when two collide, the higher one wins.
+
+1. **An answer before a list.** Every top-level screen answers its question in the first 390×600 pt.
+2. **Content before mechanism.** Titles and artwork lead; the service name is metadata.
+3. **Colour is information.** Light means content, a tone means state, and nothing else is coloured. A switch that is on is not green, a watched episode is not green, a service mark in a list is monochrome.
+4. **Every fault carries its remedy**, grouped (`18 need a manual import · Review`) and within thumb reach.
+5. **One primary action per screen**, chosen by the state and by who is looking.
+6. **Promise only what works.** A figure without a source is `—`; a background check says when it ran (`Checked 2 h ago`), because the OS decides when that is. Better to delete a control than ship one that fails.
+7. **One authored moment per screen**, not an entrance on everything. Every animation has its Reduce Motion answer.
+
+## Words
+
+**Plain, warm, short.** Say what happened in the words of the person reading; the service's own term waits under *Why?*. People, then things. One line per fact: a count and a verb beat a paragraph.
+
+- **English only, on purpose.** No localisation layer; copy is written once.
+- **Sentence case everywhere** — headers, buttons, tabs, empty states. There is no uppercase voice: `label.eyebrow` survives only for the sites that still use it; do not add one.
+- **A verb on every button**, and the verb says what will happen: `Try another download`, `Remove and delete files`, `Scrub tank`.
+- **Name the service, not the mechanism**: `Open in qBittorrent`, *Sonarr lists nothing under Specials yet.*
+- **No emoji, no exclamation marks, no apology, no marketing voice.** An empty state says what is true and, if useful, what to try.
+
+### The lexicon
+
+One word per state, the same on every screen. The tone follows the tone rule below; a word with no tone carries no state.
+
+| Word | Tone | Means |
+|---|---|---|
+| `Answering` | green | The service replied to the last check. |
+| `Did not answer` | red | Nothing replied at its address. **The only red words**, never contracted; say who and since when: `Radarr did not answer since 20:41`. |
+| `Not set up` · `Set up Plex` | — | No address or key yet. The control stays tappable and names the service. |
+| `Retry` | — | Send the same request again. `Run again` is a different action: it re-runs a scheduled task. |
+| `Radarr answered but refused the key` | amber | An answer that says no. A fault, with its remedy (`Paste the key again`). |
+| `—` | — | The source did not answer. A figure never reads `0` because a request failed. |
+| `Needs you` | amber | The group of faults and approvals waiting for the operator: `3 faults · 2 requests`. |
+| `Stuck` | amber | Nothing has arrived for a while: `Big Buck Bunny is stuck at 47 %` · `nothing for 3 h`. |
+| `Failed` | amber | It ended and cannot finish by itself. |
+| `Stopped` | neutral | Someone stopped it on purpose. Not a fault, never "stuck". |
+| `Missing` · `Wanted` · `Cutoff unmet` · `Not aired` · `Not out yet` | neutral | The backlog: released and not on disk, still looked for, below its profile, not yet out. |
+| `Waiting for approval` | blue | A request nobody has approved yet. |
+| `Coming up` | — | The next dated things. Films carry a date only; episodes a date and a time. |
+| `Checked 2 h ago` · `Since you opened this` · `As of 20:53` | — | When a background check ran; a history that starts when the screen opened; a widget's snapshot. |
+| `Home only` | neutral | Away, with no away address: nothing was asked. |
+| `Config loaded` · `Spun down` | — / neutral | Nginx Proxy Manager has the host's configuration (it cannot see the service behind it); an Unraid disk asleep, which has no temperature. |
+
+**A stuck download's remedies**, each for its own cause: `Try another download` (it can never finish: the arr drops this one, won't pick it again, and looks for another) · `Look for peers again` (someone has the whole file but nobody is reachable) · `Keep waiting` (hides the fault for 24 hours; it comes back if nothing has moved) · `Remove download` (stops it and deletes what arrived, behind a neutral confirmation; the title stays wanted).
+
+**Never:** `Pending` · `Offline` · `Online` · `Connected` · `Unreachable` · `not answering` · `did not respond` · `Down` · `Not configured` · `Connect Seerr` · `Try again` · `Paused` · `Live` · `Instantly` · `Please wait` · `Oops` · `Sorry` · `Error 401` · `Reannounce` · `Blocklist and search` · `Snooze` · a bare `Delete` · `0` for a source that did not answer · `0 °C` for a sleeping disk. A word from this list that still appears in the app is a defect to replace, not a precedent.
+
+### Formats
+
+Dates `Tue 29 Sep` (a year only when it is another year) · times 24 h, `21:00` · ages `12 min ago`, `2 h ago` · estimates `ready around 21:10`, `about 9 h left` · sizes one decimal in decimal units, `1.2 GB`, `31.2 of 43.6 TB` · speeds `4.2 MB/s`, `↓ 22.4 MB/s ↑ 1.1 MB/s` · percent with a space, `62 %` · counts with a comma and "of" for a part, `1,240 albums`, `12 of 12 answering` · ranges with an en dash and no spaces, `S2 E6–E10` · episodes `S2 E3` · ratings each by its source, never averaged, `TMDB 6.6 · IMDb 6.7` · facts joined by a middle dot between spaces, `Cupola 1.0.0 · Apache-2.0` · a path with an arrow, `Radarr → qBittorrent` · machine strings exactly as returned, in mono. Between a number and its unit goes a no-break space, so `62 %` never splits.
+
+### The requester
+
+A requester has a Seerr account and nothing else. Their screens say what will happen to a request, never how: `Waiting for approval` · `Downloading 62 % · ready around 21:10` · `On its way` (Seerr cannot see the download) · `Finishing on the server` · `Ready to watch` · `On the server since 12 Sep`. They never read a service name (Jellyfin and Plex excepted — they watch in them), a fault, or a figure they cannot act on; when the server does not answer they get one line with its time and `Retry`. **Today** there is no requester mode; **Direction:** it arrives with its own tab bar.
 
 ## Colour
 
-A near-black stage with one saturated light source. Dark is the primary theme; light is a complete parallel palette, not an inversion. Both are fixed constants — platform Dynamic Color is never harmonised in (**The Fixed Palette Rule**).
+A near-black room, lit from the content. Dark is the primary theme; light is **the day room**, a complete parallel palette rather than an inversion. Both are fixed: platform Dynamic Color is never harmonised in (**The Fixed Palette Rule**).
 
-**The surface ladder.** Six steps, each a distinct tone: `surface` (Room Floor) → `surface-container-lowest` (Sub-floor, recessed wells) → `surface-container-low` (Riser) → `surface-container` (Panel: cards, sheets, dialogs) → `surface-container-high` (Raised Panel) → `surface-container-highest` (Instrument Face: inputs, chips). Text is `on-surface`, then `on-surface-variant`, then `dim-text` — three steps, never more. Borders use `outline` and are scarce.
+**The room.** `CupolaRoom.of(context)` carries the room as drawn (translucent lines, fills and inks); the colour scheme carries the same values flattened on the ground, so a contrast can be measured against any surface.
 
-**The tone rule — five arms, a closed set.**
-
-| Tone | Token | Means | Never means |
+| `color.room.*` | Dark | Day | What it is |
 |---|---|---|---|
-| Green | `success` | available, complete | — |
-| Amber | `warning` | a **fault**: failing, stalled, errored, stopped unexpectedly, expiring | missing, wanted, paused |
-| Red | `error` | **unreachable**, and nothing else | failed download, missing file, a rejected release, a destructive action |
-| Blue | `info` | queued, informational — including a request awaiting approval | — |
-| Neutral | `on-surface-variant` | the **backlog**: missing, wanted, cutoff unmet, not aired, deliberately paused, deleted | — |
+| `ground` | `#0A0A0D` | paper `#F6F4EF` | The floor (`surface`). Nothing sits under it. |
+| `slab` | `#121218` | `#FFFFFF` | A section, a card, grouped rows (`surface-container`), always with its `line.hair` edge; on paper also a soft lift. |
+| `raised` | `#17171D` | `#FFFFFF` | Sheets and dialogs (`surface-container-high` in the dark). |
+| `door` | `#16161C` | `#FFFFFF` | Discover's doors and tiles: a place you walk into. |
+| `enamel` | `#1A1A1F` | `#FFFFFF` | Floating bars only (tab bar, rail, compact bar, selection bar), at `opacity.glass-surface` 0.95. |
+| `menu` | `#1D1D24` | `#FFFFFF` | Popovers. The day room lifts menus by shadow, not by tone. |
+| `toast` | `#202028` | `#16151A` | The toast (`inverse-surface`); in the day room the ink reversed. |
+| `scrim` | ground at 70 % | ink at 40 % | Behind a sheet or dialog. |
 
-**A destructive action is never red.** There used to be an exception — "red on an action means irreversible" — and the app ended up with both styles at once. It is gone. A delete, a stop, a reset is a neutral control whose verb says exactly what will happen (*Delete job*, *Take down*, *Remove and delete files*); if it cannot be undone, one neutral sentence says so (*This cannot be undone.*). No red fill, no red glyph, no red warning banner — on the confirmation or on the button that opens it. A destructive row may still sit apart (below a divider, last) and carry a firmer haptic; it never changes colour. `test/core/theme/neutral_destructive_test.dart` holds this: no button style or dialog in `lib/` names the error colour, no delete control is red, and every confirm label is a verb with its object.
+**Ink** is four steps and never more: `ink.primary` (`#F7F6F2` · `#16151A`) for text and the ink button; `ink.secondary` (white 72 % · ink 70 %; flat `on-surface-variant`); `ink.tertiary` (white 60 % · ink 65 %; flat `dim-text`), which still clears 4.5:1 on a slab and 5.4:1 on paper; `ink.disabled` (38 %) for disabled controls only. `ink.on-ink` is the label on the ink button and on any bright fill. Tertiary text in code is `CupolaThemeColors.of(context).dimText`, never `AppColors.onSurfaceDimDark`, which is the dark value in both themes.
 
-Painting the backlog amber is the commonest way this breaks: in a media stack a list of things to fetch is the resting state, not damage. Something stopped on purpose is neutral; only an unexpected exit is amber. Every status also carries a word or icon — colour is never the only channel.
+**Lines and fills.** `line.hair` (white 7 % · black 6 %) is a slab's edge and a divider; `line.edge` (10 %) a control's edge and a field at rest; `line.focus` (the secondary ink) the focus ring and a focused field. `fill.quiet` (6 % · 5 %) under chips at rest, fields and the segmented track; `fill.control` (8 %) under ghost and icon buttons; `fill.strong` (12 %) the selected tab pill and a switch track at rest; `fill.track` (12 %) a progress track. **The interactive colour is the ink**: `primary` is `ink.primary` in both rooms, so a selected chip, a selected segment and the ink button are ink fills with `on-ink` labels.
 
-**Fill byte vs. ink.** `success`, `warning`, `info` and `error` are *fill* values — dots, poster overlays, 10–16% washes. As text they go through `statusToneColor(scheme, tone, surface:, tintAlpha:)`, which walks the tone's lightness until it clears 4.6:1 on the ground it actually lands on. Raw `warning` on paper is ~1.4:1. Never paint a status token as text directly.
+### The five tones
 
-**Service accents** (`seerr` … `plex`) are identity, not health. Each is measured against every other accent and every status tone before adoption — `transmission` and `plex` were walked off their brand values to stay distinguishable at 8px.
+A closed set: nothing outside state borrows a tone (**The Closed Tone Rule**). Every status also carries a word or a glyph — colour is never the only channel.
 
-- **The Room Light Rule.** One service accent lights a screen. Only the three all-services objects — the Dashboard, the ⌘K deck and the ServiceRing — show every accent at once, confined to each service's own glyph, node or low-alpha wash.
-- **The Luminance Rule.** A label on an opaque accent takes `ServiceTheme.foregroundOn(accent)` — white or `ink-on-bright`, whichever measures higher (white on `radarr` is 2.15:1). An accent label on its own tint takes `ServiceTheme.onTint(accent, surface:, tintAlpha:)`, resolved against the surface the chip sits on (usually `surface-container-high`), in **both** themes.
-- **The Contained Fill Rule.** A fill that carries words walks until white or ink clears 4.5:1; for the brand that means `primary-container`, not raw `primary`.
-- **The Bounded Light Rule.** The ambient radial wash is at the ceiling contrast allows, so it cannot say which room you are in. On desktop the service header — the tab row that names the service — does: the current accent at 12% across the band and a bloom rising to 30% in its lower 11px, below the text; the selected tab's own accent rule is the edge, so there is no second accent line. The deck above it is a fleet-wide readout and wears no service colour.
-- **Plates** (`plate-*`) stand in for artwork and are dark in both themes — a missing poster is not a white hole on paper.
-- **Navigation accents** (`nav-activity`, `nav-search`, `nav-settings`) belong to app sections. They stay out of the status hues so permanent chrome never reads as a health signal.
+| Tone | Dark | Day | Means | Never means |
+|---|---|---|---|---|
+| **Green** `tone.green` | `#5FE39A`, dot `#34D17F` | `#0F7A45` | available, complete, healthy | on, selected, watched |
+| **Amber** `tone.amber` | `#F7C23A` | `#8F5E00` | a **fault**: failing, stuck, errored, stopped unexpectedly, expiring, answered but refused | the backlog, anything stopped on purpose |
+| **Red** `tone.red` | `#FF8A7A`, dot `#FF6B5B` | `#B8322A` | **did not answer — unreachable, and nothing else** | a failed download, a missing file, a rejected release, a refused key, a destructive action |
+| **Blue** `tone.blue` | `#9DB8FF` | `#2F5BD3` | queued, in progress, informational, waiting on someone | — |
+| **Neutral** `tone.neutral` | white 72 %, hollow dot | ink 65 % | the **backlog**: missing, wanted, cutoff unmet, not aired, not out yet, deliberately stopped, deleted | — |
+
+- **Painting the backlog amber is the commonest way this breaks.** In a media stack a list of things to fetch is the resting state, not damage. Only an unexpected stop is amber.
+- **Green is quiet.** In a status line and on a poster mark the dot carries green and the words stay in secondary ink, because healthy is the normal condition. Blue, amber and red colour their words.
+- **Only amber has a fill, and only on the remedy of a fault**: `tone.amber-fill` under `tone.amber-ink` `#2A1E00` (day: `#F2B531`). A fault chip may sit on `tone.amber-wash` (12 % · 18 %). **Today** `AppErrorState` still sets its red glyph in an `error-container` well.
+- **A destructive action is never red.** A delete, a stop, a reset is a neutral control whose verb says exactly what will happen; if it cannot be undone, one neutral sentence says so (*This cannot be undone.*). No red fill, glyph or banner, on the confirmation or on the button that opens it. A destructive row may sit apart and carry a firmer haptic; it never changes colour. `test/core/theme/neutral_destructive_test.dart` holds this: no button style or dialog in `lib/` is built with red, no delete control is red, and every confirm label is a verb with its object.
+- **Fill byte versus ink.** The tone bytes are fills — dots, bars, washes — and a fill keeps its byte. As text, a tone goes through `statusToneColor(scheme, tone, surface:, tintAlpha:)`, which walks it until it clears 4.5:1 on the ground it actually lands on, wash included. The dark room's tones clear the bar untouched; only paper walks. Never paint `AppColors.success/warning/error/info` or a room tone as text directly. `test/core/theme_light_contrast_test.dart` measures every ink on every surface in both themes, keeps each fill on its own byte, and keeps the recovery ink off the red; `test/core/widgets/accent_ink_contrast_test.dart` measures the shared widgets against the composite they sit on.
+- **The Luminance Rule.** A label on an opaque fill takes `ServiceTheme.foregroundOn(fill)` — white or `ink-on-bright`, whichever measures higher. `test/core/theme_test.dart` holds every filled scheme pair to it, and holds tertiary and secondary text to AA in both rooms.
+
+### The title light
+
+**Direction.** The light is derived from the artwork, never picked: a 64 px decode, quantised (Celebi, 128 colours) and scored off the UI isolate, dropping clusters darker than HCT tone 18 or lighter than 92 (the black ground and the lettering). From its hue: the **light** is HCT chroma 16–48 at tone 68; the tinted **action fill** chroma 12–36 at tone 82, under an ink of chroma 4–16 at tone 12 (about 10:1 on every title); the day room's tinted primary chroma 16–48 at tone 40 under white (6.4:1 or better). A poster glows with its light at `elevation.poster.glow` (0.8 · day 0.35), the hero at `elevation.hero.glow` (0.48 · day 0.35). **A screen takes every colour from the one image that lights its room** — light, glow, bar sheen, tinted primary, chart hue — and never mixes two. The light behind text is capped (relative luminance 0.22 per texel), so secondary text on a lit header stays at 4.5:1 or better. Many dark posters derive a blue light: that is the catalogue, not a defect.
+
+**The lamp.** A room with no artwork — infrastructure, settings, a service's own room — and a title whose artwork has too little chroma are lit by the neutral lamp, `color.title-light.fallback` `#8A8A99`, as the ambient wash (`AppGradients.ambientBackground`, centre at `opacity.ambient-glow` 0.16 · day 0.10). The lamp never changes with state: a fault in a lamp room brings its own amber remedy.
+
+**Today** nothing is derived: every room, poster glow and hero glow is lit by the lamp (`AppElevation.poster` and `hero` take a `light:` that defaults to it), and the primary is the ink.
+
+### Service accents are data, not paint
+
+Each service keeps its accent in the registry (`ServiceKey.brandAccent`, `color.service.*`), and nothing in the interface paints it: not the nav bar, not a wash, not a button, not a mark. What a surface is handed for a service is `ServiceKey.accent`, which is the lamp for every service — a light where it lights, the room's ink where `ServiceTheme.onTint` is asked for a label — and `test/core/theme/monochrome_accent_test.dart` allows the brand colour to be read only where the colour is itself the information (a chart series). Seven of the seventeen brand colours sit within a few degrees of a tone — Radarr, SABnzbd, Plex and Unraid beside the fault amber, Transmission and Readarr beside red, NZBGet beside green — so a healthy service read as a fault. A service is recognised by the shape of its mark and by its name. The accents stay measured apart from the tones (`test/core/theme_test.dart`: *the fault tone is not a service accent*). The section accents `color.nav.*` and the legacy `color.brand.*` indigo are no longer painted either; they remain as tokens until they are removed.
+
+**Plates** (`plate-*`) stand in for missing artwork and are dark in both themes — artwork is not palette, and a missing poster is not a white hole on paper (*the plate palette is the same in both themes*, `theme_light_contrast_test.dart`).
+
+**The day room** keeps every rule: paper for the floor, white slabs with a hairline and a soft shadow, the title still lighting the room at about a third of the strength, tones darkened until they pass on paper, shadows in ink rather than black.
 
 ## Typography
 
-One family does the work: **Inter**, bundled as a variable font (`wght` 100–900, `opsz` 14–32). Code, logs, YAML and certificate fingerprints use the `mono` stack (Menlo first — never the bare `monospace` alias, which is proportional on Apple platforms).
+Three families, all OFL and bundled, so the type is the same on all five platforms.
 
-- Set running text in `body-medium`; long prose in `body-large` capped at 640px.
-- A row that is a *name* uses `row-title`; the answer in a dense row uses `data`, which sits above `label-medium` on purpose — the thing that needs a human is never smaller than the word describing it.
-- `subtitle` names the service in its own app bar; `panel-header` heads a region inside a page.
-- **The 11px floor.** `label-small` is the minimum anywhere. Where geometry can't take 11px, the geometry grows.
-- **The Weight Ceiling Rule.** 800 is for display only; headlines and the app-bar title stop at 700; everything else stops at 600. The one exception is a KPI figure at 700.
-- **Tracking is derived, not authored**: Inter's curve (`-0.0223 + 0.185·e^(-0.1745·size)` em), plus +0.006em on dark below 24px. The `eyebrow` (+1.4px, uppercase) is the one authored value.
-- **Leading ladder.** Display tightens to 1.10 (the floor — accented capitals collide below it), body opens to 1.45–1.55, labels stay at ~1.22.
-- Numbers that update in place use tabular figures; code uses slashed zero.
+- **Bricolage Grotesque** (`type.family.display`; `opsz` 12–96, `wdth` 75–100, `wght` 200–800) — titles, section headings and figures. Voiced, and used sparingly. Its default instance is 96 pt ExtraBold at full width, so **every role sets all three axes**: `wght`, `wdth`, and `opsz` equal to the size (`AppTheme.variations`). Flutter never applies an optical size by itself. The narrow widths (90–96 %) are the voice: they fit *Cosmos Laundromat* on one line at 42.
+- **Onest** (`type.family.text`, `wght` 100–900) — everything read that is not a title or a figure. It has tabular figures.
+- **Geist Mono** (`type.family.mono`, `wght` 100–900) — machine strings only: release names, paths, hashes, keys, logs, the terminal, exactly as returned, with a slashed zero. Figures are never mono. Never the bare `monospace` alias, which is proportional on Apple platforms.
 
-## Layout and spacing
+Geist Mono and Apple Symbols follow in every fallback list and carry the glyphs the faces lack (⇧ ⏎ ∞ ⌘ ⌥). Other scripts fall back per glyph to the system face — a decision, not a surprise.
 
-A 2px step with a 4px rhythm on top. `space-lg` (16px) is the page gutter and card padding; `space-md` (12px) the grid and carousel gap; `space-xl` (24px) separates sections; `space-xxl` (32px) major blocks. The half-steps `space-xxs`, `space-s`, `space-m`, `space-ml` live inside components only. A value off the 2px grid is a defect.
+| Role `type.role.*` | Face | Size / line | Weight · width | Material slot or helper | Use |
+|---|---|---|---|---|---|
+| `figure-hero` | Bricolage | 44 / 44 | 600 · 90 % | `displayLarge` | One hero readout per room. |
+| `media` | Bricolage | 42 / 41 | 600 · 90 % | `displayMedium` | A title on its Media page. |
+| `screen` | Bricolage | 36 / 36 | 600 · 92 % | `displaySmall`, `headlineLarge` | Tab-root titles. |
+| `room` | Bricolage | 30 / 31 | 600 · 92 % | `headlineMedium` | Pushed screens and service rooms. |
+| `feature` | Bricolage | 26 / 27 | 600 · 92 % | `headlineSmall` | A featured title, a sheet title. |
+| `section` | Bricolage | 21 / 24 | 600 · 96 % | `titleLarge`, `subtitle`, `panelHeader` | Section headings, the app-bar title. |
+| `figure` · `figure-s` | Bricolage | 24 / 24 · 20 / 20 | 600 · 92 % | `AppType.figure`, `figureSmall` | KPI figures; times and figures in rows. |
+| `body` | Onest | 15 / 22 | 400 | `bodyLarge`, `bodyMedium` | Paragraphs, input text. |
+| `button` · `row` · `label` | Onest | 16 / 20 · 15 / 20 · 14 / 18 | 600 | `titleMedium` · `rowTitle` · `labelLarge` | The primary button; a row that is a name; small buttons, links, chips. |
+| `meta` · `caption` | Onest | 13 / 18 · 12 / 16 | 500 | `bodySmall`, `data` · `labelMedium` | Secondary lines and the answer in a row; captions, badges. |
+| `micro` | Onest | 11 / 14 | 600 | `labelSmall`, `AppTheme.chrome` | Tab labels, poster marks. **The floor.** |
+| `mono` | Geist Mono | 13 / 18 | 450 | `AppType.mono`, `.mono` | Machine strings. |
 
-- Screens are single-column and scroll vertically under a transparent app bar with a gradient scrim.
-- Media grids use a 130px preferred tile and resolve their real column count from the width — the declared count is a floor.
-- Detail bodies stop at 720px; prose at 640px; the desktop content well at `bp-content-well`.
-- **The Reduction Rule.** A narrower window shows fewer items at full size — never smaller ones. No token has a compact twin.
-- Text boxes grow with the reading size (compact chrome clamps at 1.6×, single-line chrome at 1.3× and elides). Touch targets are 48px minimum (44pt on iOS) for anything a finger can reach — compact density may not shave them. Pointer-only desktop chrome (the desktop rail, the deck, window-chrome rows) may go to 38–40px.
-- Phones are portrait only. Tablets are not a design target.
+- **The Weight Ceiling Rule: nothing is heavier than 600.** The display face speaks through width and optical size, not weight. `test/core/theme/weight_ceiling_test.dart` scans `lib/` for heavier weights (its allow-list is empty) and for weights changed through `fontWeight:` instead of `.weight()`.
+- **Never a bare `TextStyle(fontSize:)`**, and never `copyWith(fontWeight:)`: neither reaches the `wght` axis, so the text renders the file's default instance. Use a role, then `.weight()`, which moves `wght` and keeps `wdth` and `opsz`. `test/core/theme/type_axes_test.dart` walks every slot of the text theme, asserts each names its axes, and measures that the real faces reach them.
+- **The 11 px floor.** Nothing renders smaller than `micro`; `AppTheme.chrome` clamps to it. Where geometry cannot take 11, the geometry grows.
+- **The Tabular Rule.** Anything that updates in place or lines up in a column — speeds, times, sizes, percentages, counts — is tabular (`.tabular`; the figure roles already are). Prose keeps proportional figures.
+- **The answer is never smaller than its label**: `data` sits above `caption` on purpose.
+- Tracking is authored per role in em and is the same in both rooms.
+- **Truncation.** A row title and its status line take one line each, the ellipsis at the end; a title takes two lines at most, broken between words — never mid-word; a single word longer than its line scales down. Release names take one line in a row and wrap after their dots on a detail page. Prose stops at 640.
+
+## Space and layout
+
+The 390 pt phone is the product. The scale (`space.scale`) is 2 · 4 · 6 · 8 · 10 · 12 · 14 · 16 · 20 · 24 · 28 · 32 · 40 · 56, and a value off it is a defect; the older ladder (`space.xs` … `space.xxxl`) resolves onto it.
+
+- `gutter` 16 is the page gutter and a slab's padding; `slab-y` 14 a slab's vertical padding; `row` 10 a row's vertical padding; `l` 12 the rail, grid and row gaps; `section` 28 the space above a section heading; `top` 56 a screen's top margin under the status bar. The 2, 6, 10 and 14 steps live inside components.
+- Media grids resolve their column count from the width with a 130 tile floor; detail bodies stop at 720, prose at 640, the content well at `breakpoint.content-well` 1140.
+- **The Reduction Rule.** A narrower window shows fewer items at full size, never smaller ones. No token has a compact twin.
+- Breakpoints are window regimes, never a device check: `nav-compact` 360 · `desktop-mobile` 720 (a desktop window below it paints the touch shell under a bare drag strip) · `touch-rail` 840 (a touch window at or above it moves the bar to a side rail) · `desktop-compact` 1100 · a desktop window no smaller than 360×450. A frame at `landscape-aspect` 1.2 or wider sets two things side by side. Phones are portrait.
+- **Targets.** A finger's target is `size.touch` 44 even where the drawing is smaller — a 36 chip sits inside 44; the area grows, the drawing does not (`test/core/widgets/touch_target_test.dart` measures the rendered box). Pointer-only desktop chrome may go to 38–40 and never below (`test/core/theme/desktop_pointer_target_test.dart`). Flutter picks `VisualDensity.compact` by itself on macOS, Windows and Linux, which silently takes 8 off `minimumSize`: every button theme and `HeaderActionRow` pin `VisualDensity.standard`, and a new button style that sets `minimumSize` pins it too.
+- Sizes: `button-l` 52 (the primary) · `button-m` 44 · `field` 52 · `search` 48 · `chip` 36 · `tabbar` 62 · icons 20 and 24 · a row thumbnail 36×54.
+- **Text grows.** Boxes grow with the reading size instead of clipping (`TextScaleMetrics`, `test/core/text_scale_test.dart`): compact boxes follow it to 1.6×, single-line chrome to 1.3× and then elide. **Direction:** display roles stop at 1.35×, as large titles do on iOS, and a row whose title passes 22 stacks.
+- **Navigation. Today** the tabs are Dashboard · Activity · Search · Settings. **Direction:** the operator's are Home · Discover · Activity · Stack (Settings inside Stack), the requester's Home · Discover · Requests. Either way a service room carries its own tab bar (`tabsFor`), and TrueNAS, with ten sections, has none by design.
 
 ## Shape
 
-Rounded rectangles. `radius-md` (12px) is the default for cards, buttons, inputs, posters and snackbars. `radius-sm` for badges and small objects; `radius-lg` for dialogs and sheet tops; `radius-xl` for the floating nav bar.
+The radius scale names the object: `thumb` 8 (a row thumbnail, a checkbox) · `chip` 12 (a tile, a fault chip, a stale band) · `poster` 14 · `control` 14 (the medium button, a segmented track, a stepper, an icon button) · `button` 16 (the large button, a banner, a toast) · `field` 16 · `door` 20 · `group` 22 (grouped rows) · `slab` 26 (a section and a dialog) · `sheet` 30 (sheet tops and the floating bar) · `pill`. Small objects take `hair` 3, `xs` 4 or `sm2` 10. The older ladder (`sm`, `md`, `lg`, `xl`, `full`) resolves onto these.
 
-- **The Pill-for-Metadata Rule.** `radius-full` means a tag, genre or rating — never an interactive container.
-- `radius-pill` (20px) belongs to navigation and to rows of choices — segments, filter chips, pickers — and a row keeps it in **both** states: selection is carried by fill, border and ink, never by the corner.
-- **The Permeable Edge Rule.** Prefer a tint or scrim to a stroke. When a border is needed, `outline` or a low-alpha accent.
-- Status dots are 8px circles; empty-state wells are 72px (52px compact).
+- **Corners are continuous** — a rounded superellipse (`RoundedSuperellipseBorder`) wherever a shape takes an `OutlinedBorder`. **Today** a `BorderRadius` on a `BoxDecoration` is still circular.
+- **A pill is a chip, a tab, a segment or a metadata tag**, drawn at half its height. A button or a card is never a pill.
+- A row of choices keeps its corner in both states: selection is carried by fill and ink, never by the corner.
+- **Edges are hairlines**: `line.hair` on a slab, `line.edge` on a control at rest. Never two edges on one object.
+- Status dots are 8 px circles; the neutral dot is hollow.
 
 ## Elevation and depth
 
-Material tonal elevation is not used. Flat is the default (**The Earned Elevation Rule**); a surface earns a shadow only when it must read as a lifted object.
+The room is lit from the title, not from a lamp above, so it is flat: slabs, groups, rows, buttons, chips, doors and tiles cast nothing in the dark room (`elevation.level-1` is 0 there) and lift softly on paper. **Only two things glow and only what floats casts a shadow.**
 
-- `level-1` resting cards, rows, KPI tiles · `level-2` posters and `AppCard.elevated` · `level-3` sheets, popovers, hero surfaces · `glass` the floating nav bar only.
-- **The Two-Shadow Rule.** Every level is a contact shadow plus an ambient one. Light theme shadows are ink (`#111827`), not black.
-- **The No-Blur-Under-Scroll Rule.** Nothing blurs the content behind it: the floating nav bar is a semi-opaque `glass-surface` tint (not a backdrop filter), and heroes and scrolling bars deepen a gradient scrim instead.
-- A single signature card may carry one service glow (accent radial at 0.22); repeated cells use a fraction of that.
+- `shadow.poster` — a poster in the colour of its own light, 0 16 30 −12.
+- `shadow.hero` — the hero artwork: a wide glow of its light, 0 30 70 −16, over a tight contact shadow.
+- `shadow.float` — the bar, menus, toasts: 0 10 30. The floating bar adds a 1 px edge light (`shadow.glass`).
+- `shadow.sheet` — a sheet, cast upwards: 0 −12 40.
+- `level-2` and `level-3` remain for the older call sites: the poster geometry in the shadow ink, and the float. Each layer's opacity is per theme; the day room's shadows are ink, not black.
+- **The No-Blur-Under-Scroll Rule.** Nothing blurs the content behind it: a live blur cost 15–25 ms per scroll frame on a mid-range Android phone. Floating bars are lit enamel — `room.enamel` at 0.95 — and heroes deepen a gradient scrim (`opacity.hero-scrim-rest` 0.85 → `hero-scrim-deep` 0.35) instead. **Direction:** the enamel carries a 14 % sheen of the room's light.
 
 ## Motion
 
-Durations: 100ms micro (ripples), 200ms state changes, 300ms standard transitions, 400ms complex, 500ms dramatic. Standard curve is emphasized ease-in-out-cubic; entering elements ease out cubic. Shimmer cycles in 1500ms; a success check holds 1600ms before reverting.
+One ease carries almost everything: `motion.curve.standard` (0.2, 0.8, 0.2, 1), a fast start and a long settle. Durations are named for what moves.
 
-Motion answers an action or a meaningful state change. Dense cards dip to 0.97 scale with a light haptic on press; posters fly between list and detail as shared elements (level-2 → level-3 → level-2). The ServiceRing sweep (96s) runs only when the ring is the subject. Everything decorative stops under Reduce Motion.
+| Role `motion.*` | Duration | Curve | What moves | Reduce Motion |
+|---|---|---|---|---|
+| `press` | 180 ms | standard | A pressed target dips to `press.scale` 0.96, with a light haptic. | unchanged |
+| `standard` | 320 ms | standard | State changes, expand, select. | a 150 ms fade |
+| `emphasized` | 420 ms | standard | The pager, the segmented thumb, the chip rail. | a 150 ms fade |
+| `enter` | 520 ms | standard | An entrance: rises 12 and fades; siblings 40 ms apart, past six together. | no rise |
+| `sheet-in` · `sheet-out` | 380 · 240 ms | (0.05, 0.7, 0.1, 1) · (0.3, 0, 0.8, 0.15) | Sheets and dialogs. | a fade |
+| `shared` | 450 ms | standard | The poster flies onto its Media page. | a cross-fade |
+| `progress` | 600 ms | standard | A bar moves to a new value. | a jump |
+| `text-xfade` · `image-xfade` | 700 · 900 ms | standard · ease | Carousel copy (rising 10) and art. | unchanged, manual |
+| `roll` | 900 ms | easeOutCubic | A figure rolls once from `—` to its value. | the final figure |
+| `light` | 1500 ms | ease | The room light moves to a new title; the new light enters over the old, since a symmetric fade darkens the room halfway. | a jump |
+| `shimmer` | 1600 ms loop | linear | A skeleton sweep. | the flat base |
+| `dwell` | 6000 ms | linear | A carousel slide; the pager fills; a pause control stays visible. | no auto-advance |
+| `breathe` | 8000 ms | ease-in-out | One slab's light per screen, 0.42 ↔ 0.55. | still |
+| `kenburns` | 14000 ms | ease-in-out | Carousel art drifts 1.02 → 1.12. | still |
+
+- **One authored moment per screen** — the flight onto a Media page, the list rising on Home. Everything else changes state without an entrance.
+- **Events, not loops.** A glint or a pulse fires once per new sample, so a stuck feed stops moving. Figures roll once from `—` and never count up from 0.
+- **Continuous motion stops** off screen, in the background, under the Portal, with a screen reader running and under Reduce Motion. **Direction:** breathe, Ken Burns and the pager fill run on one gated 12 Hz ambient clock. **Today** that clock does not exist and no widget uses `breathe`, `kenburns`, `dwell` or `light`; most call sites still read the older ladder (`AppAnimation.durationXs` … `durationXl`), which now resolves onto the roles, and the poster flight rides the pushed route's own transition rather than `shared`.
+- `duration.confirmation-hold` 1600 ms: a success check replaces a button's icon for that long, then reverts.
+- **The Portal's physics are hand-tuned** (`PortalPhysics`, `lib/features/shell/presentation/service_portal.dart`) and are never normalised to the motion tokens: the values are the design.
+
+## Configurations
+
+Pages read across services — a Media page shows one title through Seerr, Jellyfin, Radarr and Bazarr at once — and every household configures a different subset. Every cross-service row therefore declares its source and what it draws in six cases, before it is built. **The core rule: a missing service costs its own row, never the page.**
+
+| Case | What it is | What the row draws | Its words |
+|---|---|---|---|
+| **a · Not set up** | Cupola has no address for it and nothing else knows it. | One dimmed, tappable row per surface that opens the service's setup form — or nothing, where the row is detail. | `Not set up` · `Set up Seerr` |
+| **b · Known through another service** | Not set up in Cupola, but Seerr (or Prowlarr, Bazarr) knows it. | That service's claim, attributed, with one quiet way to set it up, prefilled from it. | `through Seerr` · `Add Sonarr to Cupola · key found` · `address found · paste its key` |
+| **c · Did not answer** | Set up, and nothing replied. The only red on any screen. | Who and since when, the last known value under it with its time, `Retry`. | `Did not answer since 20:41` · `Retry` |
+| **d · Not allowed** | A read-only key, a non-admin token, or a requester looking. | The write stays, dimmed, with the service's own reason. | `This TrueNAS key can read` · `Nothing changed` · `Your streams` |
+| **e · More than one** | Several instances of one service: Radarr and Radarr 4K. | Every row, figure and action names its instance. | `Radarr 4K · 2160p Remux` · `Goes to Radarr 4K` |
+| **f · Not verified** | Jellyfin or Plex has something with that title, but its ids do not match. | Nothing: no row, no link, no Play. | — |
+
+**The twelve rules.**
+
+1. A missing service costs its own row, never the page.
+2. Every cross-service row declares its source and what it draws in a–f before it is built.
+3. Check configuration before asking. Case a is decided without a provider call: a screen checks `isServiceConfigured` before it reaches its providers, because a `FutureProvider` that throws retries with backoff for a condition no waiting changes (and one derived from a provider with `retry: noProviderRetry` carries it too). It draws one dimmed, tappable `Set up X` row per surface — 44 pt, naming the service, opening its setup form — or nothing where the row is detail.
+4. Red means `Did not answer` and nothing else: name who and when, and keep the last known value under it with its time. A refusal, or a failure that did answer, is amber with its remedy.
+5. An empty answer and an unasked source never look alike: `Not on Jellyfin` or `No results` only after it answered.
+6. A total covers only the sources that answered and names the one missing. A figure whose source did not answer reads `—`, never 0, and never a count taken inside a capped or paged response.
+7. An unverified match is no match: no link, no Play, and no claim that the title is missing.
+8. With several instances, every row, figure and action names its instance. Home, Activity and Stack count all of them; a service room reads one through the instance lens; no action falls back to the lens or to the first instance silently.
+9. What is known through another service is shown as that service's claim, attributed (*Seerr sends it to Sonarr*), with one quiet way to set it up, prefilled. It is never drawn as set up and never hidden, and it never shows episode files, missing counts, queue control, blocklist or search.
+10. The requester never sees a service name, a fault or an operator action. When the server does not answer: one line, its time, `Retry`.
+11. A write the credential may not make stays visible, dimmed, with the service's own reason; a refused write says nothing changed. Never hidden, never blamed on reachability. The one exception: an option the viewer may not use at all — 4K for a requester who may not ask for it — is left out.
+12. One situation, one set of words on every surface: the lexicon above.
+
+A connection reachable only at home says `Home only` while away and is never asked, so it never reads `Did not answer`. **Today** a connection has one address, so away reads as case c; capability probes exist only for Unraid, TrueNAS and Nginx Proxy Manager; nothing is drawn from another service's knowledge (case b); and the media-server slot draws the same nothing for a, c, "not in library" and f. The households in `test/test_helpers/profiles/` (P1 full household to P7 degraded and away, checked by `test/core/profiles/`) are the fixtures: a cross-service screen test runs the profiles its surface touches.
 
 ## Failure states
 
-Unreachable and unconfigured are normal daily conditions. Four levels, one vocabulary:
+Did-not-answer and not-set-up are normal daily conditions. Four levels, one vocabulary:
 
-- **Unreachable** — the page keeps its identity, tabs and last-known readout under a `Last known · 12 min ago` rule. Last-known data keeps full-strength ink (**The Full Ink Rule**).
-- **Section** — one source inside a service failed: only that section falls back, and its figures read `—`.
-- **Stale** — the poll stopped returning: `warning`, no dismiss, rows trade time-left for sample age.
+- **Did not answer** — the room keeps its identity, tabs and last-known readout under a `Did not answer since 20:41` line and `Retry`. Last-known data keeps full-strength ink (**The Full Ink Rule**): it is what the service said, not a guess.
+- **Section** — one source inside a page did not answer: only that section falls back, and its figures read `—`.
+- **Stale** — the poll stopped returning: amber, no dismiss, and rows trade time-left for the sample's age.
 - **Offline push** — a pushed page whose service died keeps its last render; only live search says so.
 
-**The Presence Rule.** A fault is a quiet line — glyph, sentence, recovery verb, dismiss. No fill, no border, the error tone on the glyph alone. The recovery verb is `primary`, never red: a red Retry makes the cure look like the disease. **Dimming means a precondition is unmet** — the other service is not set up here, or the saved credential may not make this change — and never that a service is unreachable. A dimmed control stays tappable, keeps its 44pt target, says what it needs in its hint, and answers a tap with a toast whose one verb is the fix.
+**The fault sentence** is three things in this order: *what happened*, a title in the tone of the state (`18 finished downloads need a manual import`); *why*, one plain sentence a person can act on, with the service's raw message under *Why?*; and *the remedy*, a verb within thumb reach (`Review`). Equal faults are grouped — one line with the count and one way in, never eighteen rows.
+
+**The Presence Rule.** A fault is a quiet line — glyph, sentence, remedy. The tone lives on the glyph and the title; no red fill, no red border. An amber fault's remedy is the one amber fill; `Retry` beside a red line is a ghost button in ink, never red, because a red cure looks like the disease. A download is `Stuck` only after 30 minutes with nothing arriving. A skeleton takes the shape of its content; there is never a full-page spinner.
+
+**Dimming means a precondition is unmet** — the other service is not set up here, or the saved credential may not make this change — and never that a service did not answer. A dimmed control stays tappable, keeps its 44 pt target, names what it needs in its hint, and answers a tap with a toast whose one verb is the fix. It is dimmed to `opacity.dimmed` 0.5 (**today** `CrossServiceAction` still uses 0.38) and is never announced as disabled.
 
 ## Credential scope
 
 A credential can work and still not be allowed to write: an Unraid or TrueNAS key without write scope, a view-only Nginx Proxy Manager account. The app asks once, on connect, what the key may do, and remembers the answer per connection; a refused write teaches it too. Nothing is broken, so nothing is amber:
 
 - **The banner** is one quiet blue line at the top of the page — glyph, sentence, one verb (`Update the key`, `Change account`, or `Check again` when the app could not ask). It is a standing fact, not an event, so it is not announced on every visit.
-- **Every write stays on the page**, dimmed but tappable, in the same cell a cross-service jump uses. Its hint says what it needs; its toast leads to that connection's settings.
+- **Every write stays on the page**, dimmed but tappable, with the service's own reason (*This TrueNAS key can read. Changing anything here needs a key whose user holds a write role.*); its toast leads to that connection's settings. A write the service refused says `Nothing changed`.
 - **Settings** names the scope beside the connection: `Answering · read-only key` (or `view-only account`).
-- A Jellyfin account that is not an administrator gets a calm *Needs a Jellyfin administrator* note on the tabs it cannot read, instead of an error.
+- A Jellyfin account that is not an administrator sees `Your streams` and a calm note on the tabs it cannot read, naming what they need — never an error.
 
 ## Accessibility
 
-Binding, not best effort. WCAG AA in both themes, checked against the ground each colour actually lands on. Dynamic Type never clips. VoiceOver and TalkBack operate everything: a row speaks one sentence and silences its parts; status is spoken, not only coloured; a dimmed control is never announced as disabled. The focus ring is a 2px `primary` border.
+Binding, not best effort. WCAG AA in both rooms, measured against the ground each colour actually lands on. Text grows and never clips. VoiceOver and TalkBack operate everything.
+
+- **A row that is one link speaks one sentence** and silences its parts: *Sprite Fright, out on digital today, downloading, 62 percent.* The state comes before the time; units are words (*percent*, *hours*, *votes*); a dash is spoken as *no rating*, never *dash*.
+- A remedy inside a row stays its own button. Silence the text, not the row: `Semantics(container: true, excludeSemantics: true)` on the whole row discards the button too.
+- A `Semantics(hint:)` wrapped around a button is dropped — annotate the child.
+- A dimmed control is never `Semantics(enabled: false)`: it is tappable, and its hint says what it needs.
+- Status is spoken, not only coloured. The focus ring and a focused field are `line.focus`.
+- A carousel that advances by itself shows its pause control and stops advancing under a screen reader and under Reduce Motion.
 
 ## Iconography
 
-Two families, and they never swap roles.
+Two families, and they never swap roles. No icon is drawn by hand; no emoji, no custom illustration.
 
-- **Service marks** — each service is drawn with its own mark from the `CupolaServices` font (U+E001–U+E011; SVG sources in `tool/service_glyphs/svg/`, usage in `assets/README.md`). A mark identifies a service and nothing else. It takes the service's accent, walked with `onTint` against its soft container (accent at 14%), and it never carries a status. TrueNAS, Unraid and Plex are deliberately not their logos (trademark policy): a drive rack, a hard disk, a film strip.
-- **Interface glyphs** — Flutter's Material Icons, **rounded** variant, for everything that is not a service: actions, states, navigation on phones. The outlined variant is the unselected pose of a navigation destination (`monitor_heart` outlined → rounded when Activity is selected). The **desktop rail** alone draws Material Symbols Rounded at weight 300, because Material Icons' single stroke reads heavier than the type beside it on a desktop.
-
-No emoji, no custom illustration. The brand mark — the cupola seen from above, six lit panes around a round window — lives in `assets/brand/` (usage in `assets/README.md`). It is never redrawn, recoloured or placed on a light ground without its dark body.
+- **Interface symbols.** **Today** Flutter's Material Icons, rounded variant, for everything that is not a service, with the outlined variant as the unselected pose of a navigation destination; only the desktop rail draws Material Symbols Rounded (at weight 300). **Direction:** Material Symbols Rounded everywhere (`material_symbols_icons`, already a dependency), setting all four axes — `wght` 400 (500 for back, the active tab, link chevrons and icons inside buttons); `FILL` 1 only for the active tab, a state glyph inside tone text, and play; `GRAD` −25 in the dark room, 0 on paper; and `opticalSize` equal to the size, since the font's default is the 48 px drawing and a 20 px icon without it is thin.
+- An icon never replaces the verb of an action. It takes the colour of the text beside it; only a state glyph inside tone text is coloured. One icon per control, before the label; a trailing icon means "goes somewhere" (a chevron, open-in-new). Icons match the text: 16 with 13, 18 with 14, 20 with 15–16, 22 in bars.
+- **Service marks** come from the `CupolaServices` font (U+E001–U+E011; SVG sources in `tool/service_glyphs/svg/`, usage in `assets/README.md`). A mark identifies a service and nothing else: monochrome, in ink on a neutral tile wherever a service is listed, one step brighter in the service's own room header. It never carries a status. TrueNAS, Unraid and Plex are deliberately not their logos (trademark policy): a drive rack, a hard disk, a film strip.
+- **The brand mark** — the cupola seen from above, six lit panes around a round window — lives in `assets/brand/` (usage in `assets/README.md`). It is artwork, the one object that brings its own colour: never redrawn, recoloured, or placed on a light ground without its dark body.
 
 ## Do and don't
 
-- **Do** pair `AmbientScaffold` with the current service accent and a `GlassAppBar`.
-- **Do** read every value from a token; never a widget-local literal for size, spacing, radius, duration or accent ink.
-- **Do** draw the failure state of anything you draw the healthy state of.
-- **Don't** use a service hue to communicate health, or let two accents light a service screen.
-- **Don't** set text in a bare `TextStyle(fontSize:)` — it never reaches the `wght` axis and renders Regular. Use a role and `.weight()`.
-- **Don't** blur behind scrolling content, use a single shadow as depth, or a full-radius pill for a button.
-- **Don't** add a per-OS skin — no Cupertino on iOS, Fluent on Windows or Adwaita on Linux. The OS owns safe areas, gestures, window buttons and the modifier key; nothing else.
+- **Do** read every value from a token — never a widget-local literal for size, spacing, radius, duration, colour or weight.
+- **Do** draw the failure state, and each of the six configuration cases, of anything you draw the healthy state of.
+- **Do** give a screen one primary action and one authored moment, and give every animation its Reduce Motion answer.
+- **Do** keep a widget's catalog card in step with it: re-render the card and update its `README.md` in the same change.
+- **Don't** paint a service accent, a section accent or a brand hue anywhere in the interface.
+- **Don't** paint the backlog amber, a destructive action red, or `Retry` red; don't use green for "on" or "selected".
+- **Don't** set text in a bare `TextStyle(fontSize:)`, re-weight through `copyWith(fontWeight:)`, or go above 600.
+- **Don't** show `0` for a source that did not answer, or count inside a capped page and call it a total.
+- **Don't** hide a write the credential may not make, or blame a refusal on reachability.
+- **Don't** blur behind scrolling content, or give a resting slab a shadow in the dark room.
+- **Don't** add a per-OS skin — no Cupertino on iOS, Fluent on Windows or Adwaita on Linux. The OS owns safe areas, gestures, window buttons, window corners and the modifier key; nothing else.

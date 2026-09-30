@@ -6,7 +6,7 @@ editor, reviewed like code, and never drift from the app.
 | Path | What it holds | Edited by hand? |
 |---|---|---|
 | `tokens/` | The design tokens — colour, spacing, radius, type, motion, elevation — in the W3C Design Tokens format, as token sets Tokens Studio and Penpot read directly. **The single source of every value the app paints.** | Yes |
-| `system/README.md` | The brand book: voice, colour, type, layout, shape, depth, motion, failure states, credential scope, accessibility, iconography. **The single statement of the design rules.** | Yes |
+| `system/README.md` | The brand book: principles, words, colour, type, space and layout, shape, depth, motion, configurations, failure states, credential scope, accessibility, iconography. **The single statement of the design rules.** | Yes |
 | `system/components/` | One card per widget: `<Card>/README.md` is its guide (variants, tokens, what the caller provides, semantics, do and don't); `README.md` indexes them by group. | Yes |
 | `system/motion/` | Ten animated cards for the app's motion, the one place the system re-draws the app instead of rendering it. | Yes |
 | `system/assets/` | How to use the brand and service marks, and the sample artwork the catalog draws with. | Yes |
@@ -40,7 +40,7 @@ the motion cards playing in dark and light — and serves it on `http://127.0.0.
   the pictures, and update the card's `README.md` in the same change. A new variant or state gets a
   scene; a new widget gets a card, a catalog test and a row in `system/components/README.md`.
 - **A rule** — change `system/README.md`. Where a rule can be checked mechanically it is also a test
-  (the weight ceiling, touch targets, accent contrast, the tone rule), and the test changes with it.
+  (the weight ceiling, the type axes, touch targets, ink contrast, neutral destructive actions), and the test changes with it.
 - **Motion** — change the constants in the Dart source and in the motion card together; both name
   them.
 
