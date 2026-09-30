@@ -1,16 +1,16 @@
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// The Sonarr library, for callers that would rather show nothing than a
-/// dialog.
+/// The Sonarr library wall, with a failed fetch allowed to reach the wall.
 ///
-/// `getSeries` swallows its own failure into `[]`, so this provider resolves
-/// *successfully* for an unreachable Sonarr. That is survivable for the browse
-/// grid it was written for and a lie for anything that counts: see
-/// `sonarrOverviewSeriesProvider`, which reads the same library through
-/// `getSeriesOrThrow` precisely so a figure nobody fetched can read an em dash.
+/// It read `getSeries`, which swallows its own failure into `[]`, so an
+/// unreachable Sonarr resolved this *successfully* and the wall read "No items
+/// found". The wall is the whole library in one request — there is nothing
+/// partial to show beside the failure — so it shows the failure. See
+/// `moviesProvider` for why the retry policy matches the KPI rail's.
 final seriesProvider = FutureProvider<List<SonarrSeries>>((ref) async {
   final service = ref.watch(sonarrServiceProvider);
-  return service.getSeries();
-});
+  return service.getSeriesOrThrow();
+}, retry: noProviderRetry);

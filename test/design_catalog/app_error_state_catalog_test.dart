@@ -1,6 +1,7 @@
 @Tags(['catalog'])
 library;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -14,21 +15,38 @@ void main() {
     'AppErrorState',
     scenes: [
       CatalogScene(
-        'AppErrorState(serviceName:, onRetry:) · cold open, nothing retained',
+        'AppErrorState(serviceName:, onRetry:) · cold open, nothing answered: '
+        'red, and the detail is the classified sentence, never the exception',
         (_) => AppErrorState(
           serviceName: 'Radarr',
-          error: Exception(
-            'DioException [connection timeout]: The request connection took '
-            'longer than 0:00:15.000000 and it was aborted.',
+          error: DioException.connectionError(
+            requestOptions: RequestOptions(path: '/api/v3/movie'),
+            reason: 'Connection refused',
           ),
           onRetry: () {},
         ),
         width: 320,
       ),
       CatalogScene(
-        'AppErrorState.compact() · no serviceName, no onRetry',
-        (_) =>
-            const AppErrorState.compact(error: 'Exception: Connection refused'),
+        'AppErrorState · a server that answered with 401: an amber fault',
+        (_) => AppErrorState(
+          serviceName: 'Radarr',
+          error: DioException(
+            requestOptions: RequestOptions(path: '/api/v3/movie'),
+            type: DioExceptionType.badResponse,
+            response: Response<dynamic>(
+              requestOptions: RequestOptions(path: '/api/v3/movie'),
+              statusCode: 401,
+            ),
+          ),
+          onRetry: () {},
+        ),
+        width: 320,
+      ),
+      CatalogScene(
+        'AppErrorState.compact() · no serviceName, no onRetry, a failure '
+        'nobody can attribute',
+        (_) => const AppErrorState.compact(error: 'Exception: parser'),
         width: 280,
       ),
       CatalogScene(

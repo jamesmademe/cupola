@@ -123,6 +123,21 @@ class _JellyfinActivityBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessions = ref.watch(jellyfinSessionsProvider);
+    // The tab is this one read: a dark server is its leaf, never "Nobody is
+    // watching right now".
+    if (sessions.hasError && !sessions.hasValue) {
+      return AmbientScaffold(
+        accent: ServiceKey.jellyfin.accent,
+        body: Padding(
+          padding: EdgeInsets.only(top: topPadding),
+          child: ServiceOfflineState.failure(
+            service: ServiceKey.jellyfin,
+            error: sessions.error!,
+            onRetry: () => ref.invalidate(jellyfinSessionsProvider),
+          ),
+        ),
+      );
+    }
     return AmbientScaffold(
       accent: ServiceKey.jellyfin.accent,
       body: RefreshIndicator(

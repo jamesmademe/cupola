@@ -170,3 +170,50 @@ ServiceFailureReason _fromDio(
           : fallback;
   }
 }
+
+/// Whether [reason] is a **fault** — something answered, or the device
+/// refused to dial, so there is one concrete thing to go and fix — rather than
+/// silence.
+///
+/// The same split `describeConnection` makes between amber and red, for the
+/// surfaces that have no service to hand it: red is the host that did not
+/// answer at all (and the failure nobody can attribute), everything else is
+/// amber.
+bool failureIsFault(ServiceFailureReason reason) => switch (reason) {
+  ServiceFailureReason.unreachable || ServiceFailureReason.unknown => false,
+  _ => true,
+};
+
+/// A failed read in one plain sentence, for a surface that has no service to
+/// name — `AppErrorState`, which only knows a display string.
+///
+/// **Never the exception.** `error.toString()` is a class name and a library's
+/// message ("DioException [connection error]: … This indicates an error which
+/// most likely cannot be solved by the library."), and it was the line under
+/// every failed load in the app. The sentence comes from the classification
+/// instead, in the words `connectionFailureMessage` uses where it can name the
+/// service; a failure that carries its own verbatim sentence
+/// ([HasFailureDetail]) keeps it.
+String connectionFailureSentence(Object? error) {
+  final detail = connectionFailureDetail(error);
+  if (detail != null && detail.trim().isNotEmpty) return detail;
+  return switch (classifyConnectionFailure(error)) {
+    ServiceFailureReason.unreachable =>
+      'Nothing answered at the saved address. Check that the server is '
+          'running and reachable from this device.',
+    ServiceFailureReason.timeout =>
+      'The server was reached but did not answer in time.',
+    ServiceFailureReason.tls => 'The HTTPS certificate could not be verified.',
+    ServiceFailureReason.unauthorized =>
+      'The server answered and rejected the saved credentials.',
+    ServiceFailureReason.notFound =>
+      'Something answered, but the API is not at this address.',
+    ServiceFailureReason.redirected =>
+      'The server answered with a redirect Cupola will not follow.',
+    ServiceFailureReason.serverError =>
+      'The server answered with an error of its own. Its logs will say why.',
+    ServiceFailureReason.localNetworkBlocked =>
+      'This device is blocking Cupola from reaching the local network.',
+    ServiceFailureReason.unknown => 'The request did not complete.',
+  };
+}

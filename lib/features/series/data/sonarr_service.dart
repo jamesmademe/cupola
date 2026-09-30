@@ -80,11 +80,11 @@ class SonarrService with ArrActivityMixin {
 
   /// Fetches all series from Sonarr, answering `[]` when it cannot be read.
   ///
-  /// The degrading read, kept as it was: `fetchAllItems` swallows everything,
-  /// which is the right shape for a browse grid that would rather show nothing
-  /// than a dialog, and the wrong one for anything that *counts* — an
-  /// unreachable server and an empty library arrive as the same value. Callers
-  /// that derive a figure use [getSeriesOrThrow].
+  /// The degrading read: `fetchAllItems` swallows everything, which is the
+  /// right shape only for a join that can go on without the library
+  /// ([getSeriesByTvdbId]), and the wrong one for the wall or anything that
+  /// *counts* — an unreachable server and an empty library arrive as the same
+  /// value. Those use [getSeriesOrThrow].
   Future<List<SonarrSeries>> getSeries() async {
     return fetchAllItems('series', SonarrSeries.fromJson);
   }

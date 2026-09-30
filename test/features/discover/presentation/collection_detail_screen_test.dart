@@ -52,7 +52,10 @@ void main() {
 
       expect(find.byType(AppErrorState), findsOneWidget);
       expect(find.text("Couldn't load Seerr"), findsOneWidget);
-      expect(find.textContaining('Connection refused'), findsOneWidget);
+      // The exception's own words never reach the screen; the detail is
+      // the classified sentence (an unattributable failure here).
+      expect(find.textContaining('Connection refused'), findsNothing);
+      expect(find.text('The request did not complete.'), findsOneWidget);
       // The empty-title bar is gone: the failure wears the same chrome as the
       // loaded page.
       expect(find.byType(GlassAppBar), findsOneWidget);

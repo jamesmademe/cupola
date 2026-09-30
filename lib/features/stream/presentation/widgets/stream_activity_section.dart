@@ -9,6 +9,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
 import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
@@ -38,6 +39,35 @@ class StreamActivitySection extends ConsumerWidget {
 
     final rowsAsync = ref.watch(streamActivityProvider);
     final offline = ref.watch(streamActivityOfflineProvider).value ?? const [];
+
+    // Every configured server dark. With one server that is its own leaf —
+    // the cause, its address, Settings; with several, the plain-words error
+    // state names them together.
+    if (rowsAsync.hasError && !rowsAsync.hasValue) {
+      final settings = ref.watch(currentSettingsProvider);
+      final configured = ServiceDomain.stream.services
+          .where(settings.isServiceConfigured)
+          .toList(growable: false);
+      void retry() {
+        ref.invalidate(jellyfinSessionsProvider);
+        ref.invalidate(plexSessionsProvider);
+      }
+
+      return Padding(
+        padding: EdgeInsets.only(bottom: bottomPadding),
+        child: configured.length == 1
+            ? ServiceOfflineState.failure(
+                service: configured.single,
+                error: rowsAsync.error!,
+                onRetry: retry,
+              )
+            : AppErrorState(
+                error: rowsAsync.error!,
+                serviceName: 'your media servers',
+                onRetry: retry,
+              ),
+      );
+    }
 
     return RefreshIndicator(
       onRefresh: () async {

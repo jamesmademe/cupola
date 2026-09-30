@@ -192,21 +192,20 @@ class JellyfinClient implements StreamServerClient {
     }
   }
 
-  @override
-  Future<List<StreamSession>> getSessions() async {
-    try {
-      return await getSessionsOrThrow();
-    } catch (_) {
-      return const [];
-    }
-  }
-
-  /// The same session read with its transport failure preserved.
+  /// Throws on a remote failure, like [getSessionsOrThrow], which it now is.
   ///
-  /// Browse screens intentionally use [getSessions], where a dark server is a
-  /// quiet empty board. KPI and reachability consumers must use this variant:
-  /// `0 streams` is a real answer only when `/Sessions` answered with no active
-  /// sessions.
+  /// It used to answer a dark server with `const []`, on the theory that a
+  /// dead server is a quiet empty board. It is not: the board said "Nobody is
+  /// watching right now" about a server nobody could ask, and Activity's
+  /// offline note — which exists to name the dark server — never fired.
+  @override
+  Future<List<StreamSession>> getSessions() => getSessionsOrThrow();
+
+  /// The session read with its transport failure preserved.
+  ///
+  /// The name predates [getSessions] surfacing its own failure; the KPI and
+  /// reachability readers still call it by this one. `0 streams` is a real
+  /// answer only when `/Sessions` answered with no active sessions.
   Future<List<StreamSession>> getSessionsOrThrow() async {
     final response = await _api.get(
       '/Sessions',
@@ -266,20 +265,15 @@ class JellyfinClient implements StreamServerClient {
     );
   }
 
-  @override
-  Future<List<StreamLibrary>> getLibraries() async {
-    try {
-      return await getLibrariesOrThrow();
-    } catch (_) {
-      return const [];
-    }
-  }
-
-  /// The same library read with its transport or parse failure preserved.
+  /// Throws on a remote failure, like [getLibrariesOrThrow], which it now is.
   ///
-  /// The ordinary [getLibraries] contract is kept for the browse surface; KPI
-  /// consumers use this method so an unreachable server cannot become
-  /// `Libraries 0`.
+  /// A swallowed failure made a dark server read "No libraries yet".
+  @override
+  Future<List<StreamLibrary>> getLibraries() => getLibrariesOrThrow();
+
+  /// The library read with its transport or parse failure preserved, so an
+  /// unreachable server cannot become `Libraries 0`. The name predates
+  /// [getLibraries] surfacing its own failure.
   Future<List<StreamLibrary>> getLibrariesOrThrow() async {
     final response = await _api.get('/Library/VirtualFolders');
     final folders = jellyfinVirtualFoldersFromJson(response.data);
@@ -860,11 +854,16 @@ class JellyfinClient implements StreamServerClient {
   Future<void> _ensureLibraryKind(String libraryId) async {
     if (_libraryKinds.containsKey(libraryId)) return;
     final lookup = _libraryKindLookup ??= getLibraries();
-    final libraries = await lookup;
-    // An empty result means the lookup failed (it degrades rather than throwing).
-    // Caching that would leave every browse unfiltered for the life of the
-    // client, so the next call is allowed to try again.
-    if (libraries.isEmpty) _libraryKindLookup = null;
+    // A join, not a surface: without the kind the browse goes on unfiltered,
+    // so a failed lookup degrades here even though `getLibraries` throws.
+    // Caching the failure (or an empty answer) would leave every browse
+    // unfiltered for the life of the client, so the next call tries again.
+    try {
+      final libraries = await lookup;
+      if (libraries.isEmpty) _libraryKindLookup = null;
+    } catch (_) {
+      _libraryKindLookup = null;
+    }
   }
 
   /// Shared `/Items` parameters for the three non-personal lenses.

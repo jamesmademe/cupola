@@ -163,6 +163,9 @@ class _NeedsAttentionSection extends ConsumerWidget {
         onRetry: () {
           ref.invalidate(readarrNeedsAttentionProvider);
           ref.invalidate(readarrQueueRecordsProvider);
+          // The library is plain, not autoDispose: a Retry that re-ran the
+          // fold alone read its cached failure straight back.
+          ref.invalidate(readarrAuthorsProvider);
         },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (data) => data.isEmpty,

@@ -22,8 +22,10 @@ import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/media_grid.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/search_bar_header.dart';
+import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 typedef SettingsSelector = (String, String) Function(SettingsModel settings);
@@ -244,9 +246,22 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
   final String activityRoute;
   final NavigationSection navigationSection;
   final String serviceName;
+
+  /// Whose library this is. When set, a load that failed with nothing to keep
+  /// is that service's `ServiceOfflineState.failure` — the cause in plain
+  /// words, its address and a way to its connection form — rather than the
+  /// generic error state, which can name no address and no form.
+  final ServiceKey? service;
   final Color? accentColor;
   final String heroTagPrefix;
   final String searchHeroTagPrefix;
+
+  /// The whole library, which **must fail when the fetch fails**.
+  ///
+  /// The wall has nothing but this list to show, so a provider that swallows
+  /// its error into `[]` reaches the wall as an empty library and it says "No
+  /// items found" about a server that never answered. Thrown, it lands on
+  /// `AsyncValueWidget`'s fault states with a Retry.
   final FutureProvider<List<T>> libraryProvider;
   final StateProvider<String> searchQueryProvider;
   final FutureProvider<List<T>?> searchResultsProvider;
@@ -290,6 +305,7 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
     required this.activityRoute,
     required this.navigationSection,
     required this.serviceName,
+    this.service,
     this.accentColor,
     required this.heroTagPrefix,
     required this.searchHeroTagPrefix,
@@ -505,6 +521,24 @@ class _MediaBrowseScaffoldState<T>
     final (url, apiKey) = ref.watch(
       currentSettingsProvider.select(widget.settingsSelector),
     );
+
+    final service = widget.service;
+    // A cold failure of a known service goes to its offline leaf. "Not
+    // configured" keeps AsyncValueWidget's placeholder, and a failure over a
+    // retained wall keeps its FaultBand over the last wall drawn.
+    if (service != null &&
+        libraryAsync.hasError &&
+        !libraryAsync.hasValue &&
+        !libraryAsync.error.toString().contains('not configured')) {
+      return ServiceOfflineState.failure(
+        service: service,
+        error: libraryAsync.error!,
+        onRetry: () {
+          ref.invalidate(widget.libraryProvider);
+          widget.onRefresh?.call(ref);
+        },
+      );
+    }
 
     return RefreshIndicator(
       color: _spinnerInk(context),

@@ -165,25 +165,19 @@ void main() {
     expect(header.subtitle, '2 libraries');
   });
 
-  testWidgets('an empty list from a dark server is not a census of zero', (
-    tester,
-  ) async {
+  testWidgets('a server that answered and holds nothing says so, whatever '
+      'the probe is doing', (tester) async {
+    // The probe still in flight (or reading offline) no longer turns an
+    // answered empty shelf into "The server did not answer": the libraries
+    // read throws on its own failure, so an empty list is only ever an answer.
     await _pump(tester, service: ServiceKey.jellyfin, answering: false);
 
-    // The swallowed failure, end to end. `JellyfinClient.getLibraries` and
-    // `PlexClient.getLibraries` both end `catch (_) { return const []; }` and
-    // neither provider re-throws, so a server that is dark, off the LAN or
-    // 502-ing behind a proxy resolves to `data([])` — and "0 libraries" over
-    // that is the claim a user acts on, by going to look for libraries that
-    // are still there.
     final header = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Libraries'),
     );
-    expect(header.subtitle, '—');
-    expect(find.textContaining('0 libraries'), findsNothing);
-    // And the body must not say the shelf is empty either.
-    expect(find.text('No libraries on this server'), findsNothing);
-    expect(find.text('The server did not answer'), findsOneWidget);
+    expect(header.subtitle, '0 libraries');
+    expect(find.text('No libraries on this server'), findsOneWidget);
+    expect(find.text('The server did not answer'), findsNothing);
   });
 
   testWidgets('a server that answered and holds nothing says so', (
@@ -361,9 +355,7 @@ Future<void> _pump(
         }),
         plexOnDeckProvider.overrideWith((ref) async => onDeck),
         plexCapabilitiesProvider.overrideWith((ref) async => capabilities),
-        // The reachability probe, which is what tells an empty shelf from a
-        // silent server: both clients swallow their own failure and answer
-        // `[]`, so this is the only signal left that separates them.
+        // The reachability probe the identity line reads.
         serviceSummaryProvider.overrideWith(
           (ref, key) async => ServiceSummary(
             service: key,

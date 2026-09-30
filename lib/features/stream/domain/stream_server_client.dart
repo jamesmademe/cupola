@@ -9,8 +9,18 @@
 ///
 /// Errors follow the project convention: a missing configuration throws
 /// `Exception('<Service> not configured')`, which `AsyncValueWidget` detects to
-/// render `NotConfiguredPlaceholder`. Read paths degrade to `[]`/`null` on a
-/// remote failure; write actions surface theirs so the UI can report them.
+/// render `NotConfiguredPlaceholder`. Write actions surface their failure so
+/// the UI can report them.
+///
+/// Reads come in two kinds, and which kind a read is decides whether it may
+/// degrade. **A read that is the whole of a surface throws**: [getSessions]
+/// and [getLibraries] are each the only thing their board has to show, so a
+/// swallowed failure there is not a quieter page, it is a false one — "Nobody
+/// is watching right now" about a server nobody could ask. **A read that fills
+/// one slot of a page otherwise drawn** may degrade to `[]`/`null`: a count
+/// beside a card, a search group, the item a detail link resolves to. A
+/// degraded answer there has to be a gap the page can state honestly, never a
+/// figure.
 library;
 
 import 'package:dio/dio.dart' show CancelToken;
@@ -58,6 +68,9 @@ abstract interface class StreamServerClient {
   Future<bool> verifyCredential();
 
   /// Everything playing right now, most expensive first.
+  ///
+  /// Throws on a remote failure: an empty list is the server saying nobody is
+  /// watching, and only the server may say it.
   Future<List<StreamSession>> getSessions();
 
   /// Stop one playback.
@@ -68,6 +81,8 @@ abstract interface class StreamServerClient {
   Future<void> stopSession(String sessionId);
 
   /// The libraries this server exposes.
+  ///
+  /// Throws on a remote failure, for the reason [getSessions] does.
   Future<List<StreamLibrary>> getLibraries();
 
   /// Queue a scan for one library.

@@ -441,10 +441,13 @@ Future<List<ServiceKpi>> _plexKpisFor(Ref ref, String instanceId) {
 
 /// The Radarr library, read so that a failure survives the fetch.
 ///
-/// Not [moviesProvider]: that one goes through `fetchAllItems`, which swallows
-/// every failure into `[]`, so an unreachable Radarr resolved it *successfully*
-/// and the rail printed `Movies 0 · Monitored 0 · Missing 0` under an identity
-/// band whose own probe already read Unreachable. See `getMoviesOrThrow`.
+/// Written when [moviesProvider] still went through `fetchAllItems`, which
+/// swallows every failure into `[]`: an unreachable Radarr resolved it
+/// *successfully* and the rail printed `Movies 0 · Monitored 0 · Missing 0`
+/// under an identity band whose own probe already read Unreachable. The wall
+/// now reads `getMoviesOrThrow` too, with the same retry policy, so the two are
+/// the same request made twice — kept apart so this rail's invalidation stays
+/// its own. See `getMoviesOrThrow`.
 ///
 /// Plain, not `autoDispose`, matching `moviesProvider` beside it: the library
 /// is a session-scoped read, and `serviceKpiProvider` *is* `autoDispose` — a
@@ -558,9 +561,9 @@ List<ServiceKpi> _radarrKpisFrom(
 
 Future<List<ServiceKpi>> _sonarrKpis(Ref ref) async {
   try {
-    // [sonarrKpiLibraryProvider], not `seriesProvider`: the latter reads
-    // `getSeries`, which swallows its own failure into `[]`, and every figure
-    // below it was a confident zero for a question nobody answered.
+    // [sonarrKpiLibraryProvider]: `seriesProvider` used to read `getSeries`,
+    // which swallows its own failure into `[]`, and every figure below it was
+    // a confident zero for a question nobody answered.
     return _sonarrKpisFrom(await ref.watch(sonarrKpiLibraryProvider.future));
   } catch (_) {
     return _sonarrKpisFrom(null, note: _notAnswering(ServiceKey.sonarr));

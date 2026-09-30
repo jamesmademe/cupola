@@ -295,4 +295,68 @@ void main() {
       expect(reasonForStatusCode(418), ServiceFailureReason.unknown);
     });
   });
+
+  group('connectionFailureSentence', () {
+    test('never prints the exception, only the cause in plain words', () {
+      final refused = DioException.connectionError(
+        requestOptions: RequestOptions(path: '/'),
+        reason: 'Connection refused',
+      );
+      final sentence = connectionFailureSentence(refused);
+
+      expect(sentence, isNot(contains('DioException')));
+      expect(sentence, isNot(contains('solved by the library')));
+      expect(sentence, startsWith('Nothing answered at the saved address.'));
+    });
+
+    test('names the fault a reachable server reported', () {
+      expect(
+        connectionFailureSentence(_badResponse(401)),
+        'The server answered and rejected the saved credentials.',
+      );
+      expect(
+        connectionFailureSentence(_badResponse(503)),
+        'The server answered with an error of its own. Its logs will say why.',
+      );
+    });
+
+    test('keeps a failure\'s own verbatim sentence', () {
+      expect(
+        connectionFailureSentence(const _Explained('Redirected to evil.test.')),
+        'Redirected to evil.test.',
+      );
+    });
+
+    test('an error nobody can attribute says so, without its class', () {
+      expect(
+        connectionFailureSentence(StateError('bad state: parser')),
+        'The request did not complete.',
+      );
+    });
+  });
+
+  group('failureIsFault', () {
+    test('red is silence; everything that answered is amber', () {
+      expect(failureIsFault(ServiceFailureReason.unreachable), isFalse);
+      expect(failureIsFault(ServiceFailureReason.unknown), isFalse);
+      for (final reason in const [
+        ServiceFailureReason.timeout,
+        ServiceFailureReason.tls,
+        ServiceFailureReason.unauthorized,
+        ServiceFailureReason.notFound,
+        ServiceFailureReason.redirected,
+        ServiceFailureReason.serverError,
+        ServiceFailureReason.localNetworkBlocked,
+      ]) {
+        expect(failureIsFault(reason), isTrue, reason: reason.name);
+      }
+    });
+  });
+}
+
+class _Explained implements Exception, HasFailureDetail {
+  const _Explained(this.failureDetail);
+
+  @override
+  final String failureDetail;
 }

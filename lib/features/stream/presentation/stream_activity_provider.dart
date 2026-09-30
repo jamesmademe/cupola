@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -28,14 +29,28 @@ typedef StreamActivityRow = ({ServiceKey service, StreamSession session});
 /// So the Streaming sub-segment carries its own type end to end. That is why
 /// `_ActivitySub.custom` exists.
 ///
-/// Sources degrade independently: an unreachable Jellyfin yields no rows rather
-/// than emptying the section, which is the project's read-path convention.
-/// [streamActivityOfflineProvider] is what lets the UI name the source that went
-/// dark instead of implying nobody is watching.
+/// Sources degrade independently **while one of them still answers**: an
+/// unreachable Jellyfin yields no rows rather than emptying the section, and
+/// [streamActivityOfflineProvider] names it beside the sessions Plex did send.
+/// That partial answer is honest — every row on screen is a fact, and the
+/// silence is named.
+///
+/// When **no** configured server answered there is no partial answer to show,
+/// and this throws the last failure. It used to return `[]`, which the section
+/// drew as "Nobody is watching right now" about servers nobody could ask — the
+/// offline note never fired either, because the sessions reads swallowed their
+/// own failures until they stopped.
+///
+/// `retry: noProviderRetry` because both sessions providers carry it: a
+/// derivation that dropped it would hold the failure through ten backing-off
+/// re-runs its sources had already declined.
 final streamActivityProvider = FutureProvider<List<StreamActivityRow>>((
   ref,
 ) async {
   final rows = <StreamActivityRow>[];
+  var answered = 0;
+  Object? failure;
+  StackTrace? failureStack;
 
   for (final service in ServiceDomain.stream.services) {
     if (!ref.watch(currentSettingsProvider).isServiceConfigured(service)) {
@@ -46,13 +61,20 @@ final streamActivityProvider = FutureProvider<List<StreamActivityRow>>((
         ServiceKey.jellyfin => ref.watch(jellyfinSessionsProvider.future),
         _ => ref.watch(plexSessionsProvider.future),
       };
+      answered++;
       rows.addAll(
         sessions.map((session) => (service: service, session: session)),
       );
-    } catch (_) {
+    } catch (error, stack) {
       // Reported through streamActivityOfflineProvider rather than thrown: one
       // dark server must not hide the other's sessions.
+      failure = error;
+      failureStack = stack;
     }
+  }
+
+  if (answered == 0 && failure != null) {
+    Error.throwWithStackTrace(failure, failureStack!);
   }
 
   // Transcodes first — the rows that are costing the box something are the rows
@@ -78,7 +100,7 @@ final streamActivityProvider = FutureProvider<List<StreamActivityRow>>((
       });
 
   return ordered.map((entry) => entry.row).toList(growable: false);
-});
+}, retry: noProviderRetry);
 
 /// Configured media servers that did not answer.
 ///
@@ -87,6 +109,9 @@ final streamActivityProvider = FutureProvider<List<StreamActivityRow>>((
 /// "nobody is watching" and "the server is down" arrive identically, which sends
 /// the user looking for the wrong thing. Naming which source is dark is what makes
 /// a merged section safe.
+///
+/// Never throws, so its retry policy never engages; `noProviderRetry` anyway,
+/// because its sources carry it.
 final streamActivityOfflineProvider = FutureProvider<List<ServiceKey>>((
   ref,
 ) async {
@@ -107,7 +132,7 @@ final streamActivityOfflineProvider = FutureProvider<List<ServiceKey>>((
   }
 
   return offline;
-});
+}, retry: noProviderRetry);
 
 /// Whether any media server is configured at all.
 ///

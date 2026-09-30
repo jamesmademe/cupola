@@ -188,10 +188,10 @@ final jellyfinItemChildrenProvider = FutureProvider.autoDispose
 /// Sessions with the transport failure preserved, for the surfaces that state
 /// a **figure** rather than draw a board.
 ///
-/// `getSessions()` answers an unreachable server with `const []`, which is
-/// right for a browse — a dark server is a quiet empty board — and wrong for a
-/// counter, where `0 streams` is a claim nobody made. The KPI rail and the
-/// reachability signal read this instead.
+/// Written when `getSessions()` still answered an unreachable server with
+/// `const []` — wrong for a counter, where `0 streams` is a claim nobody made,
+/// and, it turned out, wrong for the board too. Both now throw; the KPI rail
+/// and the reachability signal keep reading this one.
 ///
 /// It is a provider and not a call the KPI layer makes on the client itself,
 /// which is the part worth keeping: read straight off the client, every rebuild

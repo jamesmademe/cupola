@@ -427,21 +427,19 @@ class PlexClient implements StreamServerClient {
   /// Mapped on the main isolate on purpose, unlike the library lists below: a
   /// server with thirty concurrent streams is extraordinary, and spawning an
   /// isolate to map a dozen objects costs more than the map.
-  @override
-  Future<List<StreamSession>> getSessions({CancelToken? cancelToken}) async {
-    try {
-      return await getSessionsOrThrow(cancelToken: cancelToken);
-    } catch (_) {
-      return const [];
-    }
-  }
-
-  /// The same session read with its transport or parse failure preserved.
   ///
-  /// Browse screens intentionally use [getSessions], where a dark server is a
-  /// quiet empty board. KPI and reachability consumers must use this variant:
-  /// `0 streams` is a real answer only when `/status/sessions` answered with no
-  /// active sessions.
+  /// Throws on a remote failure, like [getSessionsOrThrow], which it now is:
+  /// answering a dark server with `const []` drew "Nobody is watching right
+  /// now" about a server nobody could ask.
+  @override
+  Future<List<StreamSession>> getSessions({CancelToken? cancelToken}) =>
+      getSessionsOrThrow(cancelToken: cancelToken);
+
+  /// The session read with its transport or parse failure preserved.
+  ///
+  /// The name predates [getSessions] surfacing its own failure; the KPI and
+  /// reachability readers still call it by this one. `0 streams` is a real
+  /// answer only when `/status/sessions` answered with no active sessions.
   Future<List<StreamSession>> getSessionsOrThrow({
     CancelToken? cancelToken,
   }) async {
@@ -559,20 +557,15 @@ class PlexClient implements StreamServerClient {
   ///
   /// Populates [_sectionKinds] as a side effect, which is what lets a lens be
   /// built later without a second round trip.
-  @override
-  Future<List<StreamLibrary>> getLibraries({CancelToken? cancelToken}) async {
-    try {
-      return await getLibrariesOrThrow(cancelToken: cancelToken);
-    } catch (_) {
-      return const [];
-    }
-  }
-
-  /// The same library read with its transport or parse failure preserved.
   ///
-  /// The ordinary [getLibraries] contract is kept for the browse surface; KPI
-  /// consumers use this method so an unreachable server cannot become
-  /// `Libraries 0`.
+  /// Throws on a remote failure, like [getLibrariesOrThrow], which it now is.
+  @override
+  Future<List<StreamLibrary>> getLibraries({CancelToken? cancelToken}) =>
+      getLibrariesOrThrow(cancelToken: cancelToken);
+
+  /// The library read with its transport or parse failure preserved, so an
+  /// unreachable server cannot become `Libraries 0`. The name predates
+  /// [getLibraries] surfacing its own failure.
   Future<List<StreamLibrary>> getLibrariesOrThrow({
     CancelToken? cancelToken,
   }) async {
@@ -910,20 +903,20 @@ class PlexClient implements StreamServerClient {
   /// Hub responses are where a no-plex.tv client leaks: Plex mixes *provider*
   /// rows into the same arrays as local ones, with absolute plex.tv keys and
   /// artwork. [plexItemFromJson] drops them at the parse boundary.
+  ///
+  /// Throws on a remote failure. The rail and the On deck tab are this one
+  /// request and nothing else, so a swallowed failure drew "Nothing
+  /// part-watched" about a server that never answered.
   Future<List<StreamItem>> getContinueWatching({
     int count = kPlexLibraryPageSize,
     CancelToken? cancelToken,
   }) async {
-    try {
-      final container = await _container(
-        '/hubs/continueWatching',
-        queryParameters: {'count': count},
-        cancelToken: cancelToken,
-      );
-      return _itemsFromHubs(container);
-    } catch (_) {
-      return const [];
-    }
+    final container = await _container(
+      '/hubs/continueWatching',
+      queryParameters: {'count': count},
+      cancelToken: cancelToken,
+    );
+    return _itemsFromHubs(container);
   }
 
   /// Devices registered on this Plex Media Server (`com.plexapp.system.devices`).
@@ -1042,7 +1035,14 @@ class PlexClient implements StreamServerClient {
   Future<StreamLibraryKind?> _sectionKind(String libraryId) async {
     final cached = _sectionKinds[libraryId];
     if (cached != null) return cached;
-    await getLibraries();
+    // A join, not a surface: an unknown kind only costs the browse its type
+    // filter, so a failed lookup degrades here even though `getLibraries`
+    // throws.
+    try {
+      await getLibraries();
+    } catch (_) {
+      return null;
+    }
     return _sectionKinds[libraryId];
   }
 

@@ -70,7 +70,10 @@ void main() {
       // The headline names what failed; the exception stays on screen as the
       // demoted detail line, not as the message.
       expect(find.text("Couldn't load Lidarr"), findsOneWidget);
-      expect(find.textContaining('Network error'), findsOneWidget);
+      // The exception's own words never reach the screen; the detail is
+      // the classified sentence (an unattributable failure here).
+      expect(find.textContaining('Network error'), findsNothing);
+      expect(find.text('The request did not complete.'), findsOneWidget);
     });
 
     testWidgets('shows not configured placeholder for configuration errors', (

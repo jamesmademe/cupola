@@ -390,8 +390,12 @@ void main() {
               .having((e) => e.message, 'message', contains('Accept')),
         ),
       );
-      // A read path meets the same body and degrades instead of throwing.
-      expect(await _client(adapter).getSessions(), isEmpty);
+      // A slot read meets the same body and degrades; the sessions board read
+      // says it could not read.
+      await expectLater(
+        _client(adapter).getSessions(),
+        throwsA(isA<PlexException>()),
+      );
       expect(await _client(adapter).probeVersion(), isNull);
     });
 
@@ -1600,14 +1604,21 @@ void main() {
   });
 
   group('remote failure', () {
-    test('reads degrade to [] / null and writes surface', () async {
+    test('slot reads degrade, board reads and writes surface', () async {
       final client = _client(_FailingAdapter());
 
       expect(await client.probeVersion(), isNull);
       expect(await client.getIdentity(), isNull);
       expect(await client.getCapabilities(), isNull);
-      expect(await client.getSessions(), isEmpty);
-      expect(await client.getLibraries(), isEmpty);
+      // A whole surface each — Now playing, the shelf, On deck — so a dark
+      // server is a failure there, never "Nobody is watching" or "Nothing
+      // part-watched".
+      await expectLater(client.getSessions(), throwsA(isA<PlexException>()));
+      await expectLater(client.getLibraries(), throwsA(isA<PlexException>()));
+      await expectLater(
+        client.getContinueWatching(),
+        throwsA(isA<PlexException>()),
+      );
       await expectLater(
         client.getSessionsOrThrow(),
         throwsA(isA<PlexException>()),
@@ -1619,7 +1630,6 @@ void main() {
       expect(await client.getViewers(), isEmpty);
       expect(await client.getChildren('41000'), isEmpty);
       expect(await client.getItem('20418'), isNull);
-      expect(await client.getContinueWatching(), isEmpty);
       expect(await client.search('inter'), isEmpty);
       expect(await client.getLibraryItemCount('1'), isNull);
 
@@ -1668,8 +1678,11 @@ void main() {
             ),
           ),
         );
-        // And the read paths still degrade rather than throwing.
-        expect(await _client(adapter).getSessions(), isEmpty);
+        // And the sessions read says it could not read, rather than "nobody".
+        await expectLater(
+          _client(adapter).getSessions(),
+          throwsA(isA<PlexException>()),
+        );
       },
     );
 
@@ -1678,7 +1691,10 @@ void main() {
       final client = _client(CapturingHttpAdapter(response: {}));
       token.cancel('navigated away');
 
-      expect(await client.getSessions(cancelToken: token), isEmpty);
+      await expectLater(
+        client.getSessions(cancelToken: token),
+        throwsA(isA<PlexException>()),
+      );
       expect(await client.search('inter', cancelToken: token), isEmpty);
     });
   });

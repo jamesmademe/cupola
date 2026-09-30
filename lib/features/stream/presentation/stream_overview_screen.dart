@@ -15,7 +15,6 @@ import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -133,19 +132,38 @@ class _OverviewBody extends ConsumerWidget {
     final sessions = _isPlex
         ? ref.watch(plexSessionsProvider)
         : ref.watch(jellyfinSessionsProvider);
+    final libraries = _isPlex
+        ? ref.watch(plexLibrariesProvider)
+        : ref.watch(jellyfinLibrariesProvider);
+
+    void refresh() {
+      invalidateServiceReadout(ref, service);
+      if (_isPlex) {
+        ref.invalidate(plexSessionsProvider);
+        ref.invalidate(plexLibrariesProvider);
+        ref.invalidate(plexOnDeckProvider);
+        ref.invalidate(plexCapabilitiesProvider);
+      } else {
+        ref.invalidate(jellyfinSessionsProvider);
+        ref.invalidate(jellyfinLibrariesProvider);
+      }
+    }
+
+    // **One** state for a server that is dark, not one per region. Sessions
+    // and the library list are the two reads both servers answer; when both
+    // failed with nothing retained there is no region left to draw, and three
+    // stacked error wells each saying the same thing about the same box was a
+    // page shouting. The identity line and the readouts stay above it — the
+    // host, and "—" where a figure had no answer.
+    final serverDark =
+        sessions.hasError &&
+        !sessions.hasValue &&
+        libraries.hasError &&
+        !libraries.hasValue;
 
     return RefreshIndicator(
       onRefresh: () async {
-        invalidateServiceReadout(ref, service);
-        if (_isPlex) {
-          ref.invalidate(plexSessionsProvider);
-          ref.invalidate(plexLibrariesProvider);
-          ref.invalidate(plexOnDeckProvider);
-          ref.invalidate(plexCapabilitiesProvider);
-        } else {
-          ref.invalidate(jellyfinSessionsProvider);
-          ref.invalidate(jellyfinLibrariesProvider);
-        }
+        refresh();
         await Future<void>.delayed(AppAnimation.durationMd);
       },
       // One scroll view for the whole page: the regions are one column of
@@ -162,16 +180,24 @@ class _OverviewBody extends ConsumerWidget {
             kpis: ref.watch(serviceKpiProvider(service)),
             accent: service.accent,
           ),
-          // Who is watching, first and on both servers: it is the one fact only
-          // a media server holds, and the only region on this page that is
-          // about people rather than about files.
-          StreamNowPlayingSection(service: service, sessions: sessions),
-          if (!_isPlex && ref.watch(jellyfinLacksAdministratorProvider))
-            const JellyfinOwnPlaybackNote(),
-          const SizedBox(height: AppSpacing.lg),
-          if (_isPlex) const _OnDeckSection(),
-          _LibrariesSection(service: service),
-          if (_isPlex) const _ServerSection(),
+          if (serverDark)
+            ServiceOfflineState.failure(
+              service: service,
+              error: sessions.error!,
+              onRetry: refresh,
+            )
+          else ...[
+            // Who is watching, first and on both servers: it is the one fact
+            // only a media server holds, and the only region on this page that
+            // is about people rather than about files.
+            StreamNowPlayingSection(service: service, sessions: sessions),
+            if (!_isPlex && ref.watch(jellyfinLacksAdministratorProvider))
+              const JellyfinOwnPlaybackNote(),
+            const SizedBox(height: AppSpacing.lg),
+            if (_isPlex) const _OnDeckSection(),
+            _LibrariesSection(service: service),
+            if (_isPlex) const _ServerSection(),
+          ],
         ],
       ),
     );
@@ -368,10 +394,11 @@ class _OnDeckTile extends StatelessWidget {
 /// The header's census comes from the whole list and the rows are capped, so a
 /// full rescan reads `9 scanning` above three rows rather than reporting three.
 ///
-/// **An empty list is not automatically an empty shelf.** Both clients swallow
-/// their own failure and answer `[]`, so the reachability probe the identity
-/// line above already watched is what separates a server whose libraries were
-/// deleted from one that is simply dark — see [streamLibrariesUnanswered].
+/// **An empty list is an empty shelf, and a dark server is a failure.** Both
+/// clients used to swallow their own failure into `[]`, and this region leaned
+/// on the reachability probe to guess which of the two it had been handed. They
+/// throw now, so the failure lands in the region's own slot with a Retry and an
+/// empty list is only ever the server's answer.
 class _LibrariesSection extends ConsumerWidget {
   const _LibrariesSection({required this.service});
 
@@ -382,15 +409,6 @@ class _LibrariesSection extends ConsumerWidget {
     final libraries = service == ServiceKey.jellyfin
         ? ref.watch(jellyfinLibrariesProvider)
         : ref.watch(plexLibrariesProvider);
-    // The same probe `ServiceOverviewIdentity` above is already watching, so
-    // this is a `select` on a value in hand rather than a second request. A
-    // probe still in flight is not an answer, so it counts as "not answering"
-    // and the census reads "—" until it lands.
-    final answering = ref.watch(
-      serviceSummaryProvider(
-        service,
-      ).select((summary) => summary.asData?.value.isOnline ?? false),
-    );
     // One `now` for the whole region, so two rows built microseconds apart
     // cannot disagree about which side of a boundary they are on.
     final now = DateTime.now();
@@ -398,17 +416,12 @@ class _LibrariesSection extends ConsumerWidget {
     return ServiceOverviewSection(
       service: service,
       title: 'Libraries',
-      // "—" while the list is in flight, after it failed, and — the case the
-      // swallowed failure creates — when an empty list arrived from a server
-      // that is not answering. A "0 libraries" printed over an unanswered
-      // question is a claim nobody made, and it is the claim a user would act
-      // on, by going to look for libraries that are there.
+      // "—" while the list is in flight and after it failed. A "0 libraries"
+      // printed over an unanswered question is a claim nobody made, and it is
+      // the claim a user would act on, by going to look for libraries that are
+      // there.
       subtitle:
-          streamLibrariesCensus(
-            libraries: libraries.asData?.value,
-            serverAnswering: answering,
-          ) ??
-          '—',
+          streamLibrariesCensus(libraries: libraries.asData?.value) ?? '—',
       destination: ServiceTab.libraries,
       child: AsyncValueWidget<List<StreamLibrary>>(
         value: libraries,
@@ -421,19 +434,12 @@ class _LibrariesSection extends ConsumerWidget {
         ),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (list) => list.isEmpty,
-        // Two different absences, and they must not share a sentence. A server
-        // that answered and holds nothing is an empty shelf; a server that is
-        // dark answers `[]` through the same `catch`, and telling that user
-        // their libraries are gone is the worst reading on the page.
-        emptyBuilder: answering
-            ? const ServiceOverviewEmpty(
-                icon: Icons.video_library_outlined,
-                label: 'No libraries on this server',
-              )
-            : const ServiceOverviewEmpty(
-                icon: Icons.cloud_off_rounded,
-                label: 'The server did not answer',
-              ),
+        // Only a server that answered reaches this: a dark one is the error
+        // branch above, never an empty list.
+        emptyBuilder: const ServiceOverviewEmpty(
+          icon: Icons.video_library_outlined,
+          label: 'No libraries on this server',
+        ),
         data: (list) => Column(
           children: [
             for (final row in streamShelfRows(list, now: now))

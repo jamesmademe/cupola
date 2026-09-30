@@ -27,6 +27,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
@@ -331,6 +332,10 @@ final readarrBelowCutoffProvider =
 /// decision before what is merely outstanding. Within the backlog, missing
 /// before below-cutoff — a book with no file at all outranks one that is merely
 /// the wrong format, which is the order the board draws too.
+///
+/// `retry: noProviderRetry` because [readarrAuthorsProvider] carries it: a
+/// derivation that dropped it would re-run a dark library ten times behind a
+/// backoff that its source had declined.
 final readarrNeedsAttentionProvider =
     FutureProvider.autoDispose<List<ReadarrAttentionItem>>((ref) async {
       final records = await ref.watch(readarrQueueRecordsProvider.future);
@@ -342,7 +347,7 @@ final readarrNeedsAttentionProvider =
         ?backlog,
         ?cutoff,
       ];
-    });
+    }, retry: noProviderRetry);
 
 // ─── Root folder ────────────────────────────────────────────────────────────
 

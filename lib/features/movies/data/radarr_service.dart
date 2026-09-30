@@ -72,9 +72,9 @@ class RadarrService with ArrActivityMixin {
 
   /// Fetches all movies from Radarr, answering `[]` when it cannot be read.
   ///
-  /// The degrading read, kept as it was: the browse grid behind it would rather
-  /// show nothing than a dialog. Callers that derive a *figure* use
-  /// [getMoviesOrThrow] — see the note there for why the two have to differ.
+  /// The degrading read, for joins that can go on without the library
+  /// ([getMovieByTmdbId]). The wall and every *figure* use [getMoviesOrThrow] —
+  /// see the note there, and on `fetchAllItems`, for why the two differ.
   Future<List<RadarrMovie>> getMovies() async {
     return fetchAllItems('movie', RadarrMovie.fromJson);
   }

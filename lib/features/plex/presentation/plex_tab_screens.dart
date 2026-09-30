@@ -108,6 +108,20 @@ class _PlexOnDeckBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(plexOnDeckTabProvider);
+    // The tab is this one read, so a cold failure is the server's leaf.
+    if (items.hasError && !items.hasValue) {
+      return AmbientScaffold(
+        accent: ServiceKey.plex.accent,
+        body: Padding(
+          padding: EdgeInsets.only(top: topPadding),
+          child: ServiceOfflineState.failure(
+            service: ServiceKey.plex,
+            error: items.error!,
+            onRetry: () => ref.invalidate(plexOnDeckTabProvider),
+          ),
+        ),
+      );
+    }
     return AmbientScaffold(
       accent: ServiceKey.plex.accent,
       body: Padding(
@@ -142,6 +156,19 @@ class _PlexActivitiesBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessions = ref.watch(plexSessionsProvider);
+    if (sessions.hasError && !sessions.hasValue) {
+      return AmbientScaffold(
+        accent: ServiceKey.plex.accent,
+        body: Padding(
+          padding: EdgeInsets.only(top: topPadding),
+          child: ServiceOfflineState.failure(
+            service: ServiceKey.plex,
+            error: sessions.error!,
+            onRetry: () => ref.invalidate(plexSessionsProvider),
+          ),
+        ),
+      );
+    }
     return AmbientScaffold(
       accent: ServiceKey.plex.accent,
       body: RefreshIndicator(

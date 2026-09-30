@@ -32,10 +32,17 @@ ReadarrService _readarrService(Ref ref, {required String? instanceId}) {
   );
 }
 
-/// All authors in the library.
+/// All authors in the library, with a failed fetch allowed to reach the caller.
+///
+/// It read `getAuthors`, which swallows its own failure into `[]`, so a dark
+/// Readarr drew "No authors in the library yet." — and the error branch the
+/// Library tab already had could never be reached. The list is the whole
+/// library in one request, so there is nothing partial to show beside a
+/// failure. `noProviderRetry` for the reason `moviesProvider` gives: the rail
+/// above reads the same library that way, and a Retry is the user's call.
 final readarrAuthorsProvider = FutureProvider<List<ReadarrAuthor>>((ref) async {
-  return ref.watch(readarrServiceProvider).getAuthors();
-});
+  return ref.watch(readarrServiceProvider).getAuthorsOrThrow();
+}, retry: noProviderRetry);
 
 /// Current download queue, with a failed fetch allowed to reach the caller.
 ///

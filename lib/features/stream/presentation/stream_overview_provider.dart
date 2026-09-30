@@ -58,6 +58,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show IconData, Icons;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
@@ -236,41 +237,17 @@ List<StreamShelfRow> streamShelfRows(
   ]);
 }
 
-/// Whether an empty library list is the shelf's answer or the server's silence.
-///
-/// **Both clients swallow their own failure**: `JellyfinClient.getLibraries`
-/// and `PlexClient.getLibraries` each end `catch (_) { return const []; }`, and
-/// neither provider re-throws, so a server that is dark, off the LAN or 502-ing
-/// behind a proxy resolves to `data([])` — indistinguishable, at this layer,
-/// from a server whose libraries were genuinely deleted. Printing "0 libraries"
-/// over the first of those is the fake zero the contract names, and it is the
-/// reading a user acts on.
-///
-/// The discriminator is the reachability probe the identity line above already
-/// watched, so this costs no extra request. Only an *empty* list is ambiguous:
-/// a list with rooms in it was answered by definition, whatever the probe
-/// happens to be saying this second.
-bool streamLibrariesUnanswered({
-  required List<StreamLibrary> libraries,
-  required bool serverAnswering,
-}) => libraries.isEmpty && !serverAnswering;
-
 /// The Libraries header's census, or null when nothing behind it answered.
 ///
-/// [libraries] is null while the list is in flight; it is empty both for an
-/// empty shelf and for a silent server, which [streamLibrariesUnanswered]
-/// separates. Null here reads "—" on the header — never 0.
-String? streamLibrariesCensus({
-  required List<StreamLibrary>? libraries,
-  required bool serverAnswering,
-}) {
+/// [libraries] is null while the list is in flight and after it failed; null
+/// here reads "—" on the header — never 0. An empty list is the server's own
+/// answer: `getLibraries` throws on a remote failure, so `[]` can only arrive
+/// from a server that answered and holds nothing. It used to swallow that
+/// failure, and this function took the reachability probe as a second
+/// argument to tell the two apart — a guess that read "did not answer" over a
+/// real empty shelf whenever the probe had not landed yet.
+String? streamLibrariesCensus({required List<StreamLibrary>? libraries}) {
   if (libraries == null) return null;
-  if (streamLibrariesUnanswered(
-    libraries: libraries,
-    serverAnswering: serverAnswering,
-  )) {
-    return null;
-  }
   final scanning = libraries.where((library) => library.isRefreshing).toList();
   return streamLibrariesSummary(
     total: libraries.length,
@@ -340,11 +317,14 @@ String streamOnDeckCaption(StreamItem item) {
 /// answer Jellyfin with an empty list, and an empty list on this rail reads as
 /// "nothing in progress", which is a claim nobody made.
 ///
-/// `getContinueWatching` swallows its own failure and answers `[]`, the same
-/// contract `getAllCutoff` has on the Radarr Overview: a Plex that serves
-/// sessions but not hubs shows a resting rail rather than taking the region
-/// down. `autoDispose` with a cancel token because this is a list fetch, and the
-/// project's convention is that those are cancellable.
+/// `getContinueWatching` throws when the hub cannot be read. It used to answer
+/// `[]`, and the rail then said "Nothing part-watched" about a Plex that never
+/// answered; the failure now lands in the region's own slot, with a Retry,
+/// and the regions around it still draw. `autoDispose` with a cancel token
+/// because this is a list fetch, and the project's convention is that those
+/// are cancellable. `retry: noProviderRetry` for the reason
+/// `jellyfinLibrariesProvider` gives: a dark server is an unreachable slot with
+/// a Retry on it, not a spinner held through ten backing-off attempts.
 final plexOnDeckProvider = FutureProvider.autoDispose<List<StreamItem>>((
   ref,
 ) async {
@@ -356,4 +336,4 @@ final plexOnDeckProvider = FutureProvider.autoDispose<List<StreamItem>>((
     cancelToken: cancelToken,
   );
   return streamOnDeckPreview(items);
-});
+}, retry: noProviderRetry);

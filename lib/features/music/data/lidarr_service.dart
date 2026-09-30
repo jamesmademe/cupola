@@ -170,8 +170,8 @@ class LidarrService with ArrActivityMixin {
 
   /// Fetches all artists from Lidarr, answering `[]` when it cannot be read.
   ///
-  /// The degrading read, kept as it was. Callers that derive a *figure* use
-  /// [getArtistsOrThrow].
+  /// The degrading read, for joins that can go on without the library (the
+  /// queue's album lookup). The wall and every *figure* use [getArtistsOrThrow].
   Future<List<LidarrArtist>> getArtists() async {
     return fetchAllItems('artist', LidarrArtist.fromJson);
   }

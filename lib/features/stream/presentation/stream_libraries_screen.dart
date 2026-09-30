@@ -98,6 +98,21 @@ class _LibrariesBody extends ConsumerWidget {
     final librariesAsync = service == ServiceKey.jellyfin
         ? ref.watch(jellyfinLibrariesProvider)
         : ref.watch(plexLibrariesProvider);
+    // The tab is this one read, so a cold failure is the server's leaf.
+    if (librariesAsync.hasError && !librariesAsync.hasValue) {
+      return Padding(
+        padding: EdgeInsets.only(top: topPadding),
+        child: ServiceOfflineState.failure(
+          service: service,
+          error: librariesAsync.error!,
+          onRetry: () => ref.invalidate(
+            service == ServiceKey.jellyfin
+                ? jellyfinLibrariesProvider
+                : plexLibrariesProvider,
+          ),
+        ),
+      );
+    }
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -151,8 +166,12 @@ class _LibrariesSection extends ConsumerWidget {
             title: 'Libraries',
             // Null until the list lands, so the header never prints "0
             // libraries" over a region that is still loading — a figure whose
-            // source has not answered is not zero.
-            subtitle: _summaryOf(libraries.value),
+            // source has not answered is not zero. A list that failed with
+            // nothing retained says so with an em dash; a retained one keeps
+            // the census of the rows still drawn under the fault band.
+            subtitle: libraries.hasError && !libraries.hasValue
+                ? '—'
+                : _summaryOf(libraries.value),
             showChevron: false,
           ),
         ),

@@ -193,52 +193,22 @@ void main() {
             _library(name: 'Movies', refreshing: true),
             _library(name: 'Shows'),
           ],
-          serverAnswering: true,
         ),
         '2 libraries · Movies scanning',
       );
     });
 
-    test('a list still in flight is not a zero', () {
-      expect(
-        streamLibrariesCensus(libraries: null, serverAnswering: true),
-        isNull,
-      );
+    test('a list in flight, or one that failed, is not a zero', () {
+      // The header prints "—" for null. `getLibraries` throws on a remote
+      // failure now, so a dark server reaches this as no list at all — never
+      // as the `[]` it used to swallow its failure into.
+      expect(streamLibrariesCensus(libraries: null), isNull);
     });
 
-    test('an empty shelf on a server that answered is genuinely empty', () {
-      expect(
-        streamLibrariesCensus(libraries: const [], serverAnswering: true),
-        '0 libraries',
-      );
-    });
-
-    test('an empty list from a dark server is a silence, not a zero', () {
-      // The defect this function exists for. Both clients end `getLibraries`
-      // with `catch (_) { return const []; }` and neither provider re-throws,
-      // so a server that is off the LAN or 502-ing behind a proxy resolves to
-      // `data([])` — and "0 libraries" over that reads as a shelf whose
-      // libraries were deleted, which is the claim a user acts on.
-      expect(
-        streamLibrariesCensus(libraries: const [], serverAnswering: false),
-        isNull,
-      );
-      expect(
-        streamLibrariesUnanswered(libraries: const [], serverAnswering: false),
-        isTrue,
-      );
-    });
-
-    test('rooms in hand outrank whatever the probe is saying this second', () {
-      // A list with libraries in it was answered by definition; a probe that
-      // has not landed yet must not turn a real census into an em dash.
-      expect(
-        streamLibrariesCensus(
-          libraries: [_library(name: 'Movies')],
-          serverAnswering: false,
-        ),
-        '1 library',
-      );
+    test('an empty list is the server saying its shelf is empty', () {
+      // Only an answering server can produce `[]` any more, so it no longer
+      // needs the reachability probe to vouch for it.
+      expect(streamLibrariesCensus(libraries: const []), '0 libraries');
     });
   });
 

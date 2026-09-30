@@ -53,6 +53,7 @@ class SeriesScreen extends ConsumerWidget {
       activityRoute: '/activity/series',
       navigationSection: NavigationSection.dashboard,
       serviceName: 'Sonarr',
+      service: ServiceKey.sonarr,
       accentColor: ServiceKey.sonarr.accent,
       heroTagPrefix: 'series',
       searchHeroTagPrefix: 'series_search',

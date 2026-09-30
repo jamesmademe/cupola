@@ -3,6 +3,7 @@ library;
 
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
@@ -17,8 +18,8 @@ import 'package:cupola/core/widgets/service_kpi_peek.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
 
+import '../test_helpers/settings_scope.dart';
 import 'catalog.dart';
 
 /// On the catalog's pinned origin with no file behind it: the load fails.
@@ -150,7 +151,10 @@ final _pendingProvider = FutureProvider<List<_Film>>(
   (ref) => Completer<List<_Film>>().future,
 );
 final _failingProvider = FutureProvider<List<_Film>>(
-  (ref) async => throw Exception('Connection refused'),
+  (ref) async => throw DioException.connectionError(
+    requestOptions: RequestOptions(path: '/api/v3/movie'),
+    reason: 'Connection refused',
+  ),
   retry: noProviderRetry,
 );
 final _unconfiguredProvider = FutureProvider<List<_Film>>(
@@ -160,7 +164,7 @@ final _unconfiguredProvider = FutureProvider<List<_Film>>(
 
 /// Each phone gets its own query, so typing into one does not search another.
 final _queries = [
-  for (var i = 0; i < 12; i++) StateProvider<String>((ref) => ''),
+  for (var i = 0; i < 13; i++) StateProvider<String>((ref) => ''),
 ];
 
 FutureProvider<List<_Film>?> _resultsFor(StateProvider<String> query) =>
@@ -205,6 +209,7 @@ Widget _scaffold(
   MediaBrowseTileShape shape = MediaBrowseTileShape.poster,
   String title = 'Movies',
   FutureProvider<List<_Film>?>? results,
+  ServiceKey? service,
 }) {
   return MediaBrowseScaffold<_Film>(
     title: title,
@@ -212,6 +217,7 @@ Widget _scaffold(
     activityRoute: '/activity',
     navigationSection: NavigationSection.dashboard,
     serviceName: 'Radarr',
+    service: service,
     accentColor: ServiceKey.radarr.accent,
     heroTagPrefix: 'movie',
     searchHeroTagPrefix: 'movie_search',
@@ -314,9 +320,13 @@ class _TypedState extends State<_Typed> {
 void main() {
   catalogCard(
     'MediaBrowseScaffold',
-    width: 1328,
+    width: 1706,
     overrides: () async => [
-      currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+      // A Radarr with an address, so the service-aware failure has a host to
+      // name; nothing else on the sheet reads settings but the image auth.
+      currentSettingsProvider.overrideWith(
+        (ref) => settingsWithServices(const [ServiceKey.radarr]),
+      ),
     ],
     scenes: [
       CatalogScene(
@@ -357,11 +367,13 @@ void main() {
         ]),
       ),
       CatalogScene(
-        'MediaBrowseScaffold · loading, a failed load, not configured · the '
-        'wall defers to AsyncValueWidget; search and chips stay put',
+        'MediaBrowseScaffold · loading, a failed load with no service, the '
+        'same failure with service: (ServiceOfflineState.failure: cause, '
+        'address, Settings), not configured · search and chips stay put',
         (_) => _phones([
           _scaffold(7, library: _pendingProvider),
           _scaffold(8, library: _failingProvider),
+          _scaffold(12, library: _failingProvider, service: ServiceKey.radarr),
           _scaffold(9, library: _unconfiguredProvider),
         ]),
       ),

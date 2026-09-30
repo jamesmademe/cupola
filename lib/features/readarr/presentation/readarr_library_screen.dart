@@ -96,9 +96,15 @@ class ReadarrLibraryScreen extends ConsumerWidget {
               );
             },
             loading: () => const ListRowsShimmer(count: 8),
-            error: (error, _) => InlineErrorRetry(
-              message: 'Failed to load authors',
-              onRetry: () => ref.invalidate(readarrAuthorsProvider),
+            // The whole tab is this one list, so a failure is the page's
+            // leaf: the cause in plain words, the address, Settings.
+            error: (error, _) => ServiceOfflineState.failure(
+              service: ServiceKey.readarr,
+              error: error,
+              onRetry: () {
+                ref.invalidate(readarrAuthorsProvider);
+                ref.invalidate(readarrKpiLibraryProvider);
+              },
             ),
           ),
         ),

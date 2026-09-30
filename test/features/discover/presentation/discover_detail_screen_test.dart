@@ -318,7 +318,10 @@ void main() {
       );
 
       expect(find.byType(AppErrorState), findsOneWidget);
-      expect(find.textContaining('Connection refused'), findsOneWidget);
+      // The exception's own words never reach the screen; the detail is
+      // the classified sentence (an unattributable failure here).
+      expect(find.textContaining('Connection refused'), findsNothing);
+      expect(find.text('The request did not complete.'), findsOneWidget);
       expect(loads, 1);
 
       await tester.tap(find.text('Retry'));

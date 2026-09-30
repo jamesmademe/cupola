@@ -37,6 +37,10 @@ class _ScriptedReadarr extends ReadarrService {
   @override
   Future<List<ReadarrAuthor>> getAuthors() async => authors;
 
+  // The author list reads this one: a failed fetch has to reach the page.
+  @override
+  Future<List<ReadarrAuthor>> getAuthorsOrThrow() async => authors;
+
   @override
   Future<List<dynamic>> getQueue({
     Map<String, dynamic>? queryParameters,

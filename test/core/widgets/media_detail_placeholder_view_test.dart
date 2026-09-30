@@ -58,7 +58,10 @@ void main() {
       expect(find.text("Couldn't load Radarr"), findsOneWidget);
       // The diagnostics stay on screen — a self-hoster can act on them — just
       // not as the opening line.
-      expect(find.textContaining('Connection refused'), findsOneWidget);
+      // The exception's own words never reach the screen; the detail is
+      // the classified sentence (an unattributable failure here).
+      expect(find.textContaining('Connection refused'), findsNothing);
+      expect(find.text('The request did not complete.'), findsOneWidget);
     });
 
     testWidgets('gives a not-found item the empty-state voice', (tester) async {

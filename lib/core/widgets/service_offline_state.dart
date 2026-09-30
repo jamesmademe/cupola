@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/sample_age.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/data/service_verification.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The leaf for a configured service that did not answer, where there is
 /// genuinely nothing else to draw.
@@ -34,6 +43,19 @@ import 'package:cupola/core/utils/sample_age.dart';
 /// already know: thirty seconds is a restart, forty minutes is an outage, and
 /// those are different decisions. And it gives the second action the fact
 /// implies — when the *address* is what changed, no number of retries helps.
+///
+/// ## `.failure`: the same leaf, told *why*
+///
+/// [ServiceOfflineState.failure] takes the service and the error a read threw,
+/// and says what the classification says rather than assuming silence: the
+/// title, glyph and tone come from `describeConnection`, the sentence from
+/// `connectionFailureMessage` (or the failure's own verbatim detail), and the
+/// address is the lens connection's host. Red only when nothing answered; a
+/// rejected key, a 5xx, a timeout or a certificate is a **fault**, amber, with
+/// Settings beside Retry because that is usually where the fix is. It never
+/// prints the exception — a class name and a library's message are
+/// diagnostics, and they were the whole detail line of every failed load.
+
 class ServiceOfflineState extends StatelessWidget {
   const ServiceOfflineState({
     super.key,
@@ -42,7 +64,25 @@ class ServiceOfflineState extends StatelessWidget {
     required this.onRetry,
     this.since,
     this.onOpenSettings,
-  });
+  }) : _service = null,
+       _error = null;
+
+  /// The leaf for a read of [service] that failed with [error], in the words
+  /// the failure classification has for it. See the class comment.
+  ///
+  /// [onOpenSettings] defaults to [service]'s own connection form: a failed
+  /// read is the moment the address or the key is most likely what changed.
+  ServiceOfflineState.failure({
+    super.key,
+    required ServiceKey service,
+    required Object error,
+    required this.onRetry,
+    this.since,
+    this.onOpenSettings,
+  }) : serviceName = service.title,
+       accent = service.accent,
+       _service = service,
+       _error = error;
 
   final String serviceName;
   final Color accent;
@@ -56,14 +96,101 @@ class ServiceOfflineState extends StatelessWidget {
   /// every host has a router to push with.
   final VoidCallback? onOpenSettings;
 
+  /// Set by [ServiceOfflineState.failure] only.
+  final ServiceKey? _service;
+  final Object? _error;
+
+  @override
+  Widget build(BuildContext context) {
+    final service = _service;
+    if (service == null) {
+      final span = since == null ? null : formatElapsedSpan(since!);
+      return _OfflineLeaf(
+        icon: Icons.cloud_off_rounded,
+        // The plain leaf has never known a cause, so it carries the service's
+        // own light rather than a verdict.
+        glyphColor: ServiceTheme.onTint(
+          accent,
+          surface: Theme.of(context).colorScheme.surface,
+          tintAlpha: 0,
+        ),
+        title: '$serviceName did not answer',
+        body: span == null
+            ? 'No response. Anything it holds is missing from this page.'
+            : 'No response for $span. Anything it holds is missing from this '
+                  'page.',
+        onRetry: onRetry,
+        onOpenSettings: onOpenSettings,
+      );
+    }
+
+    final reason = classifyConnectionFailure(_error);
+    final presentation = describeConnection(
+      service,
+      status: ServiceConnectionStatus.disconnected,
+      reason: reason,
+    );
+    final span = since == null ? null : formatElapsedSpan(since!);
+    final silent = !failureIsFault(reason);
+    final message =
+        connectionFailureDetail(_error) ??
+        connectionFailureMessage(service, reason);
+
+    return Consumer(
+      builder: (context, ref, _) {
+        final host = service.extractHost(
+          ref.watch(activeInstanceProvider(service))?.url,
+        );
+        return _OfflineLeaf(
+          icon: presentation.icon,
+          // Red for silence, amber for a fault; walked, never raw.
+          glyphColor: statusToneColor(
+            Theme.of(context).colorScheme,
+            presentation.tone,
+          ),
+          title: silent
+              ? '$serviceName did not answer'
+              : '$serviceName: ${presentation.label}',
+          address: host == null || host.isEmpty ? null : host,
+          body: [
+            if (silent && span != null) 'No response for $span.',
+            message,
+          ].join(' '),
+          onRetry: onRetry,
+          onOpenSettings:
+              onOpenSettings ??
+              () => context.push('/settings/service/${service.routeParam}'),
+        );
+      },
+    );
+  }
+}
+
+class _OfflineLeaf extends StatelessWidget {
+  const _OfflineLeaf({
+    required this.icon,
+    required this.glyphColor,
+    required this.title,
+    required this.body,
+    required this.onRetry,
+    this.address,
+    this.onOpenSettings,
+  });
+
+  final IconData icon;
+  final Color glyphColor;
+  final String title;
+
+  /// Which server this is about, when a connection names one.
+  final String? address;
+  final String body;
+  final VoidCallback onRetry;
+  final VoidCallback? onOpenSettings;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final span = since == null ? null : formatElapsedSpan(since!);
-    final body = span == null
-        ? 'No response. Anything it holds is missing from this page.'
-        : 'No response for $span. Anything it holds is missing from this page.';
 
     return Center(
       child: Padding(
@@ -71,7 +198,7 @@ class ServiceOfflineState extends StatelessWidget {
         child: Semantics(
           container: true,
           explicitChildNodes: true,
-          label: '$serviceName did not answer. $body',
+          label: [title, ?address, body].join('. '),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -79,25 +206,29 @@ class ServiceOfflineState extends StatelessWidget {
               // already emptied itself does not need a second announcement in
               // a tinted circle — the glyph alone carries the tone, measured
               // against the ground it sits on.
-              ExcludeSemantics(
-                child: Icon(
-                  Icons.cloud_off_rounded,
-                  size: 32,
-                  color: ServiceTheme.onTint(
-                    accent,
-                    surface: colorScheme.surface,
-                    tintAlpha: 0,
-                  ),
-                ),
-              ),
+              ExcludeSemantics(child: Icon(icon, size: 32, color: glyphColor)),
               const SizedBox(height: AppSpacing.lg),
               ExcludeSemantics(
                 child: Text(
-                  '$serviceName did not answer',
+                  title,
                   style: theme.textTheme.titleMedium!.weight(FontWeight.w600),
                   textAlign: TextAlign.center,
                 ),
               ),
+              if (address != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                ExcludeSemantics(
+                  child: Text(
+                    address!,
+                    style: AppTheme.chrome(
+                      context,
+                      size: 12,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
               const SizedBox(height: AppSpacing.sm),
               ExcludeSemantics(
                 child: Text(

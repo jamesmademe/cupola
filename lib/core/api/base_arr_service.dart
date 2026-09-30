@@ -421,7 +421,15 @@ mixin ArrActivityMixin {
   }
 
   /// Fetches all items from a list endpoint and maps them, in an isolate once
-  /// the response is large enough to be worth one.
+  /// the response is large enough to be worth one — answering `[]` when the
+  /// list cannot be read.
+  ///
+  /// **Only for a caller that joins against the library and can go on
+  /// without it**: a lookup by external id, an album cap in a queue join. There
+  /// the library is one input among several, and the rest of the answer is
+  /// still honest without it. A surface that *is* the library — a wall, an
+  /// author list — has nothing else to show, and reading this made a dark
+  /// server say "No items found". Those read [fetchAllItemsOrThrow].
   Future<List<T>> fetchAllItems<T>(
     String endpoint,
     T Function(Map<String, dynamic>) fromJson,
@@ -438,16 +446,17 @@ mixin ArrActivityMixin {
   /// The same list, with a failed fetch allowed to reach the caller.
   ///
   /// The sibling of [fetchAllItems], and the pair is the point. Swallowing is
-  /// right for a browse grid, which would rather show nothing than a dialog —
-  /// and it is a fabrication for anything that *counts*, because an unreachable
-  /// server and an empty library arrive as the same `[]`. Every figure derived
+  /// right only for a join that can do without the library — and it is a
+  /// fabrication for anything that *counts* or *is* the library, because an
+  /// unreachable server and an empty library arrive as the same `[]`. Every
+  /// figure derived
   /// from the swallowing read printed a confident zero for a question nobody
   /// answered: `Series 0 · Episodes 0/0 · Missing 0` on a Dashboard card,
   /// directly under an identity band whose own probe already read Unreachable.
   ///
   /// Callers that derive a figure read this one and turn the throw into
-  /// [ServiceKpi.unavailable]'s em dash. Callers that browse keep
-  /// [fetchAllItems] and are right to. Mapping is identical — straight through
+  /// [ServiceKpi.unavailable]'s em dash; the library walls read it too and
+  /// render the throw as their fault state. Mapping is identical — straight through
   /// for a small list, through an isolate once it is worth the port — so the
   /// two differ in exactly one thing, which is whether the failure survives.
   Future<List<T>> fetchAllItemsOrThrow<T>(

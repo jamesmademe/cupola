@@ -533,20 +533,23 @@ void main() {
     });
   });
 
-  group('KPI reads', () {
+  group('sessions and libraries', () {
     test(
-      'preserve a remote failure while browse reads still degrade',
+      'surface a remote failure on the board read as on the KPI read',
       () async {
+        // The board reads `getSessions` / `getLibraries`. Swallowed into `[]`,
+        // a dark server drew "Nobody is watching right now" and "No libraries
+        // yet"; each of those reads is the whole of its surface, so the failure
+        // is what the surface has to show.
         final adapter = CapturingHttpAdapter(response: '', statusCode: 500);
         final client = _client(adapter);
 
-        expect(await client.getSessions(), isEmpty);
+        await expectLater(client.getSessions(), throwsA(isA<DioException>()));
         await expectLater(
           client.getSessionsOrThrow(),
           throwsA(isA<DioException>()),
         );
-
-        expect(await client.getLibraries(), isEmpty);
+        await expectLater(client.getLibraries(), throwsA(isA<DioException>()));
         await expectLater(
           client.getLibrariesOrThrow(),
           throwsA(isA<DioException>()),
@@ -1203,14 +1206,14 @@ void main() {
   });
 
   group('remote failure', () {
-    test('every read path degrades instead of throwing', () async {
+    test('every slot read degrades instead of throwing', () async {
+      // Sessions and libraries are not here: they are a whole surface each,
+      // and throw (see "sessions and libraries" above).
       final adapter = CapturingHttpAdapter(response: '', statusCode: 500);
       final client = _client(adapter);
 
       expect(await client.probeVersion(), isNull);
       expect(await client.verifyCredential(), isFalse);
-      expect(await client.getSessions(), isEmpty);
-      expect(await client.getLibraries(), isEmpty);
       expect(await client.getViewers(), isEmpty);
       expect(await client.getItem(_movieId), isNull);
       expect(await client.getChildren(_seriesId), isEmpty);
@@ -1230,15 +1233,19 @@ void main() {
       );
     });
 
-    test('a body that is not the documented shape degrades too', () async {
-      // An HTML error page from a reverse proxy decodes to a String, not a Map.
-      final adapter = CapturingHttpAdapter(response: '<html>nope</html>');
-      final client = _client(adapter);
+    test(
+      'a body that is not the documented shape fails the board reads',
+      () async {
+        // An HTML error page from a reverse proxy decodes to a String, not a Map:
+        // the item slot degrades, the two board reads say they could not read.
+        final adapter = CapturingHttpAdapter(response: '<html>nope</html>');
+        final client = _client(adapter);
 
-      expect(await client.getSessions(), isEmpty);
-      expect(await client.getLibraries(), isEmpty);
-      expect(await client.getItem(_movieId), isNull);
-    });
+        await expectLater(client.getSessions(), throwsA(isA<DioException>()));
+        await expectLater(client.getLibraries(), throwsA(isA<DioException>()));
+        expect(await client.getItem(_movieId), isNull);
+      },
+    );
   });
 
   group('which credential the slot holds (GET /Users/Me)', () {

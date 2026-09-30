@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 
@@ -16,10 +17,29 @@ import 'package:cupola/core/widgets/status_badge.dart';
 /// it. It used to be the reverse in effect — "Something went wrong" said nothing,
 /// so the raw `error.toString()` under it was the message, and on this app's
 /// failures that is a Dio exception with a URL and a status code in it. That is
-/// diagnostics, not an explanation, and it is the first thing the eye landed on.
-/// It stays on screen because a self-hoster genuinely can act on
-/// "connection refused" — just not as the sentence that opens the state.
+/// diagnostics, not an explanation, and it was the first thing the eye landed on.
+///
+/// ## The detail is a sentence, never the exception
+///
+/// The raw `error.toString()` survived as the detail line for a while, on the
+/// argument that a self-hoster can act on "connection refused". What it
+/// actually printed was a class name and a library's own apology — "DioException
+/// [connection error]: The connection errored: Connection refused This
+/// indicates an error which most likely cannot be solved by the library." — on
+/// every failed load in the app. The detail now comes from the failure
+/// classification ([connectionFailureSentence]): the same causes the connection
+/// form names, without a service to name.
+///
+/// ## Tone follows the cause
+///
+/// Red only when nothing answered (or the failure cannot be attributed). A host
+/// that answered — a rejected key, a 5xx, a timeout, a certificate — is a
+/// **fault**, amber, because there is one concrete thing to go and fix; the
+/// split is [failureIsFault], the same one `describeConnection` makes.
 class AppErrorState extends StatelessWidget {
+  /// How strongly an amber well is washed over the surface.
+  static const double _faultWellAlpha = 0.16;
+
   final Object error;
   final VoidCallback? onRetry;
   final bool compact;
@@ -48,6 +68,28 @@ class AppErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final tone = failureIsFault(classifyConnectionFailure(error))
+        ? StatusTone.warning
+        : StatusTone.error;
+    // Red keeps its `error-container` well; amber gets its own tone as a wash,
+    // and each glyph is walked against the well it actually sits on.
+    final Color well;
+    final Color glyph;
+    if (tone == StatusTone.error) {
+      well = colorScheme.errorContainer;
+      glyph = statusToneColor(colorScheme, tone, surface: well);
+    } else {
+      well = Color.alphaBlend(
+        statusToneFill(colorScheme, tone).withValues(alpha: _faultWellAlpha),
+        colorScheme.surface,
+      );
+      glyph = statusToneColor(
+        colorScheme,
+        tone,
+        surface: colorScheme.surface,
+        tintAlpha: _faultWellAlpha,
+      );
+    }
 
     return Center(
       child: Padding(
@@ -57,20 +99,11 @@ class AppErrorState extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: colorScheme.errorContainer,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: well, shape: BoxShape.circle),
               child: Icon(
                 Icons.error_outline_rounded,
                 size: compact ? 26 : 32,
-                // A service that did not answer, so red; walked against the
-                // well it sits in rather than assumed to clear it.
-                color: statusToneColor(
-                  colorScheme,
-                  StatusTone.error,
-                  surface: colorScheme.errorContainer,
-                ),
+                color: glyph,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -83,9 +116,10 @@ class AppErrorState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             // The detail, not the message: one step down the type ladder and a
-            // step dimmer, so the sentence above it is what gets read.
+            // step dimmer, so the sentence above it is what gets read. Plain
+            // words from the classification — see the class comment.
             Text(
-              error.toString(),
+              connectionFailureSentence(error),
               style: theme.textTheme.labelSmall?.copyWith(
                 color:
                     theme.extension<CupolaThemeColors>()?.dimText ??

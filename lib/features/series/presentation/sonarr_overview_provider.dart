@@ -185,7 +185,7 @@ SonarrAiringWeek sonarrAiringWeek(
 /// The library, read so that a failure is still a failure when it arrives.
 ///
 /// **Not [seriesProvider]**, and the duplication is deliberate. That provider
-/// reads `getSeries`, which degrades to `[]`, so an unreachable, mis-keyed or
+/// read `getSeries`, which degrades to `[]`, so an unreachable, mis-keyed or
 /// 500-ing Sonarr resolved it *successfully* with an empty library — and this
 /// screen then printed "next 7 days · 0 series" over "Nothing airing this
 /// week", directly beneath an identity band whose own probe already read
@@ -199,8 +199,8 @@ SonarrAiringWeek sonarrAiringWeek(
 /// its library inside a `catch`, so its own source carries
 /// `retry: noProviderRetry`, while this one keeps the default retry because the
 /// Overview watches it as an `AsyncValue` and a blip should heal itself. One
-/// provider cannot hold both policies. `seriesProvider` keeps its degradation
-/// for the browse grid, which is what it was written for.
+/// provider cannot hold both policies. `seriesProvider`, behind the wall, now
+/// reads `getSeriesOrThrow` too, with the rail's `noProviderRetry`.
 ///
 /// Plain, not `autoDispose`, matching [seriesProvider]: the library is a
 /// session-scoped read, and a per-visit refetch of the whole library is exactly

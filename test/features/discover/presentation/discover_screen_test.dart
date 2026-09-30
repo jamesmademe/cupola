@@ -142,7 +142,10 @@ void main() {
       // The headline names what failed; the exception is demoted to a detail
       // line under it rather than being the message itself.
       expect(find.text("Couldn't load search results"), findsOneWidget);
-      expect(find.textContaining('Network error'), findsOneWidget);
+      // The exception's own words never reach the screen; the detail is
+      // the classified sentence (an unattributable failure here).
+      expect(find.textContaining('Network error'), findsNothing);
+      expect(find.text('The request did not complete.'), findsOneWidget);
     });
 
     testWidgets('uses unique hero tags for mixed media search results', (
