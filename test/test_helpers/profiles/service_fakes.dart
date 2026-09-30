@@ -1,0 +1,134 @@
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+import 'config_profile.dart';
+import 'fake_socket.dart';
+import 'fakes/arr_fakes.dart';
+import 'fakes/client_fakes.dart';
+import 'fakes/infra_fakes.dart';
+import 'fakes/media_fakes.dart';
+import 'profile_network.dart';
+
+/// A decoded JSON object, the shape every canned answer is built from.
+typedef JsonMap = Map<String, Object?>;
+
+/// What one request needs to know about the server it reached.
+class ServerContext {
+  ServerContext({required this.network, required this.server});
+
+  final ProfileNetwork network;
+  final ProfileServer server;
+
+  ConnectionBehaviour get behaviour => server.behaviour;
+  ConfigProfile get profile => network.profile;
+  DateTime get now => network.now;
+
+  /// [age] before [now], as the ISO-8601 UTC string every service here sends.
+  String ago(Duration age) => now.subtract(age).toUtc().toIso8601String();
+
+  /// [lead] after [now].
+  String ahead(Duration lead) => now.add(lead).toUtc().toIso8601String();
+}
+
+/// One service's side of the wire: its canned answers, and the shape each of
+/// the behaviours takes for it.
+///
+/// The refusal shapes are the load-bearing part. A 401 from Radarr, a
+/// `200 Fails.` from qBittorrent, `{"status": false, "error": "API Key
+/// Incorrect"}` from SABnzbd and a `false` login from TrueNAS are four spellings
+/// of one fact, and the app's classifiers are written against each spelling —
+/// so each fake answers in its service's own.
+abstract class ServiceFake {
+  const ServiceFake();
+
+  /// Routes a live server answers with no credential: the status probes that
+  /// still say "online" behind a refused key, which is the gap between the
+  /// Dashboard's probe and every other screen.
+  bool isPublic(NetworkRequest request) => false;
+
+  /// Whether [request] changes something. Most services write with anything
+  /// but GET; the RPC-over-POST ones override this.
+  bool isWrite(NetworkRequest request) => request.method != 'GET';
+
+  /// Reads a non-admin credential may not make. Only Jellyfin and Plex have a
+  /// non-admin token to model; everyone else reads everything or nothing.
+  bool isAdminRead(NetworkRequest request) => false;
+
+  /// How this service refuses a credential it does not accept.
+  NetworkReply refuseKey(NetworkRequest request) =>
+      NetworkReply.json({'message': 'Unauthorized'}, status: 401);
+
+  /// How this service refuses a write the credential may not make.
+  NetworkReply refuseWrite(NetworkRequest request) =>
+      NetworkReply.json({'message': 'Forbidden'}, status: 403);
+
+  /// The reply the connection's behaviour forces, or null to answer normally.
+  ///
+  /// [ConnectionBehaviour.didNotAnswer] and [ConnectionBehaviour.timesOut]
+  /// never reach here — they fail at dial time, before a request exists.
+  NetworkReply? gate(NetworkRequest request, ServerContext context) {
+    switch (context.behaviour) {
+      case ConnectionBehaviour.refusesKey:
+        return isPublic(request) ? null : refuseKey(request);
+      case ConnectionBehaviour.readOnly:
+        if (isWrite(request) || isAdminRead(request)) {
+          return refuseWrite(request);
+        }
+        return null;
+      case ConnectionBehaviour.answers:
+      case ConnectionBehaviour.didNotAnswer:
+      case ConnectionBehaviour.timesOut:
+        return null;
+    }
+  }
+
+  /// The world's canned answer, or null when this fake has none (served 404
+  /// and logged in `ProfileNetwork.unanswered`).
+  NetworkReply? answer(NetworkRequest request, ServerContext context);
+
+  /// The server half of a WebSocket upgrade, for the two services that speak
+  /// one. Null refuses the upgrade.
+  WebSocketPeer? upgrade(NetworkRequest request, ServerContext context) => null;
+}
+
+ServiceFake serviceFakeFor(ServiceKey service) => switch (service) {
+  ServiceKey.radarr => const RadarrFake(),
+  ServiceKey.sonarr => const SonarrFake(),
+  ServiceKey.lidarr => const LidarrFake(),
+  ServiceKey.readarr => const ReadarrFake(),
+  ServiceKey.prowlarr => const ProwlarrFake(),
+  ServiceKey.bazarr => const BazarrFake(),
+  ServiceKey.seerr => const SeerrFake(),
+  ServiceKey.jellyfin => const JellyfinFake(),
+  ServiceKey.plex => const PlexFake(),
+  ServiceKey.qbittorrent => const QbittorrentFake(),
+  ServiceKey.transmission => const TransmissionFake(),
+  ServiceKey.sabnzbd => const SabnzbdFake(),
+  ServiceKey.nzbget => const NzbgetFake(),
+  ServiceKey.truenas => const TrueNasFake(),
+  ServiceKey.dockge => const DockgeFake(),
+  ServiceKey.unraid => const UnraidFake(),
+  ServiceKey.nginxProxyManager => const NpmFake(),
+};
+
+/// Whether [request] is [method] [path] exactly.
+bool route(NetworkRequest request, String method, String path) =>
+    request.method == method && request.path == path;
+
+/// An arr-style paged envelope over [records], honouring `page`/`pageSize`.
+Map<String, Object?> pagedEnvelope(
+  NetworkRequest request,
+  List<Map<String, Object?>> records,
+) {
+  final page = int.tryParse(request.query['page'] ?? '') ?? 1;
+  final pageSize = int.tryParse(request.query['pageSize'] ?? '') ?? 20;
+  final start = ((page - 1) * pageSize).clamp(0, records.length);
+  final end = (start + pageSize).clamp(0, records.length);
+  return {
+    'page': page,
+    'pageSize': pageSize,
+    'sortKey': 'date',
+    'sortDirection': 'descending',
+    'totalRecords': records.length,
+    'records': records.sublist(start, end),
+  };
+}
