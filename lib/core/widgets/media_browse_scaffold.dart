@@ -15,6 +15,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
@@ -588,7 +589,13 @@ class _MediaBrowseScaffoldState<T>
     return searchResultsAsync.when(
       loading: () =>
           Center(child: CircularProgressIndicator(color: _spinnerInk(context))),
-      error: (error, stack) => Center(child: Text('Error: $error')),
+      // The classified state and its sentence, never `Error: DioException […]`:
+      // the exception's own text was the whole of this state.
+      error: (error, stack) => AppErrorState(
+        error: error,
+        serviceName: 'search results',
+        onRetry: () => ref.invalidate(widget.searchResultsProvider),
+      ),
       data: (results) {
         if (results == null || results.isEmpty) {
           return const Center(child: Text('No results found'));

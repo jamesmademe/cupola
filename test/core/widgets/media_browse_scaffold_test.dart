@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -444,6 +445,42 @@ void main() {
 
       expect(find.text('No results found'), findsOneWidget);
       expect(find.byType(MediaGrid<String>), findsNothing);
+    });
+
+    testWidgets('a search that failed says why in plain words, never the '
+        'exception', (tester) async {
+      final searchQueryProvider = StateProvider<String>((ref) => 'query');
+      final libraryProvider = FutureProvider<List<String>>(
+        (ref) async => ['Library Item'],
+      );
+      final searchResultsProvider = FutureProvider<List<String>?>(
+        (ref) async => throw const SocketException('Connection refused'),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+        retry: (_, _) => null,
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: libraryProvider,
+          searchQueryProvider: searchQueryProvider,
+          searchResultsProvider: searchResultsProvider,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // It printed `Error: SocketException: Connection refused`.
+      expect(find.textContaining('Error:'), findsNothing);
+      expect(find.textContaining('SocketException'), findsNothing);
+      expect(find.text("Couldn't load search results"), findsOneWidget);
+      expect(find.text('Did not answer'), findsOneWidget);
+      expect(find.text('No results found'), findsNothing);
+      expect(find.text('Retry'), findsOneWidget);
     });
 
     // Drawn in the theme's `primary`, the search spinner put Seerr's indigo in
