@@ -138,11 +138,27 @@ void main() {
       expect(client.lastGetPath, '/api/v1/discover/trending');
     });
 
-    test('discover endpoints return empty on error', () async {
+    test('a discover rail that failed throws, never reads as empty', () async {
+      // `[]` is Seerr answering with nothing. A failure used to be `[]` too,
+      // so a dark Seerr's rails vanished as if there were nothing to show.
       client.getException = Exception('boom');
+      await expectLater(service.getDiscoverMovies(), throwsException);
+      await expectLater(service.getDiscoverTV(), throwsException);
+      await expectLater(service.getDiscoverTrending(), throwsException);
+      await expectLater(service.getMovieGenres(), throwsException);
+    });
+
+    test('a discover rail Seerr answered with nothing is empty', () async {
+      client.getResponseData = {'results': const []};
       expect(await service.getDiscoverMovies(), isEmpty);
-      expect(await service.getDiscoverTV(), isEmpty);
-      expect(await service.getDiscoverTrending(), isEmpty);
+    });
+
+    test('a body that is not a results list is an unreadable answer', () async {
+      client.getResponseData = '<html>proxy</html>';
+      await expectLater(
+        service.getDiscoverTrending(),
+        throwsA(isA<FormatException>()),
+      );
     });
   });
 
@@ -456,9 +472,23 @@ void main() {
       expect(data['name'], 'Show');
     });
 
-    test('getCollection returns {} on error', () async {
+    test('getCollection throws when Seerr did not answer', () async {
       client.getException = Exception('offline');
+      await expectLater(service.getCollection(5), throwsException);
+      await expectLater(service.getPerson(5), throwsException);
+    });
+
+    test('a 404 is Seerr answering that there is no such record', () async {
+      client.getException = DioException(
+        requestOptions: RequestOptions(path: '/api/v1/collection/5'),
+        type: DioExceptionType.badResponse,
+        response: Response<dynamic>(
+          requestOptions: RequestOptions(path: '/api/v1/collection/5'),
+          statusCode: 404,
+        ),
+      );
       expect(await service.getCollection(5), isEmpty);
+      expect(await service.getPerson(5), isEmpty);
     });
 
     test('deleteMedia hits /api/v1/media/:id', () async {
@@ -531,12 +561,18 @@ void main() {
       },
     );
 
-    test('a lookup that fails is an empty filmography', () async {
-      client.getException = Exception('offline');
+    test(
+      'a lookup that fails is a failure, not an empty filmography',
+      () async {
+        client.getException = Exception('offline');
 
-      expect((await service.getPersonCredits(1203)).isEmpty, isTrue);
-      expect(await service.getPersonCombinedCredits(1203), isEmpty);
-    });
+        await expectLater(service.getPersonCredits(1203), throwsException);
+        await expectLater(
+          service.getPersonCombinedCredits(1203),
+          throwsException,
+        );
+      },
+    );
   });
 
   group('service integration endpoints', () {
@@ -549,9 +585,10 @@ void main() {
       expect(client.lastGetPath, '/api/v1/service/radarr');
     });
 
-    test('getRadarrServers returns [] on error', () async {
+    test('getRadarrServers throws when Seerr did not answer', () async {
+      // "No Radarr servers" is an answer; a failure used to read as one.
       client.getException = Exception('boom');
-      expect(await service.getRadarrServers(), isEmpty);
+      await expectLater(service.getRadarrServers(), throwsException);
     });
 
     test('getSonarrServers hits /api/v1/service/sonarr', () async {

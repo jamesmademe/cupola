@@ -37,12 +37,18 @@ class RequestBottomSheet extends ConsumerWidget {
         if (state.isLoading)
           const Center(child: CircularProgressIndicator())
         else if (state.error != null)
-          // A load that did not come back: the glyph carries the red, the
-          // sentence stays in the sheet's own secondary ink.
-          FaultNote.unreachable(
-            message: state.error!,
-            surface: colorScheme.surfaceContainer,
-          )
+          // Red only for a load nothing answered; a refusal, a failure that
+          // did answer, or a Seerr with no server to send to is amber. The
+          // glyph carries the tone, the sentence stays in the sheet's ink.
+          state.errorDidNotAnswer
+              ? FaultNote.unreachable(
+                  message: state.error!,
+                  surface: colorScheme.surfaceContainer,
+                )
+              : FaultNote.fault(
+                  message: state.error!,
+                  surface: colorScheme.surfaceContainer,
+                )
         else ...[
           if (state.servers.length > 1) ...[
             Text('Server', style: theme.textTheme.labelLarge),

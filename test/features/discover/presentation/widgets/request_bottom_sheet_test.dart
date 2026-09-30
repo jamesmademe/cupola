@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+import 'package:cupola/core/widgets/fault_note.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';
 
@@ -30,10 +32,34 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('No Radarr servers configured in Seerr'),
+        find.text(
+          'Seerr answered, but it has no Radarr server set up, so a request '
+          "has nowhere to go. Add one in Seerr's settings.",
+        ),
         findsOneWidget,
       );
       expect(find.text('Submit request'), findsNothing);
+      // An answer, not silence: the note is amber, never red.
+      expect(find.byType(FaultNote), findsOneWidget);
+      final glyph = tester.widget<Icon>(
+        find.descendant(
+          of: find.byType(FaultNote),
+          matching: find.byType(Icon),
+        ),
+      );
+      final scheme = Theme.of(
+        tester.element(find.byType(FaultNote)),
+      ).colorScheme;
+      expect(
+        glyph.color,
+        isNot(
+          statusToneColor(
+            scheme,
+            StatusTone.error,
+            surface: scheme.surfaceContainer,
+          ),
+        ),
+      );
     });
 
     testWidgets('renders quality profile dropdown and submit button', (

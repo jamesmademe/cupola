@@ -12,15 +12,16 @@ import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/search_bar_header.dart';
 import 'package:cupola/core/widgets/service_kpi_peek.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_search_provider.dart';
@@ -152,6 +153,7 @@ class DiscoverScreen extends ConsumerWidget {
             title: 'Trending',
             sectionId: 'trending',
             items: ref.watch(discoverTrendingProvider),
+            onRetry: () => ref.invalidate(discoverTrendingProvider),
             onSeeAll: () => context.push(ServiceRoutes.seerrTrendingAll),
           ),
           DiscoverCarousel(
@@ -159,6 +161,7 @@ class DiscoverScreen extends ConsumerWidget {
             sectionId: 'movies',
             items: ref.watch(discoverMoviesProvider),
             forcedMediaType: 'movie',
+            onRetry: () => ref.invalidate(discoverMoviesProvider),
             onSeeAll: () => context.push(ServiceRoutes.seerrMoviesAll),
           ),
           DiscoverCarousel(
@@ -166,6 +169,7 @@ class DiscoverScreen extends ConsumerWidget {
             sectionId: 'tv',
             items: ref.watch(discoverTVProvider),
             forcedMediaType: 'tv',
+            onRetry: () => ref.invalidate(discoverTVProvider),
             onSeeAll: () => context.push(ServiceRoutes.seerrTvAll),
           ),
           DiscoverCarousel(
@@ -173,18 +177,21 @@ class DiscoverScreen extends ConsumerWidget {
             sectionId: 'upcoming_movies',
             items: ref.watch(discoverUpcomingMoviesProvider),
             forcedMediaType: 'movie',
+            onRetry: () => ref.invalidate(discoverUpcomingMoviesProvider),
           ),
           DiscoverCarousel(
             title: 'Top rated movies',
             sectionId: 'top_rated',
             items: ref.watch(discoverTopRatedMoviesProvider),
             forcedMediaType: 'movie',
+            onRetry: () => ref.invalidate(discoverTopRatedMoviesProvider),
           ),
           DiscoverCarousel(
             title: 'Upcoming series',
             sectionId: 'upcoming_tv',
             items: ref.watch(discoverUpcomingTvProvider),
             forcedMediaType: 'tv',
+            onRetry: () => ref.invalidate(discoverUpcomingTvProvider),
           ),
           const _GenreRows(limit: _genreRowLimit),
         ],
@@ -213,7 +220,7 @@ class _GenreRows extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final genresAsync = ref.watch(movieGenresProvider);
-    return genresAsync.maybeWhen(
+    return genresAsync.when(
       data: (genres) {
         final visible = genres.take(limit).toList(growable: false);
         return Column(
@@ -223,7 +230,16 @@ class _GenreRows extends ConsumerWidget {
           ],
         );
       },
-      orElse: () => const SizedBox.shrink(),
+      // The genre rows are rails too: a list Seerr could not give says so,
+      // once, under one header, rather than taking every genre row off the
+      // page without a word.
+      error: (error, _) => DiscoverCarousel(
+        title: 'By genre',
+        sectionId: 'genres',
+        items: AsyncValue<List<MediaPreview>>.error(error, StackTrace.empty),
+        onRetry: () => ref.invalidate(movieGenresProvider),
+      ),
+      loading: () => const SizedBox.shrink(),
     );
   }
 }
@@ -242,6 +258,7 @@ class _GenreCarousel extends ConsumerWidget {
       sectionId: 'genre_${genre.id}',
       items: ref.watch(discoverByGenreProvider(key)),
       forcedMediaType: mediaType,
+      onRetry: () => ref.invalidate(discoverByGenreProvider(key)),
       onSeeAll: () => context.push(
         ServiceRoutes.seerrGenre(
           mediaType: mediaType,
@@ -388,9 +405,17 @@ class _DiscoverSearchResults extends ConsumerWidget {
 
     return searchResults.when(
       loading: () => AppSkeleton.posterGrid(),
-      error: (error, _) =>
-          AppErrorState(error: error, serviceName: 'search results'),
+      // A search Seerr did not answer is not a search with no results: it
+      // says why, in the classified words, and offers to ask again.
+      error: (error, _) => error.toString().contains('not configured')
+          ? NotConfiguredPlaceholder.forService(ServiceKey.seerr)
+          : AppErrorState(
+              error: error,
+              serviceName: 'search results',
+              onRetry: () => ref.invalidate(discoverSearchResultsProvider),
+            ),
       data: (results) {
+        // "No results" only after Seerr answered with none.
         if (results == null || results.isEmpty) {
           return const AppEmptyState(
             icon: Icons.search_off_rounded,

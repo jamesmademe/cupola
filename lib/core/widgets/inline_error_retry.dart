@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 
 /// Inline failure notice with a retry action, so a failed section reads as a
 /// failure rather than as an endless loading shimmer.
@@ -38,11 +41,19 @@ import 'package:cupola/core/service_theme.dart';
 /// [CapabilityBanner] is deliberately the same shape in a different tone: a
 /// credential that may only read is configuration, not a fault. It could not
 /// have copied this widget while this widget still carried error chrome.
+///
+/// ## Tone follows the cause, when it is given
+///
+/// Pass the [error] that failed and the glyph takes the classification's tone
+/// and glyph: red only when nothing answered, amber for a refusal or any other
+/// failure that did answer. Without it the line keeps its historical red,
+/// which assumes silence — a caller that holds the error should pass it.
 class InlineErrorRetry extends StatelessWidget {
   const InlineErrorRetry({
     super.key,
     required this.message,
     required this.onRetry,
+    this.error,
   }) : _height = null;
 
   /// A notice locked to [_fixedHeight], for slots whose height must not change
@@ -51,6 +62,7 @@ class InlineErrorRetry extends StatelessWidget {
     super.key,
     required this.message,
     required this.onRetry,
+    this.error,
   }) : _height = _fixedHeight;
 
   /// Height of the [InlineErrorRetry.fixedHeight] variant.
@@ -59,6 +71,9 @@ class InlineErrorRetry extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
+  /// What failed, classified for the glyph's tone. See the class comment.
+  final Object? error;
+
   /// `null` for the self-sizing default; [_fixedHeight] for the fixed variant.
   final double? _height;
 
@@ -66,16 +81,27 @@ class InlineErrorRetry extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final error = this.error;
+    final reason = error == null ? null : classifyConnectionFailure(error);
 
-    // Through `onTint` with no tint — the composite is the surface itself —
-    // because the raw error red measures around 3.4:1 on the light scaffold,
-    // and with the fill gone this glyph is the only thing carrying the tone. A
-    // graphical object owes 3:1 and has no coloured text beside it to lean on.
-    final alarm = ServiceTheme.onTint(
-      colorScheme.error,
-      surface: colorScheme.surface,
-      tintAlpha: 0,
-    );
+    // Walked against the surface itself, because the raw error red measures
+    // around 3.4:1 on the light scaffold, and with the fill gone this glyph is
+    // the only thing carrying the tone. A graphical object owes 3:1 and has no
+    // coloured text beside it to lean on.
+    final alarm = reason == null
+        ? ServiceTheme.onTint(
+            colorScheme.error,
+            surface: colorScheme.surface,
+            tintAlpha: 0,
+          )
+        : statusToneColor(
+            colorScheme,
+            failureTone(reason),
+            surface: colorScheme.surface,
+          );
+    final glyph = reason == null
+        ? Icons.error_outline_rounded
+        : failureIcon(reason);
 
     return Container(
       width: double.infinity,
@@ -95,9 +121,7 @@ class InlineErrorRetry extends StatelessWidget {
         label: message,
         child: Row(
           children: [
-            ExcludeSemantics(
-              child: Icon(Icons.error_outline_rounded, size: 16, color: alarm),
-            ),
+            ExcludeSemantics(child: Icon(glyph, size: 16, color: alarm)),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: ExcludeSemantics(

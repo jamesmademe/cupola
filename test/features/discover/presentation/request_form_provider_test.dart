@@ -1,6 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/presentation/request_form_provider.dart';
 
@@ -166,7 +168,60 @@ void main() {
       final state = container.read(requestFormProvider(args));
 
       expect(state.isLoading, isFalse);
-      expect(state.error, 'No Radarr servers configured in Seerr');
+      expect(
+        state.error,
+        'Seerr answered, but it has no Radarr server set up, so a request has '
+        "nowhere to go. Add one in Seerr's settings.",
+      );
+      // An answer, so no transport reason and never the red of silence.
+      expect(state.errorReason, isNull);
+      expect(state.errorDidNotAnswer, isFalse);
+    });
+
+    test('a server list Seerr did not give is not "no servers"', () async {
+      final container = createContainer(
+        _FakeSeerr(
+          radarrServersError: DioException.connectionError(
+            requestOptions: RequestOptions(path: '/api/v1/service/radarr'),
+            reason: 'Connection refused',
+          ),
+        ),
+      );
+      const args = (mediaId: 123, mediaType: 'movie');
+      keepAlive(container, args);
+
+      await _flushProviderTasks();
+      final state = container.read(requestFormProvider(args));
+
+      expect(state.isLoading, isFalse);
+      expect(state.error, startsWith('Seerr did not answer.'));
+      expect(state.error, isNot(contains('server set up')));
+      expect(state.error, isNot(contains('DioException')));
+      expect(state.errorDidNotAnswer, isTrue);
+    });
+
+    test('a refused key reads as a refusal, amber', () async {
+      final container = createContainer(
+        _FakeSeerr(
+          radarrServersError: DioException(
+            requestOptions: RequestOptions(path: '/api/v1/service/radarr'),
+            type: DioExceptionType.badResponse,
+            response: Response<dynamic>(
+              requestOptions: RequestOptions(path: '/api/v1/service/radarr'),
+              statusCode: 403,
+            ),
+          ),
+        ),
+      );
+      const args = (mediaId: 123, mediaType: 'movie');
+      keepAlive(container, args);
+
+      await _flushProviderTasks();
+      final state = container.read(requestFormProvider(args));
+
+      expect(state.error, startsWith('Seerr answered but refused the key.'));
+      expect(state.errorReason, ServiceFailureReason.unauthorized);
+      expect(state.errorDidNotAnswer, isFalse);
     });
 
     test('selectServer loads sonarr profiles for chosen server', () async {
@@ -277,10 +332,14 @@ class _FakeSeerr extends shared.FakeSeerrService {
     this.sonarrServers = const <Map<String, dynamic>>[],
     this.radarrProfilesByServer = const <int, Map<String, dynamic>>{},
     this.sonarrProfilesByServer = const <int, Map<String, dynamic>>{},
+    this.radarrServersError,
   });
 
   final List<Map<String, dynamic>> radarrServers;
   final List<Map<String, dynamic>> sonarrServers;
+
+  /// Thrown by [getRadarrServers] instead of answering, when set.
+  final Object? radarrServersError;
   final Map<int, Map<String, dynamic>> radarrProfilesByServer;
   final Map<int, Map<String, dynamic>> sonarrProfilesByServer;
 
@@ -293,6 +352,8 @@ class _FakeSeerr extends shared.FakeSeerrService {
   @override
   Future<List<Map<String, dynamic>>> getRadarrServers() async {
     radarrServersCallCount += 1;
+    final error = radarrServersError;
+    if (error != null) throw error;
     return radarrServers;
   }
 

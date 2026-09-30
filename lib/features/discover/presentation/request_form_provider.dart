@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 const Object _noSelectionUpdate = Object();
 
@@ -64,6 +67,14 @@ class RequestFormState {
   final bool isSubmitting;
   final String? error;
 
+  /// Why [error] happened, when it was a read that failed; null when Seerr
+  /// answered and the answer is the problem (it has no server to send to).
+  ///
+  /// The two used to be one red line: "No Radarr servers configured in Seerr"
+  /// for a Seerr that had not answered at all. The sheet paints red only when
+  /// this says nothing answered.
+  final ServiceFailureReason? errorReason;
+
   const RequestFormState({
     this.servers = const [],
     this.profiles = const [],
@@ -74,7 +85,14 @@ class RequestFormState {
     this.isLoading = true,
     this.isSubmitting = false,
     this.error,
+    this.errorReason,
   });
+
+  /// Nothing answered: the one case the sheet paints red.
+  bool get errorDidNotAnswer {
+    final reason = errorReason;
+    return reason != null && failureDidNotAnswer(reason);
+  }
 
   bool get canSubmit =>
       selectedProfileId != null && !isSubmitting && !isLoading && error == null;
@@ -89,6 +107,7 @@ class RequestFormState {
     bool? isLoading,
     bool? isSubmitting,
     String? error,
+    ServiceFailureReason? errorReason,
     bool clearError = false,
   }) {
     return RequestFormState(
@@ -107,9 +126,20 @@ class RequestFormState {
       isLoading: isLoading ?? this.isLoading,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       error: clearError ? null : (error ?? this.error),
+      // A new error brings its own reason (null when Seerr answered); an
+      // update that leaves the error alone leaves its reason alone too.
+      errorReason: clearError
+          ? null
+          : (error != null ? errorReason : this.errorReason),
     );
   }
 }
+
+/// A failed read of the request sheet's lists, as the sheet says it: the
+/// classified headline, never the exception.
+String _loadFailure(Object error) =>
+    '${failureHeadline(classifyConnectionFailure(error), subject: ServiceKey.seerr.title, credential: refusedCredentialOf(ServiceKey.seerr))}. '
+    'The request cannot be sent until it does.';
 
 final requestFormProvider = NotifierProvider.autoDispose
     .family<RequestFormNotifier, RequestFormState, RequestFormArgs>(
@@ -136,10 +166,15 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
       final servers = serverMaps.map(SeerrServer.fromJson).toList();
 
       if (servers.isEmpty) {
+        // Seerr answered, with no server to send to: a fault with its
+        // remedy, amber — never the red of a Seerr that did not answer,
+        // which is what this line used to claim when the read had failed.
+        final arr = arg.mediaType == 'movie' ? 'Radarr' : 'Sonarr';
         state = state.copyWith(
           isLoading: false,
           error:
-              'No ${arg.mediaType == 'movie' ? 'Radarr' : 'Sonarr'} servers configured in Seerr',
+              'Seerr answered, but it has no $arr server set up, so a '
+              "request has nowhere to go. Add one in Seerr's settings.",
           clearError: false,
         );
         return;
@@ -152,9 +187,12 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
       );
       await _loadProfiles(servers.first.id);
     } catch (error) {
+      // Classified, and never the exception: the sheet used to print
+      // "Failed to load servers: DioException […]".
       state = state.copyWith(
         isLoading: false,
-        error: 'Failed to load servers: $error',
+        error: _loadFailure(error),
+        errorReason: classifyConnectionFailure(error),
       );
     }
   }
@@ -214,7 +252,8 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
     } catch (error) {
       state = state.copyWith(
         isLoading: false,
-        error: 'Failed to load profiles: $error',
+        error: _loadFailure(error),
+        errorReason: classifyConnectionFailure(error),
       );
     }
   }

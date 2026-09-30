@@ -5,12 +5,15 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 class DiscoverSeeAllScreen extends ConsumerStatefulWidget {
   final String type; // 'movies', 'tv', 'trending', 'genre'
@@ -101,6 +104,16 @@ class _DiscoverSeeAllScreenState extends ConsumerState<DiscoverSeeAllScreen> {
                 mainAxisSpacing: AppSpacing.gridGap,
               ),
               builderDelegate: PagedChildBuilderDelegate<MediaPreview>(
+                // A first page Seerr did not give is a failure in its own
+                // words, not the pager's stock message — and never the "no
+                // items" of a list that answered empty.
+                firstPageErrorIndicatorBuilder: (_) => AppErrorState(
+                  error:
+                      state.error ??
+                      const ClassifiedFailure(ServiceFailureReason.unknown),
+                  serviceName: ServiceKey.seerr.title,
+                  onRetry: _pagingController.refresh,
+                ),
                 itemBuilder: (context, item, index) {
                   final imageUrl = ImageUtils.buildTmdbPosterUrl(
                     item.posterPath,

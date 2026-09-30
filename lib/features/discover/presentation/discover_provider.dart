@@ -111,23 +111,29 @@ final seerrDecisionsProvider = FutureProvider<SeerrDecisions>((ref) async {
   );
 }, retry: noProviderRetry);
 
-// Basic providers for the main Discover screen (Carousels) - fetching page 1
+// Basic providers for the main Discover screen (Carousels) - fetching page 1.
+//
+// Every rail below fails when Seerr did not answer or answered with a failure
+// (`SeerrService._discover` no longer turns that into `[]`), and a failed rail
+// says so under its header. `noProviderRetry`, because a backoff would hold the
+// rail on its skeleton for the better part of a minute before it could; Retry
+// and pull-to-refresh are the user's call. See `provider_retry.dart`.
 final discoverMoviesProvider = FutureProvider<List<MediaPreview>>((ref) async {
   final service = ref.watch(seerrServiceProvider);
   return service.getDiscoverMovies(page: 1);
-});
+}, retry: noProviderRetry);
 
 final discoverTVProvider = FutureProvider<List<MediaPreview>>((ref) async {
   final service = ref.watch(seerrServiceProvider);
   return service.getDiscoverTV(page: 1);
-});
+}, retry: noProviderRetry);
 
 final discoverTrendingProvider = FutureProvider<List<MediaPreview>>((
   ref,
 ) async {
   final service = ref.watch(seerrServiceProvider);
   return service.getDiscoverTrending(page: 1);
-});
+}, retry: noProviderRetry);
 
 // Upcoming + top-rated carousels (page 1)
 final discoverUpcomingMoviesProvider = FutureProvider<List<MediaPreview>>((
@@ -135,27 +141,27 @@ final discoverUpcomingMoviesProvider = FutureProvider<List<MediaPreview>>((
 ) async {
   final service = ref.watch(seerrServiceProvider);
   return service.getDiscoverUpcomingMovies(page: 1);
-});
+}, retry: noProviderRetry);
 
 final discoverUpcomingTvProvider = FutureProvider<List<MediaPreview>>((
   ref,
 ) async {
   final service = ref.watch(seerrServiceProvider);
   return service.getDiscoverUpcomingTv(page: 1);
-});
+}, retry: noProviderRetry);
 
 final discoverTopRatedMoviesProvider = FutureProvider<List<MediaPreview>>((
   ref,
 ) async {
   final service = ref.watch(seerrServiceProvider);
   return service.getDiscoverMovies(page: 1, sortBy: kTopRatedSort);
-});
+}, retry: noProviderRetry);
 
 // Genre list + per-genre carousels
 final movieGenresProvider = FutureProvider<List<SeerrGenre>>((ref) async {
   final service = ref.watch(seerrServiceProvider);
   return service.getMovieGenres();
-});
+}, retry: noProviderRetry);
 
 final discoverByGenreProvider =
     FutureProvider.family<List<MediaPreview>, GenreRowKey>((ref, key) async {
@@ -164,7 +170,7 @@ final discoverByGenreProvider =
         return service.getDiscoverTV(page: 1, genre: key.genreId);
       }
       return service.getDiscoverMovies(page: 1, genre: key.genreId);
-    });
+    }, retry: noProviderRetry);
 
 // Paginated per-genre + top-rated providers for "See All" screens
 final discoverByGenrePageProvider =
@@ -180,14 +186,14 @@ final discoverByGenrePageProvider =
         page: args.page,
         genre: args.key.genreId,
       );
-    });
+    }, retry: noProviderRetry);
 
 // Family providers for pagination in "See All" screens
 final discoverMoviesPageProvider =
     FutureProvider.family<List<MediaPreview>, int>((ref, page) async {
       final service = ref.watch(seerrServiceProvider);
       return service.getDiscoverMovies(page: page);
-    });
+    }, retry: noProviderRetry);
 
 final discoverTVPageProvider = FutureProvider.family<List<MediaPreview>, int>((
   ref,
@@ -195,10 +201,10 @@ final discoverTVPageProvider = FutureProvider.family<List<MediaPreview>, int>((
 ) async {
   final service = ref.watch(seerrServiceProvider);
   return service.getDiscoverTV(page: page);
-});
+}, retry: noProviderRetry);
 
 final discoverTrendingPageProvider =
     FutureProvider.family<List<MediaPreview>, int>((ref, page) async {
       final service = ref.watch(seerrServiceProvider);
       return service.getDiscoverTrending(page: page);
-    });
+    }, retry: noProviderRetry);

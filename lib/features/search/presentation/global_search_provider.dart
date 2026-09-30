@@ -318,9 +318,12 @@ Future<GlobalSearchServiceResults> _runLeg(
     ServiceKey.seerr => _loadLeg(
       leg: leg,
       cancelToken: cancelToken,
+      // `reportFailure`, like the arr lanes: without it a Seerr that did not
+      // answer, or refused the key, came back as `[]` — a lane reading
+      // "0 results" and counted as answered.
       loadItems: () => ref
           .read(seerrServiceProvider)
-          .search(query, cancelToken: cancelToken),
+          .search(query, cancelToken: cancelToken, reportFailure: true),
       toResult: (item, index) => _seerrResult(item, instance, index),
     ),
     ServiceKey.radarr => _loadLeg(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -139,13 +140,50 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // The headline names what failed; the exception is demoted to a detail
-      // line under it rather than being the message itself.
+      // A search Seerr did not complete is not "No results found": the leaf
+      // says what happened, in the classified words, and never the
+      // exception's own.
       expect(find.text("Couldn't load search results"), findsOneWidget);
-      // The exception's own words never reach the screen; the detail is
-      // the classified sentence (an unattributable failure here).
+      expect(find.text('Did not complete'), findsOneWidget);
+      expect(find.text('No results found'), findsNothing);
       expect(find.textContaining('Network error'), findsNothing);
-      expect(find.text('The request did not complete.'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+    });
+
+    testWidgets('a search nothing answered says so, in red words', (
+      tester,
+    ) async {
+      await _pumpDiscover(
+        tester,
+        searchQueryBuilder: (ref) => 'fail',
+        searchResultsBuilder: (ref) => Future<List<MediaPreview>?>.error(
+          const SocketException('Connection refused'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Did not answer'), findsOneWidget);
+      expect(find.text('No results found'), findsNothing);
+    });
+
+    testWidgets('a rail whose source failed says so, under its header', (
+      tester,
+    ) async {
+      // Every rail used to vanish when Seerr did not answer, because every
+      // read answered a failure with `[]`.
+      await _pumpDiscover(
+        tester,
+        trendingBuilder: (ref) => Future<List<MediaPreview>>.error(
+          const SocketException('Connection refused'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Trending'), findsOneWidget);
+      expect(
+        find.text('Seerr did not answer, so this row is missing.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('uses unique hero tags for mixed media search results', (

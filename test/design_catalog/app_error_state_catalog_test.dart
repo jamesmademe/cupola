@@ -58,6 +58,24 @@ void main() {
         width: 360,
       ),
       CatalogScene(
+        'InlineErrorRetry(error:) · a Discover rail Seerr refused: the glyph '
+        'takes the classification, amber',
+        (_) => InlineErrorRetry(
+          message:
+              'Seerr answered but refused the key, so this row is missing.',
+          error: DioException(
+            requestOptions: RequestOptions(path: '/api/v1/discover/trending'),
+            type: DioExceptionType.badResponse,
+            response: Response<dynamic>(
+              requestOptions: RequestOptions(path: '/api/v1/discover/trending'),
+              statusCode: 403,
+            ),
+          ),
+          onRetry: () {},
+        ),
+        width: 360,
+      ),
+      CatalogScene(
         'InlineErrorRetry.fixedHeight · locked to 120px so a carousel row does '
         'not jump between loading, loaded and failed',
         (_) => DecoratedBox(

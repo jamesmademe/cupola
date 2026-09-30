@@ -210,8 +210,12 @@ final seerrOverviewProcessingProvider =
 /// Seerr's `/discover/trending` proxies TMDB's weekly trending list, which is
 /// what lets the section call itself "this week" without inventing a window the
 /// client never asked for.
+///
+/// `noProviderRetry` like the rail it cuts: a Seerr that did not answer fails
+/// the source now, and a derived provider under the default policy would
+/// retry what its source had already given up on.
 final seerrOverviewTrendingProvider =
     FutureProvider.autoDispose<List<MediaPreview>>((ref) async {
       final trending = await ref.watch(discoverTrendingProvider.future);
       return List.unmodifiable(trending.take(seerrTrendingRailLimit));
-    });
+    }, retry: noProviderRetry);

@@ -139,10 +139,14 @@ class PersonDetailScreen extends ConsumerWidget {
             // owns its own gutter and its own heading, hence `.rail`.
             operate: [
               MediaDetailSlot.rail(
+                // A filmography Seerr could not give says so here, under its
+                // header; it is not an empty filmography.
                 builder: (_) => DiscoverCarousel(
                   title: 'Filmography',
                   sectionId: 'person_$personId',
                   items: creditsAsync,
+                  onRetry: () =>
+                      ref.invalidate(personCreditsProvider(personId)),
                 ),
               ),
             ],

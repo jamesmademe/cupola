@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:cupola/core/models/media_preview.dart';
-import 'package:cupola/core/utils/search_results_loader.dart';
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 
 /// Provider for the current search query in Discover section.
@@ -23,15 +23,14 @@ final discoverSearchResultsProvider = FutureProvider<List<MediaPreview>?>((
   ref,
 ) async {
   final query = ref.watch(discoverSearchQueryProvider);
+  if (query.isEmpty) return null;
   final cancelToken = CancelToken();
   ref.onDispose(cancelToken.cancel);
-  return loadNullableSearchResults(
-    query: query,
-    // Read inside the lookup, not above it: the loader only calls this when the
-    // query is non-empty, and it runs inside the try. That keeps the original
-    // behaviour where an unconfigured Seerr yields `[]` — and an empty query
-    // still yields `null` without touching the provider at all.
-    lookup: (term) =>
-        ref.read(seerrServiceProvider).search(term, cancelToken: cancelToken),
-  );
-});
+  // `reportFailure`, and not through `loadNullableSearchResults`: both used to
+  // turn a Seerr that did not answer into `[]`, and the page said "No results
+  // found" about a search nobody ran. "No results" is only said after Seerr
+  // answered; a failure reaches the page's error state in its own words.
+  return ref
+      .read(seerrServiceProvider)
+      .search(query, cancelToken: cancelToken, reportFailure: true);
+}, retry: noProviderRetry);

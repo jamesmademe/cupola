@@ -17,13 +17,13 @@ Rendered from `lib/core/widgets/app_error_state.dart` and `lib/core/widgets/inli
 ## InlineErrorRetry
 
 - Full width, margin `space-lg` × `space-sm`, padding `space-sm` vertical. No fill, no border.
-- 16px `error_outline`, red walked against `surface`; `space-sm`; the message `body-small` `on-surface-variant`; `space-sm`; text button *Retry* in `primary`, minimum 56 × 44, horizontal padding `space-sm`.
+- A 16px glyph walked against `surface`: pass the `error` that failed and it takes the classification's glyph and tone (`failureIcon`, `failureTone` — red only when nothing answered, amber for a refusal or any other failure that answered); without it, `error_outline` in red, which assumes silence; `space-sm`; the message `body-small` `on-surface-variant`; `space-sm`; text button *Retry* in `primary`, minimum 56 × 44, horizontal padding `space-sm`.
 - `.fixedHeight` locks the slot to 120px so a carousel row does not jump between loading, loaded and failed.
 - A live region announced on appearance; Retry stays its own control.
 
 ## The consumer provides
 
-For `AppErrorState`: the error, optionally `serviceName` and `onRetry`. For `InlineErrorRetry`: the message and `onRetry`.
+For `AppErrorState`: the error, optionally `serviceName` and `onRetry`. For `InlineErrorRetry`: the message and `onRetry`, and the `error` whenever the caller holds it (the Discover rails do).
 
 ## Do / don't
 

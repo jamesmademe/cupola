@@ -4,18 +4,28 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/content_card.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/staggered_entrance.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// A single premium discover row: a section header + horizontal poster
-/// carousel. Collapses to nothing while it has no data (so unsupported Seerr
-/// endpoints or empty genres simply don't render).
+/// carousel. Collapses to nothing when Seerr answered with nothing (an empty
+/// genre simply does not render).
+///
+/// A row whose source **failed** is not a row with nothing in it. It used to
+/// collapse the same way — Seerr's reads turned every failure into `[]` — so a
+/// dark Seerr quietly took its rails off the page and the page looked like a
+/// short catalogue. It now keeps its header and says what happened, in the
+/// classified words, with Retry: "Seerr did not answer" only when nothing did.
 class DiscoverCarousel extends StatelessWidget {
   final String title;
 
@@ -29,6 +39,9 @@ class DiscoverCarousel extends StatelessWidget {
 
   final VoidCallback? onSeeAll;
 
+  /// Asks for this row again after it failed.
+  final VoidCallback? onRetry;
+
   static const double _posterWidth = 104;
   static const double _posterHeight = 156;
 
@@ -39,6 +52,7 @@ class DiscoverCarousel extends StatelessWidget {
     required this.items,
     this.forcedMediaType,
     this.onSeeAll,
+    this.onRetry,
   });
 
   @override
@@ -47,7 +61,26 @@ class DiscoverCarousel extends StatelessWidget {
     return items.when(
       loading: () =>
           _shell(child: AppSkeleton.posterRow(height: _posterHeight)),
-      error: (_, _) => const SizedBox.shrink(),
+      error: (error, _) {
+        // A Seerr nobody set up is the page's to say, once, not every row's.
+        // Matched on the phrase the app throws for it; see `AsyncValueWidget`.
+        if (error.toString().contains('not configured')) {
+          return const SizedBox.shrink();
+        }
+        final reason = classifyConnectionFailure(error);
+        return _shell(
+          child: InlineErrorRetry(
+            message:
+                '${failureHeadline(reason, subject: ServiceKey.seerr.title, credential: refusedCredentialOf(ServiceKey.seerr))}, '
+                'so this row is missing.',
+            error: error,
+            onRetry: onRetry ?? () {},
+          ),
+          // The skeleton's height is the rail's; the line is not a rail, and
+          // the page should not hold a poster-sized gap under it.
+          compact: true,
+        );
+      },
       data: (list) {
         if (list.isEmpty) return const SizedBox.shrink();
         return _shell(
@@ -68,18 +101,19 @@ class DiscoverCarousel extends StatelessWidget {
     );
   }
 
-  Widget _shell({required Widget child}) {
+  Widget _shell({required Widget child, bool compact = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(
           title: title,
-          showChevron: onSeeAll != null,
-          onTap: onSeeAll,
+          // Nothing to see all of when the row failed.
+          showChevron: onSeeAll != null && !compact,
+          onTap: compact ? null : onSeeAll,
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: compact ? 0 : AppSpacing.md),
         child,
-        const SizedBox(height: AppSpacing.xl),
+        SizedBox(height: compact ? AppSpacing.md : AppSpacing.xl),
       ],
     );
   }

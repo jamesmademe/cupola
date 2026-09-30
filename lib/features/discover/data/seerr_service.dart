@@ -490,6 +490,11 @@ class SeerrService {
   /// The conditional spreads are what keep the query maps identical to the
   /// per-row methods they replaced — the upcoming and trending rows take no
   /// genre or sort, so they still send `page` alone.
+  ///
+  /// **Throws when Seerr did not answer, or answered with a failure.** It used
+  /// to answer every failure with `[]`, so a rail whose source was dark was a
+  /// rail with nothing in it, and the Discover page quietly lost it. An empty
+  /// list now means Seerr answered with none.
   Future<List<MediaPreview>> _discover(
     String path, {
     required int page,
@@ -497,17 +502,24 @@ class SeerrService {
     String? sortBy,
     String? forcedMediaType,
   }) async {
-    try {
-      final response = await _client.get(
-        path,
-        queryParameters: {'page': page, 'genre': ?genre, 'sortBy': ?sortBy},
-      );
-      final results = response.data['results'] as List<dynamic>;
-      return await _mapPreviews(results, forcedMediaType);
-    } catch (e) {
-      return [];
-    }
+    final response = await _client.get(
+      path,
+      queryParameters: {'page': page, 'genre': ?genre, 'sortBy': ?sortBy},
+    );
+    return _mapPreviews(_resultsOf(response.data), forcedMediaType);
   }
+
+  /// The `results` array of a Seerr list response, or a [FormatException] —
+  /// an answer nobody can read — when the body is not one.
+  static List<dynamic> _resultsOf(Object? data) {
+    final results = data is Map ? data['results'] : null;
+    if (results is List) return results;
+    throw const FormatException('Seerr answered without a results list');
+  }
+
+  /// A Seerr 404 is an answer: the TMDB record it proxies does not exist.
+  static bool _isNotFound(Object error) =>
+      error is DioException && error.response?.statusCode == 404;
 
   Future<List<MediaPreview>> getDiscoverMovies({
     int page = 1,
@@ -561,20 +573,21 @@ class SeerrService {
   /// Available TV genres.
   Future<List<SeerrGenre>> getTvGenres() => _getGenres('tv');
 
+  /// Throws when Seerr did not answer or answered with a failure, like
+  /// [_discover]: the genre rows are rails too.
   Future<List<SeerrGenre>> _getGenres(String mediaType) async {
-    try {
-      final response = await _client.get(
-        '/api/v1/discover/genreslider/$mediaType',
-      );
-      final results = (response.data as List<dynamic>);
-      return results
-          .whereType<Map<String, dynamic>>()
-          .map(SeerrGenre.fromJson)
-          .where((g) => g.id > 0 && g.name.isNotEmpty)
-          .toList();
-    } catch (e) {
-      return [];
+    final response = await _client.get(
+      '/api/v1/discover/genreslider/$mediaType',
+    );
+    final results = response.data;
+    if (results is! List) {
+      throw const FormatException('Seerr answered without a genre list');
     }
+    return results
+        .whereType<Map<String, dynamic>>()
+        .map(SeerrGenre.fromJson)
+        .where((g) => g.id > 0 && g.name.isNotEmpty)
+        .toList();
   }
 
   /// Trending rows mix movies and TV, so the media type stays whatever each row
@@ -593,29 +606,44 @@ class SeerrService {
     return response.data;
   }
 
+  /// A collection and its member films, `{}` when Seerr answered that there is
+  /// no such collection (404).
+  ///
+  /// **Throws for every other failure.** It used to answer all of them with
+  /// `{}`, so a Seerr that did not answer read "Seerr answered, but it has
+  /// nothing filed under this collection" — an answer nobody gave.
   Future<Map<String, dynamic>> getCollection(int collectionId) async {
     try {
       final response = await _client.get('/api/v1/collection/$collectionId');
-      return response.data;
-    } catch (_) {
-      return {};
+      final data = response.data;
+      return data is Map ? data.cast<String, dynamic>() : {};
+    } catch (error) {
+      if (_isNotFound(error)) return {};
+      rethrow;
     }
   }
 
   /// TMDB person details (bio, department, birthday) proxied by Overseerr /
-  /// Jellyseerr. Returns `{}` on any error so the UI can degrade gracefully.
+  /// Jellyseerr; `{}` when Seerr answered that it has no such person (404).
+  ///
+  /// **Throws for every other failure**, for the reason [getCollection] does:
+  /// "Seerr answered, but it has no record of them" is only true when it did.
   Future<Map<String, dynamic>> getPerson(int personId) async {
     try {
       final response = await _client.get('/api/v1/person/$personId');
-      return response.data as Map<String, dynamic>;
-    } catch (_) {
-      return {};
+      final data = response.data;
+      return data is Map ? data.cast<String, dynamic>() : {};
+    } catch (error) {
+      if (_isNotFound(error)) return {};
+      rethrow;
     }
   }
 
   /// A person's combined movie + TV credits, cast **and** crew, each with the
   /// job or character it was credited for and Seerr's own status for the
-  /// title. [PersonCombinedCredits.empty] on error.
+  /// title. [PersonCombinedCredits.empty] when Seerr answered with none (a
+  /// 404 included); throws when it did not answer or answered with a failure,
+  /// so a dark Seerr is not an empty filmography.
   ///
   /// The route is `combined_credits`, snake case (Seerr's
   /// `server/routes/person.ts`). This used to ask for `combinedCredits`, which
@@ -628,8 +656,9 @@ class SeerrService {
       final data = response.data;
       if (data is! Map) return PersonCombinedCredits.empty;
       return PersonCombinedCredits.fromJson(data.cast<String, dynamic>());
-    } catch (_) {
-      return PersonCombinedCredits.empty;
+    } catch (error) {
+      if (_isNotFound(error)) return PersonCombinedCredits.empty;
+      rethrow;
     }
   }
 
@@ -693,26 +722,25 @@ class SeerrService {
     }
   }
 
-  /// Gets available Radarr servers from Seerr.
-  Future<List<Map<String, dynamic>>> getRadarrServers() async {
-    try {
-      final response = await _client.get('/api/v1/service/radarr');
-      final data = response.data as List<dynamic>;
-      return data.cast<Map<String, dynamic>>();
-    } catch (e) {
-      return [];
-    }
-  }
+  /// The Radarr servers Seerr sends requests to. An empty list means Seerr
+  /// answered with none; a failure throws.
+  ///
+  /// It used to answer every failure with `[]`, so the request sheet said "no
+  /// Radarr servers" — in red — about a Seerr that had not answered at all.
+  Future<List<Map<String, dynamic>>> getRadarrServers() =>
+      _servers('/api/v1/service/radarr');
 
-  /// Gets available Sonarr servers from Seerr.
-  Future<List<Map<String, dynamic>>> getSonarrServers() async {
-    try {
-      final response = await _client.get('/api/v1/service/sonarr');
-      final data = response.data as List<dynamic>;
-      return data.cast<Map<String, dynamic>>();
-    } catch (e) {
-      return [];
+  /// The Sonarr servers Seerr sends requests to. See [getRadarrServers].
+  Future<List<Map<String, dynamic>>> getSonarrServers() =>
+      _servers('/api/v1/service/sonarr');
+
+  Future<List<Map<String, dynamic>>> _servers(String path) async {
+    final response = await _client.get(path);
+    final data = response.data;
+    if (data is! List) {
+      throw const FormatException('Seerr answered without a server list');
     }
+    return data.whereType<Map<String, dynamic>>().toList(growable: false);
   }
 
   /// Gets quality profiles for a specific Radarr server.

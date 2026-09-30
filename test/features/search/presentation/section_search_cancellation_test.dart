@@ -202,8 +202,26 @@ void main() {
       },
     );
 
-    test('a failing lookup degrades to an empty list, not an error', () async {
+    test('a failing lookup is a failure, never "no results"', () async {
+      // It used to degrade to `[]`, and the page said "No results found"
+      // about a search Seerr never answered.
       final seerr = _GateSeerrService(fails: true);
+      final container = ProviderContainer(
+        overrides: [seerrServiceProvider.overrideWithValue(seerr)],
+      );
+      addTearDown(container.dispose);
+
+      container.read(discoverSearchQueryProvider.notifier).state = 'arrival';
+
+      await expectLater(
+        container.read(discoverSearchResultsProvider.future),
+        throwsException,
+      );
+      expect(seerr.reportedFailure, isTrue);
+    });
+
+    test('an answer with nothing in it is "no results"', () async {
+      final seerr = _GateSeerrService();
       final container = ProviderContainer(
         overrides: [seerrServiceProvider.overrideWithValue(seerr)],
       );
@@ -283,6 +301,9 @@ class _GateSeerrService extends FakeSeerrService {
   final bool fails;
   final List<CancelToken?> tokens = [];
 
+  /// Whether the last caller asked for the failure to travel.
+  bool reportedFailure = false;
+
   @override
   Future<List<MediaPreview>> search(
     String query, {
@@ -291,8 +312,10 @@ class _GateSeerrService extends FakeSeerrService {
     bool reportFailure = false,
   }) async {
     tokens.add(cancelToken);
+    reportedFailure = reportFailure;
     await gate?.future;
-    if (fails) throw Exception('Seerr unreachable');
+    // The real service's contract: a failure travels only when asked.
+    if (fails && reportFailure) throw Exception('Seerr unreachable');
     return const [];
   }
 }
