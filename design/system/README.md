@@ -237,7 +237,7 @@ Pages read across services — a Media page shows one title through Seerr, Jelly
 11. A write the credential may not make stays visible, dimmed, with the service's own reason; a refused write says nothing changed. Never hidden, never blamed on reachability. The one exception: an option the viewer may not use at all — 4K for a requester who may not ask for it — is left out.
 12. One situation, one set of words on every surface: the lexicon above.
 
-A connection reachable only at home says `Home only` while away and is never asked, so it never reads `Did not answer`. **Today** a connection has one address, so away reads as case c; capability probes exist only for Unraid, TrueNAS and Nginx Proxy Manager; nothing is drawn from another service's knowledge (case b); and the media-server slot draws the same nothing for a, c, "not in library" and f. The households in `test/test_helpers/profiles/` (P1 full household to P7 degraded and away, checked by `test/core/profiles/`) are the fixtures: a cross-service screen test runs the profiles its surface touches.
+A connection reachable only at home says `Home only` while away and is never asked, so it never reads `Did not answer`. **Today** a connection has one address, so away reads as case c; capability probes exist only for Unraid, TrueNAS and Nginx Proxy Manager; and nothing is drawn from another service's knowledge (case b). The households in `test/test_helpers/profiles/` (P1 full household to P7 degraded and away, checked by `test/core/profiles/`) are the fixtures: a cross-service screen test runs the profiles its surface touches.
 
 ## Failure states
 

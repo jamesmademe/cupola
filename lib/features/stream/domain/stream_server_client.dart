@@ -30,6 +30,7 @@ import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
 import 'package:cupola/features/stream/domain/models/stream_search_group.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_external_match.dart';
 
 /// A viewer whose watch state a library can be read through.
 class StreamViewer {
@@ -219,6 +220,24 @@ abstract interface class StreamServerClient {
   /// disk, the server knows it is in the library and playable. Refusing to
   /// answer without a viewer made this slot Plex-only in practice.
   Future<StreamItem?> findByExternalId({
+    String? tmdbId,
+    String? tvdbId,
+    String? imdbId,
+    StreamItemKind? kind,
+    String? title,
+    int? year,
+    CancelToken? cancelToken,
+  });
+
+  /// [findByExternalId], with its nothings told apart: the verified item, "not
+  /// in the library" (the server answered with no rows), or "not verified"
+  /// (rows came back and none is this title). **Throws when the server did not
+  /// answer or answered with a failure** — that is neither of the other two,
+  /// and the availability slot says it in its own words.
+  ///
+  /// The same checking contract as [findByExternalId], which is this with every
+  /// nothing — and every failure — flattened to null.
+  Future<StreamExternalLookup> lookupByExternalId({
     String? tmdbId,
     String? tvdbId,
     String? imdbId,

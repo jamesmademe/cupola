@@ -124,6 +124,50 @@ int? streamExternalMatchScore(StreamItem candidate, StreamExternalQuery query) {
   return 0;
 }
 
+/// What one media server answered when asked for a title by its ids.
+///
+/// Three answers, because "no match" was two facts in one null: the server
+/// has nothing under those ids (**not in the library** — a claim the page may
+/// make, "Not on Jellyfin"), or it has rows that do not verify as the title
+/// (**not verified** — the brand book's case f, which makes no claim either
+/// way). A server that did not answer is neither: the lookup throws, and the
+/// caller classifies the failure.
+enum StreamLookupOutcome { found, notInLibrary, notVerified }
+
+@immutable
+class StreamExternalLookup {
+  const StreamExternalLookup.found(StreamItem this.item)
+    : outcome = StreamLookupOutcome.found;
+
+  const StreamExternalLookup.notInLibrary()
+    : outcome = StreamLookupOutcome.notInLibrary,
+      item = null;
+
+  const StreamExternalLookup.notVerified()
+    : outcome = StreamLookupOutcome.notVerified,
+      item = null;
+
+  /// The verdict over the rows a server returned for [query]: the
+  /// best-supported one when any clears the bar, "not verified" when rows came
+  /// back and none did, and "not in the library" when none came back at all.
+  factory StreamExternalLookup.of(
+    Iterable<StreamItem> candidates,
+    StreamExternalQuery query,
+  ) {
+    final rows = candidates.toList(growable: false);
+    if (rows.isEmpty) return const StreamExternalLookup.notInLibrary();
+    final best = bestStreamExternalMatch(rows, query);
+    return best == null
+        ? const StreamExternalLookup.notVerified()
+        : StreamExternalLookup.found(best);
+  }
+
+  final StreamLookupOutcome outcome;
+
+  /// The verified item, on [StreamLookupOutcome.found] only.
+  final StreamItem? item;
+}
+
 /// The best-supported candidate for [query], or null when none is supported.
 ///
 /// Ties keep the server's order: the same film in a 4K and an HD library is two

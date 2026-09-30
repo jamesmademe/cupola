@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/core/widgets/media_detail_slot.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/presentation/stream_lookup_provider.dart';
@@ -31,9 +34,22 @@ import 'package:cupola/features/stream/presentation/stream_lookup_provider.dart'
 /// search group — see [streamMatchProvider] for why adding Jellyfin and Plex as
 /// their own global-search sources would have produced six sections for one film.
 ///
-/// Renders **nothing** in three cases, all of them "we cannot say": no media
-/// server configured, the title genuinely absent, or the server unreachable. An
-/// explicit "not on your server" would be a claim, and two of those three are not.
+/// ## What it draws when the title is not found
+///
+/// Four different nothings, each said as what it is ([StreamAvailability]):
+///
+///  * **no media server set up** (case a) — nothing: the slot is detail, and a
+///    setup prompt on every film page would be a nag;
+///  * **the server did not answer**, or answered with a failure (case c) — one
+///    quiet line in the failure's tone and words (`Jellyfin did not answer.`),
+///    because "we could not ask" is a fact the page owes the reader;
+///  * **the server answered, without the title** — `Not on Jellyfin`, in plain
+///    ink: the one absence that is a claim, made only after an answer;
+///  * **a row that does not verify** (case f) — nothing: no link, no Play, and
+///    no claim that the title is missing.
+///
+/// It used to draw the same nothing for all four, which made a dark server
+/// indistinguishable from a library without the title.
 ///
 /// [accent] is the **host** page's, never Jellyfin's or Plex's. The data comes
 /// from the media server but the section belongs to the page it renders in —
@@ -56,26 +72,80 @@ List<MediaDetailSlot> streamAvailabilitySlots(
   String? title,
   int? year,
 }) {
-  final matchAsync = ref.watch(
-    streamMatchProvider((
-      tmdbId: tmdbId,
-      tvdbId: tvdbId,
-      imdbId: imdbId,
-      kind: kind,
-      title: title,
-      year: year,
-    )),
-  );
+  final availability = ref
+      .watch(
+        streamAvailabilityProvider((
+          tmdbId: tmdbId,
+          tvdbId: tvdbId,
+          imdbId: imdbId,
+          kind: kind,
+          title: title,
+          year: year,
+        )),
+      )
+      .value;
+  // Still asking: nothing yet, as before — a skeleton here would promise a
+  // card that may never come.
+  if (availability == null) return const <MediaDetailSlot>[];
 
-  final match = matchAsync.value;
-  if (match == null) return const <MediaDetailSlot>[];
+  switch (availability.state) {
+    case StreamAvailabilityState.found:
+      return [
+        MediaDetailSlot.box(
+          label: 'On your server',
+          child: _StreamAvailabilityCard(
+            match: availability.match!,
+            accent: accent,
+          ),
+        ),
+      ];
+    case StreamAvailabilityState.failed:
+      final service = availability.services.first;
+      final reason = availability.failure ?? ServiceFailureReason.unknown;
+      final sentence =
+          '${describeFailure(service, reason).headline}, so Cupola cannot say '
+          'whether it has this.';
+      return [
+        MediaDetailSlot.box(
+          label: 'On your server',
+          // One quiet line, red only when nothing answered.
+          child: failureDidNotAnswer(reason)
+              ? FaultNote.unreachable(message: sentence)
+              : FaultNote.fault(message: sentence),
+        ),
+      ];
+    case StreamAvailabilityState.notInLibrary:
+      return [
+        MediaDetailSlot.box(
+          label: 'On your server',
+          child: _NotInLibraryLine(services: availability.services),
+        ),
+      ];
+    case StreamAvailabilityState.notSetUp:
+    case StreamAvailabilityState.notVerified:
+      return const <MediaDetailSlot>[];
+  }
+}
 
-  return [
-    MediaDetailSlot.box(
-      label: 'On your server',
-      child: _StreamAvailabilityCard(match: match, accent: accent),
-    ),
-  ];
+/// `Not on Jellyfin` — said only after Jellyfin answered. Plain secondary
+/// ink: an absence from the library is the backlog's kind of fact, not a
+/// fault.
+class _NotInLibraryLine extends StatelessWidget {
+  const _NotInLibraryLine({required this.services});
+
+  final List<ServiceKey> services;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final names = services.map((s) => s.title).join(' or ');
+    return Text(
+      'Not on $names',
+      style: theme.textTheme.bodyMedium?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
 }
 
 class _StreamAvailabilityCard extends StatelessWidget {

@@ -627,6 +627,31 @@ class JellyfinClient implements StreamServerClient {
     int? year,
     CancelToken? cancelToken,
   }) async {
+    try {
+      return (await lookupByExternalId(
+        tmdbId: tmdbId,
+        tvdbId: tvdbId,
+        imdbId: imdbId,
+        kind: kind,
+        title: title,
+        year: year,
+        cancelToken: cancelToken,
+      )).item;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<StreamExternalLookup> lookupByExternalId({
+    String? tmdbId,
+    String? tvdbId,
+    String? imdbId,
+    StreamItemKind? kind,
+    String? title,
+    int? year,
+    CancelToken? cancelToken,
+  }) async {
     // `anyProviderIdEquals` takes `provider.value` pairs; passing several is an
     // OR, which is what we want — an arr may know a film by TMDB and a series by
     // TVDB, and either identifies the same thing here.
@@ -635,7 +660,8 @@ class JellyfinClient implements StreamServerClient {
       if (tvdbId != null && tvdbId.isNotEmpty) 'tvdb.$tvdbId',
       if (imdbId != null && imdbId.isNotEmpty) 'imdb.$imdbId',
     ];
-    if (pairs.isEmpty) return null;
+    // Nothing to ask by, so nothing to verify: no claim either way.
+    if (pairs.isEmpty) return const StreamExternalLookup.notVerified();
     final query = StreamExternalQuery(
       tmdbId: tmdbId,
       tvdbId: tvdbId,
@@ -652,36 +678,34 @@ class JellyfinClient implements StreamServerClient {
     // out without a viewer made the slot Plex-only in practice.
     final userId = _resolveViewerId(null);
 
-    try {
-      final items = await _fetchItems('/Items', {
-        'recursive': true,
-        'anyProviderIdEquals': pairs.join(','),
-        // Only the two kinds an arr record can be. Without this an episode —
-        // which carries TVDB and IMDb ids of its own, in the same namespaces a
-        // series uses — is a legitimate hit for a Sonarr lookup.
-        'includeItemTypes': switch (kind) {
-          StreamItemKind.movie => 'Movie',
-          StreamItemKind.series => 'Series',
-          _ => 'Movie,Series',
-        },
-        // Several rows, not one: the filter is an OR, so a film sharing the
-        // series' TMDB number is a hit too, and the first row is simply
-        // whichever sorted first. The matcher picks among them.
-        'limit': _kExternalMatchCandidates,
-        // `ProviderIds` is what the answer is checked against. Without it the
-        // only evidence a row matched is that the server returned it — which is
-        // also what a server that ignored `anyProviderIdEquals` does, with the
-        // first rows of the whole library.
-        'fields': '$_browseFields,ProviderIds',
-        // `UserData` is omitted from the response entirely unless both are
-        // present, so they travel together or not at all.
-        'userId': ?userId,
-        if (userId != null) 'enableUserData': true,
-      }, cancelToken: cancelToken);
-      return bestStreamExternalMatch(items, query);
-    } catch (_) {
-      return null;
-    }
+    // Not caught: a server that did not answer is not a library without the
+    // title, and the caller says which it was.
+    final items = await _fetchItems('/Items', {
+      'recursive': true,
+      'anyProviderIdEquals': pairs.join(','),
+      // Only the two kinds an arr record can be. Without this an episode —
+      // which carries TVDB and IMDb ids of its own, in the same namespaces a
+      // series uses — is a legitimate hit for a Sonarr lookup.
+      'includeItemTypes': switch (kind) {
+        StreamItemKind.movie => 'Movie',
+        StreamItemKind.series => 'Series',
+        _ => 'Movie,Series',
+      },
+      // Several rows, not one: the filter is an OR, so a film sharing the
+      // series' TMDB number is a hit too, and the first row is simply
+      // whichever sorted first. The matcher picks among them.
+      'limit': _kExternalMatchCandidates,
+      // `ProviderIds` is what the answer is checked against. Without it the
+      // only evidence a row matched is that the server returned it — which is
+      // also what a server that ignored `anyProviderIdEquals` does, with the
+      // first rows of the whole library.
+      'fields': '$_browseFields,ProviderIds',
+      // `UserData` is omitted from the response entirely unless both are
+      // present, so they travel together or not at all.
+      'userId': ?userId,
+      if (userId != null) 'enableUserData': true,
+    }, cancelToken: cancelToken);
+    return StreamExternalLookup.of(items, query);
   }
 
   /// How many rows [findByExternalId] asks for. A real answer is one to three

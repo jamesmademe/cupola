@@ -789,6 +789,31 @@ class PlexClient implements StreamServerClient {
     int? year,
     CancelToken? cancelToken,
   }) async {
+    try {
+      return (await lookupByExternalId(
+        tmdbId: tmdbId,
+        tvdbId: tvdbId,
+        imdbId: imdbId,
+        kind: kind,
+        title: title,
+        year: year,
+        cancelToken: cancelToken,
+      )).item;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<StreamExternalLookup> lookupByExternalId({
+    String? tmdbId,
+    String? tvdbId,
+    String? imdbId,
+    StreamItemKind? kind,
+    String? title,
+    int? year,
+    CancelToken? cancelToken,
+  }) async {
     // Plex indexes external ids as `Guid[]` entries and filters on them through
     // `?guid=`, one value at a time — unlike Jellyfin's comma-delimited OR. So
     // this tries each id in turn, cheapest identifier first: TMDB is what Radarr
@@ -812,8 +837,18 @@ class PlexClient implements StreamServerClient {
     // answers 200 with the whole library rather than an error, and a server that
     // does can still hand back a film for a show's TMDB number, so neither the
     // status nor the first row is evidence.
+    // Nothing to ask by, so nothing to verify: no claim either way.
+    if (guids.isEmpty) return const StreamExternalLookup.notVerified();
+
     StreamItem? best;
     var bestScore = -1;
+    // What the rounds said, beyond the best row: whether any of them answered
+    // at all, and whether any answered with rows that did not verify. A title
+    // is "not in the library" only when a round answered and every answer was
+    // empty; when no round answered, the failure is the answer.
+    var answered = false;
+    var sawCandidates = false;
+    Object? lastFailure;
     for (final guid in guids) {
       try {
         final container = await _container(
@@ -832,22 +867,32 @@ class PlexClient implements StreamServerClient {
           cancelToken: cancelToken,
         );
         final items = await _itemsFromAsync(container['Metadata']);
+        answered = true;
+        if (items.isNotEmpty) sawCandidates = true;
         final match = bestStreamExternalMatch(items, query);
         if (match == null) continue;
         final score = streamExternalMatchScore(match, query) ?? -1;
         // Confirmed by every id the arr offered: nothing a further round trip
         // could find would be better supported.
-        if (score >= query.idCount) return match;
+        if (score >= query.idCount) return StreamExternalLookup.found(match);
         if (score > bestScore) {
           best = match;
           bestScore = score;
         }
-      } catch (_) {
+      } catch (error) {
         // An unanswered id is not evidence against the title; try the next.
+        lastFailure = error;
         continue;
       }
     }
-    return best;
+    final verified = best;
+    if (verified != null) return StreamExternalLookup.found(verified);
+    // No round answered: that is the answer, and it is not "not there".
+    final failure = lastFailure;
+    if (!answered && failure != null) throw failure;
+    return sawCandidates
+        ? const StreamExternalLookup.notVerified()
+        : const StreamExternalLookup.notInLibrary();
   }
 
   /// How many rows one `?guid=` probe reads — see [findByExternalId].

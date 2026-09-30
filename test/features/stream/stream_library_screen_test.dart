@@ -15,6 +15,7 @@ import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
 import 'package:cupola/features/stream/domain/models/stream_search_group.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_external_match.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 import 'package:cupola/features/stream/presentation/stream_library_screen.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_poster_tile.dart';
@@ -109,6 +110,17 @@ class _ScriptedServer implements StreamServerClient {
     int? year,
     CancelToken? cancelToken,
   }) async => null;
+
+  @override
+  Future<StreamExternalLookup> lookupByExternalId({
+    String? tmdbId,
+    String? tvdbId,
+    String? imdbId,
+    StreamItemKind? kind,
+    String? title,
+    int? year,
+    CancelToken? cancelToken,
+  }) async => const StreamExternalLookup.notInLibrary();
 
   @override
   Future<List<StreamLibrary>> getLibraries() async => const [];
