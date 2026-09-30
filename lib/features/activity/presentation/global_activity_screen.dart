@@ -1057,20 +1057,20 @@ class _FinishedTodayBand extends ConsumerWidget {
   }
 }
 
-class _FinishedTodayRow extends ConsumerWidget {
+class _FinishedTodayRow extends StatelessWidget {
   const _FinishedTodayRow({required this.item, required this.colorScheme});
 
   final GlobalActivityItem item;
   final ColorScheme colorScheme;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final tone = statusToneColor(colorScheme, item.status.tone);
     final dim = CupolaThemeColors.of(context).dimText;
     // The two reads the annotation names and nothing in the app performed:
     // where the file landed, and — when it did not — what the service said.
     final destination = item.raw == null ? null : historyFilePath(item.raw!);
-    final canImport = canManualImportFrom(ref, item);
+    final canImport = canManualImportFrom(item);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),

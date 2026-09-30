@@ -307,6 +307,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
                 context,
                 ServiceKey.sonarr,
                 seriesId,
+                instanceId: _instanceId,
               ),
               // Every in-flight pipeline state promotes 'Open queue' only if the
               // host actually has a route for it; without this the most common

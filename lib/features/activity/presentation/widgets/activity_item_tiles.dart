@@ -22,7 +22,6 @@ import 'package:cupola/features/activity/presentation/widgets/activity_tab_helpe
 import 'package:cupola/features/activity/presentation/widgets/detail_sheets.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class QueueItemTile extends StatelessWidget {
@@ -324,10 +323,9 @@ class GlobalActivityItemTile extends ConsumerWidget {
         (item.kind == GlobalActivityKind.missing ||
             item.kind == GlobalActivityKind.cutoff) &&
         extractWantedItemId(item.serviceType, raw) != null;
-    // Resolved here rather than inside [_writeActions] because it is the one
-    // decision on this row that needs a `ref` — see [canManualImportFrom] for
-    // the three gates and why the lens is one of them.
-    final canManualImport = canManualImportFrom(ref, item);
+    // Resolved once here and handed to [_writeActions]; see
+    // [canManualImportFrom] for the two gates.
+    final canManualImport = canManualImportFrom(item);
     final writeActions = _writeActions(canManualImport: canManualImport);
     final icon = switch (item.kind) {
       GlobalActivityKind.request => Icons.person_add_alt_1_rounded,
@@ -873,19 +871,17 @@ String _requestsLocation(String instanceId) {
   return Uri(path: path, queryParameters: {'i': instanceId}).toString();
 }
 
-/// Whether [item] can hand the import wizard a folder on the server the app is
-/// currently looking at.
+/// Whether [item] can hand the import wizard a folder on disk.
 ///
-/// Three gates, and the third is the one that is a gap rather than a rule:
-/// `manualImportLocation` carries a service and no connection, and every screen
-/// in the import flow resolves through the lens — so sending a row off the
-/// *other* Radarr there would browse the wrong server's filesystem and import
-/// into it. The affordance is withheld rather than made to lie. Restoring it
-/// needs `?i=` on the import routes, which is that feature's work.
+/// Two gates: the row names a path (a queue record's `outputPath`, a failed
+/// history record's `droppedPath`), and the service has the wizard. Which
+/// connection the row came off is not a gate: [openManualImportFrom] binds the
+/// wizard to it through `?i=`, so a row off the *other* Radarr browses and
+/// imports on that Radarr, not on whichever one the lens is on.
 ///
 /// Shared by the row menu and the "Finished today" band so the two cannot
 /// disagree about when the affordance is honest.
-bool canManualImportFrom(WidgetRef ref, GlobalActivityItem item) {
+bool canManualImportFrom(GlobalActivityItem item) {
   // The queue knows where the client is writing; a failed history record knows
   // where the client left the file. No other kind names a path on disk.
   final offersPath = switch (item.kind) {
@@ -894,13 +890,8 @@ bool canManualImportFrom(WidgetRef ref, GlobalActivityItem item) {
     _ => false,
   };
   if (!offersPath || !item.service.supportsManualImport) return false;
-  if (manualImportFolderFromOutputPath(_manualImportSourcePath(item)) == null) {
-    return false;
-  }
-  // Short-circuited last so only a row that would actually offer the hand-off
-  // subscribes to the lens — the History list builds thousands of these.
-  return item.instanceId.isEmpty ||
-      item.instanceId == ref.watch(activeInstanceProvider(item.service))?.id;
+  return manualImportFolderFromOutputPath(_manualImportSourcePath(item)) !=
+      null;
 }
 
 /// Opens the import wizard on the folder [item] names.
@@ -917,6 +908,9 @@ void openManualImportFrom(BuildContext context, GlobalActivityItem item) {
       manualImportBrowsePath,
       item.service,
       folderPath: folder,
+      // The connection the row came off. Empty on a row that predates a
+      // service having two, which the wizard reads as the lens.
+      instanceId: item.instanceId,
     ),
   );
 }

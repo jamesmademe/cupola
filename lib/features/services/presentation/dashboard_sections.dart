@@ -828,6 +828,7 @@ Future<void> _runDecision(
           manualImportBrowsePath,
           decision.service,
           targetId: decision.actionId,
+          instanceId: decision.instanceId,
         ),
       );
     case DecisionKind.failingIndexer:
