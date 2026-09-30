@@ -108,6 +108,15 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
         // answer. It used to render *after* Details and Tags, because the old
         // spine emitted every content section before every sliver.
         operate: [
+          // The other half of "English, Italian · German wanted". Bazarr sends
+          // the languages on disk with every movie record, and the page used to
+          // read only the missing half, so a covered movie could say that it was
+          // covered and never by what.
+          if (viewModel.present.isNotEmpty)
+            MediaDetailSlot.box(
+              label: 'Subtitles on disk',
+              child: BazarrSubtitleLanguageWrap(languages: viewModel.present),
+            ),
           MediaDetailSlot.box(
             label: 'Missing subtitles',
             // No count: the hero chip already states the missing figure in

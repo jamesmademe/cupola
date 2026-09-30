@@ -186,6 +186,80 @@ void main() {
       },
     );
 
+    // The languages on disk used to be dropped: only `missing_subtitles` was
+    // read, so "English, Italian · German wanted" could only ever say its last
+    // half.
+    test('getMovies parses the subtitles already on disk', () async {
+      final client = FakeApiClient()
+        ..getResponseData = {
+          'data': [
+            {
+              'radarrId': 99,
+              'title': 'Sintel',
+              'monitored': true,
+              // The shape `postprocess` builds from `get_subtitles`: one row
+              // per file, `path` null for an embedded track.
+              'subtitles': [
+                {
+                  'name': 'English',
+                  'code2': 'en',
+                  'code3': 'eng',
+                  'path': null,
+                  'forced': false,
+                  'hi': false,
+                  'file_size': null,
+                },
+                {
+                  'name': 'English',
+                  'code2': 'en',
+                  'code3': 'eng',
+                  'path': '/movies/Sintel/Sintel.en.srt',
+                  'forced': false,
+                  'hi': false,
+                  'file_size': 41213,
+                },
+                {
+                  'name': 'Italian',
+                  'code2': 'it',
+                  'code3': 'ita',
+                  'path': '/movies/Sintel/Sintel.it.forced.srt',
+                  'forced': true,
+                  'hi': false,
+                  'file_size': 1024,
+                },
+              ],
+              'missing_subtitles': [
+                {'name': 'German', 'code2': 'de', 'code3': 'deu'},
+              ],
+            },
+          ],
+          'total': 1,
+        };
+      final service = BazarrService(client);
+
+      final movie = (await service.getMovies()).data.single;
+
+      // One entry per language and flavour, not one per file.
+      expect(movie.presentLanguages.map((l) => l.code2).toList(), ['en', 'it']);
+      expect(movie.presentLanguages.last.forced, isTrue);
+      expect(movie.missingLanguages.single.code2, 'de');
+    });
+
+    test('a record with no subtitles list has none on disk', () async {
+      final client = FakeApiClient()
+        ..getResponseData = {
+          'data': [
+            {'radarrId': 1, 'title': 'Charge', 'monitored': true},
+          ],
+          'total': 1,
+        };
+      final service = BazarrService(client);
+
+      final movie = (await service.getMovies()).data.single;
+
+      expect(movie.presentLanguages, isEmpty);
+    });
+
     test(
       'getWantedEpisodes returns wanted items with missing languages',
       () async {

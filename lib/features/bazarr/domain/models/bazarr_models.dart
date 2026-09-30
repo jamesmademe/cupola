@@ -38,6 +38,24 @@ List<BazarrSubtitleLanguage> parseBazarrSubtitleLanguages(dynamic value) {
   return const <BazarrSubtitleLanguage>[];
 }
 
+/// The subtitle languages a title already has, from the `subtitles` list
+/// Bazarr's `postprocess` attaches to every movie and episode record (it looks
+/// them up by `radarrId` / `sonarrEpisodeId`, so wanted records carry it too).
+///
+/// One entry per language and flavour: Bazarr lists one row per *file*, so an
+/// embedded English track and an external `.en.srt` are two rows that say one
+/// thing — English is there.
+List<BazarrSubtitleLanguage> parseBazarrPresentSubtitles(dynamic value) {
+  final seen = <String>{};
+  return [
+    for (final language in parseBazarrSubtitleLanguages(value))
+      if (seen.add(
+        '${language.code2 ?? language.name}:${language.forced}:${language.hi}',
+      ))
+        language,
+  ];
+}
+
 class BazarrSeries {
   final int sonarrSeriesId;
   final String? title;
@@ -95,6 +113,9 @@ class BazarrMovie {
   final String? path;
   final bool monitored;
   final List<BazarrSubtitleLanguage> missingLanguages;
+
+  /// The languages already on disk — see [parseBazarrPresentSubtitles].
+  final List<BazarrSubtitleLanguage> presentLanguages;
   final int? profileId;
   final List<String> tags;
 
@@ -106,6 +127,7 @@ class BazarrMovie {
     this.path,
     required this.monitored,
     this.missingLanguages = const [],
+    this.presentLanguages = const [],
     this.profileId,
     this.tags = const [],
   });
@@ -129,6 +151,7 @@ class BazarrMovie {
       path: stringOrNull(json['path']),
       monitored: json['monitored'] == true,
       missingLanguages: parseBazarrSubtitleLanguages(json['missing_subtitles']),
+      presentLanguages: parseBazarrPresentSubtitles(json['subtitles']),
       profileId: intOrNull(json['profileId']),
       tags: tags,
     );
@@ -142,6 +165,9 @@ class BazarrWantedItem {
   final String? episodeTitle;
   final int? season;
   final List<BazarrSubtitleLanguage> missingLanguages;
+
+  /// The languages already on disk — see [parseBazarrPresentSubtitles].
+  final List<BazarrSubtitleLanguage> presentLanguages;
   final int? sonarrSeriesId;
   final int? sonarrEpisodeId;
   final int? radarrId;
@@ -155,6 +181,7 @@ class BazarrWantedItem {
     this.episodeTitle,
     this.season,
     this.missingLanguages = const [],
+    this.presentLanguages = const [],
     this.sonarrSeriesId,
     this.sonarrEpisodeId,
     this.radarrId,
@@ -185,6 +212,7 @@ class BazarrWantedItem {
       episodeTitle: stringOrNull(json['episodeTitle']),
       season: seasonFromEpisode,
       missingLanguages: parseBazarrSubtitleLanguages(json['missing_subtitles']),
+      presentLanguages: parseBazarrPresentSubtitles(json['subtitles']),
       sonarrSeriesId: intOrNull(json['sonarrSeriesId']),
       sonarrEpisodeId: intOrNull(json['sonarrEpisodeId']),
       radarrId: intOrNull(json['radarrId']),

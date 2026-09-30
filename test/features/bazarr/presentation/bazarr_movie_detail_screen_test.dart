@@ -136,6 +136,44 @@ void main() {
     expect(find.text('All languages covered'), findsOneWidget);
   });
 
+  // The page read only the missing half of Bazarr's answer, so a movie with
+  // English and Italian on disk and German wanted said only "German".
+  testWidgets('shows the subtitles on disk beside the missing ones', (
+    tester,
+  ) async {
+    final fake = FakeBazarrService()
+      ..movieByIdOverride = const BazarrMovie(
+        radarrId: 42,
+        title: 'Sintel',
+        monitored: true,
+        presentLanguages: [
+          BazarrSubtitleLanguage(code2: 'en', name: 'English'),
+          BazarrSubtitleLanguage(code2: 'it', name: 'Italian'),
+        ],
+        missingLanguages: [BazarrSubtitleLanguage(code2: 'de', name: 'German')],
+      )
+      ..wantedMovieByIdOverride = const BazarrWantedItem(
+        title: 'Sintel',
+        radarrId: 42,
+        missingLanguages: [BazarrSubtitleLanguage(code2: 'de', name: 'German')],
+      );
+    await _pumpScreen(tester, fake: fake);
+
+    expect(find.text('SUBTITLES ON DISK'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget);
+    expect(find.text('Italian'), findsOneWidget);
+    expect(find.text('MISSING SUBTITLES'), findsOneWidget);
+    expect(find.text('German'), findsOneWidget);
+    // The figure stays the missing count: what is on disk is not a gap.
+    expect(find.text('1 missing'), findsOneWidget);
+  });
+
+  testWidgets('draws no on-disk region when Bazarr lists none', (tester) async {
+    await _pumpScreen(tester, fake: _fakeWithMovie());
+
+    expect(find.text('SUBTITLES ON DISK'), findsNothing);
+  });
+
   testWidgets('falls back to the wanted item while the lookup misses', (
     tester,
   ) async {

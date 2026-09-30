@@ -11,7 +11,8 @@ import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 /// service has a subtitle-language axis, so these do not belong in
 /// `core/widgets`.
 
-/// A wrap of missing subtitle-language cards (code, full name, forced/HI).
+/// A wrap of subtitle-language cards (code, full name, forced/HI) — the missing
+/// languages or the ones on disk; the slot label around it says which.
 class BazarrSubtitleLanguageWrap extends StatelessWidget {
   final List<BazarrSubtitleLanguage> languages;
 

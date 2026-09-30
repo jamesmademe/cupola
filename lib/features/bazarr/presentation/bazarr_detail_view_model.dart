@@ -23,6 +23,10 @@ class BazarrDetailViewModel {
   /// owns — two copies of one rule.
   final int missing;
 
+  /// Subtitles already on disk, one per language. Movies only: a series has one
+  /// set per episode, which this page does not read.
+  final List<BazarrSubtitleLanguage> present;
+
   /// Whether anything (library record or wanted fallback) exists to render.
   final bool found;
 
@@ -33,6 +37,7 @@ class BazarrDetailViewModel {
     required this.status,
     required this.facts,
     required this.missing,
+    this.present = const [],
     required this.found,
   });
 
@@ -56,6 +61,8 @@ class BazarrDetailViewModel {
         if ((movie?.path ?? '').isNotEmpty) MediaFact('Path', movie!.path!),
       ],
       missing: missing,
+      present:
+          movie?.presentLanguages ?? fallback?.presentLanguages ?? const [],
       found: movie != null || fallback != null,
     );
   }

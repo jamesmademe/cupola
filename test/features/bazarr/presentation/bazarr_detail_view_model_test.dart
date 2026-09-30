@@ -62,6 +62,28 @@ void main() {
       expect(BazarrDetailViewModel.forMovie(null, null).missing, 0);
     });
 
+    test('carries the languages on disk, from either record', () {
+      const english = BazarrSubtitleLanguage(code2: 'en', name: 'English');
+      final fromMovie = BazarrDetailViewModel.forMovie(
+        const BazarrMovie(
+          radarrId: 42,
+          title: 'Sintel',
+          monitored: true,
+          presentLanguages: [english],
+        ),
+        null,
+      );
+      expect(fromMovie.present, [english]);
+
+      final fromFallback = BazarrDetailViewModel.forMovie(
+        null,
+        const BazarrWantedItem(title: 'Sintel', presentLanguages: [english]),
+      );
+      expect(fromFallback.present, [english]);
+
+      expect(BazarrDetailViewModel.forMovie(null, null).present, isEmpty);
+    });
+
     test('cascades to the wanted fallback, then the constant', () {
       final fromFallback = BazarrDetailViewModel.forMovie(
         null,
