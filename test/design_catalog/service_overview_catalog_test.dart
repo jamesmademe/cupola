@@ -180,17 +180,21 @@ final _history = [
 
 /// Radarr answering every section, offline.
 class _ScriptedRadarr extends FakeRadarrService {
-  _ScriptedRadarr({this.libraryFails = false});
+  _ScriptedRadarr({this.libraryFailure});
 
-  /// A library endpoint that errors while the rest of the server answers.
-  final bool libraryFails;
+  /// What the library endpoint fails with, while the rest of the server
+  /// answers — or null for a library that loads. A real failure, so the app's
+  /// own classification decides the tone: a bare `Exception` is a failure
+  /// nobody can attribute, and would paint amber where the scene means red.
+  final Object? libraryFailure;
 
   @override
   Future<List<RadarrMovie>> getMovies() async => _library;
 
   @override
   Future<List<RadarrMovie>> getMoviesOrThrow() async {
-    if (libraryFails) throw Exception('library failed');
+    final failure = libraryFailure;
+    if (failure != null) throw failure;
     return _library;
   }
 
@@ -354,21 +358,29 @@ void main() {
         height: 900,
       ),
       CatalogScene(
-        'RadarrOverviewScreen · the library did not answer · every figure it '
-        'owns reads —, and the two sections built on it fail in their own '
-        'slots while the queue and history still draw',
+        'RadarrOverviewScreen · the library timed out · the server answers, '
+        'so the failure is amber: every figure the library owns reads —, and '
+        'the two sections built on it fail in their own slots while the queue '
+        'and history still draw',
         (_) => _radarr(
-          _ScriptedRadarr(libraryFails: true),
+          _ScriptedRadarr(
+            libraryFailure: DioException(
+              requestOptions: RequestOptions(path: '/api/v3/movie'),
+              type: DioExceptionType.receiveTimeout,
+            ),
+          ),
           const RadarrOverviewScreen(topPadding: 0),
         ),
         width: 390,
         height: 1180,
       ),
       CatalogScene(
-        'RadarrOverviewScreen · unreachable · the version is —, never the '
-        'v3 API fallback',
+        'RadarrOverviewScreen · did not answer · red, and only here: the '
+        'version is —, never the v3 API fallback',
         (_) => _radarr(
-          _ScriptedRadarr(libraryFails: true),
+          _ScriptedRadarr(
+            libraryFailure: const SocketException('Connection refused'),
+          ),
           const RadarrOverviewScreen(topPadding: 0),
           version: '',
         ),
