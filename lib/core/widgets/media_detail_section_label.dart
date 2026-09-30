@@ -14,7 +14,8 @@ const double _stackAboveScaleFactor = 1.4;
 /// The body-role size the threshold is measured at.
 const double _stackProbeFontSize = 14.0;
 
-/// The media detail body's region label — an accent eyebrow with an optional
+/// The media detail body's region label — an accent label in the micro role,
+/// sentence case, with an optional
 /// tabular count and an optional trailing control.
 ///
 /// Built **only** by `MediaDetailView`'s spine, from `MediaDetailSlot.label`.
@@ -22,7 +23,7 @@ const double _stackProbeFontSize = 14.0;
 /// the page accent, or without `Semantics(header: true)`, because a caller never
 /// builds one.
 ///
-/// Why an eyebrow and not [SectionHeader]'s `titleLarge`: on a six-region page
+/// Why a small label and not [SectionHeader]'s `titleLarge`: on a six-region page
 /// the hero title and the collapsed bar's title are the page's voice, and a
 /// stack of 22pt bold headings competes with them. An accent kicker repeated
 /// five or six times down the page reads as a *rhythm* — which is the same
@@ -32,7 +33,7 @@ const double _stackProbeFontSize = 14.0;
 /// arbitrary length read as tick marks, where five identical kickers read as
 /// structure.
 class MediaDetailSectionLabel extends StatelessWidget {
-  /// The region name, in its original case. Uppercased for the eye only.
+  /// The region name, in sentence case, for the eye and the ear alike.
   final String label;
 
   /// The page's service accent. Walked to a legible tone before it is used as
@@ -65,7 +66,7 @@ class MediaDetailSectionLabel extends StatelessWidget {
     // The accent as *text on the surface*, not as a fill. `tintAlpha: 0` makes
     // the composite the surface itself, so `onTint` walks the accent's
     // lightness — keeping its hue — until it clears 4.5:1. Without it Sonarr's
-    // violet on `surface-light` measures about 3.96:1, and an 11pt eyebrow is
+    // violet on `surface-light` measures about 3.96:1, and an 11pt label is
     // not large text.
     final litAccent = ServiceTheme.onTint(
       accent,
@@ -82,10 +83,10 @@ class MediaDetailSectionLabel extends StatelessWidget {
         children: [
           Flexible(
             child: Text(
-              label.toUpperCase(),
+              label,
               maxLines: 2,
               softWrap: true,
-              style: AppTheme.eyebrow(litAccent),
+              style: AppTheme.chrome(context, color: litAccent),
             ),
           ),
           if (count != null && count!.trim().isNotEmpty) ...[
@@ -162,7 +163,7 @@ class MediaDetailSectionLabel extends StatelessWidget {
       // interactive `action` keep a node of its own.
       explicitChildNodes: true,
       header: true,
-      // Original case: uppercase belongs in the eye, not in the ear.
+      // The label as written, and its count.
       label: [
         label,
         if (count != null && count!.trim().isNotEmpty) count!,

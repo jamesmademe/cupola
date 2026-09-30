@@ -85,14 +85,13 @@ class OnboardingWalkSubject extends StatelessWidget {
     // words, while "step 3 of 4 · service 2 of 8" says the thing the ring
     // cannot — which service, out of how many, inside which beat.
     final eyebrow = ReelLine(
-      '$_beat · service $position of $total'.toUpperCase(),
-      style: AppTheme.eyebrow(scheme.onSurfaceVariant),
+      '$_beat · service $position of $total',
+      style: AppTheme.chrome(context, color: scheme.onSurfaceVariant),
       // The word holds still and the digit moves, which is precisely what
       // `figure` is for — `word` rolled the whole line when only a numeral
       // changed.
       options: ReelMotion.figure,
-      // Uppercase belongs in the eye, not the ear. The service is named here
-      // rather than drawn, because in the compact register the glyph tile and
+      // The service is named here rather than drawn, because in the compact register the glyph tile and
       // the headline are both gone and this line is the only orientation left.
       semanticsLabel:
           '${service.title}, step 3 of 4, service $position of $total',

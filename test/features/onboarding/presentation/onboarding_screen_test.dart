@@ -103,7 +103,7 @@ void main() {
       // in the compact register neither the tile nor the headline is on screen.
       final first = ServiceRing.order.first;
       expect(
-        findLine('STEP 3 OF 4 · SERVICE 1 OF ${ServiceKey.values.length}'),
+        findLine('Step 3 of 4 · service 1 of ${ServiceKey.values.length}'),
         findsOneWidget,
       );
       expect(
@@ -160,7 +160,7 @@ void main() {
       await _pick(tester, 'Sonarr');
       await _tap(tester, 'Continue with 1');
 
-      expect(findLine('STEP 3 OF 4 · SERVICE 1 OF 1'), findsOneWidget);
+      expect(findLine('Step 3 of 4 · service 1 of 1'), findsOneWidget);
       await _fill(tester, url: 'sonarr.lan:8989', key: 'abcdef1234567890');
 
       // Test, not Next: the primary action only becomes an advance once the
@@ -187,10 +187,10 @@ void main() {
       // 47 the eyebrow counts beats and services and names neither, so it can
       // no longer tell these two steps apart.
       expect(findLine('Where does Radarr live?'), findsOneWidget);
-      expect(findLine('STEP 3 OF 4 · SERVICE 1 OF 2'), findsOneWidget);
+      expect(findLine('Step 3 of 4 · service 1 of 2'), findsOneWidget);
       await _tap(tester, 'Skip Radarr');
       expect(findLine('Where does Sonarr live?'), findsOneWidget);
-      expect(findLine('STEP 3 OF 4 · SERVICE 2 OF 2'), findsOneWidget);
+      expect(findLine('Step 3 of 4 · service 2 of 2'), findsOneWidget);
 
       await _tap(tester, 'Skip Sonarr');
       // Both skipped, so the close has nothing to report.
@@ -458,7 +458,7 @@ void main() {
         same(ringElement),
         reason: 'the same element, so its animation state is continuous',
       );
-      expect(findLine('STEP 3 OF 4 · SERVICE 1 OF 1'), findsOneWidget);
+      expect(findLine('Step 3 of 4 · service 1 of 1'), findsOneWidget);
 
       // Bounded pumps only: the sweep repeats forever by design, so settling is
       // not something this screen ever does with motion on.
@@ -814,12 +814,12 @@ void main() {
       // *spoken* form is what still carries the service: in this register the
       // glyph tile and the headline are both gone, and a counter alone would
       // leave a screen-reader user without the subject.
-      expect(findLine('STEP 3 OF 4 · SERVICE 1 OF 1'), findsOneWidget);
+      expect(findLine('Step 3 of 4 · service 1 of 1'), findsOneWidget);
       expect(
         _spokenLine('Sonarr, step 3 of 4, service 1 of 1'),
         findsOneWidget,
       );
-      final label = tester.getRect(findLine('STEP 3 OF 4 · SERVICE 1 OF 1'));
+      final label = tester.getRect(findLine('Step 3 of 4 · service 1 of 1'));
       final ring = tester.getRect(find.byType(ServiceRing));
       expect(
         label.left,
@@ -952,7 +952,7 @@ void main() {
       // Radarr comes first in ring order.
       await _tap(tester, 'Skip Radarr');
 
-      expect(findLine('STEP 3 OF 4 · SERVICE 2 OF 2'), findsOneWidget);
+      expect(findLine('Step 3 of 4 · service 2 of 2'), findsOneWidget);
       expect(tester.testTextInput.isVisible, isFalse);
     });
 

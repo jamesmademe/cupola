@@ -117,7 +117,8 @@ void main() {
         ServiceKey.radarr,
       ),
       _scene(
-        'Source failed · one card replaces the rail: Figures, did not answer',
+        'Source failed · one card replaces the rail; a failure nobody can '
+        'attribute reads Did not complete, never Did not answer',
         AsyncValue.error(Exception('timeout'), StackTrace.empty),
         ServiceKey.sonarr,
       ),

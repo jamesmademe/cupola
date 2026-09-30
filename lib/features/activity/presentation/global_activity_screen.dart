@@ -1068,8 +1068,9 @@ class _FinishedTodayBand extends ConsumerWidget {
                 child: Text(
                   'Finished today · ${items.length} '
                   '${items.length == 1 ? 'item' : 'items'}',
-                  style: AppTheme.eyebrow(
-                    CupolaThemeColors.of(context).dimText,
+                  style: AppTheme.chrome(
+                    context,
+                    color: CupolaThemeColors.of(context).dimText,
                   ),
                 ),
               ),

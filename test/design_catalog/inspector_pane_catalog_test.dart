@@ -52,7 +52,7 @@ final _queue = [
   _transfer(
     ServiceKey.qbittorrent,
     'Metropolis.1927.1080p.BluRay.x264',
-    '1.8 GB of 10.0 GB · 0 B/s · stalled',
+    '1.8 GB of 10.0 GB · 0 B/s · stuck',
     0.18,
     stalled: true,
   ),
@@ -182,8 +182,8 @@ void main() {
     scenes: [
       CatalogScene(
         'InspectorPane beside InspectorSplitHandle · the live queue, two '
-        'services unreachable, finished today · a stalled transfer spends its '
-        'amber on the bar; the red card is only for what did not answer',
+        'services that did not answer, finished today · a stuck transfer spends '
+        'its amber on the bar; the red line is only for what did not answer',
         (_) => _Pane(
           queue: () async => ActivityFeed(items: _queue, results: const []),
           offline: const [ServiceKey.sonarr, ServiceKey.prowlarr],

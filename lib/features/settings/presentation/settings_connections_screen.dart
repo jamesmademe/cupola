@@ -183,7 +183,7 @@ class _CountChip extends StatelessWidget {
     return ExcludeSemantics(
       child: Text(
         '$count of ${ServiceKey.values.length}',
-        style: AppTheme.eyebrow(colorScheme.onSurfaceVariant),
+        style: AppTheme.chrome(context, color: colorScheme.onSurfaceVariant),
       ),
     );
   }

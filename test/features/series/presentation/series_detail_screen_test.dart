@@ -131,7 +131,7 @@ void main() {
 
       // The seasons are region 3, so they arrive before the prose and the
       // catalogue rather than sixth.
-      expect(find.text('SEASONS'), findsOneWidget);
+      expect(find.text('Seasons'), findsOneWidget);
       expect(find.byType(SeriesSeasonsList), findsOneWidget);
 
       await _scrollUntilVisible(
@@ -140,12 +140,12 @@ void main() {
       );
       expect(find.text('A chemistry teacher turns to crime.'), findsOneWidget);
 
-      await _scrollUntilVisible(tester, find.text('DETAILS'));
+      await _scrollUntilVisible(tester, find.text('Details'));
       expect(find.byType(MediaInfoCard), findsOneWidget);
 
       // Genres appear exactly once, under a heading that is true. The hero chip
       // slot carries the manifest counter instead.
-      await _scrollUntilVisible(tester, find.text('GENRES'));
+      await _scrollUntilVisible(tester, find.text('Genres'));
       expect(find.byType(GenreChip), findsNWidgets(2));
       expect(
         find.descendant(
@@ -154,7 +154,7 @@ void main() {
         ),
         findsNothing,
       );
-      expect(find.text('TAGS'), findsNothing);
+      expect(find.text('Tags'), findsNothing);
     });
 
     testWidgets('the canonical region order puts seasons above the catalogue', (
@@ -314,7 +314,7 @@ void main() {
         find.textContaining('Sonarr is not tracking this series'),
         findsOneWidget,
       );
-      expect(find.text('SEASONS'), findsNothing);
+      expect(find.text('Seasons'), findsNothing);
     });
 
     testWidgets('monitoring an unmonitored-but-complete series is in the sheet', (

@@ -97,14 +97,14 @@ void main() {
     expect(find.byType(MediaDetailView), findsOneWidget);
     // Hero summary + collapsed bar both carry the title.
     expect(find.text('Dune'), findsWidgets);
-    expect(find.text('MISSING SUBTITLES'), findsOneWidget);
+    expect(find.text('Missing subtitles'), findsOneWidget);
     expect(find.text('IT'), findsOneWidget);
     expect(find.text('EN'), findsOneWidget);
     expect(find.text('Italian'), findsOneWidget);
-    expect(find.text('DETAILS'), findsOneWidget);
+    expect(find.text('Details'), findsOneWidget);
     expect(find.text('Monitored'), findsWidgets);
     // The one page in the app where "Tags" is true: these are real Bazarr tags.
-    expect(find.text('TAGS'), findsOneWidget);
+    expect(find.text('Tags'), findsOneWidget);
     expect(find.text('scifi'), findsOneWidget);
     // Exactly one claimant on the pull gesture: the spine owns the indicator
     // now, so this screen no longer wraps a second one of its own around a view
@@ -159,10 +159,10 @@ void main() {
       );
     await _pumpScreen(tester, fake: fake);
 
-    expect(find.text('SUBTITLES ON DISK'), findsOneWidget);
+    expect(find.text('Subtitles on disk'), findsOneWidget);
     expect(find.text('English'), findsOneWidget);
     expect(find.text('Italian'), findsOneWidget);
-    expect(find.text('MISSING SUBTITLES'), findsOneWidget);
+    expect(find.text('Missing subtitles'), findsOneWidget);
     expect(find.text('German'), findsOneWidget);
     // The figure stays the missing count: what is on disk is not a gap.
     expect(find.text('1 missing'), findsOneWidget);
@@ -171,7 +171,7 @@ void main() {
   testWidgets('draws no on-disk region when Bazarr lists none', (tester) async {
     await _pumpScreen(tester, fake: _fakeWithMovie());
 
-    expect(find.text('SUBTITLES ON DISK'), findsNothing);
+    expect(find.text('Subtitles on disk'), findsNothing);
   });
 
   testWidgets('falls back to the wanted item while the lookup misses', (

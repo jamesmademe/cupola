@@ -28,12 +28,12 @@ enum MediaDetailMeasure {
 /// an empty list would still spend a label and 24pt of air. **Omit the slot.**
 @immutable
 class MediaDetailSlot {
-  /// Region label, rendered uppercase through the eyebrow. Null renders no
+  /// Region label, drawn in sentence case in the micro role. Null renders no
   /// label at all.
   ///
   /// **Pass sentence case** — `'Missing subtitles'`, not `'MISSING SUBTITLES'`.
-  /// The widget uppercases for the eye and hands the string through *unchanged*
-  /// to `Semantics(label:)`, so a pre-shouted label is read out as shouting by
+  /// The widget draws it as given and hands the same string to
+  /// `Semantics(label:)`, so a pre-shouted label is read out as shouting by
   /// VoiceOver and cannot be un-shouted downstream.
   final String? label;
 

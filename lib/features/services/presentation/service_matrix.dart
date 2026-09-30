@@ -285,9 +285,15 @@ class _StackHeader extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Text('STACK', style: AppTheme.eyebrow(colorScheme.onSurface)),
+            Text(
+              'Stack',
+              style: AppTheme.chrome(context, color: colorScheme.onSurface),
+            ),
             const SizedBox(width: AppSpacing.sm),
-            Text('· $registrySize', style: AppTheme.eyebrow(dim)),
+            Text(
+              '· $registrySize',
+              style: AppTheme.chrome(context, color: dim),
+            ),
             const Spacer(),
             if (notSetUp > 0)
               Flexible(
@@ -459,11 +465,17 @@ class _DomainBand extends ConsumerWidget {
       child: Row(
         children: [
           Text(
-            domain.label.toUpperCase(),
-            style: AppTheme.eyebrow(colorScheme.onSurfaceVariant),
+            domain.label,
+            style: AppTheme.chrome(
+              context,
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text('· ${subjects.length}', style: AppTheme.eyebrow(dim)),
+          Text(
+            '· ${subjects.length}',
+            style: AppTheme.chrome(context, color: dim),
+          ),
           const SizedBox(width: AppSpacing.sm),
           if (health != null)
             Expanded(

@@ -229,10 +229,13 @@ class _KpiCard extends StatelessWidget {
             // When the source did not answer, *why* is the more useful of the
             // two — the glyph and the surrounding cards already say which
             // figure this is.
-            (kpi.note ?? kpi.label).toUpperCase(),
+            kpi.note ?? kpi.label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTheme.eyebrow(colorScheme.onSurfaceVariant),
+            style: AppTheme.chrome(
+              context,
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),

@@ -496,7 +496,7 @@ void main() {
     testWidgets('the region header counts the whole registry', (tester) async {
       await _pumpDashboard(tester);
 
-      expect(find.text('STACK'), findsOneWidget);
+      expect(find.text('Stack'), findsOneWidget);
       expect(find.text('· ${ServiceKey.values.length}'), findsOneWidget);
     });
 

@@ -122,7 +122,7 @@ void main() {
 
       // A valid collection with zero parts used to render a full hero over an
       // empty rail that collapsed to nothing.
-      expect(find.text('MOVIES'), findsOneWidget);
+      expect(find.text('Movies'), findsOneWidget);
       expect(find.text('No movies listed'), findsOneWidget);
     });
   });

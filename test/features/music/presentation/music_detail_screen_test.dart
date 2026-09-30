@@ -108,7 +108,7 @@ void main() {
       // deck rather than dead last after the genre chips.
       await _scrollUntilVisible(
         tester,
-        find.widgetWithText(MediaDetailSectionLabel, 'ALBUMS'),
+        find.widgetWithText(MediaDetailSectionLabel, 'Albums'),
       );
       expect(find.byType(MusicAlbumsList), findsOneWidget);
       expect(find.text('OK Computer'), findsOneWidget);
@@ -118,7 +118,7 @@ void main() {
 
       await _scrollUntilVisible(
         tester,
-        find.widgetWithText(MediaDetailSectionLabel, 'DETAILS'),
+        find.widgetWithText(MediaDetailSectionLabel, 'Details'),
       );
       expect(find.byType(MediaInfoCard), findsOneWidget);
 
@@ -126,9 +126,9 @@ void main() {
       // that these are not.
       await _scrollUntilVisible(
         tester,
-        find.widgetWithText(MediaDetailSectionLabel, 'GENRES'),
+        find.widgetWithText(MediaDetailSectionLabel, 'Genres'),
       );
-      expect(find.text('TAGS'), findsNothing);
+      expect(find.text('Tags'), findsNothing);
     });
 
     testWidgets('the canonical region order is albums before genres', (
@@ -224,7 +224,7 @@ void main() {
 
       await _scrollUntilVisible(
         tester,
-        find.widgetWithText(MediaDetailSectionLabel, 'ALBUMS'),
+        find.widgetWithText(MediaDetailSectionLabel, 'Albums'),
         settle: false,
       );
 
@@ -253,7 +253,7 @@ void main() {
 
       await _scrollUntilVisible(
         tester,
-        find.widgetWithText(MediaDetailSectionLabel, 'ALBUMS'),
+        find.widgetWithText(MediaDetailSectionLabel, 'Albums'),
       );
 
       expect(find.byType(AppErrorState), findsOneWidget);
@@ -334,7 +334,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.widgetWithText(MediaDetailSectionLabel, 'ALBUMS'),
+        find.widgetWithText(MediaDetailSectionLabel, 'Albums'),
         findsNothing,
       );
     });

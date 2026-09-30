@@ -95,7 +95,7 @@ void main() {
 
     expect(find.byType(MediaDetailView), findsOneWidget);
     expect(find.text('Foundation'), findsWidgets);
-    expect(find.text('MISSING SUBTITLES'), findsOneWidget);
+    expect(find.text('Missing subtitles'), findsOneWidget);
     expect(find.text('The Emperor'), findsOneWidget);
 
     // On the shared dense-row primitive now, so the episode code is the ordinal
@@ -112,7 +112,7 @@ void main() {
     // read and a screen reader speaks.
     expect(find.text('EN'), findsNothing);
     expect(find.text('Missing en'), findsOneWidget);
-    expect(find.text('DETAILS'), findsOneWidget);
+    expect(find.text('Details'), findsOneWidget);
     // The missing count is stated once in words, in the hero's chip slot — the
     // figure plate beside it is the same fact as a glanceable numeral and is
     // silent to assistive technology.

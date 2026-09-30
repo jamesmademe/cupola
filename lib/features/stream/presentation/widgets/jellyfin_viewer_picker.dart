@@ -62,9 +62,12 @@ class JellyfinViewerPicker extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Watch state'.toUpperCase(),
+          'Watch state',
           semanticsLabel: 'Watch state',
-          style: AppTheme.eyebrow(theme.colorScheme.onSurfaceVariant),
+          style: AppTheme.chrome(
+            context,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(

@@ -8,7 +8,7 @@ Rendered from `lib/core/widgets/media_chip_section.dart` (composing `GenreChip` 
 - **`.neutral`** (`GenreChip`) — padding `space-xs` × `space-md`, `radius-full`, `surface-container` fill with a 1px `outline-variant` border, `label-small` 500 in `on-surface-variant`. For genres and TMDB keywords: a fact about the title, which the service's colour has no opinion on.
 - **`.accented`** (`TagChip`) — padding `space-xs` × `space-sm`, `radius-full`, `label-small` 600. The accent is first walked by `ServiceTheme.onTint` against `surface` at a 12% tint; the label, the 12% fill and the 28% border all follow the walked colour, so the recipe stays self-consistent in both themes. The page accent is the lamp, which the walk resolves to the primary ink: the chip is monochrome.
 
-The consumer provides `values` and, for `.accented`, the page `accent` (asserted non-null). The slot label is *Genres* or *Keywords* for `.neutral` and *Tags* for `.accented`, given in sentence case — the slot uppercases it for the eye.
+The consumer provides `values` and, for `.accented`, the page `accent` (asserted non-null). The slot label is *Genres* or *Keywords* for `.neutral` and *Tags* for `.accented`, given and drawn in sentence case.
 
 Semantics: each chip is plain text and reads as its text; chips are metadata, not controls, and carry no button role.
 

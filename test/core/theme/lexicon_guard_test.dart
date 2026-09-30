@@ -72,6 +72,21 @@ void main() {
     );
   });
 
+  test('there is no uppercase voice', () {
+    // Sentence case everywhere: the eyebrow, the one style whose tracking is
+    // authored for capitals, has no site left, and a new one would bring the
+    // uppercase voice back with it.
+    final offenders = [
+      for (final file in libFiles)
+        if (file.path != 'lib/core/theme.dart')
+          for (final (index, line) in file.readAsLinesSync().indexed)
+            if (!line.trimLeft().startsWith('//') &&
+                line.contains('AppTheme.eyebrow('))
+              '${file.path}:${index + 1}',
+    ];
+    expect(offenders, isEmpty);
+  });
+
   test('every allow-list entry still matches something', () {
     // An entry whose site was fixed or moved is an exception nobody needs,
     // and it would quietly excuse the next occurrence in that file.

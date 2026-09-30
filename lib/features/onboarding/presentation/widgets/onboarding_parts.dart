@@ -647,8 +647,11 @@ class OnboardingPick extends StatelessWidget {
         const SizedBox(height: AppSpacing.xl),
         for (final domain in ServiceDomain.values) ...[
           Text(
-            domain.label.toUpperCase(),
-            style: AppTheme.eyebrow(theme.colorScheme.onSurfaceVariant),
+            domain.label,
+            style: AppTheme.chrome(
+              context,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           Wrap(

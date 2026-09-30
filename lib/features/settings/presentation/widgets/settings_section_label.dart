@@ -15,15 +15,14 @@ class SettingsSectionLabel extends StatelessWidget {
     return Semantics(
       container: true,
       header: true,
-      // The un-uppercased title: '.toUpperCase()' is typography, and VoiceOver
-      // spells out all-caps tokens it does not recognise.
+      // The title as written, for the eye and the ear alike.
       label: title,
       excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
         child: Text(
-          title.toUpperCase(),
-          style: AppTheme.eyebrow(colorScheme.onSurfaceVariant),
+          title,
+          style: AppTheme.chrome(context, color: colorScheme.onSurfaceVariant),
         ),
       ),
     );

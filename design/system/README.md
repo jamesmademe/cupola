@@ -19,7 +19,7 @@ In order of precedence: when two collide, the higher one wins.
 **Plain, warm, short.** Say what happened in the words of the person reading; the service's own term waits under *Why?*. People, then things. One line per fact: a count and a verb beat a paragraph.
 
 - **English only, on purpose.** No localisation layer; copy is written once.
-- **Sentence case everywhere** — headers, buttons, tabs, empty states. There is no uppercase voice: `label.eyebrow` survives only for the sites that still use it; do not add one.
+- **Sentence case everywhere** — headers, buttons, tabs, empty states, section labels, figure labels and badges. There is no uppercase voice: the labels that wore `label.eyebrow` now set the `micro` role in sentence case, and no site uses the eyebrow any more; do not add one. Only what is itself an abbreviation keeps its capitals (`EN`, `MKV`, `H264`).
 - **A verb on every button**, and the verb says what will happen: `Try another download`, `Remove and delete files`, `Scrub tank`.
 - **Name the service, not the mechanism**: `Open in qBittorrent`, *Sonarr lists nothing under Specials yet.*
 - **No emoji, no exclamation marks, no apology, no marketing voice.** An empty state says what is true and, if useful, what to try.

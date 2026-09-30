@@ -924,9 +924,12 @@ class AppTheme {
     ],
   ];
 
-  /// Standardised "eyebrow" / overline style: small, uppercase-tracked label
-  /// used above section titles and on onboarding steps. Pair with
-  /// `Text(label.toUpperCase(), style: AppTheme.eyebrow(...))`.
+  /// The retired "eyebrow" / overline style: small, uppercase-tracked label.
+  ///
+  /// There is no uppercase voice any more (the brand book's Words): every
+  /// section label, KPI label and badge that wore this now sets the micro role
+  /// ([chrome]) in sentence case. It stays for the token's sake; do not add a
+  /// site.
   ///
   /// The one style whose tracking is authored for uppercase: +1.4 is what
   /// uppercasing at 11pt needs to stop reading as a cramped acronym.

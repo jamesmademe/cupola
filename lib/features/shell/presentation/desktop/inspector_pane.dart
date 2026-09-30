@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
@@ -276,7 +277,7 @@ class _UnreachableCard extends ConsumerWidget {
             ServiceFailureReason.unreachable,
             subject: services.single.title,
           )
-        : '${services.map((s) => s.title).join(' · ')} did not answer';
+        : '${Lexicon.names(services.map((s) => s.title))} did not answer';
     final body = services.length == 1
         ? 'Anything it holds is missing from this list.'
         : 'Anything they hold is missing from this list.';
@@ -481,12 +482,15 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-    // A section kicker, so the eyebrow itself rather than a hand-built copy
-    // of its numbers; the ear gets the sentence-case source.
+    // A section label in the micro role, sentence case for the eye and the
+    // ear alike.
     child: Text(
-      text.toUpperCase(),
+      text,
       semanticsLabel: text,
-      style: AppTheme.eyebrow(CupolaThemeColors.of(context).dimText),
+      style: AppTheme.chrome(
+        context,
+        color: CupolaThemeColors.of(context).dimText,
+      ),
     ),
   );
 }

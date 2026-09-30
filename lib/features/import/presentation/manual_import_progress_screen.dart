@@ -232,8 +232,11 @@ class _Metric extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label.toUpperCase(),
-          style: AppTheme.eyebrow(theme.colorScheme.onSurfaceVariant),
+          label,
+          style: AppTheme.chrome(
+            context,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(

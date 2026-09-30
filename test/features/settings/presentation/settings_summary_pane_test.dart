@@ -23,18 +23,26 @@ void main() {
 
         // Six cards, one per area, each a door to its own pane.
         for (final card in const [
-          'CONNECTIONS',
-          'TRUSTED CERTIFICATES',
-          'BACKGROUND SEARCH',
-          'REGION',
-          'APPEARANCE',
-          'HINTS',
+          'Connections',
+          'Trusted certificates',
+          'Background search',
+          'Region',
+          'Appearance',
+          'Hints',
         ]) {
-          expect(find.text(card), findsOneWidget, reason: '$card card missing');
+          // Inside the pane: beside it the rail names the same areas.
+          expect(
+            find.descendant(
+              of: find.byType(SettingsSummaryPane),
+              matching: find.text(card),
+            ),
+            findsOneWidget,
+            reason: '$card card missing',
+          );
         }
         // General belongs to the narrow layout: beside the rail its rows
         // would be a second copy of the rail.
-        expect(find.text('GENERAL'), findsNothing);
+        expect(find.text('General'), findsNothing);
       });
     });
 
@@ -48,7 +56,7 @@ void main() {
       await _onDesktop(() async {
         await _pumpHome(tester, size: const Size(1440, 2400));
 
-        for (final label in const ['ONBOARDING', 'ABOUT', 'DANGER ZONE']) {
+        for (final label in const ['Onboarding', 'About', 'Danger zone']) {
           expect(find.text(label), findsOneWidget, reason: '$label missing');
         }
         for (final row in const [

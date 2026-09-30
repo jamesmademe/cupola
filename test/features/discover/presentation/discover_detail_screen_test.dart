@@ -148,7 +148,7 @@ void main() {
       expect(labels, contains('Genres'));
       expect(labels, isNot(contains('Tags')));
       // Rendered uppercase for the eye, sentence case in the argument.
-      expect(find.text('KEYWORDS'), findsOneWidget);
+      expect(find.text('Keywords'), findsOneWidget);
     });
 
     testWidgets('the certification is metadata text, not a chip', (

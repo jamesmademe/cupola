@@ -16,21 +16,20 @@ import 'package:cupola/core/theme.dart';
 /// Bazarr has no poster and no backdrop *by definition*, so its hero was 236pt
 /// of gradient framing an absence — a fake poster rendering a film reel above
 /// the only question the page answers. This makes the band *contain* the answer:
-/// `12` over the eyebrow `MISSING`.
+/// `12` over the label `Missing`.
 ///
 /// Silent to assistive technology: the deck's headline says the same thing in
 /// words one region below, and a screen reader does not need it twice.
 ///
 /// `headlineSmall` and not `displaySmall`: at the hero band's 1.6x clamp that is
-/// 38.4pt, plus a 17.6pt eyebrow and a 4pt gap — 60pt inside a 123pt box, with
+/// 38.4pt, plus a 17.6pt label and a 4pt gap — 60pt inside a 123pt box, with
 /// room to spare. The whole row already lays out on
 /// `MediaDetailHeaderMetrics.heroTextScaler`, so it cannot exceed that.
 class MediaDetailFigurePlate extends StatelessWidget {
   /// The figure itself, pre-formatted ('12').
   final String value;
 
-  /// What the figure counts, in sentence case ('Missing'). Uppercased for the
-  /// eye.
+  /// What the figure counts, in sentence case ('Missing'), as it is drawn.
   final String label;
 
   /// The page's service accent.
@@ -86,9 +85,12 @@ class MediaDetailFigurePlate extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    label.toUpperCase(),
+                    label,
                     maxLines: 1,
-                    style: AppTheme.eyebrow(colorScheme.onSurfaceVariant),
+                    style: AppTheme.chrome(
+                      context,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),

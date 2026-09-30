@@ -86,7 +86,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
-        find.text('DETAILS'),
+        find.text('Details'),
         300,
         scrollable: find.byType(Scrollable).first,
       );

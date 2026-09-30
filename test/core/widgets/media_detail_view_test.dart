@@ -428,7 +428,7 @@ void main() {
       final readoutY = tester
           .getTopLeft(find.byKey(const ValueKey('readout')))
           .dy;
-      final firstLabelY = tester.getTopLeft(find.text('EPISODES')).dy;
+      final firstLabelY = tester.getTopLeft(find.text('Episodes')).dy;
       expect(deckY, lessThan(readoutY));
       expect(readoutY, lessThan(firstLabelY));
     });
@@ -446,12 +446,12 @@ void main() {
       // a lazy child list used to be emitted after every content section, so
       // Lidarr's albums landed below its genre chips.
       expect(
-        tester.getTopLeft(find.text('EPISODES')).dy,
-        lessThan(tester.getTopLeft(find.text('GENRES')).dy),
+        tester.getTopLeft(find.text('Episodes')).dy,
+        lessThan(tester.getTopLeft(find.text('Genres')).dy),
       );
       expect(
-        tester.getTopLeft(find.text('OVERVIEW')).dy,
-        lessThan(tester.getTopLeft(find.text('DETAILS')).dy),
+        tester.getTopLeft(find.text('Overview')).dy,
+        lessThan(tester.getTopLeft(find.text('Details')).dy),
       );
     });
 
@@ -497,8 +497,8 @@ void main() {
         );
 
         // And it is still region 3: `Genres` is below it, off screen.
-        expect(find.text('EPISODES'), findsOneWidget);
-        expect(find.text('GENRES'), findsNothing);
+        expect(find.text('Episodes'), findsOneWidget);
+        expect(find.text('Genres'), findsNothing);
       },
     );
   });
@@ -875,10 +875,10 @@ void main() {
           ),
         );
 
-        final seasons = tester.getRect(find.text('SEASONS'));
-        final cast = tester.getRect(find.text('CAST'));
-        final details = tester.getRect(find.text('DETAILS'));
-        final collection = tester.getRect(find.text('COLLECTION'));
+        final seasons = tester.getRect(find.text('Seasons'));
+        final cast = tester.getRect(find.text('Cast'));
+        final details = tester.getRect(find.text('Details'));
+        final collection = tester.getRect(find.text('Collection'));
 
         // Named → side track.
         expect(details.left, greaterThan(seasons.right));
@@ -908,8 +908,8 @@ void main() {
         // No set, so the old region rule still applies rather than the page
         // collapsing to one column under it.
         expect(
-          tester.getRect(find.text('SEASONS')).left,
-          greaterThan(tester.getRect(find.text('DETAILS')).right),
+          tester.getRect(find.text('Seasons')).left,
+          greaterThan(tester.getRect(find.text('Details')).right),
         );
       } finally {
         debugDefaultTargetPlatformOverride = null;
@@ -969,11 +969,11 @@ void main() {
       // A heading indented 155pt from its own table reads as a heading for
       // something else.
       expect(
-        tester.getRect(find.text('TRACK')).left,
-        lessThan(tester.getRect(find.text('COLUMN')).left),
+        tester.getRect(find.text('Track')).left,
+        lessThan(tester.getRect(find.text('Column')).left),
       );
       expect(
-        tester.getRect(find.text('TRACK')).left,
+        tester.getRect(find.text('Track')).left,
         closeTo(tester.getRect(find.byKey(trackKey)).left, 0.5),
       );
     });

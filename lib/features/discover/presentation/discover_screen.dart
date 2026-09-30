@@ -357,9 +357,12 @@ class _FeaturedBanner extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Featured'.toUpperCase(),
+                              'Featured',
                               semanticsLabel: 'Featured',
-                              style: AppTheme.eyebrow(colorScheme.primary),
+                              style: AppTheme.chrome(
+                                context,
+                                color: colorScheme.primary,
+                              ),
                             ),
                             const SizedBox(height: AppSpacing.xs),
                             Text(

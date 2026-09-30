@@ -154,18 +154,18 @@ void main() {
       // A movie has no child records, so region 3 is the file — and the path a
       // self-hoster hunts for is near the top of the page rather than buried in
       // an encyclopaedic grid.
-      expect(find.text('FILE'), findsOneWidget);
+      expect(find.text('File'), findsOneWidget);
       expect(find.byType(FileInfoSection), findsOneWidget);
 
       await _scrollUntilVisible(tester, find.text('A mind-bending thriller.'));
       expect(find.text('A mind-bending thriller.'), findsOneWidget);
 
-      await _scrollUntilVisible(tester, find.text('DETAILS'));
+      await _scrollUntilVisible(tester, find.text('Details'));
       expect(find.byType(MediaInfoCard), findsOneWidget);
 
       // Genres appear once, labelled honestly. 'Tags' names a real Radarr
       // release-profile concept that these are not.
-      await _scrollUntilVisible(tester, find.text('GENRES'));
+      await _scrollUntilVisible(tester, find.text('Genres'));
       expect(find.byType(GenreChip), findsNWidgets(2));
       expect(
         find.descendant(
@@ -174,7 +174,7 @@ void main() {
         ),
         findsNothing,
       );
-      expect(find.text('TAGS'), findsNothing);
+      expect(find.text('Tags'), findsNothing);
     });
 
     testWidgets('the extras region spends a heading only on what it has', (
@@ -202,8 +202,8 @@ void main() {
       // worthless if the region was never built.
       await _scrollUntilVisible(tester, find.text('Cast & collections'));
       expect(find.text('Cast & collections'), findsOneWidget);
-      expect(find.text('CAST'), findsNothing);
-      expect(find.text('COLLECTION'), findsNothing);
+      expect(find.text('Cast'), findsNothing);
+      expect(find.text('Collection'), findsNothing);
     });
 
     testWidgets('the hero chip slot states how much of the manifest exists', (
@@ -255,7 +255,7 @@ void main() {
       // *same row shape* a real file gets — so the region does not jump when one
       // arrives — instead of a centred well with a circled glyph.
       expect(find.byType(FileInfoSection), findsOneWidget);
-      expect(find.text('FILE'), findsOneWidget);
+      expect(find.text('File'), findsOneWidget);
       expect(find.text('No file'), findsOneWidget);
       // A suggestion, naming the route the promoted "Automatic search" does not.
       expect(find.text('Import a file you already have'), findsOneWidget);
@@ -296,7 +296,7 @@ void main() {
         find.textContaining('Radarr is not tracking this movie'),
         findsOneWidget,
       );
-      expect(find.text('FILE'), findsNothing);
+      expect(find.text('File'), findsNothing);
     });
 
     testWidgets('an unmonitored movie with no file promotes Monitor', (
@@ -458,7 +458,7 @@ void main() {
         detailBuilder: (ref, movieId) async => _movieWithRatings(),
       );
       await tester.pumpAndSettle();
-      await _scrollUntilVisible(tester, find.text('SCORES'));
+      await _scrollUntilVisible(tester, find.text('Scores'));
 
       // `MC 53.0`, `RO 57.0` and `TR 7.1` were three abbreviations that appear
       // nowhere else in the app; `RO` in particular is only two letters because

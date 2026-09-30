@@ -13,7 +13,8 @@ import 'package:cupola/core/theme.dart';
 /// That is the same rule `ServiceConnectionRow` follows on the Connections
 /// screen and `ServiceMatrixCell` follows on the Portal.
 ///
-/// Tinted by the service accent and set in the eyebrow ramp, matching the badge
+/// Tinted by the service accent and set in the micro role as the connection is
+/// named — never recased, since the name is the user's — matching the badge
 /// the global search puts on a section heading. Search can say it once per
 /// section because one leg queries one server; the Activity feed interleaves
 /// connections inside one service group, so its badge belongs on the row.
@@ -54,7 +55,7 @@ class ConnectionBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(DesignTokens.radiusXs2),
         border: Border.all(color: accent.withValues(alpha: 0.34)),
       ),
-      child: Text(label.toUpperCase(), style: AppTheme.eyebrow(ink)),
+      child: Text(label, style: AppTheme.chrome(context, color: ink)),
     );
   }
 }

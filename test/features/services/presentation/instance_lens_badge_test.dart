@@ -183,7 +183,7 @@ void main() {
     );
 
     expect(
-      find.text('HOME'),
+      find.text('Home'),
       findsOneWidget,
       reason: 'two Jellyfin, so the badge names the one being read',
     );
@@ -270,7 +270,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     // The badge kept its whole label; the title is the one that gave way.
-    expect(find.text('CASA'), findsOneWidget);
+    expect(find.text('Casa'), findsOneWidget);
   });
 
   testWidgets('announces itself as the lens, not as a service switcher', (

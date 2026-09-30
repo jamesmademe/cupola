@@ -1,13 +1,13 @@
 # ConnectionBadge
 
-A small uppercase tag naming which of a service's connections a row came from — drawn only when there is more than one to tell apart.
+A small tag naming, as the user named it, which of a service's connections a row came from — drawn only when there is more than one to tell apart.
 
 Rendered from `lib/core/widgets/connection_badge.dart` by `test/design_catalog/connection_badge_catalog_test.dart`, as the Activity feed uses it (`features/activity/presentation/widgets/activity_item_tiles.dart`). Connection names and titles are illustrative: the label is the user's own.
 
 ## Anatomy
 
 - Padding 6px horizontal, 1px vertical; `radius-xs2` (8); fill the accent (the lamp, for every service) at 14% alpha; 1px border, the accent at 34% alpha.
-- Text: the eyebrow style (11px / weight 600, 1.4px letter-spacing, 14 line height), uppercased. The ink is the accent walked against its own 14% wash over the ground the badge sits on (`ServiceTheme.onTint`, `tintAlpha: 0.14`) — the lamp resolves to the room's primary ink, so the badge is monochrome in both themes.
+- Text: the micro role (`AppTheme.chrome`, 11 / 600 / 14, the role's own tracking), in sentence case — the connection's name exactly as the user typed it, never recased. The ink is the accent walked against its own 14% wash over the ground the badge sits on (`ServiceTheme.onTint`, `tintAlpha: 0.14`) — the lamp resolves to the room's primary ink, so the badge is monochrome in both themes.
 - An empty `label` renders `SizedBox.shrink()`: a stack with one Radarr never grows a badge naming the only Radarr.
 
 ## Placement

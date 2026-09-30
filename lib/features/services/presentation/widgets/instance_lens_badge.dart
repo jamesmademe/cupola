@@ -86,7 +86,7 @@ class InstanceLensBadge extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(label.toUpperCase(), style: AppTheme.eyebrow(ink)),
+                      Text(label, style: AppTheme.chrome(context, color: ink)),
                       Icon(
                         Icons.keyboard_arrow_down_rounded,
                         size: 14,

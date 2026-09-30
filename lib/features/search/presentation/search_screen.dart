@@ -624,8 +624,8 @@ class _SearchSectionHeader extends StatelessWidget {
                 ),
               ),
               child: Text(
-                lane.instanceLabel.toUpperCase(),
-                style: AppTheme.eyebrow(ink),
+                lane.instanceLabel,
+                style: AppTheme.chrome(context, color: ink),
               ),
             ),
           ],
@@ -1148,9 +1148,12 @@ class _SearchEmptyState extends ConsumerWidget {
           Row(
             children: [
               Text(
-                'Recent'.toUpperCase(),
+                'Recent',
                 semanticsLabel: 'Recent',
-                style: AppTheme.eyebrow(colorScheme.onSurfaceVariant),
+                style: AppTheme.chrome(
+                  context,
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
               const Spacer(),
               // TextButton rather than a bare GestureDetector on 11pt text: it

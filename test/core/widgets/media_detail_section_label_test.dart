@@ -35,7 +35,7 @@ void main() {
       ),
     );
 
-    final label = tester.getRect(find.text('MISSING SUBTITLES'));
+    final label = tester.getRect(find.text('Missing subtitles'));
     final button = tester.getRect(find.byType(IconButton));
     expect(button.top, greaterThanOrEqualTo(label.bottom));
     expect(button.left, closeTo(label.left, 0.5));

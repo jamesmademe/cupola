@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 
-/// A small, uppercase section label used to head a group of services that
+/// A small, sentence-case section label used to head a group of services that
 /// belong to the same [ServiceDomain]. Shared by the Home dashboard, Settings
 /// and onboarding so the domain grouping reads identically everywhere.
 class DomainSectionHeader extends StatelessWidget {
@@ -30,9 +30,7 @@ class DomainSectionHeader extends StatelessWidget {
       container: true,
       explicitChildNodes: true,
       header: true,
-      // The un-uppercased label: `.toUpperCase()` is typography, and VoiceOver
-      // spells out all-caps tokens it does not recognise. The eye gets the caps,
-      // the ear gets the word.
+      // The label as written, for the eye and the ear alike.
       label: label,
       child: Padding(
         padding: padding,
@@ -41,11 +39,14 @@ class DomainSectionHeader extends StatelessWidget {
             Expanded(
               child: ExcludeSemantics(
                 child: Text(
-                  label.toUpperCase(),
-                  // One kicker per domain group, introducing the region below
-                  // it — the case `AppTheme.eyebrow` exists for, and the only
-                  // place tracking is authored rather than derived.
-                  style: AppTheme.eyebrow(theme.colorScheme.onSurfaceVariant),
+                  label,
+                  // One label per domain group, introducing the region below
+                  // it, in the micro role and sentence case: there is no
+                  // uppercase voice.
+                  style: AppTheme.chrome(
+                    context,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),

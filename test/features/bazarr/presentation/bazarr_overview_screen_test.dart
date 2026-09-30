@@ -39,7 +39,8 @@ void main() {
           .map((header) => header.title),
       ['Wanted subtitles', 'History'],
     );
-    expect(find.text('Providers'), findsNothing);
+    // A readout may be labelled Providers; no section is.
+    expect(find.widgetWithText(SectionHeader, 'Providers'), findsNothing);
   });
 
   testWidgets('the readouts are Bazarr\'s four badge figures', (tester) async {

@@ -180,11 +180,13 @@ class _TopologyCategory extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              category.toUpperCase(),
-              // A single uppercase kicker introducing each topology region, so
-              // it goes through the one authored-tracking style rather than a
-              // hand-written letterSpacing.
-              style: AppTheme.eyebrow(theme.colorScheme.onSurfaceVariant),
+              category,
+              // One label introducing each topology region, in the micro role
+              // and sentence case, rather than a hand-written letterSpacing.
+              style: AppTheme.chrome(
+                context,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: AppSpacing.xs),
             for (final vdev in vdevs) ...[

@@ -53,7 +53,7 @@ void main() {
         ),
       );
 
-      expect(findLineContaining('DID NOT ANSWER'), findsOneWidget);
+      expect(findLineContaining('Did not answer'), findsOneWidget);
     });
 
     testWidgets('a refusal says it was refused, never that nothing answered', (
@@ -76,8 +76,8 @@ void main() {
         ),
       );
 
-      expect(findLineContaining('REFUSED THE KEY'), findsOneWidget);
-      expect(findLineContaining('ANSWER'), findsNothing);
+      expect(findLineContaining('Refused the key'), findsOneWidget);
+      expect(findLineContaining('answer'), findsNothing);
     });
 
     testWidgets('announces the absence as a word, not as a dash', (

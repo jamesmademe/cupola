@@ -153,14 +153,14 @@ class _GraphCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // One kicker per chart, over the region it names: the eyebrow's
-            // job. The name is TrueNAS's own identifier (`cpu`, `arcsize`), so
-            // the eye gets it uppercased and the ear gets it as sent.
+            // One label per chart, over the region it names. The name is
+            // TrueNAS's own identifier (`cpu`, `arcsize`), shown as sent: a
+            // machine string is never recased.
             Text(
-              graph.name.toUpperCase(),
-              semanticsLabel: graph.name,
-              style: AppTheme.eyebrow(
-                Theme.of(context).colorScheme.onSurfaceVariant,
+              graph.name,
+              style: AppTheme.chrome(
+                context,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: AppSpacing.sm),

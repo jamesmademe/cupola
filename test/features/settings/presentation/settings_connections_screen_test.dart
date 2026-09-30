@@ -58,11 +58,11 @@ void main() {
         diagnosis: const ServiceDiagnosis.connected(),
       );
 
-      expect(find.text('MEDIA'), findsOneWidget);
-      expect(find.text('DOWNLOADS'), findsOneWidget);
+      expect(find.text('Media'), findsOneWidget);
+      expect(find.text('Downloads'), findsOneWidget);
       // Nothing configured in Infrastructure, so that header stays out of the
       // connected section entirely.
-      expect(find.text('INFRASTRUCTURE'), findsNothing);
+      expect(find.text('Infrastructure'), findsNothing);
     });
 
     testWidgets('with nothing configured only the add section is shown', (

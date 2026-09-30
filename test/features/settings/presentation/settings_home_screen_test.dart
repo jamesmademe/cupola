@@ -25,14 +25,14 @@ void main() {
       await _pumpSettingsHome(tester);
 
       expect(find.text('Settings'), findsOneWidget);
-      expect(find.text('CONNECTIONS'), findsOneWidget);
-      expect(find.text('GENERAL'), findsOneWidget);
+      expect(find.text('Connections'), findsOneWidget);
+      expect(find.text('General'), findsOneWidget);
       // Security is new, and it is always there: trusted certificates used to
       // be reachable only from a Connections row that appears when something
       // is already pinned, which on a phone made the pane unreachable until it
       // had content.
-      expect(find.text('SECURITY'), findsOneWidget);
-      expect(find.text('ABOUT'), findsOneWidget);
+      expect(find.text('Security'), findsOneWidget);
+      expect(find.text('About'), findsOneWidget);
     });
 
     testWidgets('the connections summary counts against the registry', (
@@ -193,9 +193,8 @@ void main() {
           find.semantics.byLabel('Connections'),
           containsSemantics(isHeader: true),
         );
-        // '.toUpperCase()' is typography; VoiceOver spells out all-caps tokens.
-        expect(find.semantics.byLabel('GENERAL'), findsNothing);
-        expect(find.text('GENERAL'), findsOneWidget);
+        // Drawn as it is read: there is no uppercase voice to spell out.
+        expect(find.text('General'), findsOneWidget);
       });
     });
 
@@ -246,10 +245,10 @@ void main() {
     testWidgets('reset tile shows Danger Zone section', (tester) async {
       await _pumpSettingsHome(tester);
 
-      await tester.scrollUntilVisible(find.text('DANGER ZONE'), 300);
+      await tester.scrollUntilVisible(find.text('Danger zone'), 300);
       await tester.pumpAndSettle();
 
-      expect(find.text('DANGER ZONE'), findsOneWidget);
+      expect(find.text('Danger zone'), findsOneWidget);
       expect(find.text('Reset app data'), findsOneWidget);
     });
 

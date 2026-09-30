@@ -88,7 +88,7 @@ void main() {
       );
 
       // Uppercase in the eye...
-      expect(find.text('EPISODES'), findsOneWidget);
+      expect(find.text('Episodes'), findsOneWidget);
       // ...original case in the ear, with the count folded into the sentence.
       expect(
         tester.getSemantics(find.byType(MediaDetailSectionLabel)),
@@ -138,7 +138,7 @@ void main() {
 
       await tester.pumpWidget(labelWith(1.0));
       final rowTop = tester.getTopLeft(find.text('Refresh')).dy;
-      final rowLabelTop = tester.getTopLeft(find.text('MISSING SUBTITLES')).dy;
+      final rowLabelTop = tester.getTopLeft(find.text('Missing subtitles')).dy;
       // One line: the action sits beside the label, not below it.
       expect((rowTop - rowLabelTop).abs(), lessThan(24));
 
@@ -147,7 +147,7 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(
         tester.getTopLeft(find.text('Refresh')).dy,
-        greaterThan(tester.getTopLeft(find.text('MISSING SUBTITLES')).dy),
+        greaterThan(tester.getTopLeft(find.text('Missing subtitles')).dy),
       );
       // Full width when stacked, so a trailing that wraps internally can.
       expect(tester.getSize(find.byType(TextButton)).width, greaterThan(200));
@@ -164,9 +164,9 @@ void main() {
           ),
         );
 
-        final context = tester.element(find.text('DETAILS'));
+        final context = tester.element(find.text('Details'));
         final surface = Theme.of(context).colorScheme.surface;
-        final style = tester.widget<Text>(find.text('DETAILS')).style!;
+        final style = tester.widget<Text>(find.text('Details')).style!;
 
         expect(
           _contrast(style.color!, surface),
@@ -382,7 +382,7 @@ void main() {
             height: 123,
             child: MediaDetailFigurePlate(
               value: '12',
-              label: 'missing',
+              label: 'Missing',
               accent: _kSonarr,
             ),
           ),
@@ -390,7 +390,7 @@ void main() {
       );
 
       expect(find.text('12'), findsOneWidget);
-      expect(find.text('MISSING'), findsOneWidget);
+      expect(find.text('Missing'), findsOneWidget);
       // The deck says it in words one region below; a reader does not need it
       // twice.
       expect(find.semantics.byLabel('12'), findsNothing);
@@ -407,7 +407,7 @@ void main() {
             height: 123,
             child: MediaDetailFigurePlate(
               value: '148',
-              label: 'missing',
+              label: 'Missing',
               accent: _kSonarr,
             ),
           ),
@@ -417,7 +417,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('148'), findsOneWidget);
-      expect(find.text('MISSING'), findsOneWidget);
+      expect(find.text('Missing'), findsOneWidget);
     });
   });
 

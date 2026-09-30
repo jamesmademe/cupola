@@ -1305,17 +1305,16 @@ class ActivityTableHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = AppTheme.eyebrow(CupolaThemeColors.of(context).dimText);
+    final style = AppTheme.chrome(
+      context,
+      color: CupolaThemeColors.of(context).dimText,
+    );
 
     Widget cell(String label, double width) => SizedBox(
       width: width,
-      // Sentence case in the source, uppercase for the eye: the eyebrow is
-      // the one uppercase voice, and it is applied here, not typed.
-      child: Text(
-        label.toUpperCase(),
-        textAlign: TextAlign.right,
-        style: style,
-      ),
+      // Sentence case in the source and on screen: there is no uppercase
+      // voice.
+      child: Text(label, textAlign: TextAlign.right, style: style),
     );
 
     return Semantics(
@@ -1333,7 +1332,7 @@ class ActivityTableHeader extends StatelessWidget {
         child: Row(
           children: [
             const SizedBox(width: _ActivityTableMetrics.glyph + AppSpacing.md),
-            Expanded(child: Text('Release'.toUpperCase(), style: style)),
+            Expanded(child: Text('Release', style: style)),
             const SizedBox(width: AppSpacing.md),
             cell('Details', _ActivityTableMetrics.figures),
             cell('When', _ActivityTableMetrics.time),

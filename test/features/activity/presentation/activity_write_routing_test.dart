@@ -273,7 +273,7 @@ void main() {
       item: _row(_second.id, 'On the second server'),
     );
 
-    expect(find.text(_second.id.toUpperCase()), findsOneWidget);
+    expect(find.text(_second.id), findsOneWidget);
   });
 
   testWidgets('and grows no badge when the row carries no label', (
@@ -305,7 +305,7 @@ void main() {
       ),
     );
 
-    expect(find.text('SONARR'), findsNothing);
+    expect(find.text('Sonarr'), findsNothing);
   });
 }
 
