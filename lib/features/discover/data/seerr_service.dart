@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/discover/domain/models/person_credits.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -612,29 +613,30 @@ class SeerrService {
     }
   }
 
+  /// A person's combined movie + TV credits, cast **and** crew, each with the
+  /// job or character it was credited for and Seerr's own status for the
+  /// title. [PersonCombinedCredits.empty] on error.
+  ///
+  /// The route is `combined_credits`, snake case (Seerr's
+  /// `server/routes/person.ts`). This used to ask for `combinedCredits`, which
+  /// Seerr answers with a 404, so every Person page drew an empty filmography.
+  Future<PersonCombinedCredits> getPersonCredits(int personId) async {
+    try {
+      final response = await _client.get(
+        '/api/v1/person/$personId/combined_credits',
+      );
+      final data = response.data;
+      if (data is! Map) return PersonCombinedCredits.empty;
+      return PersonCombinedCredits.fromJson(data.cast<String, dynamic>());
+    } catch (_) {
+      return PersonCombinedCredits.empty;
+    }
+  }
+
   /// A person's combined movie + TV cast filmography, de-duped by id and sorted
   /// by rating so the strongest credits lead. Returns `[]` on error.
   Future<List<MediaPreview>> getPersonCombinedCredits(int personId) async {
-    try {
-      final response = await _client.get(
-        '/api/v1/person/$personId/combinedCredits',
-      );
-      final cast = (response.data['cast'] as List<dynamic>? ?? const []);
-      final seen = <int>{};
-      final items = <MediaPreview>[];
-      for (final entry in cast) {
-        if (entry is! Map<String, dynamic>) continue;
-        final mediaType = entry['mediaType'] ?? entry['media_type'];
-        if (mediaType != 'movie' && mediaType != 'tv') continue;
-        final id = (entry['id'] as num?)?.toInt();
-        if (id == null || !seen.add(id)) continue;
-        items.add(MediaPreview.fromJson(entry));
-      }
-      items.sort((a, b) => (b.voteAverage ?? 0).compareTo(a.voteAverage ?? 0));
-      return items;
-    } catch (_) {
-      return const [];
-    }
+    return (await getPersonCredits(personId)).castFilmography;
   }
 
   /// Searches for movies and TV shows by query string.

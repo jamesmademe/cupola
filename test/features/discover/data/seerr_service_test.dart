@@ -1,10 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/models/person_credits.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
+import '../../../test_helpers/fixtures.dart';
 
 void main() {
   late FakeApiClient client;
@@ -471,6 +474,68 @@ void main() {
     test('deleteRequest hits /api/v1/request/:id', () async {
       await service.deleteRequest(77);
       expect(client.lastDeletePath, '/api/v1/request/77');
+    });
+  });
+
+  // The route is snake case in Seerr's person.ts. The camel-case spelling the
+  // app used 404'd, so every Person page drew an empty filmography.
+  group('person credits', () {
+    test('the filmography asks Seerr for combined_credits', () async {
+      client.getResponseData = jsonFixtureMap(
+        'seerr/person_combined_credits.json',
+      );
+
+      final items = await service.getPersonCombinedCredits(1203);
+
+      expect(client.lastGetPath, '/api/v1/person/1203/combined_credits');
+      // Cast only, one entry per title, best rated first; the person row that
+      // is not a title is dropped.
+      expect(items.map((item) => item.title), ['Sintel', 'Cosmos Laundromat']);
+      expect(items.last.mediaType, 'tv');
+    });
+
+    test(
+      'crew is exposed with its job, its department and each title status',
+      () async {
+        client.getResponseData = jsonFixtureMap(
+          'seerr/person_combined_credits.json',
+        );
+
+        final credits = await service.getPersonCredits(1203);
+
+        expect(credits.cast, hasLength(3));
+        expect(credits.crew, hasLength(4));
+        final screenplay = credits.crew[1];
+        expect(screenplay.role, PersonCreditRole.crew);
+        expect(screenplay.job, 'Screenplay');
+        expect(screenplay.department, 'Writing');
+        expect(screenplay.character, isNull);
+        expect(credits.cast.first.character, 'Guard');
+        expect(credits.cast.first.job, isNull);
+
+        // "Director · 1 of 3 on your server": one row per title, TMDB's job
+        // name matched without regard to case, and Seerr's `mediaInfo` read
+        // per credit.
+        final directed = credits.crewAs('Director');
+        expect(directed.map((credit) => credit.media.title), [
+          'Tears of Steel',
+          'Dynamo Dream',
+          'Prelude',
+        ]);
+        expect(directed.where((credit) => credit.isOnServer), hasLength(1));
+        expect(directed[0].status.availability, MediaAvailability.available);
+        expect(directed[1].status.availability, MediaAvailability.notTracked);
+        expect(directed[2].status.availability, MediaAvailability.missing);
+        // A partly available series is on the server, in part.
+        expect(credits.cast[1].isOnServer, isTrue);
+      },
+    );
+
+    test('a lookup that fails is an empty filmography', () async {
+      client.getException = Exception('offline');
+
+      expect((await service.getPersonCredits(1203)).isEmpty, isTrue);
+      expect(await service.getPersonCombinedCredits(1203), isEmpty);
     });
   });
 
