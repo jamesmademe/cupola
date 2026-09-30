@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
+import 'package:cupola/core/utils/a11y_announce.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
@@ -280,6 +281,28 @@ void main() {
         1,
       );
     });
+
+    testWidgets(
+      'on Android the refresh is spoken through the live region',
+      (tester) async {
+        // TalkBack's engine has no announcement channel.
+        final native = SemanticsAnnouncementRecorder.install(
+          tester,
+          supportsAnnounce: false,
+        );
+        await _pumpShell(tester, initialLocation: '/dashboard');
+
+        await tester.tap(_navItem('Dashboard'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.semantics.byLabel('Refreshing Dashboard'),
+          containsSemantics(isLiveRegion: true),
+        );
+        expect(native.messages, isEmpty);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
 
     testWidgets('switching tabs does not announce', (tester) async {
       // Replacing the whole screen is its own feedback, and an announcement
@@ -796,6 +819,44 @@ void main() {
       semantics.dispose();
     });
 
+    testWidgets(
+      'on Android the opening sentence reaches TalkBack',
+      (tester) async {
+        final native = SemanticsAnnouncementRecorder.install(
+          tester,
+          supportsAnnounce: false,
+        );
+        // TalkBack is running: the drag is withheld, and the engine has no
+        // announcement channel.
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            const FakeAccessibilityFeatures(accessibleNavigation: true);
+        final harness = await _pumpShell(
+          tester,
+          overrides: await _lensOverrides(),
+          viewport: const Size(390 * 3, 844 * 3),
+          devicePixelRatio: 3,
+        );
+        harness.container.listen(portalFloorCensusProvider, (_, _) {});
+        await tester.pumpAndSettle();
+
+        tester.semantics.customAction(
+          find.semantics.byLabel(RegExp(r'^Dashboard\n')),
+          ShellScreen.openPortalAction,
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ServiceMatrix), findsOneWidget);
+        // The Portal hides the page under it from the reader; the sentence is
+        // drawn above every route, where that cannot reach it.
+        expect(
+          find.semantics.byLabel('Portal open. 2 services, none with a fault.'),
+          containsSemantics(isLiveRegion: true),
+        );
+        expect(native.messages, isEmpty);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+
     testWidgets('a fault on the floor is counted in the sentence', (
       tester,
     ) async {
@@ -1184,7 +1245,12 @@ Future<_ShellHarness> _pumpShell(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(
+        routerConfig: router,
+        // Where `CupolaApp` mounts it: the live region Android's reader hears
+        // announcements through.
+        builder: (context, child) => AnnouncementHost(child: child!),
+      ),
     ),
   );
   await tester.pumpAndSettle();

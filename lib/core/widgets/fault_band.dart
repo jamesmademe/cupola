@@ -237,8 +237,7 @@ class FaultBand extends StatelessWidget {
         // rather than as three unrelated fragments.
         explicitChildNodes: true,
         // Announced when it appears, which is the moment it matters. Not routed
-        // through `announce()` as well: that double-reads on iOS and is a no-op
-        // on Android.
+        // through `announce()` as well: that would read it twice.
         liveRegion: true,
         label: message,
         child: Row(

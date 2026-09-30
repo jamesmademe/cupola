@@ -9,6 +9,7 @@ import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/platform/desktop_window.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/a11y_announce.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/release_search/data/release_search_bootstrap.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -154,12 +155,18 @@ class CupolaApp extends ConsumerWidget {
       // the block's edges keep the font's natural metrics. Prose gets its air,
       // display type stays tight, single-line chrome measures exactly what it
       // measured before, and nothing clips.
-      builder: (context, child) => DefaultTextHeightBehavior(
-        textHeightBehavior: const TextHeightBehavior(
-          applyHeightToFirstAscent: false,
-          applyHeightToLastDescent: false,
+      //
+      // Around all of it, the live region `announce()` speaks through where
+      // the engine has no announcement channel (Android): one, above every
+      // route, so a TalkBack user hears what a VoiceOver user hears.
+      builder: (context, child) => AnnouncementHost(
+        child: DefaultTextHeightBehavior(
+          textHeightBehavior: const TextHeightBehavior(
+            applyHeightToFirstAscent: false,
+            applyHeightToLastDescent: false,
+          ),
+          child: child ?? const SizedBox.shrink(),
         ),
-        child: child ?? const SizedBox.shrink(),
       ),
     );
   }

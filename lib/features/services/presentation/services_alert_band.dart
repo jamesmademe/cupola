@@ -197,8 +197,7 @@ class _AlertBandBody extends StatelessWidget {
         // node only owns the sentence.
         explicitChildNodes: true,
         // Announced when it appears, which is the moment it matters. It is not
-        // routed through `announce()` as well: that double-reads on iOS and is a
-        // no-op on Android.
+        // routed through `announce()` as well: that would read it twice.
         liveRegion: true,
         // The same string the band paints: see `servicesAlertBandMessage`.
         label: message,

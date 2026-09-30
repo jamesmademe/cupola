@@ -23,16 +23,22 @@ class SemanticsAnnouncementRecorder {
   /// Call it **before** `pumpWidget` so the first build already sees the
   /// accessibility feature enabled.
   ///
-  /// Pins `supportsAnnounce` on because the production `announce` helper
-  /// short-circuits on `MediaQuery.supportsAnnounceOf`; pinning it keeps the test
-  /// independent of the ambient default. Note that a hand-built
-  /// `MediaQueryData(...)` defaults `supportsAnnounce` to false and would
-  /// suppress announcements regardless of this — don't wrap the widget in one.
-  static SemanticsAnnouncementRecorder install(WidgetTester tester) {
+  /// Pins `supportsAnnounce`, because the production `announce` helper picks
+  /// its channel from `MediaQuery.supportsAnnounceOf`; pinning it keeps the
+  /// test independent of the ambient default. On (the default) is VoiceOver's
+  /// case, and messages land here. Off is Android's: `announce` draws them in
+  /// the app's `AnnouncementHost` live region instead, and [messages] staying
+  /// empty is the proof that nothing also went out natively. Note that a
+  /// hand-built `MediaQueryData(...)` defaults `supportsAnnounce` to false and
+  /// would override this — don't wrap the widget in one.
+  static SemanticsAnnouncementRecorder install(
+    WidgetTester tester, {
+    bool supportsAnnounce = true,
+  }) {
     final recorder = SemanticsAnnouncementRecorder._();
 
     tester.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(supportsAnnounce: true);
+        FakeAccessibilityFeatures(supportsAnnounce: supportsAnnounce);
     addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
 
     final messenger =
