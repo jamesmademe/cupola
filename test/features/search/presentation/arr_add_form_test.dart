@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
@@ -281,8 +282,11 @@ void main() {
       // The label on the fixture is left over from a sibling this test does not
       // configure — exactly the state `SettingsModel.connectionTitle` exists to
       // read past, since a real one is left behind by removing that sibling.
-      expect(state.error, "Couldn't reach Bazarr.");
-      expect(state.errorDetail, contains('has no add form'));
+      // Nothing was sent, and nothing claims a server went silent: an error
+      // nobody can attribute is amber, in the classified words.
+      expect(state.error, 'The request to Bazarr did not complete.');
+      expect(state.errorDetail, 'The request did not complete.');
+      expect(state.errorReason, ServiceFailureReason.unknown);
     },
   );
 

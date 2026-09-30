@@ -288,7 +288,8 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
       );
       return null;
     } catch (error) {
-      return 'Request failed: $error';
+      return 'Could not send the request. '
+          '${writeFailureReason(ServiceKey.seerr, error)}';
     } finally {
       state = state.copyWith(isSubmitting: false);
     }

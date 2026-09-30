@@ -144,7 +144,7 @@ class TransmissionAddReport {
     return TransmissionAddReport(
       TransmissionAddVerdict.unconfirmed,
       _unconfirmed,
-      detail: error?.toString(),
+      detail: error == null ? null : failureDiagnostic(error),
     );
   }
 
@@ -182,7 +182,7 @@ Future<TransmissionAddVerdict> runTransmissionAdd(
     report = TransmissionAddReport(
       TransmissionAddVerdict.notSent,
       'The torrent was not added',
-      detail: e.toString(),
+      detail: 'Transmission is not set up here, so nothing was sent.',
     );
   }
   for (final provider in invalidate) {

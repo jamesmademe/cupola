@@ -290,7 +290,9 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
       kind: ReleaseSearchFailureKind.unknown,
       headline: 'The search stopped unexpectedly.',
       diagnosis: 'Searching again is safe, nothing was grabbed.',
-      detail: error.toString(),
+      // Never `toString()`: the app's own message without its type, or the
+      // classification's sentence for anything that is internals.
+      detail: failureDiagnostic(error),
     );
   }
 

@@ -119,25 +119,25 @@ ManualImportFixAssignment _lidarrAssignment({
 
 void main() {
   group('mapImportError', () {
-    test('returns "Couldn\'t reach Radarr" for connectionError', () {
+    test('a connection error is Radarr that did not answer', () {
       final err = DioException(
         requestOptions: RequestOptions(path: '/x'),
         type: DioExceptionType.connectionError,
       );
       expect(
         mapImportError(err, ServiceKey.radarr),
-        startsWith("Couldn't reach Radarr"),
+        startsWith('Radarr did not answer.'),
       );
     });
 
-    test('returns "Couldn\'t reach Sonarr" for connectionTimeout', () {
+    test('a connect timeout is Sonarr that did not answer', () {
       final err = DioException(
         requestOptions: RequestOptions(path: '/x'),
         type: DioExceptionType.connectionTimeout,
       );
       expect(
         mapImportError(err, ServiceKey.sonarr),
-        startsWith("Couldn't reach Sonarr"),
+        startsWith('Sonarr did not answer.'),
       );
     });
 
@@ -162,7 +162,8 @@ void main() {
         type: DioExceptionType.badResponse,
       );
       final msg = mapImportError(err, ServiceKey.radarr);
-      expect(msg, contains('returned 500'));
+      expect(msg, contains('answered with an error'));
+      expect(msg, isNot(contains('500')));
       expect(
         msg,
         contains('Try moving the file into a folder named after the movie'),
@@ -180,7 +181,7 @@ void main() {
         type: DioExceptionType.badResponse,
       );
       final msg = mapImportError(err, ServiceKey.sonarr);
-      expect(msg, contains('returned 500'));
+      expect(msg, contains('answered with an error'));
       expect(msg, contains("doesn't match a known series/episode pattern"));
       expect(msg, contains('Series Title/S01E01.ext'));
       expect(msg, isNot(contains('movie')));
@@ -198,7 +199,7 @@ void main() {
           type: DioExceptionType.badResponse,
         );
         final msg = mapImportError(err, ServiceKey.lidarr);
-        expect(msg, contains('returned 500'));
+        expect(msg, contains('answered with an error'));
         expect(
           msg,
           contains("doesn't match a known artist/album/track pattern"),
@@ -208,7 +209,7 @@ void main() {
       },
     );
 
-    test('returns "Radarr returned 404: Not Found" for 404 with message', () {
+    test('a 404 names the address and keeps what Radarr said', () {
       final err = DioException(
         requestOptions: RequestOptions(path: '/x'),
         response: Response<dynamic>(
@@ -220,11 +221,12 @@ void main() {
       );
       expect(
         mapImportError(err, ServiceKey.radarr),
-        'Radarr returned 404: Not Found',
+        'Radarr is not at this address. Radarr said: Not Found. '
+        'Check the address in Settings.',
       );
     });
 
-    test('returns "Radarr returned 401." for 401 with no message', () {
+    test('a 401 is a refused key, never a status code', () {
       final err = DioException(
         requestOptions: RequestOptions(path: '/x'),
         response: Response<dynamic>(
@@ -233,7 +235,11 @@ void main() {
         ),
         type: DioExceptionType.badResponse,
       );
-      expect(mapImportError(err, ServiceKey.radarr), 'Radarr returned 401.');
+      expect(
+        mapImportError(err, ServiceKey.radarr),
+        'Radarr answered but refused the key. Paste the key again in '
+        'Settings.',
+      );
     });
 
     test('returns error.toString() for non-DioException throwables', () {
@@ -241,7 +247,7 @@ void main() {
     });
 
     test(
-      'returns "Lidarr request failed..." for DioException with no response and unknown type',
+      'an unattributable DioException is a request that did not complete',
       () {
         final err = DioException(
           requestOptions: RequestOptions(path: '/x'),
@@ -249,7 +255,7 @@ void main() {
         );
         expect(
           mapImportError(err, ServiceKey.lidarr),
-          contains('Lidarr request failed'),
+          'The request to Lidarr did not complete.',
         );
       },
     );
@@ -848,7 +854,7 @@ void main() {
       expect(command, isNull);
       final state = container.read(manualImportFlowProvider);
       expect(state.error, isNotNull);
-      expect(state.error, contains('returned 500'));
+      expect(state.error, contains('answered with an error'));
       expect(
         state.error,
         contains('Try moving the file into a folder named after the movie'),

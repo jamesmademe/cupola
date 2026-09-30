@@ -1,12 +1,20 @@
 import 'package:dio/dio.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+/// A manual-import failure in the words a person acts on.
+///
+/// Two failures keep the import's own hint, because only the import knows it:
+/// a receive timeout (the scan outlasted the request) and a 500 (the arr
+/// could not parse a name). Everything else reads the classification, so a
+/// refused key is "Radarr answered but refused the key" rather than
+/// "Radarr returned 401", and only silence reads "did not answer".
 String mapImportError(Object error, ServiceKey service) {
+  final title = service.title;
   if (error is DioException) {
-    final title = service.title;
-    final status = error.response?.statusCode;
     // A receive timeout means the connection succeeded and $title simply took
     // too long to answer — telling the user to check the URL sends them after
     // the wrong problem.
@@ -16,12 +24,7 @@ String mapImportError(Object error, ServiceKey service) {
           'narrower subfolder, or check $title → Activity → Queue in case the '
           'scan is still running.';
     }
-    if (error.type == DioExceptionType.connectionError ||
-        error.type == DioExceptionType.connectionTimeout ||
-        error.type == DioExceptionType.sendTimeout) {
-      return "Couldn't reach $title. Check the URL and that the service is running.";
-    }
-    if (status == 500) {
+    if (error.response?.statusCode == 500) {
       final hint = switch (service) {
         ServiceKey.radarr =>
           "the file's name isn't parseable by $title "
@@ -40,27 +43,32 @@ String mapImportError(Object error, ServiceKey service) {
               'Try organising into `Artist/Album/Track.ext`, then rescan.',
         _ => 'check the service logs for the full error.',
       };
-      return '$title returned 500 while processing the manual import. '
-          'Check $title → System → Logs for the full error. '
+      return '$title answered with an error while processing the manual '
+          'import. Check $title → System → Logs for the full error. '
           'Common cause: $hint';
     }
-    if (status != null) {
-      final data = error.response?.data;
-      final message = data is Map ? data['message'] : null;
-      final messageStr = message is String && message.isNotEmpty ? message : '';
-      return messageStr.isEmpty
-          ? '$title returned $status.'
-          : '$title returned $status: $messageStr';
+  }
+  if (isTransportFailure(error)) {
+    final reason = classifyConnectionFailure(error);
+    final headline = describeFailure(service, reason).headline;
+    if (failureDidNotAnswer(reason)) {
+      return '$headline. Check that it is running and reachable from this '
+          'device.';
     }
-    return '$title request failed. Check the URL and that the service is running.';
+    // The arr's own words, verbatim, when it gave any.
+    final said = failureServiceMessage(error);
+    final remedy = failureRemedy(
+      reason,
+      credential: refusedCredentialOf(service),
+    );
+    return [
+      '$headline.',
+      if (said != null) '$title said: ${said.endsWith('.') ? said : '$said.'}',
+      if (remedy != null) '$remedy in Settings.',
+    ].join(' ');
   }
-  if (error is Exception) {
-    final s = error.toString();
-    // Strip the "Exception: " prefix for a cleaner user-facing message.
-    if (s.startsWith('Exception: ')) return s.substring('Exception: '.length);
-    return s;
-  }
-  return error.toString();
+  // The app's own message without the type Dart prefixes it with.
+  return failureDiagnostic(error);
 }
 
 String? libraryGuardError(ServiceKey service, ManualImportFixAssignment a) {

@@ -236,7 +236,9 @@ void main() {
 
       final error = await notifier.deleteRequest(1);
 
-      expect(error, contains('Failed to delete request'));
+      expect(error, startsWith('Could not delete the request. '));
+      // Why, in the classified words, and never the exception itself.
+      expect(error, isNot(contains('Exception')));
       expect(container.read(manageMediaProvider(args)).requests, hasLength(1));
     });
 
@@ -246,7 +248,10 @@ void main() {
         args: args,
       ).read(manageMediaProvider(args).notifier);
 
-      expect(await notifier.removeFromService(), 'No media ID');
+      expect(
+        await notifier.removeFromService(),
+        'Seerr sent this title without its id, so nothing was changed.',
+      );
     });
 
     test('removeFromService calls deleteMediaFile and resets state', () async {
@@ -270,7 +275,8 @@ void main() {
 
       final error = await notifier.removeFromService();
 
-      expect(error, contains('Failed to remove'));
+      expect(error, startsWith('Could not remove this title. '));
+      expect(error, isNot(contains('Exception')));
       expect(container.read(manageMediaProvider(args)).isDeleting, isFalse);
       expect(service.deletedMediaFileIds, isEmpty);
     });
@@ -296,7 +302,8 @@ void main() {
 
       final error = await notifier.clearAllData();
 
-      expect(error, contains('Failed to clear data'));
+      expect(error, startsWith('Could not clear the data. '));
+      expect(error, isNot(contains('Exception')));
       expect(container.read(manageMediaProvider(args)).isDeleting, isFalse);
       expect(service.deletedMediaIds, isEmpty);
     });

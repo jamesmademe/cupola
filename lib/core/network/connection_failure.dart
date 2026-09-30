@@ -113,6 +113,7 @@ abstract interface class HasFailureDetail {
 /// Unwraps one [DioException] level the same way [classifyConnectionFailure]
 /// does, because an interceptor's rejection reaches the caller wrapped.
 String? connectionFailureDetail(Object? error) {
+  error = unwrapFailure(error);
   String? present(String detail) => detail.trim().isEmpty ? null : detail;
   if (error is HasFailureDetail) return present(error.failureDetail);
   if (error is DioException) {
@@ -120,6 +121,70 @@ String? connectionFailureDetail(Object? error) {
     if (inner is HasFailureDetail) return present(inner.failureDetail);
   }
   return null;
+}
+
+/// The failure a [ParallelWaitError] stands in front of — the first of the
+/// requests that failed — or [error] itself.
+///
+/// `(a, b).wait` does not rethrow what failed: it throws a `ParallelWaitError`
+/// holding every outcome, which no reason can be read from. Without this a
+/// Radarr that did not answer its profile and folder reads — the add sheet's
+/// load — classified as a failure nobody can attribute, and never as silence.
+Object? unwrapFailure(Object? error) {
+  if (error is! ParallelWaitError) return error;
+  final Object? errors = error.errors;
+  final Iterable<Object?> outcomes = switch (errors) {
+    final Iterable<Object?> list => list,
+    (final a, final b) => [a, b],
+    (final a, final b, final c) => [a, b, c],
+    (final a, final b, final c, final d) => [a, b, c, d],
+    (final a, final b, final c, final d, final e) => [a, b, c, d, e],
+    _ => const <Object?>[],
+  };
+  for (final outcome in outcomes) {
+    if (outcome is AsyncError) return outcome.error;
+  }
+  return error;
+}
+
+/// Whether [error] failed on its way to or from a service — the failures the
+/// classification can read — rather than an exception the app raised with a
+/// sentence of its own.
+bool isTransportFailure(Object? error) {
+  error = unwrapFailure(error);
+  return error is DioException ||
+      error is SocketException ||
+      error is TimeoutException ||
+      error is TlsException ||
+      error is HasFailureReason;
+}
+
+/// The line a failure keeps under its sentence — its *why* — for the surfaces
+/// that print one (a toast's second line, a sheet's detail, a search's
+/// diagnosis). **Never `toString()` of a transport failure**: that is a class
+/// name and a library's paragraph.
+///
+/// A request that failed reads what the service itself said
+/// ([failureServiceMessage]) or the classification's sentence
+/// ([connectionFailureSentence]). An exception the app raised keeps its own
+/// message, which is already a sentence, without the type Dart prefixes it
+/// with (`Exception: `, `Bad state: `). Anything else — a `TypeError`, a
+/// cast — is internals, and reads the classification's sentence too.
+String failureDiagnostic(Object? error) {
+  final cause = unwrapFailure(error);
+  if (isTransportFailure(cause)) {
+    return failureServiceMessage(cause) ?? connectionFailureSentence(cause);
+  }
+  final String? own = switch (cause) {
+    final StateError state => state.message,
+    final Exception exception => exception.toString().replaceFirst(
+      RegExp(r'^Exception:\s*'),
+      '',
+    ),
+    _ => null,
+  };
+  final trimmed = own?.trim() ?? '';
+  return trimmed.isEmpty ? connectionFailureSentence(cause) : trimmed;
 }
 
 /// Maps a thrown [error] onto the cause the UI should report.
@@ -131,6 +196,7 @@ ServiceFailureReason classifyConnectionFailure(
   Object? error, {
   ServiceFailureReason fallback = ServiceFailureReason.unknown,
 }) {
+  error = unwrapFailure(error);
   if (error is HasFailureReason) return error.reason;
   if (error is DioException) return _fromDio(error, fallback);
   // A deadline wrapped around a whole request (`future.timeout(…)`) cannot say
@@ -365,6 +431,41 @@ class ClassifiedFailure
 
   @override
   String toString() => 'ClassifiedFailure(${reason.name})';
+}
+
+/// What the service itself said when it answered with a failure, verbatim —
+/// the line a fault keeps under *Why?* — or null when it said nothing a
+/// person can read.
+///
+/// Read from the body of a reply Dio kept: an object's `message` or `error`
+/// (the \*arrs, Seerr, Nginx Proxy Manager), or the `errorMessage` of each
+/// entry in a validation list (the \*arrs' 400s: *This movie has already been
+/// added*). A body that is a bare string is left alone on purpose: it is as
+/// often a reverse proxy's HTML page as it is a sentence.
+String? failureServiceMessage(Object? error) {
+  error = unwrapFailure(error);
+  if (error is! DioException) return null;
+  final data = error.response?.data;
+  String? text(Object? value) {
+    if (value is! String) return null;
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  if (data is Map) {
+    return text(data['message']) ??
+        text(data['error']) ??
+        text(data['errorMessage']);
+  }
+  if (data is List) {
+    final messages = [
+      for (final entry in data)
+        if (entry is Map)
+          ?text(entry['errorMessage']) ?? text(entry['message']),
+    ];
+    return messages.isEmpty ? null : messages.toSet().join(' ');
+  }
+  return null;
 }
 
 /// A failed read in one plain sentence, for a surface that has no service to

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'package:cupola/features/discover/data/seerr_service.dart';
@@ -68,15 +69,27 @@ class ManageMediaNotifier extends Notifier<ManageMediaState> {
           .toList();
 
       return ManageMediaState(requests: requests, isLoading: false);
-    } catch (error) {
+    } catch (_) {
+      // Nothing was fetched here: the requests ride inside the media record
+      // Seerr already sent, so a throw is a record nobody could read — an
+      // answer, and amber, never "did not answer".
       return ManageMediaState(
         isLoading: false,
-        error: 'Failed to load requests: $error',
+        error: sectionFailureMessage(
+          ServiceKey.seerr,
+          const FormatException(),
+          consequence: 'the requests for this title are not shown',
+        ),
       );
     }
   }
 
   int? get seerrMediaId => arg.mediaInfo['id'] as int?;
+
+  /// Seerr's record carried no id, so there was nothing to address the write
+  /// to and nothing was sent.
+  static const _noMediaId =
+      'Seerr sent this title without its id, so nothing was changed.';
 
   int? get externalServiceId => arg.mediaInfo['externalServiceId'] as int?;
 
@@ -110,14 +123,15 @@ class ManageMediaNotifier extends Notifier<ManageMediaState> {
       );
       return null;
     } catch (error) {
-      return 'Failed to delete request: $error';
+      return 'Could not delete the request. '
+          '${writeFailureReason(ServiceKey.seerr, error)}';
     }
   }
 
   Future<String?> removeFromService() async {
     final mediaId = seerrMediaId;
     if (mediaId == null) {
-      return 'No media ID';
+      return _noMediaId;
     }
 
     state = state.copyWith(isDeleting: true);
@@ -126,7 +140,8 @@ class ManageMediaNotifier extends Notifier<ManageMediaState> {
       await service.deleteMediaFile(mediaId);
       return null;
     } catch (error) {
-      return 'Failed to remove: $error';
+      return 'Could not remove this title. '
+          '${writeFailureReason(ServiceKey.seerr, error)}';
     } finally {
       state = state.copyWith(isDeleting: false);
     }
@@ -135,7 +150,7 @@ class ManageMediaNotifier extends Notifier<ManageMediaState> {
   Future<String?> clearAllData() async {
     final mediaId = seerrMediaId;
     if (mediaId == null) {
-      return 'No media ID';
+      return _noMediaId;
     }
 
     state = state.copyWith(isDeleting: true);
@@ -144,7 +159,8 @@ class ManageMediaNotifier extends Notifier<ManageMediaState> {
       await service.deleteMedia(mediaId);
       return null;
     } catch (error) {
-      return 'Failed to clear data: $error';
+      return 'Could not clear the data. '
+          '${writeFailureReason(ServiceKey.seerr, error)}';
     } finally {
       state = state.copyWith(isDeleting: false);
     }

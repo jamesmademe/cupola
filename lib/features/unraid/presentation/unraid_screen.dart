@@ -9,6 +9,7 @@ import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_action.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -424,9 +425,11 @@ class _VmTile extends ConsumerWidget {
       )) {
         return;
       }
-      ScaffoldMessenger.of(
+      SnackBarHelper.error(
         context,
-      ).showSnackBar(SnackBar(content: Text('VM action failed: $error')));
+        'Could not ${_actionVerb(action)} ${vm.name}. '
+        '${writeFailureReason(ServiceKey.unraid, error)}',
+      );
     }
   }
 }
@@ -524,8 +527,10 @@ class _NotificationTile extends ConsumerWidget {
             )) {
               return;
             }
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Could not archive: $error')),
+            SnackBarHelper.error(
+              context,
+              'Could not archive this notification. '
+              '${writeFailureReason(ServiceKey.unraid, error)}',
             );
           }
         },

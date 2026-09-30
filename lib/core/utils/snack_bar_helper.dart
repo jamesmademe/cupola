@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/service_theme.dart';
 
 /// Convenience helpers for showing semantically typed snackbars.
@@ -20,10 +21,18 @@ class SnackBarHelper {
   /// so a thrown `Exception('404 Not Found')` demotes to `404 Not Found`
   /// rather than shouting its own type at the user.
   ///
+  /// A transport failure is never stringified. A `DioException`'s
+  /// `toString()` is a class name and a library's paragraph ("This indicates
+  /// an error which most likely cannot be solved by the library"), and it was
+  /// the second line of every write toast in the app. It demotes to what the
+  /// service itself said, when it said something (`failureServiceMessage`),
+  /// and otherwise to the classification's plain sentence.
+  ///
   /// Returns `null` when nothing legible survives, which is the signal to show
   /// the human sentence alone rather than a blank second line.
   static String? _demote(Object? detail) {
     if (detail == null) return null;
+    if (isTransportFailure(detail)) return failureDiagnostic(detail);
     final text = detail
         .toString()
         .replaceFirst(RegExp(r'^Exception:\s*'), '')

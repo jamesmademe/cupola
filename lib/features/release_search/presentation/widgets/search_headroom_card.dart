@@ -11,6 +11,7 @@ import 'package:cupola/features/release_search/domain/release_search_headroom.da
 import 'package:cupola/features/release_search/domain/release_search_reach.dart';
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/release_search/presentation/release_search_headroom_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// How much room this instance's path leaves for a long search.
@@ -45,10 +46,14 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
       await ref.read(headroomProbeProvider)(widget.service);
     } catch (e) {
       if (mounted) {
+        // Classified: "Couldn't reach" was said for a refused key too.
         SnackBarHelper.error(
           context,
-          "Couldn't reach ${widget.service.title} to check the path.",
-          detail: e,
+          sectionFailureMessage(
+            widget.service,
+            e,
+            consequence: 'the path was not checked',
+          ),
         );
       }
     } finally {

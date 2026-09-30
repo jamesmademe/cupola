@@ -10,6 +10,7 @@ import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
 import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
@@ -168,8 +169,7 @@ class StreamActivitySection extends ConsumerWidget {
       if (!context.mounted) return;
       SnackBarHelper.error(
         context,
-        'Could not stop playback',
-        detail: '$error',
+        'Could not stop playback. ${writeFailureReason(row.service, error)}',
       );
     }
   }

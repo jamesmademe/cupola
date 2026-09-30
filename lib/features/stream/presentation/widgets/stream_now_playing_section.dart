@@ -6,6 +6,7 @@ import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
@@ -189,12 +190,12 @@ class StreamNowPlayingSection extends ConsumerWidget {
       ref.invalidate(jellyfinSessionsProvider);
     } catch (error) {
       if (!context.mounted) return;
+      final failed = session.isPaused
+          ? 'Could not resume playback'
+          : 'Could not pause playback';
       SnackBarHelper.error(
         context,
-        session.isPaused
-            ? 'Could not resume playback'
-            : 'Could not pause playback',
-        detail: '$error',
+        '$failed. ${writeFailureReason(ServiceKey.jellyfin, error)}',
       );
     }
   }
@@ -224,8 +225,8 @@ class StreamNowPlayingSection extends ConsumerWidget {
       if (!context.mounted) return;
       SnackBarHelper.error(
         context,
-        'Could not send the message',
-        detail: '$error',
+        'Could not send the message. '
+        '${writeFailureReason(ServiceKey.jellyfin, error)}',
       );
     }
   }
@@ -267,8 +268,7 @@ class StreamNowPlayingSection extends ConsumerWidget {
       if (!context.mounted) return;
       SnackBarHelper.error(
         context,
-        'Could not stop playback',
-        detail: '$error',
+        'Could not stop playback. ${writeFailureReason(service, error)}',
       );
     }
   }

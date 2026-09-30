@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
+
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One selectable option: a quality profile, or a metadata profile.
@@ -69,6 +72,11 @@ class ArrAddFormState {
   /// `SnackBarHelper.error` and `AppErrorState` use.
   final String? errorDetail;
 
+  /// Why the request failed, when one was sent — the tone of the sheet's
+  /// glyph. Null for a fault that was an answer (Radarr has no quality
+  /// profile) or a post this sheet refused to send: amber, never red.
+  final ServiceFailureReason? errorReason;
+
   const ArrAddFormState({
     this.profiles = const [],
     this.rootFolders = const [],
@@ -82,6 +90,7 @@ class ArrAddFormState {
     this.isSubmitting = false,
     this.error,
     this.errorDetail,
+    this.errorReason,
   });
 
   /// Whether the form can be posted.
@@ -108,6 +117,7 @@ class ArrAddFormState {
     bool? isSubmitting,
     String? error,
     String? errorDetail,
+    ServiceFailureReason? errorReason,
     bool clearError = false,
   }) {
     return ArrAddFormState(
@@ -123,6 +133,7 @@ class ArrAddFormState {
       isSubmitting: isSubmitting ?? this.isSubmitting,
       error: clearError ? null : (error ?? this.error),
       errorDetail: clearError ? null : (errorDetail ?? this.errorDetail),
+      errorReason: clearError ? null : (errorReason ?? this.errorReason),
     );
   }
 }
@@ -218,11 +229,16 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
         ),
       );
     } catch (error) {
+      // Classified, not "Couldn't reach" for everything: a refused key is an
+      // answer, and the sheet said the server could not be reached.
+      final reason = classifyConnectionFailure(error);
       _emit(
         state.copyWith(
           isLoading: false,
-          error: "Couldn't reach $connectionName.",
-          errorDetail: '$error',
+          error:
+              '${describeFailure(arg.service, reason, subject: connectionName).headline}.',
+          errorDetail: failureDiagnostic(error),
+          errorReason: reason,
         ),
       );
     }
@@ -371,7 +387,12 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
         state.copyWith(
           isSubmitting: false,
           error: message,
-          errorDetail: '$error',
+          // The arr's own words when it gave any ("This movie has already
+          // been added"), otherwise why in the classified words.
+          errorDetail:
+              failureServiceMessage(error) ??
+              writeFailureReason(arg.service, error, subject: connectionName),
+          errorReason: classifyConnectionFailure(error),
         ),
       );
       return message;

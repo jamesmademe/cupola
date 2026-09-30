@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
@@ -107,6 +108,61 @@ void main() {
       expect(
         tester.widget<SnackBar>(find.byType(SnackBar)).backgroundColor,
         Theme.of(context).colorScheme.error,
+      );
+    });
+  });
+
+  group('SnackBarHelper.error transport detail', () {
+    testWidgets('a DioException demotes to words, never to its own text', (
+      tester,
+    ) async {
+      await _fire(
+        tester,
+        (context) => SnackBarHelper.error(
+          context,
+          'Could not start the app sync',
+          detail: DioException(
+            requestOptions: RequestOptions(path: '/api/v1/command'),
+            type: DioExceptionType.badResponse,
+            response: Response<dynamic>(
+              requestOptions: RequestOptions(path: '/api/v1/command'),
+              statusCode: 401,
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        _snackText(tester),
+        'Could not start the app sync\nThe server answered and refused the '
+        'saved credentials. Check them in Settings.',
+      );
+      expect(_snackText(tester), isNot(contains('DioException')));
+    });
+
+    testWidgets('what the service said, verbatim, when it said something', (
+      tester,
+    ) async {
+      await _fire(
+        tester,
+        (context) => SnackBarHelper.error(
+          context,
+          "Couldn't delete this movie from Radarr.",
+          detail: DioException(
+            requestOptions: RequestOptions(path: '/api/v3/movie/1'),
+            type: DioExceptionType.badResponse,
+            response: Response<dynamic>(
+              requestOptions: RequestOptions(path: '/api/v3/movie/1'),
+              statusCode: 404,
+              data: {'message': 'Movie not found'},
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        _snackText(tester),
+        "Couldn't delete this movie from Radarr.\nMovie not found",
       );
     });
   });

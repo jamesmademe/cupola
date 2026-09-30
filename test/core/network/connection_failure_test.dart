@@ -476,6 +476,103 @@ void main() {
       );
     });
   });
+
+  group('a parallel wait', () {
+    test('is classified by the request that failed, not as unknown', () async {
+      // `(a, b).wait` throws a ParallelWaitError, which carries no reason of
+      // its own: without unwrapping, a Radarr that did not answer the add
+      // sheet's two reads read as a failure nobody could attribute.
+      Object? caught;
+      try {
+        await (
+          Future<int>.value(1),
+          Future<int>.error(const SocketException('Connection refused')),
+        ).wait;
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught, isA<ParallelWaitError>());
+      expect(
+        classifyConnectionFailure(caught),
+        ServiceFailureReason.unreachable,
+      );
+    });
+
+    test('over a list unwraps too', () async {
+      Object? caught;
+      try {
+        await [Future<int>.value(1), Future<int>.error(_badResponse(401))].wait;
+      } catch (error) {
+        caught = error;
+      }
+      expect(
+        classifyConnectionFailure(caught),
+        ServiceFailureReason.unauthorized,
+      );
+    });
+  });
+
+  group('failureServiceMessage', () {
+    DioException answered(Object? data) => DioException(
+      requestOptions: RequestOptions(path: '/'),
+      type: DioExceptionType.badResponse,
+      response: Response(
+        requestOptions: RequestOptions(path: '/'),
+        statusCode: 400,
+        data: data,
+      ),
+    );
+
+    test('reads a message field verbatim', () {
+      expect(
+        failureServiceMessage(answered({'message': 'Movie already added'})),
+        'Movie already added',
+      );
+    });
+
+    test('reads every validation entry of an arr 400', () {
+      expect(
+        failureServiceMessage(
+          answered([
+            {'propertyName': 'Path', 'errorMessage': 'Path is required'},
+            {'propertyName': 'Title', 'errorMessage': 'Title is required'},
+          ]),
+        ),
+        'Path is required Title is required',
+      );
+    });
+
+    test('leaves a bare string body alone: it is often a proxy page', () {
+      expect(failureServiceMessage(answered('<html>502</html>')), isNull);
+      expect(failureServiceMessage(Exception('x')), isNull);
+    });
+  });
+
+  group('failureDiagnostic', () {
+    test('never the text of a transport failure', () {
+      final line = failureDiagnostic(
+        DioException(
+          requestOptions: RequestOptions(path: '/'),
+          type: DioExceptionType.connectionError,
+          error: const SocketException('Connection refused'),
+        ),
+      );
+      expect(line, startsWith('Nothing answered at the saved address.'));
+      expect(line, isNot(contains('DioException')));
+    });
+
+    test("keeps the app's own sentence without Dart's type prefix", () {
+      expect(failureDiagnostic(Exception('empty folder')), 'empty folder');
+      expect(
+        failureDiagnostic(StateError('refuses http://')),
+        'refuses http://',
+      );
+    });
+
+    test('reads internals as the classification sentence', () {
+      expect(failureDiagnostic(TypeError()), 'The request did not complete.');
+    });
+  });
 }
 
 class _Explained implements Exception, HasFailureDetail {

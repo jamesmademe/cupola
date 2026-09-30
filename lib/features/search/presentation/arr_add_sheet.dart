@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
 import 'package:cupola/features/search/presentation/arr_add_form_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Opens the add sheet for [request], against the connection that listed the
@@ -63,7 +65,11 @@ class _ArrAddSheet extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (state.error != null) ...[
-          _SheetError(message: state.error!, detail: state.errorDetail),
+          _SheetError(
+            message: state.error!,
+            detail: state.errorDetail,
+            reason: state.errorReason,
+          ),
           const SizedBox(height: AppSpacing.lg),
         ],
         if (state.profiles.isNotEmpty) ...[
@@ -178,7 +184,10 @@ class _SheetError extends StatelessWidget {
   final String message;
   final String? detail;
 
-  const _SheetError({required this.message, this.detail});
+  /// Null for a fault that was an answer, or a post the sheet refused.
+  final ServiceFailureReason? reason;
+
+  const _SheetError({required this.message, this.detail, this.reason});
 
   @override
   Widget build(BuildContext context) {
@@ -188,16 +197,23 @@ class _SheetError extends StatelessWidget {
     // glyph, walked against the sheet, and the words stay in text ink. The
     // sentence used to be red too, which put the alarm on the words and read
     // under 4.5:1 on paper.
+    // Red only when nothing answered; a refusal, a missing profile and a
+    // post the sheet would not send are faults, amber.
+    final reason = this.reason;
     final alarm = statusToneColor(
       colorScheme,
-      StatusTone.error,
+      reason == null ? StatusTone.warning : failureTone(reason),
       surface: colorScheme.surfaceContainer,
     );
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.error_outline_rounded, size: 18, color: alarm),
+        Icon(
+          reason == null ? Icons.warning_amber_rounded : failureIcon(reason),
+          size: 18,
+          color: alarm,
+        ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Column(

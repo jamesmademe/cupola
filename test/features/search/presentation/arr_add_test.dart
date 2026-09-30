@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -134,7 +136,7 @@ void main() {
 
     // Not "no root folders configured": the root-folder fetch is the one that
     // travels, so an unreachable server says so rather than looking empty.
-    expect(find.textContaining("Couldn't reach Radarr · Away"), findsOneWidget);
+    expect(find.text('Radarr · Away did not answer.'), findsOneWidget);
     // The button stays on screen and stays dead: there is nothing honest to
     // post, and hiding it would leave the sheet looking like it was still
     // loading.
@@ -252,7 +254,7 @@ class _AddRadarrService extends FakeRadarrService {
 
   @override
   Future<List<Map<String, dynamic>>> getRootFolders() async {
-    if (offline) throw Exception('connection refused');
+    if (offline) throw const SocketException('Connection refused');
     return [
       {'id': 1, 'path': rootFolder},
       {'id': 2, 'path': '$rootFolder-4k'},

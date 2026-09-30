@@ -1,33 +1,45 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/utils/grab_error_utils.dart';
 
+DioException _answered(int status, {Object? data}) => DioException(
+  requestOptions: RequestOptions(path: '/api/v3/release'),
+  type: DioExceptionType.badResponse,
+  response: Response<dynamic>(
+    requestOptions: RequestOptions(path: '/api/v3/release'),
+    statusCode: status,
+    data: data,
+  ),
+);
+
 void main() {
   group('translateGrabError', () {
-    test('returns timeout message for 504 gateway timeout', () {
-      final message = translateGrabError(
-        Exception('Error 504 Gateway Timeout'),
-      );
+    test('a 504 is the indexer behind the arr running out of time', () {
+      final message = translateGrabError(_answered(504));
 
       expect(
         message,
-        'Indexer timeout - the indexer took too long to respond. (Error 504)',
+        'The indexer took too long to answer, so nothing was grabbed.',
       );
     });
 
-    test('returns server error message for 500 errors', () {
-      final message = translateGrabError(
-        Exception('500 Internal Server Error'),
-      );
+    test('a 500 is the arr answering with an error, in words', () {
+      final message = translateGrabError(_answered(500));
 
       expect(
         message,
-        'This release may already be downloading or available. Check your download queue. (Error 500)',
+        'The server answered with an error. This release may already be '
+        'downloading or available, so check the download queue.',
       );
     });
 
-    test('returns already exists message', () {
-      final message = translateGrabError(Exception('Item already exists'));
+    test('the arr saying it already has it', () {
+      final message = translateGrabError(
+        _answered(400, data: {'message': 'Item already exists'}),
+      );
 
       expect(
         message,
@@ -35,38 +47,66 @@ void main() {
       );
     });
 
-    test('returns disk space message', () {
+    test('an app exception that carries the arr sentence keeps its hint', () {
       final message = translateGrabError(Exception('Not enough disk space'));
 
       expect(message, 'Not enough disk space for this download.');
     });
 
-    test('returns generic timeout message', () {
+    test('a timeout says so and offers Retry, never "try again"', () {
       final message = translateGrabError(
         Exception('Connection timeout after 30s'),
       );
 
-      expect(message, 'Request timed out. Please try again.');
+      expect(
+        message,
+        'The request timed out, so nothing was grabbed. Retry when the '
+        'indexer is back.',
+      );
     });
 
-    test('returns fallback message with status code', () {
-      final message = translateGrabError(Exception('403 Forbidden'));
+    test('a refused key is a refusal, never a status code', () {
+      final message = translateGrabError(_answered(403));
 
-      expect(message, 'Failed to grab release (Error 403): 403 Forbidden');
+      expect(
+        message,
+        'Nothing was grabbed. The server answered and refused the saved '
+        'credentials. Check them in Settings.',
+      );
+      expect(message, isNot(contains('403')));
+      expect(message, isNot(contains('Error')));
     });
 
-    test('returns fallback message without status code', () {
-      final message = translateGrabError(Exception('Network unreachable'));
+    test('silence is the only failure that says nothing answered', () {
+      final message = translateGrabError(
+        const SocketException('Connection refused'),
+      );
 
-      expect(message, 'Failed to grab release: Network unreachable');
+      expect(message, startsWith('Nothing was grabbed. Nothing answered'));
     });
 
-    test('uses trailing error segment for colon separated errors', () {
+    test('the arr own words, verbatim, when it gave any', () {
+      final message = translateGrabError(
+        _answered(
+          400,
+          data: [
+            {'errorMessage': 'Release rejected by the download client'},
+          ],
+        ),
+      );
+
+      expect(
+        message,
+        'Nothing was grabbed. Release rejected by the download client',
+      );
+    });
+
+    test('never the exception text for anything it cannot attribute', () {
       final message = translateGrabError(
         Exception('Request failed: Upstream unavailable'),
       );
 
-      expect(message, 'Failed to grab release: Upstream unavailable');
+      expect(message, 'Nothing was grabbed. The request did not complete.');
     });
   });
 }

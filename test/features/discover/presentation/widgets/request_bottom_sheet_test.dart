@@ -150,10 +150,17 @@ void main() {
       await tester.tap(find.text('Submit request'));
       await tester.pumpAndSettle();
 
+      // What did not happen, then why in the classified words: an error
+      // nobody can attribute is a request that did not complete, never the
+      // exception's own text.
       expect(
-        find.text('Request failed: Exception: request failed'),
+        find.text(
+          'Could not send the request. The request to Seerr did not '
+          'complete.',
+        ),
         findsOneWidget,
       );
+      expect(find.textContaining('Exception'), findsNothing);
     });
 
     testWidgets('shows the tv request title for tv media', (tester) async {

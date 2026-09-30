@@ -7,8 +7,11 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/domain/models/virt_instance.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
@@ -150,8 +153,15 @@ class _DetailBody extends ConsumerWidget {
         const SizedBox(height: AppSpacing.sm),
         devices.when(
           loading: () => AppSkeleton.listRows(count: 3),
-          error: (e, _) => AppCard.surfaceOutlined(
-            child: Text('$e', style: Theme.of(context).textTheme.bodySmall),
+          error: (error, _) => InlineErrorRetry(
+            message: sectionFailureMessage(
+              ServiceKey.truenas,
+              error,
+              consequence: 'the devices are not shown',
+            ),
+            error: error,
+            onRetry: () =>
+                ref.invalidate(truenasVirtDevicesProvider(instance.id)),
           ),
           data: (list) => list.isEmpty
               ? AppCard.surfaceOutlined(
