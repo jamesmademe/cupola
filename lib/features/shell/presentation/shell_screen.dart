@@ -18,6 +18,7 @@ import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
+import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_shell.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 import 'package:cupola/features/shell/presentation/portal_coach_mark.dart';
@@ -76,7 +77,48 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // Using the Portal is the proof the coach mark is no longer needed.
     _portal.onOpened = () =>
         ref.read(portalHintsProvider.notifier).notePortalUsed();
+    _portal.covering.addListener(_reportBackOwnership);
     WidgetsBinding.instance.addPostFrameCallback((_) => _armDemoBounce());
+  }
+
+  /// Back, while the Portal is up, means "put the page back" — never "leave
+  /// the page".
+  ///
+  /// A listener on the router's back dispatcher rather than a `PopScope`, and
+  /// the difference is the whole fix. go_router offers a back to the deepest
+  /// navigator first, so with a room pushed on the Dashboard branch the branch
+  /// pops the room *under* the card before anything the shell owns is asked; a
+  /// `PopScope` here sits on the shell's own route, which is consulted last.
+  /// The dispatcher is asked before any navigator is.
+  ///
+  /// Asked of [ServicePortalController.isOpenOrEngaged], the same question a
+  /// tab tap asks before it closes the Portal, so the two cannot disagree about
+  /// whether there is anything to close.
+  Future<bool> _handleSystemBack() async {
+    if (!_portal.isOpenOrEngaged) return false;
+    _portal.closeFromUi();
+    return true;
+  }
+
+  /// Tells Android whether the app wants the next back gesture.
+  ///
+  /// With predictive back the system only hands a back to the app when the
+  /// framework has said it can use one, and the navigators say so only when
+  /// they have a route to pop. On a branch root that is never, so without this
+  /// a back over an open Portal would leave the app instead of closing it.
+  ///
+  /// Dispatched by hand, in the navigators' own currency, because a `PopScope`
+  /// on the shell's route would report *its* answer on the way back down too
+  /// — "nothing to pop" — over a branch that still has a room pushed, and back
+  /// would then leave the app from the room. On close this restores exactly
+  /// what the navigators would say. A no-op on every other platform.
+  void _reportBackOwnership() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      NavigationNotification(
+        canHandlePop: _portal.covering.value || GoRouter.of(context).canPop(),
+      ).dispatch(context);
+    });
   }
 
   /// The one-shot demo bounce (Settings → Hints re-arms it): only on the phone
@@ -100,6 +142,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   @override
   void dispose() {
     _demoTimer?.cancel();
+    _portal.covering.removeListener(_reportBackOwnership);
     _portal.dispose();
     super.dispose();
   }
@@ -225,32 +268,53 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
               ],
             ),
           )
-        : Scaffold(
-            extendBody: true,
-            body:
-                // The Portal is a cover the route system cannot see: it
-                // freezes the page's pixels while leaving its timers running.
-                // Scoping the stage tells whatever polls under there to stop —
-                // see `PageCoverageScope`.
-                PageCoverageScope(
-                  covering: _portal.covering,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      PortalStage(
-                        controller: _portal,
-                        child: widget.navigationShell,
+        // The phone layout is the only one the Portal exists in, so it is the
+        // only one whose back and escape it may claim.
+        : BackButtonListener(
+            onBackButtonPressed: _handleSystemBack,
+            child: Shortcuts(
+              // Escape on a keyboard is the desktop window's back, and a
+              // desktop window narrower than the compact artboard gets this
+              // layout and its Portal. The shell's own intent rather than
+              // `DismissIntent`, for the reason `CloseOverlayIntent` gives.
+              shortcuts: const <ShortcutActivator, Intent>{
+                SingleActivator(LogicalKeyboardKey.escape):
+                    CloseOverlayIntent(),
+              },
+              child: Actions(
+                actions: <Type, Action<Intent>>{
+                  CloseOverlayIntent: _ClosePortalAction(_portal),
+                },
+                child: Scaffold(
+                  extendBody: true,
+                  body:
+                      // The Portal is a cover the route system cannot see: it
+                      // freezes the page's pixels while leaving its timers
+                      // running. Scoping the stage tells whatever polls under
+                      // there to stop — see `PageCoverageScope`.
+                      PageCoverageScope(
+                        covering: _portal.covering,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            PortalStage(
+                              controller: _portal,
+                              child: widget.navigationShell,
+                            ),
+                            if (!accessibleNav)
+                              PortalCoachMark(controller: _portal),
+                          ],
+                        ),
                       ),
-                      if (!accessibleNav) PortalCoachMark(controller: _portal),
-                    ],
+                  bottomNavigationBar: FloatingBottomNavBar(
+                    selectedIndex: selectedIndex,
+                    onDestinationSelected: (int idx) =>
+                        _onItemTapped(idx, context, selectedIndex),
+                    destinations: destinations,
+                    verticalDragDelegate: accessibleNav ? null : _portal,
                   ),
                 ),
-            bottomNavigationBar: FloatingBottomNavBar(
-              selectedIndex: selectedIndex,
-              onDestinationSelected: (int idx) =>
-                  _onItemTapped(idx, context, selectedIndex),
-              destinations: destinations,
-              verticalDragDelegate: accessibleNav ? null : _portal,
+              ),
             ),
           );
 
@@ -350,6 +414,24 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
         return null;
     }
   }
+}
+
+/// Escape while the Portal is up. Disabled otherwise, so the key goes on to
+/// clear a field or close a dialog exactly as it did before — a disabled action
+/// is skipped by the dispatcher instead of swallowing the key.
+///
+/// Reads the controller at key time rather than a flag captured at build: the
+/// Portal opens and closes without rebuilding the shell.
+class _ClosePortalAction extends Action<CloseOverlayIntent> {
+  _ClosePortalAction(this.portal);
+
+  final ServicePortalController portal;
+
+  @override
+  bool get isActionEnabled => portal.isOpenOrEngaged;
+
+  @override
+  void invoke(CloseOverlayIntent intent) => portal.closeFromUi();
 }
 
 /// Side navigation shown on tablet and desktop widths.

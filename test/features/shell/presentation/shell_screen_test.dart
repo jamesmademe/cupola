@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -577,6 +578,156 @@ void main() {
     });
   });
 
+  // Back over an open Portal means "put the page back". It used to reach the
+  // branch navigator first, which popped the room under the card and left the
+  // Portal to be closed by the route hook a frame later — over a page the user
+  // never chose to leave.
+  group('the Portal and back', () {
+    testWidgets('system back closes the Portal and leaves the room alone', (
+      tester,
+    ) async {
+      final harness = await _pumpShell(
+        tester,
+        initialLocation: '/dashboard/radarr/movie/42',
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+
+      await _openPortal(tester);
+      expect(find.byType(ServiceMatrix), findsOneWidget);
+
+      await _systemBack(tester);
+
+      expect(find.byType(ServiceMatrix), findsNothing);
+      expect(
+        harness.router.state.uri.path,
+        '/dashboard/radarr/movie/42',
+        reason: 'the room the Portal lifted is the one it puts back',
+      );
+      expect(find.text('MovieDetailPage'), findsOneWidget);
+
+      // And with the Portal gone, back is back again.
+      await _systemBack(tester);
+      expect(harness.router.state.uri.path, '/dashboard');
+    });
+
+    testWidgets('on a tab root, back closes the Portal instead of the app', (
+      tester,
+    ) async {
+      final platformCalls = _recordPlatformCalls();
+      await _pumpShell(
+        tester,
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+
+      await _openPortal(tester);
+      await _systemBack(tester);
+
+      expect(find.byType(ServiceMatrix), findsNothing);
+      expect(
+        platformCalls.map((call) => call.method),
+        isNot(contains('SystemNavigator.pop')),
+        reason: 'nothing under the Portal could pop, and the app stayed open',
+      );
+    });
+
+    testWidgets('Android is told the app wants back only while it is open', (
+      tester,
+    ) async {
+      // With predictive back the system keeps a back to itself unless the app
+      // has claimed it, and on a tab root the navigators never do: the back
+      // would close the app from under an open Portal.
+      final platformCalls = _recordPlatformCalls();
+      await _pumpShell(
+        tester,
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+      // The app only reports to the engine once it is running.
+      await _sendLifecycle(tester, AppLifecycleState.resumed);
+      bool? lastClaim() =>
+          platformCalls
+                  .lastWhere(
+                    (call) =>
+                        call.method ==
+                        'SystemNavigator.setFrameworkHandlesBack',
+                  )
+                  .arguments
+              as bool?;
+
+      await _openPortal(tester);
+      expect(lastClaim(), isTrue);
+
+      await tester.tap(_navItem('Dashboard'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ServiceMatrix), findsNothing);
+      expect(
+        lastClaim(),
+        isFalse,
+        reason: 'closed on a tab root, back belongs to the system again',
+      );
+    });
+
+    testWidgets('closing over a pushed room keeps back with the app', (
+      tester,
+    ) async {
+      // The counterweight: a claim released as a flat "no" would leave the
+      // room unpoppable by the system back.
+      final platformCalls = _recordPlatformCalls();
+      await _pumpShell(
+        tester,
+        initialLocation: '/dashboard/radarr/movie/42',
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+      await _sendLifecycle(tester, AppLifecycleState.resumed);
+
+      await _openPortal(tester);
+      await _systemBack(tester);
+
+      expect(
+        platformCalls
+            .lastWhere(
+              (call) =>
+                  call.method == 'SystemNavigator.setFrameworkHandlesBack',
+            )
+            .arguments,
+        isTrue,
+      );
+    });
+
+    testWidgets('Escape closes it in a narrow desktop window', (tester) async {
+      // Under the compact artboard a desktop window gets the phone layout, and
+      // the Portal with it; the keyboard's back is Escape.
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        final harness = await _pumpShell(
+          tester,
+          initialLocation: '/dashboard/radarr/movie/42',
+          overrides: await _lensOverrides(),
+          viewport: const Size(390 * 3, 844 * 3),
+          devicePixelRatio: 3,
+        );
+
+        await _openPortal(tester);
+        expect(find.byType(ServiceMatrix), findsOneWidget);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ServiceMatrix), findsNothing);
+        expect(harness.router.state.uri.path, '/dashboard/radarr/movie/42');
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+  });
+
   // The single-animation half of the story above, asked of the machine rather
   // than of the tree: the tree only shows that it ended closed.
   group('ServicePortalController', () {
@@ -668,6 +819,31 @@ Future<void> _openPortal(WidgetTester tester) async {
     2000,
   );
   await tester.pumpAndSettle();
+}
+
+/// The Android back button, sent down the channel the platform uses.
+Future<void> _systemBack(WidgetTester tester) async {
+  await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+    SystemChannels.navigation.name,
+    SystemChannels.navigation.codec.encodeMethodCall(
+      const MethodCall('popRoute'),
+    ),
+    (_) {},
+  );
+  await tester.pumpAndSettle();
+}
+
+/// Every call the app makes on the platform channel, in order.
+///
+/// Installed over the file's silent default; the file's `tearDown` removes it.
+List<MethodCall> _recordPlatformCalls() {
+  final calls = <MethodCall>[];
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        calls.add(call);
+        return null;
+      });
+  return calls;
 }
 
 /// Wide enough for the rail: the breakpoint is Material's 840pt expanded window.
