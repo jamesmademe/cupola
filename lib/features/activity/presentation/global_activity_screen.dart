@@ -18,7 +18,6 @@ import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
-import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
@@ -1402,6 +1401,13 @@ class _StackHealthStrip extends StatelessWidget {
     );
   }
 
+  /// A fault is a quiet line — glyph, sentence, remedy — and nothing else.
+  ///
+  /// It used to be a card: the tone at 7% under a 34% border of the same
+  /// tone, with a pip beside the glyph. That is alarm chrome, and in a
+  /// self-hosted stack a service that did not answer is a normal afternoon;
+  /// the brand book's Presence Rule keeps the tone on the glyph and the title
+  /// and leaves the remedy in ink, because a red cure looks like the disease.
   Widget _band(
     BuildContext context, {
     required StatusTone tone,
@@ -1413,57 +1419,64 @@ class _StackHealthStrip extends StatelessWidget {
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    // The fill and border are walked against the surface the card composites
-    // on, not the raw token: error red is 3.74:1 on paper.
-    final alarm = statusToneColor(colorScheme, tone);
+    // Walked against the ground the line is drawn on: with no fill behind it
+    // the glyph and the title carry the whole tone, and raw error red measures
+    // 3.7:1 on paper.
+    final ink = statusToneColor(
+      colorScheme,
+      tone,
+      surface: colorScheme.surface,
+    );
 
     return Padding(
+      key: const ValueKey('activity-fault-line'),
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.sm,
-        AppSpacing.lg,
+        AppSpacing.sm,
         AppSpacing.sm,
       ),
-      child: AppCard.outlined(
-        backgroundColor: alarm.withValues(alpha: 0.07),
-        borderColor: alarm.withValues(alpha: 0.34),
-        padding: const EdgeInsets.all(AppSpacing.md),
+      child: Semantics(
+        container: true,
+        // The remedy stays its own control; this node owns the sentence.
+        explicitChildNodes: true,
+        liveRegion: true,
+        label: '$title. $body',
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Red never travels alone: the pip is the non-colour half of the
-            // signal, so the band still reads as an alarm to a user who cannot
-            // separate red from amber. It sits before the glyph, not on it.
-            Container(
-              // 7pt, and nudged down by the glyph's own optical centre so the
-              // dot sits on the first line of type rather than above it.
-              margin: const EdgeInsets.only(top: 6),
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(color: alarm, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Icon(icon, size: 20, color: alarm),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: theme.textTheme.titleSmall?.weight(FontWeight.w600),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    body,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+            ExcludeSemantics(
+              child: Padding(
+                // The glyph's optical centre on the title's first line.
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(icon, size: 18, color: ink),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: ExcludeSemantics(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleSmall
+                          ?.weight(FontWeight.w600)
+                          .copyWith(color: ink),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      body,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            // In ink, never the fault tone.
             TextButton(onPressed: onAction, child: Text(actionLabel)),
           ],
         ),

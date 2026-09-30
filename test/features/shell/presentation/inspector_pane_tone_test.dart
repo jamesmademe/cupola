@@ -43,6 +43,7 @@ Future<void> _pump(
   WidgetTester tester, {
   required ThemeData theme,
   required List<GlobalActivityItem> queue,
+  List<ServiceKey> unreachable = const [],
 }) async {
   final container = ProviderContainer(
     overrides: [
@@ -50,9 +51,9 @@ Future<void> _pump(
       globalNowItemsProvider.overrideWith(
         (ref) async => ActivityFeed(items: queue, results: const []),
       ),
-      // Nothing unreachable: the pane's red card is correct when it appears,
-      // and it is not what this file is about.
-      unreachableServicesProvider.overrideWithValue(const <ServiceKey>[]),
+      // Nothing unreachable unless asked: the pane's red line is correct when
+      // it appears, and most of this file is not about it.
+      unreachableServicesProvider.overrideWithValue(unreachable),
     ],
   );
   addTearDown(container.dispose);
@@ -153,6 +154,54 @@ void main() {
         ),
       );
       expect(bar.valueColor!.value, light.colorScheme.primary);
+    });
+  });
+
+  group('InspectorPane did not answer', () {
+    testWidgets('is a quiet line: red on the glyph and the title only', (
+      tester,
+    ) async {
+      final light = AppTheme.lightTheme();
+      await _pump(
+        tester,
+        theme: light,
+        queue: const [],
+        unreachable: const [ServiceKey.sonarr],
+      );
+
+      final line = find.byKey(const ValueKey('inspector-did-not-answer'));
+      expect(line, findsOneWidget);
+      final red = statusToneColor(
+        light.colorScheme,
+        StatusTone.error,
+        surface: light.colorScheme.surfaceContainerLowest,
+      );
+      final glyph = tester.widget<Icon>(
+        find.descendant(of: line, matching: find.byType(Icon)),
+      );
+      expect(glyph.icon, Icons.cloud_off_rounded);
+      expect(glyph.color, red);
+      final title = tester.widget<Text>(
+        find.descendant(of: line, matching: find.text('Sonarr did not answer')),
+      );
+      expect(title.style?.color, red);
+      expect(find.textContaining('No response'), findsNothing);
+
+      // No fill and no border behind it: the Presence Rule.
+      for (final box in tester.widgetList<Container>(
+        find.descendant(of: line, matching: find.byType(Container)),
+      )) {
+        final decoration = box.decoration;
+        if (decoration is BoxDecoration) {
+          expect(decoration.color, isNull);
+          expect(decoration.border, isNull);
+        }
+      }
+      // Retry in ink, never red.
+      final retry = tester.widget<Text>(
+        find.descendant(of: line, matching: find.text('Retry')),
+      );
+      expect(retry.style?.color, isNot(red));
     });
   });
 }

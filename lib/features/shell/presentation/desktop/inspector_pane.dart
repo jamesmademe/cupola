@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/inspector_state.dart';
@@ -250,6 +251,11 @@ class _QueueRow extends StatelessWidget {
 
 /// The incomplete-list warning, in the pane that would otherwise imply a whole
 /// queue. A queue that silently omits a service is worse than no queue.
+///
+/// A quiet line — glyph, sentence, remedy — and not a card: the Presence
+/// Rule keeps the red on the glyph and the title. It used to be a card in the
+/// error tone at 7% under a 30% border, with an amber-shaped warning glyph,
+/// and "No response." for words.
 class _UnreachableCard extends ConsumerWidget {
   const _UnreachableCard({required this.services});
 
@@ -258,110 +264,114 @@ class _UnreachableCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    // Walked against the pane it is drawn on: there is no wash behind it any
+    // more, and the glyph and the title carry the whole tone.
+    final red = statusToneColor(
+      colorScheme,
+      StatusTone.error,
+      surface: _paneSurface(colorScheme),
+    );
+    final title = services.length == 1
+        ? failureHeadline(
+            ServiceFailureReason.unreachable,
+            subject: services.single.title,
+          )
+        : '${services.map((s) => s.title).join(' · ')} did not answer';
+    final body = services.length == 1
+        ? 'Anything it holds is missing from this list.'
+        : 'Anything they hold is missing from this list.';
+
     return Padding(
+      key: const ValueKey('inspector-did-not-answer'),
       padding: const EdgeInsets.all(AppSpacing.md + 2),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const _SectionLabel('Did not answer'),
-          const SizedBox(height: AppSpacing.sm + 2),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: 11,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              color: colorScheme.error.withValues(alpha: 0.07),
-              border: Border.all(
-                color: colorScheme.error.withValues(alpha: 0.3),
+      child: Semantics(
+        container: true,
+        explicitChildNodes: true,
+        label: '$title. $body',
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ExcludeSemantics(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Icon(
+                  failureIcon(ServiceFailureReason.unreachable),
+                  size: 15,
+                  color: red,
+                ),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    // Red here is *correct* under the tone rule — these are
-                    // connections that did not answer, which is the one thing
-                    // red means — but as ink on its own 7% tint it still has to
-                    // clear the composite, which raw `colorScheme.error` does
-                    // not on paper (3.42:1).
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      size: 15,
-                      color: statusToneColor(
-                        colorScheme,
-                        StatusTone.error,
-                        surface: _paneSurface(colorScheme),
-                        tintAlpha: 0.07,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        services.map((s) => s.title).join(' · '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTheme.chrome(
-                          context,
-                          size: 12,
-                          weight: FontWeight.w600,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  'No response. Anything they hold is missing from this list.',
-                  style: AppTheme.chrome(
-                    context,
-                    size: 11,
-                    weight: FontWeight.w500,
-                    color: CupolaThemeColors.of(context).dimText,
-                    height: 1.3,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: [
-                    OutlinedButton(
-                      onPressed: () {
-                        for (final service in services) {
-                          // Per connection: `serviceSummaryProvider` delegates
-                          // to these, so invalidating the delegate alone
-                          // re-awaited the cached verdict and probed nothing.
-                          for (final id in ref.read(
-                            serviceInstanceIdsProvider(service),
-                          )) {
-                            ref.invalidate(
-                              instanceSummaryProvider((
-                                service: service,
-                                instanceId: id,
-                              )),
-                            );
-                          }
-                          ref.invalidate(serviceSummaryProvider(service));
-                        }
-                        ref.invalidate(globalNowItemsProvider);
-                      },
-                      child: const Text('Retry'),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    TextButton(
-                      onPressed: () => GoRouter.of(
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ExcludeSemantics(
+                    child: Text(
+                      title,
+                      style: AppTheme.chrome(
                         context,
-                      ).go('${NavTab.settings.routePath}/connections'),
-                      child: const Text('Settings'),
+                        size: 12,
+                        weight: FontWeight.w600,
+                        color: red,
+                      ),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 4),
+                  ExcludeSemantics(
+                    child: Text(
+                      body,
+                      style: AppTheme.chrome(
+                        context,
+                        size: 11,
+                        weight: FontWeight.w500,
+                        color: CupolaThemeColors.of(context).dimText,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Wrap(
+                    spacing: AppSpacing.xs,
+                    children: [
+                      // Both verbs in ink, never red: a red cure looks like
+                      // the disease.
+                      TextButton(
+                        onPressed: () {
+                          for (final service in services) {
+                            // Per connection: `serviceSummaryProvider`
+                            // delegates to these, so invalidating the delegate
+                            // alone re-awaited the cached verdict and probed
+                            // nothing.
+                            for (final id in ref.read(
+                              serviceInstanceIdsProvider(service),
+                            )) {
+                              ref.invalidate(
+                                instanceSummaryProvider((
+                                  service: service,
+                                  instanceId: id,
+                                )),
+                              );
+                            }
+                            ref.invalidate(serviceSummaryProvider(service));
+                          }
+                          ref.invalidate(globalNowItemsProvider);
+                        },
+                        child: const Text('Retry'),
+                      ),
+                      TextButton(
+                        onPressed: () => GoRouter.of(
+                          context,
+                        ).go('${NavTab.settings.routePath}/connections'),
+                        child: const Text('Settings'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

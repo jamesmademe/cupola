@@ -316,35 +316,43 @@ void main() {
 
     // Scoped to the band: the service strip draws the same glyph on the tile
     // of a service that did not answer, and it is toned from the same rule.
+    final line = find.byKey(const ValueKey('activity-fault-line'));
     final glyph = find.descendant(
-      of: find.byType(AppCard),
+      of: line,
       matching: find.byIcon(Icons.cloud_off_rounded),
     );
     expect(glyph, findsOneWidget);
     final colorScheme = Theme.of(tester.element(glyph)).colorScheme;
-    expect(
-      tester.widget<Icon>(glyph).color,
-      statusToneColor(colorScheme, StatusTone.error),
+    final red = statusToneColor(
+      colorScheme,
+      StatusTone.error,
+      surface: colorScheme.surface,
     );
+    expect(tester.widget<Icon>(glyph).color, red);
     expect(
       tester.widget<Icon>(glyph).color,
       isNot(statusToneColor(colorScheme, StatusTone.warning)),
     );
-
-    // And red never travels alone: the pip is the non-colour half of the
-    // signal, for a reader who cannot separate red from amber.
-    expect(
-      find.descendant(
-        of: find.byType(AppCard),
-        matching: find.byWidgetPredicate(
-          (w) =>
-              w is Container &&
-              w.decoration is BoxDecoration &&
-              (w.decoration! as BoxDecoration).shape == BoxShape.circle,
-        ),
-      ),
-      findsOneWidget,
+    // The tone reaches the title and nothing else on the line.
+    final title = tester.widget<Text>(
+      find.descendant(of: line, matching: find.text('Sonarr did not answer')),
     );
+    expect(title.style?.color, red);
+
+    // The Presence Rule: a quiet line, no fill and no border.
+    expect(
+      find.descendant(of: line, matching: find.byType(AppCard)),
+      findsNothing,
+    );
+    for (final box in tester.widgetList<DecoratedBox>(
+      find.descendant(of: line, matching: find.byType(DecoratedBox)),
+    )) {
+      final decoration = box.decoration;
+      if (decoration is BoxDecoration) {
+        expect(decoration.color, isNull);
+        expect(decoration.border, isNull);
+      }
+    }
   });
 
   testWidgets('a connection that refused the key is an amber fault with its '
@@ -382,14 +390,18 @@ void main() {
     expect(find.text('Paste the key again'), findsOneWidget);
 
     final glyph = find.descendant(
-      of: find.byType(AppCard),
+      of: find.byKey(const ValueKey('activity-fault-line')),
       matching: find.byIcon(Icons.key_off_rounded),
     );
     expect(glyph, findsOneWidget);
     final colorScheme = Theme.of(tester.element(glyph)).colorScheme;
     expect(
       tester.widget<Icon>(glyph).color,
-      statusToneColor(colorScheme, StatusTone.warning),
+      statusToneColor(
+        colorScheme,
+        StatusTone.warning,
+        surface: colorScheme.surface,
+      ),
     );
   });
 
