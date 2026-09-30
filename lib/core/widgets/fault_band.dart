@@ -26,6 +26,8 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 ///  * [FaultBand.section] — the service answered, one source inside it did not.
 ///    Only that section falls back, and a figure that source owns reads `—`,
 ///    never `0`.
+///  * [FaultBand.partial] — the service answered part of a read and not the
+///    rest. Amber: something that just replied did not fail to answer.
 ///  * [FaultBand.stale] — nothing is broken, the poll stopped coming back.
 ///    **Warning**, not error, and no dismiss: it is a condition of the data,
 ///    not an event, and it is still true after you acknowledge it.
@@ -121,6 +123,25 @@ class FaultBand extends StatelessWidget {
        secondaryAction = onOpenSettings == null
            ? null
            : FaultBandAction('Settings', onOpenSettings);
+
+  /// Level 2, when the service answered **part** of a read: the first pages
+  /// of a paged list came back and a later one did not, or one of several
+  /// sources a list merges failed while the rest answered.
+  ///
+  /// Amber, never [FaultBand.section]'s red: the service is there — it just
+  /// answered — so "did not answer" would be a claim about a host that
+  /// replied. The sentence is the caller's, because only the caller knows how
+  /// much arrived: *"Seerr returned 50 of 300 users; later pages are
+  /// unavailable."* Pair it with a count that names what is shown ("50 shown")
+  /// rather than a total.
+  FaultBand.partial({
+    super.key,
+    required this.message,
+    required VoidCallback onRetry,
+  }) : tone = StatusTone.warning,
+       icon = Icons.playlist_remove_rounded,
+       primaryAction = FaultBandAction('Retry', onRetry),
+       secondaryAction = null;
 
   /// Level 3 — the poll stopped coming back.
   ///

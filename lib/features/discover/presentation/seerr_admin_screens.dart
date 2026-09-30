@@ -54,7 +54,7 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
         ),
       ),
       banner: partial != null && partial.isPartial
-          ? FaultBand.section(
+          ? FaultBand.partial(
               message:
                   'Seerr returned ${partial.items.length} of '
                   '${partial.total} issues; later pages are unavailable.',
@@ -133,7 +133,7 @@ class SeerrUsersScreen extends ConsumerWidget {
       emptyMessage: 'Seerr returned no users.',
       topPadding: topPadding + MediaQuery.paddingOf(context).top,
       banner: partial != null && partial.isPartial
-          ? FaultBand.section(
+          ? FaultBand.partial(
               message:
                   'Seerr returned ${partial.items.length} of '
                   '${partial.total} users; later pages are unavailable.',

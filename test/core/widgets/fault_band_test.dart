@@ -47,7 +47,11 @@ void main() {
           onRetry: () {},
         ),
         FaultBand.section(
-          message: 'qBittorrent is not answering.',
+          message: 'qBittorrent did not answer.',
+          onRetry: () {},
+        ),
+        FaultBand.partial(
+          message: 'Seerr returned 50 of 300 users.',
           onRetry: () {},
         ),
         FaultBand.stale(
@@ -182,6 +186,26 @@ void main() {
       );
       expect(find.textContaining('TrueNAS did not answer'), findsOneWidget);
       expect(find.textContaining('for 0'), findsNothing);
+    });
+
+    testWidgets('a partial read is a fault, never "did not answer"', (
+      tester,
+    ) async {
+      // The first pages came back, so the service answered: red here would be
+      // a claim about a host that just replied.
+      await _pump(
+        tester,
+        FaultBand.partial(
+          message:
+              'Seerr returned 50 of 300 users; later pages are '
+              'unavailable.',
+          onRetry: () {},
+        ),
+      );
+      final band = tester.widget<FaultBand>(find.byType(FaultBand));
+      expect(band.tone, StatusTone.warning);
+      expect(band.secondaryAction, isNull);
+      expect(find.text('Retry'), findsOneWidget);
     });
 
     testWidgets('stale is a warning, not an error', (tester) async {

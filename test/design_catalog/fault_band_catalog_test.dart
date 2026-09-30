@@ -49,6 +49,15 @@ void main() {
         ),
       ),
       CatalogScene(
+        '.partial · the service answered part of a paged read: amber, never '
+        'red, Retry only',
+        (_) => FaultBand.partial(
+          message:
+              'Seerr returned 50 of 300 users; later pages are unavailable.',
+          onRetry: () {},
+        ),
+      ),
+      CatalogScene(
         '.stale(age: 6 min) · warning tone, Refresh only, no dismiss',
         (_) => FaultBand.stale(
           age: const Duration(minutes: 6),

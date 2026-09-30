@@ -258,7 +258,10 @@ class _BazarrHistoryScreenState extends ConsumerState<BazarrHistoryScreen> {
       child: Column(
         children: [
           if (failedSources.isNotEmpty)
-            FaultBand.section(
+            // Partial, not a section that did not answer: Bazarr just
+            // answered the other source, so red would be a claim about a host
+            // that replied.
+            FaultBand.partial(
               message:
                   'Bazarr is answering, but ${_sourceNames(failedSources)} '
                   'history did not load. The other records remain visible.',

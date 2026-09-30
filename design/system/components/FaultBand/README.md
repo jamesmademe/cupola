@@ -18,6 +18,7 @@ Rendered from `lib/core/widgets/fault_band.dart` by `test/design_catalog/fault_b
 | `.unreachable` | error | `cloud_off_rounded` | *TrueNAS did not answer. Everything below is what it said last.* — with `since` ≥ 1 minute: *TrueNAS has not answered for 6 minutes. …* | Retry · Settings (optional) |
 | `.fault` | warning (`failureTone`) | the reason's (`failureIcon`: `key_off`, `report`, `timer_off`, …) | The classified headline, then the same consequence: *Radarr answered but refused the key. Everything below is what it said last.* | Retry · the remedy (*Paste the key again*) or Settings (optional) |
 | `.section` | error | `link_off_rounded` | The caller's own sentence, naming which source inside the service did not answer and what is missing | Retry · Settings (optional) |
+| `.partial` | warning | `playlist_remove_rounded` | The caller's own sentence, saying how much of a paged or merged read arrived: *Seerr returned 50 of 300 users; later pages are unavailable.* Amber, never red — the service just answered | Retry only |
 | `.stale` | warning | `history_toggle_off_rounded` | *These figures are 6 min ago.* + the caller's `detail`; under a minute, *These figures have stopped updating.* + `detail` | Refresh only, no dismiss |
 | `.offlinePush` | error | `cloud_off_rounded` | *Radarr stopped answering while this page was open. Everything here is the last render; a write will fail until it is back.* | Retry · Open Radarr (optional) |
 
@@ -27,7 +28,7 @@ Rendered from `lib/core/widgets/fault_band.dart` by `test/design_catalog/fault_b
 
 ## The consumer provides
 
-The service name (or, for `.section`, the whole sentence), the stale `age` and `detail`, and the callbacks. Actions are a label and a callback (`FaultBandAction`), never a widget, so a caller cannot restyle the verb. `primaryAction` is always present — a band with nothing to do about it should not be on screen; `secondaryAction` is `null` on `.stale`.
+The service name (or, for `.section` and `.partial`, the whole sentence), the stale `age` and `detail`, and the callbacks. Actions are a label and a callback (`FaultBandAction`), never a widget, so a caller cannot restyle the verb. `primaryAction` is always present — a band with nothing to do about it should not be on screen; `secondaryAction` is `null` on `.stale`.
 
 ## Semantics
 
