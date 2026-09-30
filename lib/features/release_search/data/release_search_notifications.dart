@@ -101,6 +101,18 @@ class ReleaseSearchNotifications {
   static const _androidChannelDescription =
       'Tells you when a background release search has finished.';
 
+  /// The status-bar icon: `android/app/src/main/res/drawable/ic_stat_cupola.xml`,
+  /// kept through release shrinking by `res/raw/keep.xml`.
+  ///
+  /// It used to be `@mipmap/ic_launcher`, which is wrong twice. Android draws a
+  /// small icon as an alpha mask, so a full-colour launcher icon is a white
+  /// blob; and this app's launcher icon is `cupola_icon` — there has been no
+  /// `ic_launcher` since the icons were regenerated. The plugin refuses to
+  /// initialise with an icon it cannot find, and a notification with no small
+  /// icon cannot post, so on Android none ever did.
+  @visibleForTesting
+  static const androidSmallIcon = 'ic_stat_cupola';
+
   /// Deliberately no `zonedSchedule` anywhere in this class — that single
   /// omission is what keeps the Android manifest at one permission and clear of
   /// the Play-restricted exact-alarm permissions.
@@ -113,7 +125,7 @@ class ReleaseSearchNotifications {
     try {
       await _plugin.initialize(
         settings: const InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          android: AndroidInitializationSettings(androidSmallIcon),
           // Not requested here: asking at launch, before the user has expressed
           // any interest, is the pattern this deliberately avoids.
           iOS: DarwinInitializationSettings(

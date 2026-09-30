@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Status-bar (small) icon for Cupola's notifications. Android draws a small
+  icon as an alpha mask, so it is one white shape on transparent: the mark's
+  six panes and its oculus as a ring, as the themed launcher icon composes it
+  (scripts/icons/masters.py, mono()), except that the ring is drawn heavier
+  (56 units instead of 36) so it still reads at status-bar size. Geometry is
+  the mark's own, rotated and scaled into a 22dp live area of the 24dp grid.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M13.288,6.004L16.549,7.887Q17.201,8.263 17.803,7.811L20.529,5.767Q21.131,5.315 20.479,4.939L13.876,1.126Q13.224,0.749 13.133,1.497L12.726,4.88Q12.636,5.628 13.288,6.004ZM17.836,10.117L17.836,13.883Q17.836,14.636 18.529,14.932L21.662,16.27Q22.355,16.566 22.355,15.813L22.355,8.187Q22.355,7.434 21.662,7.73L18.529,9.068Q17.836,9.364 17.836,10.117ZM16.549,16.113L13.288,17.996Q12.636,18.372 12.726,19.12L13.133,22.503Q13.224,23.251 13.876,22.874L20.479,19.061Q21.131,18.685 20.529,18.233L17.803,16.189Q17.201,15.737 16.549,16.113ZM10.712,17.996L7.451,16.113Q6.799,15.737 6.197,16.189L3.471,18.233Q2.869,18.685 3.521,19.061L10.124,22.874Q10.776,23.251 10.867,22.503L11.274,19.12Q11.364,18.372 10.712,17.996ZM6.164,13.883L6.164,10.117Q6.164,9.364 5.471,9.068L2.338,7.73Q1.645,7.434 1.645,8.187L1.645,15.813Q1.645,16.566 2.338,16.27L5.471,14.932Q6.164,14.636 6.164,13.883ZM7.451,7.887L10.712,6.004Q11.364,5.628 11.274,4.88L10.867,1.497Q10.776,0.749 10.124,1.126L3.521,4.939Q2.869,5.315 3.471,5.767L6.197,7.811Q6.799,8.263 7.451,7.887ZM7.246,12A4.754,4.754 0 1,0 16.754,12A4.754,4.754 0 1,0 7.246,12ZM8.564,12A3.436,3.436 0 1,0 15.436,12A3.436,3.436 0 1,0 8.564,12Z" />
+</vector>
