@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -341,7 +343,7 @@ void main() {
 
     await _pumpScreen(tester, container);
 
-    expect(find.bySemanticsLabel('Sonarr, did not respond'), findsOneWidget);
+    expect(find.bySemanticsLabel('Sonarr, did not answer'), findsOneWidget);
 
     await _closeScreen(tester, container);
   });
@@ -425,6 +427,6 @@ class _ThrowingQueueSonarrService extends FakeSonarrService {
   Future<List<dynamic>> getQueue({
     Map<String, dynamic>? queryParameters,
   }) async {
-    throw Exception('sonarr unreachable');
+    throw const SocketException('Connection refused');
   }
 }

@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,7 +33,10 @@ void main() {
       // not be asked. `ServiceKpi.unavailable` is the answer.
       await _pump(
         tester,
-        AsyncValue.error(Exception('unreachable'), StackTrace.empty),
+        AsyncValue.error(
+          const SocketException('Connection refused'),
+          StackTrace.empty,
+        ),
       );
 
       expect(findLine(ServiceKpi.unavailableValue), findsOneWidget);
@@ -41,10 +47,37 @@ void main() {
     ) async {
       await _pump(
         tester,
-        AsyncValue.error(Exception('unreachable'), StackTrace.empty),
+        AsyncValue.error(
+          const SocketException('Connection refused'),
+          StackTrace.empty,
+        ),
       );
 
-      expect(findLineContaining('NOT ANSWERING'), findsOneWidget);
+      expect(findLineContaining('DID NOT ANSWER'), findsOneWidget);
+    });
+
+    testWidgets('a refusal says it was refused, never that nothing answered', (
+      tester,
+    ) async {
+      // P6's Plex: the header says Answering, and the rail used to say "not
+      // answering" beside it about the same server.
+      await _pump(
+        tester,
+        AsyncValue.error(
+          DioException(
+            requestOptions: RequestOptions(path: '/status/sessions'),
+            type: DioExceptionType.badResponse,
+            response: Response<dynamic>(
+              requestOptions: RequestOptions(path: '/status/sessions'),
+              statusCode: 401,
+            ),
+          ),
+          StackTrace.empty,
+        ),
+      );
+
+      expect(findLineContaining('REFUSED THE KEY'), findsOneWidget);
+      expect(findLineContaining('ANSWER'), findsNothing);
     });
 
     testWidgets('announces the absence as a word, not as a dash', (
@@ -53,7 +86,10 @@ void main() {
       final handle = tester.ensureSemantics();
       await _pump(
         tester,
-        AsyncValue.error(Exception('unreachable'), StackTrace.empty),
+        AsyncValue.error(
+          const SocketException('Connection refused'),
+          StackTrace.empty,
+        ),
       );
 
       expect(find.bySemanticsLabel(RegExp('unavailable')), findsOneWidget);

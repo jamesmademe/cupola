@@ -10,6 +10,42 @@ import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/truenas/domain/truenas_version.dart';
 
 void main() {
+  group('writeFailureReason', () {
+    test('a refused write says it answered and that nothing changed', () {
+      expect(
+        writeFailureReason(
+          ServiceKey.seerr,
+          const ClassifiedFailure(ServiceFailureReason.unauthorized),
+        ),
+        'Seerr answered but refused the key. Nothing changed.',
+      );
+    });
+
+    test('"did not answer" only when nothing did', () {
+      expect(
+        writeFailureReason(
+          ServiceKey.radarr,
+          const ClassifiedFailure(ServiceFailureReason.unreachable),
+        ),
+        'Radarr did not answer.',
+      );
+      expect(
+        writeFailureReason(
+          ServiceKey.radarr,
+          const ClassifiedFailure(ServiceFailureReason.serverError),
+        ),
+        'Radarr answered with an error.',
+      );
+      for (final reason in ServiceFailureReason.values) {
+        expect(
+          writeFailureReason(ServiceKey.sonarr, ClassifiedFailure(reason)),
+          isNot(contains('unreachable')),
+          reason: reason.name,
+        );
+      }
+    });
+  });
+
   group('transportWarningFor', () {
     test('a TrueNAS address over http:// is refused while it is typed', () {
       expect(

@@ -4,6 +4,7 @@ import 'package:cupola/core/lifecycle/gated_poll.dart'; // ignore: implementatio
 import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
@@ -122,8 +123,19 @@ class ActivityServiceResult {
   /// Configured, asked, and answered.
   bool get reached => configured && error == null;
 
-  /// Configured, asked, and did not answer.
+  /// Configured, asked, and failed — silent or refused; see [didNotAnswer].
   bool get failed => configured && error != null;
+
+  /// Why it failed, classified. Null when it did not.
+  ServiceFailureReason? get failureReason =>
+      failed ? classifyConnectionFailure(error) : null;
+
+  /// Failed because nothing answered — the red case. A connection that
+  /// answered with a refusal or a fault failed too, and is amber.
+  bool get didNotAnswer {
+    final reason = failureReason;
+    return reason != null && failureDidNotAnswer(reason);
+  }
 }
 
 /// A whole feed load: the merged items plus what happened to each service.

@@ -15,6 +15,8 @@ import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The Seerr requests list, reached from `/activity/discover`.
 ///
@@ -316,11 +318,13 @@ class _RequestCard extends ConsumerWidget {
       if (context.mounted) SnackBarHelper.success(context, successMessage);
     } on SeerrRequestConflict catch (conflict) {
       if (context.mounted) SnackBarHelper.error(context, '$conflict');
-    } catch (_) {
+    } catch (error) {
+      // Why, in the classified words: "Seerr did not answer" only when
+      // nothing did; a refusal says it answered and that nothing changed.
       if (context.mounted) {
         SnackBarHelper.error(
           context,
-          '$failureMessage. Seerr may be unreachable.',
+          '$failureMessage. ${writeFailureReason(ServiceKey.seerr, error)}',
         );
       }
       return;

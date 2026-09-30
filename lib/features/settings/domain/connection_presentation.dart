@@ -204,6 +204,26 @@ FailurePresentation describeFailure(
   );
 }
 
+/// Why a write to [service] failed, as the second sentence of its toast:
+/// `Could not decline this request. Seerr answered but refused the key.
+/// Nothing changed.`
+///
+/// The toasts used to guess — "The service may be unreachable." — for every
+/// failure, which blamed reachability for a refusal and sent the user to check
+/// a server that had just answered. A refused write says that nothing changed,
+/// because that is the one thing the user needs to know about it.
+String writeFailureReason(
+  ServiceKey service,
+  Object? error, {
+  String? subject,
+}) {
+  final reason = classifyConnectionFailure(error);
+  final headline = describeFailure(service, reason, subject: subject).headline;
+  return reason == ServiceFailureReason.unauthorized
+      ? '$headline. Nothing changed.'
+      : '$headline.';
+}
+
 /// What an address field owes [service] before anything is sent, when the
 /// scheme itself is the problem — null when there is nothing specific to say
 /// (the general `UrlUtils.cleartextWarning` still applies).

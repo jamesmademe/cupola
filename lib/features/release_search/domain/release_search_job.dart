@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/release_search/domain/release_search_reach.dart';
 import 'package:cupola/features/release_search/domain/release_search_target.dart';
@@ -59,6 +60,10 @@ enum ReleaseSearchFailureKind {
 
   /// The service itself answered with an error, typically an indexer throwing.
   serverError,
+
+  /// The service answered and refused the key (401/403). Nothing was searched;
+  /// the fix is the key in the form, not the network.
+  refused,
 
   /// The app was sent to the background while the search was in flight, and the
   /// request did not survive it. Phase 1 cannot prevent this.
@@ -336,10 +341,25 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
     );
   }
 
+  // An answer that says no. It used to fall through to "Could not reach the
+  // service", which blamed the network for a key the server had just refused.
+  if (status == 401 || status == 403) {
+    return ReleaseSearchFailure(
+      kind: ReleaseSearchFailureKind.refused,
+      headline: 'The service answered but refused the key.',
+      diagnosis:
+          'Nothing was searched. Paste the key again in Settings, then search '
+          'again.',
+      detail: 'HTTP $status',
+      gateway: gateway,
+    );
+  }
+
+  // A connection that never completed is not a timeout of the search: nothing
+  // answered at all, and that is the classified fallback below.
   final isTimeout =
       error.type == DioExceptionType.receiveTimeout ||
-      error.type == DioExceptionType.sendTimeout ||
-      error.type == DioExceptionType.connectionTimeout;
+      error.type == DioExceptionType.sendTimeout;
 
   // Only a reach that actually dies with the app may blame backgrounding.
   // On [ReleaseSearchReach.beyondTheApp] the native task keeps running through
@@ -410,11 +430,24 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
     );
   }
 
+  // Everything else, in the classified words. "Did not answer" only when
+  // nothing did; an answer Cupola cannot use (a 404, a certificate, a reply
+  // nobody can read) says what it was.
+  final reason = classifyConnectionFailure(error);
+  if (failureDidNotAnswer(reason)) {
+    return ReleaseSearchFailure(
+      kind: ReleaseSearchFailureKind.connectionLost,
+      headline: 'The service did not answer.',
+      diagnosis: 'Check the address and that the instance is running.',
+      detail: error.type.name,
+    );
+  }
   return ReleaseSearchFailure(
-    kind: ReleaseSearchFailureKind.connectionLost,
-    headline: 'Could not reach the service.',
-    diagnosis: 'Check the address and that the instance is running.',
-    detail: error.type.name,
+    kind: ReleaseSearchFailureKind.unknown,
+    headline: '${failureHeadline(reason, subject: 'The service')}.',
+    diagnosis: connectionFailureSentence(error),
+    detail: status == null ? error.type.name : 'HTTP $status',
+    gateway: gateway,
   );
 }
 

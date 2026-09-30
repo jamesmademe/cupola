@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -309,7 +311,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('did not respond'), findsOneWidget);
+    expect(find.text('Sonarr did not answer'), findsOneWidget);
+    expect(find.textContaining('did not respond'), findsNothing);
 
     // Scoped to the band: the service strip draws the same glyph on the tile
     // of a service that did not answer, and it is toned from the same rule.
@@ -341,6 +344,52 @@ void main() {
         ),
       ),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('a connection that refused the key is an amber fault with its '
+      'remedy, never "did not answer"', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...await settingsScopeOverrides(configured: activityServiceKeys),
+          requestsProvider.overrideWith((ref) async => const <SeerrRequest>[]),
+          seerrServiceProvider.overrideWith((ref) => FakeSeerrService()),
+          radarrServiceProvider.overrideWith(
+            (ref) => _ActivityRadarrService(
+              queue: const [
+                {
+                  'title': 'Furiosa.2024.2160p.WEB-DL-GROUP',
+                  'status': 'downloading',
+                  'size': 100,
+                  'sizeleft': 25,
+                  'movie': {'title': 'Furiosa', 'year': 2024},
+                },
+              ],
+            ),
+          ),
+          sonarrServiceProvider.overrideWith((ref) => _RefusingSonarrService()),
+          lidarrServiceProvider.overrideWith((ref) => FakeLidarrService()),
+        ],
+        child: const MaterialApp(home: GlobalActivityScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sonarr answered but refused the key'), findsOneWidget);
+    expect(find.textContaining('did not answer'), findsNothing);
+    expect(find.text('Paste the key again'), findsOneWidget);
+
+    final glyph = find.descendant(
+      of: find.byType(AppCard),
+      matching: find.byIcon(Icons.key_off_rounded),
+    );
+    expect(glyph, findsOneWidget);
+    final colorScheme = Theme.of(tester.element(glyph)).colorScheme;
+    expect(
+      tester.widget<Icon>(glyph).color,
+      statusToneColor(colorScheme, StatusTone.warning),
     );
   });
 
@@ -848,7 +897,22 @@ class _SilentSonarrService extends FakeSonarrService {
   @override
   Future<List<dynamic>> getQueue({
     Map<String, dynamic>? queryParameters,
-  }) async => throw Exception('Connection refused');
+  }) async => throw const SocketException('Connection refused');
+}
+
+/// A Sonarr that answered and refused the key.
+class _RefusingSonarrService extends FakeSonarrService {
+  @override
+  Future<List<dynamic>> getQueue({
+    Map<String, dynamic>? queryParameters,
+  }) async => throw DioException(
+    requestOptions: RequestOptions(path: '/api/v3/queue'),
+    type: DioExceptionType.badResponse,
+    response: Response<dynamic>(
+      requestOptions: RequestOptions(path: '/api/v3/queue'),
+      statusCode: 401,
+    ),
+  );
 }
 
 class _ActivityRadarrService extends FakeRadarrService {

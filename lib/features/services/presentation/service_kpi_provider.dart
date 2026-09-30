@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
@@ -369,7 +371,13 @@ ServiceKpi _figure({
 /// that holds it (the rail is two lines tall by construction), so putting it on
 /// all four would leave a strip of four identical reasons and no way to tell
 /// which absence is which.
-String _notAnswering(ServiceKey service) => '${service.title} not answering';
+///
+/// In the classified words, never a guess: "Radarr not answering" was printed
+/// for a refused key too, under a header that had just said Answering. A read
+/// that failed without saying why is `Did not complete`, not silence.
+String _notAnswering(ServiceKey service, Object? error) =>
+    '${service.title} · '
+    '${failureLabel(classifyConnectionFailure(error), credential: refusedCredentialOf(service))}';
 
 /// The shared KPI set for a media server, identical for Jellyfin and Plex.
 ///
@@ -493,12 +501,16 @@ Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
   final List<RadarrMovie> movies;
   try {
     movies = await ref.watch(radarrKpiLibraryProvider.future);
-  } catch (_) {
+  } catch (error) {
     // The queue figure goes too. It comes off the same server through
     // `radarrQueueSnapshotProvider`, which degrades to an empty snapshot — so
     // once the library has told us the server is dark, `Queue 0` is the same
     // fabrication wearing a different label.
-    return _radarrKpisFrom(null, null, note: _notAnswering(ServiceKey.radarr));
+    return _radarrKpisFrom(
+      null,
+      null,
+      note: _notAnswering(ServiceKey.radarr, error),
+    );
   }
   final queued = await ref.watch(radarrQueuedMovieIdsProvider.future);
   return _radarrKpisFrom(movies, queued.length);
@@ -515,8 +527,12 @@ Future<List<ServiceKpi>> _radarrKpisFor(Ref ref, String instanceId) async {
     movies = await ref
         .watch(radarrServiceForProvider(instanceId))
         .getMoviesOrThrow();
-  } catch (_) {
-    return _radarrKpisFrom(null, null, note: _notAnswering(ServiceKey.radarr));
+  } catch (error) {
+    return _radarrKpisFrom(
+      null,
+      null,
+      note: _notAnswering(ServiceKey.radarr, error),
+    );
   }
   final queue = await ref.watch(
     radarrQueueSnapshotForProvider(instanceId).future,
@@ -565,8 +581,8 @@ Future<List<ServiceKpi>> _sonarrKpis(Ref ref) async {
     // which swallows its own failure into `[]`, and every figure below it was
     // a confident zero for a question nobody answered.
     return _sonarrKpisFrom(await ref.watch(sonarrKpiLibraryProvider.future));
-  } catch (_) {
-    return _sonarrKpisFrom(null, note: _notAnswering(ServiceKey.sonarr));
+  } catch (error) {
+    return _sonarrKpisFrom(null, note: _notAnswering(ServiceKey.sonarr, error));
   }
 }
 
@@ -576,8 +592,8 @@ Future<List<ServiceKpi>> _sonarrKpisFor(Ref ref, String instanceId) async {
     return _sonarrKpisFrom(
       await ref.watch(sonarrServiceForProvider(instanceId)).getSeriesOrThrow(),
     );
-  } catch (_) {
-    return _sonarrKpisFrom(null, note: _notAnswering(ServiceKey.sonarr));
+  } catch (error) {
+    return _sonarrKpisFrom(null, note: _notAnswering(ServiceKey.sonarr, error));
   }
 }
 
@@ -623,8 +639,8 @@ Future<List<ServiceKpi>> _lidarrKpis(Ref ref) async {
   try {
     // [lidarrKpiLibraryProvider], not `musicProvider`: see [_radarrKpis].
     return _lidarrKpisFrom(await ref.watch(lidarrKpiLibraryProvider.future));
-  } catch (_) {
-    return _lidarrKpisFrom(null, note: _notAnswering(ServiceKey.lidarr));
+  } catch (error) {
+    return _lidarrKpisFrom(null, note: _notAnswering(ServiceKey.lidarr, error));
   }
 }
 
@@ -634,8 +650,8 @@ Future<List<ServiceKpi>> _lidarrKpisFor(Ref ref, String instanceId) async {
     return _lidarrKpisFrom(
       await ref.watch(lidarrServiceForProvider(instanceId)).getArtistsOrThrow(),
     );
-  } catch (_) {
-    return _lidarrKpisFrom(null, note: _notAnswering(ServiceKey.lidarr));
+  } catch (error) {
+    return _lidarrKpisFrom(null, note: _notAnswering(ServiceKey.lidarr, error));
   }
 }
 
@@ -985,10 +1001,12 @@ Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
   // over a queue endpoint that does not is the ordinary case on a Readarr
   // mid-upgrade — so each figure says for itself whether it was answered.
   List<ReadarrAuthor>? authors;
+  Object? authorsError;
   try {
     authors = await ref.watch(readarrKpiLibraryProvider.future);
-  } catch (_) {
+  } catch (error) {
     authors = null;
+    authorsError = error;
   }
   int? queued;
   try {
@@ -997,7 +1015,7 @@ Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
     queued = null;
   }
 
-  return _readarrKpisFrom(authors, queued);
+  return _readarrKpisFrom(authors, queued, error: authorsError);
 }
 
 Future<List<ServiceKpi>> _readarrKpisFor(Ref ref, String instanceId) async {
@@ -1007,19 +1025,29 @@ Future<List<ServiceKpi>> _readarrKpisFor(Ref ref, String instanceId) async {
   // answering costs one timeout here instead of two back to back. The fallback
   // is attached at construction, which is what keeps either failure from
   // escaping as an unhandled async error while the other is still in flight.
+  Object? authorsError;
   final authorsFuture = service.getAuthorsOrThrow().then<List<ReadarrAuthor>?>(
     (value) => value,
-    onError: (_) => null,
+    onError: (Object error) {
+      authorsError = error;
+      return null;
+    },
   );
   final queueFuture = service.getQueue().then<int?>(
     (value) => value.length,
     onError: (_) => null,
   );
 
-  return _readarrKpisFrom(await authorsFuture, await queueFuture);
+  final authors = await authorsFuture;
+  return _readarrKpisFrom(authors, await queueFuture, error: authorsError);
 }
 
-List<ServiceKpi> _readarrKpisFrom(List<ReadarrAuthor>? authors, int? queued) {
+/// [error] is why the library read failed, for the note; null when it did not.
+List<ServiceKpi> _readarrKpisFrom(
+  List<ReadarrAuthor>? authors,
+  int? queued, {
+  Object? error,
+}) {
   var books = 0;
   var have = 0;
   for (final a in authors ?? const <ReadarrAuthor>[]) {
@@ -1033,7 +1061,7 @@ List<ServiceKpi> _readarrKpisFrom(List<ReadarrAuthor>? authors, int? queued) {
       label: 'Authors',
       value: answered ? '${authors.length}' : null,
       icon: Icons.person_rounded,
-      note: answered ? null : _notAnswering(ServiceKey.readarr),
+      note: answered ? null : _notAnswering(ServiceKey.readarr, error),
     ),
     _figure(
       label: 'Books',

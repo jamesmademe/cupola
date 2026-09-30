@@ -19,8 +19,8 @@ The rule is the app's tone rule. A backlog figure (Missing, Pending) is `StatusT
 ## States
 
 - **Loading** — four skeleton cards, 100 wide with no shadow: a 44 × 16 and a 64 × 9 shimmer line, 6 apart.
-- **Unavailable figure** — `ServiceKpi.unavailable`: the figure is an em dash in `onSurfaceVariant`, the glyph goes `onSurfaceVariant`, and the note (e.g. *Radarr not answering*) replaces the label. The rail keeps the same cards, so a reader sees which figure is missing. Never `0`.
-- **Source failed** — one unavailable card replaces the rail: glyph `remove_rounded`, label *Figures*, note *not answering*.
+- **Unavailable figure** — `ServiceKpi.unavailable`: the figure is an em dash in `onSurfaceVariant`, the glyph goes `onSurfaceVariant`, and the note replaces the label — the service and the classified reason, *Radarr · Did not answer*, *Radarr · Refused the key*. The rail keeps the same cards, so a reader sees which figure is missing. Never `0`.
+- **Source failed** — one unavailable card replaces the rail: glyph `remove_rounded`, label *Figures*, note the classified reason (`failureLabel`): *Did not answer* only when nothing answered, *Refused the key*, *Timed out*, *Did not complete* otherwise.
 - **Not configured** (an error containing `not configured`) or **no figures** — the rail collapses to nothing; the page below answers for it.
 
 ## The consumer provides
@@ -29,7 +29,7 @@ An `AsyncValue<List<ServiceKpi>>` (label, value, icon, optional tone, optional n
 
 ## Semantics
 
-Each card is one container node speaking `ServiceKpi.semanticLabel` — *Movies: 1,284*, or *Movies: unavailable, Radarr not answering*; the glyph, figure and eyebrow are excluded.
+Each card is one container node speaking `ServiceKpi.semanticLabel` — *Movies: 1,284*, or *Movies: unavailable, Radarr · Did not answer*; the glyph, figure and eyebrow are excluded.
 
 ## Do / don't
 

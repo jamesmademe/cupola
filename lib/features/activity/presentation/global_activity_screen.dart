@@ -12,9 +12,11 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
@@ -35,6 +37,7 @@ import 'package:cupola/features/stream/presentation/widgets/stream_activity_sect
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_searches_body.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The three top-level activity buckets. Each bucket exposes a contextual
@@ -1311,31 +1314,108 @@ class _StackHealthStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final failures = feed.failures.toList(growable: false);
+    if (failures.isEmpty) return const SizedBox.shrink();
+
+    // Classified before painted: a connection that did not answer and one that
+    // answered with a refusal are two bands, in two tones, with two remedies.
+    // This band used to say "did not respond" in red for a 403.
+    final silent = failures
+        .where((r) => r.didNotAnswer)
+        .toList(growable: false);
+    final faulted = failures
+        .where((r) => !r.didNotAnswer)
+        .toList(growable: false);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (silent.isNotEmpty) _silentBand(context, silent),
+        if (faulted.isNotEmpty) _faultBand(context, faulted),
+      ],
+    );
+  }
+
+  /// The noun that follows a count: two failures of one service are two
+  /// connections, not two services.
+  static String _noun(List<ActivityServiceResult> results) =>
+      results.any((r) => r.label.isNotEmpty) ? 'connections' : 'services';
+
+  Widget _silentBand(BuildContext context, List<ActivityServiceResult> failed) {
+    // Named by connection, never by service alone: "Sonarr did not answer" is
+    // a false statement while the other Sonarr is answering, and it leaves the
+    // user with no way to know which server to go and look at.
+    final names = failed.map((r) => r.title).join(', ');
+    return _band(
+      context,
+      // The one place in Activity that earns red. Every other fault on this
+      // page — a stalled transfer, a failed grab, a refused key — is a service
+      // answering and telling us something went wrong, which is amber. This
+      // band says a connection did not answer at all, and that is the whole of
+      // what red means in this app.
+      tone: StatusTone.error,
+      icon: failureIcon(ServiceFailureReason.unreachable),
+      title: failed.length == 1
+          ? failureHeadline(ServiceFailureReason.unreachable, subject: names)
+          : '${failed.length} ${_noun(failed)} did not answer',
+      body: failed.length == 1
+          ? 'This list is incomplete, anything from $names is missing from '
+                'it.'
+          : 'This list is incomplete. Nothing came back from $names.',
+      actionLabel: 'Retry',
+      onAction: onRetry,
+    );
+  }
+
+  Widget _faultBand(BuildContext context, List<ActivityServiceResult> failed) {
+    final names = failed.map((r) => r.title).join(', ');
+    final single = failed.length == 1 ? failed.single : null;
+    final presentation = single == null
+        ? null
+        : describeFailure(
+            single.service,
+            single.failureReason ?? ServiceFailureReason.unknown,
+            subject: single.title,
+          );
+    // The remedy, when the form holds it (`Paste the key again`), leads to that
+    // connection's own form; otherwise Retry, which is what a 5xx or a timeout
+    // asks for.
+    final remedy = presentation?.remedy;
+    return _band(
+      context,
+      tone: StatusTone.warning,
+      icon: presentation?.icon ?? failureIcon(ServiceFailureReason.unknown),
+      title:
+          presentation?.headline ??
+          '${failed.length} ${_noun(failed)} answered with a fault',
+      body: 'This list is incomplete, anything from $names is missing from it.',
+      actionLabel: remedy ?? 'Retry',
+      onAction: remedy == null || single == null
+          ? onRetry
+          : () => context.push(
+              ServiceRoutes.settingsForConnection(
+                single.service,
+                single.instanceId,
+              ),
+            ),
+    );
+  }
+
+  Widget _band(
+    BuildContext context, {
+    required StatusTone tone,
+    required IconData icon,
+    required String title,
+    required String body,
+    required String actionLabel,
+    required VoidCallback onAction,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final failed = feed.failures.toList(growable: false);
-    if (failed.isEmpty) return const SizedBox.shrink();
-
-    // Named by connection, never by service alone: "Sonarr did not respond"
-    // is a false statement while the other Sonarr is answering, and it leaves
-    // the user with no way to know which server to go and look at.
-    final names = failed.map((r) => r.title).join(', ');
-    // And the noun follows: two failures of one service are two connections,
-    // not two services.
-    final noun = failed.any((r) => r.label.isNotEmpty)
-        ? 'connections'
-        : 'services';
-
-    // The one place in Activity that earns red. Every other fault on this page
-    // — a stalled transfer, a failed grab, a failed import — is a service
-    // answering and telling us something went wrong, which is amber. This band
-    // says a connection did not answer at all, and that is the whole of what
-    // red means in this app. It was amber, which put it in the same tone as the
-    // rows it is warning about.
-    //
     // The fill and border are walked against the surface the card composites
     // on, not the raw token: error red is 3.74:1 on paper.
-    final alarm = statusToneColor(colorScheme, StatusTone.error);
+    final alarm = statusToneColor(colorScheme, tone);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -1363,24 +1443,19 @@ class _StackHealthStrip extends StatelessWidget {
               decoration: BoxDecoration(color: alarm, shape: BoxShape.circle),
             ),
             const SizedBox(width: AppSpacing.sm),
-            Icon(Icons.cloud_off_rounded, size: 20, color: alarm),
+            Icon(icon, size: 20, color: alarm),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    failed.length == 1
-                        ? '$names did not respond'
-                        : '${failed.length} $noun did not respond',
+                    title,
                     style: theme.textTheme.titleSmall?.weight(FontWeight.w600),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    failed.length == 1
-                        ? 'This list is incomplete, anything from $names is '
-                              'missing from it.'
-                        : 'This list is incomplete. No response from $names.',
+                    body,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -1389,7 +1464,7 @@ class _StackHealthStrip extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onAction, child: Text(actionLabel)),
           ],
         ),
       ),
@@ -1458,6 +1533,7 @@ class _ServiceStrip extends StatelessWidget {
               // saying "no idea" would hide the rows already on screen. The
               // health strip is what reports the shortfall, by connection.
               failed: _allFailedFor(results, service),
+              silent: _allSilentFor(results, service),
               selected: selected == service,
               onTap: () => onSelected(service),
             ),
@@ -1511,12 +1587,28 @@ bool _allFailedFor(List<ActivityServiceResult> results, ServiceKey service) {
   return any;
 }
 
+/// Whether every configured connection of [service] failed **because nothing
+/// answered** — the only failure the tile paints red.
+bool _allSilentFor(List<ActivityServiceResult> results, ServiceKey service) {
+  var any = false;
+  for (final result in results) {
+    if (result.service != service || !result.configured) continue;
+    if (!result.didNotAnswer) return false;
+    any = true;
+  }
+  return any;
+}
+
 class _ServiceTile extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color accent;
   final int? count;
   final bool failed;
+
+  /// With [failed]: every failure was silence. False when at least one
+  /// connection answered with a refusal or a fault, which is amber.
+  final bool silent;
   final bool selected;
   final VoidCallback onTap;
 
@@ -1528,6 +1620,7 @@ class _ServiceTile extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.failed = false,
+    this.silent = false,
   });
 
   @override
@@ -1535,12 +1628,15 @@ class _ServiceTile extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
-    // The same fact the health band reports, so the same ink. `failed` here
-    // means every connection of this service was unreachable — silence, which
-    // is red — and it was amber, which is the tone reserved for a service that
-    // answered and said something was wrong.
+    // The same fact the health band reports, so the same ink. `failed` means
+    // every connection of this service failed: red when all of them were
+    // silent, amber when one answered with a refusal or a fault — a refused
+    // key is the service speaking, not a dark box.
     final tone = failed
-        ? statusToneColor(colorScheme, StatusTone.error)
+        ? statusToneColor(
+            colorScheme,
+            silent ? StatusTone.error : StatusTone.warning,
+          )
         : accent;
 
     // Selected borrows the nav bar's pill treatment — the app's established
@@ -1558,7 +1654,7 @@ class _ServiceTile extends StatelessWidget {
     final count = this.count;
     final countLabel = failed || count == null ? '—' : '$count';
     final spoken = failed
-        ? '$label, did not respond'
+        ? (silent ? '$label, did not answer' : '$label, answered with a fault')
         : count == null
         ? '$label, count unavailable'
         : '$label, $count ${count == 1 ? 'item' : 'items'}';

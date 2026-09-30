@@ -7,6 +7,8 @@ import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The write actions the Activity surfaces can perform on a queue or blocklist
 /// record.
@@ -91,6 +93,7 @@ class ActivityActions {
     await _run(
       context,
       ref,
+      service: serviceType.service,
       action: () => ref
           .read(connectionArrServiceProvider((serviceType, instanceId)))
           .removeFromQueue(
@@ -133,6 +136,7 @@ class ActivityActions {
     await _run(
       context,
       ref,
+      service: serviceType.service,
       action: () => ref
           .read(connectionArrServiceProvider((serviceType, instanceId)))
           .removeFromQueue(recordId, removeFromClient: true, blocklist: true),
@@ -164,6 +168,7 @@ class ActivityActions {
     await _run(
       context,
       ref,
+      service: serviceType.service,
       action: () => ref
           .read(connectionArrServiceProvider((serviceType, instanceId)))
           .deleteBlocklistItem(recordId),
@@ -200,6 +205,7 @@ class ActivityActions {
     await _run(
       context,
       ref,
+      service: ServiceKey.seerr,
       action: () => ref
           .read(seerrServiceForProvider(instanceId))
           .approveRequest(requestId),
@@ -233,6 +239,7 @@ class ActivityActions {
     await _run(
       context,
       ref,
+      service: ServiceKey.seerr,
       action: () => ref
           .read(seerrServiceForProvider(instanceId))
           .declineRequest(requestId),
@@ -251,6 +258,7 @@ class ActivityActions {
   static Future<void> _run(
     BuildContext context,
     WidgetRef ref, {
+    required ServiceKey service,
     required Future<void> Function() action,
     required String successMessage,
     required String failureMessage,
@@ -270,11 +278,13 @@ class ActivityActions {
       // The stale thing is the list on screen, so this falls through to the
       // refresh below instead of leaving a row the server no longer agrees with.
       if (context.mounted) SnackBarHelper.error(context, '$conflict');
-    } catch (_) {
+    } catch (error) {
+      // Why, in the classified words: a refusal is not an outage, and the
+      // toast used to guess "may be unreachable" for both.
       if (context.mounted) {
         SnackBarHelper.error(
           context,
-          '$failureMessage. The service may be unreachable.',
+          '$failureMessage. ${writeFailureReason(service, error)}',
         );
       }
       return;

@@ -6,6 +6,7 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/reel_motion.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
@@ -88,10 +89,15 @@ class ServiceKpiPeek extends StatelessWidget {
               // One card, not four blanks: the rail cannot know which figures
               // this service would have had, and inventing labels for them
               // would be a second fabrication on top of the first.
-              kpi: const ServiceKpi.unavailable(
+              //
+              // The note is the classified reason, not a guess: "not
+              // answering" under a header that had just said Answering was two
+              // contradicting facts about one server, when the figures had
+              // been refused, not unanswered.
+              kpi: ServiceKpi.unavailable(
                 label: 'Figures',
                 icon: Icons.remove_rounded,
-                note: 'not answering',
+                note: failureLabel(classifyConnectionFailure(error)),
               ),
               fallbackAccent: accent,
             ),

@@ -498,6 +498,35 @@ void main() {
       expect(failure.retryIsHarmful, isFalse);
     });
 
+    test('a 403 is a refusal, never "could not reach"', () {
+      for (final status in const [401, 403]) {
+        final failure = classify(withResponse(status));
+        expect(failure.kind, ReleaseSearchFailureKind.refused);
+        expect(failure.headline, 'The service answered but refused the key.');
+        expect(failure.headline, isNot(contains('reach')));
+        expect(failure.diagnosis, contains('Paste the key again'));
+      }
+    });
+
+    test('a connection nothing answered says so, in the red words', () {
+      for (final type in const [
+        DioExceptionType.connectionError,
+        DioExceptionType.connectionTimeout,
+      ]) {
+        final failure = classify(
+          DioException(requestOptions: RequestOptions(), type: type),
+        );
+        expect(failure.kind, ReleaseSearchFailureKind.connectionLost);
+        expect(failure.headline, 'The service did not answer.');
+      }
+    });
+
+    test('an answer Cupola cannot use names what it was', () {
+      final failure = classify(withResponse(404));
+      expect(failure.headline, 'The service is not at this address.');
+      expect(failure.headline, isNot(contains('did not answer')));
+    });
+
     test('a timeout at our own ceiling blames us, not the network', () {
       final failure = classify(
         DioException(
