@@ -41,9 +41,10 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// about the host that nothing supports. The split is [failureTone], the same
 /// one every other failure surface makes.
 ///
-/// The state is said in words as well as tone: the classified label (`Did not
-/// answer`, `Refused the key`) sits under the headline in the state's tone,
-/// which is the one place the tone reaches text. There is **no well** behind
+/// The state is said once, in words and tone together: the headline is set in
+/// the state's tone (`Radarr did not answer` in red, `Radarr answered but
+/// refused the key` in amber), and the sentence under it says why or what to
+/// do instead of repeating it. There is **no well** behind
 /// the glyph — the brand book's Presence Rule: a fault is a quiet line, and a
 /// red fill is the disease drawn as chrome. The glyph alone carries the tone,
 /// measured against the ground it sits on.
@@ -95,6 +96,16 @@ class AppErrorState extends StatelessWidget {
     return headline[0].toUpperCase() + headline.substring(1);
   }
 
+  /// The sentence under the headline, or null when it would say the same
+  /// thing again: a failure nobody can attribute has nothing to add to "The
+  /// request to Radarr did not complete" unless it carries its own words.
+  static String? _detail(Object error, ServiceFailureReason reason) {
+    final own = connectionFailureDetail(error);
+    if (own != null && own.trim().isNotEmpty) return own;
+    if (reason == ServiceFailureReason.unknown) return null;
+    return connectionFailureSentence(error);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -112,39 +123,35 @@ class AppErrorState extends StatelessWidget {
           children: [
             Icon(failureIcon(reason), size: compact ? 26 : 32, color: toneInk),
             const SizedBox(height: AppSpacing.lg),
-            // The classification's headline, never "Couldn't load Radarr":
-            // what happened, naming who, in the words every other failure
-            // surface uses.
+            // What happened, naming who, in the tone of the state — the
+            // brand book's fault sentence, said once: the classification's
+            // headline, never "Couldn't load Radarr", and red only when
+            // nothing answered.
             Text(
               _headline(reason),
-              style: theme.textTheme.titleMedium!.weight(FontWeight.w600),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            // The state in its tone: the one word on this leaf that is red,
-            // and only when nothing answered.
-            Text(
-              failureLabel(reason),
-              style: theme.textTheme.labelMedium
-                  ?.weight(FontWeight.w600)
+              style: theme.textTheme.titleMedium!
+                  .weight(FontWeight.w600)
                   .copyWith(color: toneInk),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppSpacing.xs),
-            // The detail, not the message: one step down the type ladder and a
-            // step dimmer, so the sentence above it is what gets read. Plain
-            // words from the classification — see the class comment.
-            Text(
-              connectionFailureSentence(error),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color:
-                    theme.extension<CupolaThemeColors>()?.dimText ??
-                    colorScheme.onSurfaceVariant,
+            // Why, or what to do: one step down the type ladder and a step
+            // dimmer. Plain words from the classification — see the class
+            // comment — and left out when they would only restate the
+            // headline.
+            if (_detail(error, reason) case final detail?) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                detail,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color:
+                      theme.extension<CupolaThemeColors>()?.dimText ??
+                      colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
+            ],
             if (onRetry != null) ...[
               const SizedBox(height: AppSpacing.xl),
               FilledButton.tonalIcon(

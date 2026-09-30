@@ -486,9 +486,11 @@ String connectionFailureSentence(Object? error) {
     ServiceFailureReason.unreachable =>
       'Nothing answered at the saved address. Check that the server is '
           'running and reachable from this device.',
-    ServiceFailureReason.timeout =>
-      'The server was reached but did not answer in time.',
-    ServiceFailureReason.tls => 'The HTTPS certificate could not be verified.',
+    // Said after a headline that already names the failure, so each adds what
+    // to do rather than restating it.
+    ServiceFailureReason.timeout => 'It may be busy. Retry in a moment.',
+    ServiceFailureReason.tls =>
+      'If its certificate changed, trust it again in its settings.',
     ServiceFailureReason.unauthorized =>
       'The server answered and refused the saved credentials. Check them in '
           'Settings.',

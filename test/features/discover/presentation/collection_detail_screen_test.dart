@@ -55,10 +55,10 @@ void main() {
         find.text('The request to Seerr did not complete'),
         findsOneWidget,
       );
-      // The exception's own words never reach the screen; the detail is
-      // the classified sentence (an unattributable failure here).
+      // The exception's own words never reach the screen, and a failure
+      // nobody can attribute adds no sentence that repeats the headline.
       expect(find.textContaining('Connection refused'), findsNothing);
-      expect(find.text('The request did not complete.'), findsOneWidget);
+      expect(find.text('The request did not complete.'), findsNothing);
       // The empty-title bar is gone: the failure wears the same chrome as the
       // loaded page.
       expect(find.byType(GlassAppBar), findsOneWidget);

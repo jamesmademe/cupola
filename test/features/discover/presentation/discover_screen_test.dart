@@ -147,7 +147,6 @@ void main() {
         find.text('The request to Seerr did not complete'),
         findsOneWidget,
       );
-      expect(find.text('Did not complete'), findsOneWidget);
       expect(find.text('No results'), findsNothing);
       expect(find.textContaining('Network error'), findsNothing);
       expect(find.text('Retry'), findsOneWidget);
@@ -165,7 +164,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Did not answer'), findsOneWidget);
+      expect(find.text('Seerr did not answer'), findsOneWidget);
       expect(find.text('No results'), findsNothing);
     });
 

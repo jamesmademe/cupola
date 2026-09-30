@@ -67,10 +67,10 @@ void main() {
         find.text('The request to Radarr did not complete'),
         findsOneWidget,
       );
-      // The exception's own words never reach the screen; the detail is
-      // the classified sentence (an unattributable failure here).
+      // The exception's own words never reach the screen, and a failure
+      // nobody can attribute adds no sentence that repeats the headline.
       expect(find.textContaining('Network failure'), findsNothing);
-      expect(find.text('The request did not complete.'), findsOneWidget);
+      expect(find.text('The request did not complete.'), findsNothing);
     });
 
     testWidgets('a failed load can be retried in place', (tester) async {

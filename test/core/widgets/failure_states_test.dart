@@ -199,8 +199,8 @@ void main() {
       await _pump(tester, AppErrorState(error: _refused()));
       final red = statusToneColor(scheme, StatusTone.error);
       expect(glyph(), red);
-      // The red words, in red, and never contracted.
-      expect(label('Did not answer'), red);
+      // The headline in the state's tone: the red words, never contracted.
+      expect(label('The server did not answer'), red);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await _pump(tester, AppErrorState(error: _status(401)));
@@ -213,8 +213,8 @@ void main() {
       );
       final amber = statusToneColor(scheme, StatusTone.warning);
       expect(glyph(), amber);
-      expect(label('Refused the key'), amber);
-      expect(find.text('Did not answer'), findsNothing);
+      expect(label('The server answered but refused the key'), amber);
+      expect(find.text('The server did not answer'), findsNothing);
     });
 
     testWidgets('no red well: the glyph alone carries the tone', (
@@ -243,7 +243,10 @@ void main() {
       final scheme = AppTheme.darkTheme().colorScheme;
       await _pump(tester, AppErrorState(error: StateError('parser')));
 
-      expect(find.text('Did not complete'), findsOneWidget);
+      expect(
+        find.text('The request to the server did not complete'),
+        findsOneWidget,
+      );
       expect(
         tester
             .widget<Icon>(

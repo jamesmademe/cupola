@@ -61,10 +61,10 @@ void main() {
       );
       // The diagnostics stay on screen — a self-hoster can act on them — just
       // not as the opening line.
-      // The exception's own words never reach the screen; the detail is
-      // the classified sentence (an unattributable failure here).
+      // The exception's own words never reach the screen, and a failure
+      // nobody can attribute adds no sentence that repeats the headline.
       expect(find.textContaining('Connection refused'), findsNothing);
-      expect(find.text('The request did not complete.'), findsOneWidget);
+      expect(find.text('The request did not complete.'), findsNothing);
     });
 
     testWidgets('gives a not-found item the empty-state voice', (tester) async {
