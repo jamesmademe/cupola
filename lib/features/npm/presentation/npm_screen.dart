@@ -19,6 +19,7 @@ import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Which part of the old Nginx Proxy Manager dashboard a page lists.
@@ -382,8 +383,13 @@ class _AccessListList extends ConsumerWidget {
                 .toList(growable: false),
           ),
     loading: () => const ListRowsShimmer(count: 3),
-    error: (_, _) => InlineErrorRetry(
-      message: 'Failed to load access lists',
+    error: (error, _) => InlineErrorRetry(
+      message: sectionFailureMessage(
+        ServiceKey.nginxProxyManager,
+        error,
+        consequence: 'the access lists are not shown',
+      ),
+      error: error,
       onRetry: () => ref.invalidate(npmAccessListsProvider),
     ),
   );
@@ -415,8 +421,13 @@ class _AuditLogList extends ConsumerWidget {
                 .toList(growable: false),
           ),
     loading: () => const ListRowsShimmer(count: 4),
-    error: (_, _) => InlineErrorRetry(
-      message: 'Failed to load the audit log',
+    error: (error, _) => InlineErrorRetry(
+      message: sectionFailureMessage(
+        ServiceKey.nginxProxyManager,
+        error,
+        consequence: 'the audit log is not shown',
+      ),
+      error: error,
       onRetry: () => ref.invalidate(npmAuditLogProvider),
     ),
   );
@@ -566,7 +577,12 @@ class _ProxyHostList extends ConsumerWidget {
       },
       loading: () => const ListRowsShimmer(count: 3),
       error: (error, _) => InlineErrorRetry(
-        message: 'Failed to load proxy hosts',
+        message: sectionFailureMessage(
+          ServiceKey.nginxProxyManager,
+          error,
+          consequence: 'the proxy hosts are not shown',
+        ),
+        error: error,
         onRetry: () => ref.invalidate(npmProxyHostsProvider),
       ),
     );
@@ -858,7 +874,12 @@ class _CertificateList extends ConsumerWidget {
       },
       loading: () => const ListRowsShimmer(count: 3),
       error: (error, _) => InlineErrorRetry(
-        message: 'Failed to load certificates',
+        message: sectionFailureMessage(
+          ServiceKey.nginxProxyManager,
+          error,
+          consequence: 'the certificates are not shown',
+        ),
+        error: error,
         onRetry: () => ref.invalidate(npmCertificatesProvider),
       ),
     );
@@ -1019,7 +1040,12 @@ class _SimpleHostList extends ConsumerWidget {
       },
       loading: () => const ListRowsShimmer(count: 3),
       error: (error, _) => InlineErrorRetry(
-        message: 'Failed to load the other hosts',
+        message: sectionFailureMessage(
+          ServiceKey.nginxProxyManager,
+          error,
+          consequence: 'the other hosts are not shown',
+        ),
+        error: error,
         onRetry: () => ref.invalidate(npmOtherHostsProvider),
       ),
     );

@@ -12,6 +12,8 @@ import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/domain/models/dataset.dart';
 import 'package:cupola/features/truenas/presentation/datasets/truenas_dataset_actions.dart';
 import 'package:cupola/features/truenas/presentation/datasets/truenas_dataset_providers.dart';
@@ -225,8 +227,13 @@ class _DetailBody extends ConsumerWidget {
           // above still reads, and the snapshot list is the one part that did
           // not answer. See `TrueNasDatasetApi.getSnapshots` for the upstream
           // change that makes this likely on TrueNAS 25.10.
-          error: (_, _) => InlineErrorRetry(
-            message: 'Failed to load snapshots',
+          error: (error, _) => InlineErrorRetry(
+            message: sectionFailureMessage(
+              ServiceKey.truenas,
+              error,
+              consequence: 'the snapshots are not shown',
+            ),
+            error: error,
             onRetry: () => ref.invalidate(truenasSnapshotsProvider(dataset.id)),
           ),
           data: (list) => list.isEmpty

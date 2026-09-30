@@ -12,6 +12,7 @@ import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// SABnzbd's Queue tab: the whole download queue, with the controls that act
@@ -155,7 +156,12 @@ Widget _queueRows(WidgetRef ref, AsyncValue<SabnzbdQueue> queueAsync) {
     loading: () => const SliverToBoxAdapter(child: ListRowsShimmer()),
     error: (error, _) => SliverToBoxAdapter(
       child: InlineErrorRetry(
-        message: 'Failed to load the queue',
+        message: sectionFailureMessage(
+          ServiceKey.sabnzbd,
+          error,
+          consequence: 'the queue is not shown',
+        ),
+        error: error,
         onRetry: () => ref.invalidate(sabnzbdQueueProvider),
       ),
     ),

@@ -10,6 +10,7 @@ import 'package:cupola/features/activity/presentation/widgets/activity_formatter
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 enum _SabnzbdHistoryFilter {
@@ -328,8 +329,13 @@ class _StatsSection extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: ServiceOverviewRowsSkeleton(rows: 3),
     ),
-    error: (_, _) => InlineErrorRetry(
-      message: 'Transfer volume is unavailable.',
+    error: (error, _) => InlineErrorRetry(
+      message: sectionFailureMessage(
+        ServiceKey.sabnzbd,
+        error,
+        consequence: 'the transfer volume is not shown',
+      ),
+      error: error,
       onRetry: onRetry,
     ),
     data: (stats) => Padding(
@@ -480,8 +486,13 @@ class _ServerConfigSection extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: ServiceOverviewRowsSkeleton(rows: 3),
     ),
-    error: (_, _) => InlineErrorRetry(
-      message: 'Server configuration did not load.',
+    error: (error, _) => InlineErrorRetry(
+      message: sectionFailureMessage(
+        ServiceKey.sabnzbd,
+        error,
+        consequence: 'its news servers are not shown',
+      ),
+      error: error,
       onRetry: onRetry,
     ),
     data: (servers) => Padding(

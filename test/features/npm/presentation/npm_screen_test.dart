@@ -242,7 +242,13 @@ void main() {
       screen: const NpmScreen.accessLists(showAppBar: false),
       failingSection: NpmSection.accessLists,
     );
-    expect(find.text('Failed to load access lists'), findsOneWidget);
+    expect(
+      find.text(
+        'The request to Nginx Proxy Manager did not complete, so the access '
+        'lists are not shown.',
+      ),
+      findsOneWidget,
+    );
 
     await _pump(
       tester,
@@ -250,7 +256,13 @@ void main() {
       account: _admin,
       failingSection: NpmSection.auditLog,
     );
-    expect(find.text('Failed to load the audit log'), findsOneWidget);
+    expect(
+      find.text(
+        'The request to Nginx Proxy Manager did not complete, so the audit '
+        'log is not shown.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a section tab lists every row it names', (tester) async {

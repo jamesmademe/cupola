@@ -8,6 +8,7 @@ import 'package:cupola/features/qbittorrent/domain/models/rss.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// qBittorrent's RSS subscriptions and automatic-download rules.
@@ -90,8 +91,13 @@ class _FeedsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return value.when(
       loading: () => const _LoadingRows(),
-      error: (_, _) => InlineErrorRetry(
-        message: 'qBittorrent did not return the RSS feeds.',
+      error: (error, _) => InlineErrorRetry(
+        message: sectionFailureMessage(
+          ServiceKey.qbittorrent,
+          error,
+          consequence: 'the RSS feeds are not shown',
+        ),
+        error: error,
         onRetry: () {
           clearQbittorrentLoginRefusal(ref);
           ref.invalidate(qbittorrentRssFeedsProvider);
@@ -127,8 +133,13 @@ class _RulesSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return value.when(
       loading: () => const _LoadingRows(count: 2),
-      error: (_, _) => InlineErrorRetry(
-        message: 'qBittorrent did not return the RSS rules.',
+      error: (error, _) => InlineErrorRetry(
+        message: sectionFailureMessage(
+          ServiceKey.qbittorrent,
+          error,
+          consequence: 'the RSS rules are not shown',
+        ),
+        error: error,
         onRetry: () {
           clearQbittorrentLoginRefusal(ref);
           ref.invalidate(qbittorrentRssRulesProvider);

@@ -9,6 +9,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 import 'package:cupola/features/transmission/presentation/transmission_actions.dart';
@@ -216,7 +217,12 @@ Widget _torrentRows(
     loading: () => const SliverToBoxAdapter(child: ListRowsShimmer()),
     error: (error, _) => SliverToBoxAdapter(
       child: InlineErrorRetry(
-        message: 'Failed to load torrents',
+        message: sectionFailureMessage(
+          ServiceKey.transmission,
+          error,
+          consequence: 'its torrents are not shown',
+        ),
+        error: error,
         onRetry: () => ref.invalidate(transmissionTorrentsProvider),
       ),
     ),

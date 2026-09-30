@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
@@ -119,8 +120,14 @@ class _TransmissionLabelsScreenState
             children: [
               if (session.hasError)
                 InlineErrorRetry(
-                  message:
-                      'Labels loaded, but the daemon capability did not. Editing is withheld.',
+                  message: sectionFailureMessage(
+                    ServiceKey.transmission,
+                    session.error,
+                    consequence:
+                        'Cupola cannot tell whether it can change labels, '
+                        'and editing them is off',
+                  ),
+                  error: session.error,
                   onRetry: () => ref.invalidate(transmissionSessionProvider),
                 )
               else if (rpcVersion != null && rpcVersion < _labelsRpcVersion)

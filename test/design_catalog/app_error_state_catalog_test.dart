@@ -1,6 +1,8 @@
 @Tags(['catalog'])
 library;
 
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,9 +52,12 @@ void main() {
         width: 280,
       ),
       CatalogScene(
-        'InlineErrorRetry · one section of a page failed, self-sizing',
+        'InlineErrorRetry · one section of a page did not answer, '
+        'self-sizing: red, the one thing red means',
         (_) => InlineErrorRetry(
-          message: 'Failed to load virtual machines',
+          message:
+              'Unraid did not answer, so its virtual machines are not shown.',
+          error: const SocketException('Connection refused'),
           onRetry: () {},
         ),
         width: 360,
@@ -86,7 +91,8 @@ void main() {
             ),
           ),
           child: InlineErrorRetry.fixedHeight(
-            message: 'Failed to load containers',
+            message: 'Unraid did not answer, so its containers are not shown.',
+            error: const SocketException('Connection refused'),
             onRetry: () {},
           ),
         ),

@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/inline_error_retry.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 
 /// The smallest of the failure surfaces, and it owes the same three rules as
 /// the largest. It also has to be tone-correct before anything copies it: the
@@ -14,6 +17,7 @@ void main() {
         home: Scaffold(
           body: InlineErrorRetry(
             message: 'Radarr did not answer.',
+            error: const SocketException('Connection refused'),
             onRetry: onRetry ?? () {},
           ),
         ),
@@ -77,6 +81,7 @@ void main() {
           home: Scaffold(
             body: InlineErrorRetry.fixedHeight(
               message: message,
+              error: null,
               onRetry: () {},
             ),
           ),
@@ -93,5 +98,60 @@ void main() {
       'everything it would have contributed to this page.',
     );
     expect(short, long);
+  });
+
+  group('the glyph follows the classification', () {
+    Future<Color?> glyphFor(WidgetTester tester, Object? error) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: InlineErrorRetry(
+              message: 'Unraid did not answer, so its shares are not shown.',
+              error: error,
+              onRetry: () {},
+            ),
+          ),
+        ),
+      );
+      return tester.widget<Icon>(find.byType(Icon)).color;
+    }
+
+    ColorScheme scheme(WidgetTester tester) =>
+        Theme.of(tester.element(find.byType(InlineErrorRetry))).colorScheme;
+
+    testWidgets('red only when nothing answered', (tester) async {
+      final color = await glyphFor(
+        tester,
+        const SocketException('Connection refused'),
+      );
+      final colorScheme = scheme(tester);
+      expect(
+        color,
+        statusToneColor(
+          colorScheme,
+          StatusTone.error,
+          surface: colorScheme.surface,
+        ),
+      );
+    });
+
+    testWidgets('amber for a failure nobody can attribute, never red', (
+      tester,
+    ) async {
+      // The sections that used to leave `error` out stayed red for this, and
+      // for a refused key: the claim "did not answer" with nothing behind it.
+      for (final error in <Object?>[Exception('offline'), null]) {
+        final color = await glyphFor(tester, error);
+        final colorScheme = scheme(tester);
+        expect(
+          color,
+          statusToneColor(
+            colorScheme,
+            StatusTone.warning,
+            surface: colorScheme.surface,
+          ),
+        );
+      }
+    });
   });
 }

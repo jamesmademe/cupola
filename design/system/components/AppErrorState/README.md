@@ -2,7 +2,7 @@
 
 The two failure leaves beneath the FaultBand: `AppErrorState`, the centred full-page state for a cold open with nothing retained, and `InlineErrorRetry`, the one-line notice for a single section.
 
-Rendered from `lib/core/widgets/app_error_state.dart` and `lib/core/widgets/inline_error_retry.dart` by `test/design_catalog/app_error_state_catalog_test.dart`; routing from `async_value_widget.dart`. The inline messages are Unraid's.
+Rendered from `lib/core/widgets/app_error_state.dart` and `lib/core/widgets/inline_error_retry.dart` by `test/design_catalog/app_error_state_catalog_test.dart`; routing from `async_value_widget.dart`. The inline messages are Unraid's, as a section that did not answer.
 
 ## How the four relate
 
@@ -17,13 +17,14 @@ Rendered from `lib/core/widgets/app_error_state.dart` and `lib/core/widgets/inli
 ## InlineErrorRetry
 
 - Full width, margin `space-lg` × `space-sm`, padding `space-sm` vertical. No fill, no border.
-- A 16px glyph walked against `surface`: pass the `error` that failed and it takes the classification's glyph and tone (`failureIcon`, `failureTone` — red only when nothing answered, amber for a refusal or any other failure that answered); without it, `error_outline` in red, which assumes silence; `space-sm`; the message `body-small` `on-surface-variant`; `space-sm`; text button *Retry* in `primary`, minimum 56 × 44, horizontal padding `space-sm`.
+- A 16px glyph walked against `surface`, in the classification's glyph and tone for the `error` that failed (`failureIcon`, `failureTone` — red only when nothing answered, amber for a refusal or any other failure that answered, and amber for a failure nobody can attribute); `space-sm`; the message `body-small` `on-surface-variant`; `space-sm`; text button *Retry* in `primary`, minimum 56 × 44, horizontal padding `space-sm`.
+- The message is worded from the same classification (`sectionFailureMessage`): the headline, then what the page is without — *Unraid did not answer, so its virtual machines are not shown.* · *Unraid answered but refused the key, so its shares are not shown.*
 - `.fixedHeight` locks the slot to 120px so a carousel row does not jump between loading, loaded and failed.
 - A live region announced on appearance; Retry stays its own control.
 
 ## The consumer provides
 
-For `AppErrorState`: the error, optionally `serviceName` and `onRetry`. For `InlineErrorRetry`: the message and `onRetry`, and the `error` whenever the caller holds it (the Discover rails do).
+For `AppErrorState`: the error, optionally `serviceName` and `onRetry`. For `InlineErrorRetry`: the message, `onRetry` and the `error` that failed — required, because a section that left it out stayed red for a refused key.
 
 ## Do / don't
 

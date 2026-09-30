@@ -49,7 +49,11 @@ void main() {
     (tester) async {
       await _pump(
         tester,
-        InlineErrorRetry(message: 'Could not load the queue.', onRetry: () {}),
+        InlineErrorRetry(
+          message: 'Radarr did not answer, so the queue is not shown.',
+          error: null,
+          onRetry: () {},
+        ),
       );
 
       _expectReachable(tester, _textButton('Retry'));

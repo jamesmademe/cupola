@@ -13,6 +13,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 import 'package:cupola/features/unraid/presentation/unraid_capability.dart';
@@ -312,8 +313,13 @@ class _VmList extends ConsumerWidget {
             children: vms.map((vm) => _VmTile(vm: vm)).toList(growable: false),
           ),
     loading: () => const ListRowsShimmer(count: 3),
-    error: (_, _) => InlineErrorRetry(
-      message: 'Failed to load virtual machines',
+    error: (error, _) => InlineErrorRetry(
+      message: sectionFailureMessage(
+        ServiceKey.unraid,
+        error,
+        consequence: 'its virtual machines are not shown',
+      ),
+      error: error,
       onRetry: () => ref.invalidate(unraidVmsProvider),
     ),
   );
@@ -465,8 +471,13 @@ class _NotificationList extends ConsumerWidget {
                 .toList(growable: false),
           ),
     loading: () => const ListRowsShimmer(count: 4),
-    error: (_, _) => InlineErrorRetry(
-      message: 'Failed to load notifications',
+    error: (error, _) => InlineErrorRetry(
+      message: sectionFailureMessage(
+        ServiceKey.unraid,
+        error,
+        consequence: 'its notifications are not shown',
+      ),
+      error: error,
       onRetry: () => ref.invalidate(unraidNotificationsProvider),
     ),
   );
@@ -561,8 +572,13 @@ class _ShareList extends ConsumerWidget {
                 .toList(growable: false),
           ),
     loading: () => const ListRowsShimmer(count: 4),
-    error: (_, _) => InlineErrorRetry(
-      message: 'Failed to load shares',
+    error: (error, _) => InlineErrorRetry(
+      message: sectionFailureMessage(
+        ServiceKey.unraid,
+        error,
+        consequence: 'its shares are not shown',
+      ),
+      error: error,
       onRetry: () => ref.invalidate(unraidSharesProvider),
     ),
   );
@@ -649,7 +665,12 @@ class _DiskList extends ConsumerWidget {
       },
       loading: () => const ListRowsShimmer(),
       error: (error, _) => InlineErrorRetry(
-        message: 'Failed to load the array',
+        message: sectionFailureMessage(
+          ServiceKey.unraid,
+          error,
+          consequence: 'the array is not shown',
+        ),
+        error: error,
         onRetry: () => ref.invalidate(unraidArrayProvider),
       ),
     );
@@ -805,7 +826,12 @@ class _DockerList extends ConsumerWidget {
       },
       loading: () => const ListRowsShimmer(),
       error: (error, _) => InlineErrorRetry(
-        message: 'Failed to load containers',
+        message: sectionFailureMessage(
+          ServiceKey.unraid,
+          error,
+          consequence: 'its containers are not shown',
+        ),
+        error: error,
         onRetry: () => ref.invalidate(unraidDockerProvider),
       ),
     );

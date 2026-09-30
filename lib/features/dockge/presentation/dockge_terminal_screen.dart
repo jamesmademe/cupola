@@ -8,6 +8,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class DockgeTerminalScreen extends ConsumerStatefulWidget {
@@ -106,8 +107,13 @@ class _StackPicker extends ConsumerWidget {
             onSelected: (name) => onSelected(name!),
           ),
     loading: () => const ListRowsShimmer(count: 3),
-    error: (_, _) => InlineErrorRetry(
-      message: 'Failed to load stacks',
+    error: (error, _) => InlineErrorRetry(
+      message: sectionFailureMessage(
+        ServiceKey.dockge,
+        error,
+        consequence: 'the stacks are not shown',
+      ),
+      error: error,
       onRetry: () => ref.invalidate(dockgeStackListProvider),
     ),
   );
@@ -163,8 +169,13 @@ class DockgeTerminalPane extends ConsumerWidget {
                     ),
                   ),
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, _) => InlineErrorRetry(
-              message: 'Terminal stream disconnected',
+            error: (error, _) => InlineErrorRetry(
+              message: sectionFailureMessage(
+                ServiceKey.dockge,
+                error,
+                consequence: 'the terminal stopped',
+              ),
+              error: error,
               onRetry: () =>
                   ref.invalidate(dockgeTerminalTextProvider(stackName)),
             ),

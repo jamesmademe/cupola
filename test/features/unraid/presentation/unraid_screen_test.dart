@@ -208,21 +208,40 @@ void main() {
       const UnraidScreen.vms(showAppBar: false),
       failingSection: UnraidSection.vms,
     );
-    expect(find.text('Failed to load virtual machines'), findsOneWidget);
+    // An error nobody can attribute is a fault that answered, not silence:
+    // the words say so rather than blaming reachability.
+    expect(
+      find.text(
+        'The request to Unraid did not complete, so its virtual machines '
+        'are not shown.',
+      ),
+      findsOneWidget,
+    );
 
     await _pump(
       tester,
       const UnraidScreen.notifications(showAppBar: false),
       failingSection: UnraidSection.notifications,
     );
-    expect(find.text('Failed to load notifications'), findsOneWidget);
+    expect(
+      find.text(
+        'The request to Unraid did not complete, so its notifications are '
+        'not shown.',
+      ),
+      findsOneWidget,
+    );
 
     await _pump(
       tester,
       const UnraidScreen.shares(showAppBar: false),
       failingSection: UnraidSection.shares,
     );
-    expect(find.text('Failed to load shares'), findsOneWidget);
+    expect(
+      find.text(
+        'The request to Unraid did not complete, so its shares are not shown.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a spun-down slot says so instead of reading 0 °C', (

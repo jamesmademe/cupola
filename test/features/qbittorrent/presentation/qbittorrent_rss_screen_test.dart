@@ -86,7 +86,10 @@ void main() {
 
     expect(find.text('Ubuntu releases'), findsOneWidget);
     expect(
-      find.text('qBittorrent did not return the RSS rules.'),
+      find.text(
+        'The request to qBittorrent did not complete, so the RSS rules are '
+        'not shown.',
+      ),
       findsOneWidget,
     );
     expect(find.text('Retry'), findsOneWidget);

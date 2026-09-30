@@ -8,6 +8,7 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_history_format.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 enum _HistoryFilter {
@@ -216,7 +217,12 @@ class _ProwlarrHistoryScreenState extends ConsumerState<ProwlarrHistoryScreen> {
           ),
           if (_error != null) ...[
             InlineErrorRetry(
-              message: 'Could not load more history',
+              message: sectionFailureMessage(
+                ServiceKey.prowlarr,
+                _error,
+                consequence: 'the older history is not shown',
+              ),
+              error: _error,
               onRetry: _loadMore,
             ),
           ] else if (_hasMore) ...[

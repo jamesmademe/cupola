@@ -15,6 +15,8 @@ import 'package:cupola/features/activity/presentation/widgets/activity_actions.d
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The Seerr home's first region: the requests waiting on a human.
 ///
@@ -52,7 +54,12 @@ class SeerrDecisionsSection extends ConsumerWidget {
           return const SizedBox.shrink();
         }
         return InlineErrorRetry(
-          message: 'Seerr did not answer, so pending requests are unknown.',
+          message: sectionFailureMessage(
+            ServiceKey.seerr,
+            error,
+            consequence: 'the requests waiting for approval are unknown',
+          ),
+          error: error,
           // The section owns no fetch of its own; dropping the list it derives
           // from is what re-runs it.
           onRetry: () => ref.invalidate(requestsProvider),

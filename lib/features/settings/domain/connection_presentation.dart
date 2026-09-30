@@ -204,6 +204,30 @@ FailurePresentation describeFailure(
   );
 }
 
+/// A section of a page whose read failed, in one line: what happened, then
+/// what the page is without because of it — `Unraid did not answer, so its
+/// shares are not shown.`
+///
+/// The first half is [describeFailure]'s headline, so a refused key reads as
+/// a refusal (amber) and only silence reads as silence (red). The sections
+/// that draw this used to say "Failed to load shares" in red for every
+/// failure, which blamed reachability for a key the service had just refused.
+/// Hand the same [error] to the widget that draws it, so its glyph takes the
+/// same tone as these words.
+String sectionFailureMessage(
+  ServiceKey service,
+  Object? error, {
+  required String consequence,
+  String? subject,
+}) {
+  final headline = describeFailure(
+    service,
+    classifyConnectionFailure(error),
+    subject: subject,
+  ).headline;
+  return '$headline, so $consequence.';
+}
+
 /// Why a write to [service] failed, as the second sentence of its toast:
 /// `Could not decline this request. Seerr answered but refused the key.
 /// Nothing changed.`

@@ -76,6 +76,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Terminal stream disconnected'), findsOneWidget);
+    expect(
+      find.text(
+        'The request to Dockge did not complete, so the terminal stopped.',
+      ),
+      findsOneWidget,
+    );
   });
 }

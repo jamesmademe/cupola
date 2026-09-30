@@ -169,7 +169,13 @@ void main() {
 
     expect(find.text('Primary'), findsOneWidget);
     expect(find.text('Enabled'), findsOneWidget);
-    expect(find.text('Transfer volume is unavailable.'), findsOneWidget);
+    expect(
+      find.text(
+        'The request to SABnzbd did not complete, so the transfer volume is '
+        'not shown.',
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(AppErrorState), findsNothing);
     expect(find.text('0 B'), findsNothing);
   });
@@ -187,7 +193,10 @@ void main() {
     );
 
     expect(find.text('0 B'), findsNWidgets(4));
-    expect(find.text('Transfer volume is unavailable.'), findsNothing);
+    expect(
+      find.textContaining('the transfer volume is not shown'),
+      findsNothing,
+    );
   });
 
   testWidgets('both server calls failing produce one page error', (
