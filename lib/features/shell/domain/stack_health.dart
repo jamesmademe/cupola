@@ -49,8 +49,15 @@ class StackHealth {
     required this.unreachable,
     required this.checking,
     required this.notSetUp,
+    this.faulted = 0,
     this.checkedAt,
   });
+
+  /// Services that answered, with at least one connection answering with a
+  /// refusal or a fault — a refused key, a 5xx — and none dark. Counted inside
+  /// [answering] (they did answer) and named as a qualifier, like [degraded]:
+  /// a refused key is not an outage, and the header must not say it is.
+  final int faulted;
 
   /// Services with at least one connection set up. The denominator.
   final int configured;
@@ -84,7 +91,7 @@ class StackHealth {
   /// Nothing is wrong. Deliberately *not* "everything is green": the header is
   /// neutral when clear, because a badge that is green on almost every open is
   /// one nobody reads on the day it turns red.
-  bool get allClear => unreachable == 0 && degraded == 0;
+  bool get allClear => unreachable == 0 && degraded == 0 && faulted == 0;
 
   /// `14 of 16 answering`, or `16 of 16 answering` when nothing is wrong.
   String get headline => '$answering of $configured answering';
@@ -93,7 +100,10 @@ class StackHealth {
   /// omitted when they are zero.
   List<String> get qualifiers => [
     if (degraded > 0) '$degraded degraded',
-    if (unreachable > 0) '$unreachable unreachable',
+    // The lexicon's group word for faults (`3 faults`), kept apart from the
+    // red count below: a refusal answered.
+    if (faulted > 0) '$faulted fault${faulted == 1 ? '' : 's'}',
+    if (unreachable > 0) '$unreachable did not answer',
     // Ahead of "not set up" because a probe in flight is about to change the
     // headline and an unconfigured service never will.
     if (checking > 0) '$checking checking',
@@ -138,6 +148,9 @@ enum StackServiceState {
   /// Every connection answered.
   answering,
 
+  /// Every connection answered, at least one with a refusal or a fault.
+  fault,
+
   /// Some answered and some did not.
   degraded,
 
@@ -157,13 +170,18 @@ StackServiceState foldServiceState({
   required int total,
   required int offline,
   required int checking,
+  int faulted = 0,
 }) {
   if (total <= 0) return StackServiceState.checking;
   // Asked before "unreachable": with one answer outstanding we do not yet know
   // whether the disagreement is real, and an unreachable count that flickers on
   // every cold open is the wolf this whole file is avoiding.
   if (checking >= total) return StackServiceState.checking;
-  if (offline <= 0) return StackServiceState.answering;
+  // `offline` counts only what did not answer; a refused key is `faulted`,
+  // and it answered.
+  if (offline <= 0) {
+    return faulted > 0 ? StackServiceState.fault : StackServiceState.answering;
+  }
   if (offline >= total) return StackServiceState.unreachable;
   // Reachable here only when `0 < offline < total`, which is why a service with
   // a single connection can never be degraded.
@@ -181,6 +199,7 @@ StackHealth stackHealthFrom({
 }) {
   var answering = 0;
   var degraded = 0;
+  var faulted = 0;
   var unreachable = 0;
   var checking = 0;
   var configured = 0;
@@ -190,6 +209,10 @@ StackHealth stackHealthFrom({
     switch (state) {
       case StackServiceState.answering:
         answering++;
+      case StackServiceState.fault:
+        // Counted in `answering` too: a refusal is an answer.
+        answering++;
+        faulted++;
       case StackServiceState.degraded:
         // Counted in `answering` as well: it answers, partially. See the class
         // doc for why the sum has to close.
@@ -206,6 +229,7 @@ StackHealth stackHealthFrom({
     configured: configured,
     answering: answering,
     degraded: degraded,
+    faulted: faulted,
     unreachable: unreachable,
     checking: checking,
     notSetUp: registrySize - configured,
@@ -241,6 +265,7 @@ final unreachableServicesProvider = Provider<List<ServiceKey>>((ref) {
         return foldServiceState(
               total: folded.total,
               offline: folded.offline,
+              faulted: folded.faulted,
               checking: folded.checking,
             ) ==
             StackServiceState.unreachable;
@@ -284,6 +309,7 @@ class StackHealthNotifier extends Notifier<StackHealth> {
         foldServiceState(
           total: folded.total,
           offline: folded.offline,
+          faulted: folded.faulted,
           checking: folded.checking,
         ),
       );

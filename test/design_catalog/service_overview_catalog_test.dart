@@ -2,6 +2,7 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -256,7 +257,7 @@ class _StatusClient extends ApiClient {
     CancelToken? cancelToken,
     Duration? receiveTimeout,
   }) async {
-    if (version!.isEmpty) throw Exception('unreachable');
+    if (version!.isEmpty) throw const SocketException('Connection refused');
     return Response(
       requestOptions: RequestOptions(path: path),
       statusCode: 200,

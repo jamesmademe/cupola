@@ -290,8 +290,8 @@ class TransmissionFake extends ServiceFake {
 
 /// SABnzbd's `/api?mode=…` surface. A wrong key is a `200` with
 /// `{"status": false, "error": "API Key Incorrect"}`; `mode=version` needs no
-/// key at all, which is why the Dashboard's probe reads a SABnzbd with a bad
-/// key as online.
+/// key at all, which is why the Dashboard's probe reads a one-slot queue
+/// before it asks for the version.
 class SabnzbdFake extends ServiceFake {
   const SabnzbdFake();
 

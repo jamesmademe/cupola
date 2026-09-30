@@ -431,7 +431,7 @@ void main() {
       expect(_pipsIn(tester, 'service-matrix-cell-radarr'), 0);
       // Lidarr does not answer, and says so twice: the mark and the word.
       expect(_pipsIn(tester, 'service-matrix-cell-lidarr'), 1);
-      expect(find.text('Unreachable'), findsOneWidget);
+      expect(find.text('Did not answer'), findsOneWidget);
     });
 
     testWidgets('a checking pip is not amber', (tester) async {

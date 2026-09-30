@@ -125,11 +125,22 @@ class SabnzbdClient {
     }
   }
 
-  /// Server version. Does not require the API key, so it doubles as a
-  /// lightweight reachability probe.
+  /// Server version. Does not require the API key — which is exactly why it
+  /// cannot be the reachability probe on its own: see [checkKeyAndVersion].
   Future<String> getVersion() async {
     final data = await _call('version', withKey: false);
     return (data['version'] ?? data['_raw'] ?? '').toString().trim();
+  }
+
+  /// The Dashboard's probe: proves the key, then names the version.
+  ///
+  /// `mode=version` answers without a key, so on its own it read a SABnzbd
+  /// with a wrong key as answering while every screen behind it failed. A
+  /// one-slot queue read is the cheapest call that checks the key; its
+  /// refusal (`status: false`, "API Key Incorrect") throws unauthorized.
+  Future<String> checkKeyAndVersion() async {
+    await getQueue(limit: 1);
+    return getVersion();
   }
 
   /// The `limit` that asks `mode=queue` for every job rather than a page.

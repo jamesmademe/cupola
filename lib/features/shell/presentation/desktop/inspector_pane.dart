@@ -263,7 +263,7 @@ class _UnreachableCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SectionLabel('Unreachable'),
+          const _SectionLabel('Did not answer'),
           const SizedBox(height: AppSpacing.sm + 2),
           Container(
             padding: const EdgeInsets.symmetric(

@@ -56,15 +56,15 @@ class _SabnzbdDashboard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final queueAsync = ref.watch(sabnzbdQueueProvider);
     final summaryAsync = ref.watch(serviceSummaryProvider(ServiceKey.sabnzbd));
-    final isOffline = summaryAsync.maybeWhen(
-      data: (summary) => !summary.isOnline,
-      orElse: () => false,
+    // A failed probe, in its own words: "did not answer" only when nothing did,
+    // the refusal and its remedy when the key was refused.
+    final failed = summaryAsync.whenOrNull(
+      data: (summary) => summary.isOnline ? null : summary,
     );
 
-    if (isOffline) {
-      return ServiceOfflineState(
-        serviceName: ServiceKey.sabnzbd.title,
-        accent: ServiceKey.sabnzbd.accent,
+    if (failed != null) {
+      return ServiceOfflineState.fromSummary(
+        summary: failed,
         onRetry: () => _invalidateAll(ref),
       );
     }

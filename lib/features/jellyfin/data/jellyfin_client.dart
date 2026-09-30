@@ -177,6 +177,33 @@ class JellyfinClient implements StreamServerClient {
     }
   }
 
+  /// The Dashboard's probe: proves the credential, and names the version.
+  ///
+  /// [probeVersion] reads the anonymous endpoint, so a Jellyfin with a wrong
+  /// token read as answering. `/System/Info` is its authenticated twin and
+  /// carries the same `Version`. A **403** is a valid token without the
+  /// administrator's reads — a narrower credential, not a fault — so it still
+  /// answers, and the version comes from the public endpoint. A 401 throws:
+  /// the server answered and refused the token.
+  Future<String?> checkCredentialAndVersion() async {
+    try {
+      final response = await _api.get('/System/Info');
+      return _versionOf(response.data);
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 403) return probeVersion();
+      rethrow;
+    }
+  }
+
+  static String? _versionOf(Object? data) {
+    if (data is! Map) return null;
+    // Jellyfin spells it `Version`; the shared probe read `version` and so
+    // never showed one.
+    final version = data['Version'] ?? data['version'];
+    final text = version?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
+  }
+
   @override
   Future<bool> verifyCredential() async {
     try {

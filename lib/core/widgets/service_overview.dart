@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/section_header.dart';
@@ -331,9 +332,11 @@ class ServiceOverviewIdentity extends ConsumerWidget {
     final instance = ref.watch(activeInstanceProvider(service));
     final hasLens = ref.watch(hasMultipleInstancesProvider(service));
 
-    // The probe reduced to the connection vocabulary. A summary still in flight
-    // is `checking` rather than a guess, and one that threw is the same fact a
-    // failed probe reports: we could not confirm it, and we cannot say why.
+    // The probe reduced to the connection vocabulary, **with its reason**. A
+    // summary still in flight is `checking` rather than a guess. A failed one
+    // says why: without the reason every failure read red "did not answer",
+    // so a Radarr that refused the key sat under the same word as one that
+    // was switched off.
     final status = summary.when(
       loading: () => ServiceConnectionStatus.checking,
       error: (_, _) => ServiceConnectionStatus.disconnected,
@@ -341,7 +344,16 @@ class ServiceOverviewIdentity extends ConsumerWidget {
           ? ServiceConnectionStatus.connected
           : ServiceConnectionStatus.disconnected,
     );
-    final presentation = describeConnection(service, status: status);
+    final reason = summary.when(
+      loading: () => null,
+      error: (error, _) => classifyConnectionFailure(error),
+      data: (value) => value.failureReason,
+    );
+    final presentation = describeConnection(
+      service,
+      status: status,
+      reason: reason,
+    );
     final toneColor = statusToneColor(colorScheme, presentation.tone);
 
     final host = service.extractHost(instance?.url);

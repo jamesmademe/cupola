@@ -25,6 +25,7 @@ import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
@@ -52,6 +53,7 @@ import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Region 3 — everything waiting on a human, from every source, in one list.
@@ -1274,23 +1276,31 @@ class _SectionEmptyState extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final offline = sources
-        .where(
-          // Strictly `false`, not `!= true`: a summary still loading is neither
-          // online nor a fault, and blaming it during the first second of a cold
-          // open is the same wolf-crying `ServicesAlertBand` avoids.
-          (service) =>
-              ref
-                  .watch(serviceSummaryProvider(service))
-                  .asData
-                  ?.value
-                  .isOnline ==
-              false,
-        )
+    // Only settled summaries: one still loading is neither answering nor a
+    // fault, and blaming it during the first second of a cold open is the same
+    // wolf-crying `ServicesAlertBand` avoids.
+    final summaries = {
+      for (final service in sources)
+        service: ref.watch(serviceSummaryProvider(service)).asData?.value,
+    };
+    // Two kinds of empty that are not an empty library: a source that did not
+    // answer, and one that answered with a refusal or a fault. They are said
+    // in their own words — a refused key is not "did not answer".
+    final silent = sources
+        .where((service) => summaries[service]?.didNotAnswer ?? false)
         .toList(growable: false);
-    final titles = offline
-        .map((service) => service.title)
+    final faulted = sources
+        .where((service) => summaries[service]?.isFault ?? false)
         .toList(growable: false);
+    final offline = [...silent, ...faulted];
+    final message = [
+      if (silent.isNotEmpty)
+        servicesSectionOfflineMessage([
+          for (final service in silent) service.title,
+        ]),
+      for (final service in faulted)
+        '${describeFailure(service, summaries[service]!.failureReason ?? ServiceFailureReason.unknown).headline}.',
+    ].join(' ');
 
     return Container(
       width: double.infinity,
@@ -1300,7 +1310,7 @@ class _SectionEmptyState extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            offline.isEmpty ? label : servicesSectionOfflineMessage(titles),
+            offline.isEmpty ? label : message,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
@@ -1328,7 +1338,8 @@ class _SectionEmptyState extends ConsumerWidget {
               // without a wrapper and without losing its tap semantics.
               child: Text(
                 'Retry',
-                semanticsLabel: 'Retry ${titles.join(', ')}',
+                semanticsLabel:
+                    'Retry ${offline.map((s) => s.title).join(', ')}',
               ),
             ),
           ],

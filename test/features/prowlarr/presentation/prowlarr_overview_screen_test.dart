@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -278,7 +280,7 @@ class _StatusClient extends ApiClient {
     CancelToken? cancelToken,
     Duration? receiveTimeout,
   }) async {
-    if (version == null) throw Exception('unreachable');
+    if (version == null) throw const SocketException('Connection refused');
     return Response(
       requestOptions: RequestOptions(path: path),
       statusCode: 200,

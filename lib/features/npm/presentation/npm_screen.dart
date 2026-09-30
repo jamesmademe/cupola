@@ -218,15 +218,15 @@ class _NpmSection extends ConsumerWidget {
     final summaryAsync = ref.watch(
       serviceSummaryProvider(ServiceKey.nginxProxyManager),
     );
-    final isOffline = summaryAsync.maybeWhen(
-      data: (summary) => !summary.isOnline,
-      orElse: () => false,
+    // A failed probe, in its own words: "did not answer" only when nothing did,
+    // the refusal and its remedy when the sign-in was refused.
+    final failed = summaryAsync.whenOrNull(
+      data: (summary) => summary.isOnline ? null : summary,
     );
 
-    if (isOffline) {
-      return ServiceOfflineState(
-        serviceName: ServiceKey.nginxProxyManager.title,
-        accent: ServiceKey.nginxProxyManager.accent,
+    if (failed != null) {
+      return ServiceOfflineState.fromSummary(
+        summary: failed,
         onRetry: () => _invalidate(ref, section),
       );
     }

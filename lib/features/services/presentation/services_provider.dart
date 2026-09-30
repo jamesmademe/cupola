@@ -4,11 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/features/dockge/data/dockge_client.dart';
+import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
+import 'package:cupola/features/plex/data/plex_client.dart';
 import 'package:cupola/features/dockge/data/dockge_service.dart';
 import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
@@ -89,12 +92,23 @@ final serviceInstanceIdsProvider = Provider.family<List<String>, ServiceKey>((
 /// different one. The cell reports the worst state it contains and how many are
 /// in it, so a folded card never claims to be healthier than its worst
 /// connection.
-typedef FoldedServiceHealth = ({int total, int offline, int checking});
+///
+/// `offline` counts the connections that **did not answer**, and nothing else.
+/// `faulted` counts the ones that answered with a refusal or a fault — a
+/// refused key, a 5xx — which are amber, and which the band that names what
+/// did not answer must never name.
+typedef FoldedServiceHealth = ({
+  int total,
+  int offline,
+  int faulted,
+  int checking,
+});
 
 final foldedServiceHealthProvider =
     Provider.family<FoldedServiceHealth, ServiceKey>((ref, service) {
       final ids = ref.watch(serviceInstanceIdsProvider(service));
       var offline = 0;
+      var faulted = 0;
       var checking = 0;
       for (final id in ids) {
         final summary = ref.watch(
@@ -102,14 +116,24 @@ final foldedServiceHealthProvider =
         );
         switch (summary) {
           case AsyncData(:final value):
-            if (!value.isOnline) offline++;
-          case AsyncError():
-            offline++;
+            if (value.didNotAnswer) offline++;
+            if (value.isFault) faulted++;
+          case AsyncError(:final error):
+            if (failureDidNotAnswer(classifyConnectionFailure(error))) {
+              offline++;
+            } else {
+              faulted++;
+            }
           default:
             checking++;
         }
       }
-      return (total: ids.length, offline: offline, checking: checking);
+      return (
+        total: ids.length,
+        offline: offline,
+        faulted: faulted,
+        checking: checking,
+      );
     });
 
 /// One connection, named by what it is as well as by which one.
@@ -254,8 +278,11 @@ Future<ServiceSummary> _loadServiceSummary(
   final String? version;
   try {
     version = await _loadVersion(ref, settings, instance);
-  } catch (_) {
-    return _offlineSummary(service, host: host);
+  } catch (error) {
+    // Classified, never flattened: a refused key is the service answering, and
+    // painting it with the same red as a box that is switched off sent people
+    // to check a cable when the fix was the key in the form.
+    return ServiceSummary.failed(service, host: host, error: error);
   }
 
   return ServiceSummary(
@@ -338,9 +365,41 @@ Future<String?> _loadVersion(
       apiKey: instance.credential,
       certFingerprint: settings.pinForUrl(instance.url),
     );
+    // Keyed, not `mode=version`: that one needs no key, and a probe that
+    // cannot see a wrong key paints it as answering. Two hops, hence the room.
     return _versionOrNull(
-      client.getVersion,
-      timeout: const Duration(seconds: 5),
+      client.checkKeyAndVersion,
+      timeout: const Duration(seconds: 6),
+      close: client.close,
+    );
+  }
+
+  // The two media servers, through their own clients: each authenticates with
+  // a header the shared `ApiClient` does not send, and each one's status route
+  // is anonymous, so the generic branch below read any token as answering.
+  if (service == ServiceKey.jellyfin) {
+    final client = JellyfinClient(
+      baseUrl: instance.url,
+      apiKey: instance.credential,
+      pinnedCertFingerprint: settings.pinForUrl(instance.url),
+    );
+    return _versionOrNull(
+      () async => await client.checkCredentialAndVersion() ?? '',
+      timeout: const Duration(seconds: 6),
+      close: client.close,
+    );
+  }
+
+  if (service == ServiceKey.plex) {
+    final client = PlexClient(
+      url: instance.url,
+      token: instance.credential,
+      clientIdentifier: settings.plexClientId,
+      pinnedCertFingerprint: settings.pinForUrl(instance.url),
+    );
+    return _versionOrNull(
+      () async => await client.checkCredentialAndVersion() ?? '',
+      timeout: const Duration(seconds: 6),
       close: client.close,
     );
   }
@@ -382,12 +441,14 @@ Future<String?> _loadVersion(
       secret: instance.credential.isEmpty ? null : instance.credential,
       certFingerprint: settings.pinForUrl(instance.url),
     );
-    // `GET /api/` is unauthenticated, so the reachability probe costs no
-    // token exchange — which matters because this provider re-runs on every
-    // settings change and NPM has no rate limiting to absorb a login storm.
+    // `GET /api/` is unauthenticated, so on its own it read a wrong password
+    // as answering. The token exchange is what proves the account, and it is
+    // paid once per probe: this provider is keyed on the connection's own
+    // fields, so it re-runs when this connection changes or is re-checked, not
+    // on every settings write.
     return _versionOrNull(
-      client.version,
-      timeout: const Duration(seconds: 6),
+      client.checkCredentialAndVersion,
+      timeout: const Duration(seconds: 8),
       close: client.close,
     );
   }

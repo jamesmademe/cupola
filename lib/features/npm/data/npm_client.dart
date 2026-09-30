@@ -194,9 +194,20 @@ class NpmClient {
   /// without which every later call is a 403. Checking only the first is how a
   /// wrong password shows a green tile.
   Future<bool> testConnection() async {
-    await serverInfo();
-    if (_hasCredentials) await _authenticate();
+    await checkCredentialAndVersion();
     return true;
+  }
+
+  /// The Dashboard's probe: [testConnection]'s two halves, keeping the version
+  /// the first one read.
+  ///
+  /// `GET /api/` alone answers anyone, so an NPM with a wrong password read as
+  /// answering. The token exchange is the cheapest call that proves the
+  /// account; a refusal throws unauthorized.
+  Future<String> checkCredentialAndVersion() async {
+    final info = await serverInfo();
+    if (_hasCredentials) await _authenticate();
+    return info.version;
   }
 
   // ── Reads ─────────────────────────────────────────────────────────────────

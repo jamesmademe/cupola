@@ -81,6 +81,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
@@ -92,6 +93,7 @@ import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/presentation/portal_dismiss_scope.dart';
@@ -102,7 +104,13 @@ import 'package:cupola/features/shell/presentation/portal_dismiss_scope.dart';
 /// The grid this replaced fabricated an offline summary while loading, which made
 /// its border resolve to error red — so every service flashed as failed on cold
 /// open, before a single request had come back.
-enum ServiceReachability { online, checking, offline }
+///
+/// `fault` is a state of its own for the same kind of reason: a service that
+/// answered and refused the key is not a service that did not answer. It used
+/// to be `offline` — red, "Unreachable", unlit — which sent the user to check a
+/// cable when the fix was the key in the form. It is amber, and it stays lit:
+/// the service is there.
+enum ServiceReachability { online, checking, fault, offline }
 
 /// What the matrix is being asked for.
 ///
@@ -374,7 +382,13 @@ class _DomainBand extends ConsumerWidget {
         continue;
       }
       if (reachability == ServiceReachability.offline) {
-        qualifiers.add('${service.title} unreachable');
+        qualifiers.add('${service.title} did not answer');
+        continue;
+      }
+      // A refusal or a fault: it answered, so it is not "did not answer", and
+      // it is not clean either. The cell below names which fault.
+      if (reachability == ServiceReachability.fault || folded.faulted > 0) {
+        qualifiers.add('${service.title} needs a look');
         continue;
       }
       if (reachability == ServiceReachability.checking) {
@@ -489,12 +503,24 @@ Iterable<InstanceRef> pickerSubjectsOf(
 /// floor's cells has to read their state the way the cells do.
 ServiceReachability serviceReachabilityOf(AsyncValue<ServiceSummary> summary) =>
     switch (summary) {
-      AsyncData(:final value) =>
-        value.isOnline
-            ? ServiceReachability.online
-            : ServiceReachability.offline,
-      AsyncError() => ServiceReachability.offline,
+      AsyncData(:final value) => switch (value.status) {
+        ServiceSummaryStatus.online => ServiceReachability.online,
+        ServiceSummaryStatus.fault => ServiceReachability.fault,
+        ServiceSummaryStatus.offline => ServiceReachability.offline,
+      },
+      AsyncError(:final error) =>
+        failureDidNotAnswer(classifyConnectionFailure(error))
+            ? ServiceReachability.offline
+            : ServiceReachability.fault,
       _ => ServiceReachability.checking,
+    };
+
+/// Why the probe behind [summary] failed, when it did.
+ServiceFailureReason? _failureOf(AsyncValue<ServiceSummary> summary) =>
+    switch (summary) {
+      AsyncData(:final value) => value.failureReason,
+      AsyncError(:final error) => classifyConnectionFailure(error),
+      _ => null,
     };
 
 /// Where every card in one grid sits.
@@ -668,11 +694,26 @@ class ServiceMatrixCell extends ConsumerWidget {
     final signalsFailed =
         signalState != null && signalState.hasError && !signalState.isLoading;
 
+    // A folded cell whose connections all answered, some with a fault, is a
+    // fault: never better than its worst connection, and never "did not
+    // answer" about servers that did.
+    final foldedFault =
+        folded != null &&
+        folded.total > 1 &&
+        folded.offline == 0 &&
+        folded.faulted > 0;
+
     return _ServiceMatrixCellBody(
       service: service,
       role: role,
       // A folded cell never reports a better state than its worst connection.
-      reachability: degraded ? ServiceReachability.offline : reachability,
+      reachability: degraded
+          ? ServiceReachability.offline
+          : foldedFault
+          ? ServiceReachability.fault
+          : reachability,
+      failure: _failureOf(summary),
+      faultedOf: foldedFault ? folded : null,
       // And it never shows a live figure summed over an incomplete set: a total
       // that silently drops an unreachable connection is a wrong number, not a
       // partial one.
@@ -774,10 +815,20 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
     required this.host,
     required this.role,
     this.degradedOf,
+    this.faultedOf,
+    this.failure,
     this.instanceId,
     this.instanceCount,
     required this.displayName,
   });
+
+  /// Why the probe failed, for the state word of a single connection. Null
+  /// while answering or still asking.
+  final ServiceFailureReason? failure;
+
+  /// Set only when this service has more than one connection, none dark and
+  /// at least one answering with a fault.
+  final FoldedServiceHealth? faultedOf;
 
   /// What the matrix is being asked for. Decides whether the live lines are
   /// rendered at all — see [ServiceMatrixCell.role].
@@ -811,29 +862,44 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isOnline = reachability == ServiceReachability.online;
-    // An unreachable service recedes instead of changing colour: the surface
-    // steps *down* the ladder so the cell reads as unlit. A brightness step
-    // survives colour blindness, which a red border does not.
-    final surface = isOnline
+    // A service that answered — cleanly or with a fault — stays lit: it is
+    // there, and a refused key is not a dark box.
+    final answered =
+        reachability == ServiceReachability.online ||
+        reachability == ServiceReachability.fault;
+    // A service that did not answer recedes instead of changing colour: the
+    // surface steps *down* the ladder so the cell reads as unlit. A brightness
+    // step survives colour blindness, which a red border does not.
+    final surface = answered
         ? colorScheme.surfaceContainer
         : colorScheme.surfaceContainerLow;
 
-    // A folded cell counts rather than naming a state. "Offline" on a Radarr
-    // with three connections and one down is false in both directions: two of
-    // them are answering, and saying so would hide the one that is not.
+    // A folded cell counts rather than naming a state. "Did not answer" on a
+    // Radarr with three connections and one dark is false in both directions:
+    // two of them are answering, and saying so would hide the one that is not.
     final folded = degradedOf;
+    final faulted = faultedOf;
     final statusLabel = folded != null
-        ? '${folded.offline} of ${folded.total} offline'
+        ? '${folded.offline} of ${folded.total} did not answer'
+        : faulted != null
+        ? '${faulted.faulted} of ${faulted.total} with a fault'
         : switch (reachability) {
-            ServiceReachability.online => 'Online',
+            ServiceReachability.online => 'Answering',
             ServiceReachability.checking => 'Checking',
-            // A bare state word, and deliberately so: "Unreachable 6 min" needs
-            // a `firstFailedAt` notifier keyed by TLS origin and a 30-second
-            // clock, neither of which exists. Inventing the duration from the
-            // first frame that noticed would print an age of the *observation*
-            // and call it the age of the outage.
-            ServiceReachability.offline => 'Unreachable',
+            // The classification's own words: `Refused the key`, `Timed out`,
+            // `Answered with an error` — the same the connection form says.
+            ServiceReachability.fault => failureLabel(
+              failure ?? ServiceFailureReason.unknown,
+              credential: refusedCredentialOf(service),
+            ),
+            // A bare state word, and deliberately so: "Did not answer since
+            // 20:41" needs a `firstFailedAt` notifier keyed by TLS origin and a
+            // clock, neither of which exists. Inventing the time from the first
+            // frame that noticed would print the time of the *observation* and
+            // call it the time of the outage.
+            ServiceReachability.offline => failureLabel(
+              ServiceFailureReason.unreachable,
+            ),
           };
 
     // Resolved here rather than in the tap handler: an inherited lookup belongs
@@ -896,7 +962,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
       // The light, and the only place a service accent appears on this screen.
       // Withheld from an unreachable card: a service that is not answering
       // should look unlit, and that has to include its own colour.
-      accentColor: isOnline ? service.accent : null,
+      accentColor: answered ? service.accent : null,
       accentGlowAlpha: ServiceMatrixMetrics.accentWashAlpha,
       accentGlowCenter: Alignment.topLeft,
       borderRadius: AppRadius.borderRadiusLg,
@@ -962,7 +1028,9 @@ class _CellIdentity extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isOnline = reachability == ServiceReachability.online;
+    final isOnline =
+        reachability == ServiceReachability.online ||
+        reachability == ServiceReachability.fault;
 
     return Row(
       children: [
@@ -1050,6 +1118,11 @@ class _ReachabilityPip extends StatelessWidget {
         colorScheme,
         StatusTone.neutral,
       ),
+      // It answered and said no, or answered broken: a fault, amber.
+      ServiceReachability.fault => statusToneColor(
+        colorScheme,
+        StatusTone.warning,
+      ),
       ServiceReachability.offline => statusToneColor(
         colorScheme,
         StatusTone.error,
@@ -1119,13 +1192,14 @@ class _CellLiveLine extends StatelessWidget {
           // Checking is **neutral**, not amber. A probe still out is not a
           // fault, and the header says the same thing in the same breath ("N
           // checking, which is not a fault").
-          color: statusToneColor(
-            colorScheme,
-            reachability == ServiceReachability.checking
-                ? StatusTone.neutral
-                : StatusTone.error,
-            surface: surface,
-          ),
+          //
+          // A fault is amber: the service answered. Only a service that did
+          // not answer is red.
+          color: statusToneColor(colorScheme, switch (reachability) {
+            ServiceReachability.checking => StatusTone.neutral,
+            ServiceReachability.fault => StatusTone.warning,
+            _ => StatusTone.error,
+          }, surface: surface),
         ),
       );
     }

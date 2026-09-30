@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
@@ -120,7 +123,9 @@ void main() {
           serviceSummaryProvider(ServiceKey.seerr).future,
         );
 
-        expect(summary.status, ServiceSummaryStatus.offline);
+        // Refused, and an answer: a fault, amber — never "did not answer".
+        expect(summary.status, ServiceSummaryStatus.fault);
+        expect(summary.failureReason, ServiceFailureReason.unauthorized);
       },
     );
 
@@ -1309,7 +1314,7 @@ class _ThrowingStatusClient extends ApiClient {
     CancelToken? cancelToken,
     Duration? receiveTimeout,
   }) async {
-    throw Exception('status failed');
+    throw const SocketException('Connection refused');
   }
 
   @override
@@ -1330,6 +1335,7 @@ class _SeerrRejectingStatusClient extends ApiClient {
     if (path == '/api/v1/request') {
       throw DioException(
         requestOptions: RequestOptions(path: path),
+        type: DioExceptionType.badResponse,
         response: Response(
           requestOptions: RequestOptions(path: path),
           statusCode: 403,

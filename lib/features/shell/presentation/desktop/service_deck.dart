@@ -248,6 +248,9 @@ class _HealthReadout extends ConsumerWidget {
             // with the pip on the cards, or the same probe reads two ways in
             // one window.
             if (health.checking > 0) _Dot(color: colorScheme.onSurfaceVariant),
+            // A refusal answered: amber, never counted with what went dark.
+            if (health.faulted > 0)
+              _Dot(color: statusToneColor(colorScheme, StatusTone.warning)),
             if (health.unreachable > 0)
               _Dot(color: statusToneColor(colorScheme, StatusTone.error)),
             const SizedBox(width: AppSpacing.sm),
@@ -269,10 +272,27 @@ class _HealthReadout extends ConsumerWidget {
                 color: CupolaThemeColors.of(context).dimText,
               ),
             ),
+            if (health.faulted > 0 && !narrow) ...[
+              const SizedBox(width: 5),
+              Text(
+                '· ${health.faulted} '
+                '${health.faulted == 1 ? 'fault' : 'faults'}',
+                style: AppTheme.chrome(
+                  context,
+                  size: 11,
+                  weight: FontWeight.w500,
+                  color: statusToneColor(
+                    colorScheme,
+                    StatusTone.warning,
+                    surface: colorScheme.surfaceContainer,
+                  ),
+                ),
+              ),
+            ],
             if (health.unreachable > 0 && !narrow) ...[
               const SizedBox(width: 5),
               Text(
-                '· ${health.unreachable} down',
+                '· ${health.unreachable} did not answer',
                 style: AppTheme.chrome(
                   context,
                   size: 11,

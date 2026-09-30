@@ -2,10 +2,10 @@
 /// configured service, through its own probe and its own clients — builds and
 /// settles under each configuration without an exception.
 ///
-/// Deliberately asserts nothing about what the Dashboard says. Much of what it
-/// says under these profiles is known to be wrong today (a refused qBittorrent
-/// reads unreachable, a missing figure reads 0); the packages that fix those
-/// assert them. This only guarantees the profile itself is sound enough to
+/// Deliberately asserts nothing about what the Dashboard says. Some of what it
+/// says under these profiles is known to be wrong today (a missing figure reads
+/// 0); the packages that fix those assert them — the probe's own verdicts are
+/// in `test/features/services/presentation/probe_classification_test.dart`. This only guarantees the profile itself is sound enough to
 /// test on.
 library;
 

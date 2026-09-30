@@ -390,6 +390,19 @@ class PlexClient implements StreamServerClient {
     }
   }
 
+  /// The Dashboard's probe: proves the token, and names the version.
+  ///
+  /// [probeVersion] reads `/identity`, which answers anyone, so a Plex with a
+  /// wrong token read as answering while every screen behind it failed.
+  /// `GET /` is the cheapest authenticated read: it 401s on a bad token —
+  /// thrown as unauthorized — and carries the version.
+  Future<String?> checkCredentialAndVersion() async {
+    _assertUsableToken();
+    return PlexServerCapabilities.fromMediaContainer(
+      await _container('/'),
+    ).version;
+  }
+
   /// Whether the token is accepted, via `GET /` — which 401s on a bad one.
   ///
   /// Returns false only for an actual refusal. A timeout or a DNS failure

@@ -54,15 +54,15 @@ class _NzbgetDashboard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final queueAsync = ref.watch(nzbgetQueueProvider);
     final summaryAsync = ref.watch(serviceSummaryProvider(ServiceKey.nzbget));
-    final isOffline = summaryAsync.maybeWhen(
-      data: (summary) => !summary.isOnline,
-      orElse: () => false,
+    // A failed probe, in its own words: "did not answer" only when nothing did,
+    // the refusal and its remedy when the sign-in was refused.
+    final failed = summaryAsync.whenOrNull(
+      data: (summary) => summary.isOnline ? null : summary,
     );
 
-    if (isOffline) {
-      return ServiceOfflineState(
-        serviceName: ServiceKey.nzbget.title,
-        accent: ServiceKey.nzbget.accent,
+    if (failed != null) {
+      return ServiceOfflineState.fromSummary(
+        summary: failed,
         onRetry: () => _invalidateAll(ref),
       );
     }

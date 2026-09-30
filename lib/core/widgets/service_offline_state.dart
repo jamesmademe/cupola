@@ -8,6 +8,7 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
@@ -83,6 +84,45 @@ class ServiceOfflineState extends StatelessWidget {
        accent = service.accent,
        _service = service,
        _error = error;
+
+  /// The leaf for a service whose reachability probe came back failed: the
+  /// plain leaf when nothing answered, and [ServiceOfflineState.failure]'s
+  /// words when it answered with a refusal or a fault.
+  ///
+  /// The screens that gate on the probe used to draw the plain leaf for any
+  /// failed summary, so a SABnzbd that refused the key read "SABnzbd did not
+  /// answer" — red, about a server that had just answered.
+  factory ServiceOfflineState.fromSummary({
+    Key? key,
+    required ServiceSummary summary,
+    required VoidCallback onRetry,
+    Duration? since,
+    VoidCallback? onOpenSettings,
+  }) {
+    final service = summary.service;
+    if (summary.isFault) {
+      return ServiceOfflineState.failure(
+        key: key,
+        service: service,
+        error:
+            summary.failure ??
+            ClassifiedFailure(
+              summary.failureReason ?? ServiceFailureReason.unknown,
+            ),
+        onRetry: onRetry,
+        since: since,
+        onOpenSettings: onOpenSettings,
+      );
+    }
+    return ServiceOfflineState(
+      key: key,
+      serviceName: service.title,
+      accent: service.accent,
+      onRetry: onRetry,
+      since: since,
+      onOpenSettings: onOpenSettings,
+    );
+  }
 
   final String serviceName;
   final Color accent;

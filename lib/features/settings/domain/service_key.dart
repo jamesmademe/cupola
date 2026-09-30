@@ -630,7 +630,8 @@ extension ServiceKeyExtension on ServiceKey {
   /// `X-Api-Key` header the shared `ApiClient` sends, so a 2xx here says nothing
   /// at all about the pasted credential. That is why those two verify through
   /// their own clients first and only fall back to this table to explain a
-  /// refusal — see `diagnoseCredentials`.
+  /// refusal — see `diagnoseCredentials` — and why the Dashboard's probe
+  /// never reads this table for them at all.
   String get statusEndpoint => switch (this) {
     ServiceKey.seerr => '/api/v1/status',
     ServiceKey.radarr || ServiceKey.sonarr => '/api/v3/system/status',

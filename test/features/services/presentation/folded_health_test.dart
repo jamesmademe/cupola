@@ -79,6 +79,7 @@ void main() {
     expect(container.read(foldedServiceHealthProvider(ServiceKey.radarr)), (
       total: 0,
       offline: 0,
+      faulted: 0,
       checking: 0,
     ));
   });
