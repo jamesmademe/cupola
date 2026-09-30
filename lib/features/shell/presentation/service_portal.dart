@@ -171,6 +171,12 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
 
   bool get isOpenOrEngaged => _engaged || portal.value > 0.05;
 
+  /// Fully at rest: closed, no finger, nothing moving. The one state the demo
+  /// bounce may play from — and so the one a caller checks before counting the
+  /// demo as shown.
+  bool get isIdle =>
+      !_engaged && !_closing && !portal.isAnimating && portal.value == 0;
+
   double get _finalBottom =>
       PortalPhysics.cardTopInset + screenHeight * PortalPhysics.cardScale;
   double get _travel => screenHeight - _finalBottom;
@@ -321,7 +327,7 @@ class ServicePortalController implements FloatingNavBarVerticalDragDelegate {
   /// back with the same elastic return a real release uses. No-op unless the
   /// Portal is fully idle; aborted if a real drag arrives mid-demo.
   Future<void> playDemoBounce() async {
-    if (_engaged || _closing || portal.isAnimating || portal.value > 0) return;
+    if (!isIdle) return;
     final anticipation = (9.0 / _travel).clamp(0.0, 0.05);
     _runBarAnim(
       const Duration(milliseconds: 240),

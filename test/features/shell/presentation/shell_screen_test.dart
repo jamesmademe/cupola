@@ -20,6 +20,7 @@ import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/presentation/branch_transition.dart';
 import 'package:cupola/features/shell/presentation/portal_announcement.dart';
@@ -842,6 +843,68 @@ void main() {
       expect(find.byType(NavigationRail), findsOneWidget);
       expect(find.semantics.byPredicate(_offersPortal), findsNothing);
       semantics.dispose();
+    });
+  });
+
+  // The one-shot demo is spent only where it is seen. The window that could
+  // not see it is asked in the desktop shell's own tests.
+  group('the Portal demo', () {
+    testWidgets('plays once on the phone and is then marked seen', (
+      tester,
+    ) async {
+      final harness = await _pumpShell(
+        tester,
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+      expect(
+        harness.container.read(portalHintsProvider).demoBouncePending,
+        isTrue,
+      );
+
+      await tester.pump(const Duration(milliseconds: 700));
+      // The bounce is under way: the page has begun to recede.
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(find.byType(ServiceMatrix), findsOneWidget);
+      // The lift ends, then the hold — a timer, which settling alone does not
+      // run — then the release settles.
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+
+      expect(
+        harness.container.read(portalHintsProvider).demoBouncePending,
+        isFalse,
+      );
+      expect(find.byType(ServiceMatrix), findsNothing);
+    });
+
+    testWidgets('a finger on the bar when it is due keeps it owed', (
+      tester,
+    ) async {
+      final harness = await _pumpShell(
+        tester,
+        overrides: await _lensOverrides(),
+        viewport: const Size(390 * 3, 844 * 3),
+        devicePixelRatio: 3,
+      );
+
+      // The user is already dragging when the breath runs out: the bounce
+      // cannot play, so it has not been shown.
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(FloatingBottomNavBar)),
+      );
+      await gesture.moveBy(const Offset(0, -60));
+      await gesture.moveBy(const Offset(0, -60));
+      await tester.pump(const Duration(milliseconds: 800));
+
+      expect(
+        harness.container.read(portalHintsProvider).demoBouncePending,
+        isTrue,
+      );
+      await gesture.up();
+      await tester.pumpAndSettle();
     });
   });
 

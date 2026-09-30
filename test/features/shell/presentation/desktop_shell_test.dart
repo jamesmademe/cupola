@@ -16,6 +16,7 @@ import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/presentation/branch_transition.dart';
 import 'package:cupola/features/shell/presentation/desktop/command_deck.dart';
@@ -334,6 +335,33 @@ void main() {
           semantics.dispose();
         }
       });
+    });
+  });
+
+  testWidgets('a window between 720 and 839 keeps the Portal demo owed', (
+    tester,
+  ) async {
+    // Narrower than the rail and still the window shell: there is no bar to
+    // lift here, so the one-shot demo must not be spent here either. It used
+    // to be, on the timer, and never came back.
+    await onPlatform(TargetPlatform.macOS, () async {
+      await _pumpShell(
+        tester,
+        viewport: const Size(760, 900),
+        overrides: await _world(),
+      );
+      expect(find.byType(FloatingBottomNavBar), findsNothing);
+
+      // Well past the demo's breath after the first frame.
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ShellScreen)),
+      );
+      expect(container.read(portalHintsProvider).demoBouncePending, isTrue);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool('portal_hint_demo_shown'), isNot(isTrue));
     });
   });
 

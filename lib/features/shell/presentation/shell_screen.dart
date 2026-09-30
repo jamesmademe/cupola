@@ -141,19 +141,40 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     });
   }
 
-  /// The one-shot demo bounce (Settings → Hints re-arms it): only on the phone
-  /// layout, never under a screen reader, and only while the Portal is idle.
-  /// A cancellable timer, not a bare delay: the shell may be torn down first.
+  /// Whether this window draws the Portal: the phone layout, bottom bar and
+  /// all — the branch [build] reaches after the desktop shell and the rail.
+  ///
+  /// Both halves, because each alone is wrong somewhere: a desktop window
+  /// between the compact artboard (720) and the rail (840) is narrower than
+  /// the rail and still draws the desktop shell, which has no bar to lift.
+  static bool _portalDrawn(BuildContext context) =>
+      !AppBreakpoints.isDesktopShell(context) &&
+      MediaQuery.sizeOf(context).width < AppBreakpoints.touchRail;
+
+  /// Whether the one-shot demo may play now, in this window.
+  bool _demoCanPlay() =>
+      mounted &&
+      _portalDrawn(context) &&
+      !MediaQuery.accessibleNavigationOf(context) &&
+      !MediaQuery.disableAnimationsOf(context) &&
+      ref.read(portalHintsProvider).demoBouncePending;
+
+  /// The one-shot demo bounce (Settings → Hints re-arms it): only where the
+  /// Portal is drawn, never under a screen reader or Reduce Motion, and only
+  /// while the Portal is idle. A cancellable timer, not a bare delay: the shell
+  /// may be torn down first.
+  ///
+  /// It is marked seen only when it plays. It used to be marked on the timer
+  /// whatever the window was, so a desktop window between 720 and 839 spent the
+  /// one demo on a bar it does not draw, and the lesson never came back.
   void _armDemoBounce() {
-    if (!mounted) return;
-    if (MediaQuery.sizeOf(context).width >= AppBreakpoints.touchRail) return;
-    if (MediaQuery.accessibleNavigationOf(context)) return;
-    if (MediaQuery.disableAnimationsOf(context)) return;
-    if (!ref.read(portalHintsProvider).demoBouncePending) return;
+    if (!_demoCanPlay()) return;
     // A breath after the first frame: the bounce has to read as a gesture of
     // the bar, not as a startup glitch.
     _demoTimer = Timer(const Duration(milliseconds: 700), () {
-      if (!mounted || !ref.read(portalHintsProvider).demoBouncePending) return;
+      // Asked again: the window may have been resized in the breath, and a
+      // finger may already be on the bar. Either way the demo stays owed.
+      if (!_demoCanPlay() || !_portal.isIdle) return;
       ref.read(portalHintsProvider.notifier).markDemoShown();
       _portal.playDemoBounce();
     });
