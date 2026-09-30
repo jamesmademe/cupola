@@ -16,11 +16,14 @@ Rendered from `lib/core/widgets/fault_band.dart` by `test/design_catalog/fault_b
 | Constructor | Tone | Glyph | Sentence | Verbs |
 |---|---|---|---|---|
 | `.unreachable` | error | `cloud_off_rounded` | *TrueNAS did not answer. Everything below is what it said last.* — with `since` ≥ 1 minute: *TrueNAS has not answered for 6 minutes. …* | Retry · Settings (optional) |
+| `.fault` | warning (`failureTone`) | the reason's (`failureIcon`: `key_off`, `report`, `timer_off`, …) | The classified headline, then the same consequence: *Radarr answered but refused the key. Everything below is what it said last.* | Retry · the remedy (*Paste the key again*) or Settings (optional) |
 | `.section` | error | `link_off_rounded` | The caller's own sentence, naming which source inside the service did not answer and what is missing | Retry · Settings (optional) |
 | `.stale` | warning | `history_toggle_off_rounded` | *These figures are 6 min ago.* + the caller's `detail`; under a minute, *These figures have stopped updating.* + `detail` | Refresh only, no dismiss |
 | `.offlinePush` | error | `cloud_off_rounded` | *Radarr stopped answering while this page was open. Everything here is the last render; a write will fail until it is back.* | Retry · Open Radarr (optional) |
 
 `since`/`age` go through the shared age vocabulary in `core/utils/sample_age.dart`: `formatElapsedSpan` returns `null` under a minute (the sentence drops the span), and `formatDurationAge` buckets to `just now` / `N min ago` / `N h ago` — hours never roll up into days.
+
+`AsyncValueWidget` chooses between the first two by the classification: an error over a retained value is `.unreachable` only when nothing answered, and `.fault` for a refusal or any other failure that did answer — red is never spent on a service that just replied.
 
 ## The consumer provides
 

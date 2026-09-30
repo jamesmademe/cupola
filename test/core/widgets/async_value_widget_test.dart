@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
@@ -61,6 +65,42 @@ void main() {
     expect(find.text('tank DEGRADED 78%'), findsOneWidget);
     expect(find.byType(FaultBand), findsOneWidget);
     expect(find.byType(AppErrorState), findsNothing);
+  });
+
+  testWidgets('the band over retained data is red only for silence', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _failedOver(
+        'tank DEGRADED 78%',
+        error: const SocketException('Connection refused'),
+      ),
+    );
+    expect(
+      tester.widget<FaultBand>(find.byType(FaultBand)).tone,
+      StatusTone.error,
+    );
+    expect(find.textContaining('TrueNAS did not answer'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pump(
+      tester,
+      _failedOver(
+        'tank DEGRADED 78%',
+        error: const ClassifiedFailure(ServiceFailureReason.unauthorized),
+      ),
+    );
+    // Answered and refused: amber, and still the readout below.
+    expect(
+      tester.widget<FaultBand>(find.byType(FaultBand)).tone,
+      StatusTone.warning,
+    );
+    expect(
+      find.textContaining('TrueNAS answered but refused the key'),
+      findsOneWidget,
+    );
+    expect(find.text('tank DEGRADED 78%'), findsOneWidget);
   });
 
   testWidgets('the retained readout is not dimmed', (tester) async {

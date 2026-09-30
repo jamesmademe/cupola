@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
@@ -112,17 +113,28 @@ class AsyncValueWidget<T> extends StatelessWidget {
         if (value.hasValue &&
             (isEmpty == null || !isEmpty!(value.requireValue))) {
           final lastKnown = value.requireValue;
+          // Classified before painted: red "did not answer" only when nothing
+          // did. A refusal or a fault over retained data is amber.
+          final reason = classifyConnectionFailure(e);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              FaultBand.unreachable(
-                serviceName: serviceName,
-                // No `since`: nothing in the tree records a first-failure time
-                // yet, and the band drops the span rather than inventing one.
-                // When that notifier lands this is where it is plumbed in.
-                onRetry: onRetry ?? () {},
-              ),
+              if (failureDidNotAnswer(reason))
+                FaultBand.unreachable(
+                  serviceName: serviceName,
+                  // No `since`: nothing in the tree records a first-failure
+                  // time yet, and the band drops the span rather than
+                  // inventing one. When that notifier lands this is where it
+                  // is plumbed in.
+                  onRetry: onRetry ?? () {},
+                )
+              else
+                FaultBand.fault(
+                  serviceName: serviceName,
+                  reason: reason,
+                  onRetry: onRetry ?? () {},
+                ),
               // Full ink, unchanged. This is the whole point of the branch.
               Flexible(child: data(lastKnown)),
             ],

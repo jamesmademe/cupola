@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 
@@ -40,6 +41,11 @@ void main() {
       // nobody reads on the day it matters.
       final bands = <Widget>[
         FaultBand.unreachable(serviceName: 'TrueNAS', onRetry: () {}),
+        FaultBand.fault(
+          serviceName: 'Radarr',
+          reason: ServiceFailureReason.serverError,
+          onRetry: () {},
+        ),
         FaultBand.section(
           message: 'qBittorrent is not answering.',
           onRetry: () {},
@@ -143,6 +149,28 @@ void main() {
       // different decisions.
       expect(find.textContaining('6 minutes'), findsOneWidget);
       expect(find.textContaining('what it said last'), findsOneWidget);
+    });
+
+    testWidgets('a refusal over retained data is amber, in its own words', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        FaultBand.fault(
+          serviceName: 'Radarr',
+          reason: ServiceFailureReason.unauthorized,
+          onRetry: () {},
+          onOpenSettings: () {},
+        ),
+      );
+      final band = tester.widget<FaultBand>(find.byType(FaultBand));
+      expect(band.tone, StatusTone.warning);
+      expect(
+        find.textContaining('Radarr answered but refused the key'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('did not answer'), findsNothing);
+      expect(find.text('Paste the key again'), findsOneWidget);
     });
 
     testWidgets('unreachable drops the span rather than inventing one', (

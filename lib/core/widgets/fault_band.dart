@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 
 /// One grammar for the four ways a page can be wrong, none of which is an
 /// error page.
@@ -73,6 +75,33 @@ class FaultBand extends StatelessWidget {
        secondaryAction = onOpenSettings == null
            ? null
            : FaultBandAction('Settings', onOpenSettings);
+
+  /// Level 1, when the service **answered**: the read failed with a refusal
+  /// or a fault — a refused key, a 5xx, a reply nobody can read.
+  ///
+  /// Amber, never [FaultBand.unreachable]'s red: the service is there, and
+  /// telling the user it did not answer sends them to check a box that just
+  /// replied. [reason] is the classification; the sentence names who and
+  /// what, and the readout below stays at full ink for the same reason it does
+  /// under silence.
+  FaultBand.fault({
+    super.key,
+    required String serviceName,
+    required ServiceFailureReason reason,
+    required VoidCallback onRetry,
+    VoidCallback? onOpenSettings,
+  }) : tone = failureTone(reason),
+       icon = failureIcon(reason),
+       message =
+           '${failureHeadline(reason, subject: serviceName)}. Everything '
+           'below is what it said last.',
+       primaryAction = FaultBandAction('Retry', onRetry),
+       secondaryAction = onOpenSettings == null
+           ? null
+           : FaultBandAction(
+               failureRemedy(reason) ?? 'Settings',
+               onOpenSettings,
+             );
 
   /// Level 2 — the service answered; one source inside it did not.
   ///

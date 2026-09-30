@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 
 import 'catalog.dart';
@@ -25,6 +26,16 @@ void main() {
         '.unreachable(since: null) · under a minute, the span is dropped '
         'rather than printing a number nobody can act on',
         (_) => FaultBand.unreachable(serviceName: 'Radarr', onRetry: () {}),
+      ),
+      CatalogScene(
+        '.fault(reason: unauthorized) · the service answered and refused the '
+        'key: amber, Retry · the remedy',
+        (_) => FaultBand.fault(
+          serviceName: 'Radarr',
+          reason: ServiceFailureReason.unauthorized,
+          onRetry: () {},
+          onOpenSettings: () {},
+        ),
       ),
       CatalogScene(
         '.section · the caller\'s own sentence naming which source is '
