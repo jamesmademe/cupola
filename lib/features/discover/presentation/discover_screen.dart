@@ -411,7 +411,7 @@ class _DiscoverSearchResults extends ConsumerWidget {
           ? NotConfiguredPlaceholder.forService(ServiceKey.seerr)
           : AppErrorState(
               error: error,
-              serviceName: 'search results',
+              serviceName: ServiceKey.seerr.title,
               onRetry: () => ref.invalidate(discoverSearchResultsProvider),
             ),
       data: (results) {
@@ -419,7 +419,7 @@ class _DiscoverSearchResults extends ConsumerWidget {
         if (results == null || results.isEmpty) {
           return const AppEmptyState(
             icon: Icons.search_off_rounded,
-            title: 'No results found',
+            title: 'No results',
             message: 'Try a different title or spelling.',
           );
         }

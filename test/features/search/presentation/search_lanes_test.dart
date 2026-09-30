@@ -56,7 +56,7 @@ void main() {
       bazarr: bazarr,
     );
 
-    expect(find.text('No results found'), findsNothing);
+    expect(find.text('No results'), findsNothing);
     expect(find.text('Searching…'), findsOneWidget);
 
     await _release(tester, bazarr.release);

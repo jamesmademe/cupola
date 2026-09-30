@@ -20,7 +20,7 @@ void main() {
         'AppEmptyState() · full, neutral well, with an action',
         (_) => AppEmptyState(
           icon: Icons.search_off_rounded,
-          title: 'No results found',
+          title: 'No results',
           message: 'Try a different title or spelling.',
           action: FilledButton(
             onPressed: () {},

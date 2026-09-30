@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/utils/search_results_loader.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
@@ -32,6 +33,11 @@ final moviesSearchResultsProvider = FutureProvider<List<RadarrMovie>?>((
   ref.onDispose(cancelToken.cancel);
   return loadNullableSearchResults(
     query: query,
-    lookup: (term) => service.lookupMovies(term, cancelToken: cancelToken),
+    // `reportFailure`: a Radarr that did not answer is not "No results".
+    lookup: (term) => service.lookupMovies(
+      term,
+      cancelToken: cancelToken,
+      reportFailure: true,
+    ),
   );
-});
+}, retry: noProviderRetry);

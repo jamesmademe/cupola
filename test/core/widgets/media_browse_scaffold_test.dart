@@ -443,7 +443,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('No results found'), findsOneWidget);
+      expect(find.text('No results'), findsOneWidget);
       expect(find.byType(MediaGrid<String>), findsNothing);
     });
 
@@ -477,9 +477,9 @@ void main() {
       // It printed `Error: SocketException: Connection refused`.
       expect(find.textContaining('Error:'), findsNothing);
       expect(find.textContaining('SocketException'), findsNothing);
-      expect(find.text("Couldn't load search results"), findsOneWidget);
+      expect(find.text("Couldn't load Test Service"), findsOneWidget);
       expect(find.text('Did not answer'), findsOneWidget);
-      expect(find.text('No results found'), findsNothing);
+      expect(find.text('No results'), findsNothing);
       expect(find.text('Retry'), findsOneWidget);
     });
 

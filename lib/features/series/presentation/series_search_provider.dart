@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: implementation_imports
 import 'package:flutter_riverpod/legacy.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/utils/search_results_loader.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
@@ -26,6 +27,11 @@ final seriesSearchResultsProvider = FutureProvider<List<SonarrSeries>?>((
   ref.onDispose(cancelToken.cancel);
   return loadNullableSearchResults(
     query: query,
-    lookup: (term) => service.lookupSeries(term, cancelToken: cancelToken),
+    // `reportFailure`: a Sonarr that did not answer is not "No results".
+    lookup: (term) => service.lookupSeries(
+      term,
+      cancelToken: cancelToken,
+      reportFailure: true,
+    ),
   );
-});
+}, retry: noProviderRetry);

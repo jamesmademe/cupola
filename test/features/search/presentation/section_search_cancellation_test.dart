@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -147,6 +148,62 @@ void main() {
     });
   });
 
+  group('a section search that failed', () {
+    // "No results" only after the arr answered: the loader used to catch
+    // every failure into `[]`, and a Radarr that did not answer drew exactly
+    // what an empty answer draws.
+    test('movies: the failure reaches the page, never an empty list', () async {
+      final container = ProviderContainer(
+        overrides: [
+          radarrServiceProvider.overrideWithValue(
+            _GateRadarrService(fails: true),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(moviesSearchQueryProvider.notifier).state = 'dune';
+      await expectLater(
+        container.read(moviesSearchResultsProvider.future),
+        throwsA(isA<SocketException>()),
+      );
+    });
+
+    test('series: the failure reaches the page, never an empty list', () async {
+      final container = ProviderContainer(
+        overrides: [
+          sonarrServiceProvider.overrideWithValue(
+            _GateSonarrService(fails: true),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(seriesSearchQueryProvider.notifier).state = 'severance';
+      await expectLater(
+        container.read(seriesSearchResultsProvider.future),
+        throwsA(isA<SocketException>()),
+      );
+    });
+
+    test('music: the failure reaches the page, never an empty list', () async {
+      final container = ProviderContainer(
+        overrides: [
+          lidarrServiceProvider.overrideWithValue(
+            _GateLidarrService(fails: true),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(musicSearchQueryProvider.notifier).state = 'charli';
+      await expectLater(
+        container.read(musicSearchResultsProvider.future),
+        throwsA(isA<SocketException>()),
+      );
+    });
+  });
+
   group('discover', () {
     test('hands the lookup a cancel token', () async {
       final seerr = _GateSeerrService();
@@ -241,9 +298,10 @@ void main() {
 /// the first round is genuinely still in flight when the second arrives —
 /// which is the only state in which cancelling means anything.
 class _GateRadarrService extends FakeRadarrService {
-  _GateRadarrService({this.gate});
+  _GateRadarrService({this.gate, this.fails = false});
 
   final Completer<void>? gate;
+  final bool fails;
   final List<CancelToken?> tokens = [];
 
   @override
@@ -254,14 +312,19 @@ class _GateRadarrService extends FakeRadarrService {
   }) async {
     tokens.add(cancelToken);
     await gate?.future;
+    // The real service's contract: a failure travels only when asked.
+    if (fails && reportFailure) {
+      throw const SocketException('Connection refused');
+    }
     return const [];
   }
 }
 
 class _GateSonarrService extends FakeSonarrService {
-  _GateSonarrService({this.gate});
+  _GateSonarrService({this.gate, this.fails = false});
 
   final Completer<void>? gate;
+  final bool fails;
   final List<CancelToken?> tokens = [];
 
   @override
@@ -272,14 +335,19 @@ class _GateSonarrService extends FakeSonarrService {
   }) async {
     tokens.add(cancelToken);
     await gate?.future;
+    // The real service's contract: a failure travels only when asked.
+    if (fails && reportFailure) {
+      throw const SocketException('Connection refused');
+    }
     return const [];
   }
 }
 
 class _GateLidarrService extends FakeLidarrService {
-  _GateLidarrService({this.gate});
+  _GateLidarrService({this.gate, this.fails = false});
 
   final Completer<void>? gate;
+  final bool fails;
   final List<CancelToken?> tokens = [];
 
   @override
@@ -290,6 +358,10 @@ class _GateLidarrService extends FakeLidarrService {
   }) async {
     tokens.add(cancelToken);
     await gate?.future;
+    // The real service's contract: a failure travels only when asked.
+    if (fails && reportFailure) {
+      throw const SocketException('Connection refused');
+    }
     return const [];
   }
 }

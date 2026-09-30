@@ -593,12 +593,14 @@ class _MediaBrowseScaffoldState<T>
       // the exception's own text was the whole of this state.
       error: (error, stack) => AppErrorState(
         error: error,
-        serviceName: 'search results',
+        serviceName: widget.serviceName,
         onRetry: () => ref.invalidate(widget.searchResultsProvider),
       ),
       data: (results) {
+        // Only after an answer: a lookup that failed reaches the error state
+        // above, never this line.
         if (results == null || results.isEmpty) {
-          return const Center(child: Text('No results found'));
+          return const Center(child: Text('No results'));
         }
 
         return _buildGrid(

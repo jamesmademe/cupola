@@ -127,7 +127,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('No results found'), findsOneWidget);
+      expect(find.text('No results'), findsOneWidget);
       expect(find.byIcon(Icons.search_off_rounded), findsOneWidget);
     });
 
@@ -143,9 +143,9 @@ void main() {
       // A search Seerr did not complete is not "No results found": the leaf
       // says what happened, in the classified words, and never the
       // exception's own.
-      expect(find.text("Couldn't load search results"), findsOneWidget);
+      expect(find.text("Couldn't load Seerr"), findsOneWidget);
       expect(find.text('Did not complete'), findsOneWidget);
-      expect(find.text('No results found'), findsNothing);
+      expect(find.text('No results'), findsNothing);
       expect(find.textContaining('Network error'), findsNothing);
       expect(find.text('Retry'), findsOneWidget);
     });
@@ -163,7 +163,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Did not answer'), findsOneWidget);
-      expect(find.text('No results found'), findsNothing);
+      expect(find.text('No results'), findsNothing);
     });
 
     testWidgets('a rail whose source failed says so, under its header', (

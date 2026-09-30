@@ -1067,7 +1067,7 @@ class _NoResultsState extends StatelessWidget {
   Widget build(BuildContext context) {
     return const AppEmptyState(
       icon: Icons.search_off_rounded,
-      title: 'No results found',
+      title: 'No results',
       message: 'Try a different title or spelling.',
     );
   }
