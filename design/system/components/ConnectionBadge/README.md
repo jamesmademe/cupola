@@ -6,8 +6,8 @@ Rendered from `lib/core/widgets/connection_badge.dart` by `test/design_catalog/c
 
 ## Anatomy
 
-- Padding 6px horizontal, 1px vertical; `radius-xs2` (6); fill the accent at 14% alpha; 1px border, the accent at 34% alpha.
-- Text: the eyebrow style (11px / weight 600, 1.4px letter-spacing, 1.2 line height), uppercased. The ink is the accent walked against its own 14% wash over the ground the badge sits on (`ServiceTheme.onTint`, `tintAlpha: 0.14`) — so Radarr amber darkens on paper and stays itself on the dark surface.
+- Padding 6px horizontal, 1px vertical; `radius-xs2` (8); fill the accent (the lamp, for every service) at 14% alpha; 1px border, the accent at 34% alpha.
+- Text: the eyebrow style (11px / weight 600, 1.4px letter-spacing, 14 line height), uppercased. The ink is the accent walked against its own 14% wash over the ground the badge sits on (`ServiceTheme.onTint`, `tintAlpha: 0.14`) — the lamp resolves to the room's primary ink, so the badge is monochrome in both themes.
 - An empty `label` renders `SizedBox.shrink()`: a stack with one Radarr never grows a badge naming the only Radarr.
 
 ## Placement
@@ -17,7 +17,7 @@ On the row, after the `StatusBadge`, `AppSpacing.sm` apart (hidden on the compac
 ## The consumer provides
 
 - `label` — the connection's name, or empty to render nothing.
-- `accent` — the service accent.
+- `accent` — the service's accent (`ServiceKey.accent`, the lamp).
 - `surface` — the ground the badge lands on, defaulting to `ColorScheme.surface`; a badge on a card passes `surfaceContainer`.
 
 ## Semantics

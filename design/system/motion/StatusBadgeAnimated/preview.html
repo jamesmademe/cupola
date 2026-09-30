@@ -23,8 +23,8 @@
       <dl class="cp-motion-readout">
         <dt>status</dt><dd data-out="state">—</dd>
         <dt>key</dt><dd data-out="key">—</dd>
-        <dt>fade</dt><dd data-out="fade">200 ms · in easeOutCubic · out linear</dd>
-        <dt>ring</dt><dd data-out="ring">300 ms · standardCurve</dd>
+        <dt>fade</dt><dd data-out="fade">320 ms · in cubic-bezier(0.2, 0.8, 0.2, 1) · out linear</dd>
+        <dt>ring</dt><dd data-out="ring">320 ms · standardCurve</dd>
         <dt>ring at</dt><dd data-out="value">—</dd>
       </dl>
       <p class="cp-motion-note">A poll that only moves the percentage keeps the key, so nothing fades: the digits snap, the arc sweeps. The ×2 copy is the same badge, magnified.</p>
@@ -38,14 +38,8 @@
     function ev(p, q, m) { return 3 * p * (1 - m) * (1 - m) * m + 3 * q * (1 - m) * m * m + m * m * m; }
     return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; var lo = 0, hi = 1; for (;;) { var m = (lo + hi) / 2, x = ev(a, c, m); if (Math.abs(t - x) < 0.001) return ev(b, d, m); if (x < t) lo = m; else hi = m; } };
   }
-  function threePoint(a1, b1, mid, a2, b2) {
-    var sx1 = mid[0], sy1 = mid[1], sx2 = 1 - mid[0], sy2 = 1 - mid[1];
-    var f1 = cubic(a1[0] / sx1, a1[1] / sy1, b1[0] / sx1, b1[1] / sy1), f2 = cubic((a2[0] - mid[0]) / sx2, (a2[1] - mid[1]) / sy2, (b2[0] - mid[0]) / sx2, (b2[1] - mid[1]) / sy2);
-    return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; return t < mid[0] ? f1(t / sx1) * sy1 : f2((t - mid[0]) / sx2) * sy2 + mid[1]; };
-  }
-  var standard = threePoint([0.05, 0], [0.133333, 0.06], [0.166666, 0.4], [0.208333, 0.82], [0.25, 1]);
-  var easeOutCubic = cubic(0.215, 0.61, 0.355, 1);
-  var SWITCH_MS = 200, RING_MS = 300, REDUCED = 0.05;
+  var ease = cubic(0.2, 0.8, 0.2, 1); /* standardCurve and emphasizedCurve: the one ease */
+  var SWITCH_MS = 320, RING_MS = 320, REDUCED = 0.05;
   /* The walk: pipeline + progress, as MediaStatusInfo would resolve it. */
   var STEPS = [
     { label: 'Queued', pipeline: 'queued', tone: 'info', icon: 'schedule' },
@@ -63,9 +57,11 @@
   var out = {}; root.querySelectorAll('[data-out]').forEach(function (el) { out[el.dataset.out] = el; });
   var probe = document.createElement('span'); probe.style.display = 'none'; root.appendChild(probe);
   function rgb(token) { probe.style.color = 'var(--' + token + ')'; var m = getComputedStyle(probe).color.match(/[\d.]+/g) || [0, 0, 0]; return { r: +m[0], g: +m[1], b: +m[2] }; }
+  /* Each room has its own five tones: statusToneColor takes the tone of the room it is drawn in. */
+  var TONE = { success: 'tone-green', warning: 'tone-amber', info: 'tone-blue', error: 'tone-red' };
   function toneColor(tone) {
     if (tone === 'neutral') return 'var(--on-surface-variant)';
-    var c = window.Cupola.onTint(rgb(tone), rgb('surface'), 0);
+    var c = window.Cupola.onTint(rgb(TONE[tone] || tone), rgb('surface'), 0);
     return 'rgb(' + Math.round(c.r) + ',' + Math.round(c.g) + ',' + Math.round(c.b) + ')';
   }
   function reduce() { return root.dataset.reduce === 'true'; }
@@ -93,7 +89,7 @@
     cancelAnimationFrame(ringTween);
     if (reduce()) { ringValue = to; paintRing(to); return; }
     var from = ringValue, t0 = performance.now();
-    (function f(now) { var p = Math.min(1, (now - t0) / RING_MS); ringValue = from + (to - from) * standard(p); paintRing(ringValue); if (p < 1) ringTween = requestAnimationFrame(f); })(t0);
+    (function f(now) { var p = Math.min(1, (now - t0) / RING_MS); ringValue = from + (to - from) * ease(p); paintRing(ringValue); if (p < 1) ringTween = requestAnimationFrame(f); })(t0);
   }
   function show(i, instant) {
     index = i;
@@ -119,7 +115,7 @@
       }
       row.style.opacity = '0'; sw.appendChild(row);
       var t1 = performance.now();
-      (function g(now) { var p = Math.min(1, (now - t1) / SWITCH_MS); row.style.opacity = String(easeOutCubic(p)); if (p < 1) requestAnimationFrame(g); })(t1);
+      (function g(now) { var p = Math.min(1, (now - t1) / SWITCH_MS); row.style.opacity = String(ease(p)); if (p < 1) requestAnimationFrame(g); })(t1);
     });
     if (s.progress != null) {
       /* Tween(end: progress) has no begin: a freshly mounted ring starts AT its value, and only later polls sweep. */
@@ -139,8 +135,8 @@
   root.querySelector('[data-next]').addEventListener('click', function () { clearTimeout(timer); show((index + 1) % STEPS.length, index + 1 >= STEPS.length); });
   var sw = root.querySelector('[data-reduce-switch]');
   function applyOut() {
-    out.fade.textContent = reduce() ? 'none: no AnimatedSwitcher' : '200 ms · in easeOutCubic · out linear';
-    out.ring.textContent = reduce() ? 'snaps: no TweenAnimationBuilder' : '300 ms · standardCurve';
+    out.fade.textContent = reduce() ? 'none: no AnimatedSwitcher' : '320 ms · in cubic-bezier(0.2, 0.8, 0.2, 1) · out linear';
+    out.ring.textContent = reduce() ? 'snaps: no TweenAnimationBuilder' : '320 ms · standardCurve';
   }
   function setReduce(v) { root.dataset.reduce = v ? 'true' : 'false'; sw.setAttribute('aria-checked', v ? 'true' : 'false'); applyOut(); }
   sw.addEventListener('click', function () { setReduce(!reduce()); });

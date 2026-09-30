@@ -28,12 +28,12 @@
 ///   children go through `SliverList.builder` and stay lazy while still landing
 ///   mid-page.
 /// - **Three "this one is selected" languages.** The season pills were
-///   `ChoiceChip`s: full radius on an *interactive* control, which the
-///   Pill-for-Metadata Rule reserves for metadata, and a selected state
-///   (a small check plus a slightly different fill) distinct from the browse
-///   filters directly above them. The selector is [SelectionPills] now — the
-///   same 20dp accent-tinted treatment as the navigation bar and the Activity
-///   segments.
+///   `ChoiceChip`s: full radius on an *interactive* control, the shape a tag
+///   or a piece of metadata takes, and a selected state (a small check plus a
+///   slightly different fill) distinct from the browse filters directly above
+///   them. The selector is [SelectionPills] now — the same pill as the
+///   navigation bar and the Activity segments: the room's strong fill under
+///   the primary ink.
 library;
 
 import 'package:flutter/material.dart';
@@ -655,7 +655,6 @@ class _GroupSelector extends StatelessWidget {
                       .map((group) => group.id)
                       .toList(growable: false),
                   selected: selected.id,
-                  accent: accent,
                   labelBuilder: (id) =>
                       groups.firstWhere((group) => group.id == id).shortLabel,
                   onSelected: onSelected,

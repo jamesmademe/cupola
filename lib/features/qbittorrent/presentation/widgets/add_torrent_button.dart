@@ -9,12 +9,13 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// qBittorrent's accent as ink on the header it sits in, walked against that
 /// header's surface — the lit band on a desktop window, the plain surface on a
 /// phone. The raw accent is measured nowhere.
 Color qbittorrentBarInk(BuildContext context) => ServiceTheme.onTint(
-  AppColors.qbittorrent,
+  ServiceKey.qbittorrent.accent,
   surface: ServiceBandSurface.of(context),
   tintAlpha: 0,
 );
@@ -42,7 +43,7 @@ class AddTorrentButton extends ConsumerWidget {
       context: context,
       title: 'Add torrent',
       icon: Icons.add_link_rounded,
-      accent: AppColors.qbittorrent,
+      accent: ServiceKey.qbittorrent.accent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setModalState) {
           return Form(
@@ -82,10 +83,6 @@ class AddTorrentButton extends ConsumerWidget {
                         child: OutlinedButton.icon(
                           icon: const Icon(Icons.attach_file_rounded, size: 18),
                           label: const Text('Pick .torrent files'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.qbittorrent,
-                            side: BorderSide(color: AppColors.qbittorrent),
-                          ),
                           onPressed: () async {
                             final result = await FilePicker.platform.pickFiles(
                               allowMultiple: true,
@@ -109,11 +106,7 @@ class AddTorrentButton extends ConsumerWidget {
                             padding: const EdgeInsets.only(bottom: 4),
                             child: Row(
                               children: [
-                                const Icon(
-                                  Icons.description_rounded,
-                                  size: 16,
-                                  color: AppColors.qbittorrent,
-                                ),
+                                const Icon(Icons.description_rounded, size: 16),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -146,9 +139,6 @@ class AddTorrentButton extends ConsumerWidget {
                         TextButton.icon(
                           icon: const Icon(Icons.add_rounded, size: 16),
                           label: const Text('Add more files'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.qbittorrent,
-                          ),
                           onPressed: () async {
                             final result = await FilePicker.platform.pickFiles(
                               allowMultiple: true,
@@ -186,15 +176,10 @@ class AddTorrentButton extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.xl),
                 FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.qbittorrent,
-                    // One ink for the glyph and the label, measured against
-                    // the fill. The label's weight lives here too, not on the
-                    // Text: a `labelLarge` style on the Text carries the
-                    // theme's own text colour and overrode this — near-black
-                    // on qBittorrent blue in light theme beside a white +.
-                    foregroundColor: ServiceTheme.foregroundOn(
-                      AppColors.qbittorrent,
-                    ),
+                    // The ink button, the theme's. The label's weight lives
+                    // here, not on the Text: a `labelLarge` style on the Text
+                    // carries the theme's own text colour and overrides the
+                    // button's foreground.
                     textStyle: Theme.of(
                       ctx2,
                     ).textTheme.labelLarge!.weight(FontWeight.w600),

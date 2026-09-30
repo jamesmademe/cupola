@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/section_header.dart';
@@ -28,26 +27,23 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// they named — the fifth copy would have been written before anyone noticed
 /// the first four had drifted. Nine more Overviews are owed.
 ///
-/// Everything here takes the [ServiceKey] and derives the rest: the accent
-/// walked to ink by [serviceOverviewInk], the tab link's destination and its
-/// spoken hint, the branch a link switches to. Nothing takes a colour, because
-/// a caller passing a colour is a caller that can pass the raw accent and put
-/// 2.4:1 text on paper.
+/// Everything here takes the [ServiceKey] and derives the rest: the ink by
+/// [serviceOverviewInk], the tab link's destination and its spoken hint, the
+/// branch a link switches to. Nothing takes a colour, because a caller passing
+/// a colour is a caller that can pass a hue and put 2.4:1 text on paper.
 
-/// A service accent, walked until it can carry ink.
+/// The ink of an Overview's links and section marks: the room's secondary ink.
 ///
-/// Every place an accent becomes *text* rather than a dot goes through
-/// [ServiceTheme.onTint]: seven of the seventeen service accents sit under 3:1
-/// on paper and resolve to a darker hue than the dark artboards draw. Public
-/// because a page's own section marks have to be tinted the same way as the
-/// link and the lens chip here — four private copies of this one expression is
-/// exactly what the rest of this file exists to stop.
+/// The room is monochrome (principle 3 of the brand book: colour is information), so a link
+/// that opens another tab is the secondary ink the brand book draws section links
+/// in, the same on every service — it used to be the service's accent, walked
+/// until it cleared AA. Public because a page's own section marks have to be
+/// inked the same way as the link and the lens chip here — four private copies
+/// of this one expression is exactly what the rest of this file exists to
+/// stop. [service] stays in the signature so every call site keeps naming
+/// whose Overview it is.
 Color serviceOverviewInk(ServiceKey service, ColorScheme colorScheme) =>
-    ServiceTheme.onTint(
-      service.accent,
-      surface: colorScheme.surface,
-      tintAlpha: 0,
-    );
+    colorScheme.onSurfaceVariant;
 
 /// Switches to another of [service]'s tabs.
 ///

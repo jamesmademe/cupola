@@ -146,13 +146,13 @@ class ServiceMatrixMetrics {
   /// below do the rest of the work.
   static const double glyphSize = 18;
 
-  /// Strength of the accent wash lighting a live card from its top-left corner.
+  /// Strength of the wash lighting a live card from its top-left corner.
   ///
-  /// Deliberately the same 0.14 the icon tile this replaced used for its fill:
-  /// the card carries exactly as much of the service's colour as before, spread
-  /// as light across a corner instead of stamped into a 28pt square. That is the
-  /// whole move, and keeping the quantity identical is what keeps it inside the
-  /// Room Light Rule's documented Dashboard exception rather than widening it.
+  /// The wash is the service's accent, which is the lamp for every service
+  /// (`ServiceKey.accent`): a live card is lit, an unreachable one is not, and
+  /// the light says nothing about *which* service — the mark and the name do.
+  /// Deliberately the same 0.14 the icon tile this replaced used for its fill,
+  /// spread as light across a corner instead of stamped into a 28pt square.
   static const double accentWashAlpha = 0.14;
 
   /// Cell height before text growth: identity row, then the two figures.
@@ -164,10 +164,10 @@ class ServiceMatrixMetrics {
   /// the secondary — and nothing else. The app root installs a
   /// [DefaultTextHeightBehavior] with `applyHeightToFirstAscent` and
   /// `applyHeightToLastDescent` both false, so the leading applies only
-  /// *between* lines while a block's outer edges keep Inter's natural metrics:
-  /// every role measures the same for a single line as it did before —
-  /// `bodyLarge` 19.0, `bodySmall` 15.0 — and every line in this cell is a
-  /// single line.
+  /// *between* lines while a block's outer edges keep the face's natural
+  /// metrics (Onest's are 1.275em): a single line of `bodyLarge` measures 19.1
+  /// and one of `bodySmall` 16.6, and every line in this cell is a single
+  /// line.
   static const double cellTextHeight = 54;
 
   /// Columns that fit [availableWidth], never fewer than [minColumns].
@@ -795,9 +795,8 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final isOnline = reachability == ServiceReachability.online;
     // An unreachable service recedes instead of changing colour: the surface
-    // steps *down* the ladder so the cell reads as unlit. Health has nowhere to
-    // hide in a hue — see the Room Light note in DESIGN.md — and a brightness
-    // step survives colour blindness, which a red border does not.
+    // steps *down* the ladder so the cell reads as unlit. A brightness step
+    // survives colour blindness, which a red border does not.
     final surface = isOnline
         ? colorScheme.surfaceContainer
         : colorScheme.surfaceContainerLow;

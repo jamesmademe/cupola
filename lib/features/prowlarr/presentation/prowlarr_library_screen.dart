@@ -200,7 +200,7 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
           ? null
           : indexer.displayImplementation,
       icon: Icons.travel_explore_rounded,
-      accent: AppColors.prowlarr,
+      accent: ServiceKey.prowlarr.accent,
       builder: (sheetContext) => Column(
         children: [
           ListTile(
@@ -264,7 +264,9 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
       return Scaffold(
         appBar: widget.showAppBar
             ? AppBar(
-                backgroundColor: AppColors.prowlarr.withValues(alpha: 0.12),
+                backgroundColor: ServiceKey.prowlarr.accent.withValues(
+                  alpha: 0.12,
+                ),
                 leading: IconButton(
                   icon: const Icon(Icons.chevron_left_rounded),
                   onPressed: () =>
@@ -379,7 +381,9 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
     return Scaffold(
       appBar: widget.showAppBar
           ? AppBar(
-              backgroundColor: AppColors.prowlarr.withValues(alpha: 0.12),
+              backgroundColor: ServiceKey.prowlarr.accent.withValues(
+                alpha: 0.12,
+              ),
               leading: _selecting
                   ? cancelSelection
                   : IconButton(
@@ -829,7 +833,7 @@ class _FilterChip extends StatelessWidget {
       padding: const EdgeInsets.only(right: AppSpacing.sm),
       child: Material(
         color: selected
-            ? AppColors.prowlarr.withValues(alpha: 0.15)
+            ? ServiceKey.prowlarr.accent.withValues(alpha: 0.15)
             : colorScheme.surfaceContainerHighest,
         borderRadius: AppRadius.borderRadiusSm,
         child: InkWell(
@@ -844,7 +848,7 @@ class _FilterChip extends StatelessWidget {
               borderRadius: AppRadius.borderRadiusSm,
               border: Border.all(
                 color: selected
-                    ? AppColors.prowlarr.withValues(alpha: 0.5)
+                    ? ServiceKey.prowlarr.accent.withValues(alpha: 0.5)
                     : Colors.transparent,
               ),
             ),
@@ -854,7 +858,7 @@ class _FilterChip extends StatelessWidget {
                   .weight(FontWeight.w600)
                   .copyWith(
                     color: selected
-                        ? AppColors.prowlarr
+                        ? colorScheme.onSurface
                         : colorScheme.onSurfaceVariant,
                   ),
             ),

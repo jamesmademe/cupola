@@ -14,6 +14,7 @@ import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/domain/models/truenas_models.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
@@ -386,7 +387,7 @@ class _CpuCard extends StatelessWidget {
             value: fraction ?? 0,
             valueLabel: label,
             caption: usage != null ? 'CPU' : 'load 1m',
-            color: AppColors.truenas,
+            color: ServiceKey.truenas.accent,
             size: 108,
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -459,7 +460,7 @@ class _NetworkCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (series.isNotEmpty) ...[
-                Sparkline(values: series, color: AppColors.truenas),
+                Sparkline(values: series, color: ServiceKey.truenas.accent),
                 const SizedBox(height: AppSpacing.sm),
               ],
               if (upInterfaces.isEmpty)

@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/status/media_action.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
@@ -259,9 +258,10 @@ class _MediaOverflowRow extends StatelessWidget {
 class LibraryDetailActions extends StatelessWidget {
   /// The service that owns this page.
   ///
-  /// One parameter rather than an accent plus a name, because the two must never
-  /// disagree: the accent lights the promoted verb and the name appears in the
-  /// consequence sentence.
+  /// One parameter rather than a colour plus a name, because the two must never
+  /// disagree: the name appears in the consequence sentence, and the overflow
+  /// sheet's header is lit by the service's accent — the lamp. The promoted
+  /// verb is the ink button, never a service's colour.
   final ServiceKey service;
 
   /// The fully resolved status, from the feature's `domain/` layer.
@@ -473,10 +473,16 @@ class LibraryDetailActions extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    // The promoted verb is the brand book's primary: the ink button, the same on every
+    // service. It used to be filled with the service's accent, which put white
+    // on Radarr's amber at 2.1:1 on the loudest control of the page before the
+    // ink was measured, and a hue on the one control that is about the title,
+    // not the service.
+    final primaryFill = colorScheme.primary;
+    final onPrimaryFill = colorScheme.onPrimary;
+    // The overflow sheet still takes the service's accent: it lights the
+    // sheet's header well, and that accent is the lamp (`ServiceKey.accent`).
     final accent = service.accent;
-    // Never a local luminance threshold: `> 0.55 ? black : white` put white on
-    // Radarr's amber at roughly 2.1:1 — on the loudest control of the page.
-    final onAccent = ServiceTheme.foregroundOn(accent);
 
     final action = promotedAction;
     final invoker = _invokerFor(action.kind);
@@ -662,7 +668,7 @@ class LibraryDetailActions extends StatelessWidget {
 
     // The promoted button is only ever disabled by [isBusy], and then it carries
     // the spinner: it keeps its fill and ink, because in Material's disabled
-    // grey the spinner — still drawn in [onAccent] — all but vanished.
+    // grey the spinner — still drawn in the on-ink — all but vanished.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -674,15 +680,15 @@ class LibraryDetailActions extends StatelessWidget {
               label: action.label,
               isBusy: isBusy,
               isConfirmed: isConfirmed,
-              color: onAccent,
-              fill: accent,
+              color: onPrimaryFill,
+              fill: primaryFill,
             ),
             label: label,
             style: HeaderActionRow.expandedButtonStyle(
-              foregroundColor: onAccent,
-              backgroundColor: accent,
-              disabledForegroundColor: onAccent,
-              disabledBackgroundColor: accent,
+              foregroundColor: onPrimaryFill,
+              backgroundColor: primaryFill,
+              disabledForegroundColor: onPrimaryFill,
+              disabledBackgroundColor: primaryFill,
             ),
           ),
           trailing: trailing,

@@ -62,8 +62,8 @@ class MediaDetailValueRow<T> extends StatefulWidget {
   /// quality profile can still queue a library-wide upgrade sweep.
   final Future<void> Function(T value)? onChanged;
 
-  /// The page's service accent. Never `colorScheme.primary`: that would put
-  /// indigo on a Sonarr violet page, which is a second accent on one screen.
+  /// The page's service accent — the lamp, which the selected row's label
+  /// resolves to the room's ink through `ServiceTheme.onTint`.
   final Color? accent;
 
   /// Spoken after the name and value, so a screen reader user knows the row is

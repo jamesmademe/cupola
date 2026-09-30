@@ -6,8 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
-import 'package:cupola/core/service_theme.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/search_bar_header.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -172,25 +170,23 @@ void main() {
     expect(find.text('No Seerr results'), findsOneWidget);
   });
 
-  testWidgets('the field carries the search accent, explicitly', (
+  testWidgets('the field is monochrome: the magnifier is the secondary ink', (
     tester,
   ) async {
-    // A section accent does not reach a field on its own: without the hand-off
-    // the one screen `navSearch` was named for fell back to the brand indigo.
+    // It used to take the Search section's own purple, handed over explicitly;
+    // the chrome has no section colours now, so the field draws the same
+    // secondary-ink magnifier it draws on every other screen.
     await _pump(tester);
 
     final context = tester.element(find.byType(SearchScreen));
     final colorScheme = Theme.of(context).colorScheme;
-    final header = tester.widget<SearchBarHeader>(find.byType(SearchBarHeader));
-    expect(
-      header.accent,
-      ServiceTheme.onTint(
-        AppColors.navSearch,
-        surface: colorScheme.surfaceContainer,
-        tintAlpha: 0,
+    final glyph = tester.widget<Icon>(
+      find.descendant(
+        of: find.byType(SearchBarHeader),
+        matching: find.byIcon(Icons.search_rounded),
       ),
     );
-    expect(header.accent, isNot(colorScheme.primary));
+    expect(glyph.color, colorScheme.onSurfaceVariant);
   });
 
   testWidgets('the filter strip offers only services that can answer', (

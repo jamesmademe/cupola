@@ -6,7 +6,7 @@ Rendered from `lib/core/widgets/domain_section.dart` by `test/design_catalog/dom
 
 ## Values
 
-- Label: `AppTheme.eyebrow` (11, w600, +1.4 tracking, 1.2 leading), set uppercase, `onSurfaceVariant`, `Expanded` across the row; the optional trailing widget sits at the row's end.
+- Label: `AppTheme.eyebrow` (11, w600, +1.4 tracking, 14 leading), set uppercase, `onSurfaceVariant`, `Expanded` across the row; the optional trailing widget sits at the row's end.
 - Default padding: `AppSpacing.md` (12) top, `AppSpacing.lg` (16) sides, `AppSpacing.sm` (8) bottom. Settings › Connections passes `AppSpacing.lg` top, `AppSpacing.xs` (4) sides and `AppSpacing.sm` bottom, because its page already carries the 16 inset and the header only needs to sit a hair inside the group card's edge.
 - Order is the pipeline, `ServiceDomain` declaration order: Media (Seerr, Radarr, Sonarr, Lidarr, Bazarr, Readarr) → Downloads (qBittorrent, Transmission, Prowlarr, SABnzbd, NZBGet) → Stream (Jellyfin, Plex) → Infrastructure (TrueNAS, Dockge, Unraid, Nginx Proxy Manager).
 

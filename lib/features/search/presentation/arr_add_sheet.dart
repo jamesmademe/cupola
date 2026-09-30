@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/search/domain/arr_add_request.dart';
@@ -51,7 +50,6 @@ class _ArrAddSheet extends ConsumerWidget {
     final args = (instanceId: request.instanceId, service: request.service);
     final state = ref.watch(arrAddFormProvider(args));
     final notifier = ref.read(arrAddFormProvider(args).notifier);
-    final accent = request.service.accent;
 
     if (state.isLoading) {
       return const Padding(
@@ -117,7 +115,6 @@ class _ArrAddSheet extends ConsumerWidget {
           contentPadding: EdgeInsets.zero,
           title: const Text('Monitored'),
           value: state.monitored,
-          activeThumbColor: accent,
           onChanged: notifier.setMonitored,
         ),
         SwitchListTile(
@@ -125,15 +122,10 @@ class _ArrAddSheet extends ConsumerWidget {
           title: const Text('Search now'),
           subtitle: const Text('Start looking for a release straight away'),
           value: state.searchOnAdd,
-          activeThumbColor: accent,
           onChanged: notifier.setSearchOnAdd,
         ),
         const SizedBox(height: AppSpacing.lg),
         FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: accent,
-            foregroundColor: ServiceTheme.foregroundOn(accent),
-          ),
           onPressed: state.canSubmit
               ? () async {
                   final messenger = ScaffoldMessenger.of(context);

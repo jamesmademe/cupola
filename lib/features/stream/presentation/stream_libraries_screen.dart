@@ -288,10 +288,7 @@ class _LibraryRow extends StatelessWidget {
             SizedBox(
               width: 14,
               height: 14,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation(service.accent),
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2),
             )
           else
             Icon(

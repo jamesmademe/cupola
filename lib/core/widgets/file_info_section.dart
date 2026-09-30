@@ -13,11 +13,8 @@ class FileInfoSection extends StatelessWidget {
   final String? path;
   final String? filename;
 
-  /// Optional per-service accent for the storage glyph.
-  ///
-  /// It used to feed a section-header pipe; now that the spine owns headings it
-  /// tints the glyph, which is what stopped that glyph being a second accent
-  /// (`colorScheme.primary` indigo) on a Radarr amber or Sonarr violet page.
+  /// Optional page accent for the storage glyph: the service's accent, which is
+  /// the lamp, walked to the room's ink against the well.
   final Color? accent;
 
   /// Renders the tracked-but-empty hint instead of a real file.

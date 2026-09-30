@@ -431,7 +431,7 @@ lib/
 
 | Concern | Choice |
 | --- | --- |
-| UI | Flutter + Material 3, bundled Inter, `DynamicColorBuilder` |
+| UI | Flutter + Material 3, bundled Bricolage Grotesque, Onest and Geist Mono, `DynamicColorBuilder` |
 | State | Riverpod 3: `FutureProvider` for loads, `NotifierProvider` for persisted state |
 | Navigation | go_router; every detail route resolves from path params alone, so any screen is addressable by path (no URL scheme is registered yet, so nothing outside the app can open one) |
 | HTTP | Dio, shared `ApiClient` with `X-Api-Key` for the *arr family |
@@ -576,9 +576,11 @@ Cupola was previously distributed under the MIT License. That licence still cove
 copies obtained before the change, and its original notice is preserved in
 [LICENSE-MIT](LICENSE-MIT); see [NOTICE](NOTICE) for details.
 
-The bundled typeface, [Inter](https://github.com/rsms/inter), is licensed
-separately under the SIL Open Font License 1.1 — its text ships alongside the
-font in [assets/fonts/OFL.txt](assets/fonts/OFL.txt).
+The bundled typefaces — [Bricolage Grotesque](https://github.com/ateliertriay/bricolage),
+[Onest](https://github.com/googlefonts/onest) and
+[Geist Mono](https://github.com/vercel/geist-font) — are licensed separately
+under the SIL Open Font License 1.1; each licence text ships alongside its font
+in [assets/fonts/](assets/fonts/).
 
 ### Trademarks
 

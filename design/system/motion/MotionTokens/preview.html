@@ -1,4 +1,4 @@
-<!-- @dsCard group="Motion" height=480 subtitle="The five durations and two curves, raced" -->
+<!-- @dsCard group="Motion" height=480 subtitle="The five durations and the one ease, raced" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -29,10 +29,10 @@
         <text x="30" y="264">0</text><text x="252" y="264">t 1</text><text x="8" y="26">1</text>
       </svg>
       <div class="cp-motion-key">
-        <span><i style="background:var(--primary)"></i>standardCurve · easeInOutCubicEmphasized</span>
-        <span><i style="background:var(--nav-settings)"></i>emphasizedCurve · easeOutCubic</span>
+        <span><i style="background:var(--primary)"></i>standardCurve · cubic-bezier(0.2, 0.8, 0.2, 1)</span>
+        <span><i style="background:var(--nav-settings)"></i>emphasizedCurve · cubic-bezier(0.2, 0.8, 0.2, 1)</span>
       </div>
-      <p class="cp-motion-note">The dot rides the selected curve on the 500ms lane. CSS renders <code>easeInOutCubicEmphasized</code> as a 26-stop <code>linear()</code> (max error 0.004); no single <code>cubic-bezier</code> gets closer than 0.07.</p>
+      <p class="cp-motion-note">The dot rides the selected curve on the 520ms lane. Both names are the one ease, <code>cubic-bezier(0.2, 0.8, 0.2, 1)</code>, so the two plots coincide.</p>
     </div>
   </div>
 </div>
@@ -48,29 +48,23 @@
       for (;;) { var m = (lo + hi) / 2, x = ev(a, c, m); if (Math.abs(t - x) < 0.001) return ev(b, d, m); if (x < t) lo = m; else hi = m; }
     };
   }
-  /* Curves.easeInOutCubicEmphasized = ThreePointCubic((0.05,0),(0.133333,0.06),(0.166666,0.4),(0.208333,0.82),(0.25,1)). */
-  function threePoint(a1, b1, mid, a2, b2) {
-    var sx1 = mid[0], sy1 = mid[1], sx2 = 1 - mid[0], sy2 = 1 - mid[1];
-    var first = cubic(a1[0] / sx1, a1[1] / sy1, b1[0] / sx1, b1[1] / sy1);
-    var second = cubic((a2[0] - mid[0]) / sx2, (a2[1] - mid[1]) / sy2, (b2[0] - mid[0]) / sx2, (b2[1] - mid[1]) / sy2);
-    return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; return t < mid[0] ? first(t / sx1) * sy1 : second((t - mid[0]) / sx2) * sy2 + mid[1]; };
-  }
+  /* AppAnimation.standardCurve and emphasizedCurve: both DesignTokens.motionCurveStandard, Cubic(0.2, 0.8, 0.2, 1). */
   var CURVES = {
-    standard: threePoint([0.05, 0], [0.133333, 0.06], [0.166666, 0.4], [0.208333, 0.82], [0.25, 1]),
-    emphasized: cubic(0.215, 0.61, 0.355, 1)
+    standard: cubic(0.2, 0.8, 0.2, 1),
+    emphasized: cubic(0.2, 0.8, 0.2, 1)
   };
   var sine = cubic(0.445, 0.05, 0.55, 0.95);
   var linear = function (t) { return t; };
   /* AnimationController under disableAnimations: 5% of the duration (animation_controller.dart:651). */
   var REDUCED = 0.05;
   var LANES = [
-    { name: 'durationXs', ms: 100, use: 'press dip · nav scale bump' },
-    { name: 'durationSm', ms: 200, use: 'nav pill · badge · reel roll' },
-    { name: 'durationMd', ms: 300, use: 'progress-ring sweep' },
-    { name: 'durationLg', ms: 400, use: 'ring node states · portal nominal' },
-    { name: 'durationXl', ms: 500, use: 'nav bar spring-back' },
+    { name: 'durationXs', ms: 180, use: 'press dip · nav scale bump' },
+    { name: 'durationSm', ms: 320, use: 'nav pill · badge · reel roll' },
+    { name: 'durationMd', ms: 320, use: 'progress-ring sweep' },
+    { name: 'durationLg', ms: 420, use: 'ring node states' },
+    { name: 'durationXl', ms: 520, use: 'nav bar spring-back' },
     { sep: true },
-    { name: 'shimmerDuration', ms: 1500, kind: 'sine', use: 'easeInOutSine · repeats' },
+    { name: 'shimmerDuration', ms: 1600, kind: 'sine', use: 'easeInOutSine · repeats' },
     { name: 'confirmationHold', ms: 1600, kind: 'hold', use: 'a Timer, not a curve' }
   ];
   var host = root.querySelector('[data-lanes]');

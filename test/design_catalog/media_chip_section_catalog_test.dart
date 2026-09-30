@@ -39,8 +39,8 @@ void main() {
         (_) => _column(const MediaChipSection.neutral(values: _keywords)),
       ),
       CatalogScene(
-        'MediaChipSection.accented · Radarr tags · the amber accent walked by '
-        'onTint for its 12% tint, so the label clears contrast on paper',
+        'MediaChipSection.accented · Radarr tags · the page accent is the '
+        'lamp: a 12% lamp wash under a primary-ink label, no hue',
         (_) => _column(
           MediaChipSection.accented(
             values: const ['4k', 'family', 'watchlist'],
@@ -49,8 +49,8 @@ void main() {
         ),
       ),
       CatalogScene(
-        'MediaChipSection.accented · Sonarr and Bazarr tags · the same recipe '
-        'in each page accent',
+        'MediaChipSection.accented · Sonarr and Bazarr tags · the same chip on '
+        'every service',
         (_) => _column(
           Wrap(
             spacing: 24,

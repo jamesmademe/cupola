@@ -66,8 +66,6 @@ class _BazarrWantedScreenState extends ConsumerState<BazarrWantedScreen>
     // this inner bar survives the tab model; what changes is where it hangs.
     final tabBar = TabBar(
       controller: _tabController,
-      indicatorColor: AppColors.bazarr,
-      labelColor: AppColors.bazarr,
       unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
       labelStyle: Theme.of(
         context,
@@ -83,7 +81,7 @@ class _BazarrWantedScreenState extends ConsumerState<BazarrWantedScreen>
           ? _BazarrDetailAppBar(
               title: 'Wanted subtitles',
               backRoute: ServiceRoutes.bazarr,
-              accent: AppColors.bazarr,
+              accent: ServiceKey.bazarr.accent,
               bottom: tabBar,
             )
           : null,
@@ -258,10 +256,7 @@ class _BazarrWantedTabState extends ConsumerState<_BazarrWantedTab> {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: Center(
                 child: _loadingMore
-                    ? const CircularProgressIndicator(
-                        color: AppColors.bazarr,
-                        strokeWidth: 2.4,
-                      )
+                    ? const CircularProgressIndicator(strokeWidth: 2.4)
                     : Text(
                         _error != null
                             ? 'Failed to load more'
@@ -355,14 +350,14 @@ class _BazarrWantedRow extends StatelessWidget {
                   vertical: 3,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.bazarr.withValues(alpha: 0.12),
+                  color: ServiceKey.bazarr.accent.withValues(alpha: 0.12),
                   borderRadius: AppRadius.borderRadiusSm,
                 ),
                 child: Text(
                   langCodes.isNotEmpty ? langCodes : 'Wanted',
                   style: Theme.of(context).textTheme.labelSmall!
                       .weight(FontWeight.w600)
-                      .copyWith(color: AppColors.bazarr),
+                      .copyWith(color: Theme.of(context).colorScheme.onSurface),
                 ),
               ),
             ],

@@ -6,6 +6,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_tag_selector.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The changes to apply to a selection of indexers.
 ///
@@ -64,7 +65,7 @@ Future<ProwlarrBulkEdit?> showProwlarrBulkEditSheet({
     title: 'Edit $count ${count == 1 ? 'indexer' : 'indexers'}',
     subtitle: 'Empty fields are left unchanged',
     icon: Icons.tune_rounded,
-    accent: AppColors.prowlarr,
+    accent: ServiceKey.prowlarr.accent,
     showClose: true,
     initialSize: 0.8,
     minSize: 0.5,
@@ -81,7 +82,7 @@ Future<ProwlarrBulkTags?> showProwlarrBulkTagsSheet({
     context: context,
     title: 'Tags for $count ${count == 1 ? 'indexer' : 'indexers'}',
     icon: Icons.sell_outlined,
-    accent: AppColors.prowlarr,
+    accent: ServiceKey.prowlarr.accent,
     showClose: true,
     initialSize: 0.7,
     minSize: 0.4,

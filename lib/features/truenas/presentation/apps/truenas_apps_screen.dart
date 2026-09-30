@@ -13,6 +13,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/domain/models/app.dart';
 import 'package:cupola/features/truenas/presentation/apps/truenas_app_actions.dart';
 import 'package:cupola/features/truenas/presentation/apps/truenas_apps_providers.dart';
@@ -57,7 +58,6 @@ class TrueNasAppsScreen extends ConsumerWidget {
                   icon: Icons.apps_rounded,
                   title: 'No apps installed',
                   message: 'Install apps from the TrueNAS catalog.',
-                  accentColor: AppColors.truenas,
                 )
               : ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -138,10 +138,14 @@ class AppIcon extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.truenas.withValues(alpha: 0.14),
+        color: ServiceKey.truenas.accent.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: const Icon(Icons.apps_rounded, size: 20, color: AppColors.truenas),
+      child: Icon(
+        Icons.apps_rounded,
+        size: 20,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
     );
     final url = iconUrl;
     if (url == null || url.isEmpty) return placeholder;

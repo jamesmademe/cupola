@@ -38,14 +38,18 @@ class AppGradients {
     );
   }
 
-  /// Ambient background wash: two soft accent radials over the base surface,
-  /// used behind headers and the onboarding canvas to add depth.
+  /// Ambient background wash: a soft radial of the room's light over the base
+  /// surface, used behind headers and the onboarding canvas to add depth.
+  ///
+  /// Without an [accent] the room is lit by the neutral lamp, the light of a
+  /// room with no artwork. (The primary ink is not a light: it is white in the
+  /// dark room, and a white wash would read as fog.)
   static RadialGradient ambientBackground(
     ColorScheme scheme, {
     Color? accent,
     Alignment center = const Alignment(-0.7, -0.9),
   }) {
-    final glow = (accent ?? scheme.primary);
+    final glow = (accent ?? DesignTokens.colorTitleLightFallback);
     return RadialGradient(
       center: center,
       radius: 1.4,
@@ -61,13 +65,13 @@ class AppGradients {
     );
   }
 
-  /// Accent-tinted radial glow used inside signature service cards.
+  /// A radial glow of [accent], for a card or a hero lit from one corner.
   ///
-  /// [alpha] is the wash at the centre. The 0.22 default is the signature-card
-  /// strength — one card, one accent, lighting a whole surface. A grid that
-  /// repeats the treatment needs a fraction of it: thirteen of these at full
-  /// strength is a rainbow, which is the thing the Room Light Rule exists to
-  /// prevent.
+  /// [accent] is a light: the lamp (`ServiceKey.accent` is the lamp for every
+  /// service), a shadow ink behind a badge, or a tone on a card that is about a
+  /// state. [alpha] is the wash at the centre. The 0.22 default lights one card
+  /// on its own; a grid that repeats the treatment needs a fraction of it, or
+  /// thirteen washes read as thirteen lit cells rather than one room.
   static RadialGradient serviceGlow(
     Color accent, {
     Alignment center = Alignment.topRight,

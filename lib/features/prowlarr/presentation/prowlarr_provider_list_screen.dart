@@ -13,6 +13,7 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_list_shimmer.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One screen for all four field-driven resources: apps, download clients,
 /// notifications and indexer proxies.
@@ -31,7 +32,7 @@ class ProwlarrProviderListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.prowlarr.withValues(alpha: 0.12),
+        backgroundColor: ServiceKey.prowlarr.accent.withValues(alpha: 0.12),
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded),
           tooltip: 'Back',
@@ -61,7 +62,11 @@ class ProwlarrProviderListScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(kind.icon, size: 40, color: AppColors.prowlarr),
+                    Icon(
+                      kind.icon,
+                      size: 40,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       'No ${kind.title.toLowerCase()} configured.',
@@ -140,7 +145,7 @@ class ProwlarrProviderListScreen extends ConsumerWidget {
           ? null
           : resource.displayImplementation,
       icon: kind.icon,
-      accent: AppColors.prowlarr,
+      accent: ServiceKey.prowlarr.accent,
       builder: (sheetContext) => Column(
         children: [
           ListTile(

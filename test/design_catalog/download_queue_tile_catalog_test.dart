@@ -152,8 +152,8 @@ void main() {
         width: 390,
       ),
       CatalogScene(
-        'Selected · accent at 8% with a 40% accent border, after a long-press '
-        'starts selection',
+        'Selected · a lamp wash at 8% with a 40% lamp border, after a '
+        'long-press starts selection · the bar is the blue tone, in progress',
         (_) => TorrentTile(
           torrent: _torrent(
             'Nosferatu.1922.1080p.BluRay.x264-GROUP',

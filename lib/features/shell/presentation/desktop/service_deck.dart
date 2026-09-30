@@ -20,10 +20,9 @@ import 'package:cupola/features/shell/presentation/desktop/shell_freshness.dart'
 /// The one part of the desktop shell with no counterpart on the phone — and the
 /// reason the window does not read as the phone app stretched wide. It carries
 /// one health summary, not the seventeen services: a strip of seventeen glyphs
-/// put twelve or more service accents in the highest-contrast band of the
-/// window at all times, which the Room Light Rule does not allow, while the
-/// one accent that says which room you are in sat behind them. The services
-/// are one keystroke away on ⌘K, which lists every connection by name.
+/// in the highest-contrast band of the window said nothing a glance could use,
+/// and buried the one chip that says which room you are in. The services are
+/// one keystroke away on ⌘K, which lists every connection by name.
 ///
 /// The same row at every width: a narrower window shows fewer items, never
 /// the same items shrunk.

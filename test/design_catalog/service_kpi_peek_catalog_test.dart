@@ -94,7 +94,7 @@ void main() {
     width: 720,
     scenes: [
       _scene(
-        'Radarr, answered · glyphs in the walked accent; Missing is backlog, '
+        'Radarr, answered · glyphs in the primary ink; Missing is backlog, '
         'neutral, never amber',
         const AsyncValue.data(_radarr),
         ServiceKey.radarr,

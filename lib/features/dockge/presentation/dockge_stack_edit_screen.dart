@@ -158,7 +158,7 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
     }
 
     return AmbientScaffold(
-      accent: AppColors.dockge,
+      accent: ServiceKey.dockge.accent,
       appBar: GlassAppBar(
         title: Text(widget.isNew ? 'New stack' : 'Edit ${widget.name}'),
       ),
@@ -230,9 +230,6 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
             Expanded(
               child: FilledButton.icon(
                 onPressed: canSubmit ? () => _submit(deploy: true) : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.dockge,
-                ),
                 icon: _busy
                     ? const SizedBox(
                         width: 16,

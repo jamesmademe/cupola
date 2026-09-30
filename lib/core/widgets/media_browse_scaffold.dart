@@ -478,7 +478,6 @@ class _MediaBrowseScaffoldState<T>
           SliverToBoxAdapter(
             child: SearchBarHeader(
               hintText: widget.searchHint,
-              accent: widget.accentColor,
               onQueryChanged: (query) {
                 ref.read(widget.searchQueryProvider.notifier).state = query;
               },
@@ -491,8 +490,9 @@ class _MediaBrowseScaffoldState<T>
               child: _MediaBrowseFilterChips(
                 filters: _filterOptions,
                 selectedFilter: _selectedFilter,
-                color:
-                    widget.accentColor ?? Theme.of(context).colorScheme.primary,
+                // The brand book's chip: the ink fill when selected, whichever service
+                // owns the library.
+                color: Theme.of(context).colorScheme.primary,
                 onSelected: (filter) {
                   setState(() {
                     _selectedFilter = filter;
@@ -566,11 +566,9 @@ class _MediaBrowseScaffoldState<T>
     );
   }
 
-  /// The service's accent for this screen's progress spinners, walked against
-  /// the page surface; the theme's indigo only when no service owns the page.
-  ///
-  /// The service being operated supplies the light: a spinner drawn in
-  /// `primary` put Seerr's indigo in Radarr's amber room.
+  /// The ink for this screen's progress spinners: the room's primary ink
+  /// (the lamp that [accentColor] carries resolves to it through
+  /// `ServiceTheme.onTint`), or the theme's own when no service owns the page.
   Color? _spinnerInk(BuildContext context) {
     final accent = widget.accentColor;
     if (accent == null) return null;
@@ -1157,9 +1155,8 @@ class _MediaBrowseFilterChip extends StatelessWidget {
                 style: Theme.of(context).textTheme.labelMedium!
                     .weight(FontWeight.w600)
                     .copyWith(
-                      // Unselected, the accent is a label on its own 12% wash,
-                      // so it is walked against that composite — raw, the
-                      // amber accents measured under 2:1 on the light page.
+                      // Unselected, the label sits on the fill's own 12% wash,
+                      // so it is measured against that composite.
                       color: selected
                           ? ServiceTheme.foregroundOn(color)
                           : ServiceTheme.onTint(

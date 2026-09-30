@@ -19,7 +19,6 @@ List<FloatingNavDestination> _destinations({int searchesWaiting = 0}) => [
       selectedIcon: tab.selectedIcon,
       railIcon: tab.railIcon,
       label: tab.label,
-      accentColor: tab.accentColor,
       badgeCount: tab == NavTab.activity ? searchesWaiting : 0,
       badgeSemanticLabel: tab == NavTab.activity && searchesWaiting > 0
           ? '$searchesWaiting finished search'
@@ -53,7 +52,7 @@ void main() {
       ),
       CatalogScene(
         'DesktopNavRail · Activity selected, two finished searches · the '
-        'badge in the section accent with its collar, never a status tone',
+        'badge is the ink disc with its collar, never a status tone',
         (_) => _rail(NavTab.activity.index, searchesWaiting: 2),
         width: DesktopNavRail.width,
         height: 360,

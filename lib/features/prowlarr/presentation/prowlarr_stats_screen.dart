@@ -74,7 +74,6 @@ class _ProwlarrStatsScreenState extends ConsumerState<ProwlarrStatsScreen> {
             selected: _window,
             labelBuilder: (value) => value.label,
             onSelected: (value) => setState(() => _window = value),
-            accent: ServiceKey.prowlarr.accent,
           ),
           Expanded(
             child: stats.hasError && !stats.hasValue

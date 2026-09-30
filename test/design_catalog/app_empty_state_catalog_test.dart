@@ -4,11 +4,13 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 
 import 'catalog.dart';
 
-const _sonarr = Color(0xFF7C4DFF);
+// What a service page hands these widgets: its accent, which is the lamp.
+const _sonarr = AppColors.lamp;
 
 void main() {
   catalogCard(
@@ -28,7 +30,8 @@ void main() {
         width: 320,
       ),
       CatalogScene(
-        'AppEmptyState.compact(accentColor:) · smaller, an accent-tinted well',
+        'AppEmptyState.compact(accentColor:) · smaller, a lamp-tinted well '
+        '(a service\'s accent is the lamp)',
         (_) => const AppEmptyState.compact(
           icon: Icons.tv_rounded,
           title: 'No seasons yet',

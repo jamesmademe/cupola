@@ -167,7 +167,8 @@ void main() {
       ),
       CatalogScene(
         'WindowChrome · full, on Activity, inspector open · the inspector '
-        'chip lit in the Activity accent; no lens outside a service',
+        'chip on (the strong fill under the primary ink); no lens outside a '
+        'service',
         (_) => const _Scene(
           location: '/activity',
           child: WindowChrome(inspectorOpen: true),

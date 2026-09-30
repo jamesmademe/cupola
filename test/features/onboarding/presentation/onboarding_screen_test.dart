@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/platform/local_network_access.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
@@ -635,15 +636,16 @@ void main() {
     // brand indigo for the whole flow while the artboards tint it per service.
     // The tween that carries it between two services is removed under Reduce
     // Motion, which is why this case can read the settled value.
-    testWidgets('the room takes the accent of the service being set up', (
+    testWidgets('the room is lit by the lamp on every beat, the walk too', (
       tester,
     ) async {
+      // The brand book: a room with no artwork is lit by the neutral lamp, and a service's
+      // room is no exception — the service being set up is named by its mark
+      // and its form, never by a colour. The room used to take the service's
+      // accent during the walk and the brand primary either side of it (the
+      // primary is the ink now, which would have lit the room white).
       await _pumpOnboarding(tester);
-      // The theme's own primary, read from the tree rather than named: the rule
-      // is "the brand's glow where no service owns the beat", not one colour.
-      final brand = Theme.of(
-        tester.element(find.byType(OnboardingScreen)),
-      ).colorScheme.primary;
+      const brand = AppColors.lamp;
 
       // Read off the gradient the room actually paints, not off the argument it
       // was handed. `AmbientBackground` resolves its own fallback and tweens the
@@ -668,13 +670,15 @@ void main() {
         return gradient.colors.first.withValues(alpha: 1.0);
       }
 
-      // The beats either side of the walk are the brand's own glow.
+      // The beats either side of the walk are the lamp.
       expect(roomAccent(), brand);
 
       await _tap(tester, 'Set up my stack');
       await _pick(tester, 'Sonarr');
       await _tap(tester, 'Continue with 1');
-      expect(roomAccent(), ServiceKey.sonarr.accent);
+      // And so is the walk: Sonarr's room is the same light.
+      expect(roomAccent(), brand);
+      expect(roomAccent(), isNot(ServiceKey.sonarr.brandAccent));
 
       await _tap(tester, 'Skip Sonarr');
       expect(roomAccent(), brand);

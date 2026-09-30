@@ -118,7 +118,7 @@ void main() {
     width: 776,
     scenes: [
       CatalogScene(
-        'Missing · Automatic search promoted in the Radarr accent; '
+        'Missing · Automatic search promoted as the ink button; '
         'Interactive search takes the one visible disc; the rest overflow',
         (_) => _radarr(
           const MediaStatusInfo(availability: MediaAvailability.missing),
@@ -252,7 +252,7 @@ void main() {
       ),
       CatalogScene(
         'Quality profile sheet body (showMediaProfileSelector) · the selected '
-        'row in the accent, walked for the sheet',
+        'row in the primary ink (the page accent is the lamp)',
         (_) => _profileSheet(),
         width: 390,
       ),

@@ -21,7 +21,6 @@ import 'package:cupola/features/release_search/presentation/release_search_entry
 import 'package:cupola/features/release_search/domain/release_search_job.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_provider.dart';
 import 'package:cupola/features/release_search/presentation/widgets/search_headroom_card.dart';
-import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 
@@ -123,12 +122,9 @@ class _ReleaseSearchSettingsScreenState
         : platform == TargetPlatform.iOS;
 
     return AmbientScaffold(
-      // The room belongs to the tab, not to the feature: this is a *settings*
-      // pane that happens to be owned by release search, and left unset
-      // `AmbientBackground` falls back to the brand indigo — Seerr's accent —
-      // so the one pane the rail could not reach was also the one pane glowing
-      // in a different colour from its six siblings.
-      accent: NavTab.settings.accentColor,
+      // No accent: this is a *settings* pane that happens to be owned by
+      // release search, and like its six siblings its room is lit by the
+      // neutral lamp, the fallback of `AmbientBackground`.
       appBar: const GlassAppBar(title: Text('Background search')),
       // Background search is a section of the settings rail
       // (`SettingsMasterDetail.sections`), and it was the single destination in

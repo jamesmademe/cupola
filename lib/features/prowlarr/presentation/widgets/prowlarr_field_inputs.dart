@@ -6,6 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Inputs generated from a Prowlarr provider's `fields` array.
 ///
@@ -333,7 +334,7 @@ class ProwlarrMessageBanner extends StatelessWidget {
     // answering, so both severities land on amber and red stays reserved.
     final accent = switch ((type ?? '').toLowerCase()) {
       'error' || 'warning' => statusToneColor(colorScheme, StatusTone.warning),
-      _ => AppColors.prowlarr,
+      _ => ServiceKey.prowlarr.accent,
     };
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),

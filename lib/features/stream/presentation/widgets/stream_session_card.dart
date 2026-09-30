@@ -128,7 +128,7 @@ class StreamSessionCard extends StatelessWidget {
                 ),
                 if (session.progress != null) ...[
                   const SizedBox(height: AppSpacing.sm),
-                  _ProgressBar(progress: session.progress!, accent: accent),
+                  _ProgressBar(progress: session.progress!),
                 ],
               ],
             ),
@@ -327,10 +327,9 @@ class _CostRow extends StatelessWidget {
 }
 
 class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({required this.progress, required this.accent});
+  const _ProgressBar({required this.progress});
 
   final double progress;
-  final Color accent;
 
   @override
   Widget build(BuildContext context) {
@@ -340,7 +339,6 @@ class _ProgressBar extends StatelessWidget {
         value: progress,
         minHeight: 3,
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        valueColor: AlwaysStoppedAnimation(accent),
       ),
     );
   }

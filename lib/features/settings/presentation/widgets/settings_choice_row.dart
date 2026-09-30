@@ -64,8 +64,8 @@ class SettingsChoiceRow extends StatelessWidget {
                         // The weight change is half of what carries the
                         // selected state (see the class doc), so it has to go
                         // through `.weight` — `copyWith(fontWeight:)` left
-                        // Inter's `wght` axis untouched and rendered both
-                        // states at Regular.
+                        // the `wght` axis untouched and rendered both states
+                        // at the role's weight.
                         style: theme.textTheme.titleMedium!
                             .weight(
                               selected ? FontWeight.w600 : FontWeight.w500,

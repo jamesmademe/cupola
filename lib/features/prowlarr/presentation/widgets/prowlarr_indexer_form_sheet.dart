@@ -11,6 +11,7 @@ import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_field_inputs.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_provider_pickers.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_tag_selector.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Shows the add/edit indexer form and returns what the user chose to do.
 ///
@@ -34,7 +35,7 @@ Future<ProwlarrFormOutcome> showProwlarrIndexerFormSheet({
         ? null
         : indexer.displayImplementation,
     icon: Icons.travel_explore_rounded,
-    accent: AppColors.prowlarr,
+    accent: ServiceKey.prowlarr.accent,
     showClose: true,
     initialSize: 0.9,
     minSize: 0.5,

@@ -471,7 +471,8 @@ class GlobalActivityItemTile extends ConsumerWidget {
                       // service, and when it is filtered the user chose it — so
                       // the chip was restating known information on every row,
                       // in the same 11pt weight as the status it competed with.
-                      // The accent-tinted icon well still carries the identity.
+                      // The icon well, with the service's mark, still carries
+                      // the identity — by shape, the well is the lamp.
                       StatusBadge(info: item.status),
                       // Which server this row came off. On the row rather than
                       // on the group header, because the header groups by

@@ -35,10 +35,10 @@ import 'package:cupola/features/stream/presentation/stream_lookup_provider.dart'
 /// server configured, the title genuinely absent, or the server unreachable. An
 /// explicit "not on your server" would be a claim, and two of those three are not.
 ///
-/// [accent] is the **host** page's — Radarr amber, Sonarr violet — never Jellyfin's
-/// or Plex's. The data comes from the media server but the section belongs to the
-/// page it renders in, and one screen gets one accent. `ArrMediaExtrasSection`
-/// settled this for Seerr data and the rule is the same here.
+/// [accent] is the **host** page's, never Jellyfin's or Plex's. The data comes
+/// from the media server but the section belongs to the page it renders in —
+/// the same rule `ArrMediaExtrasSection` keeps for Seerr data (every accent is
+/// the lamp now; the rule keeps the light with one owner).
 ///
 /// [kind] is what the host's record is — [StreamItemKind.movie] on Radarr,
 /// [StreamItemKind.series] on Sonarr — and a host that knows it should pass it:
@@ -133,7 +133,6 @@ class _StreamAvailabilityCard extends StatelessWidget {
                 value: item.resumeProgress,
                 strokeWidth: 3,
                 backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation(accent),
               ),
             )
           else

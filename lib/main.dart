@@ -50,8 +50,18 @@ void main() async {
   );
 }
 
-/// Puts Inter's SIL OFL 1.1 into the licence page Flutter builds from
-/// [LicenseRegistry].
+/// The bundled font families and the SIL OFL 1.1 each one ships under.
+///
+/// One entry per family, because each licence names its own copyright holder:
+/// a single merged entry would credit the wrong authors for two of the three.
+const Map<String, String> bundledFontLicenses = {
+  'Bricolage Grotesque': 'assets/fonts/BricolageGrotesque-OFL.txt',
+  'Onest': 'assets/fonts/Onest-OFL.txt',
+  'Geist Mono': 'assets/fonts/GeistMono-OFL.txt',
+};
+
+/// Puts each bundled font's SIL OFL 1.1 into the licence page Flutter builds
+/// from [LicenseRegistry].
 ///
 /// The registry only knows about licences declared in package metadata, and a
 /// font dropped into `assets/` has none — so the one obligation the OFL puts on
@@ -61,9 +71,12 @@ void main() async {
 /// licence page asks.
 void _registerBundledFontLicense() {
   LicenseRegistry.addLicense(() async* {
-    yield LicenseEntryWithLineBreaks(const <String>[
-      'Inter',
-    ], await rootBundle.loadString('assets/fonts/OFL.txt'));
+    for (final MapEntry(key: family, value: asset)
+        in bundledFontLicenses.entries) {
+      yield LicenseEntryWithLineBreaks(<String>[
+        family,
+      ], await rootBundle.loadString(asset));
+    }
   });
 }
 
@@ -123,18 +136,18 @@ class CupolaApp extends ConsumerWidget {
       themeMode: themeMode,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
-      // Leading is tightened at the top of the ramp (displayLarge sits at 1.06)
-      // and opened at the bottom (bodyLarge at 1.55). Both ends need this, in
-      // opposite directions, and one behaviour covers them:
+      // Leading is tightened at the top of the ramp (the display roles sit at
+      // 1.0) and opened at the bottom (body at 22 on 15). Both ends need this,
+      // in opposite directions, and one behaviour covers them:
       //
-      // - A line box shorter than the glyph's ink lets the ink escape it. Inter
-      //   needs its full 1.21em to contain an accented capital, so at 1.06 the
-      //   acute on `Ý` pokes out the top — and media titles arrive from TMDB in
-      //   every language. Inside anything that clips (the detail hero clips by
-      //   design) that is a shaved accent.
+      // - A line box shorter than the glyph's ink lets the ink escape it. The
+      //   display face needs its full 1.20em (Onest 1.275em) to contain an
+      //   accented capital, so at 1.0 the acute on `Ý` pokes out the top — and
+      //   media titles arrive from TMDB in every language. Inside anything that
+      //   clips (the detail hero clips by design) that is a shaved accent.
       // - Extra leading below the last line is padding nobody asked for, and it
-      //   would have pushed every fixed-height box in the app out by a couple of
-      //   points, since those constants encode a measured line at the old 1.21.
+      //   would push every fixed-height box in the app out by a couple of
+      //   points, since those constants encode a measured single line.
       //
       // Declining to apply the height to the block's outer ascent and descent
       // fixes both: the *gaps between* lines carry the leading decision, while

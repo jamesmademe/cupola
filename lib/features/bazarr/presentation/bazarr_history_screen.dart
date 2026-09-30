@@ -195,7 +195,6 @@ class _BazarrHistoryScreenState extends ConsumerState<BazarrHistoryScreen> {
             selected: _filter,
             labelBuilder: (value) => value.label,
             onSelected: _select,
-            accent: ServiceKey.bazarr.accent,
           ),
           Expanded(child: _body()),
         ],

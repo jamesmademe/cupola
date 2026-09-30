@@ -5,6 +5,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Visual style (icon + colour + label) for a Readarr history event type.
 ///
@@ -95,15 +96,11 @@ class ReadarrAuthorTile extends StatelessWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: AppColors.readarr.withValues(alpha: 0.12),
+                    color: ServiceKey.readarr.accent.withValues(alpha: 0.12),
                     borderRadius: AppRadius.borderRadiusSm,
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.person_rounded,
-                    size: 16,
-                    color: AppColors.readarr,
-                  ),
+                  child: const Icon(Icons.person_rounded, size: 16),
                 ),
                 const SizedBox(width: 10),
                 Expanded(

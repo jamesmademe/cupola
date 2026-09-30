@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
@@ -108,19 +107,13 @@ class _InspectorHeader extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          // The tab's own accent, walked against the pane's ground rather than
-          // painted raw. `AppColors.navActivity` is a palette constant tuned for
-          // the dark canvas — it measures 2.20:1 on paper — so a literal here
-          // rendered the dark palette on the Light theme and the one glyph that
-          // names the pane went nearly invisible in daylight.
+          // The secondary ink, like every mark in the chrome: the pane is
+          // named by its title beside the glyph, and a section colour here once
+          // measured 2.20:1 on paper.
           Icon(
             Icons.insights_rounded,
             size: 16,
-            color: ServiceTheme.onTint(
-              NavTab.activity.accentColor,
-              surface: _paneSurface(colorScheme),
-              tintAlpha: 0,
-            ),
+            color: colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -185,17 +178,12 @@ class _QueueRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Seven of the seventeen service accents are under 3:1 on paper, so
-          // the glyph that says *which* service a row belongs to is walked
-          // against the pane's ground rather than painted at its palette value.
+          // The service's mark, monochrome: which service a row belongs to is
+          // said by the mark's shape and the name under it, never by a hue.
           Icon(
             item.service.icon,
             size: 17,
-            color: ServiceTheme.onTint(
-              item.service.accent,
-              surface: _paneSurface(colorScheme),
-              tintAlpha: 0,
-            ),
+            color: colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 11),
           Expanded(

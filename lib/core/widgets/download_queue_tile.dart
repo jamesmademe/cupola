@@ -249,10 +249,10 @@ class DownloadQueueTile extends StatelessWidget {
                                   style: theme.textTheme.labelMedium!
                                       .weight(FontWeight.w600)
                                       .tabular
-                                      // One plate, four clients, every service
-                                      // accent: the percentage is the only
-                                      // accent-coloured *text* on the row, so it
-                                      // is the one that has to clear the surface.
+                                      // One plate, four clients: the percentage
+                                      // is the primary ink — the client's
+                                      // accent is the lamp, which `onTint`
+                                      // resolves to the room's ink.
                                       .copyWith(color: ink),
                                 ),
                               ],
@@ -272,12 +272,18 @@ class DownloadQueueTile extends StatelessWidget {
                           value: progress!.clamp(0, 1),
                           minHeight: 4,
                           backgroundColor: colorScheme.surfaceContainerHighest,
-                          // A stale bar keeps its position and loses its
-                          // colour. The accent is what makes a bar read as
-                          // moving.
+                          // A transfer in flight is the blue tone — in progress,
+                          // The brand book's bar — never the client's colour. A stale bar
+                          // keeps its position and loses the tone: the blue is
+                          // what makes a bar read as moving.
                           valueColor: AlwaysStoppedAnimation(
                             sampleAge == null
-                                ? accent
+                                ? statusToneColor(
+                                    colorScheme,
+                                    StatusTone.info,
+                                    surface:
+                                        colorScheme.surfaceContainerHighest,
+                                  )
                                 : colorScheme.onSurfaceVariant,
                           ),
                         ),

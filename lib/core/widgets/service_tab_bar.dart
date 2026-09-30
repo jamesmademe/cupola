@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -24,7 +23,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// give the same state two owners, which is how a bar and a URL come to
 /// disagree after a deep link or a back gesture.
 class ServiceTabBar extends StatelessWidget {
-  /// The service whose views these are — it supplies the accent and the bar.
+  /// The service whose views these are — it supplies the tabs and the mark.
   final ServiceKey service;
 
   /// The tab currently showing. Read from the route, not from a controller.
@@ -44,30 +43,21 @@ class ServiceTabBar extends StatelessWidget {
   /// Height of the bar, so a hosted scroll view can reserve it.
   static const double height = 44;
 
-  /// The room light: the service accent over the header's surface, across the
-  /// whole band. DESIGN.md's Bounded Light Rule — the room is named by one
-  /// bounded, edged surface at 0.12, not by the ambient radial, which sits at
-  /// the ceiling measurement allows and cannot say which room this is.
-  ///
-  /// The rule named the deck strip as that band. Since the tab row became the
-  /// service header on a desktop window the deck carries only the fleet, so
-  /// the light moved here: this band is the one lit surface on a service page.
+  /// The room light across the desktop header band: the lamp over the
+  /// header's surface. A service room has no artwork, so it is lit by the
+  /// neutral lamp — `ServiceKey.accent` is the lamp for every service — and the
+  /// band, the one lit surface on a service page, says "a room" without saying
+  /// "whose" in a hue: the mark and the name beside it say that.
   static const double roomLightAlpha = 0.12;
 
-  /// How far up from the band's lower edge the bloom reaches — the 11px
-  /// DESIGN.md gives it. Every label, glyph and pill is centred in the 44pt
-  /// row and ends above it, so no text is ever drawn over the bloom.
+  /// How far up from the band's lower edge the bloom reaches. Every label,
+  /// glyph and pill is centred in the 44pt row and ends above it, so no text
+  /// is ever drawn over the bloom.
   static const double bloomHeight = 11;
 
-  /// The bloom's strength at the band's lower edge. **Solved, not chosen.**
-  ///
-  /// DESIGN.md writes 0.55, which it set for the deck — a band with nothing in
-  /// its lower 11px. This band has the selected tab's 2px rule there, drawn in
-  /// the same accent: at 0.55 the rule falls to 2.08:1 against the bloom under
-  /// it (NZBGet, dark) and stops reading as the selection. 0.30 is the
-  /// strongest bloom at which every one of the sixteen tabbed accents keeps
-  /// its rule at 3:1 or better in both themes (floor 3.10:1, Transmission,
-  /// light) — the bloom gave way, not the indicator.
+  /// The bloom's strength at the band's lower edge: the lamp at 0.30, a soft
+  /// floor of light under the row. It was solved against a 2px accent rule
+  /// drawn in the same zone; the selection is a pill now and sits above it.
   static const double bloomAlpha = 0.30;
 
   /// The opaque surface every control on the header sits on: the room light
@@ -115,15 +105,6 @@ class ServiceTabBar extends StatelessWidget {
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    // The accent is walked against the surface the bar sits on: seven of the
-    // seventeen are under 3:1 on paper, and this label is the accent carrying
-    // ink at its smallest in the whole app. On the header that surface is the
-    // lit band, so the walk is told about the room light under it.
-    final accent = ServiceTheme.onTint(
-      service.accent,
-      surface: colorScheme.surface,
-      tintAlpha: _header ? roomLightAlpha : 0,
-    );
 
     // Scrollable, always, and aligned to the start. Eight of the sixteen
     // label sets are wider than the narrowest frame the app draws, so a bar
@@ -149,7 +130,6 @@ class ServiceTabBar extends StatelessWidget {
             _Tab(
               tab: tab,
               selected: tab == current,
-              accent: accent,
               onTap: () => onSelected(tab),
             ),
           ],
@@ -163,9 +143,9 @@ class ServiceTabBar extends StatelessWidget {
 
     // Opaque, not glass. The band is the one lit surface on the page and its
     // ink is measured against it; a translucent band would put whatever
-    // scrolled under it into that measurement. No accent border either: the
-    // selected tab's rule already draws the accent edge, and a second accent
-    // line along the band would read as a second selection.
+    // scrolled under it into that measurement. No edge either: the selected
+    // tab's pill already marks the row, and a line along the band would read
+    // as a second selection.
     return ServiceBandSurface(
       color: surface,
       child: SizedBox(
@@ -175,8 +155,7 @@ class ServiceTabBar extends StatelessWidget {
           color: surface,
           child: Stack(
             children: [
-              // Painted before the row, so the tabs — and the selected tab's
-              // rule, which sits in this zone — are drawn crisp above it.
+              // Painted before the row, so the tabs are drawn crisp above it.
               Positioned(
                 left: 0,
                 right: 0,
@@ -202,7 +181,7 @@ class ServiceTabBar extends StatelessWidget {
                 child: Row(
                   children: [
                     const SizedBox(width: AppSpacing.lg),
-                    _Identity(service: service, surface: surface),
+                    _Identity(service: service),
                     ?lens,
                     const SizedBox(width: AppSpacing.sm),
                     Container(
@@ -263,19 +242,20 @@ class ServiceBandSurface extends InheritedWidget {
 ///
 /// The name is the page's heading — on a desktop window it is the only place
 /// the service's name is set as one, since the band that carried it is gone.
+///
+/// The mark is the brand book's lit tile: the room's strong fill with an edge and the glyph
+/// in the primary ink, a step brighter than a mark in a list, and no hue — the
+/// identity is the shape and the name.
 class _Identity extends StatelessWidget {
-  const _Identity({required this.service, required this.surface});
+  const _Identity({required this.service});
 
   final ServiceKey service;
-
-  /// The lit band the tile sits on — the tile's tint composites over it.
-  final Color surface;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    const tintAlpha = 0.14;
+    final room = CupolaRoom.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -284,19 +264,11 @@ class _Identity extends StatelessWidget {
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              color: service.accent.withValues(alpha: tintAlpha),
+              color: room.fillStrong,
               borderRadius: BorderRadius.circular(AppRadius.sm - 1),
-              border: Border.all(color: service.accent.withValues(alpha: 0.4)),
+              border: Border.all(color: room.edge),
             ),
-            child: Icon(
-              service.icon,
-              size: 14,
-              color: ServiceTheme.onTint(
-                service.accent,
-                surface: surface,
-                tintAlpha: tintAlpha,
-              ),
-            ),
+            child: Icon(service.icon, size: 14, color: colorScheme.onSurface),
           ),
         ),
         const SizedBox(width: AppSpacing.sm + 2),
@@ -324,18 +296,19 @@ class _Identity extends StatelessWidget {
   }
 }
 
+/// One tab, the brand book's way: the selected one is the room's strong fill under the
+/// primary ink, the rest the tertiary ink on nothing — never the service's
+/// colour, the same pill the phone's bar and the desktop rail draw.
 class _Tab extends StatelessWidget {
   final ServiceTab tab;
   final bool selected;
-  final Color accent;
   final VoidCallback onTap;
 
-  const _Tab({
-    required this.tab,
-    required this.selected,
-    required this.accent,
-    required this.onTap,
-  });
+  const _Tab({required this.tab, required this.selected, required this.onTap});
+
+  /// Height of the selected pill inside the 44pt cell: the brand book's chip height, with
+  /// the cell's full height still the target.
+  static const double pillHeight = 36;
 
   @override
   Widget build(BuildContext context) {
@@ -364,6 +337,22 @@ class _Tab extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
+                // Drawn only when selected, and nothing shifts when it appears:
+                // the pill is positioned behind the label rather than laid out
+                // in flow, so the cell is the same width either way.
+                if (selected)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      key: const ValueKey('service-tab-pill'),
+                      height: pillHeight,
+                      decoration: BoxDecoration(
+                        color: CupolaRoom.of(context).fillStrong,
+                        borderRadius: AppRadius.borderRadiusPill,
+                      ),
+                    ),
+                  ),
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.md,
@@ -375,27 +364,12 @@ class _Tab extends StatelessWidget {
                         .weight(selected ? FontWeight.w600 : FontWeight.w500)
                         .copyWith(
                           color: selected
-                              ? accent
-                              : colorScheme.onSurfaceVariant,
+                              ? colorScheme.onSurface
+                              : CupolaThemeColors.of(context).dimText,
                         ),
                     maxLines: 1,
                   ),
                 ),
-                // Drawn only when selected, and nothing shifts when it appears:
-                // the rule is positioned rather than laid out in flow.
-                if (selected)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      height: 2,
-                      decoration: BoxDecoration(
-                        color: accent,
-                        borderRadius: AppRadius.borderRadiusPill,
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),

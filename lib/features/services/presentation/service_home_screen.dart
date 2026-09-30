@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
@@ -135,8 +134,10 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
             Container(
               width: 8,
               height: 8,
+              // The service's dot, monochrome: the name beside it says which
+              // service this is.
               decoration: BoxDecoration(
-                color: service.accent,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 shape: BoxShape.circle,
               ),
             ),
@@ -149,9 +150,9 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
             //
             // Load-bearing beyond the badge: this Text had no constraint and no
             // overflow at all, and `clampedScalerOf` is opt-in per call site
-            // rather than global. "Nginx Proxy Manager" at titleLarge/w800 and
-            // an accessibility text scale overflowed the Row before any of this
-            // existed.
+            // rather than global. "Nginx Proxy Manager" at the band's title
+            // role and an accessibility text scale overflowed the Row before
+            // any of this existed.
             //
             // The name and badge share one Expanded, so the name is the only
             // flexible child of its own row. A Flexible title beside a Spacer
@@ -179,15 +180,11 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
               trailingAction!
             else
               IconButton(
-                // The band is glass over the page, so the glyph is walked
-                // against the page surface rather than painted raw.
+                // The secondary ink, like every glyph on the band: the band is
+                // monochrome, the service is named beside it.
                 icon: Icon(
                   Icons.monitor_heart_outlined,
-                  color: ServiceTheme.onTint(
-                    service.accent,
-                    surface: colorScheme.surface,
-                    tintAlpha: 0,
-                  ),
+                  color: colorScheme.onSurfaceVariant,
                 ),
                 onPressed: () => context.go('/activity'),
                 tooltip: 'Activity',

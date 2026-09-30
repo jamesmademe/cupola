@@ -326,8 +326,8 @@ void main() {
     testWidgets('the bar keeps its position and loses its colour', (
       tester,
     ) async {
-      // It is still what the service last said, so it stays — but the accent
-      // is what makes a bar read as moving, and this one is not.
+      // It is still what the service last said, so it stays — but the blue
+      // tone is what makes a bar read as moving, and this one is not.
       await pump(tester, sampleAge: const Duration(minutes: 4));
 
       final bar = tester.widget<LinearProgressIndicator>(
@@ -344,7 +344,19 @@ void main() {
       final bar = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator),
       );
-      expect(bar.valueColor!.value, AppColors.sabnzbd);
+      // A transfer in flight is the blue tone — in progress — never the
+      // client's colour.
+      final context = tester.element(find.byType(DownloadQueueTile));
+      final scheme = Theme.of(context).colorScheme;
+      expect(
+        bar.valueColor!.value,
+        statusToneColor(
+          scheme,
+          StatusTone.info,
+          surface: scheme.surfaceContainerHighest,
+        ),
+      );
+      expect(bar.valueColor!.value, isNot(AppColors.sabnzbd));
     });
 
     testWidgets('the age reaches the screen reader too', (tester) async {

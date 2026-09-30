@@ -116,7 +116,6 @@ List<FloatingNavDestination> _destinations() => [
       selectedIcon: tab.selectedIcon,
       railIcon: tab.railIcon,
       label: tab.label,
-      accentColor: tab.accentColor,
     ),
 ];
 

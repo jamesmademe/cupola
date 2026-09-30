@@ -36,8 +36,8 @@ abstract final class ReelMotion {
   ///
   /// It also carries **no colour flash**. `ReelTextOptions.color` tints incoming
   /// glyphs before fading back, and spending that on a status figure would make
-  /// hue carry health — which is the thing the Room Light Rule exists to
-  /// prevent. A figure changes brightness and position, never hue.
+  /// a hue say something the figure's tone did not — colour is information, and
+  /// a flash is not. A figure changes brightness and position, never hue.
   static const figure = ReelTextOptions(
     direction: ReelTextDirection.down,
     duration: AppAnimation.durationSm,
@@ -94,15 +94,15 @@ abstract final class ReelMotion {
   /// tactile on a single press reads as a twitch on a repeating beat.
   ///
   /// The beat is not set here: `reel_text` derives it from this preset when no
-  /// `step` is given — the roll ([AppAnimation.durationSm], 200 ms, with no
+  /// `step` is given — the roll ([AppAnimation.durationSm], 320 ms, with no
   /// bounce to stretch it) plus the 24 ms exit offset plus a fixed 160 ms rest,
-  /// so one tick every 384 ms, about 2.6 a second. Changing the duration or the
+  /// so one tick every 504 ms, about two a second. Changing the duration or the
   /// exit offset moves it.
   ///
   /// **This preset is the one place `respectDisableAnimations` does not cover
   /// us.** That flag suppresses the *roll*; it does not stop the controller's
   /// frame timer, so under Reduce Motion an ellipsis loop still hard-swaps
-  /// `Testing` → `Testing.` → `Testing..` on that 384 ms beat. Text changing on
+  /// `Testing` → `Testing.` → `Testing..` on that 504 ms beat. Text changing on
   /// a timer with no animation is not motion, but it is still something moving
   /// for a user who asked for less — so callers check
   /// [MediaQuery.disableAnimationsOf] and show a settled label instead. That

@@ -908,7 +908,10 @@ class _BulkMap<T> extends StatelessWidget {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: AppRadius.borderRadiusSm,
-                    borderSide: BorderSide(color: service.accent, width: 1.5),
+                    borderSide: BorderSide(
+                      color: CupolaRoom.of(context).focus,
+                      width: 1.5,
+                    ),
                   ),
                 ),
                 hint: const Text('Select match'),
@@ -1064,17 +1067,13 @@ class _SheetFooter extends StatelessWidget {
             onPressed: isLastStep
                 ? (canApply ? onApply : null)
                 : (canGoNext ? onNext : null),
-            style: FilledButton.styleFrom(
-              backgroundColor: service.accent,
-              foregroundColor: ServiceTheme.foregroundOn(service.accent),
-              minimumSize: const Size(0, 48),
-            ),
+            style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
             child: applying
                 ? SizedBox.square(
                     dimension: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: ServiceTheme.foregroundOn(service.accent),
+                      color: colorScheme.onPrimary,
                     ),
                   )
                 : Text(isLastStep ? 'Apply' : 'Next'),

@@ -7,12 +7,12 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/media_search_popup_menu.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/tag_chip.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
-import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -379,10 +379,12 @@ void main() {
           ),
         );
 
+        // The room's own amber — the day room's is deeper than the dark
+        // room's — walked over its wash on the tile.
         expect(
           chipInk(tester, 'Warning'),
           ServiceTheme.onTint(
-            AppColors.warning,
+            statusToneFill(scheme, StatusTone.warning),
             surface: scheme.surfaceContainer,
             tintAlpha: 0.12,
           ),

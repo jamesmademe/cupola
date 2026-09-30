@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/header_action_row.dart';
@@ -66,8 +65,9 @@ Widget _discs(List<Widget> discs) => Row(
   ],
 );
 
-/// A band with a promoted primary: the accent-filled expanded control, the
-/// discs beside it, and the sentence underneath.
+/// A band with a promoted primary: the ink-filled expanded control (the brand book's
+/// primary, the same on every service), the discs beside it, and the sentence
+/// underneath.
 Widget _primaryBand({
   required ServiceKey service,
   required String label,
@@ -78,8 +78,9 @@ Widget _primaryBand({
   bool withSecondary = true,
 }) => Builder(
   builder: (context) {
-    final accent = service.accent;
-    final onAccent = ServiceTheme.foregroundOn(accent);
+    final scheme = Theme.of(context).colorScheme;
+    final fill = scheme.primary;
+    final onFill = scheme.onPrimary;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -91,15 +92,15 @@ Widget _primaryBand({
               label: label,
               isBusy: isBusy,
               isConfirmed: isConfirmed,
-              color: onAccent,
-              fill: accent,
+              color: onFill,
+              fill: fill,
             ),
             label: _clamped(
               Text(label, maxLines: 2, textAlign: TextAlign.center),
             ),
             style: HeaderActionRow.expandedButtonStyle(
-              foregroundColor: onAccent,
-              backgroundColor: accent,
+              foregroundColor: onFill,
+              backgroundColor: fill,
             ),
           ),
           trailing: _discs([
@@ -179,8 +180,7 @@ Widget _sentenceBand() => Builder(
 /// tops align with it, the last one gated on Radarr.
 Widget _captionedBand() => Builder(
   builder: (context) {
-    final accent = ServiceKey.seerr.accent;
-    final onAccent = ServiceTheme.foregroundOn(accent);
+    final scheme = Theme.of(context).colorScheme;
     return HeaderActionRow(
       crossAxisAlignment: CrossAxisAlignment.start,
       expanded: FilledButton.icon(
@@ -193,8 +193,8 @@ Widget _captionedBand() => Builder(
           const Text('Request', maxLines: 2, textAlign: TextAlign.center),
         ),
         style: HeaderActionRow.expandedButtonStyle(
-          foregroundColor: onAccent,
-          backgroundColor: accent,
+          foregroundColor: scheme.onPrimary,
+          backgroundColor: scheme.primary,
         ),
       ),
       trailing: Row(
@@ -282,8 +282,8 @@ Widget _atReadingSize(double scale, Widget child) => Builder(
 
 List<CatalogScene> _bands(CatalogPlatform platform, double width) => [
   CatalogScene(
-    'Primary + two discs · Radarr, Automatic search · the accent fill with '
-    'foregroundOn ink, 48pt tall, radius md',
+    'Primary + two discs · Radarr, Automatic search · the ink fill with the '
+    'on-ink label, 48pt tall, radius md — never the service\'s colour',
     (_) => _primaryBand(
       service: ServiceKey.radarr,
       label: 'Automatic search',
@@ -308,7 +308,7 @@ List<CatalogScene> _bands(CatalogPlatform platform, double width) => [
   ),
   CatalogScene(
     'Primary confirmed · Lidarr · the success check walked against the '
-    'accent fill',
+    'ink fill',
     (_) => _primaryBand(
       service: ServiceKey.lidarr,
       label: 'Automatic search',

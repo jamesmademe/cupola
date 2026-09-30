@@ -342,7 +342,6 @@ class _CrudList extends ConsumerWidget {
             onTap: onCreate,
             builder: (context, onPressed, annotate) => FloatingActionButton(
               heroTag: null,
-              backgroundColor: AppColors.truenas,
               tooltip: 'New',
               onPressed: onPressed,
               child: annotate(const Icon(Icons.add_rounded)),

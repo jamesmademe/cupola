@@ -298,7 +298,12 @@ void main() {
           matching: find.byType(CircularProgressIndicator),
         ),
       );
-      expect(fill, ServiceKey.radarr.accent);
+      // The ink button, never the service's colour (the brand book: the primary is ink).
+      final scheme = Theme.of(
+        tester.element(find.byType(LibraryDetailActions)),
+      ).colorScheme;
+      expect(fill, scheme.primary);
+      expect(fill, isNot(ServiceKey.radarr.brandAccent));
       expect(_contrast(spinner.color!, fill), greaterThanOrEqualTo(3));
     });
 

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The alphas the selected nav pill and the Activity segment pills actually use.
@@ -51,26 +51,33 @@ void main() {
       }
     });
 
-    test('every nav section accent clears AA over its own tint', () {
-      for (final tab in NavTab.values) {
-        for (final (surface, alpha) in const [
-          (AppColors.surfaceLight, _lightTintAlpha),
-          (AppColors.surfaceDark, _darkTintAlpha),
-        ]) {
-          final background = _tintOverSurface(tab.accentColor, alpha, surface);
-          final label = ServiceTheme.onTint(
-            tab.accentColor,
+    test('a label asked of the lamp is the room\'s primary ink', () {
+      // The brand book: a selected or emphasised label is ink, never a hue. Every service
+      // paints the lamp now, so walking the lamp's grey would have set every
+      // such label in a dim cool grey — below the dark room's tertiary ink.
+      for (final (surface, alpha, ink) in const [
+        (
+          AppColors.surfaceDark,
+          _darkTintAlpha,
+          DesignTokensDark.colorOnSurface,
+        ),
+        (AppColors.surfaceDark, 0.0, DesignTokensDark.colorOnSurface),
+        (
+          AppColors.surfaceLight,
+          _lightTintAlpha,
+          DesignTokensLight.colorOnSurface,
+        ),
+        (AppColors.surfaceLight, 0.0, DesignTokensLight.colorOnSurface),
+      ]) {
+        expect(
+          ServiceTheme.onTint(
+            AppColors.lamp,
             surface: surface,
             tintAlpha: alpha,
-          );
-
-          expect(
-            _contrast(label, background),
-            greaterThanOrEqualTo(4.5),
-            reason:
-                '${tab.name} on ${surface == AppColors.surfaceLight ? 'light' : 'dark'}',
-          );
-        }
+          ),
+          ink,
+          reason: 'lamp over $surface at $alpha',
+        );
       }
     });
 
@@ -112,11 +119,7 @@ void main() {
     test('the accent hue survives the adjustment', () {
       // This is the whole reason for deriving a tone instead of dropping the
       // label to a neutral: the pill has to stay recognisably that colour.
-      for (final accent in [
-        AppColors.radarr,
-        AppColors.nzbget,
-        AppColors.navSettings,
-      ]) {
+      for (final accent in [AppColors.radarr, AppColors.nzbget]) {
         final tuned = ServiceTheme.onTint(
           accent,
           surface: AppColors.surfaceLight,
@@ -132,27 +135,26 @@ void main() {
     });
   });
 
-  group('NavTab accents', () {
-    test('each section carries its own accent', () {
-      // All four used to be `AppColors.primary`, so the nav bar's
-      // per-destination accent mechanism could never show a difference.
-      final accents = NavTab.values.map((tab) => tab.accentColor).toSet();
-
-      expect(accents, hasLength(NavTab.values.length));
+  group('the monochrome registry', () {
+    test('every service paints the lamp', () {
+      // Principle 3 of the brand book: colour is information. `ServiceKey.accent` is what the
+      // interface paints for a service — its room light, its glow, its walked
+      // labels — and it is the neutral lamp for all seventeen.
+      for (final service in ServiceKey.values) {
+        expect(service.accent, AppColors.lamp, reason: service.name);
+        expect(serviceThemeFor(service).accent, AppColors.lamp);
+      }
     });
 
-    test('no section borrows the closed status vocabulary', () {
-      // A green or amber pill in permanent chrome would read as a health signal.
-      const statusTones = [
-        AppColors.success,
-        AppColors.warning,
-        AppColors.error,
-        AppColors.info,
-      ];
-
-      for (final tab in NavTab.values) {
-        expect(statusTones, isNot(contains(tab.accentColor)), reason: tab.name);
-      }
+    test('each brand colour survives as registry data, one per service', () {
+      // Retired from the paint, not from the registry: the brand colours are
+      // still distinct and still the tokens' bytes, for the few places a
+      // colour is the information itself (a chart series).
+      final brands = ServiceKey.values.map((s) => s.brandAccent).toSet();
+      expect(brands, hasLength(ServiceKey.values.length));
+      expect(ServiceKey.radarr.brandAccent, AppColors.radarr);
+      expect(ServiceKey.plex.brandAccent, AppColors.plex);
+      expect(brands, isNot(contains(AppColors.lamp)));
     });
   });
 }

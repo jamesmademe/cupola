@@ -14,6 +14,7 @@ import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/domain/models/virt_instance.dart';
 import 'package:cupola/features/truenas/domain/truenas_version.dart';
 import 'package:cupola/features/truenas/presentation/truenas_actions.dart';
@@ -110,7 +111,6 @@ class _TrueNasVirtScreenState extends ConsumerState<TrueNasVirtScreen> {
         verbPhrase: 'create instances',
         onTap: () => createInstanceFlow(context, ref, type: _kind.wire),
         builder: (context, onPressed, annotate) => FloatingActionButton(
-          backgroundColor: AppColors.truenas,
           onPressed: onPressed,
           tooltip: 'New ${_kind.singular}',
           child: annotate(const Icon(Icons.add_rounded)),
@@ -126,7 +126,6 @@ class _TrueNasVirtScreenState extends ConsumerState<TrueNasVirtScreen> {
                 values: TrueNasVirtKind.values,
                 selected: _kind,
                 labelBuilder: (kind) => kind.label,
-                accent: AppColors.truenas,
                 onSelected: (kind) => setState(() => _kind = kind),
               ),
             ),
@@ -180,7 +179,6 @@ class _VirtPane extends ConsumerWidget {
                   'This server reports $parsed. Incus virtualization '
                   '(containers and VMs) arrived in $kTrueNasMinVersion, so '
                   'Cupola has nothing to show or start here.',
-              accentColor: AppColors.truenas,
             ),
           ),
         ],
@@ -198,7 +196,6 @@ class _VirtPane extends ConsumerWidget {
               message:
                   'Choose a storage pool for instances in the '
                   'TrueNAS web UI (Virtualization) to get started.',
-              accentColor: AppColors.truenas,
             ),
           ),
         ],
@@ -368,7 +365,7 @@ class _AutostartBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: AppColors.truenas.withValues(alpha: 0.12),
+        color: ServiceKey.truenas.accent.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(DesignTokens.radiusXs2),
       ),
       child: Row(
@@ -378,7 +375,7 @@ class _AutostartBadge extends StatelessWidget {
             Icons.power_settings_new_rounded,
             size: 11,
             color: ServiceTheme.onTint(
-              AppColors.truenas,
+              ServiceKey.truenas.accent,
               surface: theme.colorScheme.surface,
               tintAlpha: 0.12,
             ),
@@ -390,7 +387,7 @@ class _AutostartBadge extends StatelessWidget {
                 .weight(FontWeight.w600)
                 .copyWith(
                   color: ServiceTheme.onTint(
-                    AppColors.truenas,
+                    ServiceKey.truenas.accent,
                     surface: theme.colorScheme.surface,
                     tintAlpha: 0.12,
                   ),

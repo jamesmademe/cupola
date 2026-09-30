@@ -127,11 +127,11 @@ class _ServiceTile extends ConsumerWidget {
                 item.enabled ? Icons.flash_on_rounded : Icons.flash_off_rounded,
                 size: 18,
                 // Autostart on is a *setting*, not a fault — amber said
-                // something was wrong with a service configured correctly. The
-                // service accent marks it as "on" the way every other toggle in
-                // the console does.
+                // something was wrong with a service configured correctly —
+                // and not a health signal either, so not green: "on" is the
+                // primary ink, the way a switch that is on is ink.
                 color: item.enabled
-                    ? AppColors.truenas
+                    ? theme.colorScheme.onSurface
                     : theme.colorScheme.outline,
               ),
               onTap: () => runTrueNasAction(

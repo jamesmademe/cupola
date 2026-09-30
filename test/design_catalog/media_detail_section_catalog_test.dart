@@ -312,7 +312,7 @@ void main() {
       CatalogScene(
         'MediaDetailSectionLabel · plain, with a count, with a trailing '
         'control, a long label on two lines, and 1.5× reading size · the '
-        'page accent walked for text on the surface; the control drops under '
+        'page accent (the lamp) resolved to ink; the control drops under '
         'the label past 1.4×, leading-aligned',
         _labels,
       ),

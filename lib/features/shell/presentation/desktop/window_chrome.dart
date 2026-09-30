@@ -84,7 +84,7 @@ class WindowChrome extends ConsumerWidget {
                       compact: compact,
                       label: 'Lens: ${lens.label}',
                       icon: Icons.dns_outlined,
-                      accent: lens.service.accent,
+                      on: true,
                       tooltip:
                           'Showing ${lens.service.title} · ${lens.label}. '
                           'Change it from the deck.',
@@ -105,7 +105,7 @@ class WindowChrome extends ConsumerWidget {
                     label: 'Inspector',
                     shortcut: ShellShortcuts.inspector,
                     icon: Icons.insights_rounded,
-                    accent: inspectorOpen ? AppColors.navActivity : null,
+                    on: inspectorOpen,
                     onPressed: () =>
                         Actions.invoke(context, const ToggleInspectorIntent()),
                   ),
@@ -332,23 +332,24 @@ class _CrumbLinkState extends State<_CrumbLink> {
   }
 }
 
-/// A 28pt chip in the strip: label, optional shortcut, optional accent.
+/// A 28pt chip in the strip: label, optional shortcut, and whether it is on.
 ///
 /// It is a control, so it takes the 12dp interactive radius and not full
 /// radius, which in this system means a tag or a piece of metadata. It keeps
-/// that shape when accented: the accent marks it as on, and the shape stays
-/// the same when it is toggled.
+/// that shape when it is on: the room's strong fill under the primary ink
+/// marks it, and the shape stays the same when it is toggled.
 ///
-/// Accented means *on* — the inspector chip is the only one that has a state —
-/// and the accent is always the owning surface's colour rather than a status
-/// tone, per the Closed Tone Rule.
+/// Monochrome, like the rest of the chrome: *on* is the selected pill of the
+/// tab bar and the rail, never a section's or a service's colour and never a
+/// status tone. The inspector chip is on while the pane is open; the lens chip
+/// is on for as long as it is shown, since it names a choice in force.
 class _ChromeChip extends StatefulWidget {
   const _ChromeChip({
     required this.label,
     this.compact = false,
     this.shortcut,
     this.icon,
-    this.accent,
+    this.on = false,
     this.onPressed,
     this.tooltip,
   });
@@ -359,7 +360,7 @@ class _ChromeChip extends StatefulWidget {
   final bool compact;
   final String? shortcut;
   final IconData? icon;
-  final Color? accent;
+  final bool on;
   final VoidCallback? onPressed;
   final String? tooltip;
 
@@ -373,21 +374,17 @@ class _ChromeChipState extends State<_ChromeChip> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accent = widget.accent;
+    final on = widget.on;
     final labelled = !widget.compact || widget.icon == null;
     final chip = Container(
       height: widget.compact ? 26 : 28,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       decoration: BoxDecoration(
-        color: accent != null
-            ? accent.withValues(alpha: 0.14)
+        color: on
+            ? CupolaRoom.of(context).fillStrong
             : (_hovered ? colorScheme.onSurface.withValues(alpha: 0.06) : null),
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: accent != null
-              ? accent.withValues(alpha: 0.4)
-              : colorScheme.outline,
-        ),
+        border: Border.all(color: colorScheme.outline),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -396,9 +393,7 @@ class _ChromeChipState extends State<_ChromeChip> {
             Icon(
               widget.icon,
               size: 14,
-              color: accent != null
-                  ? colorScheme.onSurface
-                  : colorScheme.onSurfaceVariant,
+              color: on ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
             ),
             const SizedBox(width: 6),
           ],
@@ -409,7 +404,7 @@ class _ChromeChipState extends State<_ChromeChip> {
                 context,
                 size: 11,
                 weight: FontWeight.w600,
-                color: accent != null
+                color: on
                     ? colorScheme.onSurface
                     : colorScheme.onSurfaceVariant,
               ),

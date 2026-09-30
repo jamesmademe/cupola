@@ -720,14 +720,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // so anything below this point is told the keyboard is down while it is up.
     final keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
 
-    // The room the walk happens in. It was brand indigo for the whole flow
-    // because no accent was ever passed — the tinted room the artboards draw
-    // existed in the widget and never in the screen.
-    //
-    // Null on the door, the pick and the close, where `AmbientBackground`'s own
-    // default is the brand primary and nothing changes; per service in between,
-    // so the room drifts from Radarr amber to Sonarr blue on the same 300ms
-    // clock as the page and the ring's resize — three instruments, one beat.
+    // The room the walk happens in: lit by the neutral lamp throughout. Null on
+    // the door, the pick and the close, where `AmbientBackground`'s own default
+    // is the lamp; per service in between, where the service's accent is the
+    // lamp too — so the light holds steady while the page and the ring move,
+    // and the service being set up is named by its mark and its form, never by
+    // a colour.
     //
     // The drift itself lives in `AmbientBackground` now, so this passes the
     // colour and nothing else: a private `_AmbientRoom` here tweened on the way

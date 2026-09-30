@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_gradients.dart';
+import 'package:cupola/core/theme.dart';
 
 /// Paints the app's ambient background — an opaque base surface with soft accent
 /// radial glows — behind [child], full-bleed.
@@ -13,8 +14,12 @@ import 'package:cupola/core/app_gradients.dart';
 /// black/white strip" seam: instead of an opaque scaffold surface showing
 /// through the transparent app bar, the gradient shows through.
 ///
-/// Pass [accent] to tint the glow with a per-service colour (e.g. Radarr amber,
-/// Sonarr violet); defaults to the brand primary.
+/// [accent] is the room's light. With none the room is lit by the neutral lamp
+/// ([AppColors.lamp]), the light of a room with no artwork — and a service's
+/// room is lit by it too, since `ServiceKey.accent` is the lamp for every
+/// service: the room takes its light from the content, never from the service.
+/// Never the primary ink: in the dark room that is near-white, and a white
+/// wash reads as fog.
 ///
 /// **The accent drifts, it does not cut.** A change to [accent] is animated over
 /// [AppAnimation.durationMd] on the standard curve, which is the same clock the
@@ -38,9 +43,9 @@ class AmbientBackground extends StatelessWidget {
     // and `ColorTween` asserts on a null `end` — `Color? lerp` is fine with a
     // null *begin* (it fades up from transparent) but a null end has nothing to
     // travel to. Naming the fallback here is also what makes a screen drift out
-    // of and back into the brand glow rather than cutting at the edges of a
-    // per-service stretch.
-    final target = accent ?? scheme.primary;
+    // of and back into the lamp rather than cutting at the edges of a lit
+    // stretch.
+    final target = accent ?? AppColors.lamp;
 
     // Reduce Motion **removes** the animator rather than shortening it, which is
     // the rule the rest of the app keeps (`reel_line`, `service_ring`,

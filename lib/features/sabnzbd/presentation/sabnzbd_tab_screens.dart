@@ -70,7 +70,6 @@ class _SabnzbdHistoryScreenState extends ConsumerState<SabnzbdHistoryScreen> {
             selected: _filter,
             labelBuilder: (filter) => filter.label,
             onSelected: (filter) => setState(() => _filter = filter),
-            accent: ServiceKey.sabnzbd.accent,
           ),
           Expanded(
             child: history.hasValue ? page : AppScrollablePage(child: page),

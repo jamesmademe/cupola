@@ -1,16 +1,17 @@
-import 'package:flutter/material.dart' show Color, IconData, Icons;
+import 'package:flutter/material.dart' show IconData, Icons;
 import 'package:material_symbols_icons/symbols.dart';
 
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 
 /// The four canonical tabs.
 ///
-/// Accents are the app's own indigo throughout. They used to vary per tab —
-/// Activity borrowed the Radarr amber while its content is Seerr-indigo, and
-/// Settings used `onSurfaceVariantDark`, a dark-mode token that rendered the
-/// selected pill as washed-out grey in light mode and read as disabled. The
-/// per-service accents belong to service surfaces; the app shell is one colour.
+/// **No colour of their own.** The chrome is monochrome (Principle 3 of the brand book:
+/// colour is information): the selected tab is the room's strong fill under the
+/// primary ink in every section, on the phone's bar, the desktop rail and the
+/// settings list alike. The four section accents that used to tint the pill
+/// (`color.nav.*` in `design/tokens/core.json`) are retired from the interface;
+/// the tokens stay until the palette cleanup, and nothing in `lib/` may read
+/// them (`test/core/theme/monochrome_accent_test.dart`).
 enum NavTab {
   /// The app home.
   dashboard(
@@ -19,7 +20,6 @@ enum NavTab {
     selectedIcon: Icons.view_list_rounded,
     railIcon: Symbols.view_list_rounded,
     routePath: ServiceRoutes.dashboard,
-    accentColor: AppColors.navDashboard,
   ),
   activity(
     label: 'Activity',
@@ -27,7 +27,6 @@ enum NavTab {
     selectedIcon: Icons.monitor_heart_rounded,
     railIcon: Symbols.monitor_heart_rounded,
     routePath: '/activity',
-    accentColor: AppColors.navActivity,
   ),
   search(
     label: 'Search',
@@ -35,7 +34,6 @@ enum NavTab {
     selectedIcon: Icons.search_rounded,
     railIcon: Symbols.search_rounded,
     routePath: '/search',
-    accentColor: AppColors.navSearch,
   ),
   settings(
     label: 'Settings',
@@ -43,7 +41,6 @@ enum NavTab {
     selectedIcon: Icons.settings,
     railIcon: Symbols.settings_rounded,
     routePath: '/settings',
-    accentColor: AppColors.navSettings,
   );
 
   const NavTab({
@@ -52,7 +49,6 @@ enum NavTab {
     required this.selectedIcon,
     required this.railIcon,
     required this.routePath,
-    required this.accentColor,
   });
 
   final String label;
@@ -68,5 +64,4 @@ enum NavTab {
   /// its size.
   final IconData railIcon;
   final String routePath;
-  final Color accentColor;
 }

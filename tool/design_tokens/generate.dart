@@ -21,7 +21,6 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math' as math;
 
 /// Where the token sets live, relative to the package root.
 const String tokensDirPath = 'design/tokens';
@@ -195,7 +194,16 @@ TokenSource loadTokenSource(Directory dir) {
 // ---------------------------------------------------------------------------
 
 /// The value types the generator understands, after normalisation.
-enum TokenType { color, dimension, number, fontWeight, fontFamily, duration }
+enum TokenType {
+  color,
+  dimension,
+  number,
+  fontWeight,
+  fontFamily,
+  duration,
+  cubicBezier,
+  typography,
+}
 
 /// Accepted `$type` spellings. The format's own names come first; the rest are
 /// the plural and property-specific names some editors write back, mapped to
@@ -208,6 +216,8 @@ const Map<String, TokenType> _typeNames = {
   'fontWeight': TokenType.fontWeight,
   'fontFamily': TokenType.fontFamily,
   'duration': TokenType.duration,
+  'cubicBezier': TokenType.cubicBezier,
+  'typography': TokenType.typography,
   'spacing': TokenType.dimension,
   'sizing': TokenType.dimension,
   'borderRadius': TokenType.dimension,
@@ -218,6 +228,17 @@ const Map<String, TokenType> _typeNames = {
   'lineHeights': TokenType.number,
   'fontWeights': TokenType.fontWeight,
   'fontFamilies': TokenType.fontFamily,
+  'easing': TokenType.cubicBezier,
+};
+
+/// CSS easing keywords, as the cubic Béziers CSS defines them, so a curve
+/// written back as a keyword by an editor still parses.
+const Map<String, List<double>> _easingKeywords = {
+  'linear': [0, 0, 1, 1],
+  'ease': [0.25, 0.1, 0.25, 1],
+  'ease-in': [0.42, 0, 1, 1],
+  'ease-out': [0, 0, 0.58, 1],
+  'ease-in-out': [0.42, 0, 0.58, 1],
 };
 
 const Map<String, int> _fontWeightNames = {
@@ -270,7 +291,8 @@ class _Token {
   final TokenType type;
 
   /// Parsed value: `int` ARGB for colours, `double` for dimensions and
-  /// numbers, `int` for weights and milliseconds, `List<String>` for families.
+  /// numbers, `int` for weights and milliseconds, `List<String>` for families,
+  /// `List<double>` for cubic Béziers and a [_Typography] for type roles.
   final Object value;
 
   /// The token this one aliases directly, if it is an alias.
@@ -282,6 +304,48 @@ class _Token {
 }
 
 final RegExp _aliasPattern = RegExp(r'^\{([^{}]+)\}$');
+
+/// A typography composite after parsing: one type role, every property
+/// resolved to the unit the app sets it in.
+class _Typography {
+  const _Typography({
+    required this.family,
+    required this.familyToken,
+    required this.fontSize,
+    required this.lineHeight,
+    required this.fontWeight,
+    required this.fontWidth,
+    required this.letterSpacing,
+  });
+
+  /// The family and its fallbacks, in resolution order.
+  final List<String> family;
+
+  /// The `fontFamily` token [family] came from, when it was an alias.
+  final _Token? familyToken;
+
+  /// Logical pixels.
+  final double fontSize;
+
+  /// A multiple of [fontSize], the unit `TextStyle.height` takes.
+  final double lineHeight;
+
+  /// The `wght` axis value, 1–1000.
+  final int fontWeight;
+
+  /// The `wdth` axis value, in percent of the normal width.
+  final double fontWidth;
+
+  /// Logical pixels, the unit `TextStyle.letterSpacing` takes.
+  final double letterSpacing;
+}
+
+/// [value] rounded to four decimals, so a ratio such as 41/42 or a tracking
+/// such as -0.022em × 42 lists as a number a reader can check.
+double _round4(double value) {
+  final rounded = (value * 10000).round() / 10000;
+  return rounded == 0 ? 0 : rounded;
+}
 
 void _flatten(
   Object? node,
@@ -401,6 +465,16 @@ class _Scope {
       problems.add('$where has no \$type.');
       return null;
     }
+    if (declared == TokenType.typography) {
+      final typography = _parseTypography(where, value);
+      if (typography == null) return null;
+      return _Token(
+        raw: token,
+        type: declared,
+        value: typography,
+        aliasOf: null,
+      );
+    }
     final parsed = _parse(declared, value);
     if (parsed == null) {
       problems.add(
@@ -410,6 +484,216 @@ class _Scope {
       return null;
     }
     return _Token(raw: token, type: declared, value: parsed, aliasOf: null);
+  }
+
+  /// Reads one property of a typography composite: a literal of [type], or an
+  /// alias of a token of that type.
+  (Object, _Token?)? _typographyPart(
+    String where,
+    String property,
+    TokenType type,
+    Object? value,
+  ) {
+    final alias = value is String ? _aliasPattern.firstMatch(value) : null;
+    if (alias != null) {
+      final targetId = alias.group(1)!;
+      if (!raw.containsKey(targetId)) {
+        problems.add(
+          '$where aliases "{$targetId}" in $property, which does not resolve.',
+        );
+        return null;
+      }
+      final target = resolve(targetId);
+      if (target == null) return null;
+      if (target.type != type) {
+        problems.add(
+          '$where needs a ${type.name} for $property but aliases '
+          '"{$targetId}", a ${target.type.name}.',
+        );
+        return null;
+      }
+      return (target.value, target);
+    }
+    final parsed = _parse(type, value);
+    if (parsed == null) {
+      problems.add(
+        '$where has a $property ${jsonEncode(value)} that is not a valid '
+        '${type.name}.',
+      );
+      return null;
+    }
+    return (parsed, null);
+  }
+
+  _Typography? _parseTypography(String where, Object? value) {
+    if (value is! Map) {
+      problems.add(
+        '$where has a value ${jsonEncode(value)} that is not a typography '
+        'composite.',
+      );
+      return null;
+    }
+    const known = {
+      'fontFamily',
+      'fontSize',
+      'lineHeight',
+      'fontWeight',
+      'fontWidth',
+      'letterSpacing',
+    };
+    final unknown = [
+      for (final key in value.keys)
+        if (!known.contains(key)) '$key',
+    ];
+    if (unknown.isNotEmpty) {
+      problems.add('$where has unknown typography properties: $unknown.');
+      return null;
+    }
+    final missing = [
+      for (final key in const [
+        'fontFamily',
+        'fontSize',
+        'lineHeight',
+        'fontWeight',
+      ])
+        if (!value.containsKey(key)) key,
+    ];
+    if (missing.isNotEmpty) {
+      problems.add('$where is a typography composite without $missing.');
+      return null;
+    }
+
+    final family = _typographyPart(
+      where,
+      'fontFamily',
+      TokenType.fontFamily,
+      value['fontFamily'],
+    );
+    final size = _typographyPart(
+      where,
+      'fontSize',
+      TokenType.dimension,
+      value['fontSize'],
+    );
+    if (family == null || size == null) return null;
+    final fontSize = size.$1 as double;
+    if (fontSize <= 0) {
+      problems.add('$where has a fontSize that is not positive.');
+      return null;
+    }
+
+    // Line height: a length is divided by the size, a bare number or a
+    // percentage is already the multiple `TextStyle.height` takes.
+    double? lineHeight;
+    final rawHeight = value['lineHeight'];
+    if (rawHeight is num) {
+      lineHeight = rawHeight.toDouble();
+    } else if (rawHeight is String && rawHeight.endsWith('%')) {
+      final percent = double.tryParse(rawHeight.replaceAll('%', ''));
+      lineHeight = percent == null ? null : percent / 100;
+    } else {
+      final height = _typographyPart(
+        where,
+        'lineHeight',
+        TokenType.dimension,
+        rawHeight,
+      );
+      if (height == null) return null;
+      lineHeight = (height.$1 as double) / fontSize;
+    }
+    if (lineHeight == null || lineHeight <= 0) {
+      problems.add(
+        '$where has a lineHeight ${jsonEncode(rawHeight)} that is neither a '
+        'length, a multiple nor a percentage.',
+      );
+      return null;
+    }
+
+    // Weight: any axis value from 1 to 1000, since a variable face is set
+    // through `wght` and not through the nine named weights.
+    final rawWeight = value['fontWeight'];
+    int? fontWeight;
+    if (rawWeight is String && _aliasPattern.hasMatch(rawWeight)) {
+      final weight = _typographyPart(
+        where,
+        'fontWeight',
+        TokenType.fontWeight,
+        rawWeight,
+      );
+      if (weight == null) return null;
+      fontWeight = weight.$1 as int;
+    } else {
+      final candidate = rawWeight is String
+          ? (_fontWeightNames[rawWeight] ?? int.tryParse(rawWeight))
+          : rawWeight;
+      if (candidate is int && candidate >= 1 && candidate <= 1000) {
+        fontWeight = candidate;
+      }
+    }
+    if (fontWeight == null) {
+      problems.add(
+        '$where has a fontWeight ${jsonEncode(rawWeight)} that is not a '
+        'weight from 1 to 1000.',
+      );
+      return null;
+    }
+
+    // Width: the `wdth` axis, in percent. Absent means the normal width.
+    final rawWidth = value['fontWidth'] ?? 100;
+    final fontWidth = rawWidth is num
+        ? rawWidth.toDouble()
+        : rawWidth is String
+        ? double.tryParse(rawWidth.replaceAll('%', ''))
+        : null;
+    if (fontWidth == null || fontWidth < 25 || fontWidth > 200) {
+      problems.add(
+        '$where has a fontWidth ${jsonEncode(rawWidth)} that is not a '
+        'percentage from 25 to 200.',
+      );
+      return null;
+    }
+
+    // Tracking: em is relative to the size and is resolved to pixels here;
+    // a length or a bare number is already pixels.
+    final rawSpacing = value['letterSpacing'] ?? 0;
+    double? letterSpacing;
+    if (rawSpacing is num) {
+      letterSpacing = rawSpacing.toDouble();
+    } else if (rawSpacing is String) {
+      final em = RegExp(r'^(-?\d+(?:\.\d+)?)em$').firstMatch(rawSpacing);
+      final percent = RegExp(r'^(-?\d+(?:\.\d+)?)%$').firstMatch(rawSpacing);
+      if (em != null) {
+        letterSpacing = double.parse(em.group(1)!) * fontSize;
+      } else if (percent != null) {
+        letterSpacing = double.parse(percent.group(1)!) / 100 * fontSize;
+      } else {
+        final spacing = _typographyPart(
+          where,
+          'letterSpacing',
+          TokenType.dimension,
+          rawSpacing,
+        );
+        if (spacing == null) return null;
+        letterSpacing = spacing.$1 as double;
+      }
+    }
+    if (letterSpacing == null) {
+      problems.add(
+        '$where has a letterSpacing ${jsonEncode(rawSpacing)} that is neither '
+        'a length nor an em value.',
+      );
+      return null;
+    }
+
+    return _Typography(
+      family: family.$1 as List<String>,
+      familyToken: family.$2,
+      fontSize: fontSize,
+      lineHeight: _round4(lineHeight),
+      fontWeight: fontWeight,
+      fontWidth: fontWidth,
+      letterSpacing: _round4(letterSpacing),
+    );
   }
 }
 
@@ -482,6 +766,37 @@ Object? _parse(TokenType type, Object? value) {
       };
       if (ms == null || ms != ms.roundToDouble()) return null;
       return ms.round();
+    case TokenType.cubicBezier:
+      List<Object?>? points;
+      if (value is List) {
+        points = value;
+      } else if (value is String) {
+        final keyword = _easingKeywords[value.trim()];
+        if (keyword != null) return keyword;
+        final match = RegExp(
+          r'^cubic-bezier\(([^)]*)\)$',
+        ).firstMatch(value.trim());
+        points = match == null
+            ? null
+            : [
+                for (final part in match.group(1)!.split(','))
+                  double.tryParse(part.trim()),
+              ];
+      }
+      if (points == null ||
+          points.length != 4 ||
+          points.any((point) => point is! num)) {
+        return null;
+      }
+      final curve = [for (final point in points) (point as num).toDouble()];
+      // The format's constraint: both x coordinates stay in [0, 1], or the
+      // curve is not a function of time.
+      if (curve[0] < 0 || curve[0] > 1 || curve[2] < 0 || curve[2] > 1) {
+        return null;
+      }
+      return curve;
+    case TokenType.typography:
+      throw StateError('Typography is parsed by its scope.');
   }
 }
 
@@ -683,7 +998,11 @@ TokenOutputs generate(TokenSource source) {
     final seen = <String, String>{};
     for (final token in tokens) {
       final names = [
-        _dartName(token.path),
+        if (token.type == TokenType.typography)
+          for (final suffix in _typographySuffixes)
+            '${_dartName(token.path)}$suffix'
+        else
+          _dartName(token.path),
         if (token.type == TokenType.fontFamily)
           '${_dartName(token.path)}Fallback',
       ];
@@ -742,7 +1061,30 @@ String _dartType(TokenType type) => switch (type) {
   TokenType.fontWeight => 'FontWeight',
   TokenType.fontFamily => 'String',
   TokenType.duration => 'Duration',
+  TokenType.cubicBezier => 'Cubic',
+  TokenType.typography => throw StateError('A typography token is a group.'),
 };
+
+/// The constants one typography token becomes, in order: its name plus each
+/// suffix.
+const List<String> _typographySuffixes = [
+  'FontFamily',
+  'FontFamilyFallback',
+  'FontSize',
+  'LineHeight',
+  'FontWeight',
+  'Wght',
+  'FontWidth',
+  'LetterSpacing',
+];
+
+/// The named [FontWeight] a `wght` axis value falls in: the heaviest of the
+/// nine at or below it, so a 450 asks the face matcher for Regular and never
+/// for a synthetic bold. The axis itself carries the exact value.
+String _fontWeightConstant(int weight) {
+  final hundred = (weight ~/ 100).clamp(1, 9) * 100;
+  return 'FontWeight.w$hundred';
+}
 
 String _dartDouble(double value) => value == value.roundToDouble()
     ? value.round().toString()
@@ -772,12 +1114,20 @@ String _renderDart(
   final all = [...shared.values, for (final t in themes) ...t.tokens.values];
   final shown = [
     if (all.any((t) => t.type == TokenType.color)) 'Color',
-    if (all.any((t) => t.type == TokenType.fontWeight)) 'FontWeight',
+    if (all.any(
+      (t) => t.type == TokenType.fontWeight || t.type == TokenType.typography,
+    ))
+      'FontWeight',
   ];
   if (shown.isNotEmpty) {
-    out
-      ..writeln("import 'dart:ui' show ${shown.join(', ')};")
-      ..writeln();
+    out.writeln("import 'dart:ui' show ${shown.join(', ')};");
+  }
+  if (all.any((t) => t.type == TokenType.cubicBezier)) {
+    if (shown.isNotEmpty) out.writeln();
+    out.writeln("import 'package:flutter/animation.dart' show Cubic;");
+  }
+  if (shown.isNotEmpty || all.any((t) => t.type == TokenType.cubicBezier)) {
+    out.writeln();
   }
 
   String reference(_Token target, String fromClass, String suffix) {
@@ -813,6 +1163,10 @@ String _renderDart(
       }
       final name = _dartName(token.path);
       final alias = token.aliasOf;
+      if (token.type == TokenType.typography) {
+        _writeTypography(out, name, token, alias, className, reference);
+        continue;
+      }
       if (token.type == TokenType.fontFamily) {
         final families = token.value as List<String>;
         out.writeln(
@@ -855,7 +1209,10 @@ String _renderDart(
               TokenType.number => _dartDouble(token.value as double),
               TokenType.fontWeight => 'FontWeight.w${token.value}',
               TokenType.duration => 'Duration(milliseconds: ${token.value})',
-              TokenType.fontFamily => throw StateError('handled above'),
+              TokenType.cubicBezier =>
+                'Cubic(${(token.value as List<double>).map(_dartDouble).join(', ')})',
+              TokenType.fontFamily ||
+              TokenType.typography => throw StateError('handled above'),
             };
       out.writeln(_declaration(_dartType(token.type), name, expression));
     }
@@ -878,6 +1235,103 @@ String _renderDart(
     );
   }
   return out.toString();
+}
+
+/// A typography token: one constant per property ([_typographySuffixes]), so
+/// the app builds a role from typed values and an alias of a role stays an
+/// alias of each of its properties.
+void _writeTypography(
+  StringBuffer out,
+  String name,
+  _Token token,
+  _Token? alias,
+  String className,
+  String Function(_Token target, String fromClass, String suffix) reference,
+) {
+  if (alias != null) {
+    for (final suffix in _typographySuffixes) {
+      final type = switch (suffix) {
+        'FontFamily' => 'String',
+        'FontFamilyFallback' => 'List<String>',
+        'FontWeight' => 'FontWeight',
+        _ => 'double',
+      };
+      out.writeln(
+        _declaration(type, '$name$suffix', reference(alias, className, suffix)),
+      );
+    }
+    return;
+  }
+  final role = token.value as _Typography;
+  final familyToken = role.familyToken;
+  if (familyToken != null) {
+    out
+      ..writeln(
+        _declaration(
+          'String',
+          '${name}FontFamily',
+          reference(familyToken, className, ''),
+        ),
+      )
+      ..writeln(
+        _declaration(
+          'List<String>',
+          '${name}FontFamilyFallback',
+          reference(familyToken, className, 'Fallback'),
+        ),
+      );
+  } else {
+    out.writeln(
+      _declaration(
+        'String',
+        '${name}FontFamily',
+        _dartString(role.family.first),
+      ),
+    );
+    out.writeln(
+      role.family.length > 1
+          ? _listDeclaration(
+              '${name}FontFamilyFallback',
+              role.family.skip(1).map(_dartString).toList(),
+            )
+          : _declaration(
+              'List<String>',
+              '${name}FontFamilyFallback',
+              '<String>[]',
+            ),
+    );
+  }
+  out
+    ..writeln(
+      _declaration('double', '${name}FontSize', _dartDouble(role.fontSize)),
+    )
+    ..writeln(
+      _declaration('double', '${name}LineHeight', _dartDouble(role.lineHeight)),
+    )
+    ..writeln(
+      _declaration(
+        'FontWeight',
+        '${name}FontWeight',
+        _fontWeightConstant(role.fontWeight),
+      ),
+    )
+    ..writeln(
+      _declaration(
+        'double',
+        '${name}Wght',
+        _dartDouble(role.fontWeight.toDouble()),
+      ),
+    )
+    ..writeln(
+      _declaration('double', '${name}FontWidth', _dartDouble(role.fontWidth)),
+    )
+    ..writeln(
+      _declaration(
+        'double',
+        '${name}LetterSpacing',
+        _dartDouble(role.letterSpacing),
+      ),
+    );
 }
 
 /// One `static const` line, split the way the formatter splits it when it
@@ -931,8 +1385,21 @@ String _docComment(String text, {required String indent}) {
 /// Fonts the design-system reference loads: asset facts, not tokens.
 const List<Map<String, String>> _fontFiles = [
   {
-    'family': 'Inter',
-    'file': 'fonts/Inter.ttf',
+    'family': 'Bricolage Grotesque',
+    'file': 'fonts/BricolageGrotesque.ttf',
+    'weight': '200 800',
+    'stretch': '75% 100%',
+    'style': 'normal',
+  },
+  {
+    'family': 'Onest',
+    'file': 'fonts/Onest.ttf',
+    'weight': '100 900',
+    'style': 'normal',
+  },
+  {
+    'family': 'Geist Mono',
+    'file': 'fonts/GeistMono.ttf',
     'weight': '100 900',
     'style': 'normal',
   },
@@ -947,7 +1414,7 @@ const List<Map<String, String>> _fontFiles = [
 /// Colours the listing composes from a scheme colour and a theme opacity,
 /// because the app composes them the same way.
 const Map<String, (String, String)> _derivedColors = {
-  'glass-surface': ('color.surface-container', 'opacity.glass-surface'),
+  'glass-surface': ('color.room.enamel', 'opacity.glass-surface'),
 };
 
 /// Second-level colour groups whose name the listing drops, so
@@ -971,14 +1438,8 @@ String _px(double value) =>
 String _cssFamily(List<String> families) =>
     families.map((f) => f.contains(' ') ? '"$f"' : f).join(', ');
 
-/// Inter's tracking curve in logical pixels, the one the app applies to every
-/// role whose tracking is not authored — the light theme's, rounded for a
-/// listing.
-double _interTracking(double size) {
-  final px = (-0.0223 + 0.185 * math.exp(-0.1745 * size)) * size;
-  final rounded = (px * 100).round() / 100;
-  return rounded == 0 ? 0 : rounded;
-}
+String _cssCurve(List<double> curve) =>
+    'cubic-bezier(${curve.map(_dartDouble).join(', ')})';
 
 String _renderSystemJson(
   Map<String, _Token> shared,
@@ -1088,70 +1549,95 @@ String _renderSystemJson(
   }
 
   // --- Type -----------------------------------------------------------------
-  final families = <String, String>{
+  final familyTokens = <String, _Token>{
     for (final token in shared.values)
       if (token.path.length == 3 &&
           token.path[0] == 'type' &&
           token.path[1] == 'family' &&
           token.type == TokenType.fontFamily)
-        token.path[2]: _cssFamily(token.value as List<String>),
+        token.path[2]: token,
+  };
+  final families = <String, String>{
+    for (final MapEntry(:key, :value) in familyTokens.entries)
+      key: _cssFamily(value.value as List<String>),
     'services': 'CupolaServices',
   };
 
-  final roleGroups = <String, Map<String, Map<String, _Token>>>{};
-  for (final token in shared.values) {
-    if (token.path.length != 4 || token.path[0] != 'type') continue;
-    roleGroups
-            .putIfAbsent(token.path[1], () => {})
-            .putIfAbsent(token.path[2], () => {})[token.path[3]] =
-        token;
-  }
-  final typeGroups = <Map<String, Object?>>[];
-  for (final MapEntry(key: groupName, value: roles) in roleGroups.entries) {
-    final styles = <Map<String, Object?>>[];
-    for (final MapEntry(key: role, value: props) in roles.entries) {
-      final roleId = 'type.$groupName.$role';
-      final size = props['font-size'];
-      final weight = props['font-weight'];
-      final height = props['line-height'];
-      if (size == null || weight == null || height == null) {
-        problems.add('"$roleId" needs font-size, font-weight and line-height.');
-        continue;
-      }
-      final fontSize = size.value as double;
-      final letterSpacing = props['letter-spacing'] == null
-          ? _interTracking(fontSize)
-          : (props['letter-spacing']!.value as double);
-      styles.add({
-        'name': const {'large', 'medium', 'small'}.contains(role)
-            ? '$groupName-$role'
-            : role,
-        'fontSize': _px(fontSize),
-        'lineHeight': height.value,
-        'fontWeight': weight.value,
-        'letterSpacing': '${letterSpacing}px',
-        'usage': ?(groupDescriptions[roleId] ?? size.description),
-      });
+  /// The family key a role is set in: the family token it names, followed
+  /// through aliases, so a role set in `{type.family.display}` lists as
+  /// `display` rather than as a font stack.
+  String familyKey(_Typography role) {
+    var token = role.familyToken;
+    while (token?.aliasOf != null) {
+      token = token!.aliasOf;
     }
-    typeGroups.add({
-      'name': _pascal(groupName),
-      'family': 'sans',
-      'styles': styles,
+    for (final MapEntry(:key, :value) in familyTokens.entries) {
+      if (value.aliasOf == null && value == token) return key;
+    }
+    return _cssFamily(role.family);
+  }
+
+  String styleName(List<String> path) {
+    final role = path.last;
+    return path.length == 3 && const {'large', 'medium', 'small'}.contains(role)
+        ? '${path[1]}-$role'
+        : role;
+  }
+
+  final typeGroups = <String, List<Map<String, Object?>>>{};
+  for (final token in shared.values) {
+    if (token.path.first != 'type' || token.type != TokenType.typography) {
+      continue;
+    }
+    if (token.path.length != 3) {
+      problems.add('"${token.id}" must sit at type.<group>.<role>.');
+      continue;
+    }
+    final role = token.value as _Typography;
+    final alias = token.aliasOf;
+    typeGroups.putIfAbsent(token.path[1], () => []).add({
+      'name': styleName(token.path),
+      'role': ?(alias == null ? null : styleName(alias.path)),
+      'family': familyKey(role),
+      'fontSize': _px(role.fontSize),
+      'lineHeight': role.lineHeight,
+      'fontWeight': role.fontWeight,
+      'fontWidth': '${_dartDouble(role.fontWidth)}%',
+      'letterSpacing': '${_dartDouble(role.letterSpacing)}px',
+      'usage': ?(token.description),
     });
   }
 
   // --- Lists ------------------------------------------------------------------
   List<Map<String, Object?>> dimensionList(String group, String prefix) => [
     for (final token in shared.values)
-      if (token.path.length == 2 &&
+      if (token.path.length >= 2 &&
           token.path.first == group &&
           token.type == TokenType.dimension)
         {
-          'name': '$prefix-${token.path[1]}',
+          'name': '$prefix-${token.path.skip(1).join('-')}',
           'value': _px(token.value as double),
           'usage': ?(token.description),
         },
   ];
+
+  // --- Motion -----------------------------------------------------------------
+  final motionTokens = <Map<String, Object?>>[];
+  for (final token in shared.values) {
+    if (token.path.length != 3 ||
+        token.path.first != 'motion' ||
+        token.path[2] != 'duration' ||
+        token.type != TokenType.duration) {
+      continue;
+    }
+    final curve = shared['motion.${token.path[1]}.curve'];
+    motionTokens.add({
+      'name': token.path[1],
+      'duration': '${token.value}ms',
+      'curve': ?(curve == null ? null : _cssCurve(curve.value as List<double>)),
+      'usage': ?(token.description),
+    });
+  }
 
   // --- Shadows ----------------------------------------------------------------
   final shadowLayers = <String, Map<String, Map<String, _Token>>>{};
@@ -1215,9 +1701,24 @@ String _renderSystemJson(
       ],
       'tokens': colorEntries,
     },
-    'type': {'fonts': _fontFiles, 'families': families, 'groups': typeGroups},
+    'type': {
+      'fonts': _fontFiles,
+      'families': families,
+      'groups': [
+        for (final MapEntry(:key, :value) in typeGroups.entries)
+          {'name': _pascal(key), 'styles': value},
+      ],
+    },
     'spacing': {'tokens': dimensionList('space', 'space')},
-    'radius': {'tokens': dimensionList('radius', 'radius')},
+    'radius': {
+      'note': ?groupDescriptions['radius'],
+      'tokens': dimensionList('radius', 'radius'),
+    },
+    'size': {
+      'note': ?groupDescriptions['size'],
+      'tokens': dimensionList('size', 'size'),
+    },
+    'motion': {'note': ?groupDescriptions['motion'], 'tokens': motionTokens},
     'shadow': {'note': ?groupDescriptions['shadow'], 'tokens': shadowTokens},
     'breakpoint': {
       'note': ?groupDescriptions['breakpoint'],

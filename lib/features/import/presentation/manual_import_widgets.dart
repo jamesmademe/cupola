@@ -327,7 +327,9 @@ class ImportBreadcrumb extends StatelessWidget {
             icon: Icon(
               Icons.home_rounded,
               size: 18,
-              color: isRoot ? service.accent : colorScheme.onSurfaceVariant,
+              color: isRoot
+                  ? colorScheme.onSurface
+                  : colorScheme.onSurfaceVariant,
             ),
           ),
           for (var index = 0; index < pathSegments.length; index++) ...[
@@ -346,7 +348,7 @@ class ImportBreadcrumb extends StatelessWidget {
                 minimumSize: const Size(44, 44),
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                 foregroundColor: index == pathSegments.length - 1
-                    ? service.accent
+                    ? colorScheme.onSurface
                     : colorScheme.onSurfaceVariant,
                 textStyle: theme.textTheme.labelMedium!.weight(
                   index == pathSegments.length - 1
@@ -383,7 +385,6 @@ class ImportPrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final onAccent = ServiceTheme.foregroundOn(service.accent);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -405,8 +406,6 @@ class ImportPrimaryButton extends StatelessWidget {
             : Icon(icon, size: 18),
         label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
         style: FilledButton.styleFrom(
-          backgroundColor: service.accent,
-          foregroundColor: onAccent,
           disabledBackgroundColor: colorScheme.surfaceContainerHighest,
           disabledForegroundColor: colorScheme.onSurfaceVariant,
           minimumSize: const Size.fromHeight(48),

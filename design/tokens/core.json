@@ -4,46 +4,46 @@
       "white": {
         "$type": "color",
         "$value": "#ffffff",
-        "$description": "Pure white: reversed-out labels on the brand and on deep status fills."
+        "$description": "Pure white: reversed-out labels on deep fills (the light room's ink button, the deep status containers)."
       },
       "black": {
         "$type": "color",
         "$value": "#000000",
-        "$description": "Pure black: modal scrims, the dark theme's shadow ink and the glass shadow."
+        "$description": "Pure black: the dark room's shadow ink and the modal barrier."
       }
     },
     "brand": {
       "primary-dark": {
         "$type": "color",
         "$value": "#4f46e5",
-        "$description": "Indigo Deep (indigo-600), fixed in both themes. The light theme's primary, and the dark theme's primary container."
+        "$description": "Legacy indigo-600. The room has no brand hue in its chrome, so no scheme role reads it any more; kept for the call sites that still name it."
       },
       "primary-light": {
         "$type": "color",
         "$value": "#818cf8",
-        "$description": "Indigo Light (indigo-400), fixed. The dark theme's secondary and the light theme's inverse primary."
+        "$description": "Legacy indigo-400. No scheme role reads it any more."
       },
       "primary-lighter": {
         "$type": "color",
         "$value": "#a5b4fc",
-        "$description": "Indigo Pale (indigo-300), fixed. Text on the dark primary container; the light primary container."
+        "$description": "Legacy indigo-300. No scheme role reads it any more."
       }
     },
     "service": {
       "seerr": {
         "$type": "color",
         "$value": "#6366f1",
-        "$description": "Seerr Indigo (indigo-500): the Seerr accent and the app's own brand colour, the dark theme's primary."
+        "$description": "Seerr Indigo (indigo-500): the Seerr accent. Identity data in the registry; The interface confines accents to the service mark and its tab."
       },
       "radarr": {
         "$type": "color",
         "$value": "#f59e0b",
-        "$description": "Radarr Amber, the movies accent. A fill label on it takes ink-on-bright: white measures 2.15:1."
+        "$description": "Radarr Amber, the movies accent: ΔE2000 11.6 (12° of hue) from the fault amber, so never beside a fault."
       },
       "sonarr": {
         "$type": "color",
         "$value": "#8b5cf6",
-        "$description": "Sonarr Violet, the series accent; also the brand gradient's end."
+        "$description": "Sonarr Violet, the series accent."
       },
       "lidarr": {
         "$type": "color",
@@ -73,7 +73,7 @@
       "transmission": {
         "$type": "color",
         "$value": "#e11d48",
-        "$description": "Transmission Crimson: walked off the brand red so it clears readarr (ΔE 10.8) and the error tone (ΔE 8.8)."
+        "$description": "Transmission Crimson: walked off the brand red so it clears readarr (ΔE 10.8)."
       },
       "sabnzbd": {
         "$type": "color",
@@ -103,7 +103,7 @@
       "nginx-proxy-manager": {
         "$type": "color",
         "$value": "#f15833",
-        "$description": "Nginx Proxy Manager Vermilion, the brand value unchanged: a red-orange clear of the amber band."
+        "$description": "Nginx Proxy Manager Vermilion, the brand value unchanged."
       },
       "jellyfin": {
         "$type": "color",
@@ -113,14 +113,14 @@
       "plex": {
         "$type": "color",
         "$value": "#c97a16",
-        "$description": "Plex Bronze: deliberately not brand gold #E5A00D, which collides with sabnzbd and the fault tone."
+        "$description": "Plex Bronze: deliberately not brand gold #E5A00D, which collides with sabnzbd."
       }
     },
     "nav": {
       "dashboard": {
         "$type": "color",
         "$value": "{color.service.seerr}",
-        "$description": "Dashboard tab pill: the app's own indigo."
+        "$description": "Dashboard tab pill. The room draws the active tab monochrome; the per-section pill goes with the nav bar's rebuild."
       },
       "activity": {
         "$type": "color",
@@ -141,123 +141,203 @@
     "status": {
       "success": {
         "$type": "color",
-        "$value": "#22c55e",
-        "$description": "GREEN (green-500): available or complete. A fill byte; as text it always goes through the tone walk."
+        "$value": "#5FE39A",
+        "$description": "GREEN, the dark room's green: available, complete, healthy. Quiet: in a status line the dot carries it and the words stay secondary ink."
       },
       "success-container": {
         "$type": "color",
-        "$value": "#166534",
-        "$description": "Deep green (green-800): the dark success container, and text on the light one."
+        "$value": "#0F7A45",
+        "$description": "The day room's green, the deep green: the dark success container under white, and text on the light one."
       },
       "warning": {
         "$type": "color",
-        "$value": "#facc15",
-        "$description": "AMBER (yellow-400): a fault, never the backlog. Deliberately not radarr's amber-500."
+        "$value": "#F7C23A",
+        "$description": "AMBER, the dark room's amber: a fault, never the backlog. The remedy fill, under amber ink."
       },
       "error": {
         "$type": "color",
-        "$value": "#ef4444",
-        "$description": "RED (red-500): unreachable, and nothing else."
+        "$value": "#FF8A7A",
+        "$description": "RED, the dark room's red: unreachable, and nothing else."
       },
       "error-container": {
         "$type": "color",
-        "$value": "#991b1b",
-        "$description": "Deep red (red-800): the dark error container, and text on the light one."
+        "$value": "#B8322A",
+        "$description": "The day room's red, the deep red: the dark error container under white, and text on the light one."
       },
       "info": {
         "$type": "color",
-        "$value": "#3b82f6",
-        "$description": "BLUE (blue-500): queued or informational."
+        "$value": "#9DB8FF",
+        "$description": "BLUE, the dark room's blue: queued, in progress, informational, waiting on someone."
       }
     },
     "ink-on-bright": {
       "$type": "color",
-      "$value": "#111827",
-      "$description": "gray-900: the label a bright fill takes where white loses the contrast measurement."
+      "$value": "#0A0A0D",
+      "$description": "The on-ink: the label a bright fill takes (the ink button, a tone fill) where white loses the contrast measurement."
     },
     "plate": {
       "surface": {
         "$type": "color",
-        "$value": "#1e2430",
-        "$description": "Artwork stand-in (a missing poster, an album without cover). Fixed dark in both themes: artwork is not palette."
+        "$value": "#17171D",
+        "$description": "Artwork stand-in (a missing poster, an album without cover): the raised step, fixed in both themes because artwork is not palette."
       },
       "well": {
         "$type": "color",
-        "$value": "#08090f",
-        "$description": "The letterboxed well behind a backdrop; fixed dark in both themes."
+        "$value": "#0A0A0D",
+        "$description": "The letterboxed well behind a backdrop and the terminal panel: the ground, fixed in both themes."
       },
       "outline": {
         "$type": "color",
-        "$value": "#2d3748",
-        "$description": "Hairline on a plate; fixed."
+        "$value": "#232326",
+        "$description": "Hairline on a plate: the edge line flattened on the ground; fixed."
       },
       "ink": {
         "$type": "color",
-        "$value": "#f0f2f8",
-        "$description": "Primary text on a plate."
+        "$value": "#F7F6F2",
+        "$description": "Primary text on a plate: the primary ink."
       },
       "dim-ink": {
         "$type": "color",
-        "$value": "#909aad",
-        "$description": "Secondary text on a plate: 5.49:1 on the plate surface, 7.02:1 on the well."
+        "$value": "#9D9D9E",
+        "$description": "Secondary text on a plate: the tertiary ink flattened on the ground; 6.6:1 on the plate surface, 7.3:1 on the well."
+      }
+    },
+    "title-light": {
+      "fallback": {
+        "$type": "color",
+        "$value": "#8A8A99",
+        "$description": "The neutral lamp: the light of a room with no artwork (infrastructure, settings), and of a title whose artwork has too little chroma. Never a service colour."
       }
     }
   },
   "space": {
+    "scale": {
+      "$description": "The spacing scale. Gutter 16; section rhythm 28; slab 16; rows 10–12; top margin 56 under the status bar.",
+      "2xs": {
+        "$type": "dimension",
+        "$value": "2px",
+        "$description": "Inside components only: glyph-to-label gap, between two lines of a row."
+      },
+      "xs": {
+        "$type": "dimension",
+        "$value": "4px",
+        "$description": "Tight gaps; chip vertical padding."
+      },
+      "s": {
+        "$type": "dimension",
+        "$value": "6px",
+        "$description": "Inside components only: chip inner padding."
+      },
+      "m": {
+        "$type": "dimension",
+        "$value": "8px",
+        "$description": "Related elements; the gap between chips in a rail."
+      },
+      "row": {
+        "$type": "dimension",
+        "$value": "10px",
+        "$description": "A row's vertical padding."
+      },
+      "l": {
+        "$type": "dimension",
+        "$value": "12px",
+        "$description": "Compact spacing: rail and grid gaps, row gaps."
+      },
+      "slab-y": {
+        "$type": "dimension",
+        "$value": "14px",
+        "$description": "A slab's vertical padding and the room header's top."
+      },
+      "gutter": {
+        "$type": "dimension",
+        "$value": "16px",
+        "$description": "The page gutter and a slab's padding."
+      },
+      "xl": {
+        "$type": "dimension",
+        "$value": "20px",
+        "$description": "A sheet title's leading inset."
+      },
+      "2xl": {
+        "$type": "dimension",
+        "$value": "24px",
+        "$description": "Section separation inside a page."
+      },
+      "section": {
+        "$type": "dimension",
+        "$value": "28px",
+        "$description": "The space above a section heading."
+      },
+      "3xl": {
+        "$type": "dimension",
+        "$value": "32px",
+        "$description": "Major blocks."
+      },
+      "4xl": {
+        "$type": "dimension",
+        "$value": "40px",
+        "$description": "The largest section break."
+      },
+      "top": {
+        "$type": "dimension",
+        "$value": "56px",
+        "$description": "The top margin of a screen, under the status bar."
+      }
+    },
     "xxs": {
       "$type": "dimension",
-      "$value": "2px",
+      "$value": "{space.scale.2xs}",
       "$description": "Inside components only: glyph-to-label gap, between two lines of a row."
     },
     "xs": {
       "$type": "dimension",
-      "$value": "4px",
+      "$value": "{space.scale.xs}",
       "$description": "Minimal spacing for tight layouts; chip vertical padding."
     },
     "s": {
       "$type": "dimension",
-      "$value": "6px",
+      "$value": "{space.scale.s}",
       "$description": "Inside components only: chip inner padding, nav bar inner padding."
     },
     "sm": {
       "$type": "dimension",
-      "$value": "8px",
+      "$value": "{space.scale.m}",
       "$description": "Small spacing for related elements; badge padding."
     },
     "m": {
       "$type": "dimension",
-      "$value": "10px",
+      "$value": "{space.scale.row}",
       "$description": "Inside components only: row line gaps, inner plates."
     },
     "md": {
       "$type": "dimension",
-      "$value": "12px",
+      "$value": "{space.scale.l}",
       "$description": "Compact spacing: grid and carousel gaps, button vertical padding."
     },
     "ml": {
       "$type": "dimension",
-      "$value": "14px",
+      "$value": "{space.scale.slab-y}",
       "$description": "Inside components only: nav pill horizontal padding."
     },
     "lg": {
       "$type": "dimension",
-      "$value": "16px",
+      "$value": "{space.scale.gutter}",
       "$description": "The default: page gutter, card padding, input horizontal padding."
     },
     "xl": {
       "$type": "dimension",
-      "$value": "24px",
+      "$value": "{space.scale.2xl}",
       "$description": "Section separation; button horizontal padding."
     },
     "xxl": {
       "$type": "dimension",
-      "$value": "32px",
+      "$value": "{space.scale.3xl}",
       "$description": "Major blocks."
     },
     "xxxl": {
       "$type": "dimension",
-      "$value": "48px",
-      "$description": "The largest section break."
+      "$value": "{space.scale.4xl}",
+      "$description": "The largest section break (the scale's largest step)."
     },
     "grid-gap": {
       "$type": "dimension",
@@ -267,10 +347,11 @@
     "carousel-gap": {
       "$type": "dimension",
       "$value": "{space.md}",
-      "$description": "Gap between carousel items."
+      "$description": "Gap between carousel items: the rail gap."
     }
   },
   "radius": {
+    "$description": "Corners are drawn continuous (a rounded superellipse) wherever a shape takes an OutlinedBorder.",
     "none": {
       "$type": "dimension",
       "$value": "0px",
@@ -286,45 +367,153 @@
       "$value": "4px",
       "$description": "Subtle curves; progress tracks."
     },
-    "xs2": {
-      "$type": "dimension",
-      "$value": "6px",
-      "$description": "Small-object geometry: a poster corner in dense rails."
-    },
-    "sm": {
+    "thumb": {
       "$type": "dimension",
       "$value": "8px",
-      "$description": "Chips, badges and small objects."
+      "$description": "a row thumbnail (36×54), a checkbox."
+    },
+    "xs2": {
+      "$type": "dimension",
+      "$value": "{radius.thumb}",
+      "$description": "Small-object geometry: a poster corner in dense rails, a small badge."
     },
     "sm2": {
       "$type": "dimension",
       "$value": "10px",
-      "$description": "Small-object geometry: an inner plate."
+      "$description": "Small-object geometry: an inner plate, a row's leading tile."
+    },
+    "chip": {
+      "$type": "dimension",
+      "$value": "12px",
+      "$description": "chips' inner plates, tiles, fault chips, stale bands."
+    },
+    "sm": {
+      "$type": "dimension",
+      "$value": "{radius.chip}",
+      "$description": "Chips, badges and small objects."
+    },
+    "poster": {
+      "$type": "dimension",
+      "$value": "14px",
+      "$description": "a poster."
+    },
+    "control": {
+      "$type": "dimension",
+      "$value": "14px",
+      "$description": "a medium button, a segmented track, a stepper, an icon button."
     },
     "md": {
       "$type": "dimension",
-      "$value": "12px",
-      "$description": "The default: cards, buttons, inputs, posters, snackbars, list tiles."
+      "$value": "{radius.control}",
+      "$description": "The default: cards, controls, posters, list tiles."
+    },
+    "button": {
+      "$type": "dimension",
+      "$value": "16px",
+      "$description": "a large button, a banner, a toast."
+    },
+    "field": {
+      "$type": "dimension",
+      "$value": "16px",
+      "$description": "a text field and the search field."
     },
     "lg": {
       "$type": "dimension",
-      "$value": "16px",
-      "$description": "Dialogs, bottom-sheet top corners, grouped settings."
+      "$value": "{radius.button}",
+      "$description": "Buttons, fields, banners, grouped settings."
     },
-    "pill": {
+    "door": {
       "$type": "dimension",
       "$value": "20px",
-      "$description": "Selected affordances only: the nav indicator and segment pills. Never a general corner."
+      "$description": "a door (Discover's entrances, tiles)."
+    },
+    "group": {
+      "$type": "dimension",
+      "$value": "22px",
+      "$description": "grouped rows (settings, record lists)."
+    },
+    "slab": {
+      "$type": "dimension",
+      "$value": "26px",
+      "$description": "a slab (a section) and a dialog."
+    },
+    "sheet": {
+      "$type": "dimension",
+      "$value": "30px",
+      "$description": "a bottom sheet's top corners."
     },
     "xl": {
       "$type": "dimension",
-      "$value": "28px",
-      "$description": "The floating navigation bar."
+      "$value": "{radius.sheet}",
+      "$description": "The floating navigation bar and sheet tops."
+    },
+    "pill": {
+      "$type": "dimension",
+      "$value": "999px",
+      "$description": "Fully rounded: chips, the selected tab, segment pills, metadata pills. Every pill is drawn at half its height."
     },
     "full": {
       "$type": "dimension",
-      "$value": "50px",
-      "$description": "Metadata pills (tags, genres, ratings). Never an interactive container."
+      "$value": "{radius.pill}",
+      "$description": "Metadata pills (tags, genres, ratings). The same corner as a selected pill."
+    }
+  },
+  "size": {
+    "$description": "Component sizes. A target is at least 44 even when the drawing is smaller.",
+    "touch": {
+      "$type": "dimension",
+      "$value": "44px",
+      "$description": "The minimum touch target."
+    },
+    "button-l": {
+      "$type": "dimension",
+      "$value": "52px",
+      "$description": "A primary button."
+    },
+    "button-m": {
+      "$type": "dimension",
+      "$value": "44px",
+      "$description": "A secondary button."
+    },
+    "field": {
+      "$type": "dimension",
+      "$value": "52px",
+      "$description": "A text field."
+    },
+    "search": {
+      "$type": "dimension",
+      "$value": "48px",
+      "$description": "The search field."
+    },
+    "chip": {
+      "$type": "dimension",
+      "$value": "36px",
+      "$description": "A chip (inside a 44 target)."
+    },
+    "tabbar": {
+      "$type": "dimension",
+      "$value": "62px",
+      "$description": "The floating tab bar."
+    },
+    "icon": {
+      "$type": "dimension",
+      "$value": "20px",
+      "$description": "An icon in a row or a button."
+    },
+    "icon-l": {
+      "$type": "dimension",
+      "$value": "24px",
+      "$description": "A large icon."
+    },
+    "thumb-w": {
+      "$type": "dimension",
+      "$value": "36px",
+      "$description": "A row thumbnail's width."
+    },
+    "thumb-h": {
+      "$type": "dimension",
+      "$value": "54px",
+      "$description": "A row thumbnail's height."
     }
   },
   "breakpoint": {
@@ -370,35 +559,316 @@
       "$description": "Aspect ratio at or above which a frame puts two things side by side instead of stacking. A shape, not a width."
     }
   },
+  "motion": {
+    "$description": "Motion. Every continuous animation stops off screen, in the background and under a screen reader; each one has its Reduce Motion answer.",
+    "curve": {
+      "standard": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.2,
+          0.8,
+          0.2,
+          1
+        ],
+        "$description": "The one ease: a fast start and a long settle. Press, state changes, the pager, entrances, flights, progress."
+      },
+      "sheet-in": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.05,
+          0.7,
+          0.1,
+          1
+        ],
+        "$description": "Sheets and dialogs arriving."
+      },
+      "sheet-out": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.3,
+          0,
+          0.8,
+          0.15
+        ],
+        "$description": "Sheets and dialogs leaving."
+      },
+      "roll": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.33,
+          1,
+          0.68,
+          1
+        ],
+        "$description": "A figure rolling into place (easeOutCubic)."
+      },
+      "ease": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.25,
+          0.1,
+          0.25,
+          1
+        ],
+        "$description": "CSS `ease`: cross-fades of artwork and of the room light."
+      },
+      "linear": {
+        "$type": "cubicBezier",
+        "$value": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "$description": "Loops: the skeleton, a dwell."
+      },
+      "ease-in-out": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.42,
+          0,
+          0.58,
+          1
+        ],
+        "$description": "CSS `ease-in-out`: the ambient loops (breathe, Ken Burns)."
+      }
+    },
+    "press": {
+      "duration": {
+        "$type": "duration",
+        "$value": "180ms",
+        "$description": "The press dip. Unchanged under Reduce Motion."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.standard}"
+      },
+      "scale": {
+        "$type": "number",
+        "$value": 0.96,
+        "$description": "The scale a pressed target dips to."
+      }
+    },
+    "standard": {
+      "duration": {
+        "$type": "duration",
+        "$value": "320ms",
+        "$description": "State changes, expand, select. Reduce Motion: a 150 ms fade."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.standard}"
+      }
+    },
+    "emphasized": {
+      "duration": {
+        "$type": "duration",
+        "$value": "420ms",
+        "$description": "The pager, the segmented thumb, the chip rail. Reduce Motion: a 150 ms fade."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.standard}"
+      }
+    },
+    "enter": {
+      "duration": {
+        "$type": "duration",
+        "$value": "520ms",
+        "$description": "An entrance: rise and fade. Reduce Motion: no rise."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.standard}"
+      },
+      "rise": {
+        "$type": "dimension",
+        "$value": "12px",
+        "$description": "How far an entering element rises."
+      },
+      "stagger": {
+        "$type": "duration",
+        "$value": "40ms",
+        "$description": "The delay between siblings entering."
+      },
+      "stagger-max": {
+        "$type": "number",
+        "$value": 6,
+        "$description": "Siblings past this many enter together."
+      }
+    },
+    "sheet-in": {
+      "duration": {
+        "$type": "duration",
+        "$value": "380ms",
+        "$description": "Sheets and dialogs in. Reduce Motion: a fade."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.sheet-in}"
+      }
+    },
+    "sheet-out": {
+      "duration": {
+        "$type": "duration",
+        "$value": "240ms",
+        "$description": "Sheets and dialogs out. Reduce Motion: a fade."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.sheet-out}"
+      }
+    },
+    "shared": {
+      "duration": {
+        "$type": "duration",
+        "$value": "450ms",
+        "$description": "The poster → Media flight. Reduce Motion: a cross-fade."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.standard}"
+      }
+    },
+    "progress": {
+      "duration": {
+        "$type": "duration",
+        "$value": "600ms",
+        "$description": "A bar moving to a new value. Reduce Motion: a jump."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.standard}"
+      }
+    },
+    "text-xfade": {
+      "duration": {
+        "$type": "duration",
+        "$value": "700ms",
+        "$description": "Carousel copy changing, rising 10."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.standard}"
+      }
+    },
+    "image-xfade": {
+      "duration": {
+        "$type": "duration",
+        "$value": "900ms",
+        "$description": "Carousel art changing."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.ease}"
+      }
+    },
+    "roll": {
+      "duration": {
+        "$type": "duration",
+        "$value": "900ms",
+        "$description": "A figure rolls once from \"—\" to its value; never counts up from 0. Reduce Motion: the final figure."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.roll}"
+      }
+    },
+    "light": {
+      "duration": {
+        "$type": "duration",
+        "$value": "1500ms",
+        "$description": "The room light moving to a new title. Reduce Motion: a jump."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.ease}"
+      }
+    },
+    "shimmer": {
+      "duration": {
+        "$type": "duration",
+        "$value": "1600ms",
+        "$description": "One skeleton sweep, looping."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.linear}"
+      }
+    },
+    "dwell": {
+      "duration": {
+        "$type": "duration",
+        "$value": "6000ms",
+        "$description": "A carousel slide; the pager fills. Reduce Motion: no auto-advance."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.linear}"
+      }
+    },
+    "breathe": {
+      "duration": {
+        "$type": "duration",
+        "$value": "8000ms",
+        "$description": "One slab's light per screen, alternating on the 12 Hz ambient clock. Reduce Motion: still."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.ease-in-out}"
+      },
+      "low": {
+        "$type": "number",
+        "$value": 0.42,
+        "$description": "The breathing light's low opacity."
+      },
+      "high": {
+        "$type": "number",
+        "$value": 0.55,
+        "$description": "The breathing light's high opacity."
+      }
+    },
+    "kenburns": {
+      "duration": {
+        "$type": "duration",
+        "$value": "14000ms",
+        "$description": "Carousel art drifting 1.02 → 1.12, alternating. Reduce Motion: still."
+      },
+      "curve": {
+        "$type": "cubicBezier",
+        "$value": "{motion.curve.ease-in-out}"
+      }
+    }
+  },
   "duration": {
     "xs": {
       "$type": "duration",
-      "$value": "100ms",
-      "$description": "Micro-interactions: ripples, highlights."
+      "$value": "{motion.press.duration}",
+      "$description": "Micro-interactions: the press dip, a highlight."
     },
     "sm": {
       "$type": "duration",
-      "$value": "200ms",
+      "$value": "{motion.standard.duration}",
       "$description": "Simple state changes."
     },
     "md": {
       "$type": "duration",
-      "$value": "300ms",
+      "$value": "{motion.standard.duration}",
       "$description": "Standard transitions."
     },
     "lg": {
       "$type": "duration",
-      "$value": "400ms",
+      "$value": "{motion.emphasized.duration}",
       "$description": "Complex transitions."
     },
     "xl": {
       "$type": "duration",
-      "$value": "500ms",
-      "$description": "Dramatic effects."
+      "$value": "{motion.enter.duration}",
+      "$description": "Entrances."
     },
     "shimmer": {
       "$type": "duration",
-      "$value": "1500ms",
+      "$value": "{motion.shimmer.duration}",
       "$description": "One skeleton shimmer cycle."
     },
     "confirmation-hold": {
@@ -432,222 +902,658 @@
       "$type": "number",
       "$value": 0.8,
       "$description": "The surface behind a status badge laid over artwork."
+    },
+    "dimmed": {
+      "$type": "number",
+      "$value": 0.5,
+      "$description": "A control whose target is not set up: dimmed but tappable."
     }
   },
   "shadow": {
-    "$description": "Two-layer stacks (a tight contact shadow plus a wide ambient one), deeper on dark. Flat is the default; a surface earns a shadow only when it must read as lifted. Each layer's opacity is per theme.",
+    "$description": "The room casts a shadow only from what floats (the bar, sheets, menus, toasts) and from a poster, whose shadow is its own light. Each layer's opacity is per theme.",
     "level-1": {
-      "$description": "Resting cards, rows, KPI tiles.",
+      "$description": "Resting cards, rows, KPI tiles: flat in the dark room, a soft lift on paper.",
       "contact": {
-        "offset-x": { "$type": "dimension", "$value": "0px" },
-        "offset-y": { "$type": "dimension", "$value": "2px" },
-        "blur": { "$type": "dimension", "$value": "6px" },
-        "spread": { "$type": "dimension", "$value": "0px" }
+        "offset-x": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "offset-y": {
+          "$type": "dimension",
+          "$value": "2px"
+        },
+        "blur": {
+          "$type": "dimension",
+          "$value": "6px"
+        },
+        "spread": {
+          "$type": "dimension",
+          "$value": "0px"
+        }
       },
       "ambient": {
-        "offset-x": { "$type": "dimension", "$value": "0px" },
-        "offset-y": { "$type": "dimension", "$value": "4px" },
-        "blur": { "$type": "dimension", "$value": "12px" },
-        "spread": { "$type": "dimension", "$value": "0px" }
+        "offset-x": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "offset-y": {
+          "$type": "dimension",
+          "$value": "4px"
+        },
+        "blur": {
+          "$type": "dimension",
+          "$value": "12px"
+        },
+        "spread": {
+          "$type": "dimension",
+          "$value": "0px"
+        }
       }
     },
     "level-2": {
-      "$description": "Posters, elevated cards, feature cards.",
+      "$description": "Posters, elevated cards, feature cards: the poster geometry in the shadow ink.",
       "contact": {
-        "offset-x": { "$type": "dimension", "$value": "0px" },
-        "offset-y": { "$type": "dimension", "$value": "4px" },
-        "blur": { "$type": "dimension", "$value": "10px" },
-        "spread": { "$type": "dimension", "$value": "0px" }
+        "offset-x": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "offset-y": {
+          "$type": "dimension",
+          "$value": "2px"
+        },
+        "blur": {
+          "$type": "dimension",
+          "$value": "6px"
+        },
+        "spread": {
+          "$type": "dimension",
+          "$value": "0px"
+        }
       },
       "ambient": {
-        "offset-x": { "$type": "dimension", "$value": "0px" },
-        "offset-y": { "$type": "dimension", "$value": "10px" },
-        "blur": { "$type": "dimension", "$value": "22px" },
-        "spread": { "$type": "dimension", "$value": "0px" }
+        "offset-x": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "offset-y": {
+          "$type": "dimension",
+          "$value": "16px"
+        },
+        "blur": {
+          "$type": "dimension",
+          "$value": "30px"
+        },
+        "spread": {
+          "$type": "dimension",
+          "$value": "-12px"
+        }
       }
     },
     "level-3": {
-      "$description": "Sheets, popovers, hero surfaces, a poster mid-flight.",
+      "$description": "Sheets, popovers, hero surfaces, a poster mid-flight: the float.",
       "contact": {
-        "offset-x": { "$type": "dimension", "$value": "0px" },
-        "offset-y": { "$type": "dimension", "$value": "6px" },
-        "blur": { "$type": "dimension", "$value": "16px" },
-        "spread": { "$type": "dimension", "$value": "0px" }
+        "offset-x": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "offset-y": {
+          "$type": "dimension",
+          "$value": "2px"
+        },
+        "blur": {
+          "$type": "dimension",
+          "$value": "6px"
+        },
+        "spread": {
+          "$type": "dimension",
+          "$value": "0px"
+        }
       },
       "ambient": {
-        "offset-x": { "$type": "dimension", "$value": "0px" },
-        "offset-y": { "$type": "dimension", "$value": "18px" },
-        "blur": { "$type": "dimension", "$value": "36px" },
-        "spread": { "$type": "dimension", "$value": "0px" }
+        "offset-x": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "offset-y": {
+          "$type": "dimension",
+          "$value": "10px"
+        },
+        "blur": {
+          "$type": "dimension",
+          "$value": "30px"
+        },
+        "spread": {
+          "$type": "dimension",
+          "$value": "0px"
+        }
       }
     },
     "glass": {
-      "$description": "The floating navigation bar: a deep ambient shadow plus a 1px top highlight.",
+      "$description": "The floating navigation bar: the float under the enamel, plus its 1px edge light.",
       "ambient": {
-        "color": { "$type": "color", "$value": "{color.base.black}" },
-        "offset-x": { "$type": "dimension", "$value": "0px" },
-        "offset-y": { "$type": "dimension", "$value": "8px" },
-        "blur": { "$type": "dimension", "$value": "32px" },
-        "spread": { "$type": "dimension", "$value": "0px" }
+        "color": {
+          "$type": "color",
+          "$value": "{color.base.black}"
+        },
+        "offset-x": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "offset-y": {
+          "$type": "dimension",
+          "$value": "10px"
+        },
+        "blur": {
+          "$type": "dimension",
+          "$value": "30px"
+        },
+        "spread": {
+          "$type": "dimension",
+          "$value": "0px"
+        }
       },
       "highlight": {
-        "color": { "$type": "color", "$value": "{color.base.white}" },
-        "offset-x": { "$type": "dimension", "$value": "0px" },
-        "offset-y": { "$type": "dimension", "$value": "1px" },
-        "blur": { "$type": "dimension", "$value": "0px" },
-        "spread": { "$type": "dimension", "$value": "0px" }
+        "color": {
+          "$type": "color",
+          "$value": "{color.base.white}"
+        },
+        "offset-x": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "offset-y": {
+          "$type": "dimension",
+          "$value": "1px"
+        },
+        "blur": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "spread": {
+          "$type": "dimension",
+          "$value": "0px"
+        }
+      }
+    },
+    "poster": {
+      "$description": "A poster casts its own light: the title light (the lamp until it is derived).",
+      "glow": {
+        "color": {
+          "$type": "color",
+          "$value": "{color.title-light.fallback}"
+        },
+        "offset-x": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "offset-y": {
+          "$type": "dimension",
+          "$value": "16px"
+        },
+        "blur": {
+          "$type": "dimension",
+          "$value": "30px"
+        },
+        "spread": {
+          "$type": "dimension",
+          "$value": "-12px"
+        }
+      }
+    },
+    "hero": {
+      "$description": "The hero artwork: a wide glow of its light over a tight contact shadow.",
+      "glow": {
+        "color": {
+          "$type": "color",
+          "$value": "{color.title-light.fallback}"
+        },
+        "offset-x": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "offset-y": {
+          "$type": "dimension",
+          "$value": "30px"
+        },
+        "blur": {
+          "$type": "dimension",
+          "$value": "70px"
+        },
+        "spread": {
+          "$type": "dimension",
+          "$value": "-16px"
+        }
+      },
+      "contact": {
+        "color": {
+          "$type": "color",
+          "$value": "{color.base.black}"
+        },
+        "offset-x": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "offset-y": {
+          "$type": "dimension",
+          "$value": "2px"
+        },
+        "blur": {
+          "$type": "dimension",
+          "$value": "6px"
+        },
+        "spread": {
+          "$type": "dimension",
+          "$value": "0px"
+        }
+      }
+    },
+    "float": {
+      "$description": "What floats over the room: the bar, menus, toasts.",
+      "drop": {
+        "color": {
+          "$type": "color",
+          "$value": "{color.base.black}"
+        },
+        "offset-x": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "offset-y": {
+          "$type": "dimension",
+          "$value": "10px"
+        },
+        "blur": {
+          "$type": "dimension",
+          "$value": "30px"
+        },
+        "spread": {
+          "$type": "dimension",
+          "$value": "0px"
+        }
+      }
+    },
+    "sheet": {
+      "$description": "A bottom sheet, lifting off the bottom edge.",
+      "drop": {
+        "color": {
+          "$type": "color",
+          "$value": "{color.base.black}"
+        },
+        "offset-x": {
+          "$type": "dimension",
+          "$value": "0px"
+        },
+        "offset-y": {
+          "$type": "dimension",
+          "$value": "-12px"
+        },
+        "blur": {
+          "$type": "dimension",
+          "$value": "40px"
+        },
+        "spread": {
+          "$type": "dimension",
+          "$value": "0px"
+        }
       }
     }
   },
   "type": {
     "family": {
-      "sans": {
+      "display": {
         "$type": "fontFamily",
-        "$value": "Inter",
-        "$description": "The bundled Inter variable font (wght 100–900, opsz 14–32). Every role is set in it."
+        "$value": [
+          "Bricolage Grotesque",
+          "Geist Mono",
+          "Apple Symbols"
+        ],
+        "$description": "Bricolage Grotesque, bundled (opsz 12–96, wdth 75–100, wght 200–800): display type, figures. Its default instance is 96pt ExtraBold, so every role sets all three axes. Geist Mono after it carries the symbols it lacks (⇧ ⏎), Apple Symbols the Apple modifier glyphs (⌘ ⌥)."
+      },
+      "text": {
+        "$type": "fontFamily",
+        "$value": [
+          "Onest",
+          "Geist Mono",
+          "Apple Symbols"
+        ],
+        "$description": "Onest, bundled (wght 100–900): every text role. Has tabular figures. Geist Mono after it carries the symbols it lacks (∞ ⇧ ⏎), Apple Symbols the Apple modifier glyphs (⌘ ⌥), which only Apple platforms print."
       },
       "mono": {
         "$type": "fontFamily",
-        "$value": ["Menlo", "SF Mono", "Roboto Mono", "Droid Sans Mono", "Consolas", "monospace"],
-        "$description": "Code, logs, hashes and anything compared by eye in columns, in resolution order. Never the bare 'monospace' alias, which Apple platforms do not have."
+        "$value": [
+          "Geist Mono",
+          "Apple Symbols",
+          "Menlo",
+          "SF Mono",
+          "Roboto Mono",
+          "Droid Sans Mono",
+          "Consolas",
+          "monospace"
+        ],
+        "$description": "Geist Mono, bundled (wght 100–900): release names, paths, logs, keys, the terminal. Apple Symbols after it carries the Apple modifier glyphs it lacks (⌘ ⌥); the platform mono faces follow."
+      },
+      "sans": {
+        "$type": "fontFamily",
+        "$value": "{type.family.text}",
+        "$description": "The app's default family: the text face."
+      }
+    },
+    "role": {
+      "$description": "The type roles. Bricolage speaks rarely and large; Onest carries everything read; Geist Mono carries machine strings.",
+      "screen": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.display}",
+          "fontSize": "36px",
+          "lineHeight": "36px",
+          "fontWeight": 600,
+          "fontWidth": "92%",
+          "letterSpacing": "-0.02em"
+        },
+        "$description": "Tab-root titles."
+      },
+      "media": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.display}",
+          "fontSize": "42px",
+          "lineHeight": "41px",
+          "fontWeight": 600,
+          "fontWidth": "90%",
+          "letterSpacing": "-0.022em"
+        },
+        "$description": "A title on its Media page."
+      },
+      "room": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.display}",
+          "fontSize": "30px",
+          "lineHeight": "31px",
+          "fontWeight": 600,
+          "fontWidth": "92%",
+          "letterSpacing": "-0.018em"
+        },
+        "$description": "Pushed screen and service room titles."
+      },
+      "feature": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.display}",
+          "fontSize": "26px",
+          "lineHeight": "27px",
+          "fontWeight": 600,
+          "fontWidth": "92%",
+          "letterSpacing": "-0.015em"
+        },
+        "$description": "A featured title, a sheet title."
+      },
+      "section": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.display}",
+          "fontSize": "21px",
+          "lineHeight": "24px",
+          "fontWeight": 600,
+          "fontWidth": "96%",
+          "letterSpacing": "-0.01em"
+        },
+        "$description": "Section headings."
+      },
+      "figure-hero": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.display}",
+          "fontSize": "44px",
+          "lineHeight": "44px",
+          "fontWeight": 600,
+          "fontWidth": "90%",
+          "letterSpacing": "-0.02em"
+        },
+        "$description": "One hero readout per room."
+      },
+      "figure": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.display}",
+          "fontSize": "24px",
+          "lineHeight": "24px",
+          "fontWeight": 600,
+          "fontWidth": "92%",
+          "letterSpacing": "-0.01em"
+        },
+        "$description": "KPI figures, big numbers."
+      },
+      "figure-s": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.display}",
+          "fontSize": "20px",
+          "lineHeight": "20px",
+          "fontWeight": 600,
+          "fontWidth": "92%",
+          "letterSpacing": "-0.01em"
+        },
+        "$description": "Times and figures in rows."
+      },
+      "body": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.text}",
+          "fontSize": "15px",
+          "lineHeight": "22px",
+          "fontWeight": 400,
+          "fontWidth": "100%",
+          "letterSpacing": "0em"
+        },
+        "$description": "Paragraphs."
+      },
+      "row": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.text}",
+          "fontSize": "15px",
+          "lineHeight": "20px",
+          "fontWeight": 600,
+          "fontWidth": "100%",
+          "letterSpacing": "0em"
+        },
+        "$description": "Row titles."
+      },
+      "button": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.text}",
+          "fontSize": "16px",
+          "lineHeight": "20px",
+          "fontWeight": 600,
+          "fontWidth": "100%",
+          "letterSpacing": "0em"
+        },
+        "$description": "Primary buttons."
+      },
+      "label": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.text}",
+          "fontSize": "14px",
+          "lineHeight": "18px",
+          "fontWeight": 600,
+          "fontWidth": "100%",
+          "letterSpacing": "0em"
+        },
+        "$description": "Small buttons, links, chips."
+      },
+      "meta": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.text}",
+          "fontSize": "13px",
+          "lineHeight": "18px",
+          "fontWeight": 500,
+          "fontWidth": "100%",
+          "letterSpacing": "0em"
+        },
+        "$description": "Secondary lines."
+      },
+      "caption": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.text}",
+          "fontSize": "12px",
+          "lineHeight": "16px",
+          "fontWeight": 500,
+          "fontWidth": "100%",
+          "letterSpacing": "0em"
+        },
+        "$description": "Captions, badges."
+      },
+      "micro": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.text}",
+          "fontSize": "11px",
+          "lineHeight": "14px",
+          "fontWeight": 600,
+          "fontWidth": "100%",
+          "letterSpacing": "0.01em"
+        },
+        "$description": "Tab labels, poster marks. The floor: nothing renders smaller."
+      },
+      "mono": {
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.mono}",
+          "fontSize": "13px",
+          "lineHeight": "18px",
+          "fontWeight": 450,
+          "fontWidth": "100%",
+          "letterSpacing": "-0.01em"
+        },
+        "$description": "Release names, paths, logs, the terminal."
       }
     },
     "display": {
+      "$description": "Material's display slots, each set in the role it stands for.",
       "large": {
-        "$description": "Rare editorial and onboarding moments. The only roles allowed 800.",
-        "font-size": { "$type": "dimension", "$value": "57px" },
-        "font-weight": { "$type": "fontWeight", "$value": 800 },
-        "line-height": { "$type": "number", "$value": 1.1 }
+        "$type": "typography",
+        "$value": "{type.role.figure-hero}",
+        "$description": "Rare editorial and onboarding moments."
       },
       "medium": {
-        "$description": "Editorial display, one step down.",
-        "font-size": { "$type": "dimension", "$value": "45px" },
-        "font-weight": { "$type": "fontWeight", "$value": 800 },
-        "line-height": { "$type": "number", "$value": 1.1 }
+        "$type": "typography",
+        "$value": "{type.role.media}",
+        "$description": "Editorial display, one step down: the onboarding door."
       },
       "small": {
-        "$description": "The smallest display.",
-        "font-size": { "$type": "dimension", "$value": "36px" },
-        "font-weight": { "$type": "fontWeight", "$value": 700 },
-        "line-height": { "$type": "number", "$value": 1.1 }
+        "$type": "typography",
+        "$value": "{type.role.screen}",
+        "$description": "The smallest display."
       }
     },
     "headline": {
       "large": {
-        "$description": "Screen-level headings.",
-        "font-size": { "$type": "dimension", "$value": "32px" },
-        "font-weight": { "$type": "fontWeight", "$value": 700 },
-        "line-height": { "$type": "number", "$value": 1.15 }
+        "$type": "typography",
+        "$value": "{type.role.screen}",
+        "$description": "Screen-level headings."
       },
       "medium": {
-        "$description": "Screen headings on compact widths.",
-        "font-size": { "$type": "dimension", "$value": "28px" },
-        "font-weight": { "$type": "fontWeight", "$value": 700 },
-        "line-height": { "$type": "number", "$value": 1.18 }
+        "$type": "typography",
+        "$value": "{type.role.room}",
+        "$description": "Screen headings on compact widths; pushed screens."
       },
       "small": {
-        "$description": "Detail hero titles, collapsed.",
-        "font-size": { "$type": "dimension", "$value": "24px" },
-        "font-weight": { "$type": "fontWeight", "$value": 700 },
-        "line-height": { "$type": "number", "$value": 1.2 }
+        "$type": "typography",
+        "$value": "{type.role.feature}",
+        "$description": "Detail hero titles, collapsed; sheet titles."
       }
     },
     "title": {
       "large": {
-        "$description": "Section headers. The app-bar title is this role at 700.",
-        "font-size": { "$type": "dimension", "$value": "22px" },
-        "font-weight": { "$type": "fontWeight", "$value": 600 },
-        "line-height": { "$type": "number", "$value": 1.25 }
+        "$type": "typography",
+        "$value": "{type.role.section}",
+        "$description": "Section headers and the app-bar title."
       },
       "subtitle": {
-        "$description": "A service's own name in its app bar, one step under Title.",
-        "font-size": { "$type": "dimension", "$value": "20px" },
-        "font-weight": { "$type": "fontWeight", "$value": 600 },
-        "line-height": { "$type": "number", "$value": 1.26 },
-        "letter-spacing": { "$type": "dimension", "$value": "-0.3px" }
+        "$type": "typography",
+        "$value": "{type.role.section}",
+        "$description": "A service's own name in its app bar."
       },
       "panel-header": {
-        "$description": "An h2 inside a page: a Dockge stack, an NPM host, a TrueNAS console section.",
-        "font-size": { "$type": "dimension", "$value": "18px" },
-        "font-weight": { "$type": "fontWeight", "$value": 600 },
-        "line-height": { "$type": "number", "$value": 1.28 }
+        "$type": "typography",
+        "$value": "{type.role.section}",
+        "$description": "An h2 inside a page: a Dockge stack, an NPM host, a TrueNAS console section."
       },
       "medium": {
-        "$description": "Card titles; KPI values, read at 700.",
-        "font-size": { "$type": "dimension", "$value": "16px" },
-        "font-weight": { "$type": "fontWeight", "$value": 600 },
-        "line-height": { "$type": "number", "$value": 1.32 }
+        "$type": "typography",
+        "$value": "{type.role.button}",
+        "$description": "Card titles. The system has no 16pt title: the slot takes the button role's values until each site moves to row, section or feature."
       },
       "row-title": {
-        "$description": "The primary line of a row that is a name, not a sentence: a device, a session, a proxy host.",
-        "font-size": { "$type": "dimension", "$value": "15px" },
-        "font-weight": { "$type": "fontWeight", "$value": 600 },
-        "line-height": { "$type": "number", "$value": 1.3 }
+        "$type": "typography",
+        "$value": "{type.role.row}",
+        "$description": "The primary line of a row that is a name, not a sentence."
       },
       "small": {
-        "$description": "Small titles and dense card headers.",
-        "font-size": { "$type": "dimension", "$value": "14px" },
-        "font-weight": { "$type": "fontWeight", "$value": 500 },
-        "line-height": { "$type": "number", "$value": 1.34 }
+        "$type": "typography",
+        "$value": "{type.role.label}",
+        "$description": "Small titles and dense card headers."
       }
     },
     "body": {
       "large": {
-        "$description": "The widest prose measure: overviews and descriptions.",
-        "font-size": { "$type": "dimension", "$value": "16px" },
-        "font-weight": { "$type": "fontWeight", "$value": 400 },
-        "line-height": { "$type": "number", "$value": 1.55 }
+        "$type": "typography",
+        "$value": "{type.role.body}",
+        "$description": "The widest prose measure: overviews and descriptions."
       },
       "medium": {
-        "$description": "Running text, metadata, empty-state copy, input text.",
-        "font-size": { "$type": "dimension", "$value": "14px" },
-        "font-weight": { "$type": "fontWeight", "$value": 400 },
-        "line-height": { "$type": "number", "$value": 1.45 }
+        "$type": "typography",
+        "$value": "{type.role.body}",
+        "$description": "Running text, empty-state copy, input text."
       },
       "small": {
-        "$description": "Fine print and secondary lines.",
-        "font-size": { "$type": "dimension", "$value": "12px" },
-        "font-weight": { "$type": "fontWeight", "$value": 400 },
-        "line-height": { "$type": "number", "$value": 1.4 }
+        "$type": "typography",
+        "$value": "{type.role.meta}",
+        "$description": "Fine print and secondary lines."
       }
     },
     "label": {
       "data": {
-        "$description": "The answer in a row: an attention item, a queue entry, a table cell. Never smaller than the label describing it.",
-        "font-size": { "$type": "dimension", "$value": "13px" },
-        "font-weight": { "$type": "fontWeight", "$value": 500 },
-        "line-height": { "$type": "number", "$value": 1.3 }
+        "$type": "typography",
+        "$value": "{type.role.meta}",
+        "$description": "The answer in a row: an attention item, a queue entry, a table cell. Never smaller than the label describing it."
       },
       "large": {
-        "$description": "Button labels (at 600) and tab labels.",
-        "font-size": { "$type": "dimension", "$value": "14px" },
-        "font-weight": { "$type": "fontWeight", "$value": 500 },
-        "line-height": { "$type": "number", "$value": 1.22 }
+        "$type": "typography",
+        "$value": "{type.role.label}",
+        "$description": "Button labels, tab labels, links."
       },
       "medium": {
-        "$description": "Chips, badges, nav labels.",
-        "font-size": { "$type": "dimension", "$value": "12px" },
-        "font-weight": { "$type": "fontWeight", "$value": 500 },
-        "line-height": { "$type": "number", "$value": 1.22 }
+        "$type": "typography",
+        "$value": "{type.role.caption}",
+        "$description": "Captions, badges."
       },
       "small": {
-        "$description": "The 11px floor. Nothing in the app renders smaller.",
-        "font-size": { "$type": "dimension", "$value": "11px" },
-        "font-weight": { "$type": "fontWeight", "$value": 500 },
-        "line-height": { "$type": "number", "$value": 1.22 }
+        "$type": "typography",
+        "$value": "{type.role.micro}",
+        "$description": "The 11px floor. Nothing in the app renders smaller."
       },
       "eyebrow": {
-        "$description": "Uppercase kicker above a section or a single-value readout. The one role whose tracking is authored; set the text uppercase.",
-        "font-size": { "$type": "dimension", "$value": "11px" },
-        "font-weight": { "$type": "fontWeight", "$value": 600 },
-        "line-height": { "$type": "number", "$value": 1.2 },
-        "letter-spacing": { "$type": "dimension", "$value": "1.4px" }
+        "$type": "typography",
+        "$value": {
+          "fontFamily": "{type.family.text}",
+          "fontSize": "11px",
+          "lineHeight": "14px",
+          "fontWeight": 600,
+          "fontWidth": "100%",
+          "letterSpacing": "1.4px"
+        },
+        "$description": "Uppercase kicker above a section or a single-value readout: micro with authored tracking. The system has no uppercase voice; kept for the sites that use it."
       },
       "chrome": {
-        "$description": "Dense desktop-shell chrome off the ramp. Its size is both the default and the enforced floor.",
-        "font-size": { "$type": "dimension", "$value": "11px" },
-        "font-weight": { "$type": "fontWeight", "$value": 500 },
-        "line-height": { "$type": "number", "$value": 1.22 }
+        "$type": "typography",
+        "$value": "{type.role.micro}",
+        "$description": "Dense desktop-shell chrome. Its size is both the default and the enforced floor."
       }
     }
   }

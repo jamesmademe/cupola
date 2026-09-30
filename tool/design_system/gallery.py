@@ -38,7 +38,9 @@ ARTWORK = {
     "__BACKDROP__": SYSTEM / "assets" / "Imagery" / "backdrop.jpg",
 }
 FONTS = {
-    "Inter": ROOT / "assets" / "fonts" / "Inter.ttf",
+    "Bricolage Grotesque": ROOT / "assets" / "fonts" / "BricolageGrotesque.ttf",
+    "Onest": ROOT / "assets" / "fonts" / "Onest.ttf",
+    "Geist Mono": ROOT / "assets" / "fonts" / "GeistMono.ttf",
     "CupolaServices": ROOT / "assets" / "fonts" / "CupolaServices.otf",
 }
 SHEETS = [(p, t) for p in ("phone", "desktop") for t in ("dark", "light")]
@@ -150,7 +152,7 @@ def tokens_css(tokens: dict) -> str:
         ]
         blocks.append(f"{selector} {{ {' '.join(props)} }}")
     shared = []
-    for family in ("spacing", "radius", "breakpoint"):
+    for family in ("spacing", "radius", "size", "breakpoint"):
         shared += [f"--{t['name']}: {t['value']};" for t in tokens.get(family, {}).get("tokens", [])]
     for key, stack in tokens["type"]["families"].items():
         shared.append(f"--font-{key}: {stack};")
@@ -159,10 +161,11 @@ def tokens_css(tokens: dict) -> str:
         source = FONTS.get(font["family"])
         if source is None:
             continue
+        stretch = f" font-stretch: {font['stretch']};" if font.get("stretch") else ""
         blocks.append(
             "@font-face { "
             f"font-family: \"{font['family']}\"; src: url(\"fonts/{source.name}\"); "
-            f"font-weight: {font['weight']}; font-style: {font.get('style', 'normal')}; }}"
+            f"font-weight: {font['weight']}; font-style: {font.get('style', 'normal')};{stretch} }}"
         )
     return "\n".join(blocks)
 

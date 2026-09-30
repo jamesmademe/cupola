@@ -6,6 +6,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// A single indexer row shared by the dashboard preview and the library list.
 ///
@@ -55,8 +56,6 @@ class ProwlarrIndexerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isTorrent = (indexer.protocol ?? '').toLowerCase() == 'torrent';
-    final protocolColor = isTorrent ? AppColors.prowlarr : AppColors.sonarr;
     // A failing indexer is the canonical amber fault of this app — Prowlarr
     // answered and told us which of its indexers did not. Red would claim
     // Prowlarr itself is unreachable.
@@ -77,7 +76,7 @@ class ProwlarrIndexerTile extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border.all(
           color: selected == true
-              ? AppColors.prowlarr.withValues(alpha: 0.6)
+              ? ServiceKey.prowlarr.accent.withValues(alpha: 0.6)
               : colorScheme.outlineVariant,
         ),
         borderRadius: AppRadius.borderRadiusMd,
@@ -100,7 +99,7 @@ class ProwlarrIndexerTile extends StatelessWidget {
                   : Icons.check_box_outline_blank_rounded,
               size: 20,
               color: selected!
-                  ? AppColors.prowlarr
+                  ? colorScheme.onSurface
                   : colorScheme.onSurfaceVariant,
             ),
           const SizedBox(width: AppSpacing.md),
@@ -131,7 +130,7 @@ class ProwlarrIndexerTile extends StatelessWidget {
                     child: Text(
                       tagLabels.join(' · '),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.prowlarr,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -155,8 +154,11 @@ class ProwlarrIndexerTile extends StatelessWidget {
               horizontal: AppSpacing.sm,
               vertical: 3,
             ),
+            // Neutral: the badge says "Torrent" or "Usenet" in words, so a
+            // hue per protocol (two services' accents, once) told nothing the
+            // word did not.
             decoration: BoxDecoration(
-              color: protocolColor.withValues(alpha: 0.12),
+              color: CupolaRoom.of(context).fillControl,
               borderRadius: AppRadius.borderRadiusSm,
             ),
             child: Text(
@@ -165,7 +167,7 @@ class ProwlarrIndexerTile extends StatelessWidget {
               capitalizeFirst(indexer.protocol ?? '?'),
               style: Theme.of(context).textTheme.labelSmall!
                   .weight(FontWeight.w600)
-                  .copyWith(color: protocolColor),
+                  .copyWith(color: colorScheme.onSurface),
             ),
           ),
           if (onTap != null && selected == null) ...[
@@ -187,7 +189,7 @@ class ProwlarrIndexerTile extends StatelessWidget {
       ),
       child: Material(
         color: selected == true
-            ? AppColors.prowlarr.withValues(alpha: 0.08)
+            ? ServiceKey.prowlarr.accent.withValues(alpha: 0.08)
             : colorScheme.surface,
         borderRadius: AppRadius.borderRadiusMd,
         child: onTap == null

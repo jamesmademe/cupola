@@ -2,7 +2,6 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/service_glyphs.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -287,17 +286,9 @@ void main() {
         'Search',
         'Settings',
       ]);
-      // Each tab carries its own section accent — sections, not services, per
-      // DESIGN.md's nav-* tokens. Services keeps `primary`: it is the app's
-      // own colour and the home tab. Asserted against the tokens rather than
-      // hex literals so a palette change does not need a test edit.
-      expect(NavTab.values.map((tab) => tab.accentColor), [
-        AppColors.navDashboard,
-        AppColors.navActivity,
-        AppColors.navSearch,
-        AppColors.navSettings,
-      ]);
-      expect(NavTab.dashboard.accentColor, AppColors.primary);
+      // No colour per tab any more: the chrome is monochrome, and the
+      // selected tab is the strong fill under the primary ink in every
+      // section (floating_bottom_nav_bar_test). The order is what is left.
     });
   });
 
@@ -312,12 +303,16 @@ void main() {
   });
 
   group('ServiceKey metadata', () {
-    test('exposes prototype accent colors', () {
-      expect(ServiceKey.seerr.accent.toARGB32(), 0xFF6366F1);
-      expect(ServiceKey.radarr.accent.toARGB32(), 0xFFF59E0B);
-      expect(ServiceKey.sonarr.accent.toARGB32(), 0xFF8B5CF6);
-      expect(ServiceKey.lidarr.accent.toARGB32(), 0xFFEC4899);
-      expect(ServiceKey.bazarr.accent.toARGB32(), 0xFF25A7DF);
+    test('keeps the prototype brand colours as registry data', () {
+      // Data, not paint: the interface paints every service with the lamp.
+      expect(ServiceKey.seerr.brandAccent.toARGB32(), 0xFF6366F1);
+      expect(ServiceKey.radarr.brandAccent.toARGB32(), 0xFFF59E0B);
+      expect(ServiceKey.sonarr.brandAccent.toARGB32(), 0xFF8B5CF6);
+      expect(ServiceKey.lidarr.brandAccent.toARGB32(), 0xFFEC4899);
+      expect(ServiceKey.bazarr.brandAccent.toARGB32(), 0xFF25A7DF);
+      for (final service in ServiceKey.values) {
+        expect(service.accent.toARGB32(), 0xFF8A8A99, reason: service.name);
+      }
     });
 
     test('every service draws its own mark from the service glyph font', () {

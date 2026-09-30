@@ -6,7 +6,6 @@ import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/route_utils.dart';
@@ -95,7 +94,6 @@ class _ServiceAllRequestsScreenState
           ),
           children: [
             _FilterChipRow(
-              accent: ServiceKey.seerr.accent,
               selected: _filter,
               onSelected: (filter) => setState(() => _filter = filter),
             ),
@@ -162,15 +160,10 @@ class _ServiceListAppBar extends StatelessWidget
 }
 
 class _FilterChipRow extends StatelessWidget {
-  final Color accent;
   final SeerrRequestFilter selected;
   final ValueChanged<SeerrRequestFilter> onSelected;
 
-  const _FilterChipRow({
-    required this.accent,
-    required this.selected,
-    required this.onSelected,
-  });
+  const _FilterChipRow({required this.selected, required this.onSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -193,16 +186,16 @@ class _FilterChipRow extends StatelessWidget {
             selected: isSelected,
             showCheckmark: false,
             onSelected: (_) => onSelected(filter),
+            // The brand book's chip: selected is the ink fill with the on-ink label, the
+            // rest the quiet fill with an edge and the primary ink — the
+            // theme's chip, the same on every page.
             labelStyle: Theme.of(context).textTheme.labelMedium
                 ?.weight(FontWeight.w600)
                 .copyWith(
                   color: isSelected
-                      ? ServiceTheme.foregroundOn(accent)
-                      : accent,
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : Theme.of(context).colorScheme.onSurface,
                 ),
-            selectedColor: accent,
-            backgroundColor: accent.withValues(alpha: 0.10),
-            side: BorderSide(color: isSelected ? accent : Colors.transparent),
             shape: const StadiumBorder(),
           );
         },
@@ -469,7 +462,7 @@ class _RequesterAvatar extends StatelessWidget {
         initials.isEmpty ? '?' : initials,
         style: Theme.of(context).textTheme.labelSmall
             ?.weight(FontWeight.w600)
-            .copyWith(color: ServiceKey.seerr.accent),
+            .copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
     );
   }

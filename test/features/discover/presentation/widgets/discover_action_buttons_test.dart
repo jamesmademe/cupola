@@ -99,14 +99,22 @@ void main() {
       expect(find.text('Open'), findsOneWidget);
     });
 
-    testWidgets('the request action is lit by Seerr, not colorScheme.primary', (
+    testWidgets('the request action is the ink button, not Seerr\'s colour', (
       tester,
     ) async {
+      // The brand book: the page's one primary is ink. It used to be filled with Seerr's
+      // accent, so the request was the one control the service coloured.
       await _pumpButtons(tester, hasManageableMedia: false, isInService: false);
 
       final button = tester.widget<FilledButton>(_request);
       final resolved = button.style!.backgroundColor!.resolve(<WidgetState>{});
-      expect(resolved, ServiceKey.seerr.accent);
+      final scheme = Theme.of(tester.element(_request)).colorScheme;
+      expect(resolved, scheme.primary);
+      expect(resolved, isNot(ServiceKey.seerr.brandAccent));
+      expect(
+        button.style!.foregroundColor!.resolve(<WidgetState>{}),
+        scheme.onPrimary,
+      );
     });
 
     testWidgets('every control clears the 44pt touch minimum', (tester) async {

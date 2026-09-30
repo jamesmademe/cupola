@@ -4,21 +4,24 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/tag_chip.dart';
 
 import 'catalog.dart';
 
-const _sonarr = Color(0xFF7C4DFF);
-const _lidarr = Color(0xFF00BFA5);
-const _bazarr = Color(0xFF3F51B5);
+// What a service page hands these widgets: its accent, which is the lamp.
+const _sonarr = AppColors.lamp;
+const _lidarr = AppColors.lamp;
+const _bazarr = AppColors.lamp;
 
 void main() {
   catalogCard(
     'TagChip',
     scenes: [
       CatalogScene(
-        'TagChip · service accent at 12%, with and without a leading icon',
+        'TagChip · a service\'s accent (the lamp) at 12% under the primary '
+        'ink, with and without a leading icon',
         (_) => const Wrap(
           spacing: 12,
           runSpacing: 12,

@@ -91,7 +91,7 @@ class StreamPosterTile extends ConsumerWidget {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: _ResumeBar(progress: progress, accent: service.accent),
+                child: _ResumeBar(progress: progress),
               ),
           ],
         ),
@@ -152,10 +152,9 @@ class _UnplayedBadge extends StatelessWidget {
 /// someone stopped, not work in flight, and an indeterminate-capable widget invites
 /// the animation the state does not have.
 class _ResumeBar extends StatelessWidget {
-  const _ResumeBar({required this.progress, required this.accent});
+  const _ResumeBar({required this.progress});
 
   final double progress;
-  final Color accent;
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +168,10 @@ class _ResumeBar extends StatelessWidget {
           children: [
             Expanded(
               flex: (progress * 1000).round().clamp(1, 1000),
-              child: ColoredBox(color: accent),
+              // The plate's ink: the bar sits on artwork, which is dark in both
+              // themes, and where someone stopped is a reading, not a service's
+              // colour.
+              child: const ColoredBox(color: AppColors.plateInk),
             ),
             Expanded(
               flex: (1000 - (progress * 1000).round()).clamp(0, 999),

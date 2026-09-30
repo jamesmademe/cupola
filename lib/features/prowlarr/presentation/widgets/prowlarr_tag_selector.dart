@@ -6,6 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Tag picker used by the indexer edit form and the bulk "Set tags" sheet.
 ///
@@ -153,7 +154,7 @@ class _TagToggle extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Material(
       color: selected
-          ? AppColors.prowlarr.withValues(alpha: 0.16)
+          ? ServiceKey.prowlarr.accent.withValues(alpha: 0.16)
           : colorScheme.surfaceContainerHighest,
       borderRadius: AppRadius.borderRadiusFull,
       child: InkWell(
@@ -171,7 +172,7 @@ class _TagToggle extends StatelessWidget {
                 selected ? Icons.check_circle_rounded : Icons.circle_outlined,
                 size: 14,
                 color: selected
-                    ? AppColors.prowlarr
+                    ? colorScheme.onSurface
                     : colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: AppSpacing.xs),
@@ -181,7 +182,7 @@ class _TagToggle extends StatelessWidget {
                     .weight(FontWeight.w600)
                     .copyWith(
                       color: selected
-                          ? AppColors.prowlarr
+                          ? colorScheme.onSurface
                           : colorScheme.onSurfaceVariant,
                     ),
               ),

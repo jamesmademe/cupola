@@ -89,7 +89,7 @@ class _HubGrid extends ConsumerWidget {
         children: [
           ServiceKpiPeek(
             kpis: ref.watch(serviceKpiProvider(ServiceKey.truenas)),
-            accent: AppColors.truenas,
+            accent: ServiceKey.truenas.accent,
           ),
           const TrueNasVersionBanner(),
           Padding(
@@ -154,7 +154,7 @@ class _SectionTile extends StatelessWidget {
                   child: Icon(
                     section.icon,
                     size: 20,
-                    color: serviceTheme.accent,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],

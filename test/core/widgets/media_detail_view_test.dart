@@ -790,7 +790,9 @@ void main() {
       final indicator = tester.widget<RefreshIndicator>(
         find.byType(RefreshIndicator),
       );
-      expect(indicator.color, Colors.amber);
+      // The theme's own spinner ink, not the page's accent: a refresh is not
+      // a service's colour (it used to be painted in whatever was passed).
+      expect(indicator.color, isNull);
       // Below the collapsed bar, so the spinner and the hero's overscroll
       // stretch are not two claimants on one gesture.
       expect(indicator.edgeOffset, greaterThan(_kTopPadding));

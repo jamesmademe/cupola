@@ -142,7 +142,7 @@ class _NpmAdvancedConfigScreenState
   @override
   Widget build(BuildContext context) {
     return AmbientScaffold(
-      accent: AppColors.nginxProxyManager,
+      accent: ServiceKey.nginxProxyManager.accent,
       appBar: const GlassAppBar(title: Text('Advanced')),
       body: SafeArea(
         child: Column(

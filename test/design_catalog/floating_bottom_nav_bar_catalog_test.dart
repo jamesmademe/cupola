@@ -17,7 +17,6 @@ List<FloatingNavDestination> _destinations({int searchesWaiting = 0}) => [
       selectedIcon: tab.selectedIcon,
       railIcon: tab.railIcon,
       label: tab.label,
-      accentColor: tab.accentColor,
       badgeCount: tab == NavTab.activity ? searchesWaiting : 0,
       badgeSemanticLabel: tab == NavTab.activity && searchesWaiting > 0
           ? '$searchesWaiting finished searches to look at'
@@ -48,13 +47,13 @@ void main() {
     width: 480,
     scenes: [
       _scene(
-        'Dashboard selected · the accent pill with icon and label, the other '
-        'three icon only',
+        'Dashboard selected · the strong-fill pill with icon and label in the '
+        'primary ink, the other three icon only in the secondary ink',
         0,
       ),
       _scene(
-        'Activity selected, 3 finished searches · the count in Activity\'s own '
-        'accent, never a status tone',
+        'Activity selected, 3 finished searches · the count on the ink disc, '
+        'never a status tone and never a section colour',
         1,
         searchesWaiting: 3,
       ),

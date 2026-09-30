@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_actions.dart';
@@ -33,7 +32,7 @@ class SabnzbdScreen extends ConsumerWidget {
     final isConfigured = settings.isServiceConfigured(ServiceKey.sabnzbd);
 
     return AmbientScaffold(
-      accent: AppColors.sabnzbd,
+      accent: ServiceKey.sabnzbd.accent,
       appBar: showAppBar ? const GlassAppBar(title: Text('SABnzbd')) : null,
       body: SafeArea(
         // The shared placeholder, not a private copy. Four dashboards had grown
@@ -65,7 +64,7 @@ class _SabnzbdDashboard extends ConsumerWidget {
     if (isOffline) {
       return ServiceOfflineState(
         serviceName: ServiceKey.sabnzbd.title,
-        accent: AppColors.sabnzbd,
+        accent: ServiceKey.sabnzbd.accent,
         onRetry: () => _invalidateAll(ref),
       );
     }
@@ -92,7 +91,7 @@ class _SabnzbdDashboard extends ConsumerWidget {
               if (topPadding > 0) SizedBox(height: topPadding),
               ServiceKpiPeek(
                 kpis: ref.watch(serviceKpiProvider(ServiceKey.sabnzbd)),
-                accent: AppColors.sabnzbd,
+                accent: ServiceKey.sabnzbd.accent,
               ),
               const SizedBox(height: AppSpacing.sm),
               _SabnzbdActionsBar(queueAsync: queueAsync),
@@ -374,7 +373,7 @@ class _QueueTile extends ConsumerWidget {
       ].join(' · '),
       progress: slot.progress,
       percentage: slot.percentage,
-      accent: AppColors.sabnzbd,
+      accent: ServiceKey.sabnzbd.accent,
       actions: DownloadQueueActionsMenu(
         paused: _paused,
         onCommand: (command) => _run(context, ref, command),

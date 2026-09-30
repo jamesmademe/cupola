@@ -144,7 +144,31 @@ extension ServiceKeyExtension on ServiceKey {
     ServiceKey.plex => ServiceGlyphs.plex,
   };
 
-  Color get accent => switch (this) {
+  /// What the interface paints for this service: the neutral lamp, the same
+  /// for every service.
+  ///
+  /// The room is monochrome (principle 3 of the brand book: colour is information). Colour
+  /// reaches a pixel from the content — a title's light — and from the five
+  /// status tones, and from nothing else, so a service's mark in a list, its
+  /// tab, its room and its buttons carry no hue of their own: the identity is
+  /// the mark's shape and the name. Measured against the tones, Radarr,
+  /// SABnzbd, Plex and Unraid fall within 16° of the fault amber, Transmission
+  /// and Readarr within 19° of red and NZBGet 2° from green, which is why the
+  /// accents left the interface rather than being walked further apart.
+  ///
+  /// **This getter is the switch.** Every surface that used to be tinted by a
+  /// service — a room's light, a glow, a tinted chip, a walked label — reads
+  /// it, so it hands them all the lamp: a light where it is painted as light,
+  /// and, through `ServiceTheme.onTint`, the room's ink where it is asked to
+  /// carry a label. The brand colour survives as data in [brandAccent].
+  Color get accent => AppColors.lamp;
+
+  /// The service's brand colour, as registry data.
+  ///
+  /// **Not paint.** Nothing in the interface is coloured by it (see [accent]);
+  /// `test/core/theme/monochrome_accent_test.dart` keeps it that way by
+  /// allowing it to be read only where a colour is the information itself.
+  Color get brandAccent => switch (this) {
     ServiceKey.seerr => AppColors.seerr,
     ServiceKey.radarr => AppColors.radarr,
     ServiceKey.sonarr => AppColors.sonarr,

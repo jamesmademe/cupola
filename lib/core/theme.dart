@@ -1,74 +1,70 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 
-/// Builds a [TextStyle] backed by the bundled Inter variable font.
+/// Builds a [TextStyle] for one role of the type system.
 ///
-/// Every style goes through here so three things are impossible to forget:
-/// the `wght` axis (see [AppTheme.interVariations] — a bare [FontWeight] does
-/// not reach it), the optical size, and Inter's own tracking.
-TextStyle _inter({
+/// Every style goes through here so that the variable axes are impossible to
+/// forget. The three bundled families are each one variable file registered
+/// once, and Flutter resolves `fontWeight` against that single face without
+/// touching an axis, so a bare [TextStyle] renders the file's default instance
+/// whatever it asks for — for Bricolage Grotesque that instance is 96pt
+/// ExtraBold at full width. See [AppTheme.variations].
+TextStyle _role({
   Color? color,
+  required String family,
+  required List<String> fallback,
   required double fontSize,
   required FontWeight fontWeight,
+  required double wght,
   required double height,
-  required Brightness brightness,
-  double? letterSpacing,
+  required double letterSpacing,
+  double width = 100,
   List<FontFeature>? fontFeatures,
 }) {
   return TextStyle(
-    fontFamily: AppTheme.fontFamily,
+    fontFamily: family,
+    fontFamilyFallback: fallback.isEmpty ? null : fallback,
     color: color,
     fontSize: fontSize,
     fontWeight: fontWeight,
-    fontVariations: AppTheme.interVariations(fontWeight, fontSize),
+    fontVariations: AppTheme.variations(
+      family,
+      wght: wght,
+      width: width,
+      fontSize: fontSize,
+    ),
     height: height,
-    letterSpacing:
-        letterSpacing ?? AppTheme.interTracking(fontSize, brightness),
+    letterSpacing: letterSpacing,
     fontFeatures: fontFeatures,
   );
 }
 
-/// Type-level helpers that have to reach Inter's variable axes.
+/// Type-level helpers that have to reach the variable axes.
 ///
 /// These exist because [TextStyle.copyWith] is a trap on a variable font: it
 /// will happily change [TextStyle.fontWeight] and leave `fontVariations`
 /// pointing at the old weight, so the text keeps rendering at the weight it
 /// had. Re-weight through [weight] instead.
 extension CupolaTextStyle on TextStyle {
-  /// Re-weights this style so the change actually reaches Inter's `wght` axis.
+  /// Re-weights this style so the change actually reaches the `wght` axis.
   ///
-  /// The bundled Inter is a single variable face registered at weight 400.
-  /// Flutter resolves `fontWeight: FontWeight.w800` against that one face,
-  /// finds it, and never touches the axis — so the glyphs stay Regular and the
-  /// only difference is whatever synthetic emboldening Skia decides to add.
-  /// Measured: `w400` through `w900` all lay out to the identical advance
-  /// width, while an explicit `wght` variation does not.
+  /// Each bundled family is a single variable face. Flutter resolves
+  /// `fontWeight: FontWeight.w600` against that one face, finds it, and never
+  /// touches the axis — so the glyphs stay at the default instance and the only
+  /// difference is whatever synthetic emboldening Skia decides to add.
   ///
-  /// The optical size is carried over rather than recomputed, so re-weighting a
-  /// display style does not quietly hand it back the text-size drawing.
+  /// Only `wght` moves: the width and the optical size a display role set are
+  /// carried over, so re-weighting a Bricolage title does not hand it back the
+  /// file's full-width, 96pt drawing.
   TextStyle weight(FontWeight weight) {
-    double? opticalSize;
-    final variations = fontVariations;
-    if (variations != null) {
-      for (final variation in variations) {
-        if (variation.axis == 'opsz') {
-          opticalSize = variation.value;
-          break;
-        }
-      }
-    }
+    final kept = [
+      for (final variation in fontVariations ?? const <FontVariation>[])
+        if (variation.axis != 'wght') variation,
+    ];
     return copyWith(
       fontWeight: weight,
-      fontVariations: [
-        FontVariation('wght', weight.value.toDouble()),
-        FontVariation(
-          'opsz',
-          opticalSize ?? AppTheme.opticalSize(fontSize ?? 14),
-        ),
-      ],
+      fontVariations: [FontVariation('wght', weight.value.toDouble()), ...kept],
     );
   }
 
@@ -76,34 +72,56 @@ extension CupolaTextStyle on TextStyle {
   ///
   /// The Tabular Rule: anything that updates in place — a transfer rate, a
   /// percentage, a queue count — jitters as it counts with proportional digits.
+  /// All three families carry `tnum`.
   TextStyle get tabular =>
       copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
 
-  /// Switches a style onto the monospaced family, for code, logs and data.
+  /// Switches a style onto the mono family, for release names, paths, logs,
+  /// keys and anything compared by eye in columns.
   ///
   /// Keeps the size, colour and line height it already had — a fingerprint or a
   /// log line still belongs to the role it was set in, it just needs columns
-  /// that line up. See [AppTheme.monoFontFamily] for why this is not a literal.
-  TextStyle get mono => copyWith(
-    fontFamily: AppTheme.monoFontFamily,
-    fontFamilyFallback: AppTheme.monoFontFamilyFallback,
-    // Inter's axes mean nothing to the platform mono face, and a mono face is
-    // already spaced on a fixed advance — tracking it fights the grid.
-    fontVariations: const [],
-    letterSpacing: 0,
-    fontFeatures: const [FontFeature.slashedZero()],
-  );
+  /// that line up. It takes the mono role's own drawing: `wght` 450 (or the
+  /// style's weight, if that was heavier) and the mono role's tracking in em,
+  /// so the grid stays the one the face was spaced on. See
+  /// [AppTheme.monoFontFamily] for the fallbacks after Geist Mono.
+  TextStyle get mono {
+    final size = fontSize ?? DesignTokens.typeRoleMonoFontSize;
+    final own = fontWeight?.value.toDouble() ?? 400;
+    final wght = own > DesignTokens.typeRoleMonoWght
+        ? own
+        : DesignTokens.typeRoleMonoWght;
+    return copyWith(
+      fontFamily: AppTheme.monoFontFamily,
+      fontFamilyFallback: AppTheme.monoFontFamilyFallback,
+      fontVariations: [FontVariation('wght', wght)],
+      letterSpacing:
+          DesignTokens.typeRoleMonoLetterSpacing /
+          DesignTokens.typeRoleMonoFontSize *
+          size,
+      fontFeatures: const [FontFeature.slashedZero()],
+    );
+  }
 }
 
-/// Seerr-inspired color palette for Cupola
+/// The fixed palette: service accents, the tones as fill bytes, the plate and
+/// the per-theme scheme bytes, all read from the generated tokens.
 ///
-/// Colors extracted from Seerr source code (Tailwind config)
-/// Provides both dark and light theme variants while maintaining
-/// the signature indigo accent color.
+/// The room is monochrome. Colour reaches the interface from two sources only,
+/// the content (a title's light) and the state (the five tones), so nothing in
+/// the chrome carries a hue of its own: the interactive ink is the primary ink,
+/// a room with no artwork is lit by the [lamp], and a service's accent is
+/// registry data that no pixel is painted with.
 class AppColors {
   AppColors._();
 
   // === SERVICE ACCENTS ===
+  //
+  // Registry data (`ServiceKey.brandAccent`), never paint: the interface paints
+  // every service with the [lamp] (`ServiceKey.accent`), and a service's mark,
+  // tab, room and buttons are monochrome. Outside this class and the registry
+  // they may be read only where a colour is the information itself — see
+  // `test/core/theme/monochrome_accent_test.dart`.
   static const Color seerr = DesignTokens.colorServiceSeerr;
   static const Color radarr = DesignTokens.colorServiceRadarr;
   static const Color sonarr = DesignTokens.colorServiceSonarr;
@@ -125,82 +143,46 @@ class AppColors {
   /// Transmission crimson — the brand's red family, walked off its own hex for
   /// the same reason [plex] is walked off Plex gold.
   ///
-  /// Transmission's mark is a plain red that lands ΔE 5.3 from [readarr] and
-  /// 6.1 from [error]: three near-identical reds, one of which is the alarm
-  /// tone. At the 8pt source dot on the merged Recently Added rail, and at the
-  /// 18pt glyph on a folded matrix cell, that is not a distinguishable colour —
-  /// it is a red smear that could be a book, a torrent, or a failure. Rotating
-  /// toward crimson keeps it unmistakably Transmission red while clearing
-  /// ΔE 8.8 from the alarm tone and 10.8 from Readarr. For reference, the
-  /// tightest pair already shipping is [radarr]/[sabnzbd] at ΔE 4.8.
+  /// Transmission's mark is a plain red that lands ΔE 5.3 from [readarr]: two
+  /// near-identical reds, and at the 8pt source dot on the merged Recently
+  /// Added rail, and at the 18pt glyph on a folded matrix cell, that is not a
+  /// distinguishable colour. Rotating toward crimson keeps it unmistakably
+  /// Transmission red while clearing ΔE 10.8 from Readarr.
   static const Color transmission = DesignTokens.colorServiceTransmission;
 
   /// Nginx Proxy Manager vermilion — the brand value, used unchanged.
   ///
   /// Unlike [transmission] and [plex] this one needed no adjustment: it sits
-  /// ΔE 9.2 from [prowlarr]'s orange and 8.3 from [error], comfortably above
-  /// the palette's existing floor, because it is a *red*-orange and the crowded
-  /// band above it ([unraid], [plex], [radarr], [sabnzbd]) is amber.
+  /// ΔE 9.2 from [prowlarr]'s orange, because it is a *red*-orange and the
+  /// crowded band above it ([unraid], [plex], [radarr], [sabnzbd]) is amber.
   static const Color nginxProxyManager =
       DesignTokens.colorServiceNginxProxyManager;
 
   /// Plex bronze — deliberately **not** Plex's brand gold `#E5A00D`.
   ///
-  /// The brand value is unusable here, and measurably so. In CIE Lab it sits
-  /// ΔE 5 from [sabnzbd] and ΔE 8 from the amber-500 [warning] used to be — and
-  /// that value was the same byte as [radarr] — so brand gold would have been
-  /// the fourth amber in a five-way tie that included the alarm tone. The tie
-  /// is two narrower now that [warning] has moved to yellow-400, but brand gold
-  /// would still collide with [sabnzbd]. Two consequences,
-  /// both fatal: the 8pt source dot on the merged Recently Added rail could not
-  /// distinguish a Plex item from a Radarr or SABnzbd one, and the Stream
-  /// dashboard's whole focal moment — a transcoding session lighting its reason
-  /// in [warning] — would have been invisible against a room lit by the Plex
-  /// accent itself.
-  ///
-  /// This value keeps the brand's hue family (34° against the brand's 41°, so it
-  /// still reads as Plex gold) while clearing ΔE 18 from every existing amber
-  /// and 20 from the alarm tone. It resolves to 5.05:1 as a label over its own
-  /// 14% tint in dark; light theme still goes through `ServiceTheme.onTint`,
-  /// which brand gold also required (it measured 1.84:1 there).
+  /// In CIE Lab brand gold sits ΔE 5 from [sabnzbd], so the 8pt source dot on
+  /// the merged Recently Added rail could not tell a Plex item from a SABnzbd
+  /// one. This value keeps the brand's hue family (34° against the brand's 41°,
+  /// so it still reads as Plex gold) while clearing ΔE 18 from every other
+  /// amber. As a label it still goes through `ServiceTheme.onTint`.
   static const Color plex = DesignTokens.colorServicePlex;
 
-  // === NAV SECTION ACCENTS ===
+  // === NAV SECTION ACCENTS (retired) ===
   //
-  // One per canonical tab, so the floating nav bar's selected pill actually
-  // differs by section. The bar has always taken a per-destination accent and
-  // DESIGN.md has always described the pill as carrying "that destination's
-  // accent" — but every `NavTab` passed `primary`, so the mechanism existed and
-  // never showed a difference.
-  //
-  // These are **sections, not services**, and the hues are chosen accordingly:
-  //
-  // - Nothing here may borrow from the status vocabulary (`success`, `warning`,
-  //   `error`, `info`). Status is a closed set, and a green or amber pill in
-  //   permanent chrome would read as a health signal (The Closed Tone Rule).
-  // - Nothing here should be mistaken for a service's identity, so the set stays
-  //   in the cool, instrument-panel end of the palette rather than reaching for
-  //   the alarm hues.
-  // - Services keeps `primary`: it is the app's own colour and the home tab.
+  // One per canonical tab, and they used to tint the floating nav bar's
+  // selected pill. The monochrome room draws the active tab as the strong fill
+  // under the primary ink in every section, so nothing in the interface reads
+  // these any more (the guard test forbids it); they stay, with their
+  // `color.nav.*` tokens, until the palette cleanup removes both.
   static const Color navDashboard = DesignTokens.colorNavDashboard;
   static const Color navActivity = DesignTokens.colorNavActivity; // cyan-500
   static const Color navSearch = DesignTokens.colorNavSearch; // purple-500
   static const Color navSettings = DesignTokens.colorNavSettings; // teal-500
 
-  // === PRIMARY (Seerr Indigo) ===
-  static const Color primary = seerr;
-  static const Color primaryDark =
-      DesignTokens.colorBrandPrimaryDark; // indigo-600
-  static const Color primaryLight =
-      DesignTokens.colorBrandPrimaryLight; // indigo-400
-  static const Color primaryLighter =
-      DesignTokens.colorBrandPrimaryLighter; // indigo-300
-
   // === DARK THEME SURFACES ===
-  // Deep, layered near-black ladder so cards separate cleanly once elevation
-  // and shadows are applied. Each step is a genuinely distinct tone.
-  static const Color surfaceDark =
-      DesignTokensDark.colorSurface; // scaffold base
+  //
+  // The dark room's floor and its steps: ground, slab, raised, menu.
+  static const Color surfaceDark = DesignTokensDark.colorSurface; // room ground
   static const Color surfaceContainerLowestDark =
       DesignTokensDark.colorSurfaceContainerLowest;
   static const Color surfaceContainerLowDark =
@@ -231,60 +213,42 @@ class AppColors {
   // layout; and the instant the real image arrives the well flips from white to
   // a dark photograph, which is the flash the plate exists to prevent.
   //
-  // So these are the dark ladder's own bytes, painted in both brightnesses.
-  // They were discovered independently once already — the Dockge log panel
-  // pinned itself to a near-black literal with the same reasoning written out
-  // beside it — which is the argument for naming them here instead of letting
-  // each surface rediscover them.
+  // So these are the dark room's own bytes, painted in both brightnesses.
   static const Color plateSurface = DesignTokens.colorPlateSurface;
   static const Color plateWell = DesignTokens.colorPlateWell;
   static const Color plateOutline = DesignTokens.colorPlateOutline;
   static const Color plateInk = DesignTokens.colorPlateInk;
 
-  /// The plate's secondary ink.
-  ///
-  /// Not [onSurfaceDimDark]: that tone is spaced against the dark *scaffold*
-  /// and measures 4.20:1 on [plateSurface], which is below AA on the very
-  /// surface a plate's caption sits on. This is one step brighter and clears it
-  /// at 5.49:1 on [plateSurface] and 7.02:1 on [plateWell].
+  /// The plate's secondary ink: the tertiary ink flattened on the ground,
+  /// 6.6:1 on [plateSurface] and 7.3:1 on [plateWell].
   static const Color plateDimInk = DesignTokens.colorPlateDimInk;
 
-  /// Fill behind a selected segment/chip in light mode.
-  ///
-  /// Deliberately further from `surfaceLight` than the container tokens: a
-  /// selected state has to be visible at a glance, and 1.03:1 was not.
+  /// Fill behind a selected segment/chip in light mode: the edge line
+  /// flattened on paper, far enough from it (1.23:1) to read at a glance.
   static const Color selectedContainerLight =
       DesignTokensLight.colorSecondaryContainer;
 
   // === TEXT COLORS - DARK ===
+  //
+  // The room's inks are white at 72 and 60%; the scheme carries them flattened
+  // on the ground so that a contrast can be measured against any surface.
   static const Color onSurfaceDark = DesignTokensDark.colorOnSurface;
   static const Color onSurfaceVariantDark =
-      DesignTokensDark.colorOnSurfaceVariant; // brighter secondary
+      DesignTokensDark.colorOnSurfaceVariant; // secondary ink
   static const Color onSurfaceDimDark =
-      DesignTokensDark.colorDimText; // dimmer tertiary
+      DesignTokensDark.colorDimText; // tertiary ink
 
   // === TEXT COLORS - LIGHT ===
   //
   // Spaced against the **worst paper surface the theme actually paints text
-  // on**, not against the scaffold. That distinction is the whole correction
-  // here: the previous pair (`#5A6273` / `#656C7B`) was measured on
-  // `surfaceLight` alone, where they read 5.56:1 and 4.79:1 and looked safe —
-  // but `surfaceContainerHighest` (#E2E4EA) is the chip fill and the input
-  // fill, both of which carry `onSurfaceVariant` as their label, and there the
-  // dim tone measured **4.15:1**, below AA, on every chip and every text field
-  // placeholder in light mode. A contrast token verified on one ground is a
-  // token that is wrong on the others.
-  //
-  // The replacements clear AA on all four light surfaces — paper, white, high
-  // and highest — with room to spare: onVariant 6.87 / 7.56 / 6.70 / 5.94, and
-  // dim 5.49 / 6.04 / 5.35 / 4.75. The two-step hierarchy between them is
-  // preserved, and both stay neutral grays so nothing reads as tinted.
-  static const Color onSurfaceLight =
-      DesignTokensLight.colorOnSurface; // gray-900
+  // on**, not against the scaffold: the chip and input fill
+  // (`surfaceContainerHighest`) carries `onSurfaceVariant` as its label. On it
+  // the secondary ink measures 5.9:1 and the tertiary 4.9:1.
+  static const Color onSurfaceLight = DesignTokensLight.colorOnSurface;
   static const Color onSurfaceVariantLight =
-      DesignTokensLight.colorOnSurfaceVariant; // 5.94:1 worst
+      DesignTokensLight.colorOnSurfaceVariant; // 5.9:1 worst
   static const Color onSurfaceDimLight =
-      DesignTokensLight.colorDimText; // 4.75:1 worst
+      DesignTokensLight.colorDimText; // 4.9:1 worst
 
   // === OUTLINE / BORDER ===
   static const Color outlineDark = DesignTokensDark.colorOutline;
@@ -294,47 +258,281 @@ class AppColors {
       DesignTokensLight.colorOutlineVariant;
 
   // === SEMANTIC COLORS ===
-  static const Color success = DesignTokens.colorStatusSuccess; // green-500
+  //
+  // The dark room's tone bytes. The day room has its own set (see
+  // [CupolaRoom.toneGreen] and its siblings); `statusToneFill` and
+  // `statusToneColor` pick the one for the theme they are handed, and nothing
+  // paints these raw.
+  static const Color success = DesignTokens.colorStatusSuccess;
   static const Color successContainer =
-      DesignTokens.colorStatusSuccessContainer; // green-800
-  /// The fault tone — yellow-400, and deliberately not amber-500.
-  ///
-  /// It used to be `#F59E0B`, which is the **same byte** as [radarr]. A fault
-  /// chip and a service accent that cannot be told apart is not a near miss:
-  /// the whole tone rule rests on amber meaning "something is wrong", and on a
-  /// Radarr surface every accent-coloured thing on the page was already wearing
-  /// the alarm colour. Moving it is the cheapest way to make the rule true.
-  ///
-  /// Measured in CIE Lab the new value clears ΔE 18.1 from [sabnzbd] gold — the
-  /// nearest accent in the palette — and 25.7 from [radarr]; nothing else is
-  /// under 40. It stays a warmer yellow than any of them, so the *word* amber
-  /// in the tone vocabulary still describes what the eye sees.
-  static const Color warning = DesignTokens.colorStatusWarning; // yellow-400
-  static const Color error = DesignTokens.colorStatusError; // red-500
-  static const Color errorContainer =
-      DesignTokens.colorStatusErrorContainer; // red-800
-  static const Color info = DesignTokens.colorStatusInfo; // blue-500
+      DesignTokens.colorStatusSuccessContainer;
 
-  /// The ink a *bright* fill takes, when white loses the measurement.
+  /// The fault tone — a yellow amber, and deliberately not Radarr's amber-500.
   ///
-  /// gray-900, the same value [ServiceTheme.foregroundOn] returns. It is a
-  /// constant here rather than a call so `theme.dart` stays a leaf — importing
+  /// The tone rule rests on amber meaning "something is wrong", so a fault chip
+  /// and a service accent that cannot be told apart would break it on every
+  /// Radarr surface. Measured in CIE Lab this value sits ΔE2000 11.6 (12° of
+  /// LCh hue) from [radarr] and 7.4 from [sabnzbd] — near enough that the
+  /// accents left the interface altogether: nothing but a fault is amber.
+  static const Color warning = DesignTokens.colorStatusWarning;
+  static const Color error = DesignTokens.colorStatusError;
+  static const Color errorContainer = DesignTokens.colorStatusErrorContainer;
+  static const Color info = DesignTokens.colorStatusInfo;
+
+  /// The neutral lamp: the light of a room with no artwork, and of a title
+  /// whose artwork has too little colour to light anything. Never a service's
+  /// colour.
+  static const Color lamp = DesignTokens.colorTitleLightFallback;
+
+  /// The ink a *bright* fill takes, when white loses the measurement: the
+  /// room's on-ink, the label of the ink button.
+  ///
+  /// The same value [ServiceTheme.foregroundOn] returns. It is a constant here
+  /// rather than a call so `theme.dart` stays a leaf — importing
   /// `service_theme.dart` would pull a feature file into the palette — and
   /// `theme_test.dart` re-measures every use of it against `foregroundOn`, so
   /// the constant cannot quietly become the wrong answer.
-  ///
-  /// The three schemes entries it replaces all assumed white and all lost:
-  /// on the error red white is 3.76:1 against this ink's 4.71:1, on the success
-  /// green 2.28 against 7.79, and on `primaryLight` 2.98 against 5.95. Those
-  /// values are what every filled button, badge and checkbox paints its label
-  /// in — `filledButtonTheme` reads `colorScheme.onPrimary`, and the rest read
-  /// their own pair — so three of the app's filled controls were below AA
-  /// everywhere they appeared.
-  ///
-  /// `onPrimary` is deliberately still white: on brand indigo white measures
-  /// 4.47:1 and this ink 3.97:1, so white wins and the brand keeps its
-  /// familiar reversed-out label.
   static const Color inkOnBright = DesignTokens.colorInkOnBright;
+}
+
+/// The room's own vocabulary, for the theme in use: its steps, lines, fills,
+/// inks and the five tones as the room draws them.
+///
+/// The colour scheme carries the opaque steps and the inks flattened on the
+/// ground, which is what the contrast machinery measures. This carries the
+/// room as drawn — translucent lines, fills and inks that sit on whatever step
+/// they land on — for the surfaces built on it.
+@immutable
+class CupolaRoom extends ThemeExtension<CupolaRoom> {
+  const CupolaRoom({
+    required this.ground,
+    required this.slab,
+    required this.raised,
+    required this.door,
+    required this.enamel,
+    required this.menu,
+    required this.toast,
+    required this.scrim,
+    required this.hair,
+    required this.edge,
+    required this.focus,
+    required this.fillQuiet,
+    required this.fillControl,
+    required this.fillStrong,
+    required this.fillTrack,
+    required this.ink,
+    required this.inkSecondary,
+    required this.inkTertiary,
+    required this.inkDisabled,
+    required this.onInk,
+    required this.toneGreen,
+    required this.toneGreenDot,
+    required this.toneAmber,
+    required this.toneAmberInk,
+    required this.toneAmberFill,
+    required this.toneAmberWash,
+    required this.toneRed,
+    required this.toneRedDot,
+    required this.toneBlue,
+    required this.toneNeutral,
+    required this.lamp,
+  });
+
+  /// The floor.
+  final Color ground;
+
+  /// A section, a card, grouped rows.
+  final Color slab;
+
+  /// Sheets and dialogs.
+  final Color raised;
+
+  /// Doors and tiles.
+  final Color door;
+
+  /// Floating bars, at [DesignTokensDark.opacityGlassSurface]: lit enamel,
+  /// never a live blur.
+  final Color enamel;
+
+  /// Popover menus.
+  final Color menu;
+
+  /// A toast.
+  final Color toast;
+
+  /// Behind sheets and dialogs.
+  final Color scrim;
+
+  /// A slab's edge, a divider.
+  final Color hair;
+
+  /// A control's edge.
+  final Color edge;
+
+  /// The focus ring.
+  final Color focus;
+
+  final Color fillQuiet;
+  final Color fillControl;
+  final Color fillStrong;
+  final Color fillTrack;
+
+  /// Primary text and the ink button.
+  final Color ink;
+  final Color inkSecondary;
+  final Color inkTertiary;
+  final Color inkDisabled;
+
+  /// Text on the ink button.
+  final Color onInk;
+
+  final Color toneGreen;
+  final Color toneGreenDot;
+  final Color toneAmber;
+  final Color toneAmberInk;
+  final Color toneAmberFill;
+  final Color toneAmberWash;
+  final Color toneRed;
+  final Color toneRedDot;
+  final Color toneBlue;
+  final Color toneNeutral;
+
+  /// The neutral lamp.
+  final Color lamp;
+
+  static const CupolaRoom dark = CupolaRoom(
+    ground: DesignTokensDark.colorRoomGround,
+    slab: DesignTokensDark.colorRoomSlab,
+    raised: DesignTokensDark.colorRoomRaised,
+    door: DesignTokensDark.colorRoomDoor,
+    enamel: DesignTokensDark.colorRoomEnamel,
+    menu: DesignTokensDark.colorRoomMenu,
+    toast: DesignTokensDark.colorRoomToast,
+    scrim: DesignTokensDark.colorRoomScrim,
+    hair: DesignTokensDark.colorLineHair,
+    edge: DesignTokensDark.colorLineEdge,
+    focus: DesignTokensDark.colorLineFocus,
+    fillQuiet: DesignTokensDark.colorFillQuiet,
+    fillControl: DesignTokensDark.colorFillControl,
+    fillStrong: DesignTokensDark.colorFillStrong,
+    fillTrack: DesignTokensDark.colorFillTrack,
+    ink: DesignTokensDark.colorInkPrimary,
+    inkSecondary: DesignTokensDark.colorInkSecondary,
+    inkTertiary: DesignTokensDark.colorInkTertiary,
+    inkDisabled: DesignTokensDark.colorInkDisabled,
+    onInk: DesignTokensDark.colorInkOnInk,
+    toneGreen: DesignTokensDark.colorToneGreen,
+    toneGreenDot: DesignTokensDark.colorToneGreenDot,
+    toneAmber: DesignTokensDark.colorToneAmber,
+    toneAmberInk: DesignTokensDark.colorToneAmberInk,
+    toneAmberFill: DesignTokensDark.colorToneAmberFill,
+    toneAmberWash: DesignTokensDark.colorToneAmberWash,
+    toneRed: DesignTokensDark.colorToneRed,
+    toneRedDot: DesignTokensDark.colorToneRedDot,
+    toneBlue: DesignTokensDark.colorToneBlue,
+    toneNeutral: DesignTokensDark.colorToneNeutral,
+    lamp: DesignTokens.colorTitleLightFallback,
+  );
+
+  static const CupolaRoom light = CupolaRoom(
+    ground: DesignTokensLight.colorRoomGround,
+    slab: DesignTokensLight.colorRoomSlab,
+    raised: DesignTokensLight.colorRoomRaised,
+    door: DesignTokensLight.colorRoomDoor,
+    enamel: DesignTokensLight.colorRoomEnamel,
+    menu: DesignTokensLight.colorRoomMenu,
+    toast: DesignTokensLight.colorRoomToast,
+    scrim: DesignTokensLight.colorRoomScrim,
+    hair: DesignTokensLight.colorLineHair,
+    edge: DesignTokensLight.colorLineEdge,
+    focus: DesignTokensLight.colorLineFocus,
+    fillQuiet: DesignTokensLight.colorFillQuiet,
+    fillControl: DesignTokensLight.colorFillControl,
+    fillStrong: DesignTokensLight.colorFillStrong,
+    fillTrack: DesignTokensLight.colorFillTrack,
+    ink: DesignTokensLight.colorInkPrimary,
+    inkSecondary: DesignTokensLight.colorInkSecondary,
+    inkTertiary: DesignTokensLight.colorInkTertiary,
+    inkDisabled: DesignTokensLight.colorInkDisabled,
+    onInk: DesignTokensLight.colorInkOnInk,
+    toneGreen: DesignTokensLight.colorToneGreen,
+    toneGreenDot: DesignTokensLight.colorToneGreenDot,
+    toneAmber: DesignTokensLight.colorToneAmber,
+    toneAmberInk: DesignTokensLight.colorToneAmberInk,
+    toneAmberFill: DesignTokensLight.colorToneAmberFill,
+    toneAmberWash: DesignTokensLight.colorToneAmberWash,
+    toneRed: DesignTokensLight.colorToneRed,
+    toneRedDot: DesignTokensLight.colorToneRedDot,
+    toneBlue: DesignTokensLight.colorToneBlue,
+    toneNeutral: DesignTokensLight.colorToneNeutral,
+    lamp: DesignTokens.colorTitleLightFallback,
+  );
+
+  /// The room for [brightness], for code that holds a scheme but no context.
+  static CupolaRoom forBrightness(Brightness brightness) =>
+      brightness == Brightness.dark ? dark : light;
+
+  /// The room of [context]'s theme, falling back to the one for its brightness
+  /// in a widget test that pumps a bare `MaterialApp`.
+  static CupolaRoom of(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.extension<CupolaRoom>() ?? forBrightness(theme.brightness);
+  }
+
+  List<Color> get _colors => [
+    ground, slab, raised, door, enamel, menu, toast, scrim, hair, edge, //
+    focus, fillQuiet, fillControl, fillStrong, fillTrack, ink, inkSecondary,
+    inkTertiary, inkDisabled, onInk, toneGreen, toneGreenDot, toneAmber,
+    toneAmberInk, toneAmberFill, toneAmberWash, toneRed, toneRedDot, toneBlue,
+    toneNeutral, lamp,
+  ];
+
+  factory CupolaRoom._fromList(List<Color> c) => CupolaRoom(
+    ground: c[0],
+    slab: c[1],
+    raised: c[2],
+    door: c[3],
+    enamel: c[4],
+    menu: c[5],
+    toast: c[6],
+    scrim: c[7],
+    hair: c[8],
+    edge: c[9],
+    focus: c[10],
+    fillQuiet: c[11],
+    fillControl: c[12],
+    fillStrong: c[13],
+    fillTrack: c[14],
+    ink: c[15],
+    inkSecondary: c[16],
+    inkTertiary: c[17],
+    inkDisabled: c[18],
+    onInk: c[19],
+    toneGreen: c[20],
+    toneGreenDot: c[21],
+    toneAmber: c[22],
+    toneAmberInk: c[23],
+    toneAmberFill: c[24],
+    toneAmberWash: c[25],
+    toneRed: c[26],
+    toneRedDot: c[27],
+    toneBlue: c[28],
+    toneNeutral: c[29],
+    lamp: c[30],
+  );
+
+  @override
+  CupolaRoom copyWith() => this;
+
+  @override
+  CupolaRoom lerp(covariant ThemeExtension<CupolaRoom>? other, double t) {
+    if (other is! CupolaRoom) return this;
+    final from = _colors;
+    final to = other._colors;
+    return CupolaRoom._fromList([
+      for (var i = 0; i < from.length; i++) Color.lerp(from[i], to[i], t)!,
+    ]);
+  }
 }
 
 @immutable
@@ -346,20 +544,14 @@ class CupolaThemeColors extends ThemeExtension<CupolaThemeColors> {
   /// step below [ColorScheme.onSurfaceVariant].
   final Color dimText;
 
-  /// Translucent surface used by backdrop-blurred (glass) elements.
+  /// The floating bars' lit enamel: translucent, and never blurred live.
   final Color glassSurface;
-
-  /// Brand gradient endpoints (indigo → violet) for accents and marks.
-  final Color brandGradientStart;
-  final Color brandGradientEnd;
 
   const CupolaThemeColors({
     required this.statusBadgeBackground,
     required this.statusBadgeForeground,
     required this.dimText,
     required this.glassSurface,
-    required this.brandGradientStart,
-    required this.brandGradientEnd,
   });
 
   /// The bundle for [context]'s theme, falling back to [defaults] when the
@@ -393,13 +585,15 @@ class CupolaThemeColors extends ThemeExtension<CupolaThemeColors> {
       dimText: isDark
           ? AppColors.onSurfaceDimDark
           : AppColors.onSurfaceDimLight,
-      glassSurface: colorScheme.surfaceContainer.withValues(
-        alpha: isDark
-            ? DesignTokensDark.opacityGlassSurface
-            : DesignTokensLight.opacityGlassSurface,
-      ),
-      brandGradientStart: AppColors.seerr,
-      brandGradientEnd: AppColors.sonarr,
+      // Lit enamel: the bar's own step at the glass opacity, a tint over what
+      // scrolls beneath and never a backdrop blur.
+      glassSurface: isDark
+          ? DesignTokensDark.colorRoomEnamel.withValues(
+              alpha: DesignTokensDark.opacityGlassSurface,
+            )
+          : DesignTokensLight.colorRoomEnamel.withValues(
+              alpha: DesignTokensLight.opacityGlassSurface,
+            ),
     );
   }
 
@@ -409,8 +603,6 @@ class CupolaThemeColors extends ThemeExtension<CupolaThemeColors> {
     Color? statusBadgeForeground,
     Color? dimText,
     Color? glassSurface,
-    Color? brandGradientStart,
-    Color? brandGradientEnd,
   }) {
     return CupolaThemeColors(
       statusBadgeBackground:
@@ -419,8 +611,6 @@ class CupolaThemeColors extends ThemeExtension<CupolaThemeColors> {
           statusBadgeForeground ?? this.statusBadgeForeground,
       dimText: dimText ?? this.dimText,
       glassSurface: glassSurface ?? this.glassSurface,
-      brandGradientStart: brandGradientStart ?? this.brandGradientStart,
-      brandGradientEnd: brandGradientEnd ?? this.brandGradientEnd,
     );
   }
 
@@ -443,196 +633,389 @@ class CupolaThemeColors extends ThemeExtension<CupolaThemeColors> {
       dimText: Color.lerp(dimText, other.dimText, t) ?? dimText,
       glassSurface:
           Color.lerp(glassSurface, other.glassSurface, t) ?? glassSurface,
-      brandGradientStart:
-          Color.lerp(brandGradientStart, other.brandGradientStart, t) ??
-          brandGradientStart,
-      brandGradientEnd:
-          Color.lerp(brandGradientEnd, other.brandGradientEnd, t) ??
-          brandGradientEnd,
     );
   }
+}
+
+/// The type roles as styles, for surfaces built on the room's own vocabulary.
+///
+/// The Material slots of the text theme each stand for one of these (see
+/// `design/tokens/core.json`, `type.display` onwards); these are the roles
+/// themselves, including the ones no slot carries: the figures and the media
+/// title. No colour: a role inherits the ink of the text it sets.
+abstract final class AppType {
+  /// Tab-root titles: Bricolage 36/36, 600, 92% wide.
+  static final TextStyle screen = _type(
+    DesignTokens.typeRoleScreenFontFamily,
+    DesignTokens.typeRoleScreenFontFamilyFallback,
+    DesignTokens.typeRoleScreenFontSize,
+    DesignTokens.typeRoleScreenLineHeight,
+    DesignTokens.typeRoleScreenFontWeight,
+    DesignTokens.typeRoleScreenWght,
+    DesignTokens.typeRoleScreenFontWidth,
+    DesignTokens.typeRoleScreenLetterSpacing,
+  );
+
+  /// A title on its Media page: Bricolage 42/41, 600, 90% wide.
+  static final TextStyle media = _type(
+    DesignTokens.typeRoleMediaFontFamily,
+    DesignTokens.typeRoleMediaFontFamilyFallback,
+    DesignTokens.typeRoleMediaFontSize,
+    DesignTokens.typeRoleMediaLineHeight,
+    DesignTokens.typeRoleMediaFontWeight,
+    DesignTokens.typeRoleMediaWght,
+    DesignTokens.typeRoleMediaFontWidth,
+    DesignTokens.typeRoleMediaLetterSpacing,
+  );
+
+  /// Pushed screen and service room titles: Bricolage 30/31.
+  static final TextStyle room = _type(
+    DesignTokens.typeRoleRoomFontFamily,
+    DesignTokens.typeRoleRoomFontFamilyFallback,
+    DesignTokens.typeRoleRoomFontSize,
+    DesignTokens.typeRoleRoomLineHeight,
+    DesignTokens.typeRoleRoomFontWeight,
+    DesignTokens.typeRoleRoomWght,
+    DesignTokens.typeRoleRoomFontWidth,
+    DesignTokens.typeRoleRoomLetterSpacing,
+  );
+
+  /// A featured title, a sheet title: Bricolage 26/27.
+  static final TextStyle feature = _type(
+    DesignTokens.typeRoleFeatureFontFamily,
+    DesignTokens.typeRoleFeatureFontFamilyFallback,
+    DesignTokens.typeRoleFeatureFontSize,
+    DesignTokens.typeRoleFeatureLineHeight,
+    DesignTokens.typeRoleFeatureFontWeight,
+    DesignTokens.typeRoleFeatureWght,
+    DesignTokens.typeRoleFeatureFontWidth,
+    DesignTokens.typeRoleFeatureLetterSpacing,
+  );
+
+  /// Section headings: Bricolage 21/24, 96% wide.
+  static final TextStyle section = _type(
+    DesignTokens.typeRoleSectionFontFamily,
+    DesignTokens.typeRoleSectionFontFamilyFallback,
+    DesignTokens.typeRoleSectionFontSize,
+    DesignTokens.typeRoleSectionLineHeight,
+    DesignTokens.typeRoleSectionFontWeight,
+    DesignTokens.typeRoleSectionWght,
+    DesignTokens.typeRoleSectionFontWidth,
+    DesignTokens.typeRoleSectionLetterSpacing,
+  );
+
+  /// One hero readout per room: Bricolage 44/44, 90% wide, tabular.
+  static final TextStyle figureHero = _type(
+    DesignTokens.typeRoleFigureHeroFontFamily,
+    DesignTokens.typeRoleFigureHeroFontFamilyFallback,
+    DesignTokens.typeRoleFigureHeroFontSize,
+    DesignTokens.typeRoleFigureHeroLineHeight,
+    DesignTokens.typeRoleFigureHeroFontWeight,
+    DesignTokens.typeRoleFigureHeroWght,
+    DesignTokens.typeRoleFigureHeroFontWidth,
+    DesignTokens.typeRoleFigureHeroLetterSpacing,
+    tabular: true,
+  );
+
+  /// KPI figures, big numbers: Bricolage 24/24, tabular.
+  static final TextStyle figure = _type(
+    DesignTokens.typeRoleFigureFontFamily,
+    DesignTokens.typeRoleFigureFontFamilyFallback,
+    DesignTokens.typeRoleFigureFontSize,
+    DesignTokens.typeRoleFigureLineHeight,
+    DesignTokens.typeRoleFigureFontWeight,
+    DesignTokens.typeRoleFigureWght,
+    DesignTokens.typeRoleFigureFontWidth,
+    DesignTokens.typeRoleFigureLetterSpacing,
+    tabular: true,
+  );
+
+  /// Times and figures in rows: Bricolage 20/20, tabular.
+  static final TextStyle figureSmall = _type(
+    DesignTokens.typeRoleFigureSFontFamily,
+    DesignTokens.typeRoleFigureSFontFamilyFallback,
+    DesignTokens.typeRoleFigureSFontSize,
+    DesignTokens.typeRoleFigureSLineHeight,
+    DesignTokens.typeRoleFigureSFontWeight,
+    DesignTokens.typeRoleFigureSWght,
+    DesignTokens.typeRoleFigureSFontWidth,
+    DesignTokens.typeRoleFigureSLetterSpacing,
+    tabular: true,
+  );
+
+  /// Paragraphs: Onest 15/22, 400.
+  static final TextStyle body = _type(
+    DesignTokens.typeRoleBodyFontFamily,
+    DesignTokens.typeRoleBodyFontFamilyFallback,
+    DesignTokens.typeRoleBodyFontSize,
+    DesignTokens.typeRoleBodyLineHeight,
+    DesignTokens.typeRoleBodyFontWeight,
+    DesignTokens.typeRoleBodyWght,
+    DesignTokens.typeRoleBodyFontWidth,
+    DesignTokens.typeRoleBodyLetterSpacing,
+  );
+
+  /// Row titles: Onest 15/20, 600.
+  static final TextStyle row = _type(
+    DesignTokens.typeRoleRowFontFamily,
+    DesignTokens.typeRoleRowFontFamilyFallback,
+    DesignTokens.typeRoleRowFontSize,
+    DesignTokens.typeRoleRowLineHeight,
+    DesignTokens.typeRoleRowFontWeight,
+    DesignTokens.typeRoleRowWght,
+    DesignTokens.typeRoleRowFontWidth,
+    DesignTokens.typeRoleRowLetterSpacing,
+  );
+
+  /// Primary buttons: Onest 16/20, 600.
+  static final TextStyle button = _type(
+    DesignTokens.typeRoleButtonFontFamily,
+    DesignTokens.typeRoleButtonFontFamilyFallback,
+    DesignTokens.typeRoleButtonFontSize,
+    DesignTokens.typeRoleButtonLineHeight,
+    DesignTokens.typeRoleButtonFontWeight,
+    DesignTokens.typeRoleButtonWght,
+    DesignTokens.typeRoleButtonFontWidth,
+    DesignTokens.typeRoleButtonLetterSpacing,
+  );
+
+  /// Small buttons, links, chips: Onest 14/18, 600.
+  static final TextStyle label = _type(
+    DesignTokens.typeRoleLabelFontFamily,
+    DesignTokens.typeRoleLabelFontFamilyFallback,
+    DesignTokens.typeRoleLabelFontSize,
+    DesignTokens.typeRoleLabelLineHeight,
+    DesignTokens.typeRoleLabelFontWeight,
+    DesignTokens.typeRoleLabelWght,
+    DesignTokens.typeRoleLabelFontWidth,
+    DesignTokens.typeRoleLabelLetterSpacing,
+  );
+
+  /// Secondary lines: Onest 13/18, 500.
+  static final TextStyle meta = _type(
+    DesignTokens.typeRoleMetaFontFamily,
+    DesignTokens.typeRoleMetaFontFamilyFallback,
+    DesignTokens.typeRoleMetaFontSize,
+    DesignTokens.typeRoleMetaLineHeight,
+    DesignTokens.typeRoleMetaFontWeight,
+    DesignTokens.typeRoleMetaWght,
+    DesignTokens.typeRoleMetaFontWidth,
+    DesignTokens.typeRoleMetaLetterSpacing,
+  );
+
+  /// Captions, badges: Onest 12/16, 500.
+  static final TextStyle caption = _type(
+    DesignTokens.typeRoleCaptionFontFamily,
+    DesignTokens.typeRoleCaptionFontFamilyFallback,
+    DesignTokens.typeRoleCaptionFontSize,
+    DesignTokens.typeRoleCaptionLineHeight,
+    DesignTokens.typeRoleCaptionFontWeight,
+    DesignTokens.typeRoleCaptionWght,
+    DesignTokens.typeRoleCaptionFontWidth,
+    DesignTokens.typeRoleCaptionLetterSpacing,
+  );
+
+  /// Tab labels, poster marks — the floor: Onest 11/14, 600.
+  static final TextStyle micro = _type(
+    DesignTokens.typeRoleMicroFontFamily,
+    DesignTokens.typeRoleMicroFontFamilyFallback,
+    DesignTokens.typeRoleMicroFontSize,
+    DesignTokens.typeRoleMicroLineHeight,
+    DesignTokens.typeRoleMicroFontWeight,
+    DesignTokens.typeRoleMicroWght,
+    DesignTokens.typeRoleMicroFontWidth,
+    DesignTokens.typeRoleMicroLetterSpacing,
+  );
+
+  /// Release names, paths, logs, the terminal: Geist Mono 13/18, 450.
+  static final TextStyle mono = _type(
+    DesignTokens.typeRoleMonoFontFamily,
+    DesignTokens.typeRoleMonoFontFamilyFallback,
+    DesignTokens.typeRoleMonoFontSize,
+    DesignTokens.typeRoleMonoLineHeight,
+    DesignTokens.typeRoleMonoFontWeight,
+    DesignTokens.typeRoleMonoWght,
+    DesignTokens.typeRoleMonoFontWidth,
+    DesignTokens.typeRoleMonoLetterSpacing,
+  );
+
+  static TextStyle _type(
+    String family,
+    List<String> fallback,
+    double size,
+    double height,
+    FontWeight weight,
+    double wght,
+    double width,
+    double letterSpacing, {
+    bool tabular = false,
+  }) => _role(
+    family: family,
+    fallback: fallback,
+    fontSize: size,
+    fontWeight: weight,
+    wght: wght,
+    width: width,
+    height: height,
+    letterSpacing: letterSpacing,
+    fontFeatures: tabular ? const [FontFeature.tabularFigures()] : null,
+  );
 }
 
 /// Material Design 3 Theme configuration for Cupola
 class AppTheme {
   AppTheme._();
 
-  /// Bundled app font family declared in pubspec.yaml.
+  /// The text family: every Material slot that is not display type.
   static const String fontFamily = DesignTokens.typeFamilySans;
 
-  /// Family for code, logs, hashes and anything read in columns.
+  /// The display family: titles, headings and figures.
+  static const String displayFontFamily = DesignTokens.typeFamilyDisplay;
+
+  /// Family for release names, paths, logs, hashes and anything read in
+  /// columns.
   ///
   /// **Not** the string `'monospace'`, which is the mistake this token exists to
   /// stop repeating. `'monospace'` is an Android family alias; CoreText has no
   /// family by that name, so on iOS and macOS Flutter finds nothing and falls
-  /// back to the proportional system face. That silently rendered Dockge's YAML
-  /// editor, its container logs, TrueNAS' JSON diagnostics and — worst — the
-  /// certificate fingerprint a user is asked to *compare by eye* in a
-  /// proportional font on two of the three targets, which is also a per-OS
-  /// divergence the brand explicitly forbids.
-  ///
-  /// Menlo leads because it is the mono face reliably present on both Apple
-  /// platforms; the fallbacks pick the job up everywhere else, ending at the
-  /// Android alias.
+  /// back to the proportional system face. Geist Mono is bundled, so it is the
+  /// same face on all five targets.
   static const String monoFontFamily = DesignTokens.typeFamilyMono;
 
-  /// Fallbacks for [monoFontFamily], in resolution order.
+  /// Fallbacks for [monoFontFamily], in resolution order: the platform mono
+  /// faces, which carry the glyphs Geist Mono lacks (⌘ and ⌥ among them).
   static const List<String> monoFontFamilyFallback =
       DesignTokens.typeFamilyMonoFallback;
 
   // === VARIABLE AXES ===
   //
-  // The bundled Inter.ttf is a variable font exposing `wght` (100–900) and
-  // `opsz` (14–32). Both are addressed explicitly: Flutter drives neither from
-  // a plain `TextStyle`.
+  // Bricolage Grotesque exposes `opsz` (12–96), `wdth` (75–100) and `wght`
+  // (200–800); Onest and Geist Mono expose `wght` (100–900). Flutter drives none
+  // of them from a plain `TextStyle`, and it does not apply an optical size by
+  // itself, so every role names each axis its face has.
 
-  /// Lower bound of Inter's optical-size axis — the text-reading drawing.
-  static const double _opticalSizeMin = 14;
+  /// Lower bound of Bricolage's optical-size axis — the text drawing.
+  static const double _opticalSizeMin = 12;
 
-  /// Upper bound of Inter's optical-size axis — the display drawing.
-  static const double _opticalSizeMax = 32;
+  /// Upper bound of Bricolage's optical-size axis — the poster drawing.
+  static const double _opticalSizeMax = 96;
 
-  /// The optical size Inter should be *drawn* at for text rendered at [fontSize].
+  /// The optical size display type should be *drawn* at for text rendered at
+  /// [fontSize]: the size itself, within the axis.
   ///
-  /// Inter's `opsz` axis is not a size, it is a drawing: at 14 the letterforms
-  /// are opened up and lightly contrasted for small text, at 32 they tighten and
-  /// gain contrast for headlines. The app bundles the axis and, until now, spent
-  /// every string on the 14pt drawing — so a 57pt title was set in a face
-  /// designed to survive being 14pt. Tracking the authored size is the whole
-  /// point of the axis.
+  /// The axis is a drawing, not a size: small sizes open their counters and
+  /// loosen, large ones tighten and gain contrast. Tracking the authored size
+  /// is the whole point of it.
   static double opticalSize(double fontSize) =>
       fontSize.clamp(_opticalSizeMin, _opticalSizeMax);
 
-  /// The `wght` + `opsz` pair for Inter at a given weight and size.
-  static List<FontVariation> interVariations(
-    FontWeight weight,
-    double fontSize,
-  ) => <FontVariation>[
-    FontVariation('wght', weight.value.toDouble()),
-    FontVariation('opsz', opticalSize(fontSize)),
+  /// The axes a role sets on [family]: `wght` on every face, and on the display
+  /// face its width and an optical size equal to [fontSize].
+  static List<FontVariation> variations(
+    String family, {
+    required double wght,
+    double width = 100,
+    required double fontSize,
+  }) => <FontVariation>[
+    FontVariation('wght', wght),
+    if (family == displayFontFamily) ...[
+      FontVariation('wdth', width),
+      FontVariation('opsz', opticalSize(fontSize)),
+    ],
   ];
-
-  // === TRACKING ===
-
-  /// Inter's own tracking, in logical pixels, for text at [fontSize].
-  ///
-  /// The ramp used to carry Material's Baseline tracking table — `+0.5` on
-  /// `bodyLarge`, `+0.25` on `bodyMedium`, `+0.5` on the labels. Those values
-  /// are specified for Roboto, a narrower face with tighter default fit; on
-  /// Inter they read spacey, and the display end of the same ramp had already
-  /// been hand-tuned negative, so the ladder was half-designed and half
-  /// inherited.
-  ///
-  /// This is instead Inter's published dynamic-metrics curve — tracking in em as
-  /// `-0.0223 + 0.185·e^(-0.1745·size)` — which lands near zero at reading sizes
-  /// and around -0.022em at display sizes. It replaces fifteen literals with the
-  /// curve they were approximating.
-  ///
-  /// [brightness] adds a hair of positive tracking on the dark theme only.
-  /// Light-on-dark type blooms optically and its counters close up; the standard
-  /// compensation is a little more air, tapering away by the headline sizes where
-  /// the effect stops mattering. Both themes still end up tighter than the
-  /// Roboto values they replace, so nothing gets wider than it was.
-  static double interTracking(double fontSize, Brightness brightness) {
-    final double em =
-        -0.0223 +
-        0.185 * math.exp(-0.1745 * fontSize) +
-        (brightness == Brightness.dark ? _darkTrackingDelta(fontSize) : 0);
-    return em * fontSize;
-  }
-
-  /// Dark-theme optical compensation, in em: +0.006 up to 16pt, gone by 24pt.
-  static double _darkTrackingDelta(double fontSize) {
-    const double maxDelta = 0.006;
-    final double taper = ((24 - fontSize) / 8).clamp(0.0, 1.0);
-    return maxDelta * taper;
-  }
 
   /// Standardised "eyebrow" / overline style: small, uppercase-tracked label
   /// used above section titles and on onboarding steps. Pair with
   /// `Text(label.toUpperCase(), style: AppTheme.eyebrow(...))`.
   ///
-  /// The one style whose tracking is authored rather than derived: it is meant
-  /// to be a distinct voice, and +1.4 is what uppercasing at 11pt needs to stop
-  /// reading as a cramped acronym. Kept off [interTracking] deliberately.
-  static TextStyle eyebrow(Color color) => _inter(
+  /// The one style whose tracking is authored for uppercase: +1.4 is what
+  /// uppercasing at 11pt needs to stop reading as a cramped acronym.
+  static TextStyle eyebrow(Color color) => _role(
     color: color,
+    family: DesignTokens.typeLabelEyebrowFontFamily,
+    fallback: DesignTokens.typeLabelEyebrowFontFamilyFallback,
     fontSize: DesignTokens.typeLabelEyebrowFontSize,
     fontWeight: DesignTokens.typeLabelEyebrowFontWeight,
+    wght: DesignTokens.typeLabelEyebrowWght,
     height: DesignTokens.typeLabelEyebrowLineHeight,
     letterSpacing: DesignTokens.typeLabelEyebrowLetterSpacing,
-    brightness: Brightness.dark,
   );
 
-  /// The four roles DESIGN.md's Hierarchy names that the Material ramp has no
-  /// slot for.
+  /// The four roles the Material ramp has no slot for.
   ///
   /// They exist because the alternative is what the codebase actually had:
   /// thirty-nine bare `TextStyle(fontSize: …)` literals, mostly across the
   /// desktop shell. A bare `TextStyle` is not a smaller version of a ramp role,
-  /// it is a *different* style — it never reaches Inter's `wght` axis, so every
-  /// one of those weights rendered as Regular, and it never reaches
-  /// [interTracking], so its letter spacing is whatever the face ships with.
+  /// it is a *different* style — it never reaches the `wght` axis, so every
+  /// one of those weights rendered at the face's default instance.
   ///
-  /// Each takes a [brightness] because Inter's tracking is walked per theme:
-  /// the dark delta is why a dark surface traced from light tracking is wrong.
+  /// Each still takes a [Brightness], which the type no longer reads (tracking
+  /// is the same in both rooms); the parameter is kept so the call sites stand.
   ///
-  /// **Subtitle** (600, 20, -0.3 tracking) — a service's own name in its app
-  /// bar. One step under Title because it names the surface the app bar already
-  /// put you on, not the surface itself.
-  static TextStyle subtitle(Brightness brightness) => _inter(
-    fontSize: DesignTokens.typeTitleSubtitleFontSize,
-    fontWeight: DesignTokens.typeTitleSubtitleFontWeight,
-    height: DesignTokens.typeTitleSubtitleLineHeight,
-    letterSpacing: DesignTokens.typeTitleSubtitleLetterSpacing,
-    brightness: brightness,
+  /// **Subtitle** — a service's own name in its app bar: the section role.
+  static TextStyle subtitle(Brightness brightness) => _slot(
+    DesignTokens.typeTitleSubtitleFontFamily,
+    DesignTokens.typeTitleSubtitleFontFamilyFallback,
+    DesignTokens.typeTitleSubtitleFontSize,
+    DesignTokens.typeTitleSubtitleLineHeight,
+    DesignTokens.typeTitleSubtitleFontWeight,
+    DesignTokens.typeTitleSubtitleWght,
+    DesignTokens.typeTitleSubtitleFontWidth,
+    DesignTokens.typeTitleSubtitleLetterSpacing,
   );
 
-  /// **Panel header** (600, 18) — an `h2` inside a page: a Dockge stack, an NPM
-  /// host, a TrueNAS console section. It heads a region, not the whole screen.
-  static TextStyle panelHeader(Brightness brightness) => _inter(
-    fontSize: DesignTokens.typeTitlePanelHeaderFontSize,
-    fontWeight: DesignTokens.typeTitlePanelHeaderFontWeight,
-    height: DesignTokens.typeTitlePanelHeaderLineHeight,
-    brightness: brightness,
+  /// **Panel header** — an `h2` inside a page: a Dockge stack, an NPM host, a
+  /// TrueNAS console section. The section role.
+  static TextStyle panelHeader(Brightness brightness) => _slot(
+    DesignTokens.typeTitlePanelHeaderFontFamily,
+    DesignTokens.typeTitlePanelHeaderFontFamilyFallback,
+    DesignTokens.typeTitlePanelHeaderFontSize,
+    DesignTokens.typeTitlePanelHeaderLineHeight,
+    DesignTokens.typeTitlePanelHeaderFontWeight,
+    DesignTokens.typeTitlePanelHeaderWght,
+    DesignTokens.typeTitlePanelHeaderFontWidth,
+    DesignTokens.typeTitlePanelHeaderLetterSpacing,
   );
 
   /// **Row title** (600, 15) — the primary line of a list row that is a *name*
   /// rather than a sentence: a device, a now-playing session, a proxy host.
-  static TextStyle rowTitle(Brightness brightness) => _inter(
-    fontSize: DesignTokens.typeTitleRowTitleFontSize,
-    fontWeight: DesignTokens.typeTitleRowTitleFontWeight,
-    height: DesignTokens.typeTitleRowTitleLineHeight,
-    brightness: brightness,
+  static TextStyle rowTitle(Brightness brightness) => _slot(
+    DesignTokens.typeTitleRowTitleFontFamily,
+    DesignTokens.typeTitleRowTitleFontFamilyFallback,
+    DesignTokens.typeTitleRowTitleFontSize,
+    DesignTokens.typeTitleRowTitleLineHeight,
+    DesignTokens.typeTitleRowTitleFontWeight,
+    DesignTokens.typeTitleRowTitleWght,
+    DesignTokens.typeTitleRowTitleFontWidth,
+    DesignTokens.typeTitleRowTitleLetterSpacing,
   );
 
-  /// **Data** (500, 13, 1.30) — the answer in a row: the title of an attention
-  /// item, a queue entry, a table cell.
+  /// **Data** (500, 13) — the answer in a row: the title of an attention item,
+  /// a queue entry, a table cell. The meta role.
   ///
   /// It sits *above* Label on purpose. The thing that needs a human must never
   /// be smaller than the word describing it.
-  static TextStyle data(Brightness brightness) => _inter(
-    fontSize: DesignTokens.typeLabelDataFontSize,
-    fontWeight: DesignTokens.typeLabelDataFontWeight,
-    height: DesignTokens.typeLabelDataLineHeight,
-    brightness: brightness,
+  static TextStyle data(Brightness brightness) => _slot(
+    DesignTokens.typeLabelDataFontFamily,
+    DesignTokens.typeLabelDataFontFamilyFallback,
+    DesignTokens.typeLabelDataFontSize,
+    DesignTokens.typeLabelDataLineHeight,
+    DesignTokens.typeLabelDataFontWeight,
+    DesignTokens.typeLabelDataWght,
+    DesignTokens.typeLabelDataFontWidth,
+    DesignTokens.typeLabelDataLetterSpacing,
   );
 
-  /// The dense chrome styles the desktop shell needs, off the ramp and through
-  /// Inter's axes.
+  /// The dense chrome styles the desktop shell needs: the micro role, through
+  /// the axes.
   ///
-  /// Every one of these used to be a bare `TextStyle(fontSize: …)`, which is a
-  /// different thing from a smaller ramp role in two ways that both show. It
-  /// never reaches `fontVariations`, so the bundled variable Inter resolves the
-  /// requested weight against its single registered face and renders Regular —
-  /// the whole shell was asking for w500 and w700 and getting neither. And it
-  /// never reaches [interTracking], so its letter spacing is the face default
-  /// rather than the walked per-theme value.
+  /// Every one of these used to be a bare `TextStyle(fontSize: …)`, which never
+  /// reaches `fontVariations` and so renders the face's default instance
+  /// whatever weight it asks for.
   ///
-  /// [size] is clamped to 11, which is how DESIGN.md's floor stays *enforced*
-  /// rather than asserted: ten runs in the shell were at 9 and 10, including a
-  /// nav badge numeral on a badge that had already been grown from 15 to 18dp
-  /// specifically so it would not need one.
+  /// [size] is clamped to 11, which is how the floor stays *enforced* rather
+  /// than asserted. Tracking follows the role in em, so a larger [size] keeps
+  /// the role's proportion unless [letterSpacing] is given.
   static TextStyle chrome(
     BuildContext context, {
     double size = DesignTokens.typeLabelChromeFontSize,
@@ -640,31 +1023,59 @@ class AppTheme {
     Color? color,
     double? height,
     double? letterSpacing,
-  }) => _inter(
-    color: color,
-    fontSize: size < DesignTokens.typeLabelChromeFontSize
+  }) {
+    final fontSize = size < DesignTokens.typeLabelChromeFontSize
         ? DesignTokens.typeLabelChromeFontSize
-        : size,
+        : size;
+    return _role(
+      color: color,
+      family: DesignTokens.typeLabelChromeFontFamily,
+      fallback: DesignTokens.typeLabelChromeFontFamilyFallback,
+      fontSize: fontSize,
+      fontWeight: weight,
+      wght: weight.value.toDouble(),
+      height: height ?? DesignTokens.typeLabelChromeLineHeight,
+      letterSpacing:
+          letterSpacing ??
+          DesignTokens.typeLabelChromeLetterSpacing /
+              DesignTokens.typeLabelChromeFontSize *
+              fontSize,
+    );
+  }
+
+  static TextStyle _slot(
+    String family,
+    List<String> fallback,
+    double size,
+    double height,
+    FontWeight weight,
+    double wght,
+    double width,
+    double letterSpacing,
+  ) => _role(
+    family: family,
+    fallback: fallback,
+    fontSize: size,
     fontWeight: weight,
-    height: height ?? DesignTokens.typeLabelChromeLineHeight,
+    wght: wght,
+    width: width,
+    height: height,
     letterSpacing: letterSpacing,
-    brightness: Theme.of(context).brightness,
   );
 
   // === DARK THEME (Primary) ===
   //
-  // Both themes are deliberately fixed. Cupola's palette is part of its
-  // identity — per-service accents have to stay recognisable, and the
-  // experience is meant to be identical on every OS — so platform dynamic
-  // color (Material You) is not harmonised in. The previous signature took a
-  // `dynamicColorScheme` it silently ignored, which read as a wiring bug.
+  // Both themes are deliberately fixed, and the experience is meant to be
+  // identical on every OS, so platform dynamic color (Material You) is not
+  // harmonised in.
   static ThemeData darkTheme() {
     return _buildTheme(
       brightness: Brightness.dark,
       colorScheme: _darkColorScheme,
+      room: CupolaRoom.dark,
       navigationBarBackground: AppColors.surfaceContainerDark,
-      bottomSheetBackground: _darkColorScheme.surfaceContainer,
-      dialogBackground: _darkColorScheme.surfaceContainer,
+      bottomSheetBackground: _darkColorScheme.surfaceContainerHigh,
+      dialogBackground: _darkColorScheme.surfaceContainerHigh,
     );
   }
 
@@ -673,15 +1084,17 @@ class AppTheme {
     return _buildTheme(
       brightness: Brightness.light,
       colorScheme: _lightColorScheme,
+      room: CupolaRoom.light,
       navigationBarBackground: _lightColorScheme.surface,
-      bottomSheetBackground: _lightColorScheme.surface,
-      dialogBackground: _lightColorScheme.surface,
+      bottomSheetBackground: _lightColorScheme.surfaceContainer,
+      dialogBackground: _lightColorScheme.surfaceContainer,
     );
   }
 
   static ThemeData _buildTheme({
     required Brightness brightness,
     required ColorScheme colorScheme,
+    required CupolaRoom room,
     required Color navigationBarBackground,
     required Color bottomSheetBackground,
     required Color dialogBackground,
@@ -690,14 +1103,27 @@ class AppTheme {
       brightness == Brightness.dark
           ? ThemeData.dark().textTheme
           : ThemeData.light().textTheme,
-      brightness,
     );
     // Component text comes off the ramp rather than re-declaring sizes: the
-    // app-bar title *is* titleLarge at a heavier weight, a button label *is*
-    // labelLarge. Restating `fontSize: 22` here is how a component drifts out of
-    // the ladder it is supposed to belong to.
+    // app-bar title *is* titleLarge, a small button label *is* labelLarge.
+    // Restating a size here is how a component drifts out of the ladder it is
+    // supposed to belong to.
     final TextStyle labelLarge = textTheme.labelLarge!;
     final TextStyle labelMedium = textTheme.labelMedium!;
+    // A 44pt button's label is the row role's 15/600 (the button role is the
+    // 52pt primary's 16).
+    final TextStyle buttonLabel = rowTitle(brightness);
+
+    // Corners are continuous wherever a shape takes an `OutlinedBorder`.
+    RoundedSuperellipseBorder corners(double radius, {BorderSide? side}) =>
+        RoundedSuperellipseBorder(
+          borderRadius: BorderRadius.circular(radius),
+          side: side ?? BorderSide.none,
+        );
+
+    // The fault tone, as a field's refusal draws it: a field that answered
+    // and refused is a fault, amber — red is reserved for unreachable.
+    final Color fault = room.toneAmber;
 
     return ThemeData(
       useMaterial3: true,
@@ -708,6 +1134,7 @@ class AppTheme {
           brightness: brightness,
           colorScheme: colorScheme,
         ),
+        room,
       ],
       textTheme: textTheme,
       scaffoldBackgroundColor: colorScheme.surface,
@@ -718,9 +1145,9 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: textTheme.titleLarge!
-            .weight(FontWeight.w700)
-            .copyWith(color: colorScheme.onSurface),
+        titleTextStyle: textTheme.titleLarge!.copyWith(
+          color: colorScheme.onSurface,
+        ),
         iconTheme: IconThemeData(color: colorScheme.onSurface),
       ),
 
@@ -744,52 +1171,62 @@ class AppTheme {
         }),
       ),
 
-      // Card
+      // Card: a slab, with its hairline edge.
       cardTheme: CardThemeData(
         color: colorScheme.surfaceContainer,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
+        shape: corners(
+          AppRadius.slab,
+          side: BorderSide(color: colorScheme.outlineVariant),
+        ),
       ),
 
-      // Chip
+      // Chip: a pill at rest on the quiet fill with an edge; selected is the
+      // ink fill.
       chipTheme: ChipThemeData(
-        backgroundColor: colorScheme.surfaceContainerHighest,
-        labelStyle: labelMedium.copyWith(color: colorScheme.onSurfaceVariant),
-        side: BorderSide.none,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusSm),
+        backgroundColor: room.fillQuiet,
+        selectedColor: colorScheme.primary,
+        checkmarkColor: colorScheme.onPrimary,
+        labelStyle: labelLarge.copyWith(color: colorScheme.onSurface),
+        secondaryLabelStyle: labelLarge.copyWith(color: colorScheme.onPrimary),
+        side: BorderSide(color: room.edge),
+        shape: const StadiumBorder(),
       ),
 
       // Buttons keep standard density on every platform. The theme leaves
       // `visualDensity` to Flutter, which picks compact (-2, -2) on the
-      // desktop: that took 8 off every button's height and painted Material
-      // buttons 32pt tall there, under the 38pt floor for pointer-only
-      // controls. The rest of the desktop keeps its compact density.
+      // desktop: that took 8 off every button's height, and it silently
+      // cancels `minimumSize`. The 44pt minimum is the medium button's height
+      // and the touch floor.
       //
-      // FilledButton
+      // FilledButton: the ink button.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           visualDensity: VisualDensity.standard,
+          minimumSize: const Size(64, DesignTokens.sizeButtonM),
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
-          textStyle: labelLarge.weight(FontWeight.w600),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
+          textStyle: buttonLabel,
+          shape: corners(AppRadius.control),
           padding: const EdgeInsets.symmetric(
-            horizontal: DesignTokens.spaceXl,
+            horizontal: DesignTokens.spaceLg,
             vertical: DesignTokens.spaceMd,
           ),
         ),
       ),
 
-      // OutlinedButton
+      // OutlinedButton: the ghost button, on the control fill with an edge.
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           visualDensity: VisualDensity.standard,
-          foregroundColor: colorScheme.primary,
-          textStyle: labelLarge.weight(FontWeight.w600),
-          side: BorderSide(color: colorScheme.outline),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
+          minimumSize: const Size(64, DesignTokens.sizeButtonM),
+          foregroundColor: colorScheme.onSurface,
+          backgroundColor: room.fillControl,
+          textStyle: buttonLabel,
+          side: BorderSide(color: room.edge),
+          shape: corners(AppRadius.control),
           padding: const EdgeInsets.symmetric(
-            horizontal: DesignTokens.spaceXl,
+            horizontal: DesignTokens.spaceLg,
             vertical: DesignTokens.spaceMd,
           ),
         ),
@@ -799,9 +1236,19 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           visualDensity: VisualDensity.standard,
+          minimumSize: const Size(64, DesignTokens.sizeButtonM),
           foregroundColor: colorScheme.primary,
-          textStyle: labelLarge.weight(FontWeight.w600),
+          textStyle: labelLarge,
+          shape: corners(AppRadius.control),
         ),
+      ),
+
+      // FloatingActionButton: the ink button. A screen's one floating action is
+      // its primary, and the primary is ink — never a service's colour, which
+      // is what the four TrueNAS consoles used to fill theirs with.
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
       ),
 
       // IconButton: the same floor. Compact density shrank a bare icon button
@@ -810,30 +1257,56 @@ class AppTheme {
         style: ButtonStyle(visualDensity: VisualDensity.standard),
       ),
 
-      // Input Decoration
+      // SegmentedButton: the selected segment is the ink fill.
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          visualDensity: VisualDensity.standard,
+          textStyle: WidgetStatePropertyAll(labelLarge),
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? colorScheme.primary
+                : room.fillQuiet,
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? colorScheme.onPrimary
+                : colorScheme.onSurfaceVariant,
+          ),
+          iconColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? colorScheme.onPrimary
+                : colorScheme.onSurfaceVariant,
+          ),
+          side: WidgetStatePropertyAll(BorderSide(color: room.hair)),
+        ),
+      ),
+
+      // Input Decoration: a field on the quiet fill with an edge; focus is the
+      // secondary ink, a refusal is the fault tone.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: colorScheme.surfaceContainerHighest,
+        fillColor: room.fillQuiet,
         border: OutlineInputBorder(
-          borderRadius: AppRadius.borderRadiusMd,
-          borderSide: BorderSide.none,
+          borderRadius: AppRadius.borderRadiusField,
+          borderSide: BorderSide(color: room.edge),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: AppRadius.borderRadiusMd,
-          borderSide: BorderSide.none,
+          borderRadius: AppRadius.borderRadiusField,
+          borderSide: BorderSide(color: room.edge),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: AppRadius.borderRadiusMd,
-          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+          borderRadius: AppRadius.borderRadiusField,
+          borderSide: BorderSide(color: room.focus, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: AppRadius.borderRadiusMd,
-          borderSide: BorderSide(color: colorScheme.error),
+          borderRadius: AppRadius.borderRadiusField,
+          borderSide: BorderSide(color: fault, width: 1.5),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: AppRadius.borderRadiusMd,
-          borderSide: BorderSide(color: colorScheme.error, width: 2),
+          borderRadius: AppRadius.borderRadiusField,
+          borderSide: BorderSide(color: fault, width: 1.5),
         ),
+        errorStyle: textTheme.bodySmall!.copyWith(color: fault),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: DesignTokens.spaceLg,
           vertical: DesignTokens.spaceMd,
@@ -843,20 +1316,28 @@ class AppTheme {
         ),
       ),
 
-      // BottomSheet
+      // BottomSheet: raised, its top corners the sheet's.
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: bottomSheetBackground,
-        shape: const RoundedRectangleBorder(
+        modalBarrierColor: room.scrim,
+        shape: const RoundedSuperellipseBorder(
           borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppRadius.lg),
+            top: Radius.circular(AppRadius.sheet),
           ),
         ),
       ),
 
-      // Dialog
+      // Dialog: raised, a slab's corners, over the room's scrim.
       dialogTheme: DialogThemeData(
         backgroundColor: dialogBackground,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusLg),
+        barrierColor: room.scrim,
+        shape: corners(AppRadius.slab, side: BorderSide(color: room.edge)),
+      ),
+
+      // Popover menus sit on their own step.
+      popupMenuTheme: PopupMenuThemeData(
+        color: room.menu,
+        shape: corners(AppRadius.lg, side: BorderSide(color: room.edge)),
       ),
 
       // Divider
@@ -865,14 +1346,15 @@ class AppTheme {
         thickness: 1,
       ),
 
-      // SnackBar
+      // SnackBar: the toast.
       snackBarTheme: SnackBarThemeData(
         backgroundColor: colorScheme.inverseSurface,
         contentTextStyle: textTheme.bodyMedium!.copyWith(
           color: colorScheme.onInverseSurface,
         ),
+        actionTextColor: colorScheme.inversePrimary,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
+        shape: corners(AppRadius.button, side: BorderSide(color: room.edge)),
       ),
 
       // ListTile
@@ -880,26 +1362,36 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(
           horizontal: DesignTokens.spaceLg,
         ),
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.borderRadiusMd),
+        shape: corners(AppRadius.md),
       ),
 
-      // TabBar
+      // TabBar: the active tab in ink, the rest in the tertiary ink.
       tabBarTheme: TabBarThemeData(
         labelColor: colorScheme.primary,
-        unselectedLabelColor: colorScheme.onSurfaceVariant,
+        unselectedLabelColor: brightness == Brightness.dark
+            ? AppColors.onSurfaceDimDark
+            : AppColors.onSurfaceDimLight,
         indicatorColor: colorScheme.primary,
-        labelStyle: labelLarge.weight(FontWeight.w600),
+        labelStyle: labelLarge,
         unselectedLabelStyle: labelLarge,
       ),
 
-      // ProgressIndicator
+      // ProgressIndicator: the ink on the room's track. A tone that means
+      // something (a download's blue) is the caller's to pass.
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: colorScheme.primary,
+        linearTrackColor: room.fillTrack,
+        circularTrackColor: room.fillTrack,
       ),
     );
   }
 
   // === COLOR SCHEMES ===
+  //
+  // Monochrome: the interactive colour is the primary ink, in both rooms. The
+  // inks and lines the room draws translucent are carried here flattened on
+  // the ground, so a contrast can be measured against any surface; see
+  // [CupolaRoom] for the translucent originals.
 
   static final ColorScheme _darkColorScheme = ColorScheme(
     brightness: Brightness.dark,
@@ -908,7 +1400,7 @@ class AppTheme {
     onPrimary: DesignTokensDark.colorOnPrimary,
     primaryContainer: DesignTokensDark.colorPrimaryContainer,
     onPrimaryContainer: DesignTokensDark.colorOnPrimaryContainer,
-    // Secondary (same as primary for unified look)
+    // Secondary
     secondary: DesignTokensDark.colorSecondary,
     onSecondary: DesignTokensDark.colorOnSecondary,
     secondaryContainer: DesignTokensDark.colorSecondaryContainer,
@@ -946,38 +1438,15 @@ class AppTheme {
   static final ColorScheme _lightColorScheme = ColorScheme(
     brightness: Brightness.light,
     // Primary
-    //
-    // Indigo-600 on paper, not the indigo-500 the dark scheme uses, and this is
-    // the one place the brand shifts a byte between themes. The reason is that
-    // `primary` is overwhelmingly an **ink** here — every `TextButton` and
-    // `OutlinedButton` label, the selected navigation glyph, the recovery verb
-    // on a fault band, `StatusTone.primary`, and thirty-odd `color:
-    // colorScheme.primary` sites — and indigo-500 measures **4.06:1** on the
-    // `#F3F4F6` scaffold and 4.47:1 on white. Below AA on the ground it is most
-    // often drawn on, on the most-painted ink in the app after `onSurface`.
-    //
-    // Indigo-600 clears it everywhere on paper: 5.71:1 on the scaffold, 6.29:1
-    // on white, 4.95:1 on `surfaceContainerHighest`. As a *fill* it improves
-    // too — reversed-out white goes from 4.47:1 to 6.29:1 — so the filled
-    // controls follow without a second token. Dark keeps indigo-500, where it
-    // already measures comfortably.
-    //
-    // This is not the tone walk: `statusToneColor` deliberately refuses to walk
-    // the brand, because a walked indigo is a repainted brand. Choosing the
-    // adjacent step of the brand's own ramp per theme is the design's own
-    // answer instead.
     primary: DesignTokensLight.colorPrimary,
     onPrimary: DesignTokensLight.colorOnPrimary,
     primaryContainer: DesignTokensLight.colorPrimaryContainer,
     onPrimaryContainer: DesignTokensLight.colorOnPrimaryContainer,
     // Secondary
     //
-    // `secondaryContainer` is what Material paints behind a selected
-    // SegmentedButton segment. It used to be surfaceContainerHigh (#F0F1F5),
-    // which sits 1.03:1 from `surface` — the selected segment had no visible
-    // fill at all, and with onSurfaceVariant as its foreground it read as
-    // *less* prominent than the unselected ones. A distinctly tinted container
-    // plus full-strength text makes the selected state unmistakable.
+    // `secondaryContainer` is what Material paints behind a tonal button and a
+    // selected segment. It must stay visibly off paper (1.23:1 here), because
+    // a selected state that cannot be seen is not a state.
     secondary: DesignTokensLight.colorSecondary,
     onSecondary: DesignTokensLight.colorOnSecondary,
     secondaryContainer: DesignTokensLight.colorSecondaryContainer,
@@ -1008,9 +1477,8 @@ class AppTheme {
     //
     // Ink, not black. Every `AppElevation` level paints `scheme.shadow`, and on
     // paper a pure-black drop shadow reads as grime under a card rather than as
-    // depth — the light ladder is drawn as `rgba(17,24,39, …)` at all three
-    // levels. `AppElevation.glass()` is the deliberate exception and hardcodes
-    // its own black, so it is unaffected by this line.
+    // depth. `AppElevation.glass()` is the deliberate exception and paints its
+    // own black, so it is unaffected by this line.
     shadow: DesignTokensLight.colorShadow,
     scrim: DesignTokensLight.colorScrim,
     inverseSurface: DesignTokensLight.colorInverseSurface,
@@ -1020,126 +1488,170 @@ class AppTheme {
 
   // === TEXT THEME ===
 
-  /// The type ramp.
+  /// The type ramp: each Material slot set in the role it stands for.
   ///
-  /// Sizes and weights are unchanged; what is new is that the weights actually
-  /// render (see [CupolaTextStyle.weight]), that tracking comes from Inter's
-  /// own curve rather than Roboto's table ([interTracking]), and that line
-  /// height is a decision per role instead of the font file's default.
+  /// Display, headline and the large title are Bricolage Grotesque; every other
+  /// slot is Onest. The mapping is stated once, in `design/tokens/core.json`
+  /// (`type.display` onwards), and read here through the generated constants.
   ///
-  /// On that last point: every style in the app used to inherit Inter's own
-  /// 1.21 (ascender 1984 + descender 494 over a 2048 em), from the 57pt display
-  /// down to 12pt metadata. One ratio across a 5:1 size range cannot be right at
-  /// both ends — it is loose for a headline and cramped for a paragraph. So the
-  /// ladder now tightens as it climbs and opens as it falls:
-  ///
-  /// - **Display and headline** tighten toward the 1.10 floor. Large type needs
-  ///   less leading, not proportionally more. The floor is not taste: an
-  ///   accented capital reaches ~0.89em above its baseline and a descender
-  ///   ~0.21em below, so below 1.10 the acute on one line starts touching the
-  ///   `y` on the line above. Media titles arrive from TMDB in every language,
-  ///   so that case is real; 1.06 was tried and the collision is visible.
-  /// - **Body** opens to 1.45–1.55. This is where prose lives — overviews,
-  ///   descriptions, empty-state copy — and light-on-dark text at a wide measure
-  ///   wants the most air of anything here. `bodyLarge` is the widest measure and
-  ///   gets the most.
-  /// - **Labels stay at ~1.22**, near the old default, because labels are chrome:
-  ///   they sit in fixed-height pills, badges and cells where extra leading buys
-  ///   nothing and costs layout.
-  static TextTheme _buildTextTheme(TextTheme base, Brightness brightness) {
-    TextStyle style({
-      required double size,
-      required FontWeight weight,
-      required double height,
-    }) => _inter(
-      fontSize: size,
-      fontWeight: weight,
-      height: height,
-      brightness: brightness,
-    );
-
+  /// Line height is a decision per role, and it keeps the reasoning it had: the
+  /// display end is tight (1.0 on the screen role, where the display face's
+  /// ascenders are short enough to allow it), prose opens to 22 on 15, and
+  /// labels stay near 1.3 because they are chrome and sit in fixed-height pills
+  /// and cells where extra leading buys nothing.
+  static TextTheme _buildTextTheme(TextTheme base) {
     return base
         .apply(fontFamily: fontFamily)
         .copyWith(
-          // Display — editorial: heaviest weights, tightest leading.
-          displayLarge: style(
-            size: DesignTokens.typeDisplayLargeFontSize,
-            weight: DesignTokens.typeDisplayLargeFontWeight,
-            height: DesignTokens.typeDisplayLargeLineHeight,
+          displayLarge: _slot(
+            DesignTokens.typeDisplayLargeFontFamily,
+            DesignTokens.typeDisplayLargeFontFamilyFallback,
+            DesignTokens.typeDisplayLargeFontSize,
+            DesignTokens.typeDisplayLargeLineHeight,
+            DesignTokens.typeDisplayLargeFontWeight,
+            DesignTokens.typeDisplayLargeWght,
+            DesignTokens.typeDisplayLargeFontWidth,
+            DesignTokens.typeDisplayLargeLetterSpacing,
           ),
-          displayMedium: style(
-            size: DesignTokens.typeDisplayMediumFontSize,
-            weight: DesignTokens.typeDisplayMediumFontWeight,
-            height: DesignTokens.typeDisplayMediumLineHeight,
+          displayMedium: _slot(
+            DesignTokens.typeDisplayMediumFontFamily,
+            DesignTokens.typeDisplayMediumFontFamilyFallback,
+            DesignTokens.typeDisplayMediumFontSize,
+            DesignTokens.typeDisplayMediumLineHeight,
+            DesignTokens.typeDisplayMediumFontWeight,
+            DesignTokens.typeDisplayMediumWght,
+            DesignTokens.typeDisplayMediumFontWidth,
+            DesignTokens.typeDisplayMediumLetterSpacing,
           ),
-          displaySmall: style(
-            size: DesignTokens.typeDisplaySmallFontSize,
-            weight: DesignTokens.typeDisplaySmallFontWeight,
-            height: DesignTokens.typeDisplaySmallLineHeight,
+          displaySmall: _slot(
+            DesignTokens.typeDisplaySmallFontFamily,
+            DesignTokens.typeDisplaySmallFontFamilyFallback,
+            DesignTokens.typeDisplaySmallFontSize,
+            DesignTokens.typeDisplaySmallLineHeight,
+            DesignTokens.typeDisplaySmallFontWeight,
+            DesignTokens.typeDisplaySmallWght,
+            DesignTokens.typeDisplaySmallFontWidth,
+            DesignTokens.typeDisplaySmallLetterSpacing,
           ),
-          // Headline — screen-level headings.
-          headlineLarge: style(
-            size: DesignTokens.typeHeadlineLargeFontSize,
-            weight: DesignTokens.typeHeadlineLargeFontWeight,
-            height: DesignTokens.typeHeadlineLargeLineHeight,
+          headlineLarge: _slot(
+            DesignTokens.typeHeadlineLargeFontFamily,
+            DesignTokens.typeHeadlineLargeFontFamilyFallback,
+            DesignTokens.typeHeadlineLargeFontSize,
+            DesignTokens.typeHeadlineLargeLineHeight,
+            DesignTokens.typeHeadlineLargeFontWeight,
+            DesignTokens.typeHeadlineLargeWght,
+            DesignTokens.typeHeadlineLargeFontWidth,
+            DesignTokens.typeHeadlineLargeLetterSpacing,
           ),
-          headlineMedium: style(
-            size: DesignTokens.typeHeadlineMediumFontSize,
-            weight: DesignTokens.typeHeadlineMediumFontWeight,
-            height: DesignTokens.typeHeadlineMediumLineHeight,
+          headlineMedium: _slot(
+            DesignTokens.typeHeadlineMediumFontFamily,
+            DesignTokens.typeHeadlineMediumFontFamilyFallback,
+            DesignTokens.typeHeadlineMediumFontSize,
+            DesignTokens.typeHeadlineMediumLineHeight,
+            DesignTokens.typeHeadlineMediumFontWeight,
+            DesignTokens.typeHeadlineMediumWght,
+            DesignTokens.typeHeadlineMediumFontWidth,
+            DesignTokens.typeHeadlineMediumLetterSpacing,
           ),
-          headlineSmall: style(
-            size: DesignTokens.typeHeadlineSmallFontSize,
-            weight: DesignTokens.typeHeadlineSmallFontWeight,
-            height: DesignTokens.typeHeadlineSmallLineHeight,
+          headlineSmall: _slot(
+            DesignTokens.typeHeadlineSmallFontFamily,
+            DesignTokens.typeHeadlineSmallFontFamilyFallback,
+            DesignTokens.typeHeadlineSmallFontSize,
+            DesignTokens.typeHeadlineSmallLineHeight,
+            DesignTokens.typeHeadlineSmallFontWeight,
+            DesignTokens.typeHeadlineSmallWght,
+            DesignTokens.typeHeadlineSmallFontWidth,
+            DesignTokens.typeHeadlineSmallLetterSpacing,
           ),
-          // Title — section headers, card titles, row primaries, KPI values.
-          titleLarge: style(
-            size: DesignTokens.typeTitleLargeFontSize,
-            weight: DesignTokens.typeTitleLargeFontWeight,
-            height: DesignTokens.typeTitleLargeLineHeight,
+          titleLarge: _slot(
+            DesignTokens.typeTitleLargeFontFamily,
+            DesignTokens.typeTitleLargeFontFamilyFallback,
+            DesignTokens.typeTitleLargeFontSize,
+            DesignTokens.typeTitleLargeLineHeight,
+            DesignTokens.typeTitleLargeFontWeight,
+            DesignTokens.typeTitleLargeWght,
+            DesignTokens.typeTitleLargeFontWidth,
+            DesignTokens.typeTitleLargeLetterSpacing,
           ),
-          titleMedium: style(
-            size: DesignTokens.typeTitleMediumFontSize,
-            weight: DesignTokens.typeTitleMediumFontWeight,
-            height: DesignTokens.typeTitleMediumLineHeight,
+          titleMedium: _slot(
+            DesignTokens.typeTitleMediumFontFamily,
+            DesignTokens.typeTitleMediumFontFamilyFallback,
+            DesignTokens.typeTitleMediumFontSize,
+            DesignTokens.typeTitleMediumLineHeight,
+            DesignTokens.typeTitleMediumFontWeight,
+            DesignTokens.typeTitleMediumWght,
+            DesignTokens.typeTitleMediumFontWidth,
+            DesignTokens.typeTitleMediumLetterSpacing,
           ),
-          titleSmall: style(
-            size: DesignTokens.typeTitleSmallFontSize,
-            weight: DesignTokens.typeTitleSmallFontWeight,
-            height: DesignTokens.typeTitleSmallLineHeight,
+          titleSmall: _slot(
+            DesignTokens.typeTitleSmallFontFamily,
+            DesignTokens.typeTitleSmallFontFamilyFallback,
+            DesignTokens.typeTitleSmallFontSize,
+            DesignTokens.typeTitleSmallLineHeight,
+            DesignTokens.typeTitleSmallFontWeight,
+            DesignTokens.typeTitleSmallWght,
+            DesignTokens.typeTitleSmallFontWidth,
+            DesignTokens.typeTitleSmallLetterSpacing,
           ),
-          // Body — running text. The only roles set for reading, not for chrome.
-          bodyLarge: style(
-            size: DesignTokens.typeBodyLargeFontSize,
-            weight: DesignTokens.typeBodyLargeFontWeight,
-            height: DesignTokens.typeBodyLargeLineHeight,
+          bodyLarge: _slot(
+            DesignTokens.typeBodyLargeFontFamily,
+            DesignTokens.typeBodyLargeFontFamilyFallback,
+            DesignTokens.typeBodyLargeFontSize,
+            DesignTokens.typeBodyLargeLineHeight,
+            DesignTokens.typeBodyLargeFontWeight,
+            DesignTokens.typeBodyLargeWght,
+            DesignTokens.typeBodyLargeFontWidth,
+            DesignTokens.typeBodyLargeLetterSpacing,
           ),
-          bodyMedium: style(
-            size: DesignTokens.typeBodyMediumFontSize,
-            weight: DesignTokens.typeBodyMediumFontWeight,
-            height: DesignTokens.typeBodyMediumLineHeight,
+          bodyMedium: _slot(
+            DesignTokens.typeBodyMediumFontFamily,
+            DesignTokens.typeBodyMediumFontFamilyFallback,
+            DesignTokens.typeBodyMediumFontSize,
+            DesignTokens.typeBodyMediumLineHeight,
+            DesignTokens.typeBodyMediumFontWeight,
+            DesignTokens.typeBodyMediumWght,
+            DesignTokens.typeBodyMediumFontWidth,
+            DesignTokens.typeBodyMediumLetterSpacing,
           ),
-          bodySmall: style(
-            size: DesignTokens.typeBodySmallFontSize,
-            weight: DesignTokens.typeBodySmallFontWeight,
-            height: DesignTokens.typeBodySmallLineHeight,
+          bodySmall: _slot(
+            DesignTokens.typeBodySmallFontFamily,
+            DesignTokens.typeBodySmallFontFamilyFallback,
+            DesignTokens.typeBodySmallFontSize,
+            DesignTokens.typeBodySmallLineHeight,
+            DesignTokens.typeBodySmallFontWeight,
+            DesignTokens.typeBodySmallWght,
+            DesignTokens.typeBodySmallFontWidth,
+            DesignTokens.typeBodySmallLetterSpacing,
           ),
-          // Label — chips, badges, nav, dense metadata. Chrome: leading stays put.
-          labelLarge: style(
-            size: DesignTokens.typeLabelLargeFontSize,
-            weight: DesignTokens.typeLabelLargeFontWeight,
-            height: DesignTokens.typeLabelLargeLineHeight,
+          labelLarge: _slot(
+            DesignTokens.typeLabelLargeFontFamily,
+            DesignTokens.typeLabelLargeFontFamilyFallback,
+            DesignTokens.typeLabelLargeFontSize,
+            DesignTokens.typeLabelLargeLineHeight,
+            DesignTokens.typeLabelLargeFontWeight,
+            DesignTokens.typeLabelLargeWght,
+            DesignTokens.typeLabelLargeFontWidth,
+            DesignTokens.typeLabelLargeLetterSpacing,
           ),
-          labelMedium: style(
-            size: DesignTokens.typeLabelMediumFontSize,
-            weight: DesignTokens.typeLabelMediumFontWeight,
-            height: DesignTokens.typeLabelMediumLineHeight,
+          labelMedium: _slot(
+            DesignTokens.typeLabelMediumFontFamily,
+            DesignTokens.typeLabelMediumFontFamilyFallback,
+            DesignTokens.typeLabelMediumFontSize,
+            DesignTokens.typeLabelMediumLineHeight,
+            DesignTokens.typeLabelMediumFontWeight,
+            DesignTokens.typeLabelMediumWght,
+            DesignTokens.typeLabelMediumFontWidth,
+            DesignTokens.typeLabelMediumLetterSpacing,
           ),
-          labelSmall: style(
-            size: DesignTokens.typeLabelSmallFontSize,
-            weight: DesignTokens.typeLabelSmallFontWeight,
-            height: DesignTokens.typeLabelSmallLineHeight,
+          labelSmall: _slot(
+            DesignTokens.typeLabelSmallFontFamily,
+            DesignTokens.typeLabelSmallFontFamilyFallback,
+            DesignTokens.typeLabelSmallFontSize,
+            DesignTokens.typeLabelSmallLineHeight,
+            DesignTokens.typeLabelSmallFontWeight,
+            DesignTokens.typeLabelSmallWght,
+            DesignTokens.typeLabelSmallFontWidth,
+            DesignTokens.typeLabelSmallLetterSpacing,
           ),
         );
   }

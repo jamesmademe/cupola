@@ -69,8 +69,8 @@ class ServiceTabScaffold extends StatelessWidget {
             top: 0,
             left: 0,
             right: 0,
-            // Not glass: the header paints its own opaque, lit band (the
-            // Bounded Light Rule), so a frost behind it would be covered.
+            // Not glass: the header paints its own opaque band lit by the lamp,
+            // so a frost behind it would be covered.
             child: ServiceTabBar.header(
               service: service,
               current: tab,

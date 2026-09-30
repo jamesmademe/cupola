@@ -277,36 +277,38 @@ class StatusBadge extends StatelessWidget {
 ///
 /// Anything that colours by status calls this. Nothing re-derives it.
 ///
-/// The four semantic tones are *walked* against [surface] the same way a
-/// service accent is, because they have the same problem: the palette is one
-/// set of constants and the ground is not. Measured on `surface-light`, raw
-/// success is 2.07:1, warning 1.39:1, error 3.42:1 and info 3.34:1 — every one
-/// of them below AA, and the first two far enough below to be effectively
-/// invisible in daylight. The walk keeps the hue and moves only the lightness,
-/// so a failed transfer is still red, just a red that can be read.
+/// Each room has its own five tones — the dark room's bright ones, the day
+/// room's deep ones — and the tone is taken from the room [colorScheme]
+/// belongs to. It is then *walked* against [surface] the same way a service
+/// accent is, because a tone verified on one ground is not verified on the
+/// others: the day room's green measures 4.91:1 on paper but 4.45:1 on the
+/// chip fill, and less again on its own 16% wash. The walk keeps the hue and
+/// moves only the lightness, so a failed transfer is still red, just a red that
+/// can be read.
 ///
 /// Callers used to do this themselves where someone had noticed — the expanded
 /// service card carried the idiom and a comment explaining it. Sixteen other
 /// files did not, which is the whole argument for resolving it here: a contrast
 /// rule applied at some of the call sites is a rule that is wrong at the rest.
 ///
-/// **The dark theme does not move.** Against `colorScheme.surface` in dark
-/// (#0A0B11) the four tones measure 8.62, 12.83, 5.22 and 5.34:1, so the walk
-/// returns them untouched and every dark artboard still matches. Only paper
-/// changes, which is exactly what the canvas commissions.
+/// **The dark room does not move.** On its ground the four tones measure
+/// 12.2 (green), 12.0 (amber), 8.6 (red) and 10.1:1 (blue), and still 5.5:1 or
+/// more on the menu step under a 16% wash, so the walk returns them untouched.
+/// Only paper walks, and only where a ground or a wash takes a tone under the
+/// bar.
 ///
 /// [surface] is the ground the tone will be drawn on, defaulting to
 /// [ColorScheme.surface]. Pass the real one when the tone lands on an elevated
-/// container: in dark theme a raw error on `surfaceContainerHighest` measures
-/// 3.52:1, and only the caller knows it is there.
+/// container: on paper the day room's green measures 4.45:1 on
+/// `surfaceContainerHighest`, and only the caller knows it is there.
 ///
 /// [tintAlpha] is for the common badge shape where the tone is *both* the wash
 /// behind the label and the label itself — a score pill on its own colour at
 /// 16%, a filter chip on its own colour at 13%. The real ground there is the
 /// composite, not the surface, and measuring against the surface alone passes
-/// combinations that fail on screen: a positive score on paper measures about
-/// 1.95:1 against its own tint. Pair it with [statusToneFill], which keeps the
-/// raw byte for the wash.
+/// combinations that fail on screen: the day room's green on paper measures
+/// 4.91:1 bare and 3.94:1 on its own 16% wash. Pair it with [statusToneFill],
+/// which keeps the raw byte for the wash.
 ///
 /// One tone is deliberately not walked: [StatusTone.neutral] resolves to
 /// `onSurfaceVariant`, which is already a measured text token of the scheme and
@@ -316,12 +318,11 @@ class StatusBadge extends StatelessWidget {
 /// exempting it was that walking the brand would quietly repaint it — true of
 /// brand *chrome*, and not true here. This function does not colour buttons or
 /// marks; it colours a status word, and a status word owes the same legibility
-/// as every other status word beside it. Left raw the brand measured 4.40:1 on
-/// the dark scaffold and 3.96:1 on a light chip at 16% tint, so the one tone
-/// the rule exempted was failing in both themes. The walk holds the hue and
-/// moves only the lightness, so "Not requested" is still indigo — it is an
-/// indigo that can be read. Brand chrome keeps `colorScheme.primary` directly
-/// and is untouched by this.
+/// as every other status word beside it. In the monochrome room the primary
+/// is the ink itself and passes everywhere, so the walk returns it untouched;
+/// it stays in the walk so that a primary that is ever a hue again cannot ship
+/// an unreadable status word. Chrome keeps `colorScheme.primary` directly and
+/// is untouched by this.
 Color statusToneColor(
   ColorScheme colorScheme,
   StatusTone tone, {
@@ -332,11 +333,12 @@ Color statusToneColor(
   Color walked(Color tone) =>
       ServiceTheme.onTint(tone, surface: ground, tintAlpha: tintAlpha);
 
+  final room = CupolaRoom.forBrightness(colorScheme.brightness);
   return switch (tone) {
     StatusTone.primary => walked(colorScheme.primary),
-    StatusTone.success => walked(AppColors.success),
-    StatusTone.warning => walked(AppColors.warning),
-    StatusTone.info => walked(AppColors.info),
+    StatusTone.success => walked(room.toneGreen),
+    StatusTone.warning => walked(room.toneAmber),
+    StatusTone.info => walked(room.toneBlue),
     StatusTone.error => walked(colorScheme.error),
     StatusTone.neutral => colorScheme.onSurfaceVariant,
   };
@@ -357,11 +359,12 @@ Color statusToneColor(
 /// [StatusTone.neutral] and [StatusTone.primary] are scheme roles in both
 /// directions, so they answer the same here as they do there.
 Color statusToneFill(ColorScheme colorScheme, StatusTone tone) {
+  final room = CupolaRoom.forBrightness(colorScheme.brightness);
   return switch (tone) {
     StatusTone.primary => colorScheme.primary,
-    StatusTone.success => AppColors.success,
-    StatusTone.warning => AppColors.warning,
-    StatusTone.info => AppColors.info,
+    StatusTone.success => room.toneGreen,
+    StatusTone.warning => room.toneAmber,
+    StatusTone.info => room.toneBlue,
     StatusTone.error => colorScheme.error,
     StatusTone.neutral => colorScheme.onSurfaceVariant,
   };

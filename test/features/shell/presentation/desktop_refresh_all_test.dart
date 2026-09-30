@@ -158,7 +158,6 @@ Future<void> _pump(
                   icon: t.icon,
                   selectedIcon: t.selectedIcon,
                   label: t.label,
-                  accentColor: t.accentColor,
                 ),
             ],
             selectedIndex: NavTab.values.indexOf(navTab),

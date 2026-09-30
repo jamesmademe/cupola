@@ -109,16 +109,6 @@ class SearchScreen extends ConsumerWidget {
             key: ValueKey(resetVersion),
             initialQuery: query,
             hintText: 'Movies, shows, artists...',
-            // The one screen the token was named for, and it has to be handed
-            // over explicitly: a section accent does not reach a field on its
-            // own, so without this the purple magnifier fell back to the brand
-            // indigo. Walked against the field's own fill because the token is
-            // ink here, and raw navSearch does not clear AA on paper.
-            accent: ServiceTheme.onTint(
-              AppColors.navSearch,
-              surface: Theme.of(context).colorScheme.surfaceContainer,
-              tintAlpha: 0,
-            ),
             onQueryChanged: (value) {
               ref.read(globalSearchQueryProvider.notifier).state = value;
             },
@@ -285,7 +275,6 @@ class _ServiceFilterChips extends ConsumerWidget {
           for (final service in services)
             _FilterChip(
               label: service.title,
-              color: service.accent,
               selected: selectedService == service,
               onTap: () => onSelected(service),
             ),
@@ -297,20 +286,22 @@ class _ServiceFilterChips extends ConsumerWidget {
 
 class _FilterChip extends StatelessWidget {
   final String label;
-  final Color? color;
   final bool selected;
   final VoidCallback onTap;
 
   const _FilterChip({
     required this.label,
     required this.onTap,
-    this.color,
     this.selected = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColor = color ?? Theme.of(context).colorScheme.primary;
+    // The brand book's chip, the same for every service: selected is the ink fill with the
+    // on-ink label, the rest an ink wash with the primary ink. A service's
+    // colour per chip made the strip a legend of hues with nothing to decode —
+    // the chip names the service in words.
+    final effectiveColor = Theme.of(context).colorScheme.primary;
     // The radius *is* the selection: 12 at rest, the pill at 20 when chosen.
     // Both were hardcoded to 20, which spent the one shape reserved for a
     // selected affordance on every chip in the strip and left selection to be
@@ -345,10 +336,8 @@ class _FilterChip extends StatelessWidget {
                 style: Theme.of(context).textTheme.labelMedium
                     ?.weight(FontWeight.w600)
                     .copyWith(
-                      // Foreground picked from the fill's luminance: white on
-                      // the Radarr amber measures 2.15:1, well below AA.
-                      // Unselected, the accent is a label on its own 12%
-                      // wash and is walked against that composite.
+                      // Measured against the fill, and against the wash over
+                      // the page when unselected.
                       color: selected
                           ? ServiceTheme.foregroundOn(effectiveColor)
                           : ServiceTheme.onTint(
@@ -941,7 +930,8 @@ class _ResultAction extends StatelessWidget {
             StatusTone.success,
             surface: colorScheme.surfaceContainer,
           )
-        : result.service.accent;
+        // The ink disc: adding is the row's primary action, not a service's.
+        : colorScheme.primary;
     final glyph = SizedBox.square(
       dimension: 32,
       child: DecoratedBox(

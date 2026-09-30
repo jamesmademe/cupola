@@ -6,7 +6,7 @@ Rendered from `lib/core/widgets/not_configured_placeholder.dart`, built on `AppE
 
 - `AppEmptyState` full: 72px circular well in `surface-container-high`, 34px `settings` outlined glyph in `on-surface-variant`, `space-lg`, title `title-medium` 600, `space-sm`, message `body-medium` `on-surface-variant`, `space-xl`, action. Padding `space-xxl` × 40px.
 - Title *&lt;Service&gt; is not set up*; message *Add its address and credentials in Settings.* ("credentials", because four services sign in through a WebUI and have no API key).
-- Action: the theme's filled button — `label-large` 600, `radius-md`, padding `space-xl` × `space-md` — with an 18px `settings` outlined glyph, *Open Settings*. On a service's own screen (`.forService`) it takes that service's light: the soft container (the accent at `opacityServiceSoftContainer`) as its fill and the label walked with `ServiceTheme.onTint` against it, 4.5:1 for every service in both themes; a solid accent fill cannot reach that for Seerr, Sonarr or Jellyfin. The generic form keeps `primary` / `on-primary`.
+- Action: the theme's filled button — the row role (15 / 600), `radius-control` (14), padding `space-lg` × `space-md` — with an 18px `settings` outlined glyph, *Open Settings*. The ink button in both forms — `primary` / `on-primary`, the theme's own style, never a service's colour: on a service's own screen (`.forService`) it only deep-links further.
 
 Two constructors:
 

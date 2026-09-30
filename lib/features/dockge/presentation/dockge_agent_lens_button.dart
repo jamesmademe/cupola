@@ -88,9 +88,11 @@ class DockgeAgentLensButton extends ConsumerWidget {
             vertical: 4,
           ),
           decoration: BoxDecoration(
-            color: AppColors.dockge.withValues(alpha: 0.14),
+            color: ServiceKey.dockge.accent.withValues(alpha: 0.14),
             borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: AppColors.dockge.withValues(alpha: 0.34)),
+            border: Border.all(
+              color: ServiceKey.dockge.accent.withValues(alpha: 0.34),
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

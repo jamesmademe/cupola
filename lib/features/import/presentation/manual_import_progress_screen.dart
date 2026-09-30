@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/import/domain/manual_import_display.dart';
@@ -453,8 +452,6 @@ class _TrackButtons extends StatelessWidget {
                     ),
               label: Text(failed ? 'Retry' : 'Done'),
               style: FilledButton.styleFrom(
-                backgroundColor: service.accent,
-                foregroundColor: ServiceTheme.foregroundOn(service.accent),
                 disabledBackgroundColor: colorScheme.surfaceContainerHighest,
                 disabledForegroundColor: colorScheme.onSurfaceVariant,
                 minimumSize: const Size.fromHeight(48),

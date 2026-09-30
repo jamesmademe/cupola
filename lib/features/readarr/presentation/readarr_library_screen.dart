@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
@@ -48,7 +47,7 @@ class ReadarrLibraryScreen extends ConsumerWidget {
     );
     if (!configured) {
       return AmbientScaffold(
-        accent: AppColors.readarr,
+        accent: ServiceKey.readarr.accent,
         appBar: showAppBar ? const GlassAppBar(title: Text('Authors')) : null,
         // `.forService`, never the generic form: the door goes to Readarr's own
         // connection form rather than to the settings index.
@@ -61,7 +60,7 @@ class ReadarrLibraryScreen extends ConsumerWidget {
     final authorsAsync = ref.watch(readarrAuthorsProvider);
 
     return AmbientScaffold(
-      accent: AppColors.readarr,
+      accent: ServiceKey.readarr.accent,
       appBar: showAppBar ? const GlassAppBar(title: Text('Authors')) : null,
       body: SafeArea(
         child: RefreshIndicator(

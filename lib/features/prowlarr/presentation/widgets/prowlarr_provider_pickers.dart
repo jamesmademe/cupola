@@ -8,6 +8,7 @@ import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_field_inputs.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Per-indexer download client, the advanced setting of the web UI's edit
 /// modal.
@@ -123,7 +124,7 @@ Future<ProwlarrProviderResource?> showProwlarrImplementationPicker({
     title: 'Add ${kind.singular}',
     subtitle: 'Pick an implementation',
     icon: kind.icon,
-    accent: AppColors.prowlarr,
+    accent: ServiceKey.prowlarr.accent,
     showClose: true,
     initialSize: 0.8,
     minSize: 0.4,

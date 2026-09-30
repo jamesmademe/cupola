@@ -1,4 +1,4 @@
-<!-- @dsCard group="Motion" height=300 subtitle="Press and hold: the 0.97 dip" -->
+<!-- @dsCard group="Motion" height=300 subtitle="Press and hold: the 0.96 dip" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -30,9 +30,9 @@
       <dl class="cp-motion-readout">
         <dt>scale</dt><dd data-out="scale">1.000</dd>
         <dt>state</dt><dd data-out="state">idle</dd>
-        <dt>pressedScale</dt><dd>0.97</dd>
-        <dt>duration</dt><dd data-out="dur">100 ms · durationXs</dd>
-        <dt>curve</dt><dd>easeOutCubic, down and up</dd>
+        <dt>pressedScale</dt><dd>0.96</dd>
+        <dt>duration</dt><dd data-out="dur">180 ms · press</dd>
+        <dt>curve</dt><dd>cubic-bezier(0.2, 0.8, 0.2, 1), down and up</dd>
         <dt>tap down</dt><dd>after kPressTimeout 100 ms</dd>
       </dl>
       <span class="cp-motion-haptic" data-haptic><span class="cp-icon" aria-hidden="true">vibration</span>HapticFeedback.lightImpact</span>
@@ -43,7 +43,7 @@
 <script>
 (function () {
   var root = document.querySelector('.cp-pressable-scale');
-  var PRESSED = 0.97, DUR = 100, PRESS_TIMEOUT = 100, SLOP = 18; /* kPressTimeout, kTouchSlop */
+  var PRESSED = 0.96, DUR = 180, PRESS_TIMEOUT = 100, SLOP = 18; /* kPressTimeout, kTouchSlop */
   var slow = false;
   var out = {};
   root.querySelectorAll('[data-out]').forEach(function (el) { out[el.dataset.out] = el; });
@@ -52,7 +52,7 @@
   function applyDur() {
     var ms = reduce() ? 0 : DUR * (slow ? 10 : 1);
     root.querySelectorAll('.cp-pressable-scale-target').forEach(function (t) { t.style.setProperty('--dur', ms + 'ms'); });
-    out.dur.textContent = reduce() ? '0 ms · Duration.zero' : ms + ' ms · durationXs' + (slow ? ' ×10' : '');
+    out.dur.textContent = reduce() ? '0 ms · Duration.zero' : ms + ' ms · press' + (slow ? ' ×10' : '');
   }
   var raf = 0;
   function watch(el) {

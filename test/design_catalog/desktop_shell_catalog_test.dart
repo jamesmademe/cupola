@@ -214,7 +214,6 @@ List<FloatingNavDestination> _destinations() => [
       selectedIcon: tab.selectedIcon,
       railIcon: tab.railIcon,
       label: tab.label,
-      accentColor: tab.accentColor,
       badgeCount: tab == NavTab.activity ? 2 : 0,
       badgeSemanticLabel: tab == NavTab.activity
           ? '2 finished searches to look at'

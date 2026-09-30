@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
@@ -62,14 +62,9 @@ class DiscoverActionButtons extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final serviceName = _normalizedMediaType == 'movie' ? 'Radarr' : 'Sonarr';
-    // Seerr's own accent, not `colorScheme.primary`. The two colours coincide
-    // today — Seerr's brand indigo *is* the app primary — so there is no visual
-    // symptom, which is exactly why this was the one control on the page that
-    // had quietly opted out of the accent system.
-    final accent = ServiceKey.seerr.accent;
-    // Never a local luminance threshold: the app's own helper measures both
-    // candidate inks against the fill instead of guessing from a cutoff.
-    final onAccent = ServiceTheme.foregroundOn(accent);
+    // The page's one primary is the ink button, the same on every page: a
+    // request is not Seerr-coloured, it is the thing this page is for.
+    final room = CupolaRoom.of(context);
 
     final isRequested = isInService || hasManageableMedia;
     // "Requested" is the wrong word for a title that is already on disk, and a
@@ -123,17 +118,13 @@ class DiscoverActionButtons extends ConsumerWidget {
                   ),
                 ),
                 style: HeaderActionRow.expandedButtonStyle(
-                  backgroundColor: accent,
-                  foregroundColor: onAccent,
-                  disabledBackgroundColor: accent.withValues(alpha: 0.18),
-                  // The label sits on an 18% accent tint over the surface, so
-                  // the surface underneath is part of the contrast: the raw
-                  // accent over its own tint fails AA in light theme.
-                  disabledForegroundColor: ServiceTheme.onTint(
-                    accent,
-                    surface: colorScheme.surface,
-                    tintAlpha: 0.18,
-                  ),
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  // "Available" and "Requested" are states read, not dead
+                  // controls, so the label stays legible: the secondary ink on
+                  // the room's strong fill, not Material's 38% grey.
+                  disabledBackgroundColor: room.fillStrong,
+                  disabledForegroundColor: colorScheme.onSurfaceVariant,
                 ),
               ),
               if (disabledReason != null) ...[

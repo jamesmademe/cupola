@@ -34,7 +34,7 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
     if (!configured) {
       return Scaffold(
         appBar: AppBar(
-          backgroundColor: AppColors.prowlarr.withValues(alpha: 0.12),
+          backgroundColor: ServiceKey.prowlarr.accent.withValues(alpha: 0.12),
           leading: IconButton(
             icon: const Icon(Icons.chevron_left_rounded),
             onPressed: () =>
@@ -51,7 +51,7 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.prowlarr.withValues(alpha: 0.12),
+        backgroundColor: ServiceKey.prowlarr.accent.withValues(alpha: 0.12),
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded),
           onPressed: () =>
@@ -436,7 +436,7 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final color = accent ?? AppColors.prowlarr;
+    final color = accent ?? colorScheme.onSurfaceVariant;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(

@@ -85,7 +85,6 @@ class _QbittorrentScreenState extends ConsumerState<QbittorrentScreen> {
                 SliverToBoxAdapter(
                   child: SearchBarHeader(
                     hintText: 'Search torrents...',
-                    accent: ServiceKey.qbittorrent.accent,
                     onQueryChanged: (query) {
                       ref.read(torrentSearchQueryProvider.notifier).state =
                           query;

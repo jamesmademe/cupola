@@ -57,10 +57,9 @@ class DashboardScreen extends ConsumerWidget {
       // anything.
       onStale: () => ref.triggerNavigationRefresh(NavigationSection.dashboard),
       child: AmbientScaffold(
-        // No accent passed: the room on this screen is lit by the brand primary.
-        // Seventeen service accents cannot light one room, so identity is
-        // confined to each stack card's glyph and its wash — see the Room Light
-        // Rule's one documented exception in DESIGN.md.
+        // No accent passed: the room on this screen is lit by the neutral lamp,
+        // like every room with no artwork. The fleet below is seventeen
+        // services, and each is named by its mark and its title, never a hue.
         // "Dashboard", because the crumb and the tab both say Dashboard and
         // the app bar is *where you are*. The h1 below is what you are looking
         // at — the fleet — and the two are different sentences. The desktop

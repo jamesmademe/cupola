@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The ring gives up size as the reading size grows, so the copy beside it never
@@ -27,25 +25,27 @@ enum ServiceRingState {
   /// Not chosen. A dim dot, the smallest thing on the ring.
   unlit,
 
-  /// Chosen but not yet reached — its accent, held back.
+  /// Chosen but not yet reached — the primary ink, held back.
   picked,
 
-  /// Answering. Full accent, a glow, and a spoke drawn in to the mark.
+  /// Answering. The full primary ink, a halo of the lamp, and a spoke drawn in
+  /// to the mark.
   connected,
 
   /// Configured and not answering. Drains to `onSurfaceVariant` with a hairline
-  /// collar, because on this ring hue carries identity and never health — an
-  /// unreachable service reads as unlit, not as differently coloured.
+  /// collar: an unreachable service reads as unlit, not as differently
+  /// coloured, because the ring says nothing in a hue.
   silent,
 }
 
 /// The stack as a dial: every service is a dot on one circle around the product
 /// mark, and a connected service draws a spoke to the centre.
 ///
-/// This is the second sanctioned exception to the Room Light Rule, on the same
-/// terms as `/services`: the surface is inherently about every service at
-/// once, so accents are *confined* — a service's colour appears on its own node
-/// and nowhere else. Nothing on the ring borrows a status tone.
+/// **Monochrome.** The surface is about every service at once, and the room
+/// has no colour of its own: a lit node is the primary ink and its halo and
+/// spoke are the lamp, the same for every service — which service a node is,
+/// the chip under the ring says in words. Nothing on the ring borrows a status
+/// tone either.
 ///
 /// **The ring animates itself.** Every visual a node can carry — radius, colour,
 /// glow, collar, the length of its spoke — interpolates from whatever it was
@@ -275,11 +275,15 @@ class _RingFrame {
     required this.nodes,
     required this.progress,
     required this.track,
+    required this.arc,
   });
 
   final List<_NodeVisual> nodes;
   final double progress;
   final Color track;
+
+  /// The progress arc: the primary ink at half strength.
+  final Color arc;
 
   static _RingFrame resolve({
     required Map<ServiceKey, ServiceRingState> states,
@@ -299,12 +303,19 @@ class _RingFrame {
     final unlit = scheme.onSurfaceVariant.withValues(
       alpha: isDark ? 0.55 : 0.80,
     );
-    // A soft accent halo washes out faster on a light ground.
+    // A soft halo washes out faster on a light ground.
     final glowAlpha = isDark ? 0.34 : 0.42;
     final spokeAlpha = isDark ? 0.55 : 0.70;
+    // Monochrome, like the rest of the room: a lit node is the primary ink,
+    // and only its halo and spoke are light — the lamp, which is what every
+    // service paints (`ServiceKey.accent`). Which service a node is, the chip
+    // below it says in words; a hue per node made the dial a legend with
+    // nothing to decode.
+    final ink = scheme.onSurface;
 
     return _RingFrame(
       track: scheme.onSurfaceVariant.withValues(alpha: 0.30),
+      arc: ink.withValues(alpha: 0.5),
       progress: progress,
       nodes: [
         for (final key in ServiceRing.order)
@@ -316,27 +327,27 @@ class _RingFrame {
               glow: 0,
               spoke: 0,
               collar: 0,
-              collarColor: key.accent,
+              collarColor: ink,
               spokeAlpha: spokeAlpha,
             ),
             ServiceRingState.picked => _NodeVisual(
               accent: key.accent,
               radius: 5,
-              color: key.accent.withValues(alpha: 0.78),
+              color: ink.withValues(alpha: 0.78),
               glow: activeService == key ? glowAlpha : 0,
               spoke: 0,
               collar: activeService == key ? 1 : 0,
-              collarColor: key.accent.withValues(alpha: 0.6),
+              collarColor: ink.withValues(alpha: 0.6),
               spokeAlpha: spokeAlpha,
             ),
             ServiceRingState.connected => _NodeVisual(
               accent: key.accent,
               radius: 6,
-              color: key.accent,
+              color: ink,
               glow: glowAlpha,
               spoke: 1,
               collar: activeService == key ? 1 : 0,
-              collarColor: key.accent.withValues(alpha: 0.6),
+              collarColor: ink.withValues(alpha: 0.6),
               spokeAlpha: spokeAlpha,
             ),
             ServiceRingState.silent => _NodeVisual(
@@ -347,7 +358,7 @@ class _RingFrame {
               spoke: 0,
               collar: 1,
               collarColor: activeService == key
-                  ? key.accent.withValues(alpha: 0.6)
+                  ? ink.withValues(alpha: 0.6)
                   : scheme.onSurfaceVariant.withValues(alpha: 0.35),
               spokeAlpha: spokeAlpha,
             ),
@@ -358,6 +369,7 @@ class _RingFrame {
 
   static _RingFrame lerp(_RingFrame a, _RingFrame b, double t) => _RingFrame(
     track: Color.lerp(a.track, b.track, t)!,
+    arc: Color.lerp(a.arc, b.arc, t)!,
     progress: a.progress + (b.progress - a.progress) * t,
     nodes: [
       for (var i = 0; i < b.nodes.length; i++)
@@ -536,7 +548,7 @@ class _ServiceRingPainter extends CustomPainter {
         // exists to serve.
         ..strokeWidth = 1.5
         ..strokeCap = StrokeCap.round
-        ..color = AppColors.primary.withValues(alpha: 0.5),
+        ..color = frame.arc,
     );
   }
 
@@ -624,23 +636,21 @@ class _ServiceRingPainter extends CustomPainter {
 /// no doc, because it is the one place a reader would check before changing
 /// either side.
 ///
-/// Two accents, and they are the mark's own two — the ribbon "S" runs cyan to
-/// blue, so the sentence takes the blue end for the product's own name and the
-/// cyan end for the user's own lab. The cyan is a `nav-*` section accent rather
-/// than a service's, because colouring "your lab" with one service's identity
-/// would privilege it over the other fourteen.
+/// **One ink.** The claim used to colour "Cupola" and "your lab." in two hues
+/// of their own; the room is monochrome now (principle 3 of the brand book: colour is
+/// information), so the display face and the line break carry the claim, and
+/// both lines are the primary ink. The span that sets "Cupola" is kept, so the
+/// word stays the unit the line is built around.
 class OnePunchline extends StatelessWidget {
   const OnePunchline({super.key, this.style});
 
   /// Defaults to `displayMedium` — the ramp's own step between a heading and a
   /// hero line. Pass a smaller role where the claim is a caption, not the door.
   ///
-  /// The weight comes from the role and is not forced here: 800 belongs to
-  /// Display, so the door reads at 800 and a caption keeps its own weight.
+  /// The weight comes from the role and is not forced here, so the door reads
+  /// at the display role's weight and a caption keeps its own.
   final TextStyle? style;
 
-  static const _appInk = AppColors.primary;
-  static const _stackInk = AppColors.navActivity;
   static const _spoken = 'A Cupola over your lab.';
   static const _markedLine = 'your lab.';
 
@@ -655,20 +665,6 @@ class OnePunchline extends StatelessWidget {
       height: 1.10,
     );
 
-    // Both inks resolve against the composite they sit on. The cyan proves why
-    // that is not optional: raw #06B6D4 measures 8.1:1 on `surface-dark` but
-    // 2.20:1 on `surface-light`, below even the 3:1 large-text floor.
-    final appInk = ServiceTheme.onTint(
-      _appInk,
-      surface: scheme.surface,
-      tintAlpha: 0,
-    );
-    final stackInk = ServiceTheme.onTint(
-      _stackInk,
-      surface: scheme.surface,
-      tintAlpha: 0,
-    );
-
     return Semantics(
       label: _spoken,
       excludeSemantics: true,
@@ -676,19 +672,16 @@ class OnePunchline extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text.rich(
-            TextSpan(
+            const TextSpan(
               children: [
-                const TextSpan(text: 'A '),
-                TextSpan(
-                  text: 'Cupola',
-                  style: TextStyle(color: appInk),
-                ),
-                const TextSpan(text: ' over'),
+                TextSpan(text: 'A '),
+                TextSpan(text: 'Cupola'),
+                TextSpan(text: ' over'),
               ],
             ),
             style: base,
           ),
-          Text(_markedLine, style: base.copyWith(color: stackInk)),
+          Text(_markedLine, style: base),
         ],
       ),
     );

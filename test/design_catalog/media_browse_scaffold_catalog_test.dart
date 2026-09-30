@@ -358,7 +358,8 @@ void main() {
       ),
       CatalogScene(
         'MediaBrowseScaffold · searching, results pending · the spinner in '
-        'the service accent walked against the surface, never primary',
+        'the primary ink: the service accent is the lamp, and onTint resolves '
+        'it to ink',
         (_) => _phones([
           _Typed(
             text: 'Nosferatu',

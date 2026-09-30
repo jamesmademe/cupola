@@ -11,7 +11,7 @@ Rendered from `lib/core/widgets/status_badge.dart` by `test/design_catalog/statu
 - **Icon only** (`iconOnly: true`) — an 8px tone dot with a 1.5px `shadow` ring at 35%, so it survives artwork of its own tone.
 - **Animated** (`StatusBadge.animated`) — for the detail hero only. A new status cross-fades glyph, label and percentage together (`durationSm`, emphasized curve); the ring sweeps to each new value (`durationMd`, standard curve). No colour is tweened. Renders exactly like Full under Reduce Motion.
 
-The tone colour is always `statusToneColor(colorScheme, tone)`: success, warning, info and error are walked against `surface` until they read at 4.6:1, `primary` is walked the same way, and neutral is `on-surface-variant`.
+The tone colour is always `statusToneColor(colorScheme, tone)`: success, warning, info and error are the tones of the room the scheme belongs to (each room has its own five), walked against `surface` until they read at 4.6:1, `primary` is walked the same way, and neutral is `on-surface-variant`.
 
 ## Tone mapping (five arms)
 

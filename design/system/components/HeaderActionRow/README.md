@@ -8,18 +8,18 @@ Rendered from `lib/core/widgets/header_action_row.dart` (`HeaderActionRow`, `Act
 
 - `HeaderActionRow(expanded:, trailing:, crossAxisAlignment:)`: `expanded` fills the row, `AppSpacing.sm` (8), then `trailing`. Centred by default; `CrossAxisAlignment.start` when a trailing control hangs a caption, so the tops align and the caption hangs below.
 - `HeaderActionRow.buttonHeight` is **48** — the larger of iOS 44pt and Android 48dp, and the primary's height, so a band has one height. Adjacent targets are at least `AppSpacing.sm` apart.
-- Every control uses `AppRadius.borderRadiusMd` (12), the interactive radius. Full or near-full radius is the metadata shape.
+- Every control uses `AppRadius.borderRadiusMd` (14), the control radius. None is drawn as a pill.
 
 ## Styles
 
-- **Primary** (`expandedButtonStyle`): a `FilledButton.icon` filled with the service accent, label and 18pt glyph in `ServiceTheme.foregroundOn(accent)` — dark ink on Radarr's amber and Lidarr's pink, white on Seerr's indigo. `labelLarge` at 600 (the theme's button text), horizontal padding `AppSpacing.md`, `minimumSize` 48 high and never `fixedSize`, so a label that no longer fits grows the button instead of breaking mid-word. The expanded styles pin `VisualDensity.standard`, so on a desktop they stay 48 beside the 48pt discs instead of losing 8 to compact density. The label wraps to two lines under the 1.6× reading-size clamp (`TextScaleMetrics.clampedScalerOf`).
-- **Disc** (`tonalIconButtonStyle`): an `OutlinedButton` fixed at 48 × 48, `onSurface` at 6%, a 1px `outlineVariant` side, 18pt glyph in `onSurfaceVariant`. `iconOnlyButtonStyle` is the filled equivalent, for an accent or error square.
+- **Primary** (`expandedButtonStyle`): a `FilledButton.icon`, the ink button: `primary` fill with the label and 18pt glyph in `on-primary`, on every service — the promoted verb is never the service's colour. The theme's button text (the row role, 15 / 600), horizontal padding `AppSpacing.md`, `minimumSize` 48 high and never `fixedSize`, so a label that no longer fits grows the button instead of breaking mid-word. The expanded styles pin `VisualDensity.standard`, so on a desktop they stay 48 beside the 48pt discs instead of losing 8 to compact density. The label wraps to two lines under the 1.6× reading-size clamp (`TextScaleMetrics.clampedScalerOf`).
+- **Disc** (`tonalIconButtonStyle`): an `OutlinedButton` fixed at 48 × 48, `onSurface` at 6%, a 1px `outlineVariant` side, 18pt glyph in `onSurfaceVariant`. `iconOnlyButtonStyle` is the filled equivalent, an ink square.
 - **Tonal** (`tonalExpandedButtonStyle`): the disc's fill and side on a labelled button 48 high with `AppSpacing.md` padding; the band narrows that to `AppSpacing.sm` and drops the glyph so two labels fit a phone row.
 - **Consequence**: `bodySmall` in `onSurfaceVariant`, up to three lines, `AppSpacing.sm` under the row. When nothing is promoted and nothing is surfaced, the sentence takes the `expanded` slot itself.
 
 ## ActionStateGlyph
 
-Idle icon (18pt) → busy spinner (16pt, 2pt stroke, this control's work only) → confirmed `check_rounded`, the theme's success green (`tertiary`) walked through `ServiceTheme.onTint` against the fill it sits on. The host holds the check for `AppAnimation.confirmationHold` (1600 ms). Faces cross-fade with a 0.7 → 1 scale over `AppAnimation.durationSm` (200 ms); with Reduce Motion they swap. While a band is busy the host passes `onPressed: null`, so the primary and its discs take Material's disabled colours and stay in place — nothing reflows under the thumb.
+Idle icon (18pt) → busy spinner (16pt, 2pt stroke, this control's work only) → confirmed `check_rounded`, the theme's success green (`tertiary`) walked through `ServiceTheme.onTint` against the fill it sits on. The host holds the check for `AppAnimation.confirmationHold` (1600 ms). Faces cross-fade with a 0.7 → 1 scale over `AppAnimation.durationSm` (320 ms); with Reduce Motion they swap. While a band is busy the host passes `onPressed: null`, so the primary and its discs take Material's disabled colours and stay in place — nothing reflows under the thumb.
 
 ## HeaderActionButton
 

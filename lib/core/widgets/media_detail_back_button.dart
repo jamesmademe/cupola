@@ -49,17 +49,17 @@ import 'package:cupola/core/widgets/media_detail_header_metrics.dart';
 /// plate composited over the *worst possible* artwork — pure white in dark
 /// theme, pure black in light theme, with no credit for the hero's scrim — still
 /// clears 4.5:1 against `onSurface`. Solving the sRGB relative-luminance
-/// equation for that bound gives 0.528 (light) and 0.594 (dark); 0.62 carries
+/// equation for that bound gives 0.518 (light) and 0.579 (dark); 0.62 carries
 /// headroom over both. Ratios below are *measured off the painted pixels* by
 /// `media_detail_back_button_test.dart`, at zero scrim credit — the widget over
 /// a synthetic solid backdrop, nothing else in the stack:
 ///
 /// | theme | artwork  | plate composite | ratio to `onSurface` |
 /// |-------|----------|-----------------|----------------------|
-/// | dark  | #FFFFFF  | ~#67686E        | 4.98:1               |
-/// | dark  | #000000  | ~#07070A        | 17.99:1              |
-/// | light | #000000  | ~#979798        | 6.08:1               |
-/// | light | #FFFFFF  | ~#F8F8F9        | 16.71:1              |
+/// | dark  | #FFFFFF  | ~#676769        | 5.22:1               |
+/// | dark  | #000000  | ~#060608        | 18.72:1              |
+/// | light | #000000  | ~#999794        | 6.23:1               |
+/// | light | #FFFFFF  | ~#F9F8F5        | 17.10:1              |
 ///
 /// The two failure modes are complementary, which is why one number covers
 /// arbitrary photography: artwork that tones *toward* the plate makes the plate

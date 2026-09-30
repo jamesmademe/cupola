@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/features/qbittorrent/presentation/widgets/qbittorrent_actions_bar.dart';
@@ -102,11 +101,14 @@ Finder _inBar(Finder matching) =>
     find.descendant(of: find.byType(ServiceTabBar), matching: matching);
 
 void main() {
-  group('ServiceTabBar.header is the room light', () {
+  group('ServiceTabBar.header is lit by the lamp', () {
     for (final MapEntry(key: themeName, value: theme) in _themes.entries) {
       for (final service in [ServiceKey.radarr, ServiceKey.sonarr]) {
-        testWidgets('${service.name}, $themeName: the band is the accent at '
+        testWidgets('${service.name}, $themeName: the band is the lamp at '
             '0.12 over the surface, with a bloom at its foot', (tester) async {
+          // A service room has no artwork, so it is lit by the neutral lamp —
+          // the same light for every service, never the service's colour.
+          expect(service.accent, AppColors.lamp);
           await _pump(tester, theme: theme, service: service);
 
           final band = tester.widget<ColoredBox>(
@@ -152,8 +154,8 @@ void main() {
         theme: AppTheme.darkTheme(),
         service: ServiceKey.radarr,
       );
-      // Earlier in the band's Stack is lower in paint order: the rule of the
-      // selected tab is drawn over the bloom, not under it.
+      // Earlier in the band's Stack is lower in paint order: the tabs are
+      // drawn over the bloom, not under it.
       final stack = tester.widget<Stack>(
         find
             .descendant(of: find.byKey(_bandKey), matching: find.byType(Stack))
@@ -201,11 +203,11 @@ void main() {
       }
     });
 
-    testWidgets('no second accent edge: nothing on the band draws a 2px line', (
+    testWidgets('no second selection: nothing on the band draws a 2px line', (
       tester,
     ) async {
-      // The selected tab's rule is the band's one accent edge. A 2px accent
-      // border along the band would read as a second selection.
+      // The selected tab's pill is the band's one mark of selection. A 2px
+      // border along the band would read as a second one.
       await _pump(
         tester,
         theme: AppTheme.darkTheme(),
@@ -260,32 +262,30 @@ void main() {
         }
       });
 
-      testWidgets('$themeName: the selected rule still reads over the bloom', (
-        tester,
-      ) async {
+      testWidgets('$themeName: the selected tab is the strong-fill pill under '
+          'the primary ink, for every tabbed service', (tester) async {
+        // The brand book: never the service's colour — the pill of the phone's bar and the
+        // desktop rail, on every service. It replaced a 2px rule in the
+        // service's accent, which had to be solved against the bloom under it.
         for (final service in _tabbed) {
           await _pump(tester, theme: theme, service: service);
+          final pills = tester.widgetList<Container>(
+            _inBar(find.byKey(const ValueKey('service-tab-pill'))),
+          );
+          expect(pills, hasLength(1), reason: service.name);
+          final fill = (pills.single.decoration! as BoxDecoration).color!;
+          expect(fill, CupolaRoom.forBrightness(theme.brightness).fillStrong);
+          final selected = tester.widget<Text>(
+            find.text(tabsFor(service)!.first.label),
+          );
+          expect(selected.style!.color, theme.colorScheme.onSurface);
           final surface = ServiceTabBar.headerSurfaceOf(
             theme.colorScheme,
             service,
           );
-          final rule = tester
-              .widgetList<Container>(_inBar(find.byType(Container)))
-              .singleWhere(
-                (c) =>
-                    c.constraints?.maxHeight == 2 &&
-                    c.decoration is BoxDecoration,
-              );
-          final ink = (rule.decoration! as BoxDecoration).color!;
-          // Against the bloom's strongest point, which is where the 2px rule
-          // sits. It is a state indicator, so the bar is non-text 3:1.
-          final bloomPeak = Color.alphaBlend(
-            service.accent.withValues(alpha: ServiceTabBar.bloomAlpha),
-            surface,
-          );
           expect(
-            _contrast(ink, bloomPeak),
-            greaterThanOrEqualTo(3.0),
+            _contrast(selected.style!.color!, Color.alphaBlend(fill, surface)),
+            greaterThanOrEqualTo(4.5),
             reason: service.name,
           );
         }
@@ -305,7 +305,7 @@ void main() {
             matching: find.byType(Text),
           ),
         );
-        // The pill is the accent at 0.15 over the band.
+        // The pill is the service's accent — the lamp — at 0.15 over the band.
         final pill = Color.alphaBlend(
           ServiceKey.radarr.accent.withValues(alpha: 0.15),
           ServiceTabBar.headerSurfaceOf(theme.colorScheme, ServiceKey.radarr),
@@ -342,7 +342,7 @@ void main() {
       });
 
       testWidgets('$themeName: the phone bar is unlit — no band, no bloom, '
-          'and its accent walked against the bare surface', (tester) async {
+          'and its selected label the primary ink', (tester) async {
         await _pump(
           tester,
           theme: theme,
@@ -357,14 +357,7 @@ void main() {
         final selected = tester.widget<Text>(
           find.text(ServiceTab.overview.label),
         );
-        expect(
-          selected.style!.color,
-          ServiceTheme.onTint(
-            ServiceKey.radarr.accent,
-            surface: theme.colorScheme.surface,
-            tintAlpha: 0,
-          ),
-        );
+        expect(selected.style!.color, theme.colorScheme.onSurface);
       });
     }
   });

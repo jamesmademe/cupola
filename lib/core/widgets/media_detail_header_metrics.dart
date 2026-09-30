@@ -71,8 +71,8 @@ class MediaDetailHeaderMetrics {
   /// Unchanged by the type ramp's new per-role leading, and deliberately so: the
   /// root `DefaultTextHeightBehavior` sets `applyHeightToFirstAscent` and
   /// `applyHeightToLastDescent` to false, so leading opens the gaps *between*
-  /// lines while a block's outer edges keep Inter's natural metrics. This bar's
-  /// title is one line, so it measures what it always did.
+  /// lines while a block's outer edges keep the face's natural metrics. This
+  /// bar's title is one line, so it measures one line of the face.
   static const double _barTextHeight = 20.0;
 
   /// Collapsed bar height at the current reading size.
@@ -138,7 +138,7 @@ class MediaDetailHeroPhase {
   /// Fraction of scroll speed the backdrop moves at. Decorative.
   double get parallaxFactor => reduceMotion ? 0 : 0.35;
 
-  /// The room light dims while collapsing, but never goes out
-  /// (Room Light Rule: the accent stays the screen's orientation cue).
+  /// The room light dims while collapsing, but never goes out: the collapsed
+  /// bar is still in the lit room it opened in.
   double get glowAlpha => lerpDouble(0.22, 0.12, _seg(t, 0.30, 0.75))!;
 }

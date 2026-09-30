@@ -71,7 +71,8 @@ void main() {
     scenes: [
       CatalogScene(
         'The seventeen marks, registry order · each on the settings header\'s '
-        'well (accent at 14%, radius-md), ink walked by onTint for that wash',
+        'well (the lamp at 14%, radius-md), the mark in the primary ink: '
+        'monochrome, told apart by shape',
         (context) => Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(

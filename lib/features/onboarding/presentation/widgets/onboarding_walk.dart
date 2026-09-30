@@ -498,7 +498,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
               height: 8,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: upcoming.accent,
+                color: scheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(width: AppSpacing.sm),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
@@ -11,8 +10,10 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 /// event styling stays consistent across both screens.
 /// [colorScheme] is required because the two *status* arms — a refused query
 /// and a successful grab — are resolved through [statusToneColor] and therefore
-/// walked against the surface. The remaining arms are identity colours, not
-/// statuses: an RSS sync is not "good", it is Prowlarr doing a Prowlarr thing.
+/// walked against the surface. The remaining arms are not statuses — an RSS
+/// sync is not "good", it is Prowlarr doing a Prowlarr thing — so they are the
+/// secondary ink: the label says which event it was, and a hue per event type
+/// was a legend with nothing to decode.
 ({String label, Color color, IconData icon}) prowlarrEventStyle(
   ProwlarrHistoryItem item,
   ColorScheme colorScheme,
@@ -34,12 +35,12 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
     ),
     'indexerQuery' => (
       label: 'Query',
-      color: AppColors.prowlarr,
+      color: colorScheme.onSurfaceVariant,
       icon: Icons.search_rounded,
     ),
     'indexerRss' => (
       label: 'RSS',
-      color: AppColors.sonarr,
+      color: colorScheme.onSurfaceVariant,
       icon: Icons.rss_feed_rounded,
     ),
     // A *successful* auth handshake, because the `!item.successful` arm above
@@ -55,7 +56,7 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
       // Humanised, not uppercased: the badge is a dense label repeated on
       // every row, and the eyebrow is the only voice that uppercases.
       label: humanizeCamelCase(item.eventType ?? 'Event'),
-      color: AppColors.prowlarr,
+      color: colorScheme.onSurfaceVariant,
       icon: Icons.bolt_rounded,
     ),
   };

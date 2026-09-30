@@ -9,7 +9,7 @@ Rendered from `lib/core/service_glyphs.dart` (generated), `ServiceKey.icon` in `
 - **Font**: family `CupolaServices` (`assets/fonts/CupolaServices.otf`, 17 glyphs, 4.6 KB), built by `tool/service_glyphs/build_font.py` from one filled shape per service in a `0 0 24 24` viewBox (`evenodd` holes resolved at build, since a font winds nonzero). The same script writes `service_glyphs.dart`; neither is edited by hand.
 - **Codepoints** (registry order, `ServiceKey.values`): Seerr E001 · Radarr E002 · Sonarr E003 · Lidarr E004 · qBittorrent E005 · Transmission E006 · Bazarr E007 · TrueNAS E008 · Dockge E009 · Prowlarr E00A · Readarr E00B · SABnzbd E00C · NZBGet E00D · Unraid E00E · Nginx Proxy Manager E00F · Jellyfin E010 · Plex E011.
 - **Consume**: `Icon(service.icon)` — `ServiceKey.icon` returns `ServiceGlyphs.<name>` (`ServiceGlyphs.radarr`, `ServiceGlyphs.nginxProxyManager` …). The constants are reached through `ServiceKey.icon`, never directly.
-- **Well** (shown): 48 × 48, `ServiceTheme.fromAccent(service.accent).softContainer` (the accent at `DesignTokens.opacityServiceSoftContainer`, 14%), `AppRadius.borderRadiusMd`, mark at 24, name under it in `textTheme.labelSmall`, `onSurfaceVariant`. The well sits on a `surfaceContainer` card, and the ink is the accent walked with `ServiceTheme.onTint` (tint 0.14) against that card, so a light accent does not drop under contrast on paper.
+- **Well** (shown): 48 × 48, `ServiceTheme.fromAccent(service.accent).softContainer` (the service's accent — the lamp — at `DesignTokens.opacityServiceSoftContainer`, 14%), `AppRadius.borderRadiusMd`, mark at 24, name under it in `textTheme.labelSmall`, `onSurfaceVariant`. The well sits on a `surfaceContainer` card, and the mark is the primary ink (`ServiceTheme.onTint` resolves the lamp to ink): monochrome, the seventeen told apart by shape.
 - **Sizes in use**: 12.9 (onboarding small tile) · 14 (`ServiceTabBar.header` well, search results) · 15 (⌘K connection row) · 16 (deck active chip, manual-import rows) · 17 (inspector queue row) · 18 (service matrix cell, onboarding walk, release-search job) · 20 (manual-import fix sheet, where-to-watch slot) · 24 (settings header, `ListTile` leading default).
 
 ## Provenance
@@ -23,4 +23,4 @@ A mark is decoration beside the service's name and is always excluded (`ExcludeS
 ## Do / don't
 
 - Do use a mark only to identify the service Cupola connects to — every mark belongs to its owner.
-- Don't use one as a category glyph (a download arrow, a play button — that was the old `ServiceKey.icon`, and three download clients read as one picture), as a status, as a button's verb, or at a colour other than its own accent or a neutral ink.
+- Don't use one as a category glyph (a download arrow, a play button — that was the old `ServiceKey.icon`, and three download clients read as one picture), as a status, as a button's verb, or in any colour but the room's ink — never its brand colour.

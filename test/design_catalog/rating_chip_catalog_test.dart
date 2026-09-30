@@ -40,7 +40,7 @@ void main() {
         ),
       ),
       CatalogScene(
-        'RatingChipsRow(accent: null) · no page accent, brand primary fallback',
+        'RatingChipsRow(accent: null) · no page accent, the primary ink',
         (_) => RatingChipsRow(
           ratings: legibleRatings(const [
             RatingSource(name: 'tmdb', value: 7.1, votes: 842, icon: 'tmdb'),

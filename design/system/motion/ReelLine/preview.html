@@ -19,19 +19,19 @@
       <span class="cp-caption">ReelLine · ReelMotion.figure</span>
       <span class="cp-reel-line-line cp-reel-line-figure" data-reel="figure" role="status"></span>
       <div class="cp-reel-line-actions"><button type="button" class="cp-motion-btn" data-poll>Poll</button></div>
-      <dl class="cp-motion-readout"><dt>roll</dt><dd>200 ms · easeOutCubic</dd><dt>stagger</dt><dd>18 ms · exit +28 ms</dd><dt>bounce</dt><dd>0 · interrupts</dd></dl>
+      <dl class="cp-motion-readout"><dt>roll</dt><dd>320 ms · cubic-bezier(0.2, 0.8, 0.2, 1)</dd><dt>stagger</dt><dd>18 ms · exit +28 ms</dd><dt>bounce</dt><dd>0 · interrupts</dd></dl>
     </div>
     <div class="cp-reel-line-cell">
       <span class="cp-caption">ReelLine · ReelMotion.word</span>
       <span class="cp-reel-line-line cp-reel-line-word" data-reel="word" role="status"></span>
       <div class="cp-reel-line-actions"><button type="button" class="cp-motion-btn" data-word>Next state</button></div>
-      <dl class="cp-motion-readout"><dt>roll</dt><dd>200 ms · easeOutCubic</dd><dt>stagger</dt><dd>22 ms · exit +34 ms</dd><dt>bounce</dt><dd>0 · interrupts</dd></dl>
+      <dl class="cp-motion-readout"><dt>roll</dt><dd>320 ms · cubic-bezier(0.2, 0.8, 0.2, 1)</dd><dt>stagger</dt><dd>22 ms · exit +34 ms</dd><dt>bounce</dt><dd>0 · interrupts</dd></dl>
     </div>
     <div class="cp-reel-line-cell">
       <span class="cp-caption">ReelCommandButton · command + waiting</span>
       <button type="button" class="cp-btn cp-btn--filled cp-reel-line-btn" data-command><span class="cp-reel-line-line is-center" data-reel="command"></span></button>
       <div class="cp-reel-line-actions"><button type="button" class="cp-motion-btn" data-fail aria-pressed="false">Next press fails</button></div>
-      <dl class="cp-motion-readout"><dt>command</dt><dd>20 ms · +30 · 0.15 · queues</dd><dt>waiting</dt><dd>16 ms · +24 · tick 384 ms</dd></dl>
+      <dl class="cp-motion-readout"><dt>command</dt><dd>20 ms · +30 · 0.15 · queues</dd><dt>waiting</dt><dd>16 ms · +24 · tick 504 ms</dd></dl>
     </div>
   </div>
 </div>
@@ -42,13 +42,13 @@
     function ev(p, q, m) { return 3 * p * (1 - m) * (1 - m) * m + 3 * q * (1 - m) * m * m + m * m * m; }
     return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; var lo = 0, hi = 1; for (;;) { var m = (lo + hi) / 2, x = ev(a, c, m); if (Math.abs(t - x) < 0.001) return ev(b, d, m); if (x < t) lo = m; else hi = m; } };
   }
-  var easeOutCubic = cubic(0.215, 0.61, 0.355, 1); /* AppAnimation.emphasizedCurve */
+  var ease = cubic(0.2, 0.8, 0.2, 1); /* AppAnimation.emphasizedCurve */
   /* lib/core/reel_motion.dart */
   var P = {
-    figure: { duration: 200, stagger: 18, exitOffset: 28, bounce: 0, interrupt: true },
-    word: { duration: 200, stagger: 22, exitOffset: 34, bounce: 0, interrupt: true },
-    command: { duration: 200, stagger: 20, exitOffset: 30, bounce: 0.15, interrupt: false },
-    waiting: { duration: 200, stagger: 16, exitOffset: 24, bounce: 0, interrupt: true }
+    figure: { duration: 320, stagger: 18, exitOffset: 28, bounce: 0, interrupt: true },
+    word: { duration: 320, stagger: 22, exitOffset: 34, bounce: 0, interrupt: true },
+    command: { duration: 320, stagger: 20, exitOffset: 30, bounce: 0.15, interrupt: false },
+    waiting: { duration: 320, stagger: 16, exitOffset: 24, bounce: 0, interrupt: true }
   };
   /* ReelTextController._steadyStep: roll·(1 + bounce·0.45) + exitOffset + 160 */
   var WAIT_STEP = Math.round(P.waiting.duration * (1 + P.waiting.bounce * 0.45)) + P.waiting.exitOffset + 160;
@@ -122,12 +122,12 @@
           : s.from === null ? lin(now, s.base, Math.max(140, Math.round(s.dur * 0.45))) : lin(now, s.base, s.dur);
         s.el.style.width = (s.fw + (s.tw - s.fw) * wt) + 'px';
         if (s.outEl) {
-          var ot = easeOutCubic(lin(now, s.base, s.dur));
+          var ot = ease(lin(now, s.base, s.dur));
           s.outEl.style.transform = 'translateY(' + (h * ot) + 'px) rotate(' + (-s.tilt * ot) + 'rad)';
           s.outEl.style.opacity = String(1 - smooth((ot - 0.78) / 0.22));
         }
         if (s.inEl) {
-          var it = easeOutCubic(lin(now, s.base + s.exit, s.dur));
+          var it = ease(lin(now, s.base + s.exit, s.dur));
           s.inEl.style.transform = 'translateY(' + (-h * (1 - it)) + 'px) rotate(' + (s.tilt * (1 - it)) + 'rad)';
         }
       });
@@ -192,7 +192,7 @@
   if (mq.addEventListener) mq.addEventListener('change', function (e) { setReduce(e.matches); });
   setReduce(mq.matches);
   function boot() { reels.figure.still(rates[0]); reels.word.still(words[0]); reels.command.still(cmd.label); reserve(); replay(); }
-  if (document.fonts && document.fonts.load) Promise.all([document.fonts.load('700 28px Inter'), document.fonts.load('600 14px Inter')]).then(boot, boot); else boot();
+  if (document.fonts && document.fonts.load) Promise.all([document.fonts.load('600 28px Onest'), document.fonts.load('600 15px Onest')]).then(boot, boot); else boot();
 })();
 </script>
 </body>

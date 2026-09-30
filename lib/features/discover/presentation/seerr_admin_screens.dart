@@ -51,7 +51,6 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
           selected: _filter,
           labelBuilder: (filter) => filter.label,
           onSelected: (value) => setState(() => _filter = value),
-          accent: ServiceKey.seerr.accent,
         ),
       ),
       banner: partial != null && partial.isPartial

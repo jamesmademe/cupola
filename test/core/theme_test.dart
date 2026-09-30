@@ -11,23 +11,28 @@ void main() {
     ) async {
       final theme = AppTheme.darkTheme();
 
-      expect(theme.colorScheme.surface, const Color(0xFF0A0B11));
-      expect(theme.colorScheme.surfaceContainer, const Color(0xFF161923));
-      expect(theme.colorScheme.surfaceContainerHigh, const Color(0xFF1E2430));
-      expect(theme.colorScheme.outline, const Color(0xFF2D3748));
-      expect(theme.colorScheme.onSurface, const Color(0xFFF0F2F8));
-      expect(theme.colorScheme.onSurfaceVariant, const Color(0xFFB4BCCB));
+      // The dark room: ground, slab, raised, and the inks and edge flattened
+      // on the ground.
+      expect(theme.colorScheme.surface, const Color(0xFF0A0A0D));
+      expect(theme.colorScheme.surfaceContainer, const Color(0xFF121218));
+      expect(theme.colorScheme.surfaceContainerHigh, const Color(0xFF17171D));
+      expect(theme.colorScheme.outline, const Color(0xFF232326));
+      expect(theme.colorScheme.onSurface, const Color(0xFFF7F6F2));
+      expect(theme.colorScheme.onSurfaceVariant, const Color(0xFFBBBBBC));
+      // The chrome is monochrome: the interactive colour is the ink.
+      expect(theme.colorScheme.primary, theme.colorScheme.onSurface);
       expect(
         theme.navigationBarTheme.backgroundColor,
         AppColors.surfaceContainerDark,
       );
+      // Sheets and dialogs are raised, a step above the slab.
       expect(
         theme.bottomSheetTheme.backgroundColor,
-        theme.colorScheme.surfaceContainer,
+        theme.colorScheme.surfaceContainerHigh,
       );
       expect(
         theme.dialogTheme.backgroundColor,
-        theme.colorScheme.surfaceContainer,
+        theme.colorScheme.surfaceContainerHigh,
       );
     });
 
@@ -36,11 +41,13 @@ void main() {
     ) async {
       final theme = AppTheme.lightTheme();
 
-      expect(theme.colorScheme.surface, const Color(0xFFF3F4F6));
+      // The day room: paper, white slabs, and the fill and edge flattened.
+      expect(theme.colorScheme.surface, const Color(0xFFF6F4EF));
       expect(theme.colorScheme.surfaceContainer, Colors.white);
-      expect(theme.colorScheme.surfaceContainerHigh, const Color(0xFFF0F1F5));
-      expect(theme.colorScheme.outline, const Color(0xFFE2E4EA));
-      expect(theme.colorScheme.onSurface, const Color(0xFF111827));
+      expect(theme.colorScheme.surfaceContainerHigh, const Color(0xFFF3F3F3));
+      expect(theme.colorScheme.outline, const Color(0xFFDFDDD9));
+      expect(theme.colorScheme.onSurface, const Color(0xFF16151A));
+      expect(theme.colorScheme.primary, theme.colorScheme.onSurface);
       // `onSurfaceVariant` used to be pinned here to `#5A6273`. It moved to
       // `#4B5563`, because the old value was spaced against `surface` alone and
       // measured 4.82:1 on `surfaceContainerHighest` — which is the chip fill
@@ -57,8 +64,15 @@ void main() {
         theme.navigationBarTheme.backgroundColor,
         theme.colorScheme.surface,
       );
-      expect(theme.bottomSheetTheme.backgroundColor, theme.colorScheme.surface);
-      expect(theme.dialogTheme.backgroundColor, theme.colorScheme.surface);
+      // Sheets and dialogs are white slabs on paper.
+      expect(
+        theme.bottomSheetTheme.backgroundColor,
+        theme.colorScheme.surfaceContainer,
+      );
+      expect(
+        theme.dialogTheme.backgroundColor,
+        theme.colorScheme.surfaceContainer,
+      );
     });
 
     testWidgets('dark theme attaches CupolaThemeColors defaults', (
@@ -161,6 +175,7 @@ void main() {
           AppColors.unraid,
         ]) {
           expect(AppColors.warning, isNot(accent));
+          expect(CupolaRoom.light.toneAmber, isNot(accent));
         }
       });
 

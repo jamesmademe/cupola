@@ -62,15 +62,35 @@ void main() {
       });
     });
 
-    testWidgets('uses the destination accent color for the selected icon', (
+    testWidgets('the chrome is monochrome: ink on the strong fill', (
       tester,
     ) async {
-      await _pumpNavBar(tester, selectedIndex: 1);
+      // Principle 3 of the brand book: the selected destination is the room's strong fill
+      // under the primary ink, the rest the secondary ink, and no section
+      // carries a colour of its own — so the same pill is drawn whichever tab
+      // is selected.
+      final scheme = AppTheme.darkTheme().colorScheme;
+      for (final (index, selected, unselected) in const [
+        (1, Icons.bolt_rounded, Icons.view_list_outlined),
+        (3, Icons.settings, Icons.search_outlined),
+      ]) {
+        await _pumpNavBar(tester, selectedIndex: index);
 
-      final icon = tester.widget<Icon>(find.byIcon(Icons.bolt_rounded));
-
-      expect(icon.color, AppColors.radarr);
-      expect(find.text('Activity'), findsOneWidget);
+        expect(
+          tester.widget<Icon>(find.byIcon(selected)).color,
+          scheme.onSurface,
+        );
+        expect(
+          tester.widget<Icon>(find.byIcon(unselected)).color,
+          scheme.onSurfaceVariant,
+        );
+        final pill = tester.widget<DecoratedBox>(
+          find.byKey(const ValueKey('floating-nav-indicator')),
+        );
+        final decoration = pill.decoration as BoxDecoration;
+        expect(decoration.color, CupolaRoom.dark.fillStrong);
+        expect(decoration.border, isNull, reason: 'no accent edge');
+      }
     });
 
     testWidgets('slides the selected pill between destinations', (
@@ -343,20 +363,17 @@ void main() {
                     icon: Icons.view_list_outlined,
                     selectedIcon: Icons.view_list_rounded,
                     label: 'Dashboard',
-                    accentColor: AppColors.seerr,
                   ),
                   FloatingNavDestination(
                     icon: Icons.bolt_outlined,
                     selectedIcon: Icons.bolt_rounded,
                     label: 'Activity',
-                    accentColor: AppColors.radarr,
                     badgeCount: count,
                   ),
                   const FloatingNavDestination(
                     icon: Icons.search_outlined,
                     selectedIcon: Icons.search_rounded,
                     label: 'Search',
-                    accentColor: AppColors.sonarr,
                   ),
                 ],
               ),
@@ -425,6 +442,21 @@ void main() {
         }
       });
 
+      testWidgets('the badge is the ink disc with the on-ink numeral', (
+        tester,
+      ) async {
+        // Never a status tone and never a section's colour: permanent chrome
+        // that turned green or amber would read as stack health.
+        await pumpBadged(tester, selectedIndex: 0, count: 3);
+        final scheme = AppTheme.lightTheme().colorScheme;
+        final disc = tester.widget<Container>(badge());
+        expect((disc.decoration! as BoxDecoration).color, scheme.primary);
+        final numeral = tester.widget<Text>(
+          find.descendant(of: badge(), matching: find.text('3')),
+        );
+        expect(numeral.style!.color, scheme.onPrimary);
+      });
+
       testWidgets('past nine the badge reads 9+', (tester) async {
         await pumpBadged(tester, selectedIndex: 0, count: 12);
         expect(
@@ -460,25 +492,21 @@ Future<void> _pumpNavBar(
               icon: Icons.view_list_outlined,
               selectedIcon: Icons.view_list_rounded,
               label: 'Services',
-              accentColor: AppColors.seerr,
             ),
             FloatingNavDestination(
               icon: Icons.bolt_outlined,
               selectedIcon: Icons.bolt_rounded,
               label: 'Activity',
-              accentColor: AppColors.radarr,
             ),
             FloatingNavDestination(
               icon: Icons.search_outlined,
               selectedIcon: Icons.search_rounded,
               label: 'Search',
-              accentColor: AppColors.seerr,
             ),
             FloatingNavDestination(
               icon: Icons.settings_outlined,
               selectedIcon: Icons.settings,
               label: 'Settings',
-              accentColor: AppColors.onSurfaceVariantDark,
             ),
           ],
         ),

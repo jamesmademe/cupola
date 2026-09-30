@@ -1,4 +1,4 @@
-<!-- @dsCard group="Motion" height=360 subtitle="ServiceRing: 400ms node transitions and the 96s ambient sweep" -->
+<!-- @dsCard group="Motion" height=360 subtitle="ServiceRing: 420ms node transitions and the 96s ambient sweep" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -29,17 +29,17 @@
     <div class="cp-service-ring-motion-panel">
       <dl class="cp-motion-readout">
         <dt>spoken</dt><dd data-out="spoken">—</dd>
-        <dt>transition</dt><dd data-out="t">idle · 400 ms · easeOutCubic</dd>
+        <dt>transition</dt><dd data-out="t">idle · 420 ms · cubic-bezier(0.2, 0.8, 0.2, 1)</dd>
         <dt>sweep</dt><dd data-out="sweep">0.0° · 96 s per turn, linear</dd>
         <dt>last change</dt><dd data-out="last">—</dd>
       </dl>
       <div class="cp-service-ring-motion-legend">
         <span><b>unlit</b> · 4 px, on-surface-variant 55% (80% light)</span>
-        <span><b>picked</b> · 5 px, accent 78%</span>
-        <span><b>connected</b> · 6 px, accent, halo, spoke</span>
+        <span><b>picked</b> · 5 px, ink 78%</span>
+        <span><b>connected</b> · 6 px, ink, lamp halo and spoke</span>
         <span><b>silent</b> · 5 px drained, 1 px collar</span>
-        <span><b>active</b> · + halo, collar accent 60% at r + 4</span>
-        <span><b>progress</b> · 1.5 px arc, indigo 50%</span>
+        <span><b>active</b> · + halo, collar ink 60% at r + 4</span>
+        <span><b>progress</b> · 1.5 px arc, ink 50%</span>
       </div>
       <p class="cp-motion-note">Every node property interpolates from the frame last painted, so a change mid-transition bends instead of restarting. Reduce Motion removes the animator (the new frame paints at once) and stops the sweep.</p>
     </div>
@@ -52,8 +52,8 @@
     function ev(p, q, m) { return 3 * p * (1 - m) * (1 - m) * m + 3 * q * (1 - m) * m * m + m * m * m; }
     return function (t) { if (t <= 0) return 0; if (t >= 1) return 1; var lo = 0, hi = 1; for (;;) { var m = (lo + hi) / 2, x = ev(a, c, m); if (Math.abs(t - x) < 0.001) return ev(b, d, m); if (x < t) lo = m; else hi = m; } };
   }
-  var easeOutCubic = cubic(0.215, 0.61, 0.355, 1);
-  var TRANSITION_MS = 400, SPIN_MS = 96000, NS = 'http://www.w3.org/2000/svg';
+  var ease = cubic(0.2, 0.8, 0.2, 1); /* AppAnimation.emphasizedCurve */
+  var TRANSITION_MS = 420, SPIN_MS = 96000, NS = 'http://www.w3.org/2000/svg';
   /* ServiceRing.order: ServiceDomain.values → services, in registry order. */
   var DOMAINS = [
     ['seerr', 'radarr', 'sonarr', 'lidarr', 'bazarr', 'readarr'],
@@ -84,15 +84,17 @@
   /* _RingFrame.resolve */
   function resolve(states, active, progress) {
     var dark = isDark(), osv = rgb('on-surface-variant');
+    /* Monochrome: every node is the primary ink; its halo and spoke are the lamp (ServiceKey.accent). */
+    var ink = rgb('on-surface'), lamp = rgb('title-light-fallback');
     var unlit = withA(osv, dark ? 0.55 : 0.80), glowAlpha = dark ? 0.34 : 0.42, spokeAlpha = dark ? 0.55 : 0.70;
     return {
       track: withA(osv, 0.30), progress: progress,
       nodes: ORDER.map(function (key) {
-        var acc = rgb(key), st = states[key] || 'unlit', on = active === key;
-        if (st === 'picked') return { accent: acc, radius: 5, color: withA(acc, 0.78), glow: on ? glowAlpha : 0, spoke: 0, collar: on ? 1 : 0, collarColor: withA(acc, 0.6), spokeAlpha: spokeAlpha };
-        if (st === 'connected') return { accent: acc, radius: 6, color: acc, glow: glowAlpha, spoke: 1, collar: on ? 1 : 0, collarColor: withA(acc, 0.6), spokeAlpha: spokeAlpha };
-        if (st === 'silent') return { accent: acc, radius: 5, color: osv, glow: on ? glowAlpha : 0, spoke: 0, collar: 1, collarColor: on ? withA(acc, 0.6) : withA(osv, 0.35), spokeAlpha: spokeAlpha };
-        return { accent: acc, radius: 4, color: unlit, glow: 0, spoke: 0, collar: 0, collarColor: acc, spokeAlpha: spokeAlpha };
+        var acc = lamp, st = states[key] || 'unlit', on = active === key;
+        if (st === 'picked') return { accent: acc, radius: 5, color: withA(ink, 0.78), glow: on ? glowAlpha : 0, spoke: 0, collar: on ? 1 : 0, collarColor: withA(ink, 0.6), spokeAlpha: spokeAlpha };
+        if (st === 'connected') return { accent: acc, radius: 6, color: ink, glow: glowAlpha, spoke: 1, collar: on ? 1 : 0, collarColor: withA(ink, 0.6), spokeAlpha: spokeAlpha };
+        if (st === 'silent') return { accent: acc, radius: 5, color: osv, glow: on ? glowAlpha : 0, spoke: 0, collar: 1, collarColor: on ? withA(ink, 0.6) : withA(osv, 0.35), spokeAlpha: spokeAlpha };
+        return { accent: acc, radius: 4, color: unlit, glow: 0, spoke: 0, collar: 0, collarColor: ink, spokeAlpha: spokeAlpha };
       })
     };
   }
@@ -137,7 +139,7 @@
     else {
       var a0 = -Math.PI / 2 + sweep, a1 = a0 + Math.PI * 2 * Math.min(pr, 0.99999), large = pr > 0.5 ? 1 : 0;
       progressPath.setAttribute('d', 'M' + (C + Math.cos(a0) * RADIUS) + ' ' + (C + Math.sin(a0) * RADIUS) + 'A' + RADIUS + ' ' + RADIUS + ' 0 ' + large + ' 1 ' + (C + Math.cos(a1) * RADIUS) + ' ' + (C + Math.sin(a1) * RADIUS));
-      progressPath.setAttribute('stroke', css(withA(rgb('seerr'), 0.5)));
+      progressPath.setAttribute('stroke', css(withA(rgb('on-surface'), 0.5)));
     }
     frame.nodes.forEach(function (n, i) {
       var p = P[i], a = ANGLES[i] + sweep, dx = Math.cos(a), dy = Math.sin(a);
@@ -163,7 +165,7 @@
       p.hit.setAttribute('cx', x); p.hit.setAttribute('cy', y);
     });
   }
-  /* _ServiceRingState: _transition (400 ms) + _spinner (repeat, 96 s) */
+  /* _ServiceRingState: _transition (420 ms) + _spinner (repeat, 96 s) */
   var states = {}, active = null, progress = 0, from = null, painted = null, tStart = 0, spinning = true, fast = 1;
   var spinPhase = 0, spinT0 = performance.now(), raf = 0;
   function sweepNow(now) { return spinning && !reduce() ? (spinPhase + (now - spinT0) * fast / SPIN_MS) % 1 : spinPhase; }
@@ -178,9 +180,9 @@
     raf = 0;
     var target = resolve(states, active, progress), f = target, busy = false;
     if (from) {
-      var p = Math.min(1, (now - tStart) / TRANSITION_MS), t = easeOutCubic(p);
+      var p = Math.min(1, (now - tStart) / TRANSITION_MS), t = ease(p);
       f = lerpFrame(from, target, t); busy = p < 1;
-      out.t.textContent = (busy ? 't ' + t.toFixed(3) : 'idle') + ' · 400 ms · easeOutCubic';
+      out.t.textContent = (busy ? 't ' + t.toFixed(3) : 'idle') + ' · 420 ms · cubic-bezier(0.2, 0.8, 0.2, 1)';
       if (!busy) from = null;
     }
     var sw = sweepNow(now);

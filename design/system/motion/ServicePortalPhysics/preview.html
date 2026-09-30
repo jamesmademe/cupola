@@ -30,7 +30,7 @@
       </div>
       <div class="cp-service-portal-physics-nav" data-nav>
         <div class="cp-navbar-wrap"><nav class="cp-navbar" aria-label="Main" data-bar>
-          <span class="cp-nav-item is-selected" data-ontint="nav-dashboard" data-alpha="0.16" data-alpha-light="0.13" data-tab><span class="cp-icon" aria-hidden="true">view_list</span>Dashboard</span>
+          <span class="cp-nav-item is-selected" data-tab><span class="cp-icon" aria-hidden="true">view_list</span>Dashboard</span>
           <span class="cp-nav-item" data-tab><span class="cp-icon outlined" aria-hidden="true">monitor_heart</span></span>
           <span class="cp-nav-item" data-tab><span class="cp-icon outlined" aria-hidden="true">search</span></span>
           <span class="cp-nav-item" data-tab><span class="cp-icon outlined" aria-hidden="true">settings</span></span>
@@ -74,7 +74,7 @@
   function lerp(a, b, t) { return a + (b - a) * t; }
   /* PortalPhysics (service_portal.dart) — hand-tuned literals, not motion tokens. */
   var PP = { threshold: 75, baseResistance: 0.60, falloff: 7, cardAnticipation: 0.80, safeZone: 140, springStiffness: 520, springDampingRatio: 0.95, flickGate: 700, cardTopInset: 34, cardScale: 0.42, cardCornerRadius: 22, engageBlend: 160, disengageBlend: 220, barHome: 260, barSpringBack: 500 };
-  var NAV_MAX_DRAG = 15, NAV_RESISTANCE = 0.15, NAV_FALLOFF = 30, NAV_SPRING = 500;
+  var NAV_MAX_DRAG = 15, NAV_RESISTANCE = 0.15, NAV_FALLOFF = 30, NAV_SPRING = 520;
   var REDUCED = 0.05; /* AnimationController.forward/animateTo under disableAnimations; animateWith (the spring) is not scaled */
   var H = 580;
   var q = function (s) { return root.querySelector(s); };

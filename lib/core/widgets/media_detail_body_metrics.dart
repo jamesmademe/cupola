@@ -21,7 +21,7 @@ class MediaDetailMetrics {
 
   /// Measure for running prose, nested inside [bodyMaxWidth].
   ///
-  /// Inter `bodyLarge` at 1.55 leading lands near 75 characters at
+  /// `bodyLarge` (Onest 15 on 22) lands near 75 characters at
   /// `640 - 2 x 16`, the top of the comfortable reading range. Wider than that
   /// and the eye loses the line it came from on the return sweep.
   static const double proseMaxWidth = 640;

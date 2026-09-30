@@ -1,16 +1,16 @@
 # TextField
 
-A filled input with no border at rest — the fill draws the boundary.
+A filled input with a hairline edge at rest — the quiet fill and the edge draw the boundary.
 
 Rendered from `lib/core/theme.dart` (`inputDecorationTheme`) by `test/design_catalog/text_field_catalog_test.dart`. Every `TextField` / `TextFormField` in the app takes this theme; the one deliberate exception is the Dockge compose editor, which pins its own fill and border because its panel stays dark-toned in both app themes (see `dockge_stack_edit_screen.dart`).
 
 ## Values
 
-- Fill `colorScheme.surfaceContainerHighest`, `AppRadius.borderRadiusMd`, content padding `AppSpacing.lg` horizontal × `AppSpacing.md` vertical.
+- Fill `room.fillQuiet` (white at 6% dark, ink at 5% light), `AppRadius.borderRadiusField` (16), content padding `AppSpacing.lg` horizontal × `AppSpacing.md` vertical.
 - Hint in `textTheme.bodyMedium`, coloured `onSurfaceVariant`.
-- Rest and enabled: no border (`BorderSide.none`).
-- Focused: a 2px `colorScheme.primary` border.
-- Error: a 1px `colorScheme.error` border at rest, 2px when focused, and the validation message under the field.
+- Rest and enabled: a 1px `room.edge` border.
+- Focused: a 1.5px `room.focus` border, the secondary ink.
+- Error: a 1.5px border in the amber fault tone (`room.toneAmber`), at rest and focused, and the validation message under the field in `bodySmall` in the same tone — a refusal is a fault, and red is reserved for unreachable.
 
 ## Consumer provides
 
@@ -24,4 +24,4 @@ Give every field a `labelText`; a field with only a hint loses its floating labe
 
 - Do obscure secrets (API keys, passwords) and pair `obscureText` with a reveal action rather than putting the value on the clipboard to check it.
 - Do keep `keyboardType: TextInputType.visiblePassword` on obscured fields — it is what stops the platform offering autocorrect and word suggestions on a secret.
-- Don't add an outline at rest or a local fill colour: the theme owns both, outside the one documented exception above.
+- Don't add a local outline or fill colour: the theme owns both, outside the one documented exception above.

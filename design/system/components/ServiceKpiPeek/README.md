@@ -8,13 +8,13 @@ Rendered from `lib/core/widgets/service_kpi_peek.dart` by `test/design_catalog/s
 
 - **Rail**: 78 tall at the default reading size, grown by the text share (34pt) of that height up to the 1.6× clamp (`TextScaleMetrics.boxHeight`), and painted under the same clamped scaler so the text never outgrows its box. Padding `AppSpacing.lg` / `AppSpacing.xs` / `AppSpacing.lg` / `AppSpacing.md` (overridable with `padding`), cards `AppSpacing.sm` apart, scrolling horizontally.
 - **Card**: at least 92 wide and growing with its figure, `surfaceContainer`, 1px `outlineVariant`, `AppRadius.borderRadiusMd`, `AppElevation.level1`, padding `AppSpacing.md` × `AppSpacing.sm`, content centred vertically.
-- **Figure row**: a 14pt glyph, `AppSpacing.xs`, then the figure in `titleMedium` at 700, tabular, 1.1 leading, in `onSurface`. The figure rolls on change (`ReelLine`, `ReelMotion.figure`).
-- **Glyph colour**: the service accent walked against `surfaceContainer` (`ServiceTheme.onTint`, `tintAlpha: 0`); a figure with a tone takes `statusToneColor(tone, surface: surfaceContainer)` instead.
+- **Figure row**: a 14pt glyph, `AppSpacing.xs`, then the figure in `titleMedium` at 600, tabular, 1.1 leading, in `onSurface`. The figure rolls on change (`ReelLine`, `ReelMotion.figure`).
+- **Glyph colour**: the primary ink — the service's accent is the lamp, which `ServiceTheme.onTint` resolves to ink against `surfaceContainer`; a figure with a tone takes `statusToneColor(tone, surface: surfaceContainer)` instead, and an unanswered one `onSurfaceVariant`.
 - **Label**: 3pt below, `AppTheme.eyebrow` in `onSurfaceVariant`, uppercased, one line, ellipsised. A `note`, when there is one, takes the label's place.
 
 ## Tones
 
-The rule is the app's tone rule. A backlog figure (Missing, Pending) is `StatusTone.neutral`; bytes moving or someone watching is `StatusTone.info`; only a fault — a pool past 80%, an active alert, a transcode — is `StatusTone.warning`. A figure with nothing to say carries no tone and wears the accent.
+The rule is the app's tone rule. A backlog figure (Missing, Pending) is `StatusTone.neutral`; bytes moving or someone watching is `StatusTone.info`; only a fault — a pool past 80%, an active alert, a transcode — is `StatusTone.warning`. A figure with nothing to say carries no tone and is ink.
 
 ## States
 
@@ -25,7 +25,7 @@ The rule is the app's tone rule. A backlog figure (Missing, Pending) is `StatusT
 
 ## The consumer provides
 
-An `AsyncValue<List<ServiceKpi>>` (label, value, icon, optional tone, optional note) and the service `accent`. Real labels include Movies, Monitored, Missing, Queue; Active, Down, Up, Seeding, Downloading; Streams, Transcodes, Libraries; Requests, Pending, Processing, Available; Pools, Used, Alerts.
+An `AsyncValue<List<ServiceKpi>>` (label, value, icon, optional tone, optional note) and the service `accent` (the lamp, from `ServiceKey.accent`). Real labels include Movies, Monitored, Missing, Queue; Active, Down, Up, Seeding, Downloading; Streams, Transcodes, Libraries; Requests, Pending, Processing, Available; Pools, Used, Alerts.
 
 ## Semantics
 

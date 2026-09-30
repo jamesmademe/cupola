@@ -151,10 +151,10 @@ void main() {
       // The table in the widget's doc comment, held to reality. Antialiasing on
       // the chevron means these are the *painted* ratios, not the analytic pair.
       const expected = <String, double>{
-        'dark/bright': 4.98,
-        'dark/dark': 17.99,
-        'light/bright': 16.71,
-        'light/dark': 6.08,
+        'dark/bright': 5.22,
+        'dark/dark': 18.72,
+        'light/bright': 17.10,
+        'light/dark': 6.23,
       };
 
       for (final brightness in Brightness.values) {

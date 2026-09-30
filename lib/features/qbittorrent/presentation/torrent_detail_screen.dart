@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/service_routes.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
@@ -102,7 +101,6 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
 
   Widget _buildContent(Torrent torrent) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accent = AppColors.qbittorrent;
 
     return Scaffold(
       body: NestedScrollView(
@@ -124,8 +122,10 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
                 Container(
                   width: 8,
                   height: 8,
+                  // The service's dot, monochrome: which service this is,
+                  // the page's own route already says.
                   decoration: BoxDecoration(
-                    color: accent,
+                    color: colorScheme.onSurfaceVariant,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -523,7 +523,6 @@ class _FileRow extends ConsumerWidget {
           child: LinearProgressIndicator(
             value: file.progress,
             backgroundColor: colorScheme.outline,
-            color: AppColors.qbittorrent,
           ),
         ),
       ),
@@ -563,7 +562,7 @@ class _FileRow extends ConsumerWidget {
                 trailing: file.priority == e.key
                     ? Icon(
                         Icons.check_rounded,
-                        color: AppColors.qbittorrent,
+                        color: Theme.of(ctx).colorScheme.onSurface,
                         size: 18,
                       )
                     : null,
@@ -726,10 +725,6 @@ class _ActionsTab extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         FilledButton.icon(
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.qbittorrent,
-            foregroundColor: ServiceTheme.foregroundOn(AppColors.qbittorrent),
-          ),
           onPressed: () => runTorrentAction(
             context,
             ref,

@@ -37,7 +37,7 @@
     var p = o.h < 60 ? [c, x, 0] : o.h < 120 ? [x, c, 0] : o.h < 180 ? [0, c, x] : o.h < 240 ? [0, x, c] : o.h < 300 ? [x, 0, c] : [c, 0, x];
     return { r: (p[0] + m) * 255, g: (p[1] + m) * 255, b: (p[2] + m) * 255 };
   }
-  var INK = { r: 17, g: 24, b: 39 }, WHITE = { r: 255, g: 255, b: 255 };
+  var INK = { r: 10, g: 10, b: 13 }, WHITE = { r: 255, g: 255, b: 255 };
   function css(c) { return 'rgb(' + Math.round(c.r) + ', ' + Math.round(c.g) + ', ' + Math.round(c.b) + ')'; }
   function foregroundOn(bg) {
     var l = lum(bg);

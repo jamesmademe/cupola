@@ -43,7 +43,7 @@ class DockgeStackDetailScreen extends ConsumerWidget {
         .isServiceConfigured(ServiceKey.dockge);
 
     return AmbientScaffold(
-      accent: AppColors.dockge,
+      accent: ServiceKey.dockge.accent,
       appBar: GlassAppBar(
         title: Text(name),
         actions: [
@@ -184,7 +184,7 @@ class _ActionBar extends ConsumerWidget {
     // longest, on the theory that red on an action meant "cannot be undone";
     // it does not, and its confirmation says so in a sentence instead.
     final accent = ServiceTheme.onTint(
-      AppColors.dockge,
+      ServiceKey.dockge.accent,
       surface: colorScheme.surface,
       tintAlpha: 0.12,
     );
@@ -402,7 +402,11 @@ class _ServiceStatusList extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.widgets_rounded, size: 18, color: AppColors.dockge),
+                Icon(
+                  Icons.widgets_rounded,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -555,7 +559,7 @@ class _TerminalLogState extends ConsumerState<_TerminalLog> {
           width: double.infinity,
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: const Color(0xFF0A0B11),
+            color: AppColors.plateWell,
             borderRadius: AppRadius.borderRadiusMd,
             border: Border.all(
               color: Theme.of(context).colorScheme.outlineVariant,

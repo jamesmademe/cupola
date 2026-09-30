@@ -61,10 +61,10 @@ List<Widget> settingsAboutRows(BuildContext context) {
       subtitle: 'Buy me a coffee',
       onTap: () => _openDonation(context),
     ),
-    // The only way into the licence page. `main.dart` registers Inter's OFL
-    // with the registry, and the OFL's one condition on a bundling binary is
-    // that its text travels with it — which it did not, in any build, while
-    // nothing in the app opened the page.
+    // The only way into the licence page. `main.dart` registers each bundled
+    // font's OFL with the registry, and the OFL's one condition on a bundling
+    // binary is that its text travels with it — which it did not, in any
+    // build, while nothing in the app opened the page.
     SettingsCard.grouped(
       leading: const Icon(Icons.gavel_rounded),
       title: 'Licenses & trademarks',

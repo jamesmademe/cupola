@@ -22,11 +22,11 @@ Rendered from `lib/core/widgets/cross_service_action.dart` (`GatedAffordance`, `
 | `CapabilityGatedAction.toggle` | same | merged onto the switch's own node; the whole switch dims and keeps the server's value | same |
 | `CapabilityGatedMenuLabel` | same | on the menu item's label; the item stays enabled and its `onSelected` asks `capabilityWriteAllowed` | same |
 
-The cell draws its child through `PressableScale`: a 44 × 44 minimum target around the child, a 0.97 press dip, and the haptic only when it can act. The builder shapes hand the caller's button the gated `onPressed` and an `annotate` function that dims and hints the button's **content** — `HeaderActionButton` (an outlined 48pt square with a caption under it) takes it as its `annotate` parameter and dims glyph and caption together; a `TextButton` or `FilledButton` wraps its label in it. `.icon` keeps the `IconButton`'s own target.
+The cell draws its child through `PressableScale`: a 44 × 44 minimum target around the child, a 0.96 press dip, and the haptic only when it can act. The builder shapes hand the caller's button the gated `onPressed` and an `annotate` function that dims and hints the button's **content** — `HeaderActionButton` (an outlined 48pt square with a caption under it) takes it as its `annotate` parameter and dims glyph and caption together; a `TextButton` or `FilledButton` wraps its label in it. `.icon` keeps the `IconButton`'s own target.
 
 When Cupola could not ask the service (`CapabilityBasis.unanswered`), every capability shape switches to the hint *this key's permissions are unknown* and the toast *Cupola couldn't check this key's permissions, so it's holding changes back.* with **Check again**, which re-asks instead of sending the user to replace a key that may work. Nginx Proxy Manager says *account* where the others say *key*. While the probe is still out the grant is `unknown`, which stays live.
 
-Toasts are `SnackBarHelper.withAction`: the theme's floating snackbar — `inverseSurface`, `AppRadius.borderRadiusMd`, `bodyMedium` in `onInverseSurface`, action ink `inversePrimary` — for 4 s, one sentence, one action. When the sentence and the action do not fit one line, Material moves the action under the sentence.
+Toasts are `SnackBarHelper.withAction`: the theme's floating snackbar — `inverseSurface`, `AppRadius.button` (16) with a 1px `room.edge` line, `bodyMedium` in `onInverseSurface`, action ink `inversePrimary` — for 4 s, one sentence, one action. When the sentence and the action do not fit one line, Material moves the action under the sentence.
 
 ## The consumer provides
 

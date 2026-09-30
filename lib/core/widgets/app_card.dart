@@ -40,8 +40,8 @@ enum AppCardPressFeedback {
   ///
   /// For cards too small for the first reading to survive: a ripple that
   /// *floods* its container is how a chip signals selection, not how a surface
-  /// signals a touch. The threshold is about the ripple relative to the box,
-  /// so it tracks the same judgment as DESIGN.md's Pill-for-Metadata Rule.
+  /// signals a touch. The threshold is about the ripple relative to the box:
+  /// a flood that fills a small shape reads as a state, not as a press.
   scale,
 }
 
@@ -74,16 +74,17 @@ class AppCard extends StatelessWidget {
   /// Optional custom outline color for outlined cards.
   final Color? borderColor;
 
-  /// When set, paints a soft accent glow inside the card (signature surfaces).
+  /// When set, paints a soft glow of this light inside the card: the lamp (a
+  /// service's accent is the lamp), or a tone on a card that is about a state.
   final Color? accentColor;
 
   /// Strength and origin of that glow.
   ///
-  /// The defaults are the signature-card treatment: a strong wash from the top
-  /// right, on the one card that owns the screen. A card in a *grid* wants a
-  /// fraction of it and usually a different corner — the stack matrix lights
-  /// each cell from the top left at 0.08, because thirteen cells at full
-  /// strength stop reading as identity and start reading as decoration.
+  /// The defaults light one card on its own: a strong wash from the top right,
+  /// on the one card that owns the screen. A card in a *grid* wants a fraction
+  /// of it and usually a different corner — the stack matrix lights each cell
+  /// from the top left at 0.08, because thirteen cells at full strength stop
+  /// reading as lit cells and start reading as decoration.
   final double accentGlowAlpha;
   final Alignment accentGlowCenter;
 
@@ -258,7 +259,7 @@ class AppCard extends StatelessWidget {
         break;
     }
 
-    // Optional accent glow painted behind the content for signature cards.
+    // Optional glow of the card's light, painted behind the content.
     final glow = accentColor != null
         ? AppGradients.serviceGlow(
             accentColor!,

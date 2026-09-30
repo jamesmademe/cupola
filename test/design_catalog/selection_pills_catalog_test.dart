@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
 
 import 'catalog.dart';
@@ -15,8 +14,8 @@ void main() {
     'SelectionPills',
     scenes: [
       CatalogScene(
-        'SelectionPills<int>() · default accent (primary) — an aggregate '
-        'surface is lit by primary, not by one service',
+        'SelectionPills<int>() · the selected pill is the strong fill under '
+        'the primary ink, the nav bar\'s pill',
         (_) => SelectionPills<int>(
           values: const [0, 1, 2],
           selected: 1,
@@ -25,15 +24,14 @@ void main() {
         ),
       ),
       CatalogScene(
-        'SelectionPills<int>(accent: AppColors.radarr) · a service page\'s '
-        'own accent',
+        'SelectionPills<int>() · on a service page · the same pill: no '
+        'service colours it',
         (_) => SelectionPills<int>(
           values: const [0, 1, 2, 3],
           selected: 0,
           labelBuilder: (i) =>
               const ['Queue', 'History', 'Wanted', 'Calendar'][i],
           onSelected: (_) {},
-          accent: AppColors.radarr,
         ),
       ),
       CatalogScene(
@@ -63,7 +61,6 @@ void main() {
                 selected: 1,
                 labelBuilder: (i) => 'S$i',
                 onSelected: (_) {},
-                accent: AppColors.sonarr,
                 padding: SelectionPills.flush,
               ),
             ],

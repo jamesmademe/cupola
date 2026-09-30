@@ -105,9 +105,9 @@ class StreamActivitySection extends ConsumerWidget {
               child: StreamSessionCard(
                 session: row.session,
                 // Each row takes its own server's accent, the way a download row
-                // carries its client's. The Room Light Rule's one-accent-per-screen
-                // constraint is about what *lights* the room — `/activity` is
-                // inherently cross-service, so identity stays confined to the row.
+                // carries its client's — the lamp, for every service, which the
+                // row resolves to the room's ink: which server a session is on,
+                // the row says in words.
                 accent: row.service.accent,
                 onStop: _stopHandler(context, ref, row),
               ),

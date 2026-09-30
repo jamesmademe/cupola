@@ -241,7 +241,7 @@ class _AlertBandBody extends StatelessWidget {
             // the address itself is what changed, no number of retries will help
             // and the only thing that will is one tap away. It is a text action
             // rather than a glyph because there is no icon for "the address is
-            // wrong", and it is brand indigo for the same reason Retry is:
+            // wrong", and it is the primary ink for the same reason Retry is:
             // painting the recovery in the fault's own tone makes the cure look
             // as alarming as the disease.
             TextButton(

@@ -130,9 +130,20 @@ flutter:
   uses-material-design: true
 
   fonts:
-    - family: Inter
+    # The three families of the type system, each a single variable file (see
+    # `AppTheme`: every role sets its axes explicitly, because a variable face
+    # registered once renders at its default instance whatever `fontWeight`
+    # asks for). Bricolage Grotesque (opsz, wdth, wght) sets display type,
+    # Onest (wght) sets text, Geist Mono (wght) sets machine strings.
+    - family: Bricolage Grotesque
       fonts:
-        - asset: assets/fonts/Inter.ttf
+        - asset: assets/fonts/BricolageGrotesque.ttf
+    - family: Onest
+      fonts:
+        - asset: assets/fonts/Onest.ttf
+    - family: Geist Mono
+      fonts:
+        - asset: assets/fonts/GeistMono.ttf
     # One mark per service, built from `tool/service_glyphs/` by its
     # `build_font.py`. Generated: rebuild it rather than editing the file.
     - family: CupolaServices
@@ -144,10 +155,13 @@ flutter:
     # hexagon's edge midpoints, around the central circular window. Rendered from
     # `assets/brand/cupola_mark.svg`, which is the vector source of record.
     - assets/brand/cupola_mark.png
-    # Inter ships under the SIL OFL 1.1, whose clause 2 requires the licence to
-    # travel with the font. Bundled so `main.dart` can hand it to
-    # `LicenseRegistry`, which is what puts it in the app's own licence page.
-    - assets/fonts/OFL.txt
+    # The three families ship under the SIL OFL 1.1, whose clause 2 requires the
+    # licence to travel with the font. Bundled so `main.dart` can hand each one
+    # to `LicenseRegistry`, which is what puts them in the app's own licence
+    # page.
+    - assets/fonts/BricolageGrotesque-OFL.txt
+    - assets/fonts/Onest-OFL.txt
+    - assets/fonts/GeistMono-OFL.txt
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -3,13 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_field_inputs.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_tag_selector.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Add/edit form for an app, download client, notification or indexer proxy.
 ///
@@ -35,7 +35,7 @@ Future<ProwlarrFormOutcome> showProwlarrProviderFormSheet({
         ? null
         : resource.displayImplementation,
     icon: kind.icon,
-    accent: AppColors.prowlarr,
+    accent: ServiceKey.prowlarr.accent,
     showClose: true,
     initialSize: 0.9,
     minSize: 0.5,

@@ -30,7 +30,7 @@ class DockgeScreen extends ConsumerWidget {
     final isConfigured = settings.isServiceConfigured(ServiceKey.dockge);
 
     return AmbientScaffold(
-      accent: AppColors.dockge,
+      accent: ServiceKey.dockge.accent,
       appBar: showAppBar
           ? const GlassAppBar(
               title: Text('Dockge'),
@@ -83,7 +83,7 @@ class _DockgeDashboard extends ConsumerWidget {
           if (topPadding > 0) SizedBox(height: topPadding),
           ServiceKpiPeek(
             kpis: ref.watch(serviceKpiProvider(ServiceKey.dockge)),
-            accent: AppColors.dockge,
+            accent: ServiceKey.dockge.accent,
           ),
           const SizedBox(height: AppSpacing.xs),
           SectionHeader.action(
@@ -92,7 +92,6 @@ class _DockgeDashboard extends ConsumerWidget {
               onPressed: () => context.push(ServiceRoutes.dockgeNewStack),
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('New'),
-              style: TextButton.styleFrom(foregroundColor: AppColors.dockge),
             ),
           ),
           const SizedBox(height: 2),
@@ -256,7 +255,6 @@ class _StackQuickActions extends ConsumerWidget {
         IconButton(
           tooltip: 'Restart',
           icon: const Icon(Icons.restart_alt_rounded),
-          color: AppColors.dockge,
           onPressed: () => _confirmThenRun(
             context,
             ref,

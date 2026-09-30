@@ -24,8 +24,9 @@ import 'package:cupola/features/discover/presentation/discover_provider.dart';
 /// info-row pattern found nowhere else in the app, and a raw
 /// `CircularProgressIndicator` plus `'Error: $err'` for its states. Every string
 /// here still takes a role off `textTheme` — and re-weights through
-/// `CupolaTextStyle.weight`, since `copyWith(fontWeight:)` on the bundled
-/// variable Inter does not reach the `wght` axis and silently renders Regular.
+/// `CupolaTextStyle.weight`, since `copyWith(fontWeight:)` on a bundled
+/// variable face does not reach the `wght` axis and silently keeps the role's
+/// weight.
 class RequestsList extends ConsumerWidget {
   const RequestsList({super.key, this.instanceId = ''});
 

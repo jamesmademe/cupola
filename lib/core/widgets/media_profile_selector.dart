@@ -19,8 +19,7 @@ import 'package:cupola/core/widgets/media_detail_value_row.dart';
 /// to a quality profile can queue a library-wide upgrade sweep.
 ///
 /// [accent] lights the sheet and the selected row. Pass the page's service
-/// accent; without it the picker would put `colorScheme.primary` indigo on a
-/// Sonarr violet page, which is a second accent on one screen.
+/// accent — the lamp — so the sheet is lit like the page it opened from.
 Future<void> showMediaProfileSelector(
   BuildContext context, {
   required String currentProfileName,

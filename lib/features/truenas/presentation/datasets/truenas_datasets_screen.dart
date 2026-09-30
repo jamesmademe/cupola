@@ -38,7 +38,6 @@ class TrueNasDatasetsScreen extends ConsumerWidget {
               ? const AppEmptyState(
                   icon: Icons.account_tree_rounded,
                   title: 'No datasets',
-                  accentColor: AppColors.truenas,
                 )
               : ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -101,7 +100,7 @@ class _DatasetNode extends StatelessWidget {
         Icon(
           dataset.isVolume ? Icons.storage_rounded : Icons.folder_rounded,
           size: 16,
-          color: AppColors.truenas,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
@@ -175,7 +174,6 @@ class DatasetCreateButton extends ConsumerWidget {
       onTap: () => createDatasetFlow(context, ref, parentId: null),
       builder: (context, onPressed, annotate) => FloatingActionButton.extended(
         onPressed: onPressed,
-        backgroundColor: AppColors.truenas,
         label: annotate(
           const Row(
             mainAxisSize: MainAxisSize.min,

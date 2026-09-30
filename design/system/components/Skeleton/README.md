@@ -6,7 +6,7 @@ Rendered from `lib/core/widgets/shimmer_placeholder.dart` (`ShimmerPlaceholder`,
 
 ## Values
 
-- Fill: base `colorScheme.surfaceContainerHigh`, highlight `colorScheme.surfaceContainer`, a linear gradient base / highlight / base from `Alignment(v − 1, 0)` to `Alignment(v, 0)` as `v` runs −1 → 2 on a 1500ms (`AppAnimation.shimmerDuration`) `easeInOutSine` cycle, one `AnimationController` per block.
+- Fill: base `colorScheme.surfaceContainerHigh`, highlight `colorScheme.surfaceContainer`, a linear gradient base / highlight / base from `Alignment(v − 1, 0)` to `Alignment(v, 0)` as `v` runs −1 → 2 on a 1600ms (`AppAnimation.shimmerDuration`) `easeInOutSine` cycle, one `AnimationController` per block.
 - **Reduce Motion** (`MediaQuery.disableAnimationsOf`): the controller stops and the block paints the flat base colour, no gradient.
 - Shapes: `.card` → `AppRadius.borderRadiusMd`; `.text` → `AppRadius.borderRadiusXs`, 14 tall by default; `.circle`; the bare constructor takes whatever `borderRadius` it is given (none by default, so square).
 

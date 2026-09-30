@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_actions.dart';
@@ -33,7 +32,7 @@ class NzbgetScreen extends ConsumerWidget {
     final isConfigured = settings.isServiceConfigured(ServiceKey.nzbget);
 
     return AmbientScaffold(
-      accent: AppColors.nzbget,
+      accent: ServiceKey.nzbget.accent,
       appBar: showAppBar ? const GlassAppBar(title: Text('NZBGet')) : null,
       body: SafeArea(
         // The shared placeholder, not a private copy — see the note on the
@@ -63,7 +62,7 @@ class _NzbgetDashboard extends ConsumerWidget {
     if (isOffline) {
       return ServiceOfflineState(
         serviceName: ServiceKey.nzbget.title,
-        accent: AppColors.nzbget,
+        accent: ServiceKey.nzbget.accent,
         onRetry: () => _invalidateAll(ref),
       );
     }
@@ -89,7 +88,7 @@ class _NzbgetDashboard extends ConsumerWidget {
               if (topPadding > 0) SizedBox(height: topPadding),
               ServiceKpiPeek(
                 kpis: ref.watch(serviceKpiProvider(ServiceKey.nzbget)),
-                accent: AppColors.nzbget,
+                accent: ServiceKey.nzbget.accent,
               ),
               const SizedBox(height: AppSpacing.sm),
               const _NzbgetActionsBar(),
@@ -304,7 +303,7 @@ class _QueueTile extends ConsumerWidget {
       // Preserve the distinction between a real zero and a percentage NZBGet
       // could not compute. The shared plate renders the latter as an em dash.
       percentage: group.percentage,
-      accent: AppColors.nzbget,
+      accent: ServiceKey.nzbget.accent,
       actions: DownloadQueueActionsMenu(
         paused: _paused,
         onCommand: (command) => _run(context, ref, command),

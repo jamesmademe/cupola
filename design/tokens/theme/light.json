@@ -1,29 +1,189 @@
 {
   "color": {
+    "room": {
+      "ground": {
+        "$type": "color",
+        "$value": "#F6F4EF",
+        "$description": "Paper: the floor of the day room."
+      },
+      "slab": {
+        "$type": "color",
+        "$value": "#FFFFFF",
+        "$description": "A section (with a line.hair edge and a soft shadow), a card."
+      },
+      "raised": {
+        "$type": "color",
+        "$value": "#FFFFFF",
+        "$description": "Sheets and dialogs."
+      },
+      "door": {
+        "$type": "color",
+        "$value": "#FFFFFF",
+        "$description": "Doors and tiles (the day room has no separate door)."
+      },
+      "enamel": {
+        "$type": "color",
+        "$value": "#FFFFFF",
+        "$description": "Floating bars, at the glass opacity."
+      },
+      "menu": {
+        "$type": "color",
+        "$value": "#FFFFFF",
+        "$description": "Popover menus (derived: the day room lifts menus by shadow, not by tone)."
+      },
+      "toast": {
+        "$type": "color",
+        "$value": "#16151A",
+        "$description": "A toast: the ink, reversed (derived)."
+      },
+      "scrim": {
+        "$type": "color",
+        "$value": "#16151A66",
+        "$description": "Behind sheets and dialogs: the ink at 40%."
+      }
+    },
+    "line": {
+      "hair": {
+        "$type": "color",
+        "$value": "#0000000F",
+        "$description": "A slab's edge, a divider."
+      },
+      "edge": {
+        "$type": "color",
+        "$value": "#16151A1A",
+        "$description": "A control's edge, a field at rest."
+      },
+      "focus": {
+        "$type": "color",
+        "$value": "#16151AB3",
+        "$description": "The focus ring and a focused field (derived: secondary ink)."
+      }
+    },
+    "fill": {
+      "quiet": {
+        "$type": "color",
+        "$value": "#16151A0D",
+        "$description": "Chips at rest, fields, the segmented track."
+      },
+      "control": {
+        "$type": "color",
+        "$value": "#16151A14",
+        "$description": "Ghost buttons, icon buttons, steppers (derived: 8% ink)."
+      },
+      "strong": {
+        "$type": "color",
+        "$value": "#16151A1F",
+        "$description": "The selected tab pill (derived: 12% ink)."
+      },
+      "track": {
+        "$type": "color",
+        "$value": "#16151A1F",
+        "$description": "A progress track (derived: 12% ink)."
+      }
+    },
+    "ink": {
+      "primary": {
+        "$type": "color",
+        "$value": "#16151A",
+        "$description": "Primary text and the ink button."
+      },
+      "secondary": {
+        "$type": "color",
+        "$value": "#16151AB3",
+        "$description": "Secondary text."
+      },
+      "tertiary": {
+        "$type": "color",
+        "$value": "#16151AA6",
+        "$description": "Tertiary text: 5.4:1 on paper."
+      },
+      "disabled": {
+        "$type": "color",
+        "$value": "#16151A61",
+        "$description": "Disabled text (derived: 38% ink)."
+      },
+      "on-ink": {
+        "$type": "color",
+        "$value": "{color.base.white}",
+        "$description": "Text on the ink button: white."
+      }
+    },
+    "tone": {
+      "green": {
+        "$type": "color",
+        "$value": "#0F7A45",
+        "$description": "GREEN: available, complete, healthy."
+      },
+      "green-dot": {
+        "$type": "color",
+        "$value": "#0F7A45",
+        "$description": "The green dot (derived: the tone itself)."
+      },
+      "amber": {
+        "$type": "color",
+        "$value": "#8F5E00",
+        "$description": "AMBER: a fault."
+      },
+      "amber-ink": {
+        "$type": "color",
+        "$value": "#2A1E00",
+        "$description": "Text on the amber remedy fill."
+      },
+      "amber-fill": {
+        "$type": "color",
+        "$value": "#F2B531",
+        "$description": "The remedy button's fill."
+      },
+      "amber-wash": {
+        "$type": "color",
+        "$value": "#F2B5312E",
+        "$description": "A fault chip's wash (derived: the remedy fill at 18%)."
+      },
+      "red": {
+        "$type": "color",
+        "$value": "#B8322A",
+        "$description": "RED: unreachable, and nothing else."
+      },
+      "red-dot": {
+        "$type": "color",
+        "$value": "#B8322A",
+        "$description": "The red dot (derived: the tone itself)."
+      },
+      "blue": {
+        "$type": "color",
+        "$value": "#2F5BD3",
+        "$description": "BLUE: queued, in progress, informational."
+      },
+      "neutral": {
+        "$type": "color",
+        "$value": "#16151AA6",
+        "$description": "NEUTRAL: the backlog, drawn with a hollow dot."
+      }
+    },
     "primary": {
       "$type": "color",
-      "$value": "{color.brand.primary-dark}",
-      "$description": "The app's interactive accent. Indigo-600 here because primary is mostly an ink on paper: 5.71:1 on the scaffold."
+      "$value": "{color.ink.primary}",
+      "$description": "The interactive ink: the ink button, text-button labels, the selected control, focus, progress."
     },
     "on-primary": {
       "$type": "color",
-      "$value": "{color.base.white}",
-      "$description": "Label on a primary fill: 6.29:1 on indigo-600."
+      "$value": "{color.ink.on-ink}",
+      "$description": "Label on the ink button: white."
     },
     "primary-container": {
       "$type": "color",
-      "$value": "{color.brand.primary-lighter}",
-      "$description": "Contained companion of the brand: the nav indicator, the fill a label sits on when raw indigo would miss AA."
+      "$value": "#EBE9E4",
+      "$description": "The fill, flattened on the ground so contrast is measurable. The nav indicator."
     },
     "on-primary-container": {
       "$type": "color",
-      "$value": "{color.brand.primary-dark}",
+      "$value": "{color.ink.primary}",
       "$description": "Text on the primary container."
     },
     "secondary": {
       "$type": "color",
-      "$value": "{color.brand.primary-dark}",
-      "$description": "Secondary indigo; the same step as primary on paper."
+      "$value": "#595759",
+      "$description": "The ink-2, flattened on the ground so contrast is measurable."
     },
     "on-secondary": {
       "$type": "color",
@@ -32,145 +192,145 @@
     },
     "secondary-container": {
       "$type": "color",
-      "$value": "#e2e5ee",
-      "$description": "Fill behind a selected segment, deliberately further from paper than the containers so the selected state reads at a glance."
+      "$value": "#DFDDD9",
+      "$description": "The line.edge, flattened on the ground so contrast is measurable. A tonal (ghost) button, a selected segment in Material widgets."
     },
     "on-secondary-container": {
       "$type": "color",
-      "$value": "{color.on-surface}",
-      "$description": "Label on a selected segment, at full strength."
+      "$value": "{color.ink.primary}",
+      "$description": "Label on the secondary container."
     },
     "tertiary": {
       "$type": "color",
-      "$value": "{color.status.success}",
-      "$description": "The success tone as a scheme role."
+      "$value": "{color.tone.green}",
+      "$description": "The green tone as a scheme role."
     },
     "on-tertiary": {
       "$type": "color",
-      "$value": "{color.ink-on-bright}",
-      "$description": "Label on a success fill."
+      "$value": "{color.base.white}",
+      "$description": "Label on a green fill: 5.4:1."
     },
     "tertiary-container": {
       "$type": "color",
-      "$value": "#dcfce7",
-      "$description": "Filled status surface for success (green-100)."
+      "$value": "#E7F2EC",
+      "$description": "Filled status surface for green: the tone at 10% on white."
     },
     "on-tertiary-container": {
       "$type": "color",
-      "$value": "{color.status.success-container}",
-      "$description": "Text on the success container."
+      "$value": "{color.tone.green}",
+      "$description": "Text on the green container: 4.7:1."
     },
     "error": {
       "$type": "color",
-      "$value": "{color.status.error}",
+      "$value": "{color.tone.red}",
       "$description": "The unreachable tone as a scheme role."
     },
     "on-error": {
       "$type": "color",
-      "$value": "{color.ink-on-bright}",
-      "$description": "Label on an error fill: white measures 3.76:1 there, this ink 4.71:1."
+      "$value": "{color.base.white}",
+      "$description": "Label on a red fill: 5.95:1."
     },
     "error-container": {
       "$type": "color",
-      "$value": "#fee2e2",
-      "$description": "Filled status surface for error (red-100)."
+      "$value": "#F8EAEA",
+      "$description": "Filled status surface for red: the tone at 10% on white."
     },
     "on-error-container": {
       "$type": "color",
-      "$value": "{color.status.error-container}",
-      "$description": "Text on the error container."
+      "$value": "{color.tone.red}",
+      "$description": "Text on the red container: 5.1:1."
     },
     "surface": {
       "$type": "color",
-      "$value": "#f3f4f6",
+      "$value": "{color.room.ground}",
       "$description": "Paper: the scaffold behind every screen."
     },
     "on-surface": {
       "$type": "color",
-      "$value": "#111827",
-      "$description": "Ink (gray-900): primary text and icons on every surface and container."
+      "$value": "{color.ink.primary}",
+      "$description": "Primary text and icons on every surface."
     },
     "surface-container-lowest": {
       "$type": "color",
-      "$value": "{color.base.white}",
-      "$description": "Sub-floor: recessed wells such as log panels and code blocks."
+      "$value": "{color.room.slab}",
+      "$description": "White."
     },
     "surface-container-low": {
       "$type": "color",
-      "$value": "{color.surface}",
-      "$description": "Riser: grouped-list backgrounds. The same byte as surface."
+      "$value": "{color.room.ground}",
+      "$description": "Grouped-list backgrounds: paper."
     },
     "surface-container": {
       "$type": "color",
-      "$value": "#ffffff",
-      "$description": "Card White: cards and KPI tiles. Sheets, dialogs and the navigation bar sit on surface in this theme."
+      "$value": "{color.room.slab}",
+      "$description": "Cards and KPI tiles: a white slab."
     },
     "surface-container-high": {
       "$type": "color",
-      "$value": "#f0f1f5",
-      "$description": "Cool Paper: secondary panels and the ground accent chips most often sit on."
+      "$value": "#F3F3F3",
+      "$description": "The fill, flattened on the ground so contrast is measurable. (on a slab) Secondary panels."
     },
     "surface-container-highest": {
       "$type": "color",
-      "$value": "#e2e4ea",
-      "$description": "Warm Grey: input and chip fill, carrying on-surface-variant labels."
+      "$value": "#EBE9E4",
+      "$description": "The fill, flattened on the ground so contrast is measurable. Input and chip fill."
     },
     "on-surface-variant": {
       "$type": "color",
-      "$value": "#4b5563",
-      "$description": "Secondary Ink: metadata, chip labels, input hints, unselected nav. Clears AA on all four paper grounds (worst 5.94:1)."
+      "$value": "#595759",
+      "$description": "The ink-2, flattened on the ground so contrast is measurable. 5.9:1 on the chip fill."
     },
     "dim-text": {
       "$type": "color",
-      "$value": "#5c6371",
-      "$description": "Dim Ink: editorial captions and tertiary metadata. Clears AA on all four paper grounds (worst 4.75:1)."
+      "$value": "#646364",
+      "$description": "The ink-3, flattened on the ground so contrast is measurable. 4.9:1 on the chip fill."
     },
     "outline": {
       "$type": "color",
-      "$value": "#e2e4ea",
-      "$description": "Hairline: dividers, outlined buttons and cards, the rare boundary a tint cannot draw."
+      "$value": "#DFDDD9",
+      "$description": "The line.edge, flattened on the ground so contrast is measurable."
     },
     "outline-variant": {
       "$type": "color",
-      "$value": "{color.outline}",
-      "$description": "Grouped surfaces, genre chips, KPI tile border. The same byte as outline."
+      "$value": "#E8E6E1",
+      "$description": "The line.hair, flattened on the ground so contrast is measurable."
     },
     "shadow": {
       "$type": "color",
-      "$value": "{color.on-surface}",
-      "$description": "The ink every elevation level paints its shadow in: ink, not black, so a shadow reads as depth rather than grime on paper."
+      "$value": "{color.ink.primary}",
+      "$description": "The ink every elevation level paints its shadow in: ink, not black, so a shadow reads as depth on paper."
     },
     "scrim": {
       "$type": "color",
       "$value": "{color.base.black}",
-      "$description": "Modal barrier and hero scrims."
+      "$description": "Modal barrier base and hero scrims."
     },
     "inverse-surface": {
       "$type": "color",
-      "$value": "#0a0b11",
-      "$description": "Snackbar fill."
+      "$value": "{color.room.toast}",
+      "$description": "The toast (snackbar) fill."
     },
     "on-inverse-surface": {
       "$type": "color",
-      "$value": "#f0f2f8",
-      "$description": "Snackbar text on the inverse surface."
+      "$value": "{color.room.ground}",
+      "$description": "Toast text."
     },
     "inverse-primary": {
       "$type": "color",
-      "$value": "{color.brand.primary-light}",
-      "$description": "The brand on an inverse surface."
+      "$value": "{color.room.ground}",
+      "$description": "The ink on the toast."
     }
   },
   "opacity": {
     "glass-surface": {
       "$type": "number",
-      "$value": 0.55,
-      "$description": "Opacity of surface-container in the floating nav bar's glass fill. A tint, not a backdrop blur."
+      "$value": 0.95,
+      "$description": "Opacity of the enamel in the floating bars: lit enamel, a tint and never a backdrop blur."
     },
     "ambient-glow": {
       "$type": "number",
       "$value": 0.1,
-      "$description": "Centre of the ambient accent wash behind headers and the onboarding canvas."
+      "$description": "Centre of the ambient wash behind headers and the onboarding canvas."
     }
   },
   "elevation": {
@@ -178,48 +338,81 @@
       "contact": {
         "$type": "number",
         "$value": 0.06,
-        "$description": "Opacity of the level-1 contact shadow."
+        "$description": "Level-1 contact: the soft lift of a slab on paper."
       },
       "ambient": {
         "$type": "number",
         "$value": 0.04,
-        "$description": "Opacity of the level-1 ambient shadow."
+        "$description": "Level-1 ambient."
       }
     },
     "level-2": {
       "contact": {
         "$type": "number",
         "$value": 0.08,
-        "$description": "Opacity of the level-2 contact shadow."
+        "$description": "Level-2 contact."
       },
       "ambient": {
         "$type": "number",
         "$value": 0.05,
-        "$description": "Opacity of the level-2 ambient shadow."
+        "$description": "Level-2 ambient."
       }
     },
     "level-3": {
       "contact": {
         "$type": "number",
         "$value": 0.1,
-        "$description": "Opacity of the level-3 contact shadow."
+        "$description": "Level-3 contact."
       },
       "ambient": {
         "$type": "number",
         "$value": 0.07,
-        "$description": "Opacity of the level-3 ambient shadow."
+        "$description": "Level-3 ambient."
       }
     },
     "glass": {
       "ambient": {
         "$type": "number",
         "$value": 0.18,
-        "$description": "Opacity of the glass bar's ambient shadow."
+        "$description": "The bar's float shadow."
       },
       "highlight": {
         "$type": "number",
         "$value": 0.55,
-        "$description": "Opacity of the glass bar's 1px top highlight."
+        "$description": "The bar's 1px edge light."
+      }
+    },
+    "poster": {
+      "glow": {
+        "$type": "number",
+        "$value": 0.35,
+        "$description": "A poster's glow (derived: the day room's light opacity)."
+      }
+    },
+    "hero": {
+      "glow": {
+        "$type": "number",
+        "$value": 0.35,
+        "$description": "The hero's glow (derived)."
+      },
+      "contact": {
+        "$type": "number",
+        "$value": 0.1,
+        "$description": "The hero's contact shadow (derived)."
+      }
+    },
+    "float": {
+      "drop": {
+        "$type": "number",
+        "$value": 0.18,
+        "$description": "The float shadow (derived)."
+      }
+    },
+    "sheet": {
+      "drop": {
+        "$type": "number",
+        "$value": 0.12,
+        "$description": "The sheet shadow (derived)."
       }
     }
   }

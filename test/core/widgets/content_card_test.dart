@@ -68,8 +68,8 @@ void main() {
       );
 
       final decoration = container.decoration as BoxDecoration?;
-      // AppRadius.borderRadiusMd = 12
-      expect(decoration?.borderRadius, BorderRadius.circular(12));
+      // AppRadius.borderRadiusMd: the control radius, 14 — a poster's corner.
+      expect(decoration?.borderRadius, BorderRadius.circular(14));
     });
 
     Widget tile(Widget card) => MaterialApp(

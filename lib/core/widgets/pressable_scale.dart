@@ -7,7 +7,8 @@ import 'package:cupola/core/app_animation.dart';
 /// giving the app a tactile, "alive" feel on touch.
 ///
 /// Use around posters, cards and list rows that navigate or act on tap. Keep
-/// the effect gentle ([pressedScale] ~0.97) so it reads as depth, not a bounce.
+/// the effect gentle ([pressedScale] 0.96, the press role) so it reads as
+/// depth, not a bounce.
 ///
 /// Because nearly every tappable card in the app funnels through here, this is
 /// also where the button role and label for assistive technology are attached:
@@ -19,7 +20,7 @@ class PressableScale extends StatefulWidget {
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
-  /// Scale applied while pressed. Defaults to a subtle 0.97.
+  /// Scale applied while pressed. Defaults to the press role's 0.96.
   final double pressedScale;
 
   /// Whether to fire [HapticFeedback.lightImpact] on tap.
@@ -49,7 +50,7 @@ class PressableScale extends StatefulWidget {
     required this.child,
     this.onTap,
     this.onLongPress,
-    this.pressedScale = 0.97,
+    this.pressedScale = AppAnimation.pressScale,
     this.haptic = true,
     this.semanticLabel,
     this.semanticValue,
@@ -84,8 +85,8 @@ class _PressableScaleState extends State<PressableScale> {
 
     final Widget scaled = AnimatedScale(
       scale: _pressed && animate ? widget.pressedScale : 1.0,
-      duration: animate ? AppAnimation.durationXs : Duration.zero,
-      curve: AppAnimation.emphasizedCurve,
+      duration: animate ? AppAnimation.press : Duration.zero,
+      curve: AppAnimation.standardCurve,
       child: widget.child,
     );
 

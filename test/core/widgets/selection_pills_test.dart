@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
 
 enum _Segment { history, blocklist }
@@ -99,32 +100,46 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('a selected pill never paints the raw accent as its label in '
-        'light theme', (tester) async {
-      // The Luminance Rule, second half: a saturated accent over a 13% tint of
-      // itself measures under 2:1 in light theme. The same pill passes in dark,
-      // so a dark-only check proves nothing — hence this asserts the light case
-      // specifically.
-      const accent = Color(0xFFF59E0B); // Radarr amber, the worst offender.
-
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData(brightness: Brightness.light),
-          home: Scaffold(
-            body: SelectionPills<_Segment>(
-              values: _Segment.values,
-              selected: _Segment.history,
-              accent: accent,
-              labelBuilder: (value) => value.name,
-              onSelected: (_) {},
+    for (final brightness in Brightness.values) {
+      testWidgets('the selected pill is the strong fill under the primary ink '
+          '($brightness)', (tester) async {
+        // The brand book: the nav pill, the same on every screen. It used to be a tint of
+        // the page's service accent, whose label had to be walked because a
+        // saturated accent over a 13% tint of itself measured under 2:1 on
+        // paper; a monochrome pill has no hue to walk.
+        final theme = brightness == Brightness.light
+            ? AppTheme.lightTheme()
+            : AppTheme.darkTheme();
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: Scaffold(
+              body: SelectionPills<_Segment>(
+                values: _Segment.values,
+                selected: _Segment.history,
+                labelBuilder: (value) => value.name,
+                onSelected: (_) {},
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      final label = tester.widget<Text>(find.text('history'));
-      expect(label.style?.color, isNot(accent));
-    });
+        final label = tester.widget<Text>(find.text('history'));
+        expect(label.style?.color, theme.colorScheme.onSurface);
+        final pill = tester.widget<Container>(
+          find
+              .ancestor(
+                of: find.text('history'),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        expect(
+          (pill.decoration! as BoxDecoration).color,
+          CupolaRoom.forBrightness(brightness).fillStrong,
+        );
+      });
+    }
 
     testWidgets('sits on the screen gutter by default, flush when asked', (
       tester,

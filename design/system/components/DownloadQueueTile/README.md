@@ -6,19 +6,19 @@ Rendered from `lib/core/widgets/download_queue_tile.dart`, with the qBittorrent 
 
 ## Values
 
-- Outer padding `AppSpacing.lg` (16) horizontal × `AppSpacing.xs` (4) vertical. Plate: a `Material` in `surface` with a 1px `outlineVariant` side, `AppRadius.md`, inner padding `AppSpacing.md` (12). Selected: accent at 8% with a 40% accent side. The ink splash exists only when the row has a tap or long-press.
-- First line: title in `bodyMedium` w600, one line, ellipsised; `AppSpacing.sm` (8); the state chip; 8; the percentage in `labelMedium` w600 with tabular figures, in the client accent walked by `ServiceTheme.onTint` against `surface` (the only accent-coloured text on the row), or `—` when the percentage is null; then the optional trailing `actions`. The title is the line's one `Expanded` child and takes the free width; the chip keeps its natural width up to `DownloadQueueTile.chipMaxFraction` (40%) of the line and ellipsises past it, so chip and percentage sit on the trailing edge and a long label never starves the name.
+- Outer padding `AppSpacing.lg` (16) horizontal × `AppSpacing.xs` (4) vertical. Plate: a `Material` in `surface` with a 1px `outlineVariant` side, `AppRadius.md`, inner padding `AppSpacing.md` (12). Selected: the client's accent — the lamp — at 8% with a 40% lamp side. The ink splash exists only when the row has a tap or long-press.
+- First line: title in `bodyMedium` w600, one line, ellipsised; `AppSpacing.sm` (8); the state chip; 8; the percentage in `labelMedium` w600 with tabular figures, in the primary ink (the client's accent is the lamp, which `ServiceTheme.onTint` resolves to ink), or `—` when the percentage is null; then the optional trailing `actions`. The title is the line's one `Expanded` child and takes the free width; the chip keeps its natural width up to `DownloadQueueTile.chipMaxFraction` (40%) of the line and ellipsises past it, so chip and percentage sit on the trailing edge and a long label never starves the name.
 - Chip: padding 7 × 2, `AppRadius.xs`, fill the tone's `statusToneColor` at 12%, label in `labelSmall` w600 walked against that 12% composite. The row takes a `StatusTone`, never a colour.
-- Bar (only when `progress` is non-null): 4 above, a 4pt `LinearProgressIndicator` clipped to `AppRadius.xs`, track `surfaceContainerHighest`, value in the accent.
+- Bar (only when `progress` is non-null): 4 above, a 4pt `LinearProgressIndicator` clipped to `AppRadius.xs`, track `surfaceContainerHighest`, value in the blue tone (in progress: `statusToneColor(info)` walked against the track); a stale sample (`sampleAge`) drains it to `onSurfaceVariant`.
 - Second line: 4 above, `bodySmall` with tabular figures in `onSurfaceVariant`, one line, ellipsised — whatever the client counts down (status, ETA, remaining size).
-- Metrics (optional): 4 above, 12 apart; an 8pt dot, 4, and the value in `labelSmall` tabular, both in the walked accent when `accented`, else `onSurfaceVariant`.
+- Metrics (optional): 4 above, 12 apart; an 8pt dot, 4, and the value in `labelSmall` tabular, both in the primary ink when `accented`, else `onSurfaceVariant`.
 - Menu (`DownloadQueueActionsMenu`, the Usenet pair): a `PopupMenuButton` with an 18pt `more_vert_rounded`, tooltip *Job actions*, offering *Pause* or *Resume*, then *Delete*.
 
 ## States
 
 As qBittorrent maps them (the tone rule, applied once in `_toneFor`):
 
-- **Downloading**, **Fetching metadata**, **Checking** — `info`; the bar in the accent, `↓` rate accented and `↑` rate neutral.
+- **Downloading**, **Fetching metadata**, **Checking** — `info`; the bar in blue, `↓` rate accented (ink) and `↑` rate neutral.
 - **Stalled** and **Error** — `warning`: a fault the client reported. An errored torrent draws no bar.
 - **Paused** and **Queued** — neutral: a deliberate stop and the backlog. Paused keeps its bar and prints no ETA; Queued draws no bar, and qBittorrent's unknown ETA prints `∞`.
 - **Seeding** (complete) — `success`, no bar (a full bar would say "finishing").

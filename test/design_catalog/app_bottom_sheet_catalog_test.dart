@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/media_detail_value_row.dart';
@@ -60,7 +59,7 @@ Widget _qualityPicker() => AppBottomSheet(
 Widget _addTorrent() => AppBottomSheet(
   title: 'Add torrent',
   icon: Icons.add_link_rounded,
-  accent: AppColors.qbittorrent,
+  accent: ServiceKey.qbittorrent.accent,
   child: Builder(
     builder: (context) => Column(
       mainAxisSize: MainAxisSize.min,
@@ -76,10 +75,6 @@ Widget _addTorrent() => AppBottomSheet(
         OutlinedButton.icon(
           icon: const Icon(Icons.attach_file_rounded, size: 18),
           label: const Text('Pick .torrent files'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.qbittorrent,
-            side: const BorderSide(color: AppColors.qbittorrent),
-          ),
           onPressed: () {},
         ),
         const SizedBox(height: AppSpacing.md),
@@ -93,8 +88,6 @@ Widget _addTorrent() => AppBottomSheet(
         const SizedBox(height: AppSpacing.xl),
         FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: AppColors.qbittorrent,
-            foregroundColor: ServiceTheme.foregroundOn(AppColors.qbittorrent),
             textStyle: Theme.of(
               context,
             ).textTheme.labelLarge!.weight(FontWeight.w600),
@@ -196,7 +189,8 @@ void main() {
     scenes: [
       _scene(
         'AppBottomSheet.show · a picker with icon, accent and subtitle · the '
-        'accent glow behind the header, the tile tinted at 14%',
+        'service\'s accent is the lamp: a soft glow behind the header, the '
+        'tile a 14% lamp wash under an ink glyph',
         _qualityPicker,
         height: 440,
       ),

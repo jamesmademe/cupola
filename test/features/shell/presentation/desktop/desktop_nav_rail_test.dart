@@ -27,7 +27,6 @@ void main() {
                       selectedIcon: tab.selectedIcon,
                       railIcon: tab.railIcon,
                       label: tab.label,
-                      accentColor: tab.accentColor,
                       badgeCount: tab == NavTab.activity ? count : 0,
                     ),
                 ],

@@ -57,9 +57,11 @@ class MediaDetailView extends StatelessWidget {
 
   final Widget? background;
 
-  /// Per-service accent: the room light, every region label, the deck's verb and
-  /// the current selection. Falls back to the brand primary when null, which is
-  /// only correct for a page that genuinely has no service.
+  /// The page's accent (`ServiceKey.accent` — the lamp, for every service):
+  /// the room light and the hero's glow, and, walked through
+  /// `ServiceTheme.onTint`, the ink of every region label and the current
+  /// selection, which a lamp resolves to the room's primary ink. Null for a
+  /// page that genuinely has no service.
   final Color? accent;
 
   /// Glyph for the no-backdrop fallback hero.
@@ -171,7 +173,6 @@ class MediaDetailView extends StatelessWidget {
               // the hero's `OverScrollHeaderStretchConfiguration` stop reading
               // as one gesture with two claimants. The delegate is untouched.
               view = RefreshIndicator(
-                color: accent,
                 edgeOffset: MediaDetailHeaderMetrics.minExtent(context),
                 onRefresh: onRefresh!,
                 child: view,
@@ -1049,7 +1050,7 @@ class MediaDetailLoadingView extends StatelessWidget {
   ///
   /// Nullable rather than required: a screen that reaches its loading branch
   /// before it knows which service it is showing (a deep link resolving an id)
-  /// passes null and gets the brand primary.
+  /// passes null and gets the lamp, `AmbientBackground`'s own default.
   final Color? accent;
 
   const MediaDetailLoadingView({

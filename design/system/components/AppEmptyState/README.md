@@ -6,10 +6,10 @@ Rendered from `lib/core/widgets/app_empty_state.dart` by `test/design_catalog/ap
 
 ## Densities
 
-- **Full** (default constructor) — a 72px circular well (`surface-container-high`, or the accent at 14% when `accentColor` is set) around a 34px icon, `space-lg`, title `title-medium` 600, `space-sm`, message `body-medium` in `on-surface-variant`, optional action `space-xl` below. Outer padding `space-xxl` horizontal, `space-xxl` vertical.
+- **Full** (default constructor) — a 72px circular well (`surface-container-high`, or the accent at 14% when `accentColor` is set — a lamp wash for a service, a tone's wash for a state) around a 34px icon, `space-lg`, title `title-medium` 600, `space-sm`, message `body-medium` in `on-surface-variant`, optional action `space-xl` below. Outer padding `space-xxl` horizontal, `space-xxl` vertical.
 - **`.compact`** — 52px well, 26px icon, title `title-small` 600, outer padding `space-xl`, action `space-lg` below.
 - **`.inline`** — a left-aligned row: a 16px icon optically aligned to the first text line, `space-sm`, then title `body-small` 600 and an optional message, both `on-surface-variant`. Takes no `action` — an absence nobody can act on is the only kind that belongs on a single row.
-- With an `accentColor`, the icon is the accent walked through `ServiceTheme.onTint` against the well it sits in (tint 0.14 for full/compact, 0 — no well — for inline); without one, `on-surface-variant`.
+- With an `accentColor`, the icon is the accent walked through `ServiceTheme.onTint` against the well it sits in (a service's lamp resolves to the primary ink) (tint 0.14 for full/compact, 0 — no well — for inline); without one, `on-surface-variant`.
 
 ## The consumer provides
 

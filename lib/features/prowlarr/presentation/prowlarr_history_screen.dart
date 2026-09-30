@@ -150,7 +150,6 @@ class _ProwlarrHistoryScreenState extends ConsumerState<ProwlarrHistoryScreen> {
             selected: _filter,
             labelBuilder: (value) => value.label,
             onSelected: _select,
-            accent: ServiceKey.prowlarr.accent,
           ),
           Expanded(child: _body()),
         ],

@@ -63,13 +63,13 @@ void main() {
         ),
       ),
       CatalogScene(
-        'AppCard.elevated(accentColor:) · tappable, ink feedback · one '
-        'signature card, glow at 22% from the top right',
+        'AppCard.elevated(accentColor: lamp) · tappable, ink feedback · one '
+        'card lit by the room\'s light, glow at 22% from the top right',
         (_) => SizedBox(
           width: 220,
           child: AppCard.elevated(
             onTap: () {},
-            accentColor: const Color(0xFFFFA000),
+            accentColor: AppColors.lamp,
             semanticLabel: 'Nosferatu',
             semanticValue: 'Available',
             semanticHint: 'opens the movie',
@@ -78,15 +78,15 @@ void main() {
         ),
       ),
       CatalogScene(
-        "AppCard.filled(accentColor:, accentGlowAlpha: 0.08) · a grid cell's "
-        'fraction of the same glow, three cells lit from the top left',
+        "AppCard.filled(accentColor: lamp, accentGlowAlpha: 0.08) · a grid "
+        "cell's fraction of the same glow, three cells lit from the top left",
         (_) => Wrap(
           spacing: 12,
           runSpacing: 12,
           children: [
             for (final title in ['Nosferatu', 'Metropolis', 'Sherlock Jr.'])
               AppCard.filled(
-                accentColor: const Color(0xFFFFA000),
+                accentColor: AppColors.lamp,
                 accentGlowAlpha: 0.08,
                 accentGlowCenter: Alignment.topLeft,
                 child: _tile(title, 'One cell of a matrix'),

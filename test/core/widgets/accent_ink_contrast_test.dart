@@ -22,8 +22,14 @@ import 'package:cupola/core/widgets/tag_chip.dart';
 /// in light *and* dark against the composite the widget sits on — the tint of
 /// its own tone over the surface underneath — because that composite, not the
 /// surface, is what the eye reads the ink against.
+///
+/// A service hands these widgets the lamp now (`ServiceKey.accent`), which the
+/// walk resolves to the room's ink — that is the first case. The brand bytes
+/// stay as the hardest colours a caller could pass, alongside the tones these
+/// widgets do still carry: the walk has to hold for anything it is handed.
 void main() {
   const worstAccents = <String, Color>{
+    'a service (the lamp)': AppColors.lamp,
     'radarr': AppColors.radarr,
     'sabnzbd': AppColors.sabnzbd,
     'plex': AppColors.plex,

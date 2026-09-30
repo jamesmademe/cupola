@@ -761,7 +761,7 @@ class InfoChip extends StatelessWidget {
 ///
 /// [color] is the tone's byte and paints the wash; the label and glyph are that
 /// tone walked against the wash over the row's card, so a quality pill in the
-/// brand indigo or a rejection in amber reads at AA in both themes.
+/// primary ink or a rejection in amber reads at AA in both themes.
 class _Pill extends StatelessWidget {
   final String label;
   final IconData? icon;

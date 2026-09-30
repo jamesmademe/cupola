@@ -78,7 +78,7 @@ class BazarrLibraryScreen extends ConsumerWidget {
     return Scaffold(
       appBar: showAppBar
           ? AppBar(
-              backgroundColor: AppColors.bazarr.withValues(alpha: 0.12),
+              backgroundColor: ServiceKey.bazarr.accent.withValues(alpha: 0.12),
               leading: IconButton(
                 icon: const Icon(Icons.chevron_left_rounded),
                 onPressed: () =>
@@ -267,10 +267,7 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: Center(
                 child: _loadingMore
-                    ? const CircularProgressIndicator(
-                        color: AppColors.bazarr,
-                        strokeWidth: 2.4,
-                      )
+                    ? const CircularProgressIndicator(strokeWidth: 2.4)
                     : Text(
                         'Pull up to load more',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(

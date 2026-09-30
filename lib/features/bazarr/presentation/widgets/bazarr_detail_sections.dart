@@ -6,6 +6,7 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Bazarr-specific detail sections. Feature-local on purpose: no other
 /// service has a subtitle-language axis, so these do not belong in
@@ -24,7 +25,7 @@ class BazarrSubtitleLanguageWrap extends StatelessWidget {
     // The accent is not a legible label colour over its own tint in light
     // theme (Luminance Rule); onTint walks its lightness until it clears AA.
     final accentText = ServiceTheme.onTint(
-      AppColors.bazarr,
+      ServiceKey.bazarr.accent,
       surface: colorScheme.surface,
       tintAlpha: 0.12,
     );
@@ -50,10 +51,10 @@ class BazarrSubtitleLanguageWrap extends StatelessWidget {
                 vertical: AppSpacing.sm,
               ),
               decoration: BoxDecoration(
-                color: AppColors.bazarr.withValues(alpha: 0.12),
+                color: ServiceKey.bazarr.accent.withValues(alpha: 0.12),
                 borderRadius: AppRadius.borderRadiusSm,
                 border: Border.all(
-                  color: AppColors.bazarr.withValues(alpha: 0.3),
+                  color: ServiceKey.bazarr.accent.withValues(alpha: 0.3),
                 ),
               ),
               child: Column(

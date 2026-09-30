@@ -192,7 +192,7 @@ class _ProviderSummaryCard extends StatelessWidget {
               ExcludeSemantics(
                 child: Icon(
                   Icons.hub_outlined,
-                  color: ServiceKey.bazarr.accent,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),

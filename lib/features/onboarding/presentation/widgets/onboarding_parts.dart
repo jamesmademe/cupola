@@ -6,7 +6,6 @@ import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/reel_motion.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/reel_command_button.dart';
@@ -558,41 +557,33 @@ class OnboardingDoor extends StatelessWidget {
   }
 }
 
-/// One word of a headline in an accent, resolved against the surface it sits
-/// on — the same move as [OnePunchline]'s "Cupola" and "your lab.", carried to
-/// the two headlines either side of it so the claim's colour vocabulary
-/// threads through the whole flow rather than living on the door alone.
+/// A headline with the one word the claim leans on, set like [OnePunchline]'s
+/// "Cupola" and "your lab.".
+///
+/// In the headline's own ink: the room is monochrome (the brand book's principle 3), so the
+/// word is carried by the display face and its place in the line, never by a
+/// hue — a section's cyan here was decoration, and it measured 2.2:1 on paper
+/// before it was walked.
 class _AccentedHeadline extends StatelessWidget {
   const _AccentedHeadline({
     required this.before,
     required this.accent,
     required this.after,
-    required this.accentColor,
     required this.style,
   });
 
   final String before;
   final String accent;
   final String after;
-  final Color accentColor;
   final TextStyle style;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final ink = ServiceTheme.onTint(
-      accentColor,
-      surface: scheme.surface,
-      tintAlpha: 0,
-    );
     return Text.rich(
       TextSpan(
         children: [
           if (before.isNotEmpty) TextSpan(text: before),
-          TextSpan(
-            text: accent,
-            style: TextStyle(color: ink),
-          ),
+          TextSpan(text: accent),
           if (after.isNotEmpty) TextSpan(text: after),
         ],
       ),
@@ -603,8 +594,8 @@ class _AccentedHeadline extends StatelessWidget {
 
 // ── Beat 2: the pick ────────────────────────────────────────────────────────
 
-/// Every service as an accent chip in four labelled sectors, and the ring above
-/// as a live readout of the choice.
+/// Every service as a chip in four labelled sectors, and the ring above as a
+/// live readout of the choice.
 class OnboardingPick extends StatelessWidget {
   const OnboardingPick({
     super.key,
@@ -636,12 +627,9 @@ class OnboardingPick extends StatelessWidget {
         ),
       ),
       children: [
-        // Plain, and deliberately so. The accented headline is the door's and
-        // the close's device — a claim coloured in the mark's own two inks —
-        // and this beat already has a colour system of its own: seventeen
-        // accents, one per chip and one per lit node. A third one on top of
-        // them read as decoration rather than as meaning, which is why every
-        // drawn Pick frame carries this line unaccented.
+        // Plain, and deliberately so: the leaning headline is the door's and
+        // the close's device, and this beat's own voice is its seventeen chips
+        // and the lit nodes above them.
         Text(
           'Pick your services',
           style: theme.textTheme.headlineMedium!.copyWith(
@@ -697,27 +685,18 @@ class _PickChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    // The chip's own label sits on a tint of the accent, so it resolves through
-    // `onTint` — the raw accent fails AA over its own 14% wash in light theme.
-    final labelColor = selected
-        ? ServiceTheme.onTint(
-            service.accent,
-            surface: scheme.surface,
-            tintAlpha: 0.14,
-          )
-        : scheme.onSurfaceVariant;
+    // The brand book's selected chip: the ink fill with the on-ink label, the same for every
+    // service — the chip names the service in words, and a hue per chip turned
+    // the beat into a seventeen-colour legend with nothing to decode.
+    final labelColor = selected ? scheme.onPrimary : scheme.onSurfaceVariant;
     // 44pt is the iOS minimum target; the label grows the box past it.
     const constraints = BoxConstraints(minHeight: 44);
     const padding = EdgeInsets.symmetric(horizontal: AppSpacing.md);
     final decoration = BoxDecoration(
-      color: selected
-          ? service.accent.withValues(alpha: 0.14)
-          : scheme.surfaceContainer,
+      color: selected ? scheme.primary : scheme.surfaceContainer,
       borderRadius: AppRadius.borderRadiusMd,
       border: Border.all(
-        color: selected
-            ? service.accent.withValues(alpha: 0.40)
-            : scheme.outlineVariant,
+        color: selected ? scheme.primary : scheme.outlineVariant,
       ),
     );
     // Seventeen of these, and picking a stack means tapping most of them — so
@@ -770,7 +749,7 @@ class _PickChip extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: selected
-                ? service.accent
+                ? scheme.onPrimary
                 : scheme.onSurfaceVariant.withValues(alpha: 0.40),
           ),
         ),
@@ -888,9 +867,9 @@ class OnboardingClose extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final headlineStyle = theme.textTheme.displaySmall!
-        .weight(FontWeight.w800)
-        .copyWith(color: scheme.onSurface);
+    final headlineStyle = theme.textTheme.displaySmall!.copyWith(
+      color: scheme.onSurface,
+    );
     return OnboardingBeat(
       alignment: MainAxisAlignment.end,
       actions: OnboardingFooter(
@@ -921,7 +900,6 @@ class OnboardingClose extends StatelessWidget {
             before: 'Nothing left in the ',
             accent: 'dark',
             after: '.',
-            accentColor: AppColors.navActivity,
             style: headlineStyle,
           ),
         const SizedBox(height: AppSpacing.lg),

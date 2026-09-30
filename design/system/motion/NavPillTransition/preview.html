@@ -28,14 +28,14 @@
       <dl class="cp-motion-readout">
         <dt>item widths</dt><dd data-out="widths">—</dd>
         <dt>pill</dt><dd data-out="pill">—</dd>
-        <dt>geometry</dt><dd data-out="geo">200 ms · easeOutCubic</dd>
-        <dt>scale bump</dt><dd data-out="bump">1.02 · 100 ms · easeOutCubic</dd>
-        <dt>icon · label</dt><dd data-out="swap">fade 200 ms · size 200 ms</dd>
+        <dt>geometry</dt><dd data-out="geo">320 ms · cubic-bezier(0.2, 0.8, 0.2, 1)</dd>
+        <dt>scale bump</dt><dd data-out="bump">1.02 · 180 ms · cubic-bezier(0.2, 0.8, 0.2, 1)</dd>
+        <dt>icon · label</dt><dd data-out="swap">fade 320 ms · size 320 ms</dd>
         <dt>drag offset</dt><dd data-out="drag">0.0, 0.0</dd>
-        <dt>spring-back</dt><dd data-out="spring">500 ms · elasticOut(0.4)</dd>
+        <dt>spring-back</dt><dd data-out="spring">520 ms · elasticOut(0.4)</dd>
       </dl>
       <span class="cp-motion-haptic" data-haptic><span class="cp-icon" aria-hidden="true">vibration</span>HapticFeedback.selectionClick</span>
-      <p class="cp-motion-note">The pill's fill swaps to the new accent at once; only its geometry animates. Drag: resistance 0.15 ÷ (1 + |offset| ÷ 30), clamped to ±15 on each axis.</p>
+      <p class="cp-motion-note">The pill is the room's strong fill in every section, so only its geometry animates. Drag: resistance 0.15 ÷ (1 + |offset| ÷ 30), clamped to ±15 on each axis.</p>
     </div>
   </div>
 </div>
@@ -43,25 +43,20 @@
 (function () {
   var root = document.querySelector('.cp-nav-pill-transition');
   var D = [
-    { label: 'Dashboard', icon: 'view_list', accent: 'nav-dashboard' },
-    { label: 'Activity', icon: 'monitor_heart', accent: 'nav-activity' },
-    { label: 'Search', icon: 'search', accent: 'nav-search' },
-    { label: 'Settings', icon: 'settings', accent: 'nav-settings' }
+    { label: 'Dashboard', icon: 'view_list' },
+    { label: 'Activity', icon: 'monitor_heart' },
+    { label: 'Search', icon: 'search' },
+    { label: 'Settings', icon: 'settings' }
   ];
   /* floating_bottom_nav_bar.dart: _NavBarItem + _NavBarLayoutMetrics, at text scale 1.0. */
   var ICON = 20, PAD = 14, LABEL_GAP = 6, SLACK = 6, MIN_SELECTED = 84, COMPACT = 52, COMPACT_MIN = 48, BREAKPOINT = 360, EXTRA_SHARE = 0.6, SURFACE_PAD = 6, BORDER = 1;
-  var MAX_DRAG = 15, BASE_RESISTANCE = 0.15, FALLOFF = 30, SPRING_MS = 500;
+  var MAX_DRAG = 15, BASE_RESISTANCE = 0.15, FALLOFF = 30, SPRING_MS = 520;
   var REDUCED = 0.05; /* AnimationController under disableAnimations (animation_controller.dart:651) */
   var inner = root.querySelector('[data-inner]'), ind = root.querySelector('[data-ind]'), bar = root.querySelector('[data-bar]'), wrap = root.querySelector('[data-wrap]');
   var out = {}; root.querySelectorAll('[data-out]').forEach(function (el) { out[el.dataset.out] = el; });
   var haptic = root.querySelector('[data-haptic]');
-  var probe = document.createElement('span'); probe.style.display = 'none'; root.appendChild(probe);
-  function rgb(token) { probe.style.color = 'var(--' + token + ')'; var m = getComputedStyle(probe).color.match(/[\d.]+/g) || [0, 0, 0]; return { r: +m[0], g: +m[1], b: +m[2] }; }
-  function css(c) { return 'rgb(' + Math.round(c.r) + ',' + Math.round(c.g) + ',' + Math.round(c.b) + ')'; }
-  function isLight() { return document.documentElement.getAttribute('data-theme') === 'light'; }
-  function tintAlpha() { return isLight() ? 0.13 : 0.16; }
   var ctx = document.createElement('canvas').getContext('2d');
-  function textWidth(s) { ctx.font = '600 12px Inter, system-ui, sans-serif'; if ('letterSpacing' in ctx) ctx.letterSpacing = '0.01px'; return ctx.measureText(s).width; }
+  function textWidth(s) { ctx.font = '600 12px Onest, system-ui, sans-serif'; if ('letterSpacing' in ctx) ctx.letterSpacing = '0px'; return ctx.measureText(s).width; }
   function selectedWidth(i) { return PAD * 2 + ICON + LABEL_GAP + D[i].w + SLACK; }
   function sum(a) { return a.reduce(function (s, v) { return s + v; }, 0); }
   function preferredInner() {
@@ -106,13 +101,11 @@
     });
     paint(true);
   }
-  function itemColor(i, sel) {
-    if (!sel) return 'var(--on-surface-variant)';
-    return css(window.Cupola.onTint(rgb(D[i].accent), rgb('surface'), tintAlpha()));
-  }
+  /* Monochrome: the primary ink on the pill, the secondary ink off it — the same in every section. */
+  function itemColor(i, sel) { return sel ? 'var(--on-surface)' : 'var(--on-surface-variant)'; }
   function swapIcon(it, i, sel, instant) {
     /* AnimatedSwitcher(durationSm), keyed by isSelected: the old glyph fades out as the new fades in. */
-    var ms = 200 * (reduce() ? REDUCED : 1);
+    var ms = 320 * (reduce() ? REDUCED : 1);
     it.icon.querySelectorAll('span').forEach(function (old) { old.style.opacity = '0'; setTimeout(function () { old.remove(); }, ms + 20); });
     var s = document.createElement('span');
     s.className = 'cp-icon' + (sel ? '' : ' outlined'); s.setAttribute('aria-hidden', 'true');
@@ -139,10 +132,9 @@
     });
     var indW = Math.min(selectedWidth(selected), L.widths[selected]);
     var indL = L.lefts[selected] + (L.widths[selected] - indW) / 2;
-    var acc = D[selected].accent;
     ind.style.left = indL + 'px'; ind.style.width = indW + 'px';
-    ind.style.background = 'color-mix(in srgb, var(--' + acc + ') ' + (tintAlpha() * 100) + '%, transparent)';
-    ind.style.border = '1px solid color-mix(in srgb, var(--' + acc + ') 27%, transparent)';
+    /* The room's strong fill, no edge: the same pill whichever section is selected. */
+    ind.style.background = 'var(--fill-strong)';
     out.widths.textContent = L.widths.map(function (v) { return v.toFixed(1); }).join(' · ') + '  gap ' + L.gap;
     out.pill.textContent = 'left ' + indL.toFixed(1) + ' · width ' + indW.toFixed(1) + ' · 36 tall';
     if (instant) { void inner.offsetWidth; applyK(); }
@@ -155,10 +147,10 @@
   function applyK() {
     var r = reduce();
     root.style.setProperty('--k', r ? String(REDUCED) : '1');
-    out.geo.textContent = r ? '10 ms (5% of 200) · easeOutCubic' : '200 ms · easeOutCubic';
-    out.bump.textContent = r ? '1.02 · 5 ms' : '1.02 · 100 ms · easeOutCubic';
-    out.swap.textContent = r ? 'fade 10 ms · size 10 ms' : 'fade 200 ms · size 200 ms';
-    out.spring.textContent = r ? '25 ms · elasticOut(0.4)' : '500 ms · elasticOut(0.4)';
+    out.geo.textContent = r ? '16 ms (5% of 320) · cubic-bezier(0.2, 0.8, 0.2, 1)' : '320 ms · cubic-bezier(0.2, 0.8, 0.2, 1)';
+    out.bump.textContent = r ? '1.02 · 9 ms' : '1.02 · 180 ms · cubic-bezier(0.2, 0.8, 0.2, 1)';
+    out.swap.textContent = r ? 'fade 16 ms · size 16 ms' : 'fade 320 ms · size 320 ms';
+    out.spring.textContent = r ? '26 ms · elasticOut(0.4)' : '520 ms · elasticOut(0.4)';
   }
   /* ---- elastic drag: _applyElasticResistance, clamp, then Tween(offset → 0) on elasticOut ---- */
   var off = { x: 0, y: 0 }, spring = 0, pan = null;
@@ -210,7 +202,7 @@
   if (mq.addEventListener) mq.addEventListener('change', function (e) { setReduce(e.matches); });
   setReduce(mq.matches);
   var go = function () { build(); };
-  if (document.fonts && document.fonts.load) document.fonts.load('600 12px Inter').then(go, go); else go();
+  if (document.fonts && document.fonts.load) document.fonts.load('600 12px Onest').then(go, go); else go();
   new MutationObserver(function () { items.forEach(function (it, i) { it.sel = null; }); paint(true); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 })();
 </script>

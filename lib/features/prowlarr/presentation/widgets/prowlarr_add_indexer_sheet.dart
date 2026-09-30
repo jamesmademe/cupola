@@ -10,6 +10,7 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_category_picker.dart';
 import 'package:cupola/features/prowlarr/presentation/widgets/prowlarr_list_shimmer.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Lets the user pick one of Prowlarr's indexer definitions to add.
 ///
@@ -24,7 +25,7 @@ Future<ProwlarrIndexer?> showProwlarrAddIndexerSheet({
     title: 'Add indexer',
     subtitle: 'Pick a definition from Prowlarr',
     icon: Icons.add_circle_outline_rounded,
-    accent: AppColors.prowlarr,
+    accent: ServiceKey.prowlarr.accent,
     showClose: true,
     initialSize: 0.9,
     minSize: 0.5,
@@ -250,7 +251,6 @@ class _DefinitionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isTorrent = (definition.protocol ?? '').toLowerCase() == 'torrent';
     final badges = <String>[
       // Sentence case, like the other badges beside it.
       if (definition.protocol != null) capitalizeFirst(definition.protocol!),
@@ -304,9 +304,9 @@ class _DefinitionRow extends StatelessWidget {
                             badges.join(' · '),
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
-                                  color: isTorrent
-                                      ? AppColors.prowlarr
-                                      : AppColors.sonarr,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                           ),
                         ),
@@ -345,7 +345,7 @@ class _ChoiceChip extends StatelessWidget {
       padding: const EdgeInsets.only(right: AppSpacing.sm),
       child: Material(
         color: selected
-            ? AppColors.prowlarr.withValues(alpha: 0.15)
+            ? ServiceKey.prowlarr.accent.withValues(alpha: 0.15)
             : colorScheme.surfaceContainerHighest,
         borderRadius: AppRadius.borderRadiusSm,
         child: InkWell(
@@ -362,7 +362,7 @@ class _ChoiceChip extends StatelessWidget {
                   .weight(FontWeight.w600)
                   .copyWith(
                     color: selected
-                        ? AppColors.prowlarr
+                        ? colorScheme.onSurface
                         : colorScheme.onSurfaceVariant,
                   ),
             ),

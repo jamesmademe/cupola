@@ -47,8 +47,9 @@ void main() {
     scenes: [
       CatalogScene(
         'ServiceTabBar.header · Radarr, Overview, with the instance lens · the '
-        'room light: accent at 12% over the band, bloom to 30% in the lower '
-        '11pt',
+        'room light: the lamp at 12% over the band, bloom to 30% in the lower '
+        '11pt; the selected tab the strong-fill pill, the mark a lit tile in '
+        'ink',
         (_) => ServiceTabBar.header(
           service: ServiceKey.radarr,
           current: _tab(ServiceKey.radarr, 'Overview'),

@@ -35,7 +35,6 @@ class TrueNasStorageScreen extends ConsumerWidget {
                   icon: Icons.dns_rounded,
                   title: 'No pools',
                   message: 'This system has no storage pools.',
-                  accentColor: AppColors.truenas,
                 )
               : ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -75,7 +74,9 @@ class _PoolCard extends StatelessWidget {
     final warning = statusToneColor(colorScheme, StatusTone.warning);
     final barColor = !pool.healthy || (used != null && used >= 0.9)
         ? warning
-        : AppColors.truenas;
+        // A healthy pool's usage is a reading, not a state: the brand book's usage bar, in
+        // the secondary ink.
+        : colorScheme.onSurfaceVariant;
 
     return PressableScale(
       onTap: () => context.push(ServiceRoutes.truenasPool(pool.name)),

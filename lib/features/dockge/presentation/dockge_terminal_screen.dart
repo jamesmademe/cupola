@@ -104,7 +104,6 @@ class _StackPicker extends ConsumerWidget {
             selected: selected,
             labelBuilder: (name) => name ?? '',
             onSelected: (name) => onSelected(name!),
-            accent: ServiceKey.dockge.accent,
           ),
     loading: () => const ListRowsShimmer(count: 3),
     error: (_, _) => InlineErrorRetry(

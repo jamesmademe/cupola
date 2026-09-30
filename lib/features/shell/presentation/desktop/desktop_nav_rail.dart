@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
@@ -109,9 +108,10 @@ class _RailItemState extends State<_RailItem> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final destination = widget.destination;
-    // The shell is one colour: the app's own indigo, never the per-service
-    // accents, which belong to service surfaces. See `NavTab`.
-    final primary = colorScheme.primary;
+    // The shell is monochrome: the selected item is the room's strong fill
+    // under the primary ink, the pill of the phone's bar, and no section or
+    // service carries a colour of its own. See `NavTab`.
+    final selectedFill = CupolaRoom.of(context).fillStrong;
 
     // The outline in both states, never a filled glyph. The pill behind it
     // already says which section is current; filling the glyph too said it
@@ -191,15 +191,10 @@ class _RailItemState extends State<_RailItem> {
               overlayColor: const WidgetStatePropertyAll(Colors.transparent),
               backgroundColor: WidgetStatePropertyAll(
                 widget.selected
-                    ? primary.withValues(alpha: 0.16)
+                    ? selectedFill
                     : (_hovered
                           ? colorScheme.onSurface.withValues(alpha: 0.06)
                           : Colors.transparent),
-              ),
-              side: WidgetStatePropertyAll(
-                widget.selected
-                    ? BorderSide(color: primary.withValues(alpha: 0.42))
-                    : BorderSide.none,
               ),
             ),
             icon: icon,
@@ -210,7 +205,7 @@ class _RailItemState extends State<_RailItem> {
   }
 }
 
-/// The count, in its destination's own accent — never a status tone.
+/// The count, on the ink disc — never a status tone, never a section's colour.
 class _RailBadge extends StatelessWidget {
   const _RailBadge({required this.destination});
 
@@ -238,7 +233,7 @@ class _RailBadge extends StatelessWidget {
       height: 18,
       padding: const EdgeInsets.symmetric(horizontal: 3),
       decoration: BoxDecoration(
-        color: destination.accentColor,
+        color: colorScheme.primary,
         borderRadius: BorderRadius.circular(AppRadius.full),
         // A collar in the rail's own ground, so the badge reads as sitting on
         // top of the glyph rather than merging into it.
@@ -251,7 +246,7 @@ class _RailBadge extends StatelessWidget {
             context,
             size: 11,
             weight: FontWeight.w600,
-            color: ServiceTheme.foregroundOn(destination.accentColor),
+            color: colorScheme.onPrimary,
             height: 1,
           ).mono.tabular,
         ),

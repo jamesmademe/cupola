@@ -74,7 +74,7 @@ void main() {
       ),
       CatalogScene(
         'Active service states · picked, connected and silent each take the '
-        'halo and an accent collar when they are the one being configured',
+        'halo and an ink collar when they are the one being configured',
         (_) => _pair(const [
           ServiceRing(
             states: {ServiceKey.radarr: ServiceRingState.picked},
@@ -124,8 +124,8 @@ void main() {
         width: 390,
       ),
       CatalogScene(
-        'OnePunchline · displayMedium at w800, 1.10 leading; Cupola in the '
-        'brand ink, the second line in the stack ink',
+        'OnePunchline · displayMedium at w600, 1.10 leading; one ink — the '
+        'display face and the line break carry the claim, not a hue',
         (_) => const OnePunchline(),
         width: 390,
       ),

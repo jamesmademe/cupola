@@ -119,7 +119,7 @@ class UnraidScreen extends ConsumerWidget {
     final isConfigured = settings.isServiceConfigured(ServiceKey.unraid);
 
     return AmbientScaffold(
-      accent: AppColors.unraid,
+      accent: ServiceKey.unraid.accent,
       appBar: showAppBar ? GlassAppBar(title: Text(section.label)) : null,
       body: SafeArea(
         top: showAppBar,
@@ -162,7 +162,7 @@ class _UnraidSection extends ConsumerWidget {
     if (isOffline) {
       return ServiceOfflineState(
         serviceName: ServiceKey.unraid.title,
-        accent: AppColors.unraid,
+        accent: ServiceKey.unraid.accent,
         onRetry: () => _invalidate(ref, section),
       );
     }
@@ -550,7 +550,7 @@ class _ShareList extends ConsumerWidget {
                     // lands on, not the raw brand orange: Unraid's is one of
                     // the seven that fails the check on a light ground.
                     iconColor: ServiceTheme.onTint(
-                      AppColors.unraid,
+                      ServiceKey.unraid.accent,
                       surface: Theme.of(context).colorScheme.surface,
                       tintAlpha: 0,
                     ),
@@ -680,7 +680,7 @@ class _DiskTile extends StatelessWidget {
     // rather than on the surface — seven of the seventeen accents lose the
     // contrast check otherwise, and Unraid's orange is one of them.
     final plateInk = ServiceTheme.onTint(
-      AppColors.unraid,
+      ServiceKey.unraid.accent,
       surface: colorScheme.surface,
       tintAlpha: 0.12,
     );
@@ -716,7 +716,7 @@ class _DiskTile extends StatelessWidget {
                     width: 34,
                     height: 34,
                     decoration: BoxDecoration(
-                      color: AppColors.unraid.withValues(alpha: 0.12),
+                      color: ServiceKey.unraid.accent.withValues(alpha: 0.12),
                       borderRadius: AppRadius.borderRadiusSm,
                     ),
                     alignment: Alignment.center,

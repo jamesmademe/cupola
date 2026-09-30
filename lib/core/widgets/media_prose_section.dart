@@ -25,12 +25,11 @@ class MediaProseSection extends StatefulWidget {
 
   /// The page's service accent, for Show more / Show less.
   ///
-  /// The service being operated supplies the light: on a service page the
-  /// section's own control draws in that service's accent, walked against the
-  /// page surface, like every other section action there. Without it the
-  /// button fell back to the theme's indigo on every page — Radarr's amber
-  /// room with a Seerr-coloured verb in it. Null only where no service owns
-  /// the surface, which keeps `primary`.
+  /// The page's service accent: on a service page the section's own control
+  /// draws through it, walked against the page surface like every other
+  /// section action there — and since the accent is the lamp, the walk lands on
+  /// the room's primary ink. Null only where no service owns the surface,
+  /// which keeps `primary` (the ink as well).
   final Color? accent;
 
   const MediaProseSection({

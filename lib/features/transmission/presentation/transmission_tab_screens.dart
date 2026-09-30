@@ -144,7 +144,6 @@ class _TransmissionLabelsScreenState
                   return '$label · $count';
                 },
                 onSelected: (label) => setState(() => _selectedLabel = label),
-                accent: ServiceKey.transmission.accent,
               ),
               SectionHeader(
                 title: 'Torrents',

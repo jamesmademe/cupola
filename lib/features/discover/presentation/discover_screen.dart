@@ -93,7 +93,6 @@ class DiscoverScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: SearchBarHeader(
               hintText: 'Search movies & TV shows...',
-              accent: ServiceKey.seerr.accent,
               onQueryChanged: (query) {
                 ref.read(discoverSearchQueryProvider.notifier).state = query;
               },

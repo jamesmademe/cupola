@@ -41,6 +41,30 @@ List<CatalogScene> _scenes(CatalogPlatform platform) => [
     platform: platform,
   ),
   CatalogScene(
+    'FloatingActionButton · .extended · the ink button, floating: a screen\'s '
+    'one floating action is its primary, never a service\'s colour',
+    (_) => Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        FloatingActionButton(
+          heroTag: null,
+          onPressed: () {},
+          tooltip: 'New',
+          child: const Icon(Icons.add_rounded),
+        ),
+        FloatingActionButton.extended(
+          heroTag: null,
+          onPressed: () {},
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Dataset'),
+        ),
+      ],
+    ),
+    platform: platform,
+  ),
+  CatalogScene(
     'GatedAffordance.builder(enabled: false) · label and glyph at 38%, '
     'container and target kept, still tappable',
     (_) => Wrap(

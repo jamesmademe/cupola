@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -16,7 +15,6 @@ import 'package:cupola/features/activity/presentation/widgets/activity_actions.d
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
-import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The Seerr home's first region: the requests waiting on a human.
 ///
@@ -248,24 +246,15 @@ class _DecisionButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accent = ServiceKey.seerr.accent;
 
-    // Approve carries the page's accent as ink over a tint of itself, which is
-    // what `onTint` is for: seven of the seventeen accents — Seerr's indigo
-    // among the closest calls — do not clear contrast on a light surface
-    // untreated. Decline stays neutral: it is not destructive enough for the
-    // error tone (the request stays on record as declined) and red here would
-    // read as a fault on a screen whose whole job is that nothing is wrong.
+    // Approve is the weightier of the two, and monochrome: the primary ink on
+    // the room's strong fill — it used to be Seerr's accent on a tint of
+    // itself. Decline stays the secondary ink on nothing: it is not
+    // destructive enough for a tone (the request stays on record as
+    // declined), and red here would read as a fault on a screen whose whole
+    // job is that nothing is wrong.
     final foreground = _isApprove
-        ? ServiceTheme.onTint(
-            accent,
-            // The card's own fill, not `surface`: the glyph sits on the tint
-            // composited over the row it is in, and measuring against the page
-            // behind the card would answer a contrast question nobody is
-            // looking at.
-            surface: colorScheme.surfaceContainer,
-            tintAlpha: _approveTintAlpha,
-          )
+        ? colorScheme.onSurface
         : colorScheme.onSurfaceVariant;
 
     return IconButton(
@@ -275,9 +264,7 @@ class _DecisionButton extends ConsumerWidget {
       ),
       style: IconButton.styleFrom(
         foregroundColor: foreground,
-        backgroundColor: _isApprove
-            ? accent.withValues(alpha: _approveTintAlpha)
-            : null,
+        backgroundColor: _isApprove ? CupolaRoom.of(context).fillStrong : null,
       ),
       // Names which request. `tooltip` is also what `IconButton` publishes as
       // the node's label, so this is the spoken name too.
@@ -308,8 +295,4 @@ class _DecisionButton extends ConsumerWidget {
   /// so id 42 sent to the wrong server approves a different person's request
   /// and reports success.
   static const String _lensConnection = '';
-
-  /// The fill the approve glyph is measured against, and the fill it is drawn
-  /// on — one constant so the two cannot drift apart.
-  static const double _approveTintAlpha = 0.14;
 }

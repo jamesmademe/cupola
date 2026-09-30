@@ -156,7 +156,7 @@ class _TaskTile extends ConsumerWidget {
                   Text(
                     task.state!,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppColors.truenas,
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
               ],

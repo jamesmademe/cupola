@@ -76,8 +76,8 @@
   var fastOutSlowIn = cubic(0.4, 0, 0.2, 1);
   var fastEaseInToSlowEaseOut = threePoint([0.056, 0.024], [0.108, 0.3085], [0.198, 0.541], [0.3655, 1], [0.5465, 0.989]);
   var linearToEaseOut = cubic(0.35, 0.91, 0.33, 0.97), easeInToLinear = cubic(0.67, 0.03, 0.65, 0.09);
-  var easeOut = cubic(0.25, 0.1, 0.25, 1), easeOutCubic = cubic(0.215, 0.61, 0.355, 1);
-  var ROUTE_MS = 500, REDUCED = 0.05, STEP = 45, ENTER_MS = 300, ENTER_OFFSET = 16;
+  var easeOut = cubic(0.25, 0.1, 0.25, 1), ease = cubic(0.2, 0.8, 0.2, 1); /* AppAnimation.emphasizedCurve */
+  var ROUTE_MS = 500, REDUCED = 0.05, STEP = 45, ENTER_MS = 320, ENTER_OFFSET = 16;
   var slow = 1;
   var q = function (s) { return root.querySelector(s); };
   var phone = q('[data-phone]'), gridPage = q('[data-grid-page]'), detail = q('[data-detail-page]'), grid = q('[data-grid]');
@@ -136,10 +136,11 @@
   }
   /* AppElevation.level2 / level3 per theme, lerped shadow-by-shadow like BoxShadow.lerpList. */
   function shadows(k) {
-    var light = document.documentElement.getAttribute('data-theme') === 'light', ink = light ? '17,24,39' : '0,0,0';
-    var L2 = light ? [[4, 10, 0.08], [10, 22, 0.05]] : [[4, 10, 0.34], [10, 22, 0.22]];
-    var L3 = light ? [[6, 16, 0.10], [18, 36, 0.07]] : [[6, 16, 0.40], [18, 36, 0.26]];
-    return L2.map(function (s, i) { var t = L3[i]; return '0 ' + (s[0] + (t[0] - s[0]) * k).toFixed(2) + 'px ' + (s[1] + (t[1] - s[1]) * k).toFixed(2) + 'px rgba(' + ink + ',' + (s[2] + (t[2] - s[2]) * k).toFixed(3) + ')'; }).join(', ');
+    var light = document.documentElement.getAttribute('data-theme') === 'light', ink = light ? '22,21,26' : '0,0,0';
+    /* [y offset, blur, spread, alpha] */
+    var L2 = light ? [[2, 6, 0, 0.08], [16, 30, -12, 0.05]] : [[2, 6, 0, 0.60], [16, 30, -12, 0.80]];
+    var L3 = light ? [[2, 6, 0, 0.10], [10, 30, 0, 0.07]] : [[2, 6, 0, 0.60], [10, 30, 0, 0.60]];
+    return L2.map(function (s, i) { var t = L3[i]; return '0 ' + (s[0] + (t[0] - s[0]) * k).toFixed(2) + 'px ' + (s[1] + (t[1] - s[1]) * k).toFixed(2) + 'px ' + (s[2] + (t[2] - s[2]) * k).toFixed(2) + 'px rgba(' + ink + ',' + (s[3] + (t[3] - s[3]) * k).toFixed(3) + ')'; }).join(', ');
   }
   var W = 360, state = { value: 0, pushed: false, raf: 0, cell: null, tween: null, t0: 0, from: 0, to: 0, dir: 'push', reduced: false };
   function paintPages(v, dir) {
@@ -149,8 +150,8 @@
     detail.style.visibility = v > 0 ? 'visible' : 'hidden';
     gridPage.style.transform = 'translateX(' + (-sec * W / 3).toFixed(2) + 'px)';
     if (!state.reduced) {
-      /* Destination settle: FadeTransition + ScaleTransition(1.06 → 1) on routeAnimation · easeOutCubic */
-      var s = easeOutCubic(v);
+      /* Destination settle: FadeTransition + ScaleTransition(1.06 → 1) on routeAnimation · emphasizedCurve */
+      var s = ease(v);
       settle.style.opacity = String(s); settle.style.transform = 'scale(' + (1.06 + (1 - 1.06) * s) + ')';
       out.settle.textContent = 'opacity ' + s.toFixed(3) + ' · scale ' + (1.06 - 0.06 * s).toFixed(3);
     } else { settle.style.opacity = '1'; settle.style.transform = 'none'; out.settle.textContent = 'no settle (Reduce Motion)'; }
@@ -181,10 +182,10 @@
       clearTimeout(el._t); cancelAnimationFrame(el._r);
       if (!on) { el.style.opacity = '0'; el.style.transform = 'translateY(' + ENTER_OFFSET + 'px)'; return; }
       if (state.reduced) { el.style.opacity = '1'; el.style.transform = 'none'; return; }
-      /* StaggeredEntrance: delay = route.transitionDuration (mounted mid-push) + 45 ms × index; 300 ms easeOutCubic */
+      /* StaggeredEntrance: delay = route.transitionDuration (mounted mid-push) + 45 ms × index; 320 ms emphasizedCurve */
       el._t = setTimeout(function () {
         var t0 = performance.now();
-        (function f(now) { var p = Math.max(0, Math.min(1, (now - t0) / (ENTER_MS * slow))), s = easeOutCubic(p); el.style.opacity = String(s); el.style.transform = 'translateY(' + ((1 - s) * ENTER_OFFSET) + 'px)'; if (p < 1) el._r = requestAnimationFrame(f); })(t0);
+        (function f(now) { var p = Math.max(0, Math.min(1, (now - t0) / (ENTER_MS * slow))), s = ease(p); el.style.opacity = String(s); el.style.transform = 'translateY(' + ((1 - s) * ENTER_OFFSET) + 'px)'; if (p < 1) el._r = requestAnimationFrame(f); })(t0);
       }, (ROUTE_MS + STEP * i) * slow);
     });
   }

@@ -8,7 +8,6 @@ import 'package:cupola/core/widgets/search_bar_header.dart';
 void main() {
   Future<Color> magnifierColour(
     WidgetTester tester, {
-    required Color accent,
     required Brightness brightness,
   }) async {
     await tester.pumpWidget(
@@ -16,9 +15,7 @@ void main() {
         theme: brightness == Brightness.light
             ? AppTheme.lightTheme()
             : AppTheme.darkTheme(),
-        home: Scaffold(
-          body: SearchBarHeader(onQueryChanged: (_) {}, accent: accent),
-        ),
+        home: Scaffold(body: SearchBarHeader(onQueryChanged: (_) {})),
       ),
     );
     return tester.widget<Icon>(find.byIcon(Icons.search_rounded)).color!;
@@ -32,50 +29,25 @@ void main() {
     return (lighter + 0.05) / (darker + 0.05);
   }
 
-  testWidgets('a raw accent never reaches the glyph on paper', (tester) async {
-    // The defect: the magnifier painted `widget.accent` straight through, and
-    // six callers hand it a raw service accent. The field it sits in is
-    // `surfaceContainer` — white on the light theme — where Lidarr's pink
-    // measures under 2:1 and seven of the seventeen accents are under 3:1.
-    final painted = await magnifierColour(
+  for (final brightness in Brightness.values) {
+    testWidgets('the magnifier is the secondary ink ($brightness)', (
       tester,
-      accent: AppColors.lidarr,
-      brightness: Brightness.light,
-    );
-
-    expect(painted, isNot(AppColors.lidarr));
-    expect(
-      contrast(painted, AppTheme.lightTheme().colorScheme.surfaceContainer),
-      greaterThanOrEqualTo(4.5),
-    );
-  });
-
-  testWidgets('an accent that already reads is left alone', (tester) async {
-    // The walk must not "correct" a colour that passes, or every search field
-    // in the dark theme shifts hue for no reason.
-    final painted = await magnifierColour(
-      tester,
-      accent: AppColors.lidarr,
-      brightness: Brightness.dark,
-    );
-    expect(painted, AppColors.lidarr);
-  });
-
-  testWidgets('the identity survives: the glyph keeps the accent\'s hue', (
-    tester,
-  ) async {
-    // A per-service accent is part of the identity, so the answer is a darker
-    // pink, not a neutral gray.
-    final painted = await magnifierColour(
-      tester,
-      accent: AppColors.lidarr,
-      brightness: Brightness.light,
-    );
-    expect(
-      HSLColor.fromColor(painted).hue,
-      closeTo(HSLColor.fromColor(AppColors.lidarr).hue, 1.0),
-    );
-  });
+    ) async {
+      // The brand book: the field is the same field whichever service it searches, so the
+      // glyph is monochrome — it used to take the caller's service accent,
+      // which put seven hues under 3:1 on paper. The secondary ink is spaced
+      // for the field's own fill in both rooms.
+      final theme = brightness == Brightness.light
+          ? AppTheme.lightTheme()
+          : AppTheme.darkTheme();
+      final painted = await magnifierColour(tester, brightness: brightness);
+      expect(painted, theme.colorScheme.onSurfaceVariant);
+      expect(
+        contrast(painted, theme.colorScheme.surfaceContainer),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+  }
 
   testWidgets('the clear action has an explicit accessible name', (
     tester,

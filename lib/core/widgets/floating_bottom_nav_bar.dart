@@ -7,7 +7,6 @@ import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 
 /// A destination for the [FloatingBottomNavBar].
@@ -24,15 +23,13 @@ class FloatingNavDestination {
   /// The label for this destination.
   final String label;
 
-  /// Accent color used for the selected pill.
-  final Color accentColor;
-
   /// Count of things waiting on this destination, or zero for none.
   ///
-  /// Painted in the destination's **own accent**, never a status tone: a green or
-  /// amber pill living in permanent chrome reads as stack health, which is
-  /// exactly what the section accents exist to keep separate from the closed
-  /// status vocabulary.
+  /// Painted in **ink**, never a status tone and never a colour of the
+  /// section's own: a green or amber pill living in permanent chrome reads as
+  /// stack health, and the chrome is monochrome — colour comes from the content
+  /// and the five tones, nothing else. An ink disc with the on-ink numeral is
+  /// the loudest thing the room can draw without a hue.
   final int badgeCount;
 
   /// Spoken alongside the label, because a number drawn on an icon is invisible
@@ -44,7 +41,6 @@ class FloatingNavDestination {
     required this.selectedIcon,
     this.railIcon,
     required this.label,
-    required this.accentColor,
     this.badgeCount = 0,
     this.badgeSemanticLabel,
   });
@@ -142,7 +138,8 @@ class FloatingNavBarMetrics {
 /// Features:
 /// - Floating design with margins on all sides
 /// - Rounded corners using [AppRadius.xl]
-/// - Compact selected pill with per-destination accent color
+/// - Compact selected pill, monochrome: the room's strong fill under the
+///   primary ink, the same in every section
 /// - Elastic drag animation (rubber band effect)
 /// - Glass surface: a semi-opaque tint, deliberately NOT a backdrop blur.
 ///   With `extendBody: true` every screen scrolls under this bar, so a
@@ -160,7 +157,6 @@ class FloatingNavBarMetrics {
 ///       icon: Icons.home_outlined,
 ///       selectedIcon: Icons.home,
 ///       label: 'Home',
-///       accentColor: Colors.indigo,
 ///     ),
 ///   ],
 /// )
@@ -510,15 +506,6 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
 }
 
 class _NavBarIndicator extends StatelessWidget {
-  /// Alpha of the accent fill behind the selected destination.
-  ///
-  /// Shared with [_NavBarItem], which has to measure its label against this exact
-  /// value: the fill and the label on top of it are one contrast decision, and
-  /// letting the two read different constants is how a legible pill silently
-  /// becomes an illegible one.
-  static double tintAlphaFor(Brightness brightness) =>
-      brightness == Brightness.dark ? 0.16 : 0.13;
-
   final double left;
   final double width;
   final double barHeight;
@@ -533,12 +520,11 @@ class _NavBarIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final accentColor = selectedDestination.accentColor;
-    final activeBackground = accentColor.withValues(
-      alpha: tintAlphaFor(colorScheme.brightness),
-    );
-    final activeBorder = accentColor.withValues(alpha: 0.27);
+    // The room's strong fill — white at 12% in the dark room, the day room's
+    // ink at 12% on paper — and no edge: the pill is the one lit shape in the
+    // bar, the same in every section, so it says "you are here" and nothing
+    // about which section "here" is.
+    final activeBackground = CupolaRoom.of(context).fillStrong;
     final pillHeight = _NavBarItem.pillHeightFor(
       FloatingNavBarMetrics.effectiveTextScaler(context),
       _NavBarItem.labelStyleOf(context),
@@ -558,7 +544,6 @@ class _NavBarIndicator extends StatelessWidget {
             decoration: BoxDecoration(
               color: activeBackground,
               borderRadius: BorderRadius.circular(_NavBarItem.itemRadius),
-              border: Border.all(color: activeBorder),
             ),
           ),
         ),
@@ -841,28 +826,15 @@ class _NavBarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accentColor = destination.accentColor;
     final scaler = FloatingNavBarMetrics.effectiveTextScaler(context);
 
-    // The selected label and icon sit *on top of* the indicator pill, which is
-    // this same accent at a low alpha (see [_NavBarIndicator]). Painting the raw
-    // accent there was the exact failure DESIGN.md's Luminance Rule describes: in
-    // light theme an accent over a 13% tint of itself measures under 2:1 against a
-    // 4.5:1 requirement, so every service accent was failing AA in daylight while
-    // looking fine in dark, where the same combination clears about 7.7:1.
-    //
-    // `onTint` keeps the hue and darkens only as far as AA needs, so the bar stays
-    // accent-coloured rather than dropping to a neutral.
+    // Monochrome: the selected icon and label are the primary ink on the
+    // strong fill (see [_NavBarIndicator]), the rest the secondary ink. Both
+    // are the room's own inks, spaced for the surfaces they sit on, so there is
+    // no hue to walk and nothing a section could make fail in daylight — which
+    // is where a section accent over a 13% tint of itself measured under 2:1.
     final itemColor = isSelected
-        ? ServiceTheme.onTint(
-            accentColor,
-            // The pill floats on the glass bar, whose own fill is translucent, so
-            // the true composite is not knowable here. `surface` is the opaque
-            // base the ambient background paints from, which makes this the
-            // conservative choice in light theme — where the risk actually is.
-            surface: colorScheme.surface,
-            tintAlpha: _NavBarIndicator.tintAlphaFor(colorScheme.brightness),
-          )
+        ? colorScheme.onSurface
         : colorScheme.onSurfaceVariant;
 
     // Rail parity: NavigationRail and NavigationBar both append this, so the
@@ -920,7 +892,6 @@ class _NavBarItem extends StatelessWidget {
                     _BadgedIcon(
                       count: destination.badgeCount,
                       label: destination.badgeLabel,
-                      accent: destination.accentColor,
                       child: AnimatedSwitcher(
                         duration: AppAnimation.durationSm,
                         child: Icon(
@@ -978,7 +949,7 @@ class _NavBarItem extends StatelessWidget {
 
 /// A count on a navigation icon.
 ///
-/// Deliberately the destination's own accent rather than a status tone — see
+/// Deliberately ink rather than a status tone — see
 /// [FloatingNavDestination.badgeCount]. Excluded from semantics because the
 /// destination already speaks the count in its label; a second node would read
 /// the number twice.
@@ -986,13 +957,11 @@ class _BadgedIcon extends StatelessWidget {
   const _BadgedIcon({
     required this.count,
     required this.label,
-    required this.accent,
     required this.child,
   });
 
   final int count;
   final String label;
-  final Color accent;
   final Widget child;
 
   /// The badge's height at the default reading size.
@@ -1023,7 +992,8 @@ class _BadgedIcon extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: accent,
+                // The ink disc: the primary ink, the fill of the ink button.
+                color: colorScheme.primary,
                 borderRadius: BorderRadius.circular(AppRadius.full),
                 border: Border.all(
                   color: colorScheme.surface,
@@ -1039,9 +1009,9 @@ class _BadgedIcon extends StatelessWidget {
                     ?.weight(FontWeight.w600)
                     .tabular
                     .copyWith(
-                      // Measured against the fill rather than assumed: white on
-                      // the section cyan is 2.4:1, the dark ink is 6.6:1.
-                      color: ServiceTheme.foregroundOn(accent),
+                      // The on-ink numeral: the ink button's own label colour,
+                      // spaced against the ink by the theme in both rooms.
+                      color: colorScheme.onPrimary,
                       height: 1,
                     ),
               ),

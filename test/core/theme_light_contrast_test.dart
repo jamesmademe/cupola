@@ -118,18 +118,32 @@ void main() {
     // the colour out of the app: only ink walks. A fill is a surface and owes
     // nothing on its own — what it owes is measured by whatever sits on it,
     // which the group above checks.
-    expect(statusToneFill(light, StatusTone.warning), AppColors.warning);
-    expect(statusToneFill(light, StatusTone.success), AppColors.success);
-    expect(statusToneFill(light, StatusTone.info), AppColors.info);
+    //
+    // Each room fills with its own tone bytes: the day room's deep ones on
+    // paper, the dark room's bright ones on the ground.
+    expect(
+      statusToneFill(light, StatusTone.warning),
+      CupolaRoom.light.toneAmber,
+    );
+    expect(
+      statusToneFill(light, StatusTone.success),
+      CupolaRoom.light.toneGreen,
+    );
+    expect(statusToneFill(light, StatusTone.info), CupolaRoom.light.toneBlue);
     expect(statusToneFill(light, StatusTone.error), light.error);
     expect(statusToneFill(dark, StatusTone.warning), AppColors.warning);
+    expect(statusToneFill(dark, StatusTone.success), AppColors.success);
+    expect(statusToneFill(dark, StatusTone.info), AppColors.info);
+    expect(statusToneFill(dark, StatusTone.error), dark.error);
   });
 
   group('every service accent survives as ink on paper', () {
     for (final service in ServiceKey.values) {
       test('${service.name} through onTint on the hardest light ground', () {
         // `surfaceContainerHigh` is the ground the design walks against in both
-        // themes — the lightest card on light, the lightest card on dark.
+        // themes — the lightest card on light, the lightest card on dark. What
+        // a service paints is the lamp now, and a label asked of the lamp is
+        // the room's ink, so this holds for every service by construction.
         final ground = light.surfaceContainerHigh;
         final ink = ServiceTheme.onTint(
           service.accent,
@@ -143,11 +157,12 @@ void main() {
     test(
       'most of the palette genuinely needs the walk, so it is not a no-op',
       () {
-        // Measured, not assumed: 15 of the 17 accents are under AA as raw ink on
-        // the lightest light card, and 6 are under even the 3:1 a bare glyph
-        // owes. That is the scale of the problem the walk exists for, and it is
-        // why "it looks fine on my machine" was never evidence — every one of
-        // these passes comfortably in dark mode.
+        // Measured, not assumed: 15 of the 17 brand colours are under AA as raw
+        // ink on the lightest light card, and 6 are under even the 3:1 a bare
+        // glyph owes. They are registry data now and no longer painted, but
+        // they stay the fixture that proves the walk walks — the tones still
+        // go through it on paper, and it is why "it looks fine on my machine"
+        // was never evidence: every one of these passes comfortably in dark.
         //
         // If this ever collapses toward zero, either the palette moved or the
         // walk stopped walking, and a walk that returns its input is
@@ -155,10 +170,12 @@ void main() {
         // daylight.
         final ground = light.surfaceContainerHigh;
         final underAa = ServiceKey.values
-            .where((service) => _contrast(service.accent, ground) < _aa)
+            .where((service) => _contrast(service.brandAccent, ground) < _aa)
             .length;
         final underGraphical = ServiceKey.values
-            .where((service) => _contrast(service.accent, ground) < _aaNonText)
+            .where(
+              (service) => _contrast(service.brandAccent, ground) < _aaNonText,
+            )
             .length;
         expect(underAa, greaterThanOrEqualTo(12));
         expect(underGraphical, greaterThanOrEqualTo(4));
@@ -168,10 +185,9 @@ void main() {
 
   test('the light brand ink clears AA on paper', () {
     // `colorScheme.primary` is the most-painted ink in the app after
-    // `onSurface`: every text button, every outlined button, the selected nav
-    // glyph, `StatusTone.primary`, and the recovery verb on every fault band.
-    // Indigo-500 measured 4.06:1 on the scaffold, which is why light takes the
-    // next step of the brand's own ramp instead.
+    // `onSurface`: every text button, the selected nav glyph,
+    // `StatusTone.primary`, and the recovery verb on every fault band. In the
+    // monochrome room it is the ink itself.
     for (final surface in surfacesOf(light).values) {
       expect(_contrast(light.primary, surface), greaterThanOrEqualTo(_aa));
     }
@@ -211,12 +227,6 @@ void main() {
     expect(
       _contrast(AppColors.plateDimInk, AppColors.plateWell),
       greaterThanOrEqualTo(_aa),
-    );
-    // The dark scaffold's own dim tone is *not* good enough here — 4.20:1 on
-    // the plate — which is the whole reason `plateDimInk` is its own token.
-    expect(
-      _contrast(AppColors.onSurfaceDimDark, AppColors.plateSurface),
-      lessThan(_aa),
     );
   });
 }

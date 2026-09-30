@@ -10,6 +10,12 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// [serviceThemeFor] (or [ServiceTheme.fromAccent]) instead of re-deriving
 /// accent containers, gradients and glows locally — a pattern that previously
 /// diverged (e.g. the onboarding screen tinted Seerr green instead of indigo).
+///
+/// **Monochrome.** A service's accent is the neutral lamp now
+/// ([ServiceKey.accent]), so the bundle a service gets is the lamp's: a glow
+/// that is the room's own light, a soft container that is a neutral wash, and
+/// — through [onTint] — the room's ink wherever a label sits on it. The brand
+/// colour is registry data ([ServiceKey.brandAccent]) and is not painted.
 @immutable
 class ServiceTheme {
   /// The saturated brand accent.
@@ -101,6 +107,15 @@ class ServiceTheme {
   ///
   /// Bright accents (Radarr's amber, the section cyan) do pass on the first check
   /// in dark and are returned untouched.
+  ///
+  /// **The lamp is a light, not an ink.** Every service paints the lamp now
+  /// ([ServiceKey.accent]), and walking the lamp's grey to 4.6:1 would set every
+  /// label that used to be a service's colour in a dim cool grey — below the
+  /// room's own tertiary ink in the dark room. A label asked of the lamp is the
+  /// room's primary ink instead, the one of the two rooms' inks that measures
+  /// higher on the composite: the brand book's rule that a selected or emphasised label is
+  /// ink, never a hue. Every other colour — the five tones above all — is walked
+  /// exactly as before.
   static Color onTint(
     Color accent, {
     required Color surface,
@@ -116,6 +131,8 @@ class ServiceTheme {
     // Re-deriving it per step cost 24 redundant `pow` triples for a value that
     // cannot change.
     final backgroundLuminance = background.computeLuminance();
+
+    if (accent == lamp) return _roomInkOn(backgroundLuminance);
 
     if (_contrastAgainst(accent, backgroundLuminance) >= _minBodyContrast) {
       return accent;
@@ -142,6 +159,24 @@ class ServiceTheme {
     // No point on this hue clears it — a very light tint under a very light
     // accent. Better a legible neutral than a brand-coloured smudge.
     return foregroundOn(background);
+  }
+
+  /// The neutral lamp: what every service paints (see [ServiceKey.accent]).
+  static const Color lamp = DesignTokens.colorTitleLightFallback;
+
+  /// The dark room's primary ink and the day room's, opaque.
+  static const Color _darkRoomInk = DesignTokensDark.colorOnSurface;
+  static const Color _dayRoomInk = DesignTokensLight.colorOnSurface;
+  static final double _darkRoomInkLuminance = _darkRoomInk.computeLuminance();
+  static final double _dayRoomInkLuminance = _dayRoomInk.computeLuminance();
+
+  /// The room's primary ink that reads on a background of
+  /// [backgroundLuminance]: whichever of the two rooms' inks measures higher,
+  /// which is the dark room's on a dark composite and the day room's on paper.
+  static Color _roomInkOn(double backgroundLuminance) {
+    final onDark = _contrastBetween(_darkRoomInkLuminance, backgroundLuminance);
+    final onDay = _contrastBetween(_dayRoomInkLuminance, backgroundLuminance);
+    return onDark >= onDay ? _darkRoomInk : _dayRoomInk;
   }
 
   /// WCAG AA for body-sized text, with a tenth of a point of headroom.
@@ -177,12 +212,13 @@ class ServiceTheme {
     return (lighter + 0.05) / (darker + 0.05);
   }
 
-  /// Accent-tinted radial glow for signature cards.
+  /// Radial glow for a card lit from one corner: the room's light, which for
+  /// a service is the neutral lamp.
   RadialGradient get glow => AppGradients.serviceGlow(accent);
 }
 
-/// Resolves the [ServiceTheme] for a given service. The accent still lives on
-/// [ServiceKey.accent] (backed by `AppColors`), keeping one authority.
+/// Resolves the [ServiceTheme] for a given service, from [ServiceKey.accent] —
+/// the lamp, for every service.
 ServiceTheme serviceThemeFor(ServiceKey service) {
   return ServiceTheme.fromAccent(service.accent);
 }

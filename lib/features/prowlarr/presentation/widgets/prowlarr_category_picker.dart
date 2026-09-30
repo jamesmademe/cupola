@@ -7,6 +7,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Picks newznab categories to filter indexers by.
 ///
@@ -22,7 +23,7 @@ Future<Set<int>?> showProwlarrCategoryPicker({
     title: 'Categories',
     subtitle: 'Show indexers that cover any of these',
     icon: Icons.category_outlined,
-    accent: AppColors.prowlarr,
+    accent: ServiceKey.prowlarr.accent,
     showClose: true,
     initialSize: 0.7,
     minSize: 0.4,
@@ -151,7 +152,7 @@ class _CategoryChip extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Material(
       color: selected
-          ? AppColors.prowlarr.withValues(alpha: 0.16)
+          ? ServiceKey.prowlarr.accent.withValues(alpha: 0.16)
           : colorScheme.surfaceContainerHighest,
       borderRadius: AppRadius.borderRadiusFull,
       child: InkWell(
@@ -168,7 +169,7 @@ class _CategoryChip extends StatelessWidget {
                 .weight(FontWeight.w600)
                 .copyWith(
                   color: selected
-                      ? AppColors.prowlarr
+                      ? colorScheme.onSurface
                       : colorScheme.onSurfaceVariant,
                 ),
           ),

@@ -366,21 +366,15 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
       await widget.onGrabRelease(guid, indexerId);
       if (!mounted) return;
       // The one snackbar in the app that stays on `ScaffoldMessenger` rather
-      // than going through `SnackBarHelper`, for two reasons that both have to
-      // hold: it is painted in the primary accent — a grab starting is neither
-      // the neutral default nor an error — and it is shown *after* the pop that
-      // takes this element out of the tree, so the messenger and the colour are
-      // resolved while `context` is still valid and the helper's own
-      // `Theme.of(context)` would not be.
+      // than going through `SnackBarHelper`: it is shown *after* the pop that
+      // takes this element out of the tree, so the messenger is resolved while
+      // `context` is still valid and the helper's own `Theme.of(context)` would
+      // not be. It is the theme's toast, like every other: a grab starting is
+      // not a state with a tone, and the primary ink it used to be painted in
+      // is the toast's own label colour in the dark room — white on white.
       final messenger = ScaffoldMessenger.of(context);
-      final accent = Theme.of(context).colorScheme.primary;
       Navigator.pop(context);
-      messenger.showSnackBar(
-        SnackBar(
-          content: const Text('Download started'),
-          backgroundColor: accent,
-        ),
-      );
+      messenger.showSnackBar(const SnackBar(content: Text('Download started')));
     } on ReleaseGrabAbandoned {
       // No grab, and the caller has already said why. Re-arm the list and stay.
       if (mounted) setState(() => _grabbingGuid = null);

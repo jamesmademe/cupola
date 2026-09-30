@@ -38,7 +38,7 @@ import 'package:cupola/core/widgets/status_badge.dart';
 ///    a page that shouts every time a home server is rebuilding is a page whose
 ///    shouting stops being read.
 /// 2. **The recovery verb is never painted in the fault tone.** Retry, Refresh
-///    and Settings are brand primary. A red Retry makes the cure look like the
+///    and Settings are the primary ink. A red Retry makes the cure look like the
 ///    disease, and there is no reading of "try again" that is itself alarming.
 /// 3. **Nothing is dimmed for being unreachable.** Dimming means *not
 ///    configured* everywhere else on this canvas, and the two states need

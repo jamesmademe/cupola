@@ -31,7 +31,7 @@ import 'package:cupola/core/service_theme.dart';
 ///  1. presence is the signal — no fill, no border, the error tone on the glyph
 ///     and nowhere else;
 ///  2. the recovery verb is never painted in the error tone — a red Retry makes
-///     the cure look like the disease, so it is brand primary;
+///     the cure look like the disease, so it is the primary ink;
 ///  3. nothing is dimmed for being unreachable, because dimming means *not
 ///     configured* everywhere else on this canvas.
 ///

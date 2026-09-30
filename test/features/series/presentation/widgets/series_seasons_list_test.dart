@@ -134,7 +134,7 @@ void main() {
       expect(find.byTooltip('Search Season 1'), findsOneWidget);
     });
 
-    testWidgets('the season selector is a 20dp pill, not a full-radius chip', (
+    testWidgets('the season selector is a selection pill, not a ChoiceChip', (
       tester,
     ) async {
       await _pump(
@@ -143,8 +143,10 @@ void main() {
         episodes: [_episode(id: 1, episodeNumber: 1)],
       );
 
-      // `ChoiceChip`'s default shape is full radius, which this system reserves
-      // for non-interactive metadata.
+      // The selector is the app's own selection pill, never Material's
+      // `ChoiceChip`. (Its corner used to be kept apart from the metadata
+      // pill's full radius; the room draws every pill at half its height, so
+      // the two corners are now one token.)
       expect(find.byType(ChoiceChip), findsNothing);
       expect(find.byType(SelectionPills<int>), findsOneWidget);
 
@@ -163,7 +165,6 @@ void main() {
       expect(radii, isNotEmpty);
       for (final radius in radii) {
         expect(radius, AppRadius.borderRadiusPill);
-        expect(radius, isNot(AppRadius.borderRadiusFull));
       }
     });
 

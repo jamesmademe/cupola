@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -34,7 +33,7 @@ class TransmissionScreen extends ConsumerWidget {
     final isConfigured = settings.isServiceConfigured(ServiceKey.transmission);
 
     return AmbientScaffold(
-      accent: AppColors.transmission,
+      accent: ServiceKey.transmission.accent,
       appBar: showAppBar
           ? const GlassAppBar(title: Text('Transmission'))
           : null,
@@ -80,7 +79,7 @@ class _TransmissionDashboard extends ConsumerWidget {
     if (isOffline) {
       return ServiceOfflineState(
         serviceName: ServiceKey.transmission.title,
-        accent: AppColors.transmission,
+        accent: ServiceKey.transmission.accent,
         onRetry: () => _invalidateAll(ref),
       );
     }
@@ -115,7 +114,7 @@ class _TransmissionDashboard extends ConsumerWidget {
               if (topPadding > 0) SizedBox(height: topPadding),
               ServiceKpiPeek(
                 kpis: ref.watch(serviceKpiProvider(ServiceKey.transmission)),
-                accent: AppColors.transmission,
+                accent: ServiceKey.transmission.accent,
               ),
               const SizedBox(height: AppSpacing.sm),
               const _TransmissionActionsBar(),

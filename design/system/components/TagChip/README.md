@@ -6,7 +6,7 @@ Rendered from `lib/core/widgets/tag_chip.dart` by `test/design_catalog/tag_chip_
 
 ## Variants
 
-- **TagChip** — the tone (default `primary`, usually the service's accent) at 12% with a 28% border, `radius-full`, padding `space-xs` × `space-sm`, label `label-small` 600, optional 14px leading icon. The label and icon are the tone walked against its own 12% wash over the ground the chip sits on (`ServiceTheme.onTint`, tint 0.12); the wash and hairline keep the raw tone.
+- **TagChip** — the tone (default `primary`, usually the service's accent — the lamp, so the chip is a neutral wash under the primary ink) at 12% with a 28% border, `radius-full`, padding `space-xs` × `space-sm`, label `label-small` 600, optional 14px leading icon. The label and icon are the tone walked against its own 12% wash over the ground the chip sits on (`ServiceTheme.onTint`, tint 0.12); the wash and hairline keep the raw tone.
 - **GenreChip** — neutral: `surface-container`, 1px `outline-variant`, `on-surface-variant` label at 500, padding `space-xs` × `space-md`.
 
 ## The consumer provides

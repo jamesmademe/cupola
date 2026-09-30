@@ -30,9 +30,10 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// empty-state to label around, and each heading is the spine's, in the host
 /// page's accent, with `Semantics(header: true)` for free.
 ///
-/// [accent] is the *host* screen's (Radarr amber, Sonarr violet, …), not Seerr's:
-/// the data comes from Seerr but the section belongs to the page it renders in,
-/// and one screen gets one accent.
+/// [accent] is the *host* screen's, not Seerr's: the data comes from Seerr but
+/// the section belongs to the page it renders in. (Every service's accent is
+/// the lamp now, so the two could no longer disagree; the rule stays so the
+/// light keeps one owner.)
 List<MediaDetailSlot> arrMediaExtrasSlots(
   WidgetRef ref, {
   required int tmdbId,

@@ -91,22 +91,27 @@ void main() {
     // resolved *before* the tween rather than inside it. A null accent must
     // still paint — it is the default on three of the four onboarding beats and
     // on every screen that has no service of its own.
-    testWidgets('a null accent falls back to the brand primary', (
-      tester,
-    ) async {
+    testWidgets('a null accent falls back to the neutral lamp', (tester) async {
+      // Never the primary: that is the ink now, near-white in the dark room,
+      // and a white wash reads as fog — which is what the Portal's bare
+      // `AmbientBackground()` painted until the fallback moved to the lamp.
       await _pump(tester, accent: null);
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(_paintedAccent(tester), AppTheme.darkTheme().colorScheme.primary);
+      expect(_paintedAccent(tester), AppColors.lamp);
+      expect(
+        _paintedAccent(tester),
+        isNot(AppTheme.darkTheme().colorScheme.primary),
+      );
     });
 
-    // Drifting out of and back into the brand glow, rather than cutting at the
-    // edges of a per-service stretch — the same fallback, on the way back.
-    testWidgets('drifts back out to the brand when the accent clears', (
+    // Drifting out of and back into the lamp, rather than cutting at the
+    // edges of a lit stretch — the same fallback, on the way back.
+    testWidgets('drifts back out to the lamp when the accent clears', (
       tester,
     ) async {
-      final brand = AppTheme.darkTheme().colorScheme.primary;
+      const brand = AppColors.lamp;
 
       await _pump(tester, accent: const Color(0xFFF59E0B));
       await tester.pumpAndSettle();

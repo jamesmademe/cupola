@@ -22,7 +22,10 @@ import 'package:cupola/core/widgets/status_badge.dart';
 class ServiceKpiPeek extends StatelessWidget {
   final AsyncValue<List<ServiceKpi>> kpis;
 
-  /// Service accent used for values/icons when a KPI doesn't override it.
+  /// The service's accent (`ServiceKey.accent`), used for the glyph of a KPI
+  /// with no tone of its own. That accent is the lamp for every service, and
+  /// through `ServiceTheme.onTint` a glyph asked of the lamp is the room's
+  /// primary ink: an untoned KPI is monochrome, and only a tone carries a hue.
   final Color accent;
 
   final EdgeInsetsGeometry padding;
@@ -48,8 +51,8 @@ class ServiceKpiPeek extends StatelessWidget {
     //
     // `textHeight` is the share of [_height] that is text, and it survived the
     // type ramp's new per-role leading untouched: the root
-    // `DefaultTextHeightBehavior` keeps a text block's outer edges on Inter's
-    // natural metrics, so leading only opens the gaps *between* lines and a
+    // `DefaultTextHeightBehavior` keeps a text block's outer edges on the
+    // face's natural metrics, so leading only opens the gaps *between* lines and a
     // single line measures exactly what it always did. Both lines here are
     // single lines. Re-derive this only if the card gains wrapping text.
     final railHeight = TextScaleMetrics.boxHeight(
@@ -147,18 +150,16 @@ class _KpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    // A toned KPI paints in its tone; everything else wears the service accent.
+    // A toned KPI paints in its tone; everything else is the primary ink.
     // The tone is resolved against the card's own container, not the scaffold:
     // these cards sit on `surfaceContainer`, and on paper that is the ground
     // the walk has to clear.
     final accent = kpi.isUnavailable
-        // A figure that has no value wears no colour. Painting the em dash in
-        // the service accent would make an absence look like a reading, and
-        // the absence is not this service's doing in the first place.
+        // A figure that has no value is quieter still: the secondary ink, so an
+        // absence never looks like a reading.
         ? colorScheme.onSurfaceVariant
         : kpi.tone == null
-        // The service accent is walked too: seven of the seventeen are under
-        // 3:1 on paper, and this glyph appears on every service home.
+        // The accent is the lamp, which `onTint` resolves to the room's ink.
         ? ServiceTheme.onTint(
             fallbackAccent,
             surface: colorScheme.surfaceContainer,
@@ -201,18 +202,15 @@ class _KpiCard extends StatelessWidget {
               ReelLine(
                 kpi.value,
                 options: ReelMotion.figure,
-                style: theme.textTheme.titleMedium!
-                    .weight(FontWeight.w700)
-                    .tabular
-                    .copyWith(
-                      // The em dash demotes to the secondary ink: it is a
-                      // placeholder for a figure, not a figure, and full
-                      // `onSurface` would give it the weight of one.
-                      color: kpi.isUnavailable
-                          ? colorScheme.onSurfaceVariant
-                          : colorScheme.onSurface,
-                      height: 1.1,
-                    ),
+                style: theme.textTheme.titleMedium!.tabular.copyWith(
+                  // The em dash demotes to the secondary ink: it is a
+                  // placeholder for a figure, not a figure, and full
+                  // `onSurface` would give it the weight of one.
+                  color: kpi.isUnavailable
+                      ? colorScheme.onSurfaceVariant
+                      : colorScheme.onSurface,
+                  height: 1.1,
+                ),
                 fallbackMaxLines: 1,
               ),
             ],

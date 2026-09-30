@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/import/domain/manual_import_display.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
@@ -161,8 +160,6 @@ Future<void> _showLanguagePicker(
             for (final option in options)
               CheckboxListTile(
                 value: selectedIds.contains(option.id),
-                activeColor: service.accent,
-                checkColor: ServiceTheme.foregroundOn(service.accent),
                 title: Text(option.name),
                 onChanged: (selected) {
                   setState(() {
@@ -186,8 +183,6 @@ Future<void> _showLanguagePicker(
                     .updateItemMetadata(item, languages: selected);
               },
               style: FilledButton.styleFrom(
-                backgroundColor: service.accent,
-                foregroundColor: ServiceTheme.foregroundOn(service.accent),
                 minimumSize: const Size.fromHeight(48),
               ),
               child: const Text('Apply languages'),

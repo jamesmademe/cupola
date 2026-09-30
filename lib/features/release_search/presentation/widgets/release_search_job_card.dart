@@ -11,13 +11,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One background release search, as an instrument.
 ///
-/// **The service accent is confined to the glyph.** DESIGN.md's Room Light Rule
-/// forbids two service accents lighting one screen, and this list can hold a
-/// Sonarr job beside a Radarr one — so it follows the `/services` precedent, but
-/// narrower: no icon tile and not even the matrix's corner wash. Thirteen washes
-/// across a grid read as lit cells; six stacked in a list read as a rainbow.
-/// Identity gets one glyph of hue, health gets the closed tone vocabulary, and
-/// the glyph's meaning is spoken because a colour is not information.
+/// **The service is its mark, monochrome.** This list can hold a Sonarr job
+/// beside a Radarr one, and the room is monochrome: which service a job is for
+/// is said by the glyph's shape and spoken in the card's label, health by the
+/// closed tone vocabulary, and nothing else on the card carries a hue. (The
+/// glyph used to take the service's colour, and had to drain it whenever the
+/// grab window turned urgent, because Radarr's amber and the fault amber could
+/// not be told apart beside each other. With no hue on the glyph there is no
+/// clash to guard.)
 class ReleaseSearchJobCard extends StatelessWidget {
   const ReleaseSearchJobCard({
     super.key,
@@ -54,16 +55,8 @@ class ReleaseSearchJobCard extends StatelessWidget {
     final colors = theme.colorScheme;
     final tone = releaseSearchTone(job);
     final remaining = job.grabWindowRemaining(now);
-    final serviceTheme = ServiceTheme.fromAccent(job.target.service.accent);
-
-    // A warning-toned chip beside an amber-accented service would show two
-    // ambers meaning two different things (`radarr`, `sabnzbd` and `warning` are
-    // the same hex), so the identity drains for as long as they share the card.
     final windowIsUrgent =
         remaining != null && remaining <= const Duration(minutes: 5);
-    final glyphColor = windowIsUrgent && _accentClashesWithWarning
-        ? colors.onSurfaceVariant
-        : serviceTheme.accent;
 
     return AppCard.filled(
       onTap: onTap,
@@ -75,7 +68,11 @@ class ReleaseSearchJobCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(job.target.service.icon, size: 18, color: glyphColor),
+              Icon(
+                job.target.service.icon,
+                size: 18,
+                color: colors.onSurfaceVariant,
+              ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
@@ -117,11 +114,6 @@ class ReleaseSearchJobCard extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  bool get _accentClashesWithWarning {
-    final accent = job.target.service.accent.toARGB32();
-    return accent == const Color(0xFFF59E0B).toARGB32();
   }
 
   String get _subtitle {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 
@@ -27,23 +26,16 @@ import 'package:cupola/core/widgets/pressable_scale.dart';
 ///   height; the pill is sized by its label, with a minimum for the touch target.
 ///
 /// The selected pill borrows the navigation bar's treatment — [AppRadius.pill],
-/// the accent fill, the accent border — rather than inventing a third "this one
-/// is active" language for the app. It is deliberately **not** [AppRadius.full]:
-/// full radius means metadata in this system, so an interactive pill at full
-/// radius would read as a label.
+/// the room's strong fill, the primary ink — rather than inventing a third
+/// "this one is active" language for the app. It is the same on every screen:
+/// the room is monochrome, so no service or section colours the pill. It is
+/// deliberately **not** [AppRadius.full]: full radius means metadata in this
+/// system, so an interactive pill at full radius would read as a label.
 class SelectionPills<T> extends StatelessWidget {
   final List<T> values;
   final T selected;
   final String Function(T value) labelBuilder;
   final ValueChanged<T> onSelected;
-
-  /// Colour of the selected pill. Defaults to the theme primary.
-  ///
-  /// On an aggregate surface this stays primary: per DESIGN.md's Room Light Rule
-  /// one accent lights a screen at a time, and a screen showing several services
-  /// at once is lit by primary rather than by whichever service happens to be
-  /// first.
-  final Color? accent;
 
   /// The inset inside the scrolling row.
   ///
@@ -74,14 +66,11 @@ class SelectionPills<T> extends StatelessWidget {
     required this.selected,
     required this.labelBuilder,
     required this.onSelected,
-    this.accent,
     this.padding = gutter,
   });
 
   @override
   Widget build(BuildContext context) {
-    final tone = accent ?? Theme.of(context).colorScheme.primary;
-
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: padding,
@@ -92,7 +81,6 @@ class SelectionPills<T> extends StatelessWidget {
               padding: const EdgeInsets.only(right: AppSpacing.sm),
               child: _Pill(
                 label: labelBuilder(value),
-                accent: tone,
                 selected: value == selected,
                 onTap: () => onSelected(value),
               ),
@@ -110,13 +98,11 @@ class _Pill extends StatelessWidget {
   static const double _minTouchTarget = 48;
 
   final String label;
-  final Color accent;
   final bool selected;
   final VoidCallback onTap;
 
   const _Pill({
     required this.label,
-    required this.accent,
     required this.selected,
     required this.onTap,
   });
@@ -125,27 +111,16 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isDark = colorScheme.brightness == Brightness.dark;
+    final room = CupolaRoom.of(context);
 
-    final tintAlpha = isDark ? 0.16 : 0.13;
+    // The nav pill: the room's strong fill under the primary ink. The edge
+    // stays in both states so a pill does not grow a pixel when it is chosen.
     final background = selected
-        ? accent.withValues(alpha: tintAlpha)
+        ? room.fillStrong
         : colorScheme.surfaceContainer;
-    final border = selected
-        ? accent.withValues(alpha: 0.27)
-        : colorScheme.outlineVariant;
-
-    // The Luminance Rule, second half: the raw accent is not a legible label over
-    // a low-alpha tint of itself in light theme. [ServiceTheme.onTint] keeps the
-    // accent's hue and walks its lightness until it clears AA over the composite
-    // of tint-over-surface, so the pill stays accent-coloured in both themes
-    // instead of falling back to a neutral in daylight.
+    final border = selected ? room.edge : colorScheme.outlineVariant;
     final labelColor = selected
-        ? ServiceTheme.onTint(
-            accent,
-            surface: colorScheme.surface,
-            tintAlpha: tintAlpha,
-          )
+        ? colorScheme.onSurface
         : colorScheme.onSurfaceVariant;
 
     return Semantics(

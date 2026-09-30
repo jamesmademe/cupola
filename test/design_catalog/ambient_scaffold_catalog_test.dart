@@ -163,12 +163,13 @@ void main() {
         height: 420,
       ),
       CatalogScene(
-        'AmbientBackground alone · no accent (primary), Radarr, Sonarr, '
-        'Jellyfin · two radials, top left and bottom right, same strength',
+        'AmbientBackground alone · no accent, Radarr, Sonarr, Jellyfin · the '
+        'same neutral lamp in every room: two radials, top left and bottom '
+        'right, same strength — the fallback is the lamp, never the ink',
         (_) => Wrap(
           spacing: 12,
           children: [
-            _room(null, 'primary'),
+            _room(null, 'no accent'),
             _room(ServiceKey.radarr.accent, 'Radarr'),
             _room(ServiceKey.sonarr.accent, 'Sonarr'),
             _room(ServiceKey.jellyfin.accent, 'Jellyfin'),

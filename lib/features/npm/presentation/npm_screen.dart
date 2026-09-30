@@ -137,7 +137,7 @@ class NpmScreen extends ConsumerWidget {
     );
 
     return AmbientScaffold(
-      accent: AppColors.nginxProxyManager,
+      accent: ServiceKey.nginxProxyManager.accent,
       appBar: showAppBar ? GlassAppBar(title: Text(section.label)) : null,
       body: SafeArea(
         top: showAppBar,
@@ -226,7 +226,7 @@ class _NpmSection extends ConsumerWidget {
     if (isOffline) {
       return ServiceOfflineState(
         serviceName: ServiceKey.nginxProxyManager.title,
-        accent: AppColors.nginxProxyManager,
+        accent: ServiceKey.nginxProxyManager.accent,
         onRetry: () => _invalidate(ref, section),
       );
     }
@@ -246,7 +246,7 @@ class _NpmSection extends ConsumerWidget {
           if (section == NpmSection.everything)
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.nginxProxyManager)),
-              accent: AppColors.nginxProxyManager,
+              accent: ServiceKey.nginxProxyManager.accent,
             ),
           const NpmDefaultAdminWarning(),
           NpmCapabilityBannerSlot(
@@ -449,7 +449,10 @@ class _NpmReadOnlyTile extends StatelessWidget {
               color: Theme.of(context).colorScheme.outlineVariant,
             ),
           ),
-          leading: Icon(icon, color: AppColors.nginxProxyManager),
+          leading: Icon(
+            icon,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           title: Text(title),
           subtitle: Text(detail),
         ),

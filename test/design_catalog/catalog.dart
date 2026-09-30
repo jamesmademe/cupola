@@ -173,13 +173,14 @@ Future<void> _loadFonts() async {
   await _loadMonoFaces();
 }
 
-/// The mono role (`Menlo`, then `SF Mono`) resolves to platform faces the app
-/// does not bundle, so a widget test would draw figures and key glyphs as
-/// boxes. On a Mac the sheet borrows the system's: SF Mono under the primary
-/// name and Apple Symbols under the first fallback, which is where ⌘ ⌥ ⇧ ⏎
-/// live. Elsewhere the faces are simply missing.
+/// Every family ends its fallbacks on platform faces the app does not bundle —
+/// Apple Symbols for the modifier glyphs (⌘ ⌥) no bundled face has, then the
+/// mono faces — so a widget test would draw those glyphs as boxes. On a Mac
+/// the sheet borrows the system's: Apple Symbols under its own name and under
+/// `SF Mono`, SF Mono under `Menlo`. Elsewhere the faces are simply missing.
 Future<void> _loadMonoFaces() async {
   const faces = {
+    'Apple Symbols': '/System/Library/Fonts/Apple Symbols.ttf',
     'Menlo': '/System/Library/Fonts/SFNSMono.ttf',
     'SF Mono': '/System/Library/Fonts/Apple Symbols.ttf',
   };

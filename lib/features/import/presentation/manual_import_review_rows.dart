@@ -232,8 +232,6 @@ class ReadyGroupHeader extends StatelessWidget {
                     ? false
                     : null,
                 tristate: true,
-                activeColor: service.accent,
-                checkColor: ServiceTheme.foregroundOn(service.accent),
                 onChanged: (_) => onSelectionChanged(!allSelected),
               ),
             ),
@@ -486,8 +484,6 @@ class MatchedFileRow extends StatelessWidget {
                   : null,
               child: Checkbox(
                 value: selected,
-                activeColor: service.accent,
-                checkColor: ServiceTheme.foregroundOn(service.accent),
                 onChanged: onSelectedChanged == null
                     ? null
                     : (value) => onSelectedChanged!(value == true),
@@ -683,8 +679,6 @@ class AttentionFileRow extends StatelessWidget {
               label: 'Assign ${item.fileName} together with other files',
               child: Checkbox(
                 value: picked,
-                activeColor: service.accent,
-                checkColor: ServiceTheme.foregroundOn(service.accent),
                 onChanged: (value) => onPickedChanged(value == true),
               ),
             ),

@@ -246,7 +246,9 @@ class _AreaChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accent = AppColors.truenas;
+    // Monochrome: the selected section is the room's strong fill under the
+    // primary ink, as on every other bar in the app.
+    final room = CupolaRoom.of(context);
     return Semantics(
       button: true,
       container: true,
@@ -264,13 +266,11 @@ class _AreaChip extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               decoration: BoxDecoration(
                 color: selected
-                    ? accent.withValues(alpha: 0.16)
+                    ? room.fillStrong
                     : colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(AppRadius.full),
                 border: Border.all(
-                  color: selected
-                      ? accent.withValues(alpha: 0.45)
-                      : colorScheme.outlineVariant,
+                  color: selected ? room.edge : colorScheme.outlineVariant,
                 ),
               ),
               child: Row(
@@ -278,7 +278,9 @@ class _AreaChip extends StatelessWidget {
                   Icon(
                     section.icon,
                     size: 14,
-                    color: selected ? accent : colorScheme.onSurfaceVariant,
+                    color: selected
+                        ? colorScheme.onSurface
+                        : colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -319,7 +321,9 @@ class _AreaRowState extends State<_AreaRow> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final selected = widget.selected;
-    final accent = AppColors.truenas;
+    // Monochrome, like the settings list this mirrors: the room's strong fill
+    // under the primary ink.
+    final room = CupolaRoom.of(context);
     return Semantics(
       button: true,
       container: true,
@@ -342,21 +346,21 @@ class _AreaRowState extends State<_AreaRow> {
               margin: const EdgeInsets.only(bottom: 2),
               decoration: BoxDecoration(
                 color: selected
-                    ? accent.withValues(alpha: 0.14)
+                    ? room.fillStrong
                     : (_hovered
                           ? colorScheme.onSurface.withValues(alpha: 0.05)
                           : null),
                 borderRadius: BorderRadius.circular(AppRadius.md),
-                border: selected
-                    ? Border.all(color: accent.withValues(alpha: 0.4))
-                    : null,
+                border: selected ? Border.all(color: room.edge) : null,
               ),
               child: Row(
                 children: [
                   Icon(
                     widget.section.icon,
                     size: 17,
-                    color: selected ? accent : colorScheme.onSurfaceVariant,
+                    color: selected
+                        ? colorScheme.onSurface
+                        : colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: AppSpacing.md - 1),
                   Expanded(

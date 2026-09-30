@@ -8,6 +8,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/widgets/connection_badge.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'catalog.dart';
 
@@ -33,7 +34,7 @@ Widget _row(String title, String label, String status) => Builder(
         },
       ),
       const SizedBox(width: AppSpacing.sm),
-      ConnectionBadge(label: label, accent: AppColors.radarr),
+      ConnectionBadge(label: label, accent: ServiceKey.radarr.accent),
     ],
   ),
 );
@@ -43,15 +44,19 @@ void main() {
     'ConnectionBadge',
     scenes: [
       CatalogScene(
-        'ConnectionBadge · four services, on scheme.surface',
-        (_) => const Wrap(
+        'ConnectionBadge · four services, on scheme.surface · the same '
+        'neutral pill for every service: the accent is the lamp, its label ink',
+        (_) => Wrap(
           spacing: 12,
           runSpacing: 12,
           children: [
-            ConnectionBadge(label: '4K', accent: AppColors.radarr),
-            ConnectionBadge(label: 'Main', accent: AppColors.radarr),
-            ConnectionBadge(label: 'Anime', accent: AppColors.sonarr),
-            ConnectionBadge(label: 'Seedbox', accent: AppColors.qbittorrent),
+            ConnectionBadge(label: '4K', accent: ServiceKey.radarr.accent),
+            ConnectionBadge(label: 'Main', accent: ServiceKey.radarr.accent),
+            ConnectionBadge(label: 'Anime', accent: ServiceKey.sonarr.accent),
+            ConnectionBadge(
+              label: 'Seedbox',
+              accent: ServiceKey.qbittorrent.accent,
+            ),
           ],
         ),
       ),
@@ -66,12 +71,12 @@ void main() {
             children: [
               ConnectionBadge(
                 label: '4K',
-                accent: AppColors.radarr,
+                accent: ServiceKey.radarr.accent,
                 surface: Theme.of(context).colorScheme.surfaceContainer,
               ),
               ConnectionBadge(
                 label: 'Anime',
-                accent: AppColors.sonarr,
+                accent: ServiceKey.sonarr.accent,
                 surface: Theme.of(context).colorScheme.surfaceContainer,
               ),
             ],
@@ -80,11 +85,11 @@ void main() {
       ),
       CatalogScene(
         "label: '' · renders nothing — a single connection grows no badge",
-        (_) => const Wrap(
+        (_) => Wrap(
           spacing: 12,
           children: [
-            ConnectionBadge(label: '', accent: AppColors.sonarr),
-            Text('(nothing drawn to the left)'),
+            ConnectionBadge(label: '', accent: ServiceKey.sonarr.accent),
+            const Text('(nothing drawn to the left)'),
           ],
         ),
       ),

@@ -9,7 +9,6 @@ import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
@@ -332,7 +331,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       selectedIcon: tab.selectedIcon,
       railIcon: tab.railIcon,
       label: tab.label,
-      accentColor: tab.accentColor,
       badgeCount: badge,
       badgeSemanticLabel: badge == 0
           ? null
@@ -407,9 +405,8 @@ class _ServicesNavRail extends StatelessWidget {
   }
 }
 
-/// A rail icon carrying its destination's count, in the destination's own
-/// accent — never a status tone, for the reason
-/// [FloatingNavDestination.badgeCount] documents.
+/// A rail icon carrying its destination's count, in ink — never a status tone,
+/// for the reason [FloatingNavDestination.badgeCount] documents.
 class _RailBadgedIcon extends StatelessWidget {
   const _RailBadgedIcon({required this.destination, required this.icon});
 
@@ -419,12 +416,13 @@ class _RailBadgedIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (destination.badgeCount <= 0) return Icon(icon);
+    final colorScheme = Theme.of(context).colorScheme;
     return ExcludeSemantics(
       child: Badge(
         // The same "9+" cap as the floating bar and the desktop rail.
         label: Text(destination.badgeLabel),
-        backgroundColor: destination.accentColor,
-        textColor: ServiceTheme.foregroundOn(destination.accentColor),
+        backgroundColor: colorScheme.primary,
+        textColor: colorScheme.onPrimary,
         child: Icon(icon),
       ),
     );

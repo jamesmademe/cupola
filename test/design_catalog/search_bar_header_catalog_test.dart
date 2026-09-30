@@ -1,39 +1,29 @@
 @Tags(['catalog'])
 library;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/core/service_theme.dart';
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/search_bar_header.dart';
-import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'catalog.dart';
 
 void _ignore(String _) {}
 
-/// The Search tab's accent, walked for the field the way the screen does it.
-Widget _searchTab({String? query}) => Builder(
-  builder: (context) => SearchBarHeader(
-    hintText: 'Movies, shows, artists...',
-    initialQuery: query,
-    accent: ServiceTheme.onTint(
-      AppColors.navSearch,
-      surface: Theme.of(context).colorScheme.surfaceContainer,
-      tintAlpha: 0,
-    ),
-    onQueryChanged: _ignore,
-  ),
+/// The Search tab's field. Monochrome like every other: the magnifier is the
+/// secondary ink whichever screen it searches.
+Widget _searchTab({String? query}) => SearchBarHeader(
+  hintText: 'Movies, shows, artists...',
+  initialQuery: query,
+  onQueryChanged: _ignore,
 );
 
 List<CatalogScene> _scenes(CatalogPlatform platform, double width) => [
   CatalogScene(
-    'Seerr Discover · empty, hint only · the magnifier in Seerr\'s accent, '
-    'walked against surfaceContainer',
-    (_) => SearchBarHeader(
+    'Seerr Discover · empty, hint only · the magnifier in the secondary ink, '
+    'the same on every service',
+    (_) => const SearchBarHeader(
       hintText: 'Search movies & TV shows...',
-      accent: ServiceKey.seerr.accent,
       onQueryChanged: _ignore,
     ),
     width: width,
@@ -46,10 +36,9 @@ List<CatalogScene> _scenes(CatalogPlatform platform, double width) => [
     platform: platform,
   ),
   CatalogScene(
-    'qBittorrent · empty · the accent is ink here, so it is measured',
-    (_) => SearchBarHeader(
+    'qBittorrent · empty · no service colour reaches the field',
+    (_) => const SearchBarHeader(
       hintText: 'Search torrents...',
-      accent: ServiceKey.qbittorrent.accent,
       onQueryChanged: _ignore,
     ),
     width: width,
@@ -64,18 +53,12 @@ void main() {
     scenes: [
       ..._scenes(CatalogPlatform.phone, 390),
       CatalogScene(
-        'Lidarr library · Search artists... · the pink walked darker in light '
-        'theme until it clears the field',
-        (_) => SearchBarHeader(
+        'Lidarr library · Search artists... · the hint in the field\'s own '
+        'hint ink',
+        (_) => const SearchBarHeader(
           hintText: 'Search artists...',
-          accent: ServiceKey.lidarr.accent,
           onQueryChanged: _ignore,
         ),
-        width: 390,
-      ),
-      CatalogScene(
-        'No accent · falls back to primary',
-        (_) => const SearchBarHeader(onQueryChanged: _ignore),
         width: 390,
       ),
       CatalogScene(
@@ -88,9 +71,8 @@ void main() {
       ),
       CatalogScene(
         'autofocus: true · focused, caret in the field',
-        (_) => SearchBarHeader(
+        (_) => const SearchBarHeader(
           hintText: 'Search movies...',
-          accent: ServiceKey.radarr.accent,
           autofocus: true,
           onQueryChanged: _ignore,
         ),

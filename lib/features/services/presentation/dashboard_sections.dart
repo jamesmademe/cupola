@@ -1003,14 +1003,11 @@ class _InFlightRow extends StatelessWidget {
     final percent = item.progress == null
         ? null
         : (item.progress! * 100).round();
-    // Brand primary, not the source service's accent, for both the figure and
-    // the bar. Contrast: SABnzbd's gold measures about 1.9:1 as `labelSmall` on
-    // the light card and NZBGet's green about 2.9:1, well under AA, and a 3pt
-    // progress bar in the same hue misses the 3:1 floor for a graphical object.
-    // Identity: the Room Light Rule confines service accents on this screen to
-    // the stack cards, and seven download sources putting their own hue on a
-    // percentage is the rainbow that rule exists to prevent.
-    // Walked against the row's card: the brand indigo is under 4.5:1 on paper.
+    // The primary ink, not the source service's colour, for both the figure and
+    // the bar. Contrast: SABnzbd's gold measured about 1.9:1 as `labelSmall` on
+    // the light card and NZBGet's green about 2.9:1, well under AA. Identity:
+    // seven download sources each putting a hue on a percentage said nothing
+    // the row's name did not. Walked against the row's card.
     final accent = statusToneColor(
       colorScheme,
       StatusTone.primary,
@@ -1321,10 +1318,8 @@ class _SectionEmptyState extends ConsumerWidget {
                 onRetry!();
               },
               style: TextButton.styleFrom(
-                // Brand primary, never a source's accent. The Dashboard confines
-                // service accents to the stack cards, and this button sat
-                // outside that confinement painting Radarr amber — which on a
-                // "did not answer" state also made hue carry health.
+                // The primary ink, never a source's colour: a hue on a "did not
+                // answer" state made the colour carry health.
                 foregroundColor: theme.colorScheme.primary,
                 minimumSize: const Size(44, 44),
               ),

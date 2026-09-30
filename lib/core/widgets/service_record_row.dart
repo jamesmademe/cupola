@@ -15,8 +15,8 @@ import 'package:cupola/core/widgets/status_badge.dart';
 /// than a raw `AppColors` arm, so the tone is walked for contrast against the
 /// surface it lands on; the title and the figure go through [AppTheme]'s named
 /// roles rather than a bare `TextStyle(fontSize:)`, which never reaches the
-/// `wght` axis of the bundled variable Inter and renders Regular whatever
-/// weight it asks for; and the row speaks **one** sentence, with
+/// `wght` axis of the bundled variable face and renders its default instance
+/// whatever weight it asks for; and the row speaks **one** sentence, with
 /// [ExcludeSemantics] silencing the parts, which is what keeps a screen reader
 /// from reading a title, a detail and a number as three unrelated nodes.
 ///

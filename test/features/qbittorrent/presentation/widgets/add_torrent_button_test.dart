@@ -3,7 +3,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/qbittorrent/presentation/widgets/add_torrent_button.dart';
 
@@ -55,9 +54,14 @@ void main() {
         find.descendant(of: submit, matching: find.byIcon(Icons.add_rounded)),
       );
 
+      // The ink button: the theme's primary under its on-ink, never the
+      // client's colour (the brand book: the primary is ink).
       expect(label, glyph);
-      expect(label, ServiceTheme.foregroundOn(AppColors.qbittorrent));
-      expect(contrast(label, AppColors.qbittorrent), greaterThanOrEqualTo(4.5));
+      expect(label, theme.colorScheme.onPrimary);
+      expect(
+        contrast(label, theme.colorScheme.primary),
+        greaterThanOrEqualTo(4.5),
+      );
     });
   }
 }

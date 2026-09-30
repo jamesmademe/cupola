@@ -6,7 +6,6 @@ import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/features/settings/domain/nav_tab.dart';
 
 /// One entry in the settings section list.
 typedef SettingsSection = ({String label, String location, IconData icon});
@@ -193,9 +192,6 @@ class _SectionRow extends StatefulWidget {
 class _SectionRowState extends State<_SectionRow> {
   bool _hovered = false;
 
-  /// Settings' own accent, the one the tab and the ambient room already carry.
-  static final Color _accent = NavTab.settings.accentColor;
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -221,19 +217,16 @@ class _SectionRowState extends State<_SectionRow> {
                 horizontal: AppSpacing.md - 1,
               ),
               decoration: BoxDecoration(
-                // The tab's own accent, not `colorScheme.primary`. Primary is the
-                // brand indigo (it is Seerr's accent), so the selected row was
-                // painted in the colour of one of the services listed two rows
-                // below it — on the one surface where indigo means "Seerr".
+                // The room's strong fill, the selected pill of the tab bar and
+                // the rail: monochrome, so the selected row says "here" and
+                // nothing else. A hue here was once the colour of one of the
+                // services listed two rows below it.
                 color: selected
-                    ? _accent.withValues(alpha: 0.14)
+                    ? CupolaRoom.of(context).fillStrong
                     : (_hovered
                           ? colorScheme.onSurface.withValues(alpha: 0.05)
                           : null),
                 borderRadius: BorderRadius.circular(AppRadius.md),
-                border: selected
-                    ? Border.all(color: _accent.withValues(alpha: 0.36))
-                    : null,
               ),
               child: Row(
                 children: [

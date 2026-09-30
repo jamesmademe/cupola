@@ -75,14 +75,17 @@ void main() {
     expect(location, '/settings');
   });
 
-  group('on a service page the action takes the service light', () {
+  group('on a service page the action is the ink button', () {
+    // The brand book: the one action on the page is the primary, and the primary is ink —
+    // the theme's own FilledButton, the same for every service. It used to be
+    // a tonal wash of the service's accent with a walked label.
     for (final (name, theme) in [
       ('dark', AppTheme.darkTheme()),
       ('light', AppTheme.lightTheme()),
     ]) {
       for (final service in ServiceKey.values) {
-        testWidgets('${service.name}, $name: a tonal accent fill whose label '
-            'reads at 4.5:1', (tester) async {
+        testWidgets('${service.name}, $name: no style of its own, and the '
+            'label reads at 4.5:1 on the ink', (tester) async {
           await tester.pumpWidget(
             MaterialApp(
               theme: theme,
@@ -94,11 +97,12 @@ void main() {
           final button = tester.widget<ButtonStyleButton>(
             find.byWidgetPredicate((w) => w is FilledButton),
           );
-          final fill = button.style!.backgroundColor!.resolve({})!;
-          final ink = button.style!.foregroundColor!.resolve({})!;
-          expect(fill.a, lessThan(1), reason: 'a tonal fill, not the accent');
-          final ground = Color.alphaBlend(fill, theme.colorScheme.surface);
-          expect(_contrast(ink, ground), greaterThanOrEqualTo(4.5));
+          expect(button.style, isNull);
+          final themed = theme.filledButtonTheme.style!;
+          final fill = themed.backgroundColor!.resolve({})!;
+          final ink = themed.foregroundColor!.resolve({})!;
+          expect(fill, theme.colorScheme.primary);
+          expect(_contrast(ink, fill), greaterThanOrEqualTo(4.5));
         });
       }
     }

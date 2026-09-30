@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:cupola/core/generated/design_tokens.g.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -60,26 +58,8 @@ class NotConfiguredPlaceholder extends StatelessWidget {
         onPressed: () => context.go(
           key == null ? '/settings' : '/settings/service/${key.routeParam}',
         ),
-        style: key == null ? null : _serviceStyle(context, key),
         icon: const Icon(Icons.settings_outlined, size: 18),
         label: const Text('Open Settings'),
-      ),
-    );
-  }
-
-  /// On a service's own page the action takes that service's light, as its
-  /// section actions do: a tonal fill of the accent (the soft container) with
-  /// the label walked against it. A solid accent fill is not an option — on
-  /// Seerr, Sonarr and Jellyfin neither white nor dark ink reaches 4.5:1 on the
-  /// raw accent. The generic form, with no service, keeps the theme's primary.
-  static ButtonStyle _serviceStyle(BuildContext context, ServiceKey service) {
-    const tint = DesignTokens.opacityServiceSoftContainer;
-    return FilledButton.styleFrom(
-      backgroundColor: service.accent.withValues(alpha: tint),
-      foregroundColor: ServiceTheme.onTint(
-        service.accent,
-        surface: Theme.of(context).colorScheme.surface,
-        tintAlpha: tint,
       ),
     );
   }

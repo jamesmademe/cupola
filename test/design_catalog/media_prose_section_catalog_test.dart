@@ -4,8 +4,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/media_prose_section.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'catalog.dart';
 
@@ -75,8 +75,8 @@ Widget _pair(List<Widget> children) => Row(
   ],
 );
 
-const _radarr = AppColors.radarr;
-const _sonarr = AppColors.sonarr;
+final _radarr = ServiceKey.radarr.accent;
+final _sonarr = ServiceKey.sonarr.accent;
 
 void main() {
   catalogCard(
@@ -86,13 +86,13 @@ void main() {
       CatalogScene(
         'MediaProseSection(accent: radarr) · phone column, clamped at six '
         'lines, then expanded · Show more appears because the clamp bites, '
-        'reads Show less once open, and draws in the page\'s accent walked '
-        'against the surface',
+        'reads Show less once open, and draws in the page\'s accent — the '
+        'lamp, which resolves to the primary ink',
         (_) => _pair([
-          _slot(358, const MediaProseSection(text: _overview, accent: _radarr)),
+          _slot(358, MediaProseSection(text: _overview, accent: _radarr)),
           _slot(
             358,
-            const _Pressed(
+            _Pressed(
               child: MediaProseSection(text: _overview, accent: _radarr),
             ),
           ),
@@ -122,7 +122,7 @@ void main() {
         'the measure caps at 640, leading-aligned, however wide the slot',
         (_) => _slot(
           1000,
-          const _Pressed(
+          _Pressed(
             child: MediaProseSection(text: _overview, accent: _sonarr),
           ),
         ),

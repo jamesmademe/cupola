@@ -10,6 +10,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Hub for everything Prowlarr keeps under Settings: the four field-driven
 /// resources, sync profiles and tags.
@@ -24,7 +25,7 @@ class ProwlarrSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.prowlarr.withValues(alpha: 0.12),
+        backgroundColor: ServiceKey.prowlarr.accent.withValues(alpha: 0.12),
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded),
           tooltip: 'Back',
@@ -132,10 +133,14 @@ class _SettingsRow extends StatelessWidget {
                   height: 34,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppColors.prowlarr.withValues(alpha: 0.12),
+                    color: ServiceKey.prowlarr.accent.withValues(alpha: 0.12),
                     borderRadius: AppRadius.borderRadiusSm,
                   ),
-                  child: Icon(icon, size: 18, color: AppColors.prowlarr),
+                  child: Icon(
+                    icon,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(

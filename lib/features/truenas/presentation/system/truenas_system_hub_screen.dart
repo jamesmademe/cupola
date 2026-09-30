@@ -150,7 +150,7 @@ class _SystemTile extends StatelessWidget {
               child: Icon(
                 entry.icon,
                 size: compact ? 17 : 19,
-                color: serviceTheme.accent,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const Spacer(),
