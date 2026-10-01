@@ -20,8 +20,9 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Action buttons for the discover detail screen header.
 ///
-/// One expanded request action plus two captioned icon actions for trailers and
-/// management — three controls, not six.
+/// One expanded request action plus at most two captioned icon actions: the
+/// trailers, when Seerr sent any, and either Manage or the jump into Radarr
+/// or Sonarr. Never six.
 ///
 /// This is the Discover page's region-1 deck, so the same rule
 /// [LibraryDetailActions] carries applies: **never pad this widget.** The detail
@@ -174,15 +175,18 @@ class DiscoverActionButtons extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(width: AppSpacing.sm),
-        HeaderActionButton(
-          icon: Icons.play_circle_outline_rounded,
-          label: 'Trailers',
-          semanticLabel: 'Trailers and teasers',
-          onPressed: videos.isEmpty
-              ? null
-              : () => DiscoverVideosButton.show(context, videos),
-        ),
+        // Only when Seerr sent something to play. With none it was drawn with
+        // `onPressed: null`: a control a screen reader skips and a sighted
+        // user presses for nothing, for a promise the page cannot keep.
+        if (videos.isNotEmpty) ...[
+          const SizedBox(width: AppSpacing.sm),
+          HeaderActionButton(
+            icon: Icons.play_circle_outline_rounded,
+            label: 'Trailers',
+            semanticLabel: 'Trailers and teasers',
+            onPressed: () => DiscoverVideosButton.show(context, videos),
+          ),
+        ],
         if (hasManageableMedia) ...[
           const SizedBox(width: AppSpacing.sm),
           HeaderActionButton(

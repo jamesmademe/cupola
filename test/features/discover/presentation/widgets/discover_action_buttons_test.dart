@@ -216,6 +216,28 @@ void main() {
       });
     });
 
+    testWidgets('a title with nothing to play offers no Trailers', (
+      tester,
+    ) async {
+      await _pumpButtons(
+        tester,
+        hasManageableMedia: false,
+        isInService: true,
+        videos: const [],
+      );
+
+      // It was a disabled disc, which a screen reader skips.
+      expect(find.text('Trailers'), findsNothing);
+      expect(find.byIcon(Icons.play_circle_outline_rounded), findsNothing);
+      expect(find.text('Open'), findsOneWidget);
+      expect(
+        tester
+            .widgetList<OutlinedButton>(find.byType(OutlinedButton))
+            .every((button) => button.onPressed != null),
+        isTrue,
+      );
+    });
+
     testWidgets('a title Radarr says it does not hold offers no Open', (
       tester,
     ) async {
@@ -371,6 +393,7 @@ Future<void> _pumpButtons(
   required bool? isInService,
   int? tvdbId = 456,
   List<TvSeason> seasons = const [],
+  List<RelatedVideo> videos = const [_trailer],
   Map<String, dynamic>? mediaInfo,
   double textScale = 1.0,
   List<ServiceKey> configured = const [ServiceKey.radarr, ServiceKey.sonarr],
@@ -403,7 +426,7 @@ Future<void> _pumpButtons(
             mediaInfo: mediaInfo,
             title: 'Title',
             voteAverage: 7.5,
-            videos: const <RelatedVideo>[],
+            videos: videos,
           ),
         ),
       ),
@@ -418,4 +441,12 @@ TvSeason _season(int number) => TvSeason(
   seasonNumber: number,
   name: 'Season $number',
   episodeCount: 8,
+);
+
+const _trailer = RelatedVideo(
+  url: 'https://www.youtube.com/watch?v=trailer',
+  key: 'trailer',
+  name: 'Official Trailer',
+  type: 'Trailer',
+  site: 'YouTube',
 );
