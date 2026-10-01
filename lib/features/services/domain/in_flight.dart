@@ -24,6 +24,7 @@ import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
 
 /// Why a transfer has left In flight to become a decision.
 ///
@@ -173,12 +174,19 @@ String formatInFlightLine({
 /// as zero would drag the average down and counting it as missing would make the
 /// aggregate partial. Neither: it is not a rate source, and [clients] counts the
 /// ones that are.
+///
+/// The count is over the sources [coverage] says answered. With none of them
+/// answering it is `— downloading` and carries no rate: a queue nobody could
+/// read is not an empty one. With some of them dark the count stands, and the
+/// region names what it leaves out underneath (`coverageNote`).
 String inFlightEyebrow({
   required int active,
   required int? rateBytesPerSecond,
   required int clients,
+  SourceCoverage coverage = SourceCoverage.none,
 }) {
-  final counted = '$active downloading';
+  final counted = '${coveredFigure(active, coverage)} downloading';
+  if (coverage.everySourceFailed) return counted;
   if (rateBytesPerSecond == null || clients <= 0) return counted;
   final noun = clients == 1 ? 'client' : 'clients';
   return '$counted · ${formatBytesPerSecond(rateBytesPerSecond)} '
@@ -215,9 +223,11 @@ String? inFlightFaultFootnote({
 ///
 /// "The queue is empty" only when it is. With eighteen blocked imports and
 /// nothing downloading, the queue holds eighteen records, and the region used to
-/// say it held none directly above a footnote counting them.
-String inFlightEmptyLabel({required int faults}) =>
-    faults > 0 ? 'Nothing moving' : 'The queue is empty';
+/// say it held none directly above a footnote counting them. And not when a
+/// source is missing from the read ([whole] false): SABnzbd's queue is not
+/// empty because SABnzbd did not answer.
+String inFlightEmptyLabel({required int faults, bool whole = true}) =>
+    faults > 0 || !whole ? 'Nothing moving' : 'The queue is empty';
 
 /// What one in-flight row announces after its title.
 ///

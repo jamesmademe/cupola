@@ -14,7 +14,9 @@
 /// grab landed was being shown a stable list that never changed.
 library;
 
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One library item, flattened to just what the rail paints and sorts on.
@@ -154,9 +156,17 @@ List<RecentlyAddedItem> groupRecentlyAdded(List<RecentlyAddedItem> items) {
 /// The failed half is drawn in amber by the caller and is simply absent at zero
 /// — a permanent "0 failed" is a counter nobody reads on the day it moves. The
 /// two halves are returned separately because only one of them is coloured.
+///
+/// Counted over the libraries [coverage] says answered. With none of them
+/// answering the figure is `— imported` and there is no failed half: an empty
+/// rail over three libraries that did not answer is not "0 imported".
 ({String imported, String? failed}) recentlyAddedEyebrow(
-  List<RecentlyAddedItem> items,
-) {
+  List<RecentlyAddedItem> items, {
+  SourceCoverage coverage = SourceCoverage.none,
+}) {
+  if (coverage.everySourceFailed) {
+    return (imported: '${Lexicon.noFigure} imported', failed: null);
+  }
   // Records, not rows: a folded season of six is six imports, which is what the
   // row under this eyebrow says too.
   var failed = 0;

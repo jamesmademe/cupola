@@ -285,7 +285,9 @@ void main() {
           ]),
         );
 
-        final items = await container.read(servicesQueueProvider.future);
+        final items = (await container.read(
+          servicesQueueProvider.future,
+        )).items;
 
         // Ordered by progress, closest to landing first, with the two items
         // whose client reported no progress last and in source order.
@@ -331,7 +333,7 @@ void main() {
         ]),
       );
 
-      final items = await container.read(servicesQueueProvider.future);
+      final items = (await container.read(servicesQueueProvider.future)).items;
 
       expect(items.single.service, ServiceKey.sonarr);
     });
@@ -355,7 +357,7 @@ void main() {
       // reads the same provider looking for stalls, and a list trimmed to five
       // before it got there could hide the stuck one behind five healthy
       // transfers.
-      final all = await container.read(servicesQueueProvider.future);
+      final all = (await container.read(servicesQueueProvider.future)).items;
       expect(all, hasLength(8));
 
       final inFlight = await container.read(servicesInFlightProvider.future);
@@ -449,11 +451,17 @@ void main() {
         ]),
       );
 
-      final items = await container.read(servicesQueueProvider.future);
+      final queue = await container.read(servicesQueueProvider.future);
+      final items = queue.items;
 
       expect(items, hasLength(1));
       expect(items.single.service, ServiceKey.sonarr);
       expect(items.single.title, 'Shogun');
+      // And the failure is kept, not swallowed into an empty Radarr queue: the
+      // count above the rows can only be a count of what answered.
+      expect(queue.coverage.answered, {ServiceKey.sonarr});
+      expect(queue.coverage.failed.keys, [ServiceKey.radarr]);
+      expect(queue.coverage.isPartial, isTrue);
     });
   });
 
@@ -503,7 +511,9 @@ void main() {
           ],
         );
 
-        final items = await container.read(servicesQueueProvider.future);
+        final items = (await container.read(
+          servicesQueueProvider.future,
+        )).items;
 
         expect(items.map((item) => item.title), [
           'Dune: Part Two',
@@ -550,7 +560,9 @@ void main() {
           ],
         );
 
-        final items = await container.read(servicesQueueProvider.future);
+        final items = (await container.read(
+          servicesQueueProvider.future,
+        )).items;
         expect(items, hasLength(1));
         expect(items.single.fault, InFlightFault.stalled);
 
@@ -619,7 +631,7 @@ void main() {
         ],
       );
 
-      final items = await container.read(servicesQueueProvider.future);
+      final items = (await container.read(servicesQueueProvider.future)).items;
 
       expect(items.map((item) => item.title), ['Sintel', 'debian-12.iso']);
       final sintel = items.first;
@@ -653,7 +665,7 @@ void main() {
         ]),
       );
 
-      final items = await container.read(servicesQueueProvider.future);
+      final items = (await container.read(servicesQueueProvider.future)).items;
 
       expect(items, hasLength(1));
       expect(items.single.title, 'The Boys · 3 episodes');
@@ -761,13 +773,17 @@ void main() {
         radarrService: _HistoryRadarrService([_importedRecord]),
       );
 
-      final first = await container.read(servicesRecentlyAddedProvider.future);
+      final first = (await container.read(
+        servicesRecentlyAddedProvider.future,
+      )).items;
       expect(first, hasLength(1));
 
       container
           .read(_settingsHolderProvider.notifier)
           .set(_secureRadarr.copyWith(themeMode: AppThemeMode.light));
-      final second = await container.read(servicesRecentlyAddedProvider.future);
+      final second = (await container.read(
+        servicesRecentlyAddedProvider.future,
+      )).items;
 
       expect(
         identical(first, second),
@@ -785,7 +801,9 @@ void main() {
         radarrService: _HistoryRadarrService([_importedRecord]),
       );
 
-      final first = await container.read(servicesRecentlyAddedProvider.future);
+      final first = (await container.read(
+        servicesRecentlyAddedProvider.future,
+      )).items;
       container
           .read(_settingsHolderProvider.notifier)
           .set(
@@ -794,7 +812,9 @@ void main() {
               url: 'https://moved.local:7878',
             ),
           );
-      final second = await container.read(servicesRecentlyAddedProvider.future);
+      final second = (await container.read(
+        servicesRecentlyAddedProvider.future,
+      )).items;
 
       expect(identical(first, second), isFalse);
     });
@@ -831,7 +851,9 @@ void main() {
         lidarrService: LidarrService(client),
       );
 
-      final items = await container.read(servicesRecentlyAddedProvider.future);
+      final items = (await container.read(
+        servicesRecentlyAddedProvider.future,
+      )).items;
 
       expect(client.lastGetPath, '/api/v1/history');
       expect(client.lastGetQueryParameters?['includeArtist'], isTrue);
@@ -881,7 +903,9 @@ void main() {
         lidarrService: LidarrService(client),
       );
 
-      final items = await container.read(servicesRecentlyAddedProvider.future);
+      final items = (await container.read(
+        servicesRecentlyAddedProvider.future,
+      )).items;
       final byTitle = {for (final item in items) item.title: item.posterUrl};
 
       expect(byTitle['Album 1'], 'https://img.test/album.jpg');
@@ -916,7 +940,9 @@ void main() {
         sonarrService: SonarrService(client),
       );
 
-      final items = await container.read(servicesRecentlyAddedProvider.future);
+      final items = (await container.read(
+        servicesRecentlyAddedProvider.future,
+      )).items;
 
       expect(items, hasLength(1));
       expect(items.single.title, "Marvel's Daredevil");
@@ -949,7 +975,9 @@ void main() {
         ]),
       );
 
-      final items = await container.read(servicesRecentlyAddedProvider.future);
+      final items = (await container.read(
+        servicesRecentlyAddedProvider.future,
+      )).items;
 
       expect(items.map((item) => item.title), [
         'Poor Things',

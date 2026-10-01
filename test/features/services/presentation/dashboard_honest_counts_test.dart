@@ -1,0 +1,145 @@
+/// Home's figures, driven through the app's real clients on the profiles'
+/// fake network: a count is a count of the sources that answered.
+///
+/// In flight and Recently added each read several services and degrade a
+/// failed one to no rows. The figure above the rows used to count the
+/// failure as nothing — `0 downloading` over clients that did not answer, and
+/// `3 downloading` with SABnzbd dark reading as the whole queue.
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cupola/core/widgets/fault_band.dart';
+import 'package:cupola/core/widgets/fault_note.dart';
+import 'package:cupola/features/services/presentation/dashboard_screen.dart';
+
+import '../../../test_helpers/profiles/profiles.dart';
+
+const _tall = Size(430, 6000);
+
+/// P7 with every queue and every library dark as well: Radarr (both),
+/// Sonarr, and the rest as P7 already has them.
+final _nothingAnswers = Profiles.p7
+    .withBehaviour(WorldIds.radarr, ConnectionBehaviour.didNotAnswer)
+    .withBehaviour(WorldIds.radarr4k, ConnectionBehaviour.didNotAnswer)
+    .withBehaviour(WorldIds.sonarr, ConnectionBehaviour.didNotAnswer);
+
+void main() {
+  testWidgets('P1: every source answered, so the totals stand alone', (
+    tester,
+  ) async {
+    final harness = await pumpWithProfile(
+      tester,
+      Profiles.p1,
+      child: const DashboardScreen(),
+      surfaceSize: _tall,
+    );
+
+    expect(find.text('5 downloading · 40 MB/s across 2 clients'), findsOne);
+    expect(find.text('5 imported'), findsOne);
+    expect(find.textContaining('not in the total'), findsNothing);
+    expect(find.byType(FaultNote), findsNothing);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('P7: a total over the sources that answered names who is '
+      'missing from it', (tester) async {
+    final handle = tester.ensureSemantics();
+    final harness = await pumpWithProfile(
+      tester,
+      Profiles.p7,
+      child: const DashboardScreen(),
+      surfaceSize: _tall,
+    );
+
+    // Radarr and Sonarr answered; Lidarr and SABnzbd are home-only and the
+    // device is away; qBittorrent refused the sign-in. The count is theirs,
+    // and the line under it says so — in the classification's words, so the
+    // refusal is not called silence.
+    expect(find.text('3 downloading'), findsOne);
+    const inFlightNote =
+        'Lidarr and SABnzbd did not answer · qBittorrent refused the sign-in '
+        '· not in the total';
+    expect(find.text(inFlightNote), findsOne);
+
+    expect(find.text('5 imported'), findsOne);
+    expect(find.text('Lidarr did not answer · not in the total'), findsOne);
+
+    // Red is spent on the glyph and only because a source did not answer;
+    // the sentence stays in secondary ink.
+    final note = find.ancestor(
+      of: find.text(inFlightNote),
+      matching: find.byType(FaultNote),
+    );
+    expect(
+      find.descendant(
+        of: note,
+        matching: find.byIcon(Icons.error_outline_rounded),
+      ),
+      findsOne,
+    );
+
+    // The header speaks the figure and what qualifies it as one sentence.
+    expect(
+      find.bySemanticsLabel(
+        'In flight, 3 downloading, Lidarr and SABnzbd did not answer, '
+        'qBittorrent refused the sign-in, not in the total',
+      ),
+      findsOne,
+    );
+    // And the note itself is not a second stop.
+    expect(find.bySemanticsLabel(inFlightNote), findsNothing);
+
+    handle.dispose();
+    await harness.unmount(tester);
+  });
+
+  testWidgets('P7, nothing answering: no figure reads 0, and the region '
+      'says why in one quiet line', (tester) async {
+    final handle = tester.ensureSemantics();
+    final harness = await pumpWithProfile(
+      tester,
+      _nothingAnswers,
+      child: const DashboardScreen(),
+      surfaceSize: _tall,
+    );
+
+    expect(find.text('0 downloading'), findsNothing);
+    expect(find.text('0 imported'), findsNothing);
+    expect(find.text('— downloading'), findsOne);
+    expect(find.text('— imported'), findsOne);
+    // No total, so nothing to qualify.
+    expect(find.textContaining('not in the total'), findsNothing);
+
+    // One line each, in place of the rows: the sources that did not answer,
+    // then the refusal in its own words.
+    expect(
+      find.widgetWithText(
+        FaultBand,
+        'Radarr, Sonarr and 2 others did not answer. qBittorrent answered '
+        'but refused the sign-in.',
+      ),
+      findsOne,
+    );
+    expect(
+      find.widgetWithText(
+        FaultBand,
+        'Radarr, Sonarr and 1 other did not answer.',
+      ),
+      findsOne,
+    );
+    // Not the empty copy, which would send the user looking for media.
+    expect(find.text('The queue is empty'), findsNothing);
+    expect(find.text('Nothing imported yet'), findsNothing);
+
+    expect(
+      find.bySemanticsLabel('In flight, downloading, count unavailable'),
+      findsOne,
+    );
+
+    handle.dispose();
+    await harness.unmount(tester);
+  });
+}

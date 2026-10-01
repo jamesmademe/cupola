@@ -32,6 +32,7 @@ import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/services/presentation/services_alert_band.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -759,7 +760,9 @@ Future<void> _pumpDashboard(
   SettingsModel? settings,
   List<DashboardDecision>? decisions,
   List<ServiceQueueItem>? queue,
+  SourceCoverage queueCoverage = SourceCoverage.none,
   List<RecentlyAddedItem>? recentlyAdded,
+  SourceCoverage recentlyAddedCoverage = SourceCoverage.none,
   Future<List<RecentlyAddedItem>> Function()? recentlyAddedFuture,
   ServiceSummary Function(_InstanceKey key)? instanceSummary,
   Future<ServiceSummary> Function(_InstanceKey key)? instanceSummaryFuture,
@@ -814,12 +817,20 @@ Future<void> _pumpDashboard(
     dashboardDecisionsProvider.overrideWith(
       (ref) async => rankDecisions(decisions ?? const []),
     ),
-    servicesQueueProvider.overrideWith((ref) async => queue ?? const []),
-    servicesArrHistoryProvider.overrideWith((ref) async => const []),
+    servicesQueueProvider.overrideWith(
+      (ref) async => (items: queue ?? const [], coverage: queueCoverage),
+    ),
+    servicesArrHistoryProvider.overrideWith(
+      (ref) async =>
+          (entries: const <ArrHistoryEntry>[], coverage: SourceCoverage.none),
+    ),
     servicesRecentlyAddedProvider.overrideWith(
-      (ref) =>
-          recentlyAddedFuture?.call() ??
-          Future.value(recentlyAdded ?? const []),
+      (ref) async => (
+        items:
+            await (recentlyAddedFuture?.call() ??
+                Future.value(recentlyAdded ?? const <RecentlyAddedItem>[])),
+        coverage: recentlyAddedCoverage,
+      ),
     ),
     servicesRequestsProvider.overrideWith(
       (ref) async => const <SeerrRequest>[],

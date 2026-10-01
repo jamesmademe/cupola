@@ -3,7 +3,13 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'dart:io';
+
 import 'package:cupola/features/services/domain/in_flight.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+const _silent = SocketException('Connection refused');
 
 void main() {
   group('done of total', () {
@@ -95,6 +101,38 @@ void main() {
         '3 downloading',
       );
     });
+
+    test('a queue nobody could read is —, never 0, and has no rate', () {
+      expect(
+        inFlightEyebrow(
+          active: 0,
+          rateBytesPerSecond: 1024,
+          clients: 1,
+          coverage: SourceCoverage.merge([
+            SourceCoverage.failure(ServiceKey.radarr, _silent),
+            SourceCoverage.failure(ServiceKey.sabnzbd, _silent),
+          ]),
+        ),
+        '— downloading',
+      );
+    });
+
+    test('a partial count stands, and is qualified underneath', () {
+      // The line under it (`coverageNote`) is what says SABnzbd is missing;
+      // the count itself is still a count of what answered.
+      expect(
+        inFlightEyebrow(
+          active: 3,
+          rateBytesPerSecond: null,
+          clients: 0,
+          coverage: SourceCoverage.merge([
+            SourceCoverage.answeredBy(ServiceKey.radarr),
+            SourceCoverage.failure(ServiceKey.sabnzbd, _silent),
+          ]),
+        ),
+        '3 downloading',
+      );
+    });
   });
 
   group('a fault leaves this region and says what it is', () {
@@ -121,6 +159,8 @@ void main() {
       expect(inFlightEmptyLabel(faults: 0), 'The queue is empty');
       // Eighteen records in the queue, none of them moving: not empty.
       expect(inFlightEmptyLabel(faults: 18), 'Nothing moving');
+      // SABnzbd's queue is not empty because SABnzbd did not answer.
+      expect(inFlightEmptyLabel(faults: 0, whole: false), 'Nothing moving');
     });
   });
 

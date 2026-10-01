@@ -48,6 +48,7 @@ import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/request_ordering.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -785,15 +786,20 @@ class ArrHistoryEntry {
   final String? reason;
 }
 
+/// One history page per arr, and which arrs answered for it.
+typedef ArrHistory = ({List<ArrHistoryEntry> entries, SourceCoverage coverage});
+
 /// One history page per arr, read once and shared by the two regions that need
 /// it.
 ///
 /// Recently added asks it what landed; the decisions region asks it what did
 /// not. One provider so the answer is one request, and so the two regions cannot
 /// disagree about the same record.
-final servicesArrHistoryProvider = FutureProvider<List<ArrHistoryEntry>>((
-  ref,
-) async {
+///
+/// A dark arr still degrades to no records, and now also says so in
+/// [ArrHistory.coverage]: the rail can show what the others answered, but the
+/// count above it cannot claim to be the whole without knowing who is missing.
+final servicesArrHistoryProvider = FutureProvider<ArrHistory>((ref) async {
   // One narrow watch per source rather than the whole `SettingsModel`: this
   // depends on three URL/key pairs, and watching the object refetched every
   // history page on any settings write, a theme toggle included.
@@ -806,31 +812,42 @@ final servicesArrHistoryProvider = FutureProvider<List<ArrHistoryEntry>>((
       service: _watchConnection(ref, service),
   };
 
-  Future<List<ArrHistoryEntry>> from(
+  Future<ArrHistory> from(
     ServiceKey service,
     Future<List<dynamic>> Function() load,
   ) async {
     final connection = connections[service];
-    if (connection == null || !connection.configured) return const [];
+    if (connection == null || !connection.configured) {
+      return (
+        entries: const <ArrHistoryEntry>[],
+        coverage: SourceCoverage.none,
+      );
+    }
     try {
       final records = await load();
-      return records
-          .whereType<Map>()
-          .map(stringKeyMap)
-          .map(
-            (record) => _historyEntryFrom(
-              service,
-              record,
-              baseUrl: connection.url,
-              apiKey: connection.apiKey,
-            ),
-          )
-          .toList(growable: false);
-    } catch (_) {
+      return (
+        entries: records
+            .whereType<Map>()
+            .map(stringKeyMap)
+            .map(
+              (record) => _historyEntryFrom(
+                service,
+                record,
+                baseUrl: connection.url,
+                apiKey: connection.apiKey,
+              ),
+            )
+            .toList(growable: false),
+        coverage: SourceCoverage.answeredBy(service),
+      );
+    } catch (error) {
       // The convention: a browse degrades to `[]` rather than taking the region
-      // down. A dark Radarr is named by the section's own offline state, which
-      // reads the summaries — not by an exception thrown through this.
-      return const [];
+      // down — but the failure is kept, classified, so the count above the
+      // rail can leave this arr out by name instead of counting it as zero.
+      return (
+        entries: const <ArrHistoryEntry>[],
+        coverage: SourceCoverage.failure(service, error),
+      );
     }
   }
 
@@ -861,7 +878,10 @@ final servicesArrHistoryProvider = FutureProvider<List<ArrHistoryEntry>>((
     ),
   ]);
 
-  return results.expand((entries) => entries).toList(growable: false);
+  return (
+    entries: results.expand((result) => result.entries).toList(growable: false),
+    coverage: SourceCoverage.merge(results.map((result) => result.coverage)),
+  );
 });
 
 ArrHistoryEntry _historyEntryFrom(
@@ -953,13 +973,16 @@ String _historyPosterUrl(
 ///
 /// The fetch is the history read, not the library browse it used to be: three
 /// full `fetchAllItems` walks for six tiles, on every pull-to-refresh.
-final servicesRecentlyAddedProvider = FutureProvider<List<RecentlyAddedItem>>((
+///
+/// Carries the history's coverage through, so the eyebrow counts only the
+/// libraries that answered.
+final servicesRecentlyAddedProvider = FutureProvider<ServicesRecentlyAdded>((
   ref,
 ) async {
-  final entries = await ref.watch(servicesArrHistoryProvider.future);
+  final history = await ref.watch(servicesArrHistoryProvider.future);
 
   final items = [
-    for (final entry in entries)
+    for (final entry in history.entries)
       if (entry.outcome != ArrImportOutcome.other)
         RecentlyAddedItem(
           service: entry.service,
@@ -973,10 +996,19 @@ final servicesRecentlyAddedProvider = FutureProvider<List<RecentlyAddedItem>>((
         ),
   ];
 
-  return sortRecentlyAdded(
-    groupRecentlyAdded(items),
-    limit: servicesRecentlyAddedLimit,
+  return (
+    items: sortRecentlyAdded(
+      groupRecentlyAdded(items),
+      limit: servicesRecentlyAddedLimit,
+    ),
+    coverage: history.coverage,
   );
+});
+
+/// What the Recently added rail draws, and which libraries answered for it.
+typedef ServicesRecentlyAdded = ({
+  List<RecentlyAddedItem> items,
+  SourceCoverage coverage,
 });
 
 /// How many in-flight items the hub shows before deferring to `/activity`.
@@ -1118,10 +1150,10 @@ class ServiceQueueItem {
 /// the filtered view the region draws.
 ///
 /// Every source is gated on being configured and degrades to `[]` on failure, so
-/// one unreachable client cannot empty or block the region.
-final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
-  ref,
-) async {
+/// one unreachable client cannot empty or block the region. The failure is
+/// kept, classified, in [ServicesQueue.coverage]: the rows can do without a dark
+/// client, but the count above them cannot count it as zero.
+final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
   // Watch the seven connections this actually depends on, not the whole model.
   // A bare `ref.watch(currentSettingsProvider)` re-ran seven concurrent queue
   // fetches on every settings write — including a theme-mode toggle, which
@@ -1145,7 +1177,7 @@ final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
       service: _watchConnection(ref, service),
   };
 
-  Future<List<ServiceQueueItem>> from(
+  Future<ServicesQueue> from(
     ServiceKey service,
     Future<List<ServiceQueueItem>> Function() load,
   ) async {
@@ -1153,11 +1185,19 @@ final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
     // `isServiceConfigured` — true as soon as *any* instance is set up — this
     // asked the second Radarr for its queue on the first one's account, and the
     // failure went into the `catch` as an empty list.
-    if (!(connections[service]?.configured ?? false)) return const [];
+    if (!(connections[service]?.configured ?? false)) {
+      return (items: const <ServiceQueueItem>[], coverage: SourceCoverage.none);
+    }
     try {
-      return await load();
-    } catch (_) {
-      return const [];
+      return (
+        items: await load(),
+        coverage: SourceCoverage.answeredBy(service),
+      );
+    } catch (error) {
+      return (
+        items: const <ServiceQueueItem>[],
+        coverage: SourceCoverage.failure(service, error),
+      );
     }
   }
 
@@ -1183,11 +1223,11 @@ final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
   final items = joinQueueSources(
     arr: results
         .take(arrQueues.length)
-        .expand((items) => items)
+        .expand((result) => result.items)
         .toList(growable: false),
     clients: results
         .skip(arrQueues.length)
-        .expand((items) => items)
+        .expand((result) => result.items)
         .toList(growable: false),
   );
 
@@ -1216,7 +1256,16 @@ final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
         return a.index.compareTo(b.index);
       });
 
-  return ordered.map((entry) => entry.item).toList(growable: false);
+  return (
+    items: ordered.map((entry) => entry.item).toList(growable: false),
+    coverage: SourceCoverage.merge(results.map((result) => result.coverage)),
+  );
+});
+
+/// Every transfer the configured sources reported, and which of them answered.
+typedef ServicesQueue = ({
+  List<ServiceQueueItem> items,
+  SourceCoverage coverage,
 });
 
 /// The transfers the IN FLIGHT region draws, and the numbers above them.
@@ -1229,16 +1278,21 @@ final servicesQueueProvider = FutureProvider<List<ServiceQueueItem>>((
 /// questions. The rows are capped at [servicesQueuePreviewLimit]; the eyebrow
 /// states how many transfers there are, and it used to state it by counting
 /// the capped list — thirty downloads read "5 downloading".
+///
+/// [coverage] is the queue's: [activeCount] is a count over the sources that
+/// answered, and only over them.
 typedef ServicesInFlight = ({
   List<ServiceQueueItem> preview,
   int activeCount,
   List<ServiceQueueItem> faults,
   int? rateBytesPerSecond,
   int clients,
+  SourceCoverage coverage,
 });
 
 final servicesInFlightProvider = FutureProvider<ServicesInFlight>((ref) async {
-  final items = await ref.watch(servicesQueueProvider.future);
+  final queue = await ref.watch(servicesQueueProvider.future);
+  final items = queue.items;
   final active = items.where((item) => item.isActive).toList(growable: false);
   final faults = items.where((item) => !item.isActive).toList(growable: false);
 
@@ -1261,6 +1315,7 @@ final servicesInFlightProvider = FutureProvider<ServicesInFlight>((ref) async {
         ? null
         : rates.values.fold(0, (sum, rate) => sum + rate),
     clients: rates.length,
+    coverage: queue.coverage,
   );
 });
 
@@ -1523,50 +1578,49 @@ Future<ArrQueueSnapshot> _loadArrQueueSnapshot(
   }
 }
 
+/// One \*arr's queue as in-flight items. Throws when the queue cannot be read:
+/// the caller keeps the failure, so a dark arr is named rather than counted as
+/// an empty queue.
 Future<List<ServiceQueueItem>> _loadServiceQueueItems(
   Ref ref,
   ServiceKey service,
 ) async {
-  try {
-    // The connection these records come off — the lens, which is what the
-    // service providers below resolve to. Stamped on each row so a remedy that
-    // opens a flow bound to one connection (the import wizard) opens it on
-    // this one, even if the lens has moved by the time the user taps.
-    final instanceId = ref.watch(activeInstanceProvider(service))?.id ?? '';
-    final items = switch (service) {
-      ServiceKey.radarr => await ref.watch(radarrServiceProvider).getQueue(),
-      ServiceKey.sonarr => await ref.watch(sonarrServiceProvider).getQueue(),
-      ServiceKey.lidarr => await ref.watch(lidarrServiceProvider).getQueue(),
-      ServiceKey.readarr => await ref.watch(readarrServiceProvider).getQueue(),
-      // The download clients are not `/queue` shaped and have their own loaders;
-      // the rest have no queue at all.
-      ServiceKey.seerr ||
-      ServiceKey.qbittorrent ||
-      ServiceKey.transmission ||
-      ServiceKey.bazarr ||
-      ServiceKey.truenas ||
-      ServiceKey.dockge ||
-      ServiceKey.prowlarr ||
-      ServiceKey.sabnzbd ||
-      ServiceKey.nzbget ||
-      ServiceKey.unraid ||
-      // A reverse proxy moves no bytes on anyone's behalf; it has nothing to
-      // contribute to an in-flight queue.
-      ServiceKey.nginxProxyManager ||
-      // A media server has no acquisition queue at all. Its live work is
-      // outbound playback, which is a different record with different actions
-      // and does not belong in a queue row.
-      ServiceKey.jellyfin ||
-      ServiceKey.plex => const <dynamic>[],
-    };
-    final records = items.whereType<Map>().map(stringKeyMap);
-    return [
-      for (final download in _groupQueueRecordsByDownload(records))
-        _queueItemFromRecords(service, download, instanceId: instanceId),
-    ];
-  } catch (_) {
-    return const [];
-  }
+  // The connection these records come off — the lens, which is what the
+  // service providers below resolve to. Stamped on each row so a remedy that
+  // opens a flow bound to one connection (the import wizard) opens it on this
+  // one, even if the lens has moved by the time the user taps.
+  final instanceId = ref.watch(activeInstanceProvider(service))?.id ?? '';
+  final items = switch (service) {
+    ServiceKey.radarr => await ref.watch(radarrServiceProvider).getQueue(),
+    ServiceKey.sonarr => await ref.watch(sonarrServiceProvider).getQueue(),
+    ServiceKey.lidarr => await ref.watch(lidarrServiceProvider).getQueue(),
+    ServiceKey.readarr => await ref.watch(readarrServiceProvider).getQueue(),
+    // The download clients are not `/queue` shaped and have their own loaders;
+    // the rest have no queue at all.
+    ServiceKey.seerr ||
+    ServiceKey.qbittorrent ||
+    ServiceKey.transmission ||
+    ServiceKey.bazarr ||
+    ServiceKey.truenas ||
+    ServiceKey.dockge ||
+    ServiceKey.prowlarr ||
+    ServiceKey.sabnzbd ||
+    ServiceKey.nzbget ||
+    ServiceKey.unraid ||
+    // A reverse proxy moves no bytes on anyone's behalf; it has nothing to
+    // contribute to an in-flight queue.
+    ServiceKey.nginxProxyManager ||
+    // A media server has no acquisition queue at all. Its live work is
+    // outbound playback, which is a different record with different actions
+    // and does not belong in a queue row.
+    ServiceKey.jellyfin ||
+    ServiceKey.plex => const <dynamic>[],
+  };
+  final records = items.whereType<Map>().map(stringKeyMap);
+  return [
+    for (final download in _groupQueueRecordsByDownload(records))
+      _queueItemFromRecords(service, download, instanceId: instanceId),
+  ];
 }
 
 /// The records of one \*arr queue, one list per download.
@@ -1812,7 +1866,7 @@ final dashboardDecisionsProvider = FutureProvider<List<DashboardDecision>>((
   try {
     final history = await ref.watch(servicesArrHistoryProvider.future);
     decisions.addAll(
-      history
+      history.entries
           .where((entry) => entry.outcome == ArrImportOutcome.failed)
           .map(_failedImportDecision),
     );

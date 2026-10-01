@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/services/domain/recently_added.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 RecentlyAddedItem _item(
@@ -204,6 +207,25 @@ void _theRegionsOwnStrings() {
 
       expect(counts.imported, '2 imported');
       expect(counts.failed, '1 failed');
+    });
+
+    test('three libraries that did not answer have imported —, not 0', () {
+      final counts = recentlyAddedEyebrow(
+        const [],
+        coverage: SourceCoverage.merge([
+          for (final service in const [
+            ServiceKey.radarr,
+            ServiceKey.sonarr,
+            ServiceKey.lidarr,
+          ])
+            SourceCoverage.failure(
+              service,
+              const SocketException('Connection refused'),
+            ),
+        ]),
+      );
+      expect(counts.imported, '— imported');
+      expect(counts.failed, isNull);
     });
 
     test('says nothing about failures when there are none', () {

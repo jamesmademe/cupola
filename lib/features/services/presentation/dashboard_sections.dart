@@ -25,7 +25,6 @@ import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
@@ -36,6 +35,8 @@ import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
+import 'package:cupola/core/widgets/fault_band.dart';
+import 'package:cupola/core/widgets/fault_note.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/section_header.dart';
@@ -51,9 +52,9 @@ import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Region 3 — everything waiting on a human, from every source, in one list.
@@ -146,14 +147,16 @@ class ServicesInFlightSection extends ConsumerWidget {
     final inFlight = ref.watch(servicesInFlightProvider);
     final data = inFlight.asData?.value;
     // The count, never the preview's length: the rows are capped and the
-    // eyebrow states a total.
+    // eyebrow states a total — over the sources that answered, and only them.
     final eyebrow = data == null
         ? null
         : inFlightEyebrow(
             active: data.activeCount,
             rateBytesPerSecond: data.rateBytesPerSecond,
             clients: data.clients,
+            coverage: data.coverage,
           );
+    final note = data == null ? null : coverageNote(data.coverage);
     int faultsOf(InFlightFault fault) =>
         data?.faults.where((item) => item.fault == fault).length ?? 0;
     final footnote = data == null
@@ -180,28 +183,45 @@ class ServicesInFlightSection extends ConsumerWidget {
             color: Theme.of(context).colorScheme.primary,
             onTap: () => context.go('/activity'),
           ),
-          semanticLabel: joinSpokenParts(['In flight', eyebrow]),
+          semanticLabel: joinSpokenParts([
+            'In flight',
+            if (eyebrow != null) spokenCountPhrase(spokenFromDotted(eyebrow)),
+            if (note != null) spokenFromDotted(note),
+          ]),
         ),
+        if (note != null) _CoverageNote(note: note, coverage: data!.coverage),
         const SizedBox(height: AppSpacing.sm),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: AsyncValueWidget<ServicesInFlight>(
-            value: inFlight,
-            serviceName: 'download queue',
-            onRetry: () => ref.invalidate(servicesQueueProvider),
-            data: (value) {
-              if (value.preview.isEmpty) {
-                return _SectionEmptyState(
-                  // Not "Nothing downloading", which the header now says. An
-                  // empty transfer list is a fact about the queue, so name the
-                  // queue — and only call it empty when it is, rather than over
-                  // a footnote counting what it holds.
-                  label: inFlightEmptyLabel(faults: value.faults.length),
-                  sources: sources,
-                  onRetry: () => ref.invalidate(servicesQueueProvider),
-                );
-              }
-              return Column(
+        AsyncValueWidget<ServicesInFlight>(
+          value: inFlight,
+          serviceName: 'download queue',
+          onRetry: () => ref.invalidate(servicesQueueProvider),
+          data: (value) {
+            if (value.coverage.everySourceFailed) {
+              return _SourcesFaultLine(
+                coverage: value.coverage,
+                onRetry: () => _retrySourcesSummaries(
+                  ref,
+                  value.coverage,
+                  then: () => ref.invalidate(servicesQueueProvider),
+                ),
+              );
+            }
+            if (value.preview.isEmpty) {
+              return _SectionEmptyLabel(
+                // Not "Nothing downloading", which the header now says. An
+                // empty transfer list is a fact about the queue, so name the
+                // queue — and only call it empty when it is, rather than over
+                // a footnote counting what it holds or a note naming a source
+                // that did not answer.
+                label: inFlightEmptyLabel(
+                  faults: value.faults.length,
+                  whole: value.coverage.isWhole,
+                ),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Column(
                 children: [
                   for (final item in value.preview)
                     _InFlightRow(
@@ -209,9 +229,9 @@ class ServicesInFlightSection extends ConsumerWidget {
                       item: item,
                     ),
                 ],
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
         if (footnote != null)
           Padding(
@@ -258,9 +278,11 @@ class ServicesRecentlyAddedSection extends ConsumerWidget {
     if (libraries.isEmpty) return const SizedBox.shrink();
 
     final items = ref.watch(servicesRecentlyAddedProvider);
-    final counts = items.asData == null
+    final read = items.asData?.value;
+    final counts = read == null
         ? null
-        : recentlyAddedEyebrow(items.asData!.value);
+        : recentlyAddedEyebrow(read.items, coverage: read.coverage);
+    final note = read == null ? null : coverageNote(read.coverage);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
@@ -279,8 +301,9 @@ class ServicesRecentlyAddedSection extends ConsumerWidget {
           ),
           semanticLabel: joinSpokenParts([
             'Recently added',
-            counts?.imported,
+            if (counts != null) spokenCountPhrase(counts.imported),
             counts?.failed,
+            if (note != null) spokenFromDotted(note),
           ]),
         ),
         if (counts != null)
@@ -291,8 +314,9 @@ class ServicesRecentlyAddedSection extends ConsumerWidget {
               failed: counts.failed,
             ),
           ),
+        if (note != null) _CoverageNote(note: note, coverage: read!.coverage),
         const SizedBox(height: AppSpacing.sm),
-        AsyncValueWidget<List<RecentlyAddedItem>>(
+        AsyncValueWidget<ServicesRecentlyAdded>(
           value: items,
           serviceName: 'your libraries',
           onRetry: () => ref.invalidate(servicesArrHistoryProvider),
@@ -301,16 +325,21 @@ class ServicesRecentlyAddedSection extends ConsumerWidget {
             child: AppSkeleton.posterRow(height: 90),
           ),
           data: (data) {
-            if (data.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: _SectionEmptyState(
-                  // Not "No items found", which is search vocabulary and implies
-                  // a query this rail never ran.
-                  label: 'Nothing imported yet',
-                  sources: libraries,
-                  onRetry: () => ref.invalidate(servicesArrHistoryProvider),
+            if (data.coverage.everySourceFailed) {
+              return _SourcesFaultLine(
+                coverage: data.coverage,
+                onRetry: () => _retrySourcesSummaries(
+                  ref,
+                  data.coverage,
+                  then: () => ref.invalidate(servicesArrHistoryProvider),
                 ),
+              );
+            }
+            if (data.items.isEmpty) {
+              return const _SectionEmptyLabel(
+                // Not "No items found", which is search vocabulary and implies
+                // a query this rail never ran.
+                label: 'Nothing imported yet',
               );
             }
             // The phone gets the rail; anything with room gets rows, which can
@@ -318,8 +347,8 @@ class ServicesRecentlyAddedSection extends ConsumerWidget {
             // of the three. The reduction rule is Reflow's — fewer items, never
             // smaller ones — and a row is not a smaller tile.
             return AppBreakpoints.isDesktopShell(context)
-                ? _RecentlyAddedRows(items: data)
-                : _RecentlyAddedRail(items: data);
+                ? _RecentlyAddedRows(items: data.items)
+                : _RecentlyAddedRail(items: data.items);
           },
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -1239,114 +1268,102 @@ class _SectionAction extends StatelessWidget {
   }
 }
 
-/// The "nothing here" state for a dashboard section.
+/// What a dashboard section says when its sources answered and had nothing.
 ///
-/// Distinguishes an empty library from sources that did not answer. Browse calls
-/// degrade to `[]` on failure by convention, so both arrive here as the same
-/// empty list — and before this the merged regions could only ever print the
-/// empty copy, sending the user to look for missing media when the answer was a
-/// missing connection.
-///
-/// The statuses come from [serviceSummaryProvider] — the **lens**, deliberately,
-/// and this is the one place on the Dashboard that is right to ask it. The
-/// header and the alert band speak about the fleet, so they fold every
-/// connection and call a half-dark service *degraded* rather than absent; this
-/// sentence explains *why this region is empty*, and the region was filled
-/// through the lens. With two Radarr and the lens on the dark one there is
-/// genuinely nothing here and the connection that failed is the one to name.
-/// Folding here would print the generic empty copy over a failed read, which is
-/// exactly the bug this widget exists to fix.
-///
-/// Already resolved for the stack at the top of the same screen, so it costs no
-/// extra request.
-class _SectionEmptyState extends ConsumerWidget {
+/// Only then. A source that did not answer, or answered with a refusal, is not
+/// an empty library, and the section says so from the read itself — the line
+/// under its figure ([_CoverageNote]) when some sources answered, the fault
+/// line ([_SourcesFaultLine]) when none did. Before the read carried that, a
+/// browse that degraded to `[]` arrived here exactly like an empty one, and the
+/// merged regions printed the empty copy over a missing connection.
+class _SectionEmptyLabel extends StatelessWidget {
+  const _SectionEmptyLabel({required this.label});
+
   final String label;
 
-  /// The configured services feeding the section. Any that are not answering are
-  /// named in place of [label].
-  final List<ServiceKey> sources;
-  final VoidCallback? onRetry;
-
-  const _SectionEmptyState({
-    required this.label,
-    required this.sources,
-    this.onRetry,
-  });
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Only settled summaries: one still loading is neither answering nor a
-    // fault, and blaming it during the first second of a cold open is the same
-    // wolf-crying `ServicesAlertBand` avoids.
-    final summaries = {
-      for (final service in sources)
-        service: ref.watch(serviceSummaryProvider(service)).asData?.value,
-    };
-    // Two kinds of empty that are not an empty library: a source that did not
-    // answer, and one that answered with a refusal or a fault. They are said
-    // in their own words — a refused key is not "did not answer".
-    final silent = sources
-        .where((service) => summaries[service]?.didNotAnswer ?? false)
-        .toList(growable: false);
-    final faulted = sources
-        .where((service) => summaries[service]?.isFault ?? false)
-        .toList(growable: false);
-    final offline = [...silent, ...faulted];
-    final message = [
-      if (silent.isNotEmpty)
-        servicesSectionOfflineMessage([
-          for (final service in silent) service.title,
-        ]),
-      for (final service in faulted)
-        '${describeFailure(service, summaries[service]!.failureReason ?? ServiceFailureReason.unknown).headline}.',
-    ].join(' ');
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            offline.isEmpty ? label : message,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          if (offline.isNotEmpty && onRetry != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            TextButton(
-              // Re-check the connections as well: refreshing only the list would
-              // leave this state insisting the services are down.
-              onPressed: () {
-                for (final service in offline) {
-                  ref.invalidate(serviceSummaryProvider(service));
-                }
-                onRetry!();
-              },
-              style: TextButton.styleFrom(
-                // The primary ink, never a source's colour: a hue on a "did not
-                // answer" state made the colour carry health.
-                foregroundColor: theme.colorScheme.primary,
-                minimumSize: const Size(44, 44),
-              ),
-              // Up to five sections can be offline at once, each producing an
-              // identically-named "Retry". `semanticsLabel` renames the button
-              // without a wrapper and without losing its tap semantics.
-              child: Text(
-                'Retry',
-                semanticsLabel:
-                    'Retry ${offline.map((s) => s.title).join(', ')}',
-              ),
-            ),
-          ],
-        ],
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }
+}
+
+/// The line under a total that leaves sources out: `SABnzbd did not answer ·
+/// not in the total`.
+///
+/// A [FaultNote] — the tone on one glyph, the sentence in secondary ink — and
+/// silent to a screen reader, because the section header already speaks it as
+/// part of its one sentence: a figure and the fact that qualifies it are one
+/// thing to hear, not two stops.
+class _CoverageNote extends StatelessWidget {
+  const _CoverageNote({required this.note, required this.coverage});
+
+  final String note;
+  final SourceCoverage coverage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xs,
+        AppSpacing.lg,
+        0,
+      ),
+      child: ExcludeSemantics(
+        child: coverage.anyDidNotAnswer
+            ? FaultNote.unreachable(message: note)
+            : FaultNote.fault(message: note),
+      ),
+    );
+  }
+}
+
+/// A section whose every source failed: one quiet line in its tone, in place
+/// of the rows and of any figure.
+///
+/// Red only when a source did not answer — the band names who and why, and a
+/// refused key among them is said in its own words. Amber when every one of
+/// them answered with a fault. Never a coloured box: the presence rule keeps
+/// the tone on the glyph and the recovery verb in ink.
+class _SourcesFaultLine extends StatelessWidget {
+  const _SourcesFaultLine({required this.coverage, required this.onRetry});
+
+  final SourceCoverage coverage;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final message = coverageFailureSentence(coverage);
+    return coverage.anyDidNotAnswer
+        ? FaultBand.section(message: message, onRetry: onRetry)
+        : FaultBand.partial(message: message, onRetry: onRetry);
+  }
+}
+
+/// Re-asks the probes of the sources that failed, then [then].
+void _retrySourcesSummaries(
+  WidgetRef ref,
+  SourceCoverage coverage, {
+  required VoidCallback then,
+}) {
+  // Re-check the connections as well: refreshing only the list would leave
+  // the stack above insisting the services are down.
+  for (final service in coverage.failed.keys) {
+    ref.invalidate(serviceSummaryProvider(service));
+  }
+  then();
 }
 
 /// Skeleton placeholder for one decision row while the merge resolves.
