@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One movie, from one named connection.
 ///
@@ -13,8 +11,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// that asked the HD one, and — worse — would not refetch, because from the
 /// cache's point of view nothing about the question had changed.
 ///
-/// An empty [ArrItemRef.instanceId] means the lens, which is what
-/// [movieDetailProvider] passes.
+/// An empty [ArrItemRef.instanceId] means the lens.
 typedef ArrItemRef = ({String instanceId, int id});
 
 /// Reads [RadarrService.getMovieOrThrow], so a Radarr that did not answer is a
@@ -31,19 +28,4 @@ final movieDetailForProvider = FutureProvider.autoDispose
           ? ref.watch(radarrServiceProvider)
           : ref.watch(radarrServiceForProvider(item.instanceId));
       return service.getMovieOrThrow(item.id);
-    }, retry: noProviderRetry);
-
-/// The same movie, from whichever connection Radarr is being read through.
-///
-/// Delegates rather than fetching, the same way `serviceSummaryProvider`
-/// delegates to `instanceSummaryProvider`: the surfaces that never name a
-/// connection keep the shape they always had, and there is still only one place
-/// that knows how to load a movie. Carries [movieDetailForProvider]'s
-/// `noProviderRetry`, as a derivation of it must.
-final movieDetailProvider = FutureProvider.autoDispose
-    .family<RadarrMovie?, int>((ref, movieId) async {
-      final lens = ref.watch(activeInstanceProvider(ServiceKey.radarr))?.id;
-      return ref.watch(
-        movieDetailForProvider((instanceId: lens ?? '', id: movieId)).future,
-      );
     }, retry: noProviderRetry);

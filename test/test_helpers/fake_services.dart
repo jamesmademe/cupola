@@ -46,12 +46,7 @@ class FakeRadarrService extends RadarrService {
   Future<List<RadarrMovie>> getMoviesOrThrow() async => getMovies();
 
   @override
-  Future<RadarrMovie?> getMovie(int movieId) async => null;
-
-  /// Delegates for the reason [getMoviesOrThrow] does: a subclass that
-  /// scripts [getMovie] has scripted the detail page's read too.
-  @override
-  Future<RadarrMovie?> getMovieOrThrow(int movieId) async => getMovie(movieId);
+  Future<RadarrMovie?> getMovieOrThrow(int movieId) async => null;
 
   @override
   Future<List<Map<String, dynamic>>> getQualityProfiles() async => const [];
@@ -192,12 +187,7 @@ class FakeSonarrService extends SonarrService {
   Future<List<SonarrSeries>> getSeriesOrThrow() async => getSeries();
 
   @override
-  Future<SonarrSeries?> getSeriesById(int seriesId) async => null;
-
-  /// See [FakeRadarrService.getMovieOrThrow].
-  @override
-  Future<SonarrSeries?> getSeriesByIdOrThrow(int seriesId) async =>
-      getSeriesById(seriesId);
+  Future<SonarrSeries?> getSeriesByIdOrThrow(int seriesId) async => null;
 
   @override
   Future<List<SonarrEpisode>> getEpisodes(int seriesId) async => const [];

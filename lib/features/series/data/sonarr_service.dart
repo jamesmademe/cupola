@@ -113,13 +113,8 @@ class SonarrService with ArrActivityMixin {
     return Isolate.run(() => _mapSeries(data));
   }
 
-  /// Fetches a single series by its Sonarr ID, answering `null` when it cannot
-  /// be read.
-  Future<SonarrSeries?> getSeriesById(int seriesId) async {
-    return fetchItem('series', seriesId, SonarrSeries.fromJson);
-  }
-
-  /// The same series, with a failed fetch allowed to reach the caller. See
+  /// Fetches a single series by its Sonarr ID, with a failed fetch allowed to
+  /// reach the caller. See
   /// `RadarrService.getMovieOrThrow`: a 404 is an answer and reads `null`,
   /// everything else travels, so the detail page can say Sonarr did not
   /// answer instead of drawing what it was handed as confirmed.
