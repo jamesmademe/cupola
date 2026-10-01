@@ -26,6 +26,7 @@ import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
@@ -47,6 +48,8 @@ import 'package:cupola/features/activity/presentation/widgets/activity_actions.d
 import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
+import 'package:cupola/features/npm/domain/models/npm_models.dart';
+import 'package:cupola/features/npm/presentation/npm_capability.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
@@ -896,6 +899,33 @@ class _DecisionControls extends ConsumerWidget {
       decision.kind,
       target: decision.actionTarget,
     );
+
+    // Renewing is a write on the certificates of one NPM account, and a
+    // view-only account cannot make it: the same gate the Certificates tab
+    // draws its own Renew through, so Home never offers what the page beyond
+    // it would dim. Dimmed rather than hidden, like every write a credential
+    // may not make: the certificate still needs somebody, and the toast says
+    // which account can do it.
+    if (decision.kind == DecisionKind.expiringCertificate) {
+      return CapabilityGatedAction.builder(
+        service: ServiceKey.nginxProxyManager,
+        // Empty means the lens, which is the connection the certificates
+        // were read through.
+        connectionId: decision.instanceId.isNotEmpty
+            ? decision.instanceId
+            : capabilityConnectionId(ref, ServiceKey.nginxProxyManager),
+        resource: NpmResource.certificates.key,
+        hint: npmCapabilityHint,
+        blockedMessage: npmBlockedMessage(NpmResource.certificates),
+        onTap: () => _runDecision(context, ref, decision),
+        builder: (context, onPressed, annotate) => _DecisionActionButton(
+          label: label,
+          onPressed: onPressed,
+          annotate: annotate,
+        ),
+      );
+    }
+
     if (required == null) {
       return _DecisionActionButton(
         label: label,
