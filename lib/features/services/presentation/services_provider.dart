@@ -44,6 +44,7 @@ import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/services/domain/arr_import.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/download_client_faults.dart';
+import 'package:cupola/features/services/domain/download_join.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/request_ordering.dart';
@@ -1302,37 +1303,6 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
   // the way its header does. A stall on the second Radarr, or a blocked
   // import on it, is the user's as much as one on the first, and reading the
   // lens alone left it off Home with nothing saying so.
-  Future<ServicesQueue> from(
-    _MergeConnection source,
-    Future<_QueueRead> Function() load,
-  ) async {
-    try {
-      final read = await load();
-      return (
-        items: read.items,
-        // A walk that stopped short answered, with part of its queue: the
-        // count over it is a floor.
-        coverage: SourceCoverage.answeredBy(
-          source.service,
-          cutShort: read.cutShort,
-          instanceId: source.instanceId,
-          name: source.name,
-        ),
-      );
-    } catch (error) {
-      // One connection that fails takes its own rows out and nobody else's.
-      return (
-        items: const <ServiceQueueItem>[],
-        coverage: SourceCoverage.failure(
-          source.service,
-          error,
-          instanceId: source.instanceId,
-          name: source.name,
-        ),
-      );
-    }
-  }
-
   final arrQueues = [
     for (final service in const [
       ServiceKey.radarr,
@@ -1341,22 +1311,9 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
       ServiceKey.readarr,
     ])
       for (final source in _watchMergeConnections(ref, service))
-        from(source, () => _loadServiceQueueItems(ref, source)),
+        _readQueueSource(source, () => _loadServiceQueueItems(ref, source)),
   ];
-  // The clients answer with their whole queue in one read, so there is no
-  // walk to stop short.
-  Future<_QueueRead> whole(Future<List<ServiceQueueItem>> items) async =>
-      (items: await items, cutShort: false);
-  final clientQueues = [
-    for (final source in _watchMergeConnections(ref, ServiceKey.qbittorrent))
-      from(source, () => whole(_loadQbittorrentQueueItems(ref, source))),
-    for (final source in _watchMergeConnections(ref, ServiceKey.transmission))
-      from(source, () => whole(_loadTransmissionQueueItems(ref, source))),
-    for (final source in _watchMergeConnections(ref, ServiceKey.sabnzbd))
-      from(source, () => whole(_loadSabnzbdQueueItems(ref, source))),
-    for (final source in _watchMergeConnections(ref, ServiceKey.nzbget))
-      from(source, () => whole(_loadNzbgetQueueItems(ref, source))),
-  ];
+  final clientQueues = _readDownloadClients(ref);
   final results = await Future.wait([...arrQueues, ...clientQueues]);
 
   // One row per transfer, not one per source that can see it. A Radarr grab
@@ -1407,6 +1364,103 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
 /// One source's queue rows, and whether the walk that read them stopped short
 /// of the end ([ArrRecordPage.cutShort]).
 typedef _QueueRead = ({List<ServiceQueueItem> items, bool cutShort});
+
+/// One connection's queue, read, with whether it answered.
+///
+/// One connection that fails takes its own rows out and nobody else's, and
+/// its failure is kept, classified, so a count over the rest can say what it
+/// leaves out.
+Future<ServicesQueue> _readQueueSource(
+  _MergeConnection source,
+  Future<_QueueRead> Function() load,
+) async {
+  try {
+    final read = await load();
+    return (
+      items: read.items,
+      // A walk that stopped short answered, with part of its queue: the
+      // count over it is a floor.
+      coverage: SourceCoverage.answeredBy(
+        source.service,
+        cutShort: read.cutShort,
+        instanceId: source.instanceId,
+        name: source.name,
+      ),
+    );
+  } catch (error) {
+    return (
+      items: const <ServiceQueueItem>[],
+      coverage: SourceCoverage.failure(
+        source.service,
+        error,
+        instanceId: source.instanceId,
+        name: source.name,
+      ),
+    );
+  }
+}
+
+/// Every configured download client connection's own queue, one read each.
+///
+/// [fresh] asks the lens's connection through its client too, rather than
+/// through the list its own page holds and polls. Home shares that list with
+/// the page; a surface with a poll of its own (Activity) would read it as it
+/// stood whenever the page last ran.
+List<Future<ServicesQueue>> _readDownloadClients(
+  Ref ref, {
+  bool fresh = false,
+}) {
+  // The clients answer with their whole queue in one read, so there is no
+  // walk to stop short.
+  Future<_QueueRead> whole(Future<List<ServiceQueueItem>> items) async =>
+      (items: await items, cutShort: false);
+  _MergeConnection asked(_MergeConnection source) => fresh
+      ? (
+          service: source.service,
+          instanceId: source.instanceId,
+          name: source.name,
+          isLens: false,
+          connection: source.connection,
+        )
+      : source;
+  return [
+    for (final source in _watchMergeConnections(ref, ServiceKey.qbittorrent))
+      _readQueueSource(
+        source,
+        () => whole(_loadQbittorrentQueueItems(ref, asked(source))),
+      ),
+    for (final source in _watchMergeConnections(ref, ServiceKey.transmission))
+      _readQueueSource(
+        source,
+        () => whole(_loadTransmissionQueueItems(ref, asked(source))),
+      ),
+    for (final source in _watchMergeConnections(ref, ServiceKey.sabnzbd))
+      _readQueueSource(
+        source,
+        () => whole(_loadSabnzbdQueueItems(ref, asked(source))),
+      ),
+    for (final source in _watchMergeConnections(ref, ServiceKey.nzbget))
+      _readQueueSource(
+        source,
+        () => whole(_loadNzbgetQueueItems(ref, asked(source))),
+      ),
+  ];
+}
+
+/// Every configured download client's own queue, as transfer rows, and which
+/// of the clients answered.
+///
+/// What a surface outside Home joins its \*arr records against
+/// ([joinDownloads]): Activity reads the same four clients, by the same rules
+/// (`download_client_faults.dart`), as In flight does. Read fresh, every
+/// connection through its own client: see [_readDownloadClients].
+Future<ServicesQueue> downloadClientQueues(Ref ref) async {
+  final reads = await Future.wait(_readDownloadClients(ref, fresh: true));
+  return (
+    items: [for (final read in reads) ...read.items],
+    coverage: SourceCoverage.merge(reads.map((read) => read.coverage)),
+  );
+}
 
 /// Every transfer the configured sources reported, and which of them answered.
 typedef ServicesQueue = ({
@@ -1472,44 +1526,29 @@ final servicesInFlightProvider = FutureProvider<ServicesInFlight>((ref) async {
 
 /// Joins the \*arr queues to the download-client queues, one row per transfer.
 ///
-/// An \*arr queue record names the client's own id for the transfer it tracks
-/// in `downloadId` — the torrent hash (upper case; qBittorrent reports it in
-/// lower), the SABnzbd `nzo_id`, the NZBGet job's `drone` parameter (its NZBID
-/// only when it has none) — so the two rows for one grab
-/// are the same key in two spellings. The \*arr row wins: it knows the title,
-/// the quality and whether the file can be imported. The client row lends it
-/// what only the client measures — progress, bytes, time left, rate — and a
-/// stall the \*arr has not noticed yet. A client row no \*arr claims (a torrent
-/// added by hand) stays a row of its own.
+/// The match is [joinDownloads], the one Activity's records go through too:
+/// an \*arr row names the client's own id for the transfer in `downloadId`.
+/// The \*arr row wins: it knows the title, the quality and whether the file
+/// can be imported. The client row lends it what only the client measures —
+/// progress, bytes, time left, rate — and a stall the \*arr has not noticed
+/// yet. A client row no \*arr claims (a torrent added by hand) stays a row of
+/// its own.
 ///
 /// Pure and top-level, so the rule is testable without a container.
 List<ServiceQueueItem> joinQueueSources({
   required List<ServiceQueueItem> arr,
   required List<ServiceQueueItem> clients,
 }) {
-  String key(String? id) => id?.trim().toLowerCase() ?? '';
-
-  final byId = <String, int>{};
-  for (var index = 0; index < clients.length; index++) {
-    final id = key(clients[index].id);
-    if (id.isNotEmpty) byId.putIfAbsent(id, () => index);
-  }
-
-  final claimed = <int>{};
-  final joined = <ServiceQueueItem>[];
-  for (final item in arr) {
-    final index = byId[key(item.downloadId)];
-    if (index == null || !claimed.add(index)) {
-      joined.add(item);
-      continue;
-    }
-    joined.add(_joinedQueueItem(item, clients[index]));
-  }
-
+  final join = joinDownloads<ServiceQueueItem, ServiceQueueItem>(
+    arr: arr,
+    clients: clients,
+    arrDownloadId: (row) => row.downloadId,
+    clientDownloadId: (row) => row.id,
+  );
   return [
-    ...joined,
-    for (var index = 0; index < clients.length; index++)
-      if (!claimed.contains(index)) clients[index],
+    for (final (:arr, :client) in join.joined)
+      client == null ? arr : _joinedQueueItem(arr, client),
+    ...join.unclaimed,
   ];
 }
 

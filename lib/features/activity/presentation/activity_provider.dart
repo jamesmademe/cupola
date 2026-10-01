@@ -21,6 +21,12 @@ import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/services/domain/download_join.dart';
+import 'package:cupola/features/services/domain/in_flight.dart'
+    show arrQueueFault;
+import 'package:cupola/features/services/domain/source_coverage.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart'
+    show ServiceQueueItem, ServicesQueue, downloadClientQueues;
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -137,6 +143,21 @@ class ActivityServiceResult {
       incomplete = false,
       cutShort = false;
 
+  /// This result with [items] in place of its own: the same connection, the
+  /// same answer.
+  ActivityServiceResult withItems(List<GlobalActivityItem> items) =>
+      ActivityServiceResult(
+        service: service,
+        items: items,
+        configured: configured,
+        instanceId: instanceId,
+        label: label,
+        total: total,
+        error: error,
+        incomplete: incomplete,
+        cutShort: cutShort,
+      );
+
   /// How this result names itself: the service alone when it is the only
   /// connection, `Sonarr · Anime` or `Sonarr 2` when it is not.
   String get title => serviceWithConnection(service, label);
@@ -169,9 +190,24 @@ class ActivityFeed {
   final List<GlobalActivityItem> items;
   final List<ActivityServiceResult> results;
 
-  const ActivityFeed({required this.items, required this.results});
+  /// The download clients the queue's records were joined against, and which
+  /// of them answered. [SourceCoverage.none] for a feed with no queue in it.
+  ///
+  /// Kept apart from [results] on purpose: a client that does not answer
+  /// takes no row out of the list, which is what [results] counts, it only
+  /// leaves its records with the arr's word for their state.
+  final SourceCoverage clients;
 
-  const ActivityFeed.empty() : items = const [], results = const [];
+  const ActivityFeed({
+    required this.items,
+    required this.results,
+    this.clients = SourceCoverage.none,
+  });
+
+  const ActivityFeed.empty()
+    : items = const [],
+      results = const [],
+      clients = SourceCoverage.none;
 
   Iterable<ActivityServiceResult> get configured =>
       results.where((r) => r.configured);
@@ -363,6 +399,12 @@ class GlobalActivityItem {
   final Map<String, dynamic>? raw;
   final SeerrRequest? request;
 
+  /// The download client's own row for this queue record, when a configured
+  /// client is moving its bytes: matched on the record's `downloadId` by
+  /// [joinDownloads], the join Home's In flight reads. Null for every other
+  /// kind, and for a record no client answered for.
+  final ServiceQueueItem? download;
+
   const GlobalActivityItem({
     required this.kind,
     required this.service,
@@ -376,7 +418,35 @@ class GlobalActivityItem {
     this.sortDate,
     this.raw,
     this.request,
+    this.download,
   });
+
+  /// This record, joined to [client]: the client's row on it, and its status
+  /// read through the client as Home reads it ([queueStatusWithClient]).
+  GlobalActivityItem withDownload(ServiceQueueItem client) {
+    final record = raw;
+    return GlobalActivityItem(
+      kind: kind,
+      service: service,
+      serviceType: serviceType,
+      title: title,
+      subtitle: subtitle,
+      status: queueStatusWithClient(
+        status,
+        arrFault: record == null ? null : arrQueueFault(record),
+        clientFault: client.fault,
+        clientReason: client.warning,
+        clientProgress: client.progress,
+      ),
+      figures: figures,
+      instanceId: instanceId,
+      instanceLabel: instanceLabel,
+      sortDate: sortDate,
+      raw: raw,
+      request: request,
+      download: client,
+    );
+  }
 
   double? get progress => status.progress;
 
@@ -545,20 +615,24 @@ final configuredActivityServicesProvider = Provider<List<ServiceKey>>((ref) {
 final globalActivityFeedProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
   ref.watch(activityQueuePollVersionProvider);
-  return _merge(
+  final clients = _readClients(ref);
+  return _mergeJoined(
     await Future.wait([
       ..._loadRequestResults(ref),
       ..._loadArrResults(ref, GlobalActivityKind.queue),
       ..._loadArrResults(ref, GlobalActivityKind.history),
     ]),
+    await clients,
   );
 });
 
 final globalQueueItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
   ref.watch(activityQueuePollVersionProvider);
-  return _merge(
+  final clients = _readClients(ref);
+  return _mergeJoined(
     await Future.wait(_loadArrResults(ref, GlobalActivityKind.queue)),
+    await clients,
   );
 });
 
@@ -571,13 +645,66 @@ final globalQueueItemsProvider = FutureProvider<ActivityFeed>((ref) async {
 final globalNowItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   ref.watch(activityRefreshVersionProvider);
   ref.watch(activityQueuePollVersionProvider);
-  return _merge(
+  final clients = _readClients(ref);
+  return _mergeJoined(
     await Future.wait([
       ..._loadRequestResults(ref),
       ..._loadArrResults(ref, GlobalActivityKind.queue),
     ]),
+    await clients,
   );
 });
+
+/// The download clients' own queues, for the \*arr queue records to be
+/// joined against, or null when no \*arr is set up and there is no record to
+/// join. Read beside the \*arr queues, never after them, and asked fresh on
+/// every load: the poll that re-reads the queues re-reads the clients.
+Future<ServicesQueue?> _readClients(Ref ref) {
+  if (activityArrConnections(ref.read(settingsProvider)).isEmpty) {
+    return Future.value();
+  }
+  return downloadClientQueues(ref);
+}
+
+/// [_merge], with every \*arr queue record joined to its client's row.
+///
+/// The join is Home's ([joinDownloads], on the record's `downloadId`), so a
+/// torrent qBittorrent calls stalled is a stall here as it is under In
+/// flight, even while its arr still calls it downloading. A record whose
+/// client did not answer keeps the arr's word for its state; which client did
+/// not answer is in [ActivityFeed.clients].
+ActivityFeed _mergeJoined(
+  List<ActivityServiceResult> results,
+  ServicesQueue? clients,
+) {
+  if (clients == null) return _merge(results);
+  final join = joinDownloads<GlobalActivityItem, ServiceQueueItem>(
+    arr: [
+      for (final result in results)
+        for (final item in result.items)
+          if (item.kind == GlobalActivityKind.queue) item,
+    ],
+    clients: clients.items,
+    arrDownloadId: (item) => stringOrNull(item.raw?['downloadId']),
+    clientDownloadId: (row) => row.id,
+  );
+  final matched = Map<GlobalActivityItem, ServiceQueueItem>.identity();
+  for (final (:arr, :client) in join.joined) {
+    if (client != null) matched[arr] = client;
+  }
+  return _merge([
+    for (final result in results)
+      matched.isEmpty
+          ? result
+          : result.withItems([
+              for (final item in result.items)
+                if (matched[item] case final client?)
+                  item.withDownload(client)
+                else
+                  item,
+            ]),
+  ], clients: clients.coverage);
+}
 
 /// Blocklist, complete: `getBlocklistPage` pages every record, so a one-shot
 /// provider is all this bucket needs — blocklists are small enough that
@@ -1173,7 +1300,10 @@ final resolvedArrServiceProvider =
 /// the whole of this pass in one map: folding two Sonarrs into one entry threw
 /// away the answer the screen needs — which of them is down, and which of them
 /// a row belongs to.
-ActivityFeed _merge(List<ActivityServiceResult> results) {
+ActivityFeed _merge(
+  List<ActivityServiceResult> results, {
+  SourceCoverage clients = SourceCoverage.none,
+}) {
   final byConnection = <(ServiceKey, String), ActivityServiceResult>{};
   // First-seen order, which for the loaders is the user's own instance order.
   final order = <(ServiceKey, String)>[];
@@ -1219,6 +1349,7 @@ ActivityFeed _merge(List<ActivityServiceResult> results) {
       ordered.expand((result) => result.items).toList(growable: false),
     ),
     results: ordered,
+    clients: clients,
   );
 }
 
