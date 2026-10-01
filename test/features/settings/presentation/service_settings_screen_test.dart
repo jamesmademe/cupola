@@ -508,6 +508,9 @@ void main() {
 
       // The fix is not in this form, so this is the one failure that earns a
       // button — and the button has to reach the host, not just look like it.
+      // Below the fold since the form grew its Access row.
+      await tester.ensureVisible(find.text('Open Settings'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Open Settings'));
       await tester.pumpAndSettle();
       expect(asked.map((call) => call.method), contains('openSettings'));

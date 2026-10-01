@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -142,3 +143,73 @@ bool accessIsValid(ServiceKey service, ConnectionAccess access) =>
             ].every((problem) => problem == null) &&
             !entries.any((e) => duplicatesCredentialHeader(service, e.name)),
     };
+
+/// The Access choice a gateway's remedy opens the connection form on:
+/// Cloudflare Access for Access, Password for a proxy's password prompt or a
+/// sign-in page (Custom headers where a proxy password cannot travel), the
+/// same for a gateway the answer did not name.
+AccessKind accessKindForGateway(
+  ServiceKey service,
+  AccessGatewayAnswer? gateway,
+) => switch (gateway?.kind) {
+  AccessGatewayKind.cloudflareAccess => AccessKind.cloudflare,
+  AccessGatewayKind.passwordPrompt ||
+  AccessGatewayKind.signInPage ||
+  null => service.offersProxyPassword ? AccessKind.password : AccessKind.custom,
+};
+
+/// What the connection test says about a Cloudflare service token it sent,
+/// or null when the outcome is not about the token (a wrong address, a
+/// refused key), which keeps the test's usual words.
+///
+/// Three outcomes: Access let it through and the service answered; Access
+/// refused it, which is a token no Service Auth policy names, or one that
+/// expired; nothing reached Access at all.
+String? cloudflareTokenTestOutcome(
+  ServiceKey service, {
+  required bool answered,
+  ServiceFailureReason? reason,
+  AccessGatewayAnswer? gateway,
+}) {
+  if (answered) {
+    return 'Access let the token through and ${service.title} answered.';
+  }
+  if (reason == ServiceFailureReason.accessGateway &&
+      gateway != null &&
+      gateway.kind == AccessGatewayKind.cloudflareAccess &&
+      gateway.credentialsSent) {
+    return 'Access did not accept the token: add a Service Auth policy for '
+        'it on ${gateway.serviceHost}.';
+  }
+  if (reason == ServiceFailureReason.unreachable) {
+    return 'Nothing reached Access.';
+  }
+  return null;
+}
+
+/// The Cloudflare Access team a gateway's answer names
+/// (`myteam.cloudflareaccess.com`), or null when it names none: a `401`
+/// answered on the service's own host does not say whose Access it is.
+String? accessTeamOf(AccessGatewayAnswer? gateway) {
+  if (gateway == null || gateway.kind != AccessGatewayKind.cloudflareAccess) {
+    return null;
+  }
+  final host = gateway.gatewayHost.toLowerCase();
+  return host.endsWith('.cloudflareaccess.com') ? host : null;
+}
+
+/// The offer after a token passed its test, to the connections whose last
+/// failure was the same Access team: `Use the same token for Sonarr and
+/// Seerr?`.
+String sharedTokenOffer(List<String> names) =>
+    'Use the same token for ${_joined(names)}?';
+
+/// What the offer says once taken.
+String sharedTokenSaved(List<String> names) =>
+    'Saved the token for ${_joined(names)}';
+
+String _joined(List<String> names) => switch (names.length) {
+  0 => '',
+  1 => names.single,
+  _ => '${names.take(names.length - 1).join(', ')} and ${names.last}',
+};

@@ -8,6 +8,8 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/connection_access_rules.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -94,15 +96,19 @@ class FailureRemedy {
   /// Opens [service]'s connection form: the one the lens rests on, so a key
   /// refused by a second Radarr is pasted into the second Radarr's form, which
   /// is the connection a page reads unless its link named another.
-  static void openConnectionForm(BuildContext context, ServiceKey service) {
+  ///
+  /// [access] opens it on the Access row with that choice made.
+  static void openConnectionForm(
+    BuildContext context,
+    ServiceKey service, {
+    AccessKind? access,
+  }) {
     final lens = ProviderScope.containerOf(
       context,
       listen: false,
     ).read(activeInstanceProvider(service))?.id;
     context.push(
-      lens == null || lens.isEmpty
-          ? ServiceRoutes.settingsFor(service)
-          : ServiceRoutes.settingsForConnection(service, lens),
+      ServiceRoutes.settingsForConnection(service, lens ?? '', access: access),
     );
   }
 
@@ -114,9 +120,17 @@ class FailureRemedy {
 
   /// What answered in front of the service, when that is the fault: which
   /// gateway, and whether it was sent the access it asks for. [open] lands on
-  /// the connection's form today; the form can read this to open on the
-  /// access the gateway wants.
+  /// the connection form's Access row with the choice this gateway wants
+  /// ([access]).
   final AccessGatewayAnswer? gateway;
+
+  /// The Access choice the form opens on, for a gateway in front of the
+  /// service: Cloudflare Access for Access, Password for a password prompt or
+  /// a sign-in page. Null for every other fault, whose fix is elsewhere in
+  /// the form.
+  AccessKind? get access => reason == ServiceFailureReason.accessGateway
+      ? accessKindForGateway(service, gateway)
+      : null;
 
   /// The remedy's verb, which is the action's label: `Paste the key again`.
   final String label;
@@ -128,13 +142,16 @@ class FailureRemedy {
       failureRetryHelps(reason, credential: refusedCredentialOf(service));
 
   /// Applies the remedy: opens the connection form where the fix lives, the
-  /// named connection's when there is one and the lens's otherwise.
+  /// named connection's when there is one and the lens's otherwise, on its
+  /// Access row for a gateway.
   void open(BuildContext context) {
     final named = instanceId;
     if (named == null || named.isEmpty) {
-      openConnectionForm(context, service);
+      openConnectionForm(context, service, access: access);
     } else {
-      context.push(ServiceRoutes.settingsForConnection(service, named));
+      context.push(
+        ServiceRoutes.settingsForConnection(service, named, access: access),
+      );
     }
   }
 }

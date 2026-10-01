@@ -1,4 +1,5 @@
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class ServiceRoutes {
@@ -563,10 +564,17 @@ class ServiceRoutes {
   /// read-only key on the second one has to land on the second one's form
   /// rather than on the first, which is fine. An empty [connectionId] collapses
   /// to [settingsFor].
+  ///
+  /// [access] opens the form on its Access row with that choice made, for a
+  /// gateway's remedy (`Add a service token` lands on Cloudflare Access).
   static String settingsForConnection(
     ServiceKey service,
-    String connectionId,
-  ) => _withQuery(settingsFor(service), {'i': connectionId});
+    String connectionId, {
+    AccessKind? access,
+  }) => _withQuery(settingsFor(service), {
+    'i': connectionId,
+    'access': access?.name,
+  });
 
   static String _withQuery(String path, Map<String, String?> queryParameters) {
     final values = {

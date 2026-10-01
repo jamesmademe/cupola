@@ -204,6 +204,10 @@ class ServiceOfflineState extends StatelessWidget {
         void openForm() => onOpenSettings != null
             ? onOpenSettings!()
             : FailureRemedy.openConnectionForm(context, service);
+        // The remedy's own way in, which lands on the Access row for a
+        // gateway in front of the service.
+        void applyRemedy() =>
+            onOpenSettings != null ? onOpenSettings!() : remedy!.open(context);
         return _OfflineLeaf(
           icon: presentation.icon,
           // Red for silence, amber for a fault; walked, never raw.
@@ -224,7 +228,7 @@ class ServiceOfflineState extends StatelessWidget {
           // Otherwise Retry leads and the plain way in follows.
           primary: remedy == null
               ? _LeafAction.retry(onRetry)
-              : _LeafAction(remedy.label, openForm),
+              : _LeafAction(remedy.label, applyRemedy),
           fault: !silent,
           secondary: remedy == null
               ? _LeafAction('Settings', openForm)
