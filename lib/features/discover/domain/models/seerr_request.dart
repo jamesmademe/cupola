@@ -119,7 +119,13 @@ class SeerrRequest {
   final List<RequestSeason>? seasons;
   final String type; // 'movie' or 'tv'
   final bool is4k;
+
+  /// Seerr's id of the server the request names, or null for the default
+  /// server of its resolution. See `seerrTargetServer`.
   final int? serverId;
+
+  /// The folder the request is sent with, or null for the server's own.
+  final String? rootFolder;
   final bool canRemove;
   final RequestedBy? requestedBy;
 
@@ -134,6 +140,7 @@ class SeerrRequest {
     required this.type,
     this.is4k = false,
     this.serverId,
+    this.rootFolder,
     this.canRemove = false,
     this.requestedBy,
   });
@@ -159,6 +166,7 @@ class SeerrRequest {
       type: json['type'] ?? 'movie',
       is4k: _parseBool(json['is4k']),
       serverId: json['serverId'],
+      rootFolder: json['rootFolder']?.toString(),
       canRemove: _parseBool(json['canRemove']),
       requestedBy: json['requestedBy'] != null
           ? RequestedBy.fromJson(json['requestedBy'])
@@ -179,6 +187,7 @@ class SeerrRequest {
       type: type,
       is4k: is4k,
       serverId: serverId,
+      rootFolder: rootFolder,
       canRemove: canRemove,
       requestedBy: requestedBy,
     );

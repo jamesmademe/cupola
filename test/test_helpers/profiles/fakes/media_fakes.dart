@@ -511,6 +511,17 @@ class SeerrFake extends ServiceFake {
           'tags': const <Object?>[],
         });
       }
+      final one = RegExp(r'^/api/v1/request/(\d+)$').firstMatch(path);
+      if (one != null) {
+        final id = int.parse(one.group(1)!);
+        final row = _requests.where((q) => q.$1 == id).firstOrNull;
+        if (row == null) {
+          return NetworkReply.json({
+            'message': 'Request not found.',
+          }, status: 404);
+        }
+        return NetworkReply.json(_request(c, row));
+      }
       final detail = RegExp(r'^/api/v1/(movie|tv)/(\d+)$').firstMatch(path);
       if (detail != null) {
         final id = int.parse(detail.group(2)!);

@@ -110,9 +110,7 @@ Future<AppConfirmResult> _approve(BuildContext context) => showAppConfirmDialog(
   context: context,
   useRootNavigator: false,
   title: 'Approve this request?',
-  message:
-      'Sherlock Jr. goes to the service that handles it and starts '
-      'downloading.',
+  message: 'Sherlock Jr. goes to Radarr · 4K and starts downloading.',
   icon: Icons.check_circle_outline_rounded,
   confirmLabel: 'Approve request',
 );

@@ -6,7 +6,11 @@ import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/discover/presentation/seerr_approve_target_read.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -183,18 +187,35 @@ class ActivityActions {
   /// already tones a pending request `warning` precisely to say it needs a
   /// person, and until now the only way to be that person was to leave for the
   /// Seerr web UI.
+  ///
+  /// The confirmation says where the request goes ([SeerrApproveTarget]): the
+  /// server by name, and in one clause when Cupola has no connection to it.
+  /// It used to say "the service that handles it" whichever that was, a 4K
+  /// server and one known only to Seerr included. [request] is the record
+  /// when the caller holds it; otherwise it is read from Seerr by
+  /// [requestId] first.
   static Future<void> approveRequest(
     BuildContext context,
     WidgetRef ref, {
     required String instanceId,
     required int requestId,
     required String title,
+    SeerrRequest? request,
   }) async {
+    final message = await _approveConfirmation(
+      context,
+      ref,
+      instanceId: instanceId,
+      requestId: requestId,
+      title: title,
+      request: request,
+    );
+    if (message == null || !context.mounted) return;
+
     final result = await showAppConfirmDialog(
       context: context,
       title: 'Approve this request?',
-      message:
-          '$title goes to the service that handles it and starts downloading.',
+      message: message,
       icon: Icons.check_circle_outline_rounded,
       confirmLabel: 'Approve request',
     );
@@ -212,6 +233,48 @@ class ActivityActions {
       successMessage: 'Request approved',
       failureMessage: 'Could not approve this request',
       invalidateRequests: true,
+    );
+  }
+
+  /// What the approve confirmation says, or null when the caller went away
+  /// while it was being read.
+  static Future<String?> _approveConfirmation(
+    BuildContext context,
+    WidgetRef ref, {
+    required String instanceId,
+    required int requestId,
+    required String title,
+    required SeerrRequest? request,
+  }) async {
+    var known = request;
+    if (known == null) {
+      final service = ref.read(seerrServiceForProvider(instanceId));
+      try {
+        known = await service
+            .getRequest(requestId)
+            .timeout(seerrTargetReadLimit);
+      } catch (_) {
+        known = null;
+      }
+      if (!context.mounted) return null;
+    }
+    if (known == null) {
+      // Not even its kind is known: the approval still goes where Seerr
+      // sends it, and that is all that can be said.
+      return '$title goes to the server Seerr sends it to and starts '
+          'downloading.';
+    }
+
+    final settings = ref.read(currentSettingsProvider);
+    final target = await readSeerrApproveTarget(
+      ref,
+      instanceId: instanceId,
+      request: known,
+    );
+    return target.confirmation(
+      title,
+      connectionTitle: (connection) =>
+          settings.connectionTitle(connection.id, connection.service),
     );
   }
 

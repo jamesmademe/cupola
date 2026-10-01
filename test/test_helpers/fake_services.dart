@@ -16,6 +16,7 @@ import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
@@ -25,6 +26,7 @@ import 'package:cupola/features/music/domain/models/lidarr_track.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 export 'fake_bazarr_service.dart';
 
@@ -518,6 +520,34 @@ class FakeSeerrService extends SeerrService {
 
   @override
   Future<Map<String, dynamic>> getTv(int tvId) async => _tvDetails;
+
+  /// Seerr's servers, by kind. Unscripted reads fail, the way a Seerr that
+  /// did not answer does, so a confirmation that names its server reads as
+  /// unknown rather than inventing one.
+  Map<ServiceKey, List<SeerrArrServer>> arrServers = const {};
+
+  @override
+  Future<List<SeerrArrServer>> getArrServers(ServiceKey arr) async {
+    final servers = arrServers[arr];
+    if (servers == null) {
+      throw StateError('No ${arr.title} servers scripted on this fake Seerr');
+    }
+    return servers;
+  }
+
+  /// The requests [getRequest] answers with, by id.
+  Map<int, SeerrRequest> requestsById = const {};
+
+  @override
+  Future<SeerrRequest> getRequest(int requestId) async {
+    final request = requestsById[requestId];
+    if (request == null) {
+      throw const SeerrRequestConflict(
+        'That request had already been updated somewhere else.',
+      );
+    }
+    return request;
+  }
 }
 
 const Map<String, dynamic> _defaultMovieDetails = {

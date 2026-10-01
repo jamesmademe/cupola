@@ -8,6 +8,7 @@ import 'package:cupola/features/discover/domain/models/person_credits.dart';
 import 'package:cupola/features/discover/domain/models/seerr_genre.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -552,14 +553,69 @@ class SeerrService {
     );
   }
 
+  /// One request, as Seerr holds it now: its server, profile and folder, and
+  /// whether it is still waiting. A 404 is a request removed elsewhere, and
+  /// reads as the [SeerrRequestConflict] it is.
+  Future<SeerrRequest> getRequest(int requestId) async {
+    final numberingRead = numbering();
+    try {
+      final response = await _client.get('/api/v1/request/$requestId');
+      final data = response.data;
+      if (data is! Map) {
+        throw const FormatException('Seerr answered without a request');
+      }
+      return SeerrRequest.fromJson(
+        data.cast<String, dynamic>(),
+        numbering: await numberingRead,
+      );
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) {
+        throw const SeerrRequestConflict(
+          'That request had already been updated somewhere else.',
+        );
+      }
+      rethrow;
+    }
+  }
+
+  /// The servers Seerr sends [arr] requests to, with their addresses: Seerr's
+  /// own settings (`GET /api/v1/settings/radarr` or `/sonarr`, admin only).
+  ///
+  /// An empty list means Seerr answered with none; a failure throws. Each
+  /// server's API key is in the answer and is never read: see
+  /// [SeerrArrServer].
+  Future<List<SeerrArrServer>> getArrServers(ServiceKey arr) async {
+    if (arr != ServiceKey.radarr && arr != ServiceKey.sonarr) {
+      throw ArgumentError.value(arr, 'arr', 'Seerr sends only to the arrs');
+    }
+    final response = await _client.get(
+      arr == ServiceKey.radarr
+          ? '/api/v1/settings/radarr'
+          : '/api/v1/settings/sonarr',
+    );
+    final data = response.data;
+    if (data is! List) {
+      throw const FormatException('Seerr answered without a server list');
+    }
+    return [
+      for (final raw in data)
+        if (raw is Map)
+          SeerrArrServer.fromSettingsJson(
+            raw.cast<String, dynamic>(),
+            service: arr,
+          ),
+    ];
+  }
+
   Future<void> deleteRequest(int requestId) async {
     await _guardConflict(() => _client.delete('/api/v1/request/$requestId'));
   }
 
   /// Approves a request that is waiting for approval.
   ///
-  /// The request then goes to whichever \*arr handles that media type, which is
-  /// why Activity can show a request turning into a queue row minutes later.
+  /// Seerr then sends it to the server [SeerrApproveTarget] names: the one the
+  /// request carries, or the default of its resolution. That is why Activity
+  /// can show a request turning into a queue row minutes later.
   Future<void> approveRequest(int requestId) async {
     await _guardConflict(
       () => _client.post('/api/v1/request/$requestId/approve'),

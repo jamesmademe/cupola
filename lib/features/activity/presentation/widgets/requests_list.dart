@@ -13,6 +13,7 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/tag_chip.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
+import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
@@ -260,27 +261,18 @@ class _RequestCard extends ConsumerWidget {
     ].join(' · ');
   }
 
-  Future<void> _approve(BuildContext context, WidgetRef ref) async {
-    final result = await showAppConfirmDialog(
-      context: context,
-      title: 'Approve request?',
-      message: request.media?.title,
-      icon: Icons.check_circle_outline_rounded,
-      confirmLabel: 'Approve request',
-    );
-
-    if (!result.confirmed || !context.mounted) return;
-
-    await _run(
-      context,
-      ref,
-      action: () => ref
-          .read(seerrServiceForProvider(instanceId))
-          .approveRequest(request.id),
-      successMessage: 'Request approved',
-      failureMessage: 'Could not approve the request',
-    );
-  }
+  /// Through the app's one approve path, whose confirmation names the server
+  /// the request goes to. This card used to keep a copy of its own that said
+  /// only the title.
+  Future<void> _approve(BuildContext context, WidgetRef ref) =>
+      ActivityActions.approveRequest(
+        context,
+        ref,
+        instanceId: instanceId,
+        requestId: request.id,
+        title: request.media?.title ?? 'This request',
+        request: request,
+      );
 
   Future<void> _decline(BuildContext context, WidgetRef ref) async {
     final result = await showAppConfirmDialog(

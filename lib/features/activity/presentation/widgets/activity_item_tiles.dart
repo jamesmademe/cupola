@@ -960,6 +960,7 @@ void _runRowAction(
         instanceId: item.instanceId,
         requestId: requestId,
         title: item.title,
+        request: item.request,
       );
     case _RowAction.declineRequest:
       final requestId = item.request?.id;

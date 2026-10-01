@@ -291,6 +291,7 @@ class _DecisionButton extends ConsumerWidget {
               instanceId: _lensConnection,
               requestId: request.id,
               title: title,
+              request: request,
             )
           : ActivityActions.declineRequest(
               context,
