@@ -197,10 +197,12 @@ class _StackHeadline extends ConsumerWidget {
 ///
 /// This is the same object onboarding opens with, which is what makes "Skip for
 /// now" cost nothing: the promise persists as the empty state instead of
-/// evaporating into a grey placeholder, and the button leads back into the same
-/// pick step. Deliberately *not* [AppEmptyState] — that widget is for a region
-/// that came up empty, and this screen is the product's front door on a first
-/// run.
+/// evaporating into a grey placeholder. The button opens Connections, where each
+/// service is set up on its own form — so it says "Set up a service", not the
+/// pick step's "Pick your services", which would promise the several-at-once
+/// choice it does not lead back to. Deliberately *not* [AppEmptyState] — that
+/// widget is for a region that came up empty, and this screen is the product's
+/// front door on a first run.
 class _ServicesEmptyState extends StatelessWidget {
   const _ServicesEmptyState({required this.onSetUpServices});
   final VoidCallback onSetUpServices;
@@ -224,7 +226,9 @@ class _ServicesEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xl),
           Text(
-            'Nothing answers yet.',
+            // Not "Nothing answers": that is the word for a service that was
+            // asked and stayed silent, and here nothing has been asked yet.
+            'Nothing is set up yet.',
             style: theme.textTheme.titleLarge!
                 .weight(FontWeight.w600)
                 .copyWith(color: scheme.onSurface),
@@ -242,7 +246,7 @@ class _ServicesEmptyState extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
           FilledButton(
             onPressed: onSetUpServices,
-            child: const Text('Pick your services'),
+            child: const Text('Set up a service'),
           ),
         ],
       ),

@@ -96,6 +96,47 @@ void main() {
     expect(find.textContaining('Sonarr figures unavailable'), findsOneWidget);
   });
 
+  group('with nothing set up', () {
+    // The front door after "Skip for now". Its button used to borrow the pick
+    // step's title while opening Connections, which sets up one service at a
+    // time, and its headline used the word for a service that stayed silent.
+    testWidgets('says nothing is set up and opens Connections', (tester) async {
+      String? opened;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const DashboardScreen(),
+          ),
+          GoRoute(
+            path: ServiceRoutes.settingsConnections,
+            builder: (context, state) {
+              opened = state.uri.path;
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await _pumpDashboard(
+        tester,
+        router: router,
+        settings: const SettingsModel(),
+      );
+
+      expect(find.text('Nothing is set up yet.'), findsOneWidget);
+      expect(find.text('Nothing answers yet.'), findsNothing);
+      expect(find.text('Pick your services'), findsNothing);
+
+      await tester.tap(find.text('Set up a service'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(opened, ServiceRoutes.settingsConnections);
+    });
+  });
+
   group('the header', () {
     testWidgets('counts connections folded per service, and says degraded', (
       tester,
