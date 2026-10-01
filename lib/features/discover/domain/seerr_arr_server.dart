@@ -235,8 +235,9 @@ class SeerrApproveTarget {
   /// What the approve confirmation says about where [title] goes.
   ///
   /// [connectionTitle] names a connection the way the rest of the app does
-  /// (`SettingsModel.connectionTitle`): `Radarr` while there is one, `Radarr ·
-  /// 4K` once there are two. A server Cupola has no connection to goes by
+  /// in a sentence (`SettingsModel.connectionTitle` with a space joiner):
+  /// `Radarr` while there is one, `Radarr 4K` or `Radarr 1` once there are
+  /// two. A server Cupola has no connection to goes by
   /// Seerr's name for it, and a second sentence says Cupola has no
   /// connection to it.
   String confirmation(

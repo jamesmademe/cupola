@@ -278,8 +278,11 @@ class ActivityActions {
     }
     return target.confirmation(
       title,
-      connectionTitle: (connection) =>
-          settings.connectionTitle(connection.id, connection.service),
+      connectionTitle: (connection) => settings.connectionTitle(
+        connection.id,
+        connection.service,
+        joiner: ' ',
+      ),
     );
   }
 

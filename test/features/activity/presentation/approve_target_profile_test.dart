@@ -47,7 +47,7 @@ void main() {
 
     // It said "goes to the service that handles it", whichever that was.
     expect(
-      find.text('Charge goes to Radarr and starts downloading.'),
+      find.text('Charge goes to Radarr 1 and starts downloading.'),
       findsOneWidget,
     );
     expect(find.textContaining('the service that handles it'), findsNothing);
@@ -88,7 +88,7 @@ void main() {
     await openApprove(tester, harness);
 
     expect(
-      find.text('Sintel goes to Radarr · 4K and starts downloading.'),
+      find.text('Sintel goes to Radarr 4K and starts downloading.'),
       findsOneWidget,
     );
 
@@ -165,7 +165,7 @@ void main() {
       containsAll(['GET /api/v1/request/1', 'GET /api/v1/settings/radarr']),
     );
     expect(
-      find.text('Charge goes to Radarr and starts downloading.'),
+      find.text('Charge goes to Radarr 1 and starts downloading.'),
       findsOneWidget,
     );
 

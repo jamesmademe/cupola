@@ -335,10 +335,22 @@ class SettingsModel {
   ///
   /// [fallback] names the service for an id that matches nothing, which is what
   /// a link or a queued job from a connection since removed still holds.
-  String connectionTitle(String id, ServiceKey fallback) {
+  ///
+  /// [joiner] is `' · '` where the title stands alone (a chip, a heading) and
+  /// `' '` inside a sentence or a button label, where a separator would read
+  /// as punctuation: "Goes to Radarr 4K", "Open in Radarr 4K".
+  String connectionTitle(
+    String id,
+    ServiceKey fallback, {
+    String joiner = ' · ',
+  }) {
     final instance = instanceById(id);
     if (instance == null) return fallback.title;
-    return serviceWithConnection(instance.service, connectionName(id));
+    return serviceWithConnection(
+      instance.service,
+      connectionName(id),
+      joiner: joiner,
+    );
   }
 
   /// What tells the connection [id] apart from the other connections of its

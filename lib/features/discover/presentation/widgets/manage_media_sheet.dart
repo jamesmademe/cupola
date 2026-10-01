@@ -151,8 +151,11 @@ class ManageMediaSheet extends ConsumerWidget {
   ) {
     final settings = ref.watch(currentSettingsProvider);
     final name = copy.serverName(
-      connectionTitle: (connection) =>
-          settings.connectionTitle(connection.id, connection.service),
+      connectionTitle: (connection) => settings.connectionTitle(
+        connection.id,
+        connection.service,
+        joiner: ' ',
+      ),
     );
     return MediaCopyControls(
       serverName: name,

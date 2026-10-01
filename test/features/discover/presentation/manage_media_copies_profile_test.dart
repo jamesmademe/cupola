@@ -86,10 +86,10 @@ void main() {
     );
 
     // There was one pair, for the standard copy, whatever the title held.
-    expect(find.text('Open in Radarr'), findsOneWidget);
-    expect(find.text('Remove from Radarr'), findsOneWidget);
-    expect(find.text('Open in Radarr · 4K'), findsOneWidget);
-    expect(find.text('Remove from Radarr · 4K'), findsOneWidget);
+    expect(find.text('Open in Radarr 1'), findsOneWidget);
+    expect(find.text('Remove from Radarr 1'), findsOneWidget);
+    expect(find.text('Open in Radarr 4K'), findsOneWidget);
+    expect(find.text('Remove from Radarr 4K'), findsOneWidget);
 
     await harness.unmount(tester);
   });
@@ -103,11 +103,11 @@ void main() {
       WorldTitles.elephantsDream,
     );
 
-    await tapInSheet(tester, harness, 'Remove from Radarr · 4K');
-    expect(find.text('Remove from Radarr · 4K?'), findsOneWidget);
+    await tapInSheet(tester, harness, 'Remove from Radarr 4K');
+    expect(find.text('Remove from Radarr 4K?'), findsOneWidget);
     expect(
       find.text(
-        'Seerr removes this movie from Radarr · 4K and deletes its files. '
+        'Seerr removes this movie from Radarr 4K and deletes its files. '
         'This cannot be undone.',
       ),
       findsOneWidget,
@@ -137,7 +137,7 @@ void main() {
       WorldTitles.elephantsDream,
     );
 
-    await tapInSheet(tester, harness, 'Open in Radarr · 4K');
+    await tapInSheet(tester, harness, 'Open in Radarr 4K');
 
     // Radarr 4K's id for the film, on Radarr 4K: the lens looked the title
     // up on whichever Radarr it was on.
@@ -151,8 +151,8 @@ void main() {
   testWidgets('P1: a title only in 4K has its Media section', (tester) async {
     final (harness, _) = await pump(tester, Profiles.p1, WorldTitles.spring);
 
-    expect(find.text('Remove from Radarr · 4K'), findsOneWidget);
-    expect(find.text('Remove from Radarr'), findsNothing);
+    expect(find.text('Remove from Radarr 4K'), findsOneWidget);
+    expect(find.text('Remove from Radarr 1'), findsNothing);
 
     await harness.unmount(tester);
   });

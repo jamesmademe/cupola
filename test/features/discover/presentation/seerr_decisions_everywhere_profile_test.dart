@@ -63,7 +63,7 @@ void main() {
       await tester.tap(button);
       await harness.settle(tester);
       expect(
-        find.text('Charge goes to Radarr and starts downloading.'),
+        find.text('Charge goes to Radarr 1 and starts downloading.'),
         findsOneWidget,
       );
       await tester.tap(find.widgetWithText(FilledButton, 'Approve request'));
