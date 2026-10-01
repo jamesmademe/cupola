@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 /// What a release search is being run for.
 enum ReleaseSearchScope {
@@ -170,6 +171,16 @@ class ReleaseSearchTarget {
     parentId: parentId,
     instanceId: instanceId,
   );
+
+  /// The connection this search runs on, as a job and its notification name
+  /// it: `Radarr 4K` once the service has two connections, null while it has
+  /// one. By the app's one rule for naming a connection.
+  String? connectionIn(SettingsModel settings) {
+    final name = settings.connectionName(instanceId);
+    return name == null
+        ? null
+        : serviceWithConnection(service, name, joiner: ' ');
+  }
 
   @override
   bool operator ==(Object other) =>

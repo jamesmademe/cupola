@@ -24,6 +24,7 @@ class ReleaseSearchJobCard extends StatelessWidget {
     super.key,
     required this.job,
     required this.now,
+    this.connection,
     this.queuePosition,
     this.onTap,
     this.onCancel,
@@ -37,6 +38,11 @@ class ReleaseSearchJobCard extends StatelessWidget {
   /// Passed in rather than read from the clock so the whole list agrees, and so
   /// a test can place the job anywhere in its window.
   final DateTime now;
+
+  /// Which connection the search runs on, `Radarr 4K`, once its service has
+  /// two (`ReleaseSearchTarget.connectionIn`). Null prints nothing: with one
+  /// Radarr, the glyph already says it all.
+  final String? connection;
 
   /// 1-based position among queued jobs, when this one is waiting.
   final int? queuePosition;
@@ -86,7 +92,9 @@ class ReleaseSearchJobCard extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      _subtitle,
+                      connection == null
+                          ? _subtitle
+                          : '$connection · $_subtitle',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.onSurfaceVariant,
                       ),
@@ -199,7 +207,9 @@ class ReleaseSearchJobCard extends StatelessWidget {
   /// One spoken sentence for the card's summary. In-card controls keep their own
   /// nodes — a single merged node would swallow them from the tree.
   String get _spokenSummary {
-    final service = job.target.service.title;
+    // The connection, once there are two: "Searching on Radarr 4K".
+    final service = connection ?? job.target.service.title;
+    final on = connection == null ? '' : ', on $connection';
     final remaining = job.grabWindowRemaining(now);
     return switch (job.status) {
       ReleaseSearchJobStatus.queued =>
@@ -214,9 +224,10 @@ class ReleaseSearchJobCard extends StatelessWidget {
                   '${formatWindowForSpeech(remaining ?? Duration.zero)}. '
                   'Double tap to pick one.',
       ReleaseSearchJobStatus.failed =>
-        '${job.target.label}. ${job.failure?.headline ?? 'Search stopped.'}',
+        '${job.target.label}$on. '
+            '${job.failure?.headline ?? 'Search stopped.'}',
       ReleaseSearchJobStatus.expired =>
-        '${job.target.label}. ${job.releaseCount} releases, no longer '
+        '${job.target.label}$on. ${job.releaseCount} releases, no longer '
             'grabbable. Search again to use them.',
     };
   }

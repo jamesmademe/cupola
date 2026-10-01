@@ -28,16 +28,23 @@ class ReleaseSearchNotice {
 ///   waiting for, and withholding it makes the feature feel broken.
 /// * **A failure names the target in the title.** A notification that does not
 ///   say *which* search stopped is useless.
+///
+/// [connection] is the connection the search ran on, `Radarr 4K`, once its
+/// service has two (`ReleaseSearchTarget.connectionIn`): with two Radarr,
+/// "3 releases for Sintel" does not say which library would take one.
 ReleaseSearchNotice? noticeFor(
   ReleaseSearchJob job, {
   required bool appInForeground,
   required bool notificationsEnabled,
+  String? connection,
 }) {
   if (!notificationsEnabled) return null;
   if (appInForeground) return null;
   if (job.isActive) return null;
 
-  final label = job.target.label;
+  final label = connection == null
+      ? job.target.label
+      : '${job.target.label} on $connection';
 
   return switch (job.status) {
     ReleaseSearchJobStatus.completed =>

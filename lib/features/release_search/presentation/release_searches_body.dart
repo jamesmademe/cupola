@@ -9,6 +9,7 @@ import 'package:cupola/features/release_search/domain/release_search_job.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_sheet.dart';
 import 'package:cupola/features/release_search/presentation/widgets/release_search_job_card.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// Keeps the windows honest while the section is on screen.
 ///
@@ -117,6 +118,9 @@ class ReleaseSearchesBody extends ConsumerWidget {
         return ReleaseSearchJobCard(
           job: job,
           now: now,
+          connection: ref.watch(
+            currentSettingsProvider.select(job.target.connectionIn),
+          ),
           queuePosition: queueIndex <= 0 ? null : queueIndex,
           expandVerdict: true,
           onTap: () => ReleaseSearchSheet.show(

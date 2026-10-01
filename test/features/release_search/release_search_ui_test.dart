@@ -22,6 +22,8 @@ import 'package:cupola/features/release_search/presentation/widgets/release_sear
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
+import '../../test_helpers/settings_scope.dart';
+
 final _season = ReleaseSearchTarget.season(
   seriesId: 1,
   seasonNumber: 2,
@@ -240,7 +242,11 @@ void main() {
     });
 
     testWidgets('lists every job, newest first', (tester) async {
-      final container = ProviderContainer();
+      // Settings, because a card names its connection once a service has
+      // two, and that is the settings' to say.
+      final container = ProviderContainer(
+        overrides: await settingsScopeOverrides(),
+      );
       final notifier = container.read(releaseSearchJobsProvider.notifier);
       notifier.configure(runner: (_, _) => Completer<List<dynamic>>().future);
       notifier.start(_season);

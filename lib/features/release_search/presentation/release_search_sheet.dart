@@ -20,6 +20,7 @@ import 'package:cupola/features/release_search/domain/release_search_target.dart
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/widgets/release_search_job_card.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Copy for the handoff, in one place.
@@ -266,7 +267,15 @@ class _ReleaseSearchSheetState extends ConsumerState<ReleaseSearchSheet> {
 
     final reach = ref.watch(releaseSearchReachProvider(job.target));
 
-    if (_handingOff) return _HandoffConfirmation(job: job, reach: reach);
+    if (_handingOff) {
+      return _HandoffConfirmation(
+        job: job,
+        reach: reach,
+        connection: ref.watch(
+          currentSettingsProvider.select(job.target.connectionIn),
+        ),
+      );
+    }
 
     return switch (job.status) {
       ReleaseSearchJobStatus.queued => _QueuedBody(job: job, onCancel: _cancel),
@@ -580,10 +589,15 @@ class _HandoffOffer extends StatelessWidget {
 /// same object at two densities — so the identity never fades and only the
 /// geometry moves.
 class _HandoffConfirmation extends StatelessWidget {
-  const _HandoffConfirmation({required this.job, required this.reach});
+  const _HandoffConfirmation({
+    required this.job,
+    required this.reach,
+    required this.connection,
+  });
 
   final ReleaseSearchJob job;
   final ReleaseSearchReach reach;
+  final String? connection;
 
   @override
   Widget build(BuildContext context) {
@@ -595,7 +609,11 @@ class _HandoffConfirmation extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ReleaseSearchJobCard(job: job, now: DateTime.now()),
+          ReleaseSearchJobCard(
+            job: job,
+            now: DateTime.now(),
+            connection: connection,
+          ),
           const SizedBox(height: AppSpacing.md),
           Text(
             ReleaseSearchHandoffCopy.confirmation(reach),

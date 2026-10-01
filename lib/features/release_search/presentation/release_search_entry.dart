@@ -481,6 +481,7 @@ void _onSearchFinished(Ref ref, ReleaseSearchJob job) {
     notificationsEnabled: ref
         .read(releaseSearchSettingsProvider)
         .notifyOnFinish,
+    connection: job.target.connectionIn(ref.read(currentSettingsProvider)),
   );
   if (notice == null) return;
   ref.read(releaseSearchNotificationsProvider).show(notice, jobId: job.id);
