@@ -6,6 +6,8 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/discover/domain/seerr_permission.dart';
+import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -66,11 +68,49 @@ void main() {
       expect(p1.unverifiedMatches, isNotEmpty);
     });
 
-    test('P2 is Anna, with the requester half left as a hook', () {
-      expect(Profiles.p2.connections.map((c) => c.service), [ServiceKey.seerr]);
-      expect(Profiles.p2.seerrRequester?.displayName, WorldPeople.anna);
+    test('P2 is Anna, signed in to Seerr with her own local account', () {
+      final p2 = Profiles.p2;
+      expect(p2.connections.map((c) => c.service), [ServiceKey.seerr]);
+      expect(p2.seerrRequester?.displayName, WorldPeople.anna);
+      final account = p2.connection(WorldIds.seerr).seerrAccount!;
+      expect(account.kind, WorldSeerrUserType.local);
+      expect(account.permissions, SeerrPermission.request.value);
+      expect(p2.seerrRequester, same(account));
       final jellyfin = Profiles.p2WithJellyfin.connection(WorldIds.jellyfin);
       expect(jellyfin.behaviour, ConnectionBehaviour.readOnly);
+      expect(
+        Profiles.p2WithJellyfin.connection(WorldIds.seerr).seerrAccount,
+        same(account),
+      );
+    });
+
+    test('P2-J and P2-P are Anna through Jellyfin and through Plex', () {
+      final viaJellyfin = Profiles.p2ViaJellyfin.connection(WorldIds.seerr);
+      final viaPlex = Profiles.p2ViaPlex.connection(WorldIds.seerr);
+
+      expect(viaJellyfin.seerrAccount?.kind, WorldSeerrUserType.jellyfin);
+      expect(viaJellyfin.seerrRelease, SeerrRelease.seerr);
+      expect(viaPlex.seerrAccount?.kind, WorldSeerrUserType.plex);
+      expect(viaPlex.seerrMediaServer, SeerrMediaServer.plex);
+      // Cupola has no Plex connection: Plex is only Seerr's.
+      expect(Profiles.p2ViaPlex.has(ServiceKey.plex), isFalse);
+    });
+
+    test("P9 is P1 with a friend's Seerr, where the operator requests", () {
+      final p9 = Profiles.p9;
+      final friend = p9.connection(WorldIds.seerrFriend);
+
+      expect(p9.connections.map((c) => c.id), [
+        ...Profiles.p1.connections.map((c) => c.id),
+        WorldIds.seerrFriend,
+      ]);
+      expect(friend.instance.label, WorldPeople.friend);
+      expect(friend.seerrAccount?.displayName, WorldPeople.operatorName);
+      expect(friend.seerrAccount?.permissions, SeerrPermission.request.value);
+      // The household's Seerr is still the operator's key.
+      expect(p9.connection(WorldIds.seerr).seerrAccount, isNull);
+      expect(p9.seerrRequester, isNull);
+      expect(p9.settings.hasMultipleInstances(ServiceKey.seerr), isTrue);
     });
 
     test('P3 is the first day: Radarr, Sonarr and Seerr only', () {
@@ -226,6 +266,39 @@ void main() {
       final noSeerr = Profiles.p1.without(ServiceKey.seerr);
       expect(noSeerr.has(ServiceKey.seerr), isFalse);
       expect(noSeerr.settings.isServiceConfigured(ServiceKey.seerr), isFalse);
+    });
+
+    test('withSeerrPermissions changes every Seerr account of the profile', () {
+      final mask =
+          SeerrPermission.request.value | SeerrPermission.request4k.value;
+      final p2 = Profiles.p2.withSeerrPermissions(mask);
+
+      expect(p2.seerrRequester?.permissions, mask);
+      expect(p2.connection(WorldIds.seerr).seerrAccount?.permissions, mask);
+      expect(Profiles.p2.seerrRequester?.permissions, 32);
+      // P1 signs in with the key only: there is no account to change.
+      expect(() => Profiles.p1.withSeerrPermissions(mask), throwsArgumentError);
+    });
+
+    test('withSeerrRelease puts another release behind Seerr', () {
+      final overseerr = Profiles.p9.withSeerrRelease(
+        SeerrRelease.overseerr,
+        instanceId: WorldIds.seerrFriend,
+      );
+
+      expect(
+        overseerr.connection(WorldIds.seerrFriend).seerrRelease,
+        SeerrRelease.overseerr,
+      );
+      expect(
+        overseerr.connection(WorldIds.seerr).seerrRelease,
+        SeerrRelease.jellyseerr2,
+      );
+      // The account survives the change.
+      expect(
+        overseerr.connection(WorldIds.seerrFriend).seerrAccount,
+        isNotNull,
+      );
     });
 
     test('withConnection adds a World-B service', () {

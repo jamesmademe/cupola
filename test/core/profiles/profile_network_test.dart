@@ -450,9 +450,11 @@ void main() {
         );
 
         // Seerr's admin view carries the address and key a setup-from-Seerr
-        // flow would read. The app does not call it yet, so ask it directly.
+        // flow would read. The app does not call it yet, so ask it directly,
+        // with the admin key Seerr wants for its settings.
         final admin = await Dio().get<List<dynamic>>(
           '${WorldHosts.seerr}/api/v1/settings/radarr',
+          options: Options(headers: {'X-Api-Key': worldKey(WorldIds.seerr)}),
         );
         final radarr = admin.data!.single as Map<String, dynamic>;
         expect(radarr['hostname'], 'nas.home.arpa');

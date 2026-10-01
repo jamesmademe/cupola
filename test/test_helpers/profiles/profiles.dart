@@ -1,5 +1,5 @@
-/// The seven configuration profiles of the config inventory (P1–P7), as
-/// values a test can pump.
+/// The configuration profiles of the config inventory (P1–P7, P9 and the P2
+/// variants), as values a test can pump.
 ///
 /// ```dart
 /// await pumpWithProfile(tester, Profiles.p6, child: const DashboardScreen());
@@ -9,6 +9,7 @@
 library;
 
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -18,13 +19,17 @@ import 'world.dart';
 
 export 'config_profile.dart';
 export 'fakes/infra_fakes.dart' show TrueNasRpcFault;
+export 'fakes/plex_tv_fake.dart' show PlexPin, PlexTvFake, plexTvHost;
+export 'fakes/seerr_sessions.dart'
+    show
+        SeerrQuickConnectCode,
+        SeerrServerState,
+        SeerrSession,
+        seerrQuickConnectLifetime,
+        seerrSessionLifetime;
 export 'profile_harness.dart';
 export 'profile_network.dart';
 export 'world.dart';
-
-/// The credential a world connection is configured with, and the one Seerr's
-/// settings hold for the same server.
-String worldKey(String connectionId) => 'world-$connectionId-key';
 
 ProfileConnection _api(
   String id,
@@ -169,6 +174,15 @@ abstract final class WorldConnections {
     label: 'Vinyl',
   );
 
+  /// Sara's Seerr, outside the household, where the operator has an account
+  /// of his own with REQUEST only: P9's second Seerr. Labelled with her name.
+  static final seerrFriend = _api(
+    WorldIds.seerrFriend,
+    ServiceKey.seerr,
+    WorldHosts.seerrFriend,
+    label: WorldPeople.friend,
+  ).withSeerrAccount(WorldSeerrUsers.operatorAtFriend);
+
   // World B, on `tower`: in no profile, for a test that adds one with
   // `ConfigProfile.withConnection` — the NPM and Unraid read-only cases.
   static final readarr = _api(
@@ -281,24 +295,62 @@ abstract final class Profiles {
     trustedCertificates: _worldPins,
   );
 
-  /// P2 — Requester (Anna): her Seerr connection only.
+  /// P2 — Requester (Anna): her Seerr connection only, signed in with her
+  /// own local account (REQUEST, 32).
   ///
-  /// Only half modelled: the app signs in to Seerr with an admin API key and
-  /// has no user login, so Anna's Seerr answers as the operator's does. See
-  /// `ConfigProfile.seerrRequester` for the hook.
+  /// The network answers her account as Seerr does: `/auth/local` with her
+  /// email and password, a session cookie, `/auth/me` as her, her own
+  /// requests only, and 403 on the operator's routes. The connection still
+  /// carries the server's key for the app, which signs in with a key only;
+  /// see `ProfileConnection.seerrAccount`.
   static final p2 = ConfigProfile(
     id: 'P2',
     title: 'Requester',
     summary:
-        "Anna's Seerr, nothing else. Cupola has no Seerr user login, so the "
-        'requester half is a TODO hook (seerrRequester).',
+        "Anna's Seerr, nothing else, signed in with her own local account "
+        '(REQUEST only).',
     cases: const {ConfigCase.notAllowed, ConfigCase.didNotAnswer},
-    connections: [WorldConnections.seerr],
-    seerrRequester: const WorldSeerrUser(
-      id: 2,
-      displayName: WorldPeople.anna,
-      permissions: 32,
-    ),
+    connections: [
+      WorldConnections.seerr.withSeerrAccount(WorldSeerrUsers.annaLocal),
+    ],
+    seerrRequester: WorldSeerrUsers.annaLocal,
+  );
+
+  /// P2-J — Anna through Jellyfin: her Seerr account is the Jellyfin user
+  /// Seerr imported, signed in with her Jellyfin username and password
+  /// (`/auth/jellyfin`). The server is Seerr 3.5.0, so Jellyfin Quick
+  /// Connect is there too.
+  static final p2ViaJellyfin = ConfigProfile(
+    id: 'P2-J',
+    title: 'Requester through Jellyfin',
+    summary:
+        "Anna's Seerr (3.5.0, on Jellyfin), signed in with her Jellyfin "
+        'account.',
+    cases: const {ConfigCase.notAllowed, ConfigCase.didNotAnswer},
+    connections: [
+      WorldConnections.seerr
+          .withSeerrAccount(WorldSeerrUsers.annaJellyfin)
+          .withSeerrRelease(SeerrRelease.seerr),
+    ],
+    seerrRequester: WorldSeerrUsers.annaJellyfin,
+  );
+
+  /// P2-P — Anna through Plex: a Seerr set up with Plex (`mediaServerType`
+  /// 1), and her Plex account, signed in through plex.tv's PIN and
+  /// `/auth/plex`. Cupola has no Plex connection.
+  static final p2ViaPlex = ConfigProfile(
+    id: 'P2-P',
+    title: 'Requester through Plex',
+    summary:
+        "Anna's Seerr, set up with Plex, signed in with her Plex account "
+        'through plex.tv.',
+    cases: const {ConfigCase.notAllowed, ConfigCase.didNotAnswer},
+    connections: [
+      WorldConnections.seerr
+          .withSeerrAccount(WorldSeerrUsers.annaPlex)
+          .withSeerrMediaServer(SeerrMediaServer.plex),
+    ],
+    seerrRequester: WorldSeerrUsers.annaPlex,
   );
 
   /// P2+J — Anna with her own Jellyfin sign-in: a non-admin user's token in
@@ -310,7 +362,7 @@ abstract final class Profiles {
     summary: "P2 plus Anna's own, non-admin Jellyfin sign-in.",
     cases: const {ConfigCase.notAllowed, ConfigCase.didNotAnswer},
     connections: [
-      WorldConnections.seerr,
+      p2.connections.single,
       ProfileConnection(
         WorldConnections.jellyfin.instance.copyWith(
           viewerId: JellyfinFake.annaId,
@@ -506,5 +558,38 @@ abstract final class Profiles {
     trustedCertificates: _worldPins,
   );
 
-  static final all = [p1, p2, p2WithJellyfin, p3, p4, p5, p6, p7];
+  /// P9 — Operator with a friend's Seerr: P1, plus Sara's Seerr, where the
+  /// operator signs in with an account of his own that may only request.
+  /// The household's Seerr answers his key; Sara's answers his account.
+  static final p9 = ConfigProfile(
+    id: 'P9',
+    title: "Full household and a friend's Seerr",
+    summary:
+        "P1 plus Sara's Seerr, where the operator is a requester with his own "
+        'account.',
+    cases: const {
+      ConfigCase.severalInstances,
+      ConfigCase.notSetUp,
+      ConfigCase.matchNotVerified,
+      ConfigCase.notAllowed,
+    },
+    connections: [...p1.connections, WorldConnections.seerrFriend],
+    seerrKnows: p1.seerrKnows,
+    unverifiedMatches: p1.unverifiedMatches,
+    trustedCertificates: _worldPins,
+  );
+
+  static final all = [
+    p1,
+    p2,
+    p2ViaJellyfin,
+    p2ViaPlex,
+    p2WithJellyfin,
+    p3,
+    p4,
+    p5,
+    p6,
+    p7,
+    p9,
+  ];
 }

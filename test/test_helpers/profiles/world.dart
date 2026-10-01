@@ -43,6 +43,10 @@ abstract final class WorldHosts {
   /// a test that adds it.
   static const lidarrVinyl = 'http://nas.home.arpa:8687';
 
+  /// A friend's Seerr, outside the household, where the operator has an
+  /// account of his own. P9's second Seerr.
+  static const seerrFriend = 'https://seerr.example.net';
+
   // World B.
   static const readarr = 'http://tower.home.arpa:8787';
   static const nzbget = 'http://tower.home.arpa:6789';
@@ -72,7 +76,13 @@ abstract final class WorldIds {
   static const jellyfinCabin = 'jellyfin-cabin01';
   static const seerrCabin = 'seerr-cabin001';
   static const lidarrVinyl = 'lidarr-vinyl01';
+  static const seerrFriend = 'seerr-sara001';
 }
+
+/// The credential a world connection is configured with, and the one the
+/// server behind it accepts: Seerr's settings hold the same for each Radarr
+/// and Sonarr they know.
+String worldKey(String connectionId) => 'world-$connectionId-key';
 
 /// One film or series of the world, with the ids every service agrees on.
 class WorldTitle {
@@ -209,6 +219,9 @@ abstract final class WorldPeople {
   static const operatorName = 'Matt';
   static const anna = 'Anna';
   static const luca = 'Luca';
+
+  /// The friend whose Seerr the operator requests from (P9).
+  static const friend = 'Sara';
 }
 
 /// Where a download is in its life.

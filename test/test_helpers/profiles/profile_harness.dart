@@ -120,6 +120,9 @@ Future<ProfileHarness> pumpWithProfile(
     overrides: overrides,
     now: now,
   );
+  // A Seerr session, a Quick Connect code and a plex.tv PIN then expire as
+  // the app's own timers see time pass.
+  harness.network.followFakeTime(tester.binding);
   if (surfaceSize != null) {
     await tester.binding.setSurfaceSize(surfaceSize);
     addTearDown(() => tester.binding.setSurfaceSize(null));

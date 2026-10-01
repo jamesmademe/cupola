@@ -85,6 +85,8 @@ abstract class ServiceFake {
       case BehindCloudflareAccess():
       case BehindSignInPage():
       case BehindPasswordPrompt():
+      // Seerr's own states, which only its fake reads (`SeerrFake.gate`).
+      case SeerrBehaviour():
       case PlainBehaviour.answers:
       case PlainBehaviour.didNotAnswer:
       case PlainBehaviour.timesOut:
@@ -95,6 +97,15 @@ abstract class ServiceFake {
   /// The world's canned answer, or null when this fake has none (served 404
   /// and logged in `ProfileNetwork.unanswered`).
   NetworkReply? answer(NetworkRequest request, ServerContext context);
+
+  /// The reply as it leaves the server, whoever wrote it: [gate], a test's
+  /// route or [answer]. Seerr adds the cookies its middleware sets on every
+  /// answer here. Most services send the reply as it is.
+  NetworkReply finish(
+    NetworkRequest request,
+    ServerContext context,
+    NetworkReply reply,
+  ) => reply;
 
   /// The server half of a WebSocket upgrade, for the two services that speak
   /// one. Null refuses the upgrade.

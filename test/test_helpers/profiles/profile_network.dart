@@ -3,12 +3,15 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter_test/flutter_test.dart' show addTearDown;
+import 'package:flutter_test/flutter_test.dart'
+    show TestWidgetsFlutterBinding, addTearDown;
 
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'config_profile.dart';
 import 'fake_socket.dart';
+import 'fakes/plex_tv_fake.dart';
+import 'fakes/seerr_sessions.dart';
 import 'service_fakes.dart';
 
 /// One request that reached the fake network.
@@ -61,7 +64,8 @@ class NetworkRequest {
   @override
   String toString() =>
       '$method ${uri.path}${uri.hasQuery ? '?${uri.query}' : ''}'
-      ' → ${server?.id ?? 'no such host'}${dialRefused ? ' (refused)' : ''}';
+      ' → ${server?.id ?? (uri.host == plexTvHost ? plexTvHost : 'no such host')}'
+      '${dialRefused ? ' (refused)' : ''}';
 }
 
 /// One canned reply.
@@ -106,6 +110,24 @@ class NetworkReply {
   final String body;
   final String contentType;
   final Map<String, List<String>> headers;
+
+  /// A copy with [more] headers, each value added after any already there:
+  /// two `set-cookie` lines stay two.
+  NetworkReply withHeaders(Map<String, List<String>> more) {
+    if (more.isEmpty) return this;
+    final merged = {
+      for (final entry in headers.entries) entry.key: [...entry.value],
+    };
+    for (final entry in more.entries) {
+      (merged[entry.key] ??= []).addAll(entry.value);
+    }
+    return NetworkReply(
+      status,
+      body: body,
+      contentType: contentType,
+      headers: merged,
+    );
+  }
 }
 
 /// What a gateway in front of [server] answers [request] with, or null when
@@ -291,12 +313,94 @@ class ProfileNetwork {
         ),
       );
     }
+    openSavedSeerrSessions(this);
   }
 
   final ConfigProfile profile;
 
   /// The moment the world's relative times ("2 h ago") are measured from.
+  /// It stays put; [currentTime] is the one that moves.
   final DateTime now;
+
+  // === Fake time ===========================================================
+
+  Duration _elapsed = Duration.zero;
+  Duration Function()? _followed;
+
+  /// The network's own clock: [now] plus the fake time that has passed. What
+  /// a Seerr session, a Quick Connect code and a plex.tv PIN expire by.
+  DateTime get currentTime =>
+      now.add(_elapsed + (_followed?.call() ?? Duration.zero));
+
+  /// Moves [currentTime] on by [duration], for a test that runs on no fake
+  /// clock of its own: 31 days, and a session nobody used is over.
+  void elapse(Duration duration) => _elapsed += duration;
+
+  /// Moves [currentTime] with the widget test's fake clock from here on, so
+  /// `tester.pump(const Duration(minutes: 31))` expires a PIN as the app's
+  /// own timers see it. `pumpWithProfile` does this; a test that pumps its
+  /// own tree after `ProfileHarness.start` calls it itself.
+  void followFakeTime(TestWidgetsFlutterBinding binding) {
+    final start = binding.clock.now();
+    var last = Duration.zero;
+    _followed = () {
+      // Outside a test body the binding has no fake clock to read.
+      if (binding.inTest) last = binding.clock.now().difference(start);
+      return last;
+    };
+  }
+
+  // === Seerr sign-in and plex.tv ===========================================
+
+  /// plex.tv, reachable from anywhere: the PIN sign-in for Seerr's Plex
+  /// accounts.
+  late final PlexTvFake plexTv = PlexTvFake(this);
+
+  /// The person approves PIN [id] on app.plex.tv. Polling it then answers
+  /// [authToken], by default the plex.tv token of the profile's Seerr
+  /// account.
+  PlexPin claimPlexPin(int id, {String? authToken}) =>
+      plexTv.claim(id, authToken: authToken);
+
+  /// The sign-in state Seerr connection [connectionId] keeps between
+  /// requests: its sessions, its Quick Connect codes.
+  SeerrServerState seerrState(String connectionId) {
+    server(connectionId);
+    return seerrStateOf(this, connectionId);
+  }
+
+  /// The `connect.sid` value the account of Seerr connection [connectionId]
+  /// signed in with, as the app would have saved it: send it as
+  /// `Cookie: connect.sid=<value>`. Under
+  /// [ConnectionBehaviour.sessionExpired] the server has already let it go.
+  String seerrSessionOf(String connectionId) =>
+      seerrState(connectionId).savedSession ??
+      (throw ArgumentError.value(
+        connectionId,
+        'connectionId',
+        'is not signed in to Seerr with an account',
+      ));
+
+  /// Somebody approves Quick Connect [code] from a Jellyfin app they are
+  /// signed in to: [user], by default the connection's Seerr account.
+  void approveQuickConnect(
+    String connectionId,
+    String code, {
+    WorldSeerrUser? user,
+  }) {
+    final request = seerrState(connectionId).quickConnectByCode(code);
+    if (request == null) {
+      throw StateError('$connectionId has no Quick Connect code $code');
+    }
+    request.approvedBy =
+        user ??
+        profile.connection(connectionId).seerrAccount ??
+        WorldSeerrUsers.anna;
+  }
+
+  /// The requests that went to [host], plex.tv included.
+  List<NetworkRequest> requestsToHost(String host) =>
+      requests.where((r) => r.uri.host == host).toList(growable: false);
 
   final Map<String, ProfileServer> _servers = {};
   final Map<String, List<(String, Pattern, NetworkRoute)>> _routes = {};
@@ -387,6 +491,7 @@ class ProfileNetwork {
   }
 
   SocketException? _dialVerdict(ProfileServer? server, Uri uri) {
+    if (server == null && uri.host == plexTvHost) return null;
     if (server == null) {
       return SocketException(
         "Failed host lookup: '${uri.host}'",
@@ -420,6 +525,14 @@ class ProfileNetwork {
       server: server,
     );
     requests.add(request);
+    if (server == null && raw.uri.host == plexTvHost) {
+      final reply = plexTv.answer(request);
+      if (reply != null) return _FakeResponse.fromReply(reply);
+      unanswered.add(request);
+      return _FakeResponse.fromReply(
+        NetworkReply.json({'message': 'NotFound'}, status: 404),
+      );
+    }
     if (server == null) {
       // Unreachable: dialling already failed. Kept for the type system.
       return _FakeResponse.fromReply(const NetworkReply(502));
@@ -441,8 +554,11 @@ class ProfileNetwork {
     final gateway = gatewayReply(request, server);
     if (gateway != null) return _FakeResponse.fromReply(gateway);
 
+    _FakeResponse send(NetworkReply reply) =>
+        _FakeResponse.fromReply(fake.finish(request, context, reply));
+
     final gated = fake.gate(request, context);
-    if (gated != null) return _FakeResponse.fromReply(gated);
+    if (gated != null) return send(gated);
 
     final routes =
         _routes[server.id] ?? const <(String, Pattern, NetworkRoute)>[];
@@ -453,16 +569,14 @@ class ProfileNetwork {
           : path.allMatches(request.path).isNotEmpty;
       if (!matches) continue;
       final reply = route(request);
-      if (reply != null) return _FakeResponse.fromReply(reply);
+      if (reply != null) return send(reply);
     }
 
     final answer = fake.answer(request, context);
-    if (answer != null) return _FakeResponse.fromReply(answer);
+    if (answer != null) return send(answer);
 
     unanswered.add(request);
-    return _FakeResponse.fromReply(
-      NetworkReply.json({'message': 'NotFound'}, status: 404),
-    );
+    return send(NetworkReply.json({'message': 'NotFound'}, status: 404));
   }
 }
 

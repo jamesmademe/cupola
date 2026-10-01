@@ -1,6 +1,7 @@
 /// Seerr, Jellyfin and Plex on the fake network.
 library;
 
+import 'package:cupola/features/discover/domain/seerr_permission.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../fixtures.dart';
@@ -9,49 +10,76 @@ import '../profile_network.dart';
 import '../service_fakes.dart';
 import '../world.dart';
 import 'arr_fakes.dart';
+import 'seerr_sessions.dart';
 
 // === Seerr =================================================================
 
-/// Seerr as the operator's admin key sees it.
+/// Seerr, as whoever calls it sees it: the operator's admin key, or a
+/// household member's own session.
 ///
 /// Its settings know the Radarr and Sonarr servers the profile lists in
 /// `seerrKnows` — whether or not Cupola has a connection to them, which is
 /// the whole of the b case.
+///
+/// Who is calling, the sign-in routes, the sessions and the CSRF guard are in
+/// `seerr_sessions.dart`; this class holds the world's data and the checks
+/// each route makes on its own (a requester sees her own requests only).
 class SeerrFake extends ServiceFake {
   const SeerrFake();
 
-  static const _users = [
-    (1, 'Operator', 2),
-    (2, WorldPeople.anna, 32),
-    (3, WorldPeople.luca, 32),
-  ];
+  /// The routes that want nobody, the one list [gate] reads: `/status`,
+  /// `/status/appdata` and `/settings/public` (`security: []` in the API
+  /// spec), every route under `/auth` but `GET /auth/me`, and whatever is
+  /// not the API at all (`server/routes/index.ts`).
+  @override
+  bool isPublic(NetworkRequest r) {
+    const v1 = '/api/v1/';
+    if (!r.path.startsWith(v1)) return true;
+    final route = r.path.substring(v1.length);
+    if (route.startsWith('auth/')) {
+      return !(r.method == 'GET' && route == 'auth/me');
+    }
+    return r.method == 'GET' &&
+        const {'status', 'status/appdata', 'settings/public'}.contains(route);
+  }
+
+  // Seerr reads a key it does not know as nobody, and refuses nobody the way
+  // `isAuthenticated` does.
+  @override
+  NetworkReply refuseKey(NetworkRequest r) => seerrEndpointRefused();
 
   @override
-  bool isPublic(NetworkRequest r) =>
-      r.method == 'GET' &&
-      const {
-        '/api/v1/status',
-        '/api/v1/status/appdata',
-        '/api/v1/settings/public',
-      }.contains(r.path);
+  NetworkReply refuseWrite(NetworkRequest r) => seerrEndpointRefused();
 
-  // Seerr answers a key it does not know with 403 and this sentence.
+  /// A web page still answers in front of everything; otherwise Seerr's own
+  /// middleware decides: the CSRF guard, then the key or the session, then
+  /// the route's permission.
   @override
-  NetworkReply refuseKey(NetworkRequest r) => NetworkReply.json({
-    'message': 'You do not have permission to access this endpoint.',
-  }, status: 403);
+  NetworkReply? gate(NetworkRequest r, ServerContext c) {
+    if (c.behaviour == ConnectionBehaviour.servesHtmlPage) {
+      return super.gate(r, c);
+    }
+    return seerrGate(r, c, isPublic: isPublic);
+  }
+
+  @override
+  NetworkReply finish(NetworkRequest r, ServerContext c, NetworkReply reply) =>
+      seerrFinish(r, reply);
 
   // Search and discovery are GETs; every write is a POST, PUT or DELETE.
 
-  static JsonMap _user(int id) {
-    final (_, name, permissions) = _users.firstWhere((u) => u.$1 == id);
+  /// User [id] as a request, an issue or the user list names them.
+  static JsonMap _user(ServerContext c, int id) {
+    final user =
+        SeerrSetup.of(c).userById(id) ??
+        WorldSeerrUsers.household.firstWhere((u) => u.id == id);
     return {
       'id': id,
-      'displayName': name,
-      'username': name.toLowerCase(),
-      'email': '${name.toLowerCase()}@home.arpa',
-      'permissions': permissions,
-      'userType': 3,
+      'displayName': user.displayName,
+      'username': user.displayName.toLowerCase(),
+      'email': user.email,
+      'permissions': user.permissions,
+      'userType': user.kind.wire,
       'avatar': '/avatarproxy/$id',
       'requestCount': id == 1 ? 0 : 20,
     };
@@ -199,8 +227,8 @@ class SeerrFake extends ServiceFake {
       'createdAt': c.ago(age),
       'updatedAt': c.ago(age),
       'canRemove': true,
-      'requestedBy': _user(by),
-      if (status != 1) 'modifiedBy': _user(1),
+      'requestedBy': _user(c, by),
+      if (status != 1) 'modifiedBy': _user(c, 1),
       'seasons': title.isSeries
           ? [
               {'id': 1, 'seasonNumber': 1, 'status': 5},
@@ -335,29 +363,43 @@ class SeerrFake extends ServiceFake {
 
   @override
   NetworkReply? answer(NetworkRequest r, ServerContext c) {
+    final auth = seerrAuthAnswer(r, c) ?? seerrUserSettingsAnswer(r, c);
+    if (auth != null) return auth;
     final path = r.path;
+    final setup = SeerrSetup.of(c);
+    // The gate let nobody through to a route that wants a caller; the
+    // public routes do not read it.
+    final caller = seerrCallerOf(r, c);
+    final everyone = caller?.seesEveryone ?? false;
     if (r.method == 'GET') {
       switch (path) {
         case '/api/v1/status':
           return NetworkReply.json({
-            'version': '2.7.3',
-            'commitTag': 'v2.7.3',
+            'version': setup.release.version,
+            'commitTag': setup.release.commitTag,
             'updateAvailable': false,
             'commitsBehind': 0,
             'restartRequired': false,
           });
         case '/api/v1/settings/public':
-          return NetworkReply.json({
-            'initialized': true,
-            'applicationTitle': 'Seerr',
-            'mediaServerType': c.profile.has(ServiceKey.plex) ? 1 : 2,
-          });
-        case '/api/v1/auth/me':
-          // TODO(requester-session): answers as the operator whatever
-          // `profile.seerrRequester` says — see ConfigProfile.seerrRequester.
-          return NetworkReply.json(_user(1));
+          return NetworkReply.json(setup.publicSettings);
         case '/api/v1/request':
-          final rows = [for (final row in _requests) _request(c, row)];
+          // `request.ts:147-162`: without MANAGE_REQUESTS or REQUEST_VIEW the
+          // list filters itself to the caller's own.
+          final requestedBy = int.tryParse(r.query['requestedBy'] ?? '');
+          if (!everyone &&
+              requestedBy != null &&
+              requestedBy != caller?.user.id) {
+            return seerrError(
+              403,
+              "You do not have permission to view this user's requests.",
+            );
+          }
+          final by = everyone ? requestedBy : caller?.user.id;
+          final rows = [
+            for (final row in _requests)
+              if (by == null || row.$3 == by) _request(c, row),
+          ];
           final filter = r.query['filter'];
           int? mediaStatus(JsonMap q) =>
               (q['media'] as JsonMap?)?['status'] as int?;
@@ -386,8 +428,13 @@ class SeerrFake extends ServiceFake {
                 .length,
           });
         case '/api/v1/user':
+          // `user/index.ts:160-163`: the email only for MANAGE_USERS.
+          final full = caller?.has(SeerrPermission.manageUsers) ?? false;
           return NetworkReply.json(
-            _page(r, [for (final u in _users) _user(u.$1)]),
+            _page(r, [
+              for (final u in setup.users)
+                if (full) _user(c, u.id) else _user(c, u.id)..remove('email'),
+            ]),
           );
         case '/api/v1/issue':
           return NetworkReply.json(
@@ -400,25 +447,25 @@ class SeerrFake extends ServiceFake {
                 'problemEpisode': 0,
                 'createdAt': c.ago(const Duration(days: 3)),
                 'updatedAt': c.ago(const Duration(days: 2)),
-                'createdBy': _user(2),
+                'createdBy': _user(c, 2),
                 'media': _media(c, WorldTitles.tearsOfSteel),
                 'comments': [
                   {
                     'id': 1,
                     'message': 'Audio drifts out of sync after about 8 minutes',
-                    'user': _user(2),
+                    'user': _user(c, 2),
                     'createdAt': c.ago(const Duration(days: 3)),
                   },
                   {
                     'id': 2,
                     'message': 'Which device?',
-                    'user': _user(1),
+                    'user': _user(c, 1),
                     'createdAt': c.ago(const Duration(days: 2, hours: 5)),
                   },
                   {
                     'id': 3,
                     'message': 'Living room TV',
-                    'user': _user(2),
+                    'user': _user(c, 2),
                     'createdAt': c.ago(const Duration(days: 2)),
                   },
                 ],
@@ -511,6 +558,25 @@ class SeerrFake extends ServiceFake {
           'tags': const <Object?>[],
         });
       }
+      final quota = RegExp(r'^/api/v1/user/(\d+)/quota$').firstMatch(path);
+      if (quota != null && caller != null) {
+        final id = int.parse(quota.group(1)!);
+        // `user/index.ts:804-834`: one's own, or MANAGE_USERS and
+        // MANAGE_REQUESTS for anybody's.
+        if (id != caller.user.id &&
+            !(caller.has(SeerrPermission.manageUsers) &&
+                caller.has(SeerrPermission.manageRequests))) {
+          return seerrError(
+            403,
+            "You do not have permission to view this user's request limits.",
+          );
+        }
+        final user = setup.userById(id);
+        // Upstream relays TypeORM's own "could not find" sentence here; only
+        // the 404 is modelled.
+        if (user == null) return seerrError(404, 'User not found.');
+        return NetworkReply.json(seerrQuotaOf(user, full: setup.quotaReached));
+      }
       final one = RegExp(r'^/api/v1/request/(\d+)$').firstMatch(path);
       if (one != null) {
         final id = int.parse(one.group(1)!);
@@ -519,6 +585,13 @@ class SeerrFake extends ServiceFake {
           return NetworkReply.json({
             'message': 'Request not found.',
           }, status: 404);
+        }
+        // `request.ts:434-463`.
+        if (!everyone && row.$3 != caller?.user.id) {
+          return seerrError(
+            403,
+            'You do not have permission to view this request.',
+          );
         }
         return NetworkReply.json(_request(c, row));
       }
@@ -588,6 +661,17 @@ class SeerrFake extends ServiceFake {
           'message': 'Request not found.',
         }, status: 404);
       }
+      // `request.ts:484-494`: one's own, and a series or REQUEST_ADVANCED; or
+      // MANAGE_REQUESTS.
+      final mine = row.$3 == caller?.user.id;
+      final advanced = caller?.has(SeerrPermission.requestAdvanced) ?? false;
+      if (!(caller?.has(SeerrPermission.manageRequests) ?? false) &&
+          !(mine && (row.$2.isSeries || advanced))) {
+        return seerrError(
+          403,
+          'You do not have permission to modify this request.',
+        );
+      }
       if (row.$4 != 1) {
         return NetworkReply.json({
           'message': 'Only pending requests can be modified.',
@@ -624,12 +708,74 @@ class SeerrFake extends ServiceFake {
       return NetworkReply.json(_request(c, row));
     }
     if (r.method == 'POST' && path == '/api/v1/request') {
-      return NetworkReply.json(_request(c, _requests.first), status: 201);
+      // The operator's answer is the world's first row, as it always was:
+      // the request sheet's tests read it.
+      if (caller == null || caller.byKey) {
+        return NetworkReply.json(_request(c, _requests.first), status: 201);
+      }
+      return _newRequest(r, c, caller, setup);
+    }
+    final cancel = RegExp(r'^/api/v1/request/(\d+)$').firstMatch(path);
+    if (r.method == 'DELETE' && cancel != null && caller != null) {
+      final id = int.parse(cancel.group(1)!);
+      final row = _requests.where((q) => q.$1 == id).firstOrNull;
+      if (row == null) return seerrError(404, 'Request not found.');
+      // `request.ts:706-737`: a 401, not a 403, for a request that is not
+      // one's own or no longer waits.
+      if (!caller.has(SeerrPermission.manageRequests) &&
+          (row.$3 != caller.user.id || row.$4 != 1)) {
+        return seerrError(
+          401,
+          'You do not have permission to delete this request.',
+        );
+      }
+      return const NetworkReply(204);
     }
     if (r.method == 'DELETE' && path.startsWith('/api/v1/')) {
       return const NetworkReply(204);
     }
     return null;
+  }
+
+  /// `POST /api/v1/request` by a household member's own account: the
+  /// permission and quota checks of `MediaRequest.request`, then a request of
+  /// theirs, waiting unless the account is auto-approved.
+  static NetworkReply _newRequest(
+    NetworkRequest r,
+    ServerContext c,
+    SeerrCaller caller,
+    SeerrSetup setup,
+  ) {
+    final json = r.json;
+    final body = json is Map ? json : const <String, Object?>{};
+    final kind = body['mediaType'];
+    final is4k = body['is4k'] == true;
+    final refusal = seerrRequestRefusal(
+      caller,
+      kind: kind is String ? kind : null,
+      is4k: is4k,
+      ignoreQuota: body['ignoreQuota'] == true,
+      quotaReached: setup.quotaReached,
+    );
+    if (refusal != null) return refusal;
+    final series = kind == 'tv';
+    final title =
+        WorldTitles.all
+            .where((t) => t.tmdbId == body['mediaId'] && t.isSeries == series)
+            .firstOrNull ??
+        WorldTitles.all.firstWhere((t) => t.isSeries == series);
+    final approved = seerrAutoApproves(caller, movie: !series, is4k: is4k);
+    return NetworkReply.json(
+      _request(c, (
+        100 + c.network.requestsTo(c.server.id).length,
+        title,
+        caller.user.id,
+        approved ? 2 : 1,
+        Duration.zero,
+        is4k,
+      )),
+      status: 201,
+    );
   }
 }
 
