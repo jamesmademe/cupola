@@ -8,11 +8,11 @@ import 'package:cupola/features/qbittorrent/presentation/qbittorrent_actions.dar
 
 import '../../test_helpers/profiles/profiles.dart';
 
-/// The write toast's plate, from a real write through the app's own
+/// The write toast's glyph, from a real write through the app's own
 /// qBittorrent client: the tone comes out of the classification of what the
 /// wire said, never out of the toast deciding for itself.
 void main() {
-  Future<Color?> plateAfterPause(
+  Future<Color?> glyphAfterPause(
     WidgetTester tester,
     ConfigProfile profile,
   ) async {
@@ -40,36 +40,47 @@ void main() {
     );
     await tester.tap(find.text('go'));
     await harness.settle(tester);
-    final plate = tester
-        .widget<SnackBar>(find.byType(SnackBar))
-        .backgroundColor;
+    final glyph = tester
+        .widget<Icon>(
+          find.descendant(
+            of: find.byType(SnackBar),
+            matching: find.byType(Icon),
+          ),
+        )
+        .color;
     await harness.unmount(tester);
-    return plate;
+    return glyph;
   }
 
-  final scheme = AppTheme.darkTheme().colorScheme;
+  final theme = AppTheme.darkTheme();
+  Color toned(StatusTone tone) => statusToneColor(
+    theme.colorScheme,
+    tone,
+    surface: theme.snackBarTheme.backgroundColor,
+  );
 
-  testWidgets('P7: qBittorrent refused the sign-in, so the toast is amber', (
+  testWidgets(
+    'P7: qBittorrent refused the sign-in, so the toast glyph is amber',
+    (tester) async {
+      expect(
+        await glyphAfterPause(tester, Profiles.p7),
+        toned(StatusTone.warning),
+      );
+    },
+  );
+
+  testWidgets('P1, qBittorrent did not answer: the one red glyph', (
     tester,
   ) async {
     expect(
-      await plateAfterPause(tester, Profiles.p7),
-      statusToneFill(scheme, StatusTone.warning),
-    );
-  });
-
-  testWidgets('P1, qBittorrent did not answer: the one red toast', (
-    tester,
-  ) async {
-    expect(
-      await plateAfterPause(
+      await glyphAfterPause(
         tester,
         Profiles.p1.withBehaviour(
           WorldIds.qbittorrent,
           ConnectionBehaviour.didNotAnswer,
         ),
       ),
-      statusToneFill(scheme, StatusTone.error),
+      toned(StatusTone.error),
     );
   });
 }

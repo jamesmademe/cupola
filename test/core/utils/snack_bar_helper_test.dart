@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -40,15 +39,30 @@ String _snackText(WidgetTester tester) {
   return content.data!;
 }
 
+/// The colour the toast repaints its plate with, or null for the theme's own.
 Color? _plate(WidgetTester tester) =>
     tester.widget<SnackBar>(find.byType(SnackBar)).backgroundColor;
 
-Color _ink(WidgetTester tester) => tester
-    .widget<Text>(
-      find.descendant(of: find.byType(SnackBar), matching: find.byType(Text)),
+/// The plate the toast actually sits on: the theme's toast plate.
+Color _themePlate(WidgetTester tester) {
+  final theme = Theme.of(tester.element(find.byType(Scaffold)));
+  return theme.snackBarTheme.backgroundColor ??
+      theme.colorScheme.inverseSurface;
+}
+
+/// The failure's glyph ahead of the words.
+Color _glyph(WidgetTester tester) => tester
+    .widget<Icon>(
+      find.descendant(of: find.byType(SnackBar), matching: find.byType(Icon)),
     )
-    .style!
     .color!;
+
+/// The tone walked against the toast's own plate, as the helper paints it.
+Color _toned(WidgetTester tester, StatusTone tone) => statusToneColor(
+  Theme.of(tester.element(find.byType(Scaffold))).colorScheme,
+  tone,
+  surface: _themePlate(tester),
+);
 
 double _contrast(Color a, Color b) {
   final la = a.computeLuminance();
@@ -130,7 +144,7 @@ void main() {
     });
 
     testWidgets(
-      'a failure with no cause attached is a fault plate, never red',
+      'a failure with no cause attached is a fault glyph, never red',
       (tester) async {
         // A string says nothing about a host. Red is "did not answer", and a
         // form that cannot be saved did not ask anybody anything.
@@ -139,10 +153,8 @@ void main() {
           (context) => SnackBarHelper.error(context, 'Failed.', detail: 'why'),
         );
 
-        final context = tester.element(find.byType(Scaffold));
-        final scheme = Theme.of(context).colorScheme;
-        expect(_plate(tester), statusToneFill(scheme, StatusTone.warning));
-        expect(_plate(tester), isNot(scheme.error));
+        expect(_glyph(tester), _toned(tester, StatusTone.warning));
+        expect(_glyph(tester), isNot(_toned(tester, StatusTone.error)));
       },
     );
   });
@@ -152,9 +164,8 @@ void main() {
       ('dark', AppTheme.darkTheme()),
       ('light', AppTheme.lightTheme()),
     ]) {
-      testWidgets('$room: a refused key is an amber plate with legible ink', (
-        tester,
-      ) async {
+      testWidgets('$room: a refused key keeps the toast plate and carries an '
+          'amber glyph', (tester) async {
         await _fire(
           tester,
           (context) => SnackBarHelper.error(
@@ -165,12 +176,17 @@ void main() {
           theme: theme,
         );
 
-        final amber = statusToneFill(theme.colorScheme, StatusTone.warning);
-        expect(_plate(tester), amber);
-        expect(_plate(tester), isNot(theme.colorScheme.error));
-        final ink = _ink(tester);
-        expect(ink, ServiceTheme.foregroundOn(amber));
-        expect(_contrast(ink, amber), greaterThanOrEqualTo(4.5));
+        // No tone fill behind a fault: the Presence Rule.
+        expect(_plate(tester), isNull);
+        expect(_glyph(tester), _toned(tester, StatusTone.warning));
+        expect(
+          _contrast(_glyph(tester), _themePlate(tester)),
+          greaterThanOrEqualTo(3),
+        );
+        expect(
+          tester.widget<Icon>(find.byType(Icon)).icon,
+          Icons.key_off_rounded,
+        );
       });
 
       testWidgets('$room: red is a server that did not answer, and only that', (
@@ -189,13 +205,16 @@ void main() {
           theme: theme,
         );
 
-        final red = statusToneFill(theme.colorScheme, StatusTone.error);
-        expect(_plate(tester), red);
-        expect(_contrast(_ink(tester), red), greaterThanOrEqualTo(4.5));
+        expect(_plate(tester), isNull);
+        expect(_glyph(tester), _toned(tester, StatusTone.error));
+        expect(
+          _contrast(_glyph(tester), _themePlate(tester)),
+          greaterThanOrEqualTo(3),
+        );
       });
     }
 
-    testWidgets('a cause already in the words tones the plate and prints '
+    testWidgets('a cause already in the words tones the glyph and prints '
         'nothing twice', (tester) async {
       // The write toasts say why in the classification's own words
       // (`writeFailureReason`), so the failure rides along as the cause only.
@@ -211,14 +230,11 @@ void main() {
         ),
       );
 
-      final scheme = Theme.of(
-        tester.element(find.byType(Scaffold)),
-      ).colorScheme;
       expect(
         _snackText(tester),
         'Could not stop playback. Jellyfin did not answer.',
       );
-      expect(_plate(tester), statusToneFill(scheme, StatusTone.error));
+      expect(_glyph(tester), _toned(tester, StatusTone.error));
     });
 
     testWidgets('the cause wins over a detail that is only words', (
@@ -234,10 +250,7 @@ void main() {
         ),
       );
 
-      final scheme = Theme.of(
-        tester.element(find.byType(Scaffold)),
-      ).colorScheme;
-      expect(_plate(tester), statusToneFill(scheme, StatusTone.warning));
+      expect(_glyph(tester), _toned(tester, StatusTone.warning));
     });
   });
 

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 
 /// Convenience helpers for showing semantically typed snackbars.
 ///
@@ -85,7 +86,7 @@ class SnackBarHelper {
   /// happened and never *what to do about it*, which is the half that matters.
   ///
   /// Default styling on purpose — this is not an error, and the error variant's
-  /// toned plate would make a configuration fact look like a fault.
+  /// toned glyph would make a configuration fact look like a fault.
   static void withAction(
     BuildContext context,
     String message, {
@@ -112,7 +113,8 @@ class SnackBarHelper {
     );
   }
 
-  /// Shows a failure snackbar on a plate in the failure's tone.
+  /// Shows a failure snackbar: the toast's own plate, with the failure's
+  /// glyph in the failure's tone ahead of the words.
   ///
   /// Pass the caught object as [detail] rather than interpolating it into
   /// [message]: `'Search failed: $e'` puts a stack-trace fragment where a
@@ -123,22 +125,25 @@ class SnackBarHelper {
   ///
   /// Pass it as [cause] instead when [message] already says why in the
   /// classification's words (`writeFailureReason`, `sectionFailureMessage`):
-  /// the plate takes its tone from it and nothing is printed twice.
+  /// the glyph takes its tone from it and nothing is printed twice.
   ///
   /// [duration] is for the rare failure that needs longer than the default four
   /// seconds — a grab that failed after the sheet moved on, say, where the user
   /// has to read a sentence they did not expect. Everything else takes the
   /// default; a snackbar that lingers is one the user has to dismiss.
   ///
-  /// ## The plate is the failure's tone
+  /// ## The tone is on the glyph
   ///
-  /// Red only when nothing answered ([failureTone] of the classified [cause]
-  /// or [detail]); amber for every fault — a refused key, a 5xx, a write the
-  /// service turned down — and for a toast that carries no cause at all, a
-  /// form that cannot be saved or a link nothing can open, because "did not
-  /// answer" is a claim about a host and nothing here supports it. The plate
-  /// used to be `colorScheme.error` for all of them, so a key Radarr had just
-  /// refused read exactly like a switched-off box.
+  /// The brand book's Presence Rule: a fault is a quiet line, and its tone
+  /// lives on the glyph, never on a fill behind it. The plate is the one every
+  /// toast sits on (`inverse-surface`), and the glyph ([failureIcon] of the
+  /// classified [cause] or [detail]) is red only when nothing answered; amber
+  /// for every fault — a refused key, a 5xx, a write the service turned down —
+  /// and for a toast that carries no cause at all, a form that cannot be saved
+  /// or a link nothing can open, because "did not answer" is a claim about a
+  /// host and nothing here supports it. The plate used to be `colorScheme.error`
+  /// for all of them, so a key Radarr had just refused read exactly like a
+  /// switched-off box, in a red fill.
   static void error(
     BuildContext context,
     String message, {
@@ -146,27 +151,32 @@ class SnackBarHelper {
     Object? cause,
     Duration? duration,
   }) {
-    final background = statusToneFill(
-      Theme.of(context).colorScheme,
-      failureTone(classifyConnectionFailure(cause ?? detail)),
+    final theme = Theme.of(context);
+    final reason = classifyConnectionFailure(cause ?? detail);
+    // Walked against the plate it sits on, which is dark in both rooms: the
+    // day room's red and amber are drawn for paper and would sink into it.
+    final glyph = statusToneColor(
+      theme.colorScheme,
+      failureTone(reason),
+      surface:
+          theme.snackBarTheme.backgroundColor ??
+          theme.colorScheme.inverseSurface,
     );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         duration: duration ?? const Duration(seconds: 4),
-        // The theme's snackbar ink is chosen for `inverseSurface`, and this is
-        // the one snackbar that repaints its own background — so it has to pick
-        // its own foreground too. DESIGN.md's Luminance Rule: an opaque accent
-        // resolves its ink through `foregroundOn`, never by assuming white.
-        // Assuming it here measured 3.5:1 on the light theme's error red,
-        // against a 4.5:1 floor; resolved, it lands on the dark ink at 5.2:1,
-        // and the dark room's bright amber takes the dark ink too.
-        // Set on the `Text` because `SnackBar` takes its content style from the
-        // theme; a `Text` style merges over that and changes only the colour.
-        content: Text(
-          _compose(message, detail),
-          style: TextStyle(color: ServiceTheme.foregroundOn(background)),
+        content: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // The words carry the state; the glyph is its tone, not a second
+            // announcement.
+            ExcludeSemantics(
+              child: Icon(failureIcon(reason), size: 18, color: glyph),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: Text(_compose(message, detail))),
+          ],
         ),
-        backgroundColor: background,
       ),
     );
   }
