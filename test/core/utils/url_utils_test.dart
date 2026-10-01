@@ -332,9 +332,12 @@ void main() {
       });
 
       test('warns for cleartext to a public host', () {
+        // One sentence for the connection form and the first-run walk.
         expect(
           UrlUtils.cleartextWarning('http://radarr.example.com'),
-          contains('unencrypted'),
+          'This address is off your local network and http:// sends your '
+          'credentials in the clear. Reach it over a reverse proxy with TLS, '
+          'a VPN like Tailscale, or a Cloudflare Tunnel instead.',
         );
         // 172.32 is outside the 172.16/12 private range.
         expect(UrlUtils.cleartextWarning('http://172.32.0.1'), isNotNull);
@@ -356,7 +359,7 @@ void main() {
         ]) {
           expect(
             UrlUtils.cleartextWarning(host),
-            contains('unencrypted'),
+            contains('in the clear'),
             reason: '$host is a public hostname, not a ULA',
           );
         }

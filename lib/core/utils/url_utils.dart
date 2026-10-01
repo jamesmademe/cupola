@@ -298,8 +298,12 @@ class UrlUtils {
     final host = Uri.tryParse(value)?.host ?? '';
     if (host.isEmpty || _isPrivateHost(host)) return null;
 
-    return 'This address is not on your local network and http:// sends your '
-        'credentials unencrypted. Use https:// if the instance supports it.';
+    // The one wording, for the connection form and the first-run walk alike,
+    // and it names the three routes this audience uses rather than only
+    // "use https".
+    return 'This address is off your local network and http:// sends your '
+        'credentials in the clear. Reach it over a reverse proxy with TLS, a '
+        'VPN like Tailscale, or a Cloudflare Tunnel instead.';
   }
 
   /// Whether [url] is an absolute http(s) address safe to hand to the platform

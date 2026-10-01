@@ -1052,22 +1052,13 @@ class _OnboardingFieldState extends State<OnboardingField> {
     // The service's own reason about the scheme wins over the general one: a
     // TrueNAS address over http:// is refused, not merely risky.
     final warning = error == null
-        ? (widget.warningFor?.call(raw) ?? _addressWarning(raw))
+        ? (widget.warningFor?.call(raw) ?? UrlUtils.cleartextWarning(raw))
         : null;
     if (error == _error && warning == _warning) return;
     setState(() {
       _error = error;
       _warning = warning;
     });
-  }
-
-  /// Extends `cleartextWarning`'s remedy from "use https" to the three routes
-  /// this audience actually uses.
-  static String? _addressWarning(String raw) {
-    if (UrlUtils.cleartextWarning(raw) == null) return null;
-    return 'This address is off your local network and http:// sends your '
-        'credentials in the clear. Reach it over a reverse proxy with TLS, a '
-        'VPN like Tailscale, or a Cloudflare Tunnel instead.';
   }
 
   @override

@@ -1341,7 +1341,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                   warning ??
                   "${service.title}'s default port is "
                       '${service.defaultPort}.',
-              helperMaxLines: 3,
+              // The cleartext warning names three routes, which takes four
+              // lines on a narrow phone; cut at three it lost its remedy.
+              helperMaxLines: 5,
               helperStyle: warning == null
                   ? null
                   : Theme.of(context).textTheme.bodySmall?.copyWith(
