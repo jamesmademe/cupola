@@ -360,10 +360,26 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         }
       }
 
+      // A token that passes on a connection that never failed here names no
+      // team. When another connection was stopped by an Access team, this
+      // address is asked once without the token: Access sends an
+      // unauthenticated request to its team's sign-in, which names the team.
+      var shareTeam = team;
+      if (result.isConnected &&
+          shareTeam == null &&
+          _testedAccess is CloudflareServiceToken &&
+          _anotherConnectionStoppedByAccess()) {
+        final bare = await diagnoseInstance(
+          candidateInstance.copyWith(access: const NoAccess()),
+          candidate,
+        );
+        shareTeam = accessTeamOf(bare.gateway);
+      }
+
       if (!mounted) return;
       HapticFeedback.lightImpact();
       final shareable = result.isConnected
-          ? _sameTeamConnections(team, _testedAccess)
+          ? _sameTeamConnections(shareTeam, _testedAccess)
           : const <ServiceInstance>[];
       setState(() {
         _testResult = result;
@@ -820,6 +836,11 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
           if (_lastTeamOf(other) == team) other,
     ];
   }
+
+  bool _anotherConnectionStoppedByAccess() => ref
+      .read(currentSettingsProvider)
+      .configuredInstances
+      .any((other) => other.id != _target.id && _lastTeamOf(other) != null);
 
   String? _lastTeamOf(ServiceInstance instance) {
     final key = (service: instance.service, instanceId: instance.id);

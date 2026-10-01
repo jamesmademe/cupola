@@ -514,6 +514,40 @@ void main() {
     await harness.unmount(tester);
   });
 
+  testWidgets('a token already answering offers itself too: the team is asked '
+      'of its address once, without the token', (tester) async {
+    // The live case: Radarr was set up with its token and answers, so no
+    // failure of its own names the team; Sonarr and Seerr were stopped by it.
+    final (harness, _) = await _pumpForm(
+      tester,
+      Profiles.p8,
+      WorldIds.radarr,
+      before: (container) async {
+        for (final (service, id) in [
+          (ServiceKey.radarr, WorldIds.radarr),
+          (ServiceKey.sonarr, WorldIds.sonarr),
+          (ServiceKey.seerr, WorldIds.seerr),
+        ]) {
+          await container.read(
+            instanceSummaryProvider((service: service, instanceId: id)).future,
+          );
+        }
+      },
+    );
+
+    await _test(tester, harness);
+
+    expect(
+      find.text('Access let the token through and Radarr answered.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Use the same token for Seerr and Sonarr?'),
+      findsOneWidget,
+    );
+    await harness.unmount(tester);
+  });
+
   group('a gateway\'s remedy opens the form on the Access row', () {
     AccessKind? accessOf(ServiceKey service, AccessGatewayKind kind) =>
         FailureRemedy.forReason(
