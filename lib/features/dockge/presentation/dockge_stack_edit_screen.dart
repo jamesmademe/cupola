@@ -184,6 +184,7 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
         if (detail.hasError)
           AppErrorState(
             error: detail.error!,
+            service: ServiceKey.dockge,
             onRetry: () =>
                 ref.invalidate(dockgeStackDetailProvider(widget.name!)),
           )

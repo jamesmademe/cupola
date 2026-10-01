@@ -317,6 +317,8 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
               child: AppErrorState.compact(
                 error: error,
                 serviceName: 'Lidarr',
+                service: ServiceKey.lidarr,
+                instanceId: _instanceId,
                 onRetry: () => ref.invalidate(
                   musicAlbumsForProvider((
                     instanceId: _instanceId,

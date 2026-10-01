@@ -120,6 +120,7 @@ class _CategoryPickerState extends ConsumerState<_CategoryPicker> {
       error: (error, _) => AppErrorState(
         error: error,
         serviceName: ServiceKey.prowlarr.title,
+        service: ServiceKey.prowlarr,
         onRetry: () => ref.invalidate(prowlarrCategoriesProvider),
       ),
     );

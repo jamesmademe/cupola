@@ -594,6 +594,7 @@ class _MediaBrowseScaffoldState<T>
       error: (error, stack) => AppErrorState(
         error: error,
         serviceName: widget.serviceName,
+        service: widget.service,
         onRetry: () => ref.invalidate(widget.searchResultsProvider),
       ),
       data: (results) {

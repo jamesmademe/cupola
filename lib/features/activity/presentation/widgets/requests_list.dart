@@ -92,7 +92,14 @@ class RequestsList extends ConsumerWidget {
         ),
         error: (err, stack) => ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: [AppErrorState(error: err, onRetry: () => _reload(ref))],
+          children: [
+            AppErrorState(
+              error: err,
+              service: ServiceKey.seerr,
+              instanceId: instanceId,
+              onRetry: () => _reload(ref),
+            ),
+          ],
         ),
         data: (requests) {
           if (requests.isEmpty) {

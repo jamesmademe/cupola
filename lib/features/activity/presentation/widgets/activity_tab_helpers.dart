@@ -159,6 +159,10 @@ String _scopeLabel(ServiceType serviceType) {
 
 /// Mixin providing shared async sliver builders for activity tabs.
 mixin ActivityTabHelpers {
+  /// Whose reads the tab makes: the failure state names it in its headline
+  /// and opens its connection form for the remedy.
+  ServiceKey get failureService;
+
   Widget buildRefreshableSegmentedView<T extends Enum>({
     required Key refreshKey,
     required VoidCallback onRefreshRequested,
@@ -236,7 +240,7 @@ mixin ActivityTabHelpers {
     if (snapshot.hasError) {
       return SliverFillRemaining(
         hasScrollBody: false,
-        child: AppErrorState(error: snapshot.error!),
+        child: AppErrorState(error: snapshot.error!, service: failureService),
       );
     }
 

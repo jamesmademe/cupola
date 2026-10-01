@@ -123,6 +123,7 @@ class _DiscoverSeeAllScreenState extends ConsumerState<DiscoverSeeAllScreen> {
                       state.error ??
                       const ClassifiedFailure(ServiceFailureReason.unknown),
                   serviceName: ServiceKey.seerr.title,
+                  service: ServiceKey.seerr,
                   onRetry: _pagingController.refresh,
                 ),
                 itemBuilder: (context, item, index) {

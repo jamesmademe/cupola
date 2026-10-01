@@ -55,7 +55,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// ## The remedy leads
 ///
 /// When the failure names a fix that lives in the connection's form, and
-/// [serviceName] says whose connection it is, that fix is the primary action
+/// [service] says whose connection it is, that fix is the primary action
 /// ([FailureRemedy]), in the fault's one amber fill ([remedyFillStyle]): `Paste the key again` for a refused key, `Change the
 /// address` for an `http://` address the device would not dial, `Check the
 /// address` or `Check the certificate` when the server answered from the wrong
@@ -63,9 +63,17 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// follows as the text action only where the same request can still succeed;
 /// a refused key or an address nothing was sent to can only be refused again,
 /// so there it is left out. A refused sign-in keeps it, because a ban for too
-/// many attempts runs out. Every caller gets this from the error and the name
-/// it already passes. A state that cannot name the service keeps Retry,
-/// and nothing else, because it cannot say whose form to open.
+/// many attempts runs out. The form is [instanceId]'s when the caller knows
+/// which connection the read went to, and the lens's otherwise.
+///
+/// A caller that passes no [service] still gets the remedy for the service
+/// [serviceName] starts with. That is a reading of words, kept as the
+/// fallback for the states handed only a display name (`AsyncValueWidget`'s
+/// callers); it cannot name a connection the user renamed, so every caller
+/// that knows its service passes it, and `failure_service_guard_test.dart`
+/// lists the ones that cannot with the reason. A state that names no service
+/// either way keeps Retry, and nothing else, because it cannot say whose form
+/// to open.
 ///
 /// Retry alone is the remedy too: in the amber fill for a fault (a 5xx, a
 /// timeout), and a ghost button in ink beside silence, never filled.
@@ -82,13 +90,25 @@ class AppErrorState extends StatelessWidget {
   /// service is what did or did not answer. Optional because a handful of
   /// callers sit on screens where the subject is already unambiguous; those,
   /// and a name that is no service, fall back to naming the server.
+  /// [service] wins over it.
   final String? serviceName;
+
+  /// Whose failure this is: the service the headline names and whose form the
+  /// remedy opens. Wins over the service [serviceName] names; see *The remedy
+  /// leads*.
+  final ServiceKey? service;
+
+  /// The connection the failed read went to, when the caller knows it: the
+  /// remedy opens that connection's form rather than the lens's.
+  final String? instanceId;
 
   const AppErrorState({
     super.key,
     required this.error,
     this.onRetry,
     this.serviceName,
+    this.service,
+    this.instanceId,
   }) : compact = false;
 
   const AppErrorState.compact({
@@ -96,10 +116,13 @@ class AppErrorState extends StatelessWidget {
     required this.error,
     this.onRetry,
     this.serviceName,
+    this.service,
+    this.instanceId,
   }) : compact = true;
 
-  /// The service [serviceName] names, when it names one.
-  ServiceKey? get _service => FailureRemedy.serviceNamedBy(serviceName);
+  /// [service], or the service [serviceName] names when it names one.
+  ServiceKey? get _service =>
+      service ?? FailureRemedy.serviceNamedBy(serviceName);
 
   String _headline(ServiceFailureReason reason) {
     final service = _service;
@@ -130,7 +153,7 @@ class AppErrorState extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final reason = classifyConnectionFailure(error);
-    final remedy = FailureRemedy.of(_service, error);
+    final remedy = FailureRemedy.of(_service, error, instanceId: instanceId);
     // Walked against the ground the glyph and the label actually sit on: the
     // page, with nothing behind them.
     final toneInk = statusToneColor(colorScheme, failureTone(reason));

@@ -197,6 +197,7 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
                   : AppErrorState.compact(
                       error: error,
                       serviceName: 'Bazarr',
+                      service: ServiceKey.bazarr,
                       onRetry: () => ref.invalidate(
                         bazarrWantedMovieByIdProvider(radarrId),
                       ),

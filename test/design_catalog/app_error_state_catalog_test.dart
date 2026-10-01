@@ -68,6 +68,24 @@ void main() {
         width: 320,
       ),
       CatalogScene(
+        'AppErrorState(service:) · qBittorrent refused the sign-in: the '
+        'headline names what it refused, Sign in again leads in the amber '
+        'fill, and Retry follows as text in ink, because a ban runs out',
+        (_) => AppErrorState(
+          service: ServiceKey.qbittorrent,
+          error: DioException(
+            requestOptions: RequestOptions(path: '/api/v2/torrents/info'),
+            type: DioExceptionType.badResponse,
+            response: Response<dynamic>(
+              requestOptions: RequestOptions(path: '/api/v2/torrents/info'),
+              statusCode: 403,
+            ),
+          ),
+          onRetry: () {},
+        ),
+        width: 320,
+      ),
+      CatalogScene(
         'AppErrorState · 401 with no service named: Retry only, because it '
         'cannot say whose form to open, in the amber fill as the fault\'s '
         'remedy',

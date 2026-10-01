@@ -221,6 +221,7 @@ class _ImplementationListState extends ConsumerState<_ImplementationList> {
             error: (error, _) => AppErrorState(
               error: error,
               serviceName: ServiceKey.prowlarr.title,
+              service: ServiceKey.prowlarr,
               onRetry: () =>
                   ref.invalidate(prowlarrProviderSchemaProvider(widget.kind)),
             ),

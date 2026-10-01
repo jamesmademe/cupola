@@ -234,6 +234,7 @@ class _BazarrLibraryTabState extends ConsumerState<_BazarrLibraryTab> {
         key: ValueKey(_errorKey),
         error: _error!,
         serviceName: ServiceKey.bazarr.title,
+        service: ServiceKey.bazarr,
         onRetry: _loadInitial,
       );
     }

@@ -13,6 +13,7 @@ import 'package:cupola/features/activity/presentation/widgets/sonarr_wanted_hier
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 class WantedTab extends ConsumerStatefulWidget {
   final ServiceType serviceType;
@@ -28,6 +29,9 @@ class WantedTab extends ConsumerStatefulWidget {
 }
 
 class _WantedTabState extends ConsumerState<WantedTab> with ActivityTabHelpers {
+  @override
+  ServiceKey get failureService => widget.serviceType.service;
+
   WantedSegment _selectedSegment = WantedSegment.missing;
   Key _refreshKey = UniqueKey();
   Future<Map<int, String>>? _movieQualityProfilesFuture;

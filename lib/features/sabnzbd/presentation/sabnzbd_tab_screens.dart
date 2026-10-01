@@ -261,6 +261,7 @@ class SabnzbdServersScreen extends ConsumerWidget {
           child: AppErrorState(
             error: configs.error!,
             serviceName: 'SABnzbd servers',
+            service: ServiceKey.sabnzbd,
             onRetry: () => _refresh(ref),
           ),
         ),

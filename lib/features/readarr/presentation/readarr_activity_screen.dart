@@ -92,6 +92,7 @@ class _ReadarrActivityScreenState extends ConsumerState<ReadarrActivityScreen> {
                     error: snapshot.error!,
                     onRetry: _reload,
                     serviceName: ServiceKey.readarr.title,
+                    service: ServiceKey.readarr,
                   ),
                 ],
               );

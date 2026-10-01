@@ -123,6 +123,7 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
         error: (error, _) => AppErrorState(
           error: error,
           serviceName: ServiceKey.prowlarr.title,
+          service: ServiceKey.prowlarr,
           // The source, not the lookup: `prowlarrIndexerByIdProvider`
           // only re-reads the list, so invalidating it alone re-read
           // the list's cached failure and the Retry did nothing.

@@ -167,6 +167,7 @@ class _ProwlarrHistoryScreenState extends ConsumerState<ProwlarrHistoryScreen> {
         child: AppErrorState(
           error: _error!,
           serviceName: 'Prowlarr history',
+          service: ServiceKey.prowlarr,
           onRetry: _reload,
         ),
       );

@@ -14,8 +14,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// that leaves the argument out and still draws, with the fallback quietly
 /// covering for it.
 ///
-/// A call that truly cannot know its service is listed, by file, in the
-/// allow-list beside its test with the reason.
+/// A call that truly cannot know its service is listed, by file, in its
+/// widget's allow-list with the reason.
 void main() {
   final libFiles = Directory('lib')
       .listSync(recursive: true)
@@ -24,16 +24,49 @@ void main() {
       .where((f) => !f.path.startsWith('lib/core/generated/'))
       .toList(growable: false);
 
-  group('InlineErrorRetry', () {
-    /// Files whose `InlineErrorRetry` cannot name its service, and why. None
-    /// today: every section that draws one reads one service.
-    const allowed = <String, String>{};
+  _guard(
+    'InlineErrorRetry',
+    libFiles,
+    RegExp(r'\bInlineErrorRetry(?:\.fixedHeight)?\('),
+    definedIn: 'lib/core/widgets/inline_error_retry.dart',
+    // None: every section that draws one reads one service.
+    allowed: const {},
+  );
 
-    final calls = _callsOf(
-      libFiles,
-      RegExp(r'\bInlineErrorRetry(?:\.fixedHeight)?\('),
-      definedIn: 'lib/core/widgets/inline_error_retry.dart',
-    );
+  _guard(
+    'AppErrorState',
+    libFiles,
+    RegExp(r'\bAppErrorState(?:\.compact)?\('),
+    definedIn: 'lib/core/widgets/app_error_state.dart',
+    allowed: const {
+      'lib/core/widgets/async_value_widget.dart':
+          'Handed a display name by each of its callers, never a service, '
+          'so it passes `serviceName` on and the fallback reads it.',
+      'lib/core/widgets/media_detail_placeholder_view.dart':
+          'Handed a display name by the detail pages it stands in for.',
+      'lib/core/widgets/interactive_search_sheet.dart':
+          'The sheet `showAsync` opens is told a title, not a service.',
+      'lib/features/activity/presentation/global_activity_screen.dart':
+          'Every configured service at once: no one service failed, and '
+          'no one form holds the fix.',
+      'lib/features/stream/presentation/widgets/stream_activity_section.dart':
+          'Several media servers, all dark. With one, the section draws '
+          "that server's own leaf instead.",
+    },
+  );
+}
+
+/// Holds every [opener] call in `lib/` outside [definedIn] to naming its
+/// `service:`, except in the files [allowed] lists with the reason.
+void _guard(
+  String widget,
+  List<File> libFiles,
+  RegExp opener, {
+  required String definedIn,
+  required Map<String, String> allowed,
+}) {
+  group(widget, () {
+    final calls = _callsOf(libFiles, opener, definedIn: definedIn);
 
     test('the scan finds the calls', () {
       expect(calls, isNotEmpty);
@@ -49,10 +82,10 @@ void main() {
         offenders,
         isEmpty,
         reason:
-            'An InlineErrorRetry here names no `service:`. Pass the service '
-            'whose read failed (and `instanceId:` when the screen knows the '
-            'connection), so the remedy opens the right form. If it truly '
-            'cannot know, list the file with the reason.',
+            'A $widget here names no `service:`. Pass the service whose read '
+            'failed (and `instanceId:` when the screen knows the connection), '
+            'so the remedy opens the right form. If it truly cannot know, '
+            'list the file with the reason.',
       );
     });
 

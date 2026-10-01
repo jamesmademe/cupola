@@ -442,6 +442,49 @@ void main() {
       expect(find.text('Paste the key again'), findsNothing);
     });
 
+    testWidgets('AppErrorState: an explicit service and connection win over '
+        'the name', (tester) async {
+      // The name is a connection the user called something else, which no
+      // reading of the words can tie to Radarr.
+      await _pump(
+        tester,
+        AppErrorState(
+          serviceName: 'Films',
+          error: _status(401),
+          service: ServiceKey.radarr,
+          instanceId: 'radarr-second',
+          onRetry: () {},
+        ),
+      );
+
+      expect(find.text('Radarr answered but refused the key'), findsOneWidget);
+      await tester.tap(find.text('Paste the key again'));
+      await tester.pumpAndSettle();
+      expect(_landedOn?.path, '/settings/service/radarr');
+      expect(_landedOn?.queryParameters['i'], 'radarr-second');
+    });
+
+    testWidgets('AppErrorState: the explicit service wins over the one the '
+        'name starts with', (tester) async {
+      await _pump(
+        tester,
+        AppErrorState(
+          serviceName: 'Seerr issues',
+          error: _status(403),
+          service: ServiceKey.qbittorrent,
+          onRetry: () {},
+        ),
+      );
+
+      // qBittorrent takes a sign-in, so the headline and the remedy say so.
+      expect(
+        find.text('qBittorrent answered but refused the sign-in'),
+        findsOneWidget,
+      );
+      expect(_filled('Sign in again'), findsOneWidget);
+      expect(find.text('Paste the key again'), findsNothing);
+    });
+
     testWidgets('InlineErrorRetry: a section Radarr refused offers the key in '
         'place of Retry', (tester) async {
       final error = _status(401);

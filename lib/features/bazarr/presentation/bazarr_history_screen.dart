@@ -211,6 +211,7 @@ class _BazarrHistoryScreenState extends ConsumerState<BazarrHistoryScreen> {
         child: AppErrorState(
           error: _errors[failedSources.first]!,
           serviceName: 'Bazarr history',
+          service: ServiceKey.bazarr,
           onRetry: _reload,
         ),
       );

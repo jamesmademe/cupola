@@ -222,6 +222,7 @@ class _AddIndexerBodyState extends ConsumerState<_AddIndexerBody> {
             error: (error, _) => AppErrorState(
               error: error,
               serviceName: ServiceKey.prowlarr.title,
+              service: ServiceKey.prowlarr,
               onRetry: () => ref.invalidate(prowlarrIndexerSchemaProvider),
             ),
           ),

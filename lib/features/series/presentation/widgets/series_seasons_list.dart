@@ -165,6 +165,7 @@ class SeriesSeasonsList extends StatelessWidget {
       return AppErrorState.compact(
         error: episodesAsync.error ?? 'Unknown error',
         serviceName: 'Sonarr',
+        service: ServiceKey.sonarr,
         onRetry: onRetryEpisodes,
       );
     }

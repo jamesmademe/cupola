@@ -179,7 +179,11 @@ class _ArrTabScreenState extends ConsumerState<ArrTabScreen> {
     if (snapshot.hasError) {
       return _single(
         context,
-        AppErrorState(error: snapshot.error!, onRetry: _reload),
+        AppErrorState(
+          error: snapshot.error!,
+          service: _service,
+          onRetry: _reload,
+        ),
       );
     }
 

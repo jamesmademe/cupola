@@ -77,6 +77,7 @@ class ProwlarrAppProfilesScreen extends ConsumerWidget {
         error: (error, _) => AppErrorState(
           error: error,
           serviceName: ServiceKey.prowlarr.title,
+          service: ServiceKey.prowlarr,
           onRetry: () => ref.invalidate(prowlarrAppProfilesProvider),
         ),
       ),

@@ -83,8 +83,11 @@ class _StackDetailBody extends ConsumerWidget {
         .when(
           data: (detail) => _DetailBody(detail: detail, onRefresh: onRefresh),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) =>
-              AppErrorState(error: error, onRetry: () => onRefresh(ref)),
+          error: (error, _) => AppErrorState(
+            error: error,
+            service: ServiceKey.dockge,
+            onRetry: () => onRefresh(ref),
+          ),
         );
   }
 }
@@ -127,7 +130,8 @@ class _DetailBody extends ConsumerWidget {
           servicesAsync.when(
             data: (services) => _ServiceStatusList(services: services),
             loading: () => const ShimmerPlaceholder(height: 120),
-            error: (error, _) => AppErrorState.compact(error: error),
+            error: (error, _) =>
+                AppErrorState.compact(error: error, service: ServiceKey.dockge),
           ),
           const SizedBox(height: 20),
           _TerminalLog(stackName: detail.name),

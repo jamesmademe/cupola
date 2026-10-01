@@ -432,6 +432,7 @@ class _DiscoverSearchResults extends ConsumerWidget {
           : AppErrorState(
               error: error,
               serviceName: ServiceKey.seerr.title,
+              service: ServiceKey.seerr,
               onRetry: () => ref.invalidate(discoverSearchResultsProvider),
             ),
       data: (results) {

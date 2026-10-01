@@ -134,6 +134,7 @@ class _ArrCalendarScreenState extends ConsumerState<ArrCalendarScreen> {
                     error: snapshot.error!,
                     onRetry: _reload,
                     serviceName: widget.service.title,
+                    service: widget.service,
                   ),
                 ],
               );

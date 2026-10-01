@@ -419,6 +419,7 @@ class _LibraryGrid extends StatelessWidget {
             : AppErrorState(
                 error: state.error ?? const StreamLibraryPageFailure(),
                 serviceName: service.title,
+                service: service,
                 onRetry: fetchNextPage,
               ),
         // A failure partway down used to truncate the grid silently — no

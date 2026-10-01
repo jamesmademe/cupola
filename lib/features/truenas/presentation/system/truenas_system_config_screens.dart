@@ -19,6 +19,7 @@ import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.
 import 'package:cupola/features/truenas/presentation/widgets/truenas_section_scaffold.dart';
 import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
 import 'package:cupola/features/truenas/domain/truenas_capability.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Renders an async config map/list into a standard section scaffold.
 class _AsyncSection<T> extends StatelessWidget {
@@ -271,6 +272,7 @@ class TrueNasNetworkScreen extends ConsumerWidget {
             loading: () => AppSkeleton.listRows(count: 2),
             error: (e, _) => AppErrorState(
               error: e,
+              service: ServiceKey.truenas,
               onRetry: () => ref.invalidate(truenasInterfacesProvider),
             ),
             data: (list) => Column(

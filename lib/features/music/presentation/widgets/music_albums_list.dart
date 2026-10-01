@@ -206,6 +206,7 @@ class _AlbumTracksSheetState extends State<_AlbumTracksSheet> {
           AppErrorState.compact(
             error: error,
             serviceName: 'Lidarr',
+            service: ServiceKey.lidarr,
             onRetry: _load,
           ),
         ],

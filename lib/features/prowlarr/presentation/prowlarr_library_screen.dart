@@ -568,6 +568,7 @@ class _ProwlarrLibraryScreenState extends ConsumerState<ProwlarrLibraryScreen> {
                 child: AppErrorState(
                   error: error,
                   serviceName: ServiceKey.prowlarr.title,
+                  service: ServiceKey.prowlarr,
                   onRetry: () => ref.invalidate(prowlarrIndexersProvider),
                 ),
               ),

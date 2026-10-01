@@ -8,6 +8,7 @@ import 'package:cupola/features/activity/presentation/widgets/activity_item_tile
 import 'package:cupola/features/activity/presentation/widgets/activity_tab_helpers.dart';
 import 'package:cupola/features/activity/presentation/widgets/segment_selector.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 class ActivityTab extends ConsumerStatefulWidget {
   final ServiceType serviceType;
@@ -24,6 +25,9 @@ class ActivityTab extends ConsumerStatefulWidget {
 
 class _ActivityTabState extends ConsumerState<ActivityTab>
     with ActivityTabHelpers {
+  @override
+  ServiceKey get failureService => widget.serviceType.service;
+
   ActivitySegment _selectedSegment = ActivitySegment.queue;
   Key _refreshKey = UniqueKey();
 

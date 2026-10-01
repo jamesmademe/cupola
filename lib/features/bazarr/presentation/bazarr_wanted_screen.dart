@@ -230,6 +230,7 @@ class _BazarrWantedTabState extends ConsumerState<_BazarrWantedTab> {
         key: ValueKey(_errorKey),
         error: _error!,
         serviceName: ServiceKey.bazarr.title,
+        service: ServiceKey.bazarr,
         onRetry: _loadInitial,
       );
     }

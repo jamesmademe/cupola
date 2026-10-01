@@ -99,6 +99,7 @@ class _ReadarrHistoryScreenState extends ConsumerState<ReadarrHistoryScreen> {
                     error: snapshot.error!,
                     onRetry: _reload,
                     serviceName: ServiceKey.readarr.title,
+                    service: ServiceKey.readarr,
                   ),
                 ],
               );

@@ -100,6 +100,7 @@ class _DockgeDashboard extends ConsumerWidget {
             loading: () => const ListRowsShimmer(),
             error: (error, _) => AppErrorState(
               error: error,
+              service: ServiceKey.dockge,
               onRetry: () => ref.invalidate(dockgeStackListProvider),
             ),
           ),
