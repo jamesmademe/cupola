@@ -32,7 +32,7 @@ import 'package:cupola/features/music/presentation/music_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/sonarr_queue_snapshots.dart';
 import 'package:cupola/features/series/presentation/series_provider.dart';
-import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -73,7 +73,7 @@ import 'package:cupola/features/unraid/data/unraid_client.dart';
 /// The `select` is load-bearing rather than a micro-optimisation, because of
 /// what this provider *is*: one family entry per service, each of which opens a
 /// connection and waits out a 5–8 second timeout ([_loadVersion] builds a fresh
-/// qBittorrent/SABnzbd/NZBGet/Unraid client per call). Watching the whole
+/// SABnzbd/NZBGet/Unraid client per call). Watching the whole
 /// `SettingsModel` meant that every settings write — a theme-mode toggle
 /// included — re-probed every service, and a single Save can write twice
 /// because answering the cert-trust prompt writes again. Keyed on the service's
@@ -368,19 +368,18 @@ Future<String?> _loadVersion(
 ) async {
   final service = instance.service;
   if (service == ServiceKey.qbittorrent) {
-    final client = QbittorrentClient(
-      url: instance.url,
-      username: instance.username.isNotEmpty ? instance.username : null,
-      password: instance.credential.isNotEmpty ? instance.credential : null,
-      certFingerprint: settings.pinForUrl(instance.url),
-      accessHeaders: instance.access.headers(),
-    );
+    // The connection's own client, never a throwaway one. A probe that built
+    // its own sent the login again on every refresh, so with a wrong password
+    // each pull counted toward qBittorrent's ban of the address. The shared
+    // client holds a refused sign-in until the credentials change or a user's
+    // Retry lifts it, and it is not this probe's to close.
+    final client = ref.watch(qbittorrentClientForProvider(instance.id));
     // Login-then-version is two hops on a cold client, so this gets the same
     // headroom as Transmission's 409 handshake pair.
     return _versionOrNull(
       client.getVersion,
       timeout: const Duration(seconds: 8),
-      close: client.close,
+      close: () {},
     );
   }
 
@@ -389,9 +388,10 @@ Future<String?> _loadVersion(
   // so probing the second connection through them asked the first one whether
   // it was up and painted the answer on the second one's cell: a box that was
   // switched off reading green, and `foldedServiceHealthProvider` counting zero
-  // offline. Every other branch here already builds a throwaway client from
-  // `instance`, which is what makes a per-connection probe per-connection;
-  // these two now do the same, and close it either way like the rest.
+  // offline. The branches below build a throwaway client from `instance`,
+  // which is what makes a per-connection probe per-connection; these two now
+  // do the same, and close it either way like the rest. (qBittorrent, above,
+  // reads its connection's own client, which is per connection too.)
   if (service == ServiceKey.truenas) {
     final client = TrueNasWsClient(
       baseUrl: instance.url,

@@ -5,7 +5,7 @@ import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderBase;
 
-import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent_file.dart';
@@ -16,34 +16,28 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
-  // Selected rather than watching the whole model, and here that matters twice
-  // over: the client holds the WebUI SID cookie, so rebuilding it throws away
-  // an authenticated session. Only this service's own address and credentials
-  // should do that.
+  // Selected rather than watching the whole model: only this service's own
+  // address and credentials, and the lens, decide which connection this is.
   final transport = watchTransport(ref, ServiceKey.qbittorrent);
   if (!transport.configured) {
     throw Exception('qBittorrent not configured');
   }
-  final client = QbittorrentClient(
-    url: transport.url,
-    username: transport.username.isNotEmpty ? transport.username : null,
-    password: transport.apiKey.isNotEmpty ? transport.apiKey : null,
-    certFingerprint: transport.pin,
-    accessHeaders: transport.access.headers(),
+  // The connection's one client, which holds the WebUI SID cookie and any
+  // refused sign-in, and which the Dashboard's probe and Home's reads share.
+  // Owned and closed by its own provider, so moving the lens away and back
+  // keeps the session instead of signing in again.
+  return QbittorrentService(
+    ref.watch(qbittorrentClientForProvider(transport.instanceId)),
   );
-  // The outgoing client owns a Dio and a cookie jar; close it so neither leaks.
-  ref.onDispose(() => client.close());
-  return QbittorrentService(client);
 });
 
 /// The qBittorrent service for a route or background job that names a
 /// connection explicitly.
 ///
 /// Empty ids and the active id deliberately collapse onto the ordinary
-/// provider. That preserves one long-lived WebUI client — and therefore one
-/// SID/cookie jar — for the connection currently under the lens. A different
-/// id gets its own equally long-lived client and is disposed with this family
-/// entry.
+/// provider, which reads the same client. A different id reads that
+/// connection's own client: one client per connection, whoever asks
+/// ([qbittorrentClientForProvider]).
 final qbittorrentServiceForProvider =
     Provider.family<QbittorrentService, String>((ref, instanceId) {
       final activeId = ref
@@ -61,23 +55,18 @@ final qbittorrentServiceForProvider =
       if (!transport.configured) {
         throw Exception('qBittorrent not configured');
       }
-      final client = QbittorrentClient(
-        url: transport.url,
-        username: transport.username.isNotEmpty ? transport.username : null,
-        password: transport.apiKey.isNotEmpty ? transport.apiKey : null,
-        certFingerprint: transport.pin,
-        accessHeaders: transport.access.headers(),
+      return QbittorrentService(
+        ref.watch(qbittorrentClientForProvider(instanceId)),
       );
-      ref.onDispose(client.close);
-      return QbittorrentService(client);
     });
 
 /// Call first in a user's explicit Retry, or pull-to-refresh, on a qBittorrent
 /// surface — before invalidating what it retries.
 ///
-/// Forgets a sign-in refusal the client is holding (see [QbittorrentClient]),
-/// so the one attempt the person asked for is actually made: they fixed the
-/// password on the server, or waited out a ban. Poll ticks invalidate directly
+/// Forgets a sign-in refusal the lens's client is holding (see
+/// `QbittorrentClient` and [qbittorrentClientForProvider]), so the one attempt
+/// the person asked for is actually made: they fixed the password on the
+/// server, or waited out a ban. Poll ticks invalidate directly
 /// and never come through here — a timer that cleared the refusal would be the
 /// loop that gets the address banned.
 void clearQbittorrentLoginRefusal(WidgetRef ref) {

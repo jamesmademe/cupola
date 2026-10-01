@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
@@ -30,6 +31,11 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 int testAllConnections(WidgetRef ref) {
   final connections = ref.read(currentSettingsProvider).configuredInstances;
 
+  // A test is the person asking every server again, so a qBittorrent sign-in
+  // its client is holding as refused is sent once more: once per press, never
+  // on a refresh. Without this the rows would re-read the held refusal and
+  // "Test all" could never show a password fixed at the server.
+  liftQbittorrentRefusals(ref, connections.map((instance) => instance.id));
   ref.invalidate(serviceDiagnosisProvider);
   for (final instance in connections) {
     ref.invalidate(instanceDiagnosisProvider(instance.id));

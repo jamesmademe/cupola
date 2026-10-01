@@ -20,6 +20,7 @@ import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
@@ -71,10 +72,15 @@ void retryDashboardServices(WidgetRef ref, Iterable<ServiceKey> services) {
   final asked = services.toSet();
   if (asked.isEmpty) return;
   for (final service in asked) {
+    final ids = ref.read(serviceInstanceIdsProvider(service));
+    // A Retry is the person asking again, so a qBittorrent sign-in a
+    // connection's client is holding as refused is sent once more. Only here,
+    // beside the failure: a pull that re-reads the page never lifts it.
+    if (service == ServiceKey.qbittorrent) liftQbittorrentRefusals(ref, ids);
     // The probe itself, one entry per connection. `serviceSummaryProvider`
     // only delegates to these, so invalidating it alone rebuilt a wrapper that
     // awaited the same cached answer.
-    for (final id in ref.read(serviceInstanceIdsProvider(service))) {
+    for (final id in ids) {
       ref.invalidate(
         instanceSummaryProvider((service: service, instanceId: id)),
       );

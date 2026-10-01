@@ -12,6 +12,7 @@ import 'package:cupola/features/npm/data/npm_client.dart';
 import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/plex/data/plex_client.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
@@ -590,17 +591,25 @@ Future<ServiceDiagnosis> _explainCredentialRefusal(
 /// The cost is one probe per connection instead of one per service. That is the
 /// honest price of the count beside it: before, the second connection was never
 /// asked at all.
+///
+/// [diagnose] answers for one connection, [diagnoseInstance] unless a caller
+/// has a better way to ask: the readouts that run unattended pass one that
+/// reads qBittorrent through its connection's own client
+/// ([diagnoseSavedInstance]). Called for every connection before anything is
+/// awaited.
 Future<ServiceDiagnosis> diagnoseService(
   ServiceKey service,
-  SettingsModel settings,
-) async {
+  SettingsModel settings, {
+  Future<ServiceDiagnosis> Function(ServiceInstance instance)? diagnose,
+}) async {
   final instances = settings.configuredInstancesOf(service);
   if (instances.isEmpty) return const ServiceDiagnosis.notConfigured();
 
-  final results = await Future.wait([
-    for (final instance in instances) diagnoseInstance(instance, settings),
-  ]);
-  return worstDiagnosis(results);
+  final pending = [
+    for (final instance in instances)
+      diagnose?.call(instance) ?? diagnoseInstance(instance, settings),
+  ];
+  return worstDiagnosis(await Future.wait(pending));
 }
 
 /// The diagnosis a folded readout should show: the one the user most needs to
@@ -651,6 +660,37 @@ Future<ServiceDiagnosis> diagnoseInstance(
     clientIdentifier: settings.plexClientId,
     access: instance.access,
   );
+}
+
+/// Diagnoses one **saved** connection for a readout nobody asked to re-test:
+/// the Settings rows, which re-run on launch, on every settings write and on a
+/// refresh.
+///
+/// [diagnoseInstance] for every service but qBittorrent, which is asked
+/// through its connection's own client ([qbittorrentClientForProvider]). A
+/// throwaway client sent the login again each time, so with a wrong password
+/// every re-run of these readouts, a theme toggle included, counted toward
+/// qBittorrent's ban of the address. The shared client holds a refused
+/// sign-in until the credentials change or a user's Retry or test lifts it,
+/// and it is not this readout's to close.
+///
+/// A form testing what is typed keeps [diagnoseInstance]: that is the person
+/// asking, once per press, about values that may not be saved yet.
+Future<ServiceDiagnosis> diagnoseSavedInstance(
+  Ref ref,
+  ServiceInstance instance,
+  SettingsModel settings,
+) {
+  if (instance.service == ServiceKey.qbittorrent && instance.isConfigured) {
+    final client = ref.watch(qbittorrentClientForProvider(instance.id));
+    // Two round trips (login + version) on a cold client.
+    return _probe(
+      client.getVersion,
+      timeout: const Duration(seconds: 8),
+      close: () {},
+    );
+  }
+  return diagnoseInstance(instance, settings);
 }
 
 /// Whether a blocked local network could still explain this failure.
@@ -877,7 +917,7 @@ final instanceDiagnosisProvider =
       final settings = ref.watch(currentSettingsProvider);
       final instance = settings.instanceById(instanceId);
       if (instance == null) return const ServiceDiagnosis.notConfigured();
-      return diagnoseInstance(instance, settings);
+      return diagnoseSavedInstance(ref, instance, settings);
     });
 
 /// The connection state of a single service — folded across every connection it
@@ -895,5 +935,9 @@ final serviceDiagnosisProvider =
       // in the list rather than naming the permission. It is named the moment the
       // user does the obvious thing — open the service and test it — which is
       // where the fix lives anyway.
-      return diagnoseService(service, settings);
+      return diagnoseService(
+        service,
+        settings,
+        diagnose: (instance) => diagnoseSavedInstance(ref, instance, settings),
+      );
     });
