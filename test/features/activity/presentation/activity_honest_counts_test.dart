@@ -87,6 +87,38 @@ void main() {
       expect(readout.spoken, readout.text);
     });
 
+    test('what to act on comes first, the reservation last', () {
+      // The qualifier used to follow the count, and a phone's ellipsis took
+      // the manual-import clause, the one asking for something, to keep it.
+      const blocked = MediaStatusInfo(pipeline: MediaPipeline.importBlocked);
+      final radarr = [
+        for (var i = 0; i < 18; i++)
+          GlobalActivityItem(
+            kind: GlobalActivityKind.queue,
+            service: ServiceKey.radarr,
+            serviceType: ServiceType.movies,
+            title: 'Blocked $i',
+            subtitle: '',
+            status: blocked,
+          ),
+        for (var i = 0; i < 6; i++) _queued(ServiceKey.radarr, 'Moving $i'),
+      ];
+      final feed = ActivityFeed(
+        items: radarr,
+        results: [
+          _answered(ServiceKey.radarr, radarr),
+          _silent(ServiceKey.lidarr),
+        ],
+      );
+
+      final readout = nowReadout(feed)!;
+      expect(
+        readout.text,
+        '24 in the queue · 18 need a manual import · Lidarr not counted',
+      );
+      expect(readout.spoken, readout.text);
+    });
+
     // "Nothing in the queue" was the sentence for a queue that answered empty
     // and for a queue that could not be asked. Only the first one is true.
     test('an empty answer beside a failure is not "nothing"', () {
@@ -174,7 +206,9 @@ void main() {
 
       expect(find.textContaining('Nothing in the queue'), findsNothing);
       expect(
-        find.textContaining(RegExp(r'^\d+ in the queue · Lidarr not counted')),
+        find.textContaining(
+          RegExp(r'^\d+ in the queue( · [^·]+)* · Lidarr not counted$'),
+        ),
         findsOneWidget,
       );
 

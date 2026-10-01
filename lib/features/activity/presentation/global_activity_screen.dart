@@ -457,8 +457,8 @@ class _ActivityTitle extends ConsumerWidget {
   }
 }
 
-/// "20 in the queue · 18 need a manual import · 2 stalled · 1 importing" — and
-/// only the clauses that are true. A readout that prints "0 stalled" spends a
+/// "20 in the queue · 18 need a manual import · 2 stuck · 1 importing" — and
+/// only the clauses that are true. A readout that prints "0 stuck" spends a
 /// third of its width telling the user that nothing happened.
 ///
 /// Faults before progress, and a blocked import is a fault. It used to be
@@ -468,13 +468,17 @@ class _ActivityTitle extends ConsumerWidget {
 /// named by its remedy — the verb on the row — and it leads.
 ///
 /// The figure covers the connections that answered and **names the ones that
-/// did not**: `12 in the queue · Sonarr Anime not counted`. It used to count
-/// the survivors with no qualifier, so a Sonarr that did not answer took its
-/// downloads out of the number without a word, and when every \*arr failed the
-/// bar said "Nothing in the queue" over a page that could not know. With
-/// nothing answering there is no figure at all, and the bar says so with the
-/// em dash. The qualifier sits straight after the count it qualifies, so a
-/// phone's ellipsis takes the clauses after it before it takes this one.
+/// did not**: `12 in the queue · 3 need a manual import · Sonarr Anime not
+/// counted`. It used to count the survivors with no qualifier, so a Sonarr
+/// that did not answer took its downloads out of the number without a word,
+/// and when every \*arr failed the bar said "Nothing in the queue" over a page
+/// that could not know. With nothing answering there is no figure at all, and
+/// the bar says so with the em dash.
+///
+/// What to act on comes first and the reservation last, for the eye and the
+/// ear alike. The qualifier used to sit straight after the count, and on a
+/// phone the ellipsis took the manual-import clause, the one that asks for
+/// something, to keep a note the health strip below says in full.
 ///
 /// Null when no \*arr is set up, and the bar is the page's name alone. Every
 /// clause here is about a queue, and with only Seerr configured there is no
@@ -528,10 +532,10 @@ class _ActivityTitle extends ConsumerWidget {
   );
   String clauses(String queue) => [
     queue,
-    if (notCounted.isNotEmpty) notCountedClause(notCounted),
     if (needsImport > 0) needsManualImportClause(needsImport),
     if (stalled > 0) '$stalled ${StateWord.stuck.inline}',
     if (importing > 0) '$importing importing',
+    if (notCounted.isNotEmpty) notCountedClause(notCounted),
   ].join(' · ');
   if (queued.isEmpty) {
     final text = clauses('Nothing in the queue');
