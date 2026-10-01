@@ -50,7 +50,7 @@ void main() {
       SourceCoverage.failure(ServiceKey.radarr, _behindAccess()),
     ]);
 
-    expect(coverage.gateways[ServiceKey.radarr], same(_access));
+    expect(coverage.gateways.values.single, same(_access));
     expect(coverageNote(coverage), 'Not in the total: Radarr');
   });
 
@@ -62,7 +62,7 @@ void main() {
         url: 'https://radarr.example.com',
         credential: 'k',
       ),
-      named: false,
+      name: '',
     ), _behindAccess());
 
     expect(lane.stateWord, 'Behind Cloudflare Access');

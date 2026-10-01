@@ -145,7 +145,7 @@ void main() {
       expect(band.tone, StatusTone.warning);
       expect(
         band.message,
-        'Cloudflare Access answered instead of Radarr. Everything below is '
+        'Cloudflare Access answered instead of Radarr 1. Everything below is '
         'what it said last.',
       );
       expect(band.primaryAction.label, 'Add a service token');

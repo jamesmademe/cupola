@@ -227,6 +227,8 @@ class _LensOptions extends ConsumerWidget {
     final summary = ref.watch(
       instanceSummaryProvider((service: service, instanceId: instance.id)),
     );
+    // The gateway too, so a connection behind one reads the same words as
+    // the matrix cell beside it.
     return describeConnection(
       service,
       status: switch (summary) {
@@ -240,6 +242,11 @@ class _LensOptions extends ConsumerWidget {
       reason: switch (summary) {
         AsyncData(:final value) => value.failureReason,
         AsyncError(:final error) => classifyConnectionFailure(error),
+        _ => null,
+      },
+      gateway: switch (summary) {
+        AsyncData(:final value) => value.failure?.gateway,
+        AsyncError(:final error) => accessGatewayOf(error),
         _ => null,
       },
     );
