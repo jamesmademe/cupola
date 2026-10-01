@@ -687,12 +687,11 @@ class _Outcome extends StatelessWidget {
     final tone = statusToneColor(scheme, presentation.tone);
     final sentence = switch (status) {
       ServiceConnectionStatus.connected => '${service.title} answered.',
-      // The instruction itself is the step's subtitle now, standing above the
+      // The instruction itself is the step's subtitle, standing above the
       // form before anything is pressed, so repeating it here would answer a
       // press with the sentence the user is already looking at. What the press
       // actually found is that there is nothing to send.
-      ServiceConnectionStatus.notConfigured =>
-        'Nothing to send yet, ${_lowerFirst(walkInstruction(service))}',
+      ServiceConnectionStatus.notConfigured => 'Nothing to send yet.',
       // The detail when the failure carried one, the reason-derived sentence
       // otherwise — the same rule `ServiceDiagnosis.messageFor` applies on the
       // settings screen, so the two surfaces cannot describe one test
@@ -986,9 +985,3 @@ String? _plexTokenWarning(String value) => value.trim().startsWith('eyJ')
     ? 'That token expires in 7 days and cannot be renewed here. Paste a '
           'long-lived device token instead.'
     : null;
-
-/// [text] with its first letter in lower case and the rest as written, for a
-/// sentence that continues another: the whole of it lowered would spell
-/// `api key`.
-String _lowerFirst(String text) =>
-    text.isEmpty ? text : '${text[0].toLowerCase()}${text.substring(1)}';

@@ -213,14 +213,9 @@ void main() {
           find.textContaining('Enter the address and the API key'),
           findsOneWidget,
         );
-        // The initialism keeps its capitals inside the sentence too.
-        expect(
-          find.text(
-            'Nothing to send yet, enter the address and the API key, then '
-            'test.',
-          ),
-          findsOneWidget,
-        );
+        // The outcome says what the press found; the instruction stays the
+        // subtitle above and is not said twice.
+        expect(find.text('Nothing to send yet.'), findsOneWidget);
       },
     );
 
