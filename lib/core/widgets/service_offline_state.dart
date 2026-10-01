@@ -70,7 +70,6 @@ class ServiceOfflineState extends StatelessWidget {
   const ServiceOfflineState({
     super.key,
     required this.serviceName,
-    required this.accent,
     required this.onRetry,
     this.since,
     this.onOpenSettings,
@@ -90,7 +89,6 @@ class ServiceOfflineState extends StatelessWidget {
     this.since,
     this.onOpenSettings,
   }) : serviceName = service.title,
-       accent = service.accent,
        _service = service,
        _error = error;
 
@@ -126,7 +124,6 @@ class ServiceOfflineState extends StatelessWidget {
     return ServiceOfflineState(
       key: key,
       serviceName: service.title,
-      accent: service.accent,
       onRetry: onRetry,
       since: since,
       onOpenSettings: onOpenSettings,
@@ -134,10 +131,6 @@ class ServiceOfflineState extends StatelessWidget {
   }
 
   final String serviceName;
-
-  /// The service's accent, which this leaf no longer paints: a service's
-  /// colour is registry data, and the glyph carries the state's tone instead.
-  final Color accent;
 
   final VoidCallback onRetry;
 

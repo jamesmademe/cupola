@@ -27,7 +27,7 @@ Used by the library walls (`MediaBrowseScaffold(service:)`), Readarr's author li
 
 ## Consumer provides
 
-`serviceName`, `accent` (kept for the callers, no longer painted) and `onRetry`; optionally `since` (the age of the first failure, formatted as minutes or hours) and `onOpenSettings`.
+`serviceName` and `onRetry`; optionally `since` (the age of the first failure, formatted as minutes or hours) and `onOpenSettings`.
 
 ## Semantics
 

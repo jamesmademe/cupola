@@ -107,11 +107,7 @@ void main() {
     ) async {
       await _pump(
         tester,
-        ServiceOfflineState(
-          serviceName: 'SABnzbd',
-          accent: ServiceKey.sabnzbd.accent,
-          onRetry: () {},
-        ),
+        ServiceOfflineState(serviceName: 'SABnzbd', onRetry: () {}),
       );
 
       expect(find.text('SABnzbd did not answer'), findsOneWidget);

@@ -36,7 +36,6 @@ void main() {
         'red glyph, a known first-failure age, Retry as a ghost and Settings',
         (_) => ServiceOfflineState(
           serviceName: 'SABnzbd',
-          accent: ServiceKey.sabnzbd.accent,
           since: const Duration(minutes: 40),
           onRetry: () {},
           onOpenSettings: () {},
@@ -46,11 +45,7 @@ void main() {
       CatalogScene(
         'ServiceOfflineState · no first-failure time known, span dropped — '
         'Retry only, no onOpenSettings',
-        (_) => ServiceOfflineState(
-          serviceName: 'Transmission',
-          accent: ServiceKey.transmission.accent,
-          onRetry: () {},
-        ),
+        (_) => ServiceOfflineState(serviceName: 'Transmission', onRetry: () {}),
         width: 320,
       ),
       CatalogScene(
