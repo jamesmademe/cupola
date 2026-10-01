@@ -70,18 +70,21 @@ void main() {
         await _pumpSheet(tester, settings: const SettingsModel());
 
         expect(find.text('Requests'), findsOneWidget);
-        // Hiding the section hid the fact with it: both jumps stay on screen,
-        // drained, and answer with a toast that leads to Radarr's settings.
+        // Hiding the section hid the fact with it: the jump stays on screen,
+        // drained, and answers with a toast that leads to Radarr's settings.
         expect(find.text('Open in Radarr'), findsOneWidget);
         expect(find.text('Remove from Radarr'), findsOneWidget);
+        final dimmed = find.byWidgetPredicate(
+          (w) => w is Opacity && w.opacity == GatedAffordance.dimmedOpacity,
+        );
         expect(
-          find.ancestor(
-            of: find.text('Open in Radarr'),
-            matching: find.byWidgetPredicate(
-              (w) => w is Opacity && w.opacity == GatedAffordance.dimmedOpacity,
-            ),
-          ),
+          find.ancestor(of: find.text('Open in Radarr'), matching: dimmed),
           findsOneWidget,
+        );
+        // The removal is Seerr's, so a Radarr missing here does not dim it.
+        expect(
+          find.ancestor(of: find.text('Remove from Radarr'), matching: dimmed),
+          findsNothing,
         );
 
         await tester.tap(find.text('Open in Radarr'));
@@ -105,14 +108,50 @@ void main() {
         expect(find.text('Open in Sonarr'), findsOneWidget);
         expect(find.text('Remove from Sonarr'), findsOneWidget);
 
-        await tester.tap(find.text('Remove from Sonarr'));
+        await tester.tap(find.text('Open in Sonarr'));
         await tester.pump();
-        expect(
-          find.text('Set up Sonarr to remove this series'),
-          findsOneWidget,
-        );
+        expect(find.text('Set up Sonarr to open this series'), findsOneWidget);
       },
     );
+
+    // P5's shape: Seerr knows its Sonarr, Cupola has none. The removal runs
+    // through Seerr, so it asks, names who does it, and goes ahead.
+    testWidgets('with no Sonarr in Cupola, Remove from Sonarr still removes '
+        'through Seerr', (tester) async {
+      final seerr = _RecordingSeerr();
+      var changed = 0;
+      await _pumpSheet(
+        tester,
+        mediaType: 'tv',
+        mediaTitle: 'Series',
+        tvdbId: 555,
+        mediaInfo: {'id': 77, 'externalServiceId': 42, 'requests': const []},
+        settings: const SettingsModel(),
+        seerr: seerr,
+        onDataChanged: () => changed++,
+      );
+
+      await tester.tap(find.text('Remove from Sonarr'));
+      await tester.pumpAndSettle();
+      // Asked, never toasted away: no "Set up Sonarr" for a write Sonarr in
+      // Cupola has no part in.
+      expect(find.text('Set up Sonarr to remove this series'), findsNothing);
+      expect(find.text('Remove from Sonarr?'), findsOneWidget);
+      expect(
+        find.text(
+          'Seerr removes this series from its Sonarr server and deletes its '
+          'files. This cannot be undone.',
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Remove and delete files'),
+      );
+      await tester.pumpAndSettle();
+      expect(seerr.filesRemoved, [77]);
+      expect(changed, 1);
+    });
 
     testWidgets(
       'Media section is shown when movie has externalServiceId and radarr is configured',
@@ -195,9 +234,13 @@ void main() {
 
 class _RecordingSeerr extends FakeSeerrService {
   final deleted = <int>[];
+  final filesRemoved = <int>[];
 
   @override
   Future<void> deleteRequest(int requestId) async => deleted.add(requestId);
+
+  @override
+  Future<void> deleteMediaFile(int mediaId) async => filesRemoved.add(mediaId);
 }
 
 Future<void> _pumpSheet(

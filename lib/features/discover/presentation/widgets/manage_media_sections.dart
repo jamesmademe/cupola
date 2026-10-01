@@ -275,9 +275,13 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
+/// The title as Radarr or Sonarr holds it: a jump into Cupola's own, and a
+/// removal Seerr performs on its own.
+///
+/// Drawn only when Seerr's record names the arr row it filed the title under,
+/// so both controls always have something to act on.
 class MediaSection extends StatelessWidget {
   final bool isMovie;
-  final bool hasExternalService;
   final bool isDeleting;
   final VoidCallback? onOpen;
   final VoidCallback? onRemove;
@@ -285,7 +289,6 @@ class MediaSection extends StatelessWidget {
   const MediaSection({
     super.key,
     required this.isMovie,
-    required this.hasExternalService,
     required this.isDeleting,
     this.onOpen,
     this.onRemove,
@@ -307,9 +310,9 @@ class MediaSection extends StatelessWidget {
           style: theme.textTheme.titleMedium?.weight(FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.md),
-        // Both are jumps into the arr, so both are cross-service cells:
-        // dimmed but tappable when that arr is not set up here, and their
-        // toast opens its settings.
+        // The jump is into Cupola's own Radarr, so it is a cross-service
+        // cell: dimmed but tappable when that Radarr is not set up here, and
+        // its toast opens the setup.
         SizedBox(
           width: double.infinity,
           child: CrossServiceAction.builder(
@@ -317,42 +320,53 @@ class MediaSection extends StatelessWidget {
             blockedMessage: '${Lexicon.setUp(serviceName)} to open this $noun',
             onTap: onOpen ?? () {},
             builder: (context, onPressed, annotate) => OutlinedButton.icon(
-              onPressed: hasExternalService ? onPressed : null,
+              onPressed: onPressed,
               icon: annotate(const Icon(Icons.open_in_new)),
               label: annotate(Text('Open in $serviceName')),
             ),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
+        // The removal is not. Seerr performs it, on the Radarr it sends
+        // requests to, and this section is drawn only when Seerr says that
+        // Radarr holds the title. It used to be gated on a Radarr set up in
+        // Cupola, which this write never touches, so a stack that knew its
+        // Radarr only through Seerr got "Set up Radarr" for something Seerr
+        // could already do.
         SizedBox(
           width: double.infinity,
-          child: CrossServiceAction.builder(
-            target: target,
-            blockedMessage:
-                '${Lexicon.setUp(serviceName)} to remove this $noun',
-            onTap: onRemove ?? () {},
-            builder: (context, onPressed, annotate) => ElevatedButton.icon(
-              onPressed: hasExternalService && !isDeleting ? onPressed : null,
-              icon: isDeleting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : annotate(const Icon(Icons.delete_outline)),
-              label: annotate(Text('Remove from $serviceName')),
-            ),
+          child: ElevatedButton.icon(
+            // Null only while the removal is in flight.
+            onPressed: isDeleting ? null : onRemove,
+            icon: isDeleting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.delete_outline),
+            label: Text('Remove from $serviceName'),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          '* This will irreversibly remove this ${isMovie ? 'movie' : 'series'} from $serviceName, including all files.',
+          '* ${removalSentence(isMovie: isMovie)}',
           style: theme.textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
         ),
       ],
     );
+  }
+
+  /// What *Remove from Radarr* does, said once for the note under it and for
+  /// the confirmation that asks before it: Seerr does the removing, on its own
+  /// Radarr, and the files go with it.
+  static String removalSentence({required bool isMovie}) {
+    final service = isMovie ? 'Radarr' : 'Sonarr';
+    final noun = isMovie ? 'movie' : 'series';
+    return 'Seerr removes this $noun from its $service server and deletes '
+        'its files. This cannot be undone.';
   }
 }
 

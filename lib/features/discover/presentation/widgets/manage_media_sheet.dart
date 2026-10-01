@@ -80,7 +80,6 @@ class ManageMediaSheet extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xl),
           MediaSection(
             isMovie: isMovie,
-            hasExternalService: notifier.hasExternalService,
             isDeleting: state.isDeleting,
             onOpen: () => _openInService(context, ref),
             onRemove: () {
@@ -145,17 +144,15 @@ class ManageMediaSheet extends ConsumerWidget {
       return;
     }
 
-    final service = mediaType == 'movie' ? 'Radarr' : 'Sonarr';
-    final noun = mediaType == 'movie' ? 'movie' : 'series';
+    final isMovie = mediaType == 'movie';
+    final service = isMovie ? 'Radarr' : 'Sonarr';
     // Neutral: the verb says the whole of it — the files go too — and the
-    // sentence says it cannot be undone. Red means unreachable and nothing
-    // else.
+    // sentence says who does it and that it cannot be undone. Red means
+    // unreachable and nothing else.
     final result = await showAppConfirmDialog(
       context: context,
       title: 'Remove from $service?',
-      message:
-          'This removes this $noun from $service, including all of its '
-          'files. This cannot be undone.',
+      message: MediaSection.removalSentence(isMovie: isMovie),
       confirmLabel: 'Remove and delete files',
     );
 
@@ -169,9 +166,10 @@ class ManageMediaSheet extends ConsumerWidget {
     }
 
     if (error == null) {
+      // Named: "removed from service" did not say which one.
       SnackBarHelper.success(
         context,
-        '${mediaType == 'movie' ? 'Movie' : 'Series'} removed from service',
+        '${isMovie ? 'Movie' : 'Series'} removed from $service',
       );
       Navigator.pop(context);
       onDataChanged();
