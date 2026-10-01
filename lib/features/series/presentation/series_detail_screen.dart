@@ -25,6 +25,7 @@ import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/domain/sonarr_series_type.dart';
+import 'package:cupola/features/series/domain/sonarr_queue_snapshots.dart';
 import 'package:cupola/features/series/domain/sonarr_status.dart';
 import 'package:cupola/features/series/presentation/series_detail_provider.dart';
 import 'package:cupola/features/series/presentation/series_detail_view_model.dart';
@@ -185,9 +186,10 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     // downloaded right now", and every in-flight series reads as Missing. A
     // queue that did not answer, or was not read to the end, cannot say the
     // series is not in it: see the movie screen.
-    final queue = queueSnapshotOf(
-      ref.watch(sonarrQueueSnapshotForProvider(instanceId)),
+    final queues = sonarrQueueSnapshotsOf(
+      ref.watch(sonarrQueueSnapshotsForProvider(instanceId)),
     );
+    final queue = queues.bySeries;
     final status = sonarrSeriesStatus(
       series,
       queueEntry: queue.entryFor(series.id),
@@ -219,6 +221,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         series.id > 0 ? series.id : widget.seriesId,
         series.tmdbId,
         series.tvdbId,
+        queue: queues,
         sonarrFaultShown: failure != null && retry != null,
         fault: failure != null && retry != null
             ? _faultBand(failure, instanceId, onRetry: retry)
@@ -292,7 +295,8 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       error: queue.error,
       service: ServiceKey.sonarr,
       instanceId: instanceId,
-      onRetry: () => ref.invalidate(sonarrQueueSnapshotForProvider(instanceId)),
+      onRetry: () =>
+          ref.invalidate(sonarrQueueSnapshotsForProvider(instanceId)),
     );
   }
 
@@ -377,6 +381,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     int seriesId,
     int tmdbId,
     int tvdbId, {
+    required SonarrQueueSnapshots queue,
     Widget? fault,
 
     // The page's band already says Sonarr did not answer (or answered with a
@@ -531,6 +536,10 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
             sliver: SeriesSeasonsList(
               seasons: viewModel.seasons,
               episodesAsync: episodesAsync,
+              // The page's connection's queue, read once for the series badge
+              // above and for every season and episode here.
+              queue: queue,
+              seriesId: seriesId,
               // State only at the granularity it was launched: a season header
               // shows its own search, an episode row its own — never each
               // other's.

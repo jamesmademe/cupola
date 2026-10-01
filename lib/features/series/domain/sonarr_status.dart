@@ -51,14 +51,22 @@ MediaAvailability sonarrSeriesAvailability(SonarrSeries series) {
 /// rows beneath it signalled `hasFile` with an indigo dot — two vocabularies for
 /// related facts, neither of them written down anywhere on the page. Both now
 /// come from here, so the header badge and the row badge cannot disagree.
+///
+/// [queueEntry] is the season's own slice of the queue
+/// (`SonarrQueueSnapshots.seasonEntry`): a season with an episode downloading
+/// reads downloading, not `Missing`. [queueUnknown] as in
+/// [sonarrSeriesStatus]: a season whose queue could not be read whole never
+/// reads `Missing` for want of an entry.
 MediaStatusInfo sonarrSeasonStatus(
   SonarrSeason season, {
   ArrQueueEntry? queueEntry,
+  bool queueUnknown = false,
 }) {
   return mediaStatusFromQueue(
     availability: sonarrSeasonAvailability(season),
     monitored: season.monitored,
     queueEntry: queueEntry,
+    queueUnknown: queueUnknown,
   );
 }
 
@@ -113,17 +121,25 @@ String? sonarrSeasonSummary(SonarrSeason season) {
 
 /// Resolves the status of one episode.
 ///
+/// [queueEntry] is the episode's record in the queue
+/// (`SonarrQueueSnapshots.byEpisode`): an episode being downloaded reads
+/// downloading, never `Missing`. [queueUnknown] as in [sonarrSeriesStatus]:
+/// with the queue unread, an aired episode with no file may be on its way,
+/// and reads unknown rather than `Missing`.
+///
 /// [now] is injectable so the unaired case is testable without freezing the
 /// clock; it defaults to the wall clock.
 MediaStatusInfo sonarrEpisodeStatus(
   SonarrEpisode episode, {
   DateTime? now,
   ArrQueueEntry? queueEntry,
+  bool queueUnknown = false,
 }) {
   return mediaStatusFromQueue(
     availability: sonarrEpisodeAvailability(episode, now: now),
     monitored: episode.monitored,
     queueEntry: queueEntry,
+    queueUnknown: queueUnknown,
   );
 }
 

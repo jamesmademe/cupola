@@ -6,10 +6,103 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/models/sonarr_season.dart';
+import 'package:cupola/features/series/domain/sonarr_queue_snapshots.dart';
 import 'package:cupola/features/series/presentation/widgets/series_seasons_list.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+/// Season 2 of series 1: E1 on disk, E2 aired with no file, and E2 the one
+/// Sonarr is downloading.
+final _seasonTwo = [_season(2, episodeCount: 2, fileCount: 1)];
+final _seasonTwoEpisodes = [
+  _episode(
+    id: 21,
+    seasonNumber: 2,
+    episodeNumber: 1,
+    title: 'On Disk',
+    airDate: '2024-01-01',
+  ),
+  _episode(
+    id: 22,
+    seasonNumber: 2,
+    episodeNumber: 2,
+    title: 'On Its Way',
+    hasFile: false,
+    airDate: '2024-01-08',
+  ),
+];
+
+/// Sonarr's `/queue` record for episode 22, half downloaded.
+const _downloadingRecord = {
+  'id': 7,
+  'seriesId': 1,
+  'episodeId': 22,
+  'seasonNumber': 2,
+  'title': 'Show.S02E02.1080p.WEB',
+  'status': 'downloading',
+  'trackedDownloadState': 'downloading',
+  'trackedDownloadStatus': 'ok',
+  'size': 1000,
+  'sizeleft': 500,
+};
+
 void main() {
+  group('an episode in the queue', () {
+    testWidgets('reads downloading, not Missing, and so does its '
+        'season', (tester) async {
+      await _pump(
+        tester,
+        seasons: _seasonTwo,
+        episodes: _seasonTwoEpisodes,
+        queue: SonarrQueueSnapshots.fromQueueItems(const [_downloadingRecord]),
+      );
+
+      expect(find.textContaining('Downloading 50%'), findsWidgets);
+      expect(find.textContaining('Missing'), findsNothing);
+    });
+
+    testWidgets('without its record in a queue read whole, an aired episode '
+        'with no file is Missing', (tester) async {
+      await _pump(
+        tester,
+        seasons: _seasonTwo,
+        episodes: _seasonTwoEpisodes,
+        queue: SonarrQueueSnapshots.fromQueueItems(const []),
+      );
+
+      expect(find.textContaining('Missing'), findsWidgets);
+    });
+
+    testWidgets('a queue that did not answer reads unknown, never '
+        'Missing', (tester) async {
+      await _pump(
+        tester,
+        seasons: _seasonTwo,
+        episodes: _seasonTwoEpisodes,
+        queue: SonarrQueueSnapshots.failed(Exception('Connection refused')),
+      );
+
+      expect(find.textContaining('Missing'), findsNothing);
+      expect(find.textContaining('Unknown'), findsWidgets);
+    });
+
+    testWidgets('a queue still being read draws no badge and says no word it '
+        'would take back', (tester) async {
+      await _pump(
+        tester,
+        seasons: _seasonTwo,
+        episodes: _seasonTwoEpisodes,
+        queue: SonarrQueueSnapshots.unknown,
+      );
+
+      expect(find.textContaining('Missing'), findsNothing);
+      expect(find.textContaining('Unknown'), findsNothing);
+      // Nor a search, which could ask for a second copy of an episode on its
+      // way.
+      expect(find.byTooltip('Search episode 2'), findsNothing);
+      expect(find.text('On Its Way'), findsOneWidget);
+    });
+  });
+
   group('SeriesSeasonsList', () {
     testWidgets('renders the empty state, in the service accent, with no '
         'seasons', (tester) async {
@@ -264,6 +357,8 @@ void main() {
                     Exception('boom'),
                     StackTrace.empty,
                   ),
+                  queue: SonarrQueueSnapshots.empty,
+                  seriesId: 1,
                   onSearchSeason: (_) {},
                   onInteractiveSearchSeason: (_) {},
                   onSearchEpisode: (_) {},
@@ -298,6 +393,8 @@ void main() {
                   seasons: [_season(1)],
                   episodesAsync:
                       const AsyncValue<List<SonarrEpisode>>.loading(),
+                  queue: SonarrQueueSnapshots.empty,
+                  seriesId: 1,
                   onSearchSeason: (_) {},
                   onInteractiveSearchSeason: (_) {},
                   onSearchEpisode: (_) {},
@@ -520,6 +617,8 @@ Future<void> _pumpAtScale(
                 SeriesSeasonsList(
                   seasons: seasons,
                   episodesAsync: AsyncValue<List<SonarrEpisode>>.data(episodes),
+                  queue: SonarrQueueSnapshots.empty,
+                  seriesId: 1,
                   onSearchSeason: (_) {},
                   onInteractiveSearchSeason: (_) {},
                   onSearchEpisode: (_) {},
@@ -542,6 +641,7 @@ Future<void> _pump(
   WidgetTester tester, {
   required List<SonarrSeason> seasons,
   required List<SonarrEpisode> episodes,
+  SonarrQueueSnapshots queue = SonarrQueueSnapshots.empty,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -551,6 +651,8 @@ Future<void> _pump(
             SeriesSeasonsList(
               seasons: seasons,
               episodesAsync: AsyncValue<List<SonarrEpisode>>.data(episodes),
+              queue: queue,
+              seriesId: 1,
               onSearchSeason: (_) {},
               onInteractiveSearchSeason: (_) {},
               onSearchEpisode: (_) {},

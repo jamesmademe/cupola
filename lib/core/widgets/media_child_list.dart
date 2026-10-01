@@ -280,7 +280,10 @@ class MediaChildGroup {
   /// Full name for the summary line, the picker and assistive technology.
   final String label;
 
-  final MediaStatusInfo status;
+  /// The container's resolved status, or null when it cannot be said yet: the
+  /// queue it reads is still being asked ([badgeOverQueue]). Null draws no
+  /// badge and no status word, rather than a word taken back a moment later.
+  final MediaStatusInfo? status;
 
   /// The manifest gap in words: `8 of 10 episodes`.
   final String? summary;
@@ -430,8 +433,7 @@ class _MediaChildGroupSliverState extends State<MediaChildGroupSliver> {
                 title: group.label,
                 facts: <String>[
                   if (group.summary != null) group.summary!,
-                  if (mediaStatusWord(group.status) != null)
-                    mediaStatusWord(group.status)!,
+                  if (group.status case final status?) ?mediaStatusWord(status),
                 ],
                 status: group.status,
                 onTap: () => Navigator.of(sheetContext).pop(group.id),
@@ -635,11 +637,15 @@ class _GroupSelector extends StatelessWidget {
       ),
     );
 
+    final status = selected.status;
     final summaryTrailing = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        StatusBadge(info: selected.status),
-        if (action != null) ...[const SizedBox(width: AppSpacing.xs), action!],
+        if (status != null) StatusBadge(info: status),
+        if (action != null) ...[
+          if (status != null) const SizedBox(width: AppSpacing.xs),
+          action!,
+        ],
       ],
     );
 
@@ -717,7 +723,10 @@ class _GroupSelector extends StatelessWidget {
                 minHeight: 3,
                 backgroundColor: colorScheme.surfaceContainerHighest,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  statusToneColor(colorScheme, selected.status.tone),
+                  statusToneColor(
+                    colorScheme,
+                    status?.tone ?? StatusTone.neutral,
+                  ),
                 ),
               ),
             ),

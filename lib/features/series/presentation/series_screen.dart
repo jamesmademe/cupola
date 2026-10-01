@@ -77,8 +77,9 @@ class SeriesScreen extends ConsumerWidget {
       ),
       onRefresh: (ref) {
         // The family behind the snapshot, not the lens wrapper: see
-        // `movies_screen.dart`.
-        ref.invalidate(sonarrQueueSnapshotForProvider);
+        // `movies_screen.dart`. The read itself, which the series index is a
+        // view of.
+        ref.invalidate(sonarrQueueSnapshotsForProvider);
         // The rail's own non-swallowing read. See `movies_screen.dart`.
         ref.invalidate(sonarrKpiLibraryProvider);
       },

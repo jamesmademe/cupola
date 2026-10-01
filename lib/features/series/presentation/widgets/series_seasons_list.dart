@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart' show badgeOverQueue;
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/models/sonarr_season.dart';
+import 'package:cupola/features/series/domain/sonarr_queue_snapshots.dart';
 import 'package:cupola/features/series/domain/sonarr_status.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -28,6 +30,20 @@ class SeriesSeasonsList extends StatelessWidget {
   final List<SonarrSeason> seasons;
 
   final AsyncValue<List<SonarrEpisode>> episodesAsync;
+
+  /// The page's connection's queue, which every row's status reads: an
+  /// episode Sonarr is downloading reads downloading, never `Missing`, and so
+  /// does its season. Required, because a caller that passes no queue is
+  /// claiming nothing is in it.
+  ///
+  /// While it is still being read, a row whose state hangs on it draws no
+  /// badge and says no word it would take back ([badgeOverQueue]); once it
+  /// failed, such a row reads unknown.
+  final SonarrQueueSnapshots queue;
+
+  /// The series the seasons belong to, which a season's slice of [queue] is
+  /// keyed on.
+  final int seriesId;
 
   /// Optional background-search indicators, injected rather than resolved here.
   ///
@@ -67,6 +83,8 @@ class SeriesSeasonsList extends StatelessWidget {
     super.key,
     required this.seasons,
     required this.episodesAsync,
+    required this.queue,
+    required this.seriesId,
     this.seasonIndicator,
     this.episodeIndicator,
     required this.onSearchSeason,
@@ -96,7 +114,7 @@ class SeriesSeasonsList extends StatelessWidget {
               id: season.seasonNumber,
               shortLabel: season.shortLabel,
               label: season.label,
-              status: sonarrSeasonStatus(season),
+              status: _seasonStatus(season),
               summary: sonarrSeasonSummary(season),
               progress: season.completionPercent,
             ),
@@ -183,8 +201,24 @@ class SeriesSeasonsList extends StatelessWidget {
     return null;
   }
 
+  MediaStatusInfo? _seasonStatus(SonarrSeason season) => badgeOverQueue(
+    sonarrSeasonStatus(
+      season,
+      queueEntry: queue.seasonEntry(seriesId, season.seasonNumber),
+      queueUnknown: !queue.isWhole,
+    ),
+    queue.byEpisode,
+  );
+
   Widget _episodeRow(SonarrEpisode episode) {
-    final status = sonarrEpisodeStatus(episode);
+    final status = badgeOverQueue(
+      sonarrEpisodeStatus(
+        episode,
+        queueEntry: queue.byEpisode.entryFor(episode.id),
+        queueUnknown: !queue.isWhole,
+      ),
+      queue.byEpisode,
+    );
 
     return MediaChildTile.numbered(
       ordinal: formatEpisodeOrdinal(episode.episodeNumber),
@@ -217,14 +251,17 @@ class SeriesSeasonsList extends StatelessWidget {
     );
   }
 
-  static bool _isSearchable(MediaStatusInfo status) {
+  /// Not while the queue it hangs on is still being read ([status] null):
+  /// the episode may be on its way, and a search would ask for a second copy.
+  static bool _isSearchable(MediaStatusInfo? status) {
+    if (status == null) return false;
     if (status.isAvailable || status.isInPipeline) return false;
     return status.availability != MediaAvailability.unavailable;
   }
 
   static List<String> _episodeFacts(
     SonarrEpisode episode,
-    MediaStatusInfo status,
+    MediaStatusInfo? status,
   ) {
     final facts = <String>[];
     final airDate = formatMediumDateOrNull(
@@ -239,7 +276,7 @@ class SeriesSeasonsList extends StatelessWidget {
       facts.add('$runtime min');
     }
 
-    final statusWord = mediaStatusWord(status);
+    final statusWord = status == null ? null : mediaStatusWord(status);
     if (statusWord != null) facts.add(statusWord);
 
     return facts;

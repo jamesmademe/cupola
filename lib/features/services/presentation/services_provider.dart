@@ -29,6 +29,7 @@ import 'package:cupola/features/music/domain/lidarr_queue_snapshots.dart';
 import 'package:cupola/features/music/domain/models/lidarr_album.dart';
 import 'package:cupola/features/music/presentation/music_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/series/domain/sonarr_queue_snapshots.dart';
 import 'package:cupola/features/series/presentation/series_provider.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
@@ -632,19 +633,50 @@ LidarrQueueSnapshots lidarrQueueSnapshotsOf(
   _ => LidarrQueueSnapshots.unknown,
 };
 
-/// The Sonarr queue of one named connection. See
-/// [radarrQueueSnapshotForProvider].
-final sonarrQueueSnapshotForProvider =
-    FutureProvider.family<ArrQueueSnapshot, String>((ref, instanceId) async {
+/// The Sonarr queue of one named connection, indexed by series, episode and
+/// season from one read. Empty id means the lens.
+///
+/// Degrades to a **failed** snapshot, never an empty one: see
+/// [_loadArrQueueSnapshot]. Invalidate this family, not the series index
+/// derived from it, to read the queue again.
+final sonarrQueueSnapshotsForProvider =
+    FutureProvider.family<SonarrQueueSnapshots, String>((
+      ref,
+      instanceId,
+    ) async {
       final service = instanceId.isEmpty
           ? ref.watch(sonarrServiceProvider)
           : ref.watch(sonarrServiceForProvider(instanceId));
-      return _loadArrQueueSnapshot(
-        service.getQueuePage,
-        (item) => [
-          intOrNull(mapOrNull(item['series'])?['id'] ?? item['seriesId']),
-        ],
-      );
+      try {
+        final page = await service.getQueuePage();
+        return SonarrQueueSnapshots.fromQueueItems(
+          page.records,
+          cutShort: page.cutShort,
+        );
+      } catch (error) {
+        return SonarrQueueSnapshots.failed(error);
+      }
+    });
+
+/// [sonarrQueueSnapshotsForProvider]'s three snapshots as a screen reads them
+/// off the provider: see [queueSnapshotOf].
+SonarrQueueSnapshots sonarrQueueSnapshotsOf(
+  AsyncValue<SonarrQueueSnapshots> queue,
+) => switch (queue) {
+  AsyncValue(:final value?) => value,
+  AsyncValue(:final error?) => SonarrQueueSnapshots.failed(error),
+  _ => SonarrQueueSnapshots.unknown,
+};
+
+/// The Sonarr queue of one named connection, indexed by series id. See
+/// [radarrQueueSnapshotForProvider]. A view of
+/// [sonarrQueueSnapshotsForProvider], so the series grid and the episode rows
+/// read one queue.
+final sonarrQueueSnapshotForProvider =
+    FutureProvider.family<ArrQueueSnapshot, String>((ref, instanceId) async {
+      return (await ref.watch(
+        sonarrQueueSnapshotsForProvider(instanceId).future,
+      )).bySeries;
     });
 
 /// The Sonarr queue indexed by series id.

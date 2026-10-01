@@ -95,6 +95,27 @@ const _seasons = [
   ),
 ];
 
+/// Seasons whose status hangs on a queue still being read: no badge, and no
+/// word a moment later taken back.
+const _awaitedSeasons = [
+  MediaChildGroup(
+    id: 1,
+    shortLabel: 'S1',
+    label: 'Season 1',
+    status: null,
+    summary: '13 of 15 episodes',
+    progress: 13 / 15,
+  ),
+  MediaChildGroup(
+    id: 2,
+    shortLabel: 'S2',
+    label: 'Season 2',
+    status: _available,
+    summary: '15 of 15 episodes',
+    progress: 1,
+  ),
+];
+
 /// Eight containers: past the six a rail serves, so the picker appears.
 final _manySeasons = [
   const MediaChildGroup(
@@ -370,6 +391,12 @@ void main() {
             height: 340,
           ),
         ]),
+      ),
+      CatalogScene(
+        'MediaChildGroupSliver · a season whose status hangs on a queue still '
+        'being read (status: null) · the summary keeps its search menu and '
+        'draws no badge, the bar takes the neutral tone',
+        (_) => _column(_groups(_awaitedSeasons, count: (_) => 0), height: 200),
       ),
       CatalogScene(
         'MediaChildTile.stacked · Lidarr albums: 38 × 54 cover, own progress '
