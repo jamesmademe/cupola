@@ -35,7 +35,7 @@ One word per state, the same on every screen. The tone follows the tone rule bel
 | `Not set up` · `Set up Plex` | — | No address or key yet. The control stays tappable and names the service. |
 | `Retry` | — | Send the same request again. `Run again` is a different action: it re-runs a scheduled task. |
 | `Radarr answered but refused the key` | amber | An answer that says no. A fault, with its remedy (`Paste the key again`). |
-| `—` | — | The source did not answer. A figure never reads `0` because a request failed. |
+| `—` | — | The source did not answer. A figure never reads `0` because a request failed. The dash is this placeholder and nothing else: copy never breaks a sentence with it (a full stop, a colon, a comma or ` · ` instead), and a range takes the en dash, `S2 E4–E5`. |
 | `Needs you` | amber | The group of faults and approvals waiting for the operator: `3 faults · 2 requests`. |
 | `Stuck` | amber | Nothing has arrived for a while: `Big Buck Bunny is stuck at 47 %` · `nothing for 3 h`. |
 | `Failed` | amber | It ended and cannot finish by itself. |
@@ -50,7 +50,7 @@ One word per state, the same on every screen. The tone follows the tone rule bel
 
 **A stuck download's remedies**, each for its own cause: `Try another download` (it can never finish: the arr drops this one, won't pick it again, and looks for another) · `Look for peers again` (someone has the whole file but nobody is reachable) · `Keep waiting` (hides the fault for 24 hours; it comes back if nothing has moved) · `Remove download` (stops it and deletes what arrived, behind a neutral confirmation; the title stays wanted).
 
-**Never:** `Pending` · `Offline` · `Online` · `Connected` · `Unreachable` · `not answering` · `did not respond` · `Down` · `Not configured` · `Connect Seerr` · `Try again` · `Paused` · `Live` · `Instantly` · `Please wait` · `Oops` · `Sorry` · `Error 401` · `Reannounce` · `Blocklist and search` · `Snooze` · a bare `Delete` · `0` for a source that did not answer · `0 °C` for a sleeping disk. A word from this list that still appears in the app is a defect to replace, not a precedent. The state words live once in the code (`StateWord` and `Lexicon` in `lib/core/status/lexicon.dart`; the failure words in the classification, `failureLabel` and `failureHeadline`), and `test/core/theme/lexicon_guard_test.dart` scans every string in `lib/` for this list — its short allow-list names why each surviving word is not the banned state.
+**Never:** `Pending` · `Offline` · `Online` · `Connected` · `Unreachable` · `not answering` · `did not respond` · `Down` · `Not configured` · `Connect Seerr` · `Try again` · `Paused` · `Live` · `Instantly` · `Please wait` · `Oops` · `Sorry` · `Error 401` · `Reannounce` · `Blocklist and search` · `Snooze` · a bare `Delete` · `0` for a source that did not answer · `0 °C` for a sleeping disk · an em dash between words (`Saved — Radarr`). A word from this list that still appears in the app is a defect to replace, not a precedent. The state words live once in the code (`StateWord` and `Lexicon` in `lib/core/status/lexicon.dart`; the failure words in the classification, `failureLabel` and `failureHeadline`), and `test/core/theme/lexicon_guard_test.dart` scans every string in `lib/` for this list, the dash between words included — its short allow-list names why each surviving word is not the banned state.
 
 ### Formats
 
