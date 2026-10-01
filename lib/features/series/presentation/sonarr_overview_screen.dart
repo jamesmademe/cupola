@@ -32,6 +32,7 @@ import 'package:cupola/features/services/presentation/service_kpi_provider.dart'
 
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Sonarr's service home.
@@ -275,11 +276,14 @@ class _NeedsAttentionSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(sonarrNeedsAttentionProvider);
     final count = items.asData?.value.length;
+    // A queue walk that stopped short: see the Radarr home's twin.
+    final floor =
+        ref.watch(sonarrQueueRecordsProvider).value?.cutShort ?? false;
 
     return ServiceOverviewSection(
       service: ServiceKey.sonarr,
       title: 'Needs attention',
-      subtitle: count == null ? '—' : '$count',
+      subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
       // No link: every row here belongs to a different tab — a stalled download
       // to Queue, a backlog to Wanted — and a single destination would have to
       // lie about the rest.

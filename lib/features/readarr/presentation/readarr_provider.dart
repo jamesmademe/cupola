@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/readarr/data/readarr_service.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
@@ -60,6 +61,12 @@ final readarrAuthorsProvider = FutureProvider<List<ReadarrAuthor>>((ref) async {
 /// hold that `catch` for ten backed-off attempts before letting it run — the
 /// rail stuck in its skeleton for some forty seconds instead of printing the em
 /// dash. See `lib/core/providers/provider_retry.dart`.
-final readarrQueueProvider = FutureProvider<List<dynamic>>((ref) async {
-  return ref.watch(readarrServiceProvider).getQueue();
+///
+/// The walk with its envelope, not the bare rows: the rail counted the rows
+/// and stated them as the queue, so a proxy that drops `totalRecords` stopped
+/// the walk on its first full page and the rail read `Queue 200` however long
+/// the queue was. [ArrRecordPage.total] and [ArrRecordPage.cutShort] say
+/// which figure the rows can stand for.
+final readarrQueueProvider = FutureProvider<ArrRecordPage>((ref) async {
+  return ref.watch(readarrServiceProvider).getQueuePage();
 }, retry: noProviderRetry);

@@ -8,6 +8,7 @@ import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Readarr's service home.
@@ -146,13 +147,16 @@ class _NeedsAttentionSection extends ConsumerWidget {
     // it was still showing. A source that never answered has no retained value
     // and still reads "—".
     final count = items.hasValue ? items.requireValue.length : null;
+    // A queue walk that stopped short: see the Radarr home's twin.
+    final floor =
+        ref.watch(readarrQueueRecordsProvider).value?.cutShort ?? false;
 
     return ServiceOverviewSection(
       service: ServiceKey.readarr,
       title: 'Needs attention',
       // "—" while the queue and the library are loading or after either failed:
       // a "0" printed over an unanswered question is a claim nobody made.
-      subtitle: count == null ? '—' : '$count',
+      subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
       // No link: these rows belong to different tabs — Queue for a stalled
       // import, Wanted for the backlog — and a single destination would have to
       // lie about one of the two.

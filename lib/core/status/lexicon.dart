@@ -78,6 +78,22 @@ abstract final class Lexicon {
   /// A figure whose source did not answer. Never `0`.
   static const noFigure = '—';
 
+  /// A count that is only the least there is: `200+`. A walk across pages
+  /// that stopped on a full page with no total to say whether another
+  /// followed has counted rows, not the set, and a figure taken from them is
+  /// a floor, never the total.
+  static String floor(int count) => '$count+';
+
+  /// A figure as the ear should hear it: a floor (`200+`) is `at least 200`,
+  /// where a screen reader says "200 plus" or drops the mark. Anything else
+  /// is left as it is.
+  static String spokenFigure(String figure) {
+    final match = _floorFigure.firstMatch(figure);
+    return match == null ? figure : 'at least ${match.group(1)}';
+  }
+
+  static final _floorFigure = RegExp(r'^(\d[\d,]*)\+$');
+
   /// An empty answer, and only after the source answered.
   static const noResults = 'No results';
 

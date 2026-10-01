@@ -35,6 +35,7 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Radarr's service home.
@@ -264,11 +265,15 @@ class _NeedsAttentionSection extends ConsumerWidget {
     // it was still showing. A source that never answered has no retained value
     // and still reads "—".
     final count = items.hasValue ? items.requireValue.length : null;
+    // The faults are the ones in the rows the queue walk read: one that
+    // stopped on a full page with no total may have more behind it.
+    final floor =
+        ref.watch(radarrQueueRecordsProvider).value?.cutShort ?? false;
 
     return ServiceOverviewSection(
       service: ServiceKey.radarr,
       title: 'Needs attention',
-      subtitle: count == null ? '—' : '$count',
+      subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
       // No link: every row here belongs to a different tab, and a single
       // destination would have to lie about four of them.
       child: AsyncValueWidget<List<RadarrAttentionItem>>(

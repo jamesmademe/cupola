@@ -3,6 +3,7 @@ import 'dart:isolate';
 import 'package:dio/dio.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// Configuration for *arr service activity endpoints.
 class ArrServiceConfig {
@@ -132,6 +133,11 @@ class ArrRecordPage {
   /// rows are a floor, and a figure taken from them is `200+`, never `200`.
   /// Always false for a single page, which is one window by definition.
   final bool cutShort;
+
+  /// [records] as string-keyed maps, anything that is not a map dropped: the
+  /// shape every reader of a raw page maps them into first.
+  List<Map<String, dynamic>> get recordMaps =>
+      records.whereType<Map>().map(stringKeyMap).toList(growable: false);
 
   /// Reads the envelope, tolerating the shapes the four \*arr forks answer with.
   ///

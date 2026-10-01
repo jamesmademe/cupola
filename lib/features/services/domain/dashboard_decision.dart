@@ -433,16 +433,24 @@ int decisionCapFor({required bool desktopShell, required bool compact}) {
 ///
 /// Names the kinds present rather than a fixed list, so a stack with nothing but
 /// requests does not advertise stalls and certificates it does not have.
-String decisionsEyebrow(List<DashboardDecision> decisions) {
+///
+/// [floor] when a source answered with only part of itself
+/// ([SourceCoverage.isFloor]): the queue's faults were found in the rows a walk
+/// read before it stopped, so there may be more, and the count is `3+`.
+String decisionsEyebrow(
+  List<DashboardDecision> decisions, {
+  bool floor = false,
+}) {
   if (decisions.isEmpty) return '';
   final total = decisionItemCount(decisions);
-  final noun = total == 1 ? 'item' : 'items';
+  final noun = total == 1 && !floor ? 'item' : 'items';
   final kinds = <String>[];
   for (final decision in decisions) {
     final word = _kindNoun(decision.kind);
     if (!kinds.contains(word)) kinds.add(word);
   }
-  return '$total $noun · ${kinds.join(', ')}';
+  final count = floor ? Lexicon.floor(total) : '$total';
+  return '$count $noun · ${kinds.join(', ')}';
 }
 
 String _kindNoun(DecisionKind kind) => switch (kind) {

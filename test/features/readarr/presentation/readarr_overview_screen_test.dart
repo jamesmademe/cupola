@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/readarr/data/readarr_service.dart';
@@ -379,6 +380,16 @@ class _ScriptedReadarr extends ReadarrService {
   Future<List<dynamic>> getQueue({
     Map<String, dynamic>? queryParameters,
   }) async => queue;
+
+  /// The walk, as the shared fakes answer it: the scripted rows are the whole
+  /// queue, so their count is its total.
+  @override
+  Future<ArrRecordPage> getQueuePage({
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final records = await getQueue(queryParameters: queryParameters);
+    return ArrRecordPage(records: records, total: records.length);
+  }
 
   @override
   Future<List<dynamic>> getHistory({

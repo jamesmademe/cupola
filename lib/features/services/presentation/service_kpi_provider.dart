@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
+import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
-import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
@@ -118,10 +119,13 @@ final serviceKpiProvider = FutureProvider.autoDispose
 /// directly and hold nothing, so invalidating that family is already a re-ask.
 List<ProviderOrFamily> serviceKpiSources(ServiceKey service) =>
     switch (service) {
+      // The family behind the snapshot, not the lens wrapper alone: that one
+      // only resolves the lens and re-watches its family member, which keeps
+      // the answer it already had.
       ServiceKey.radarr => [
         radarrKpiLibraryProvider,
         radarrQueueSnapshotProvider,
-        radarrQueuedMovieIdsProvider,
+        radarrQueueSnapshotForProvider,
       ],
       ServiceKey.sonarr => [sonarrKpiLibraryProvider],
       ServiceKey.lidarr => [lidarrKpiLibraryProvider],
@@ -503,18 +507,19 @@ Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
   try {
     movies = await ref.watch(radarrKpiLibraryProvider.future);
   } catch (error) {
-    // The queue figure goes too. It comes off the same server through
-    // `radarrQueueSnapshotProvider`, which degrades to an empty snapshot — so
-    // once the library has told us the server is dark, `Queue 0` is the same
-    // fabrication wearing a different label.
+    // The queue figure goes too: it comes off the same server, and once the
+    // library has told us the server is dark the queue has nothing to add but
+    // a second note saying so.
     return _radarrKpisFrom(
       null,
-      null,
+      ArrQueueSnapshot.unknown,
       note: _notAnswering(ServiceKey.radarr, error),
     );
   }
-  final queued = await ref.watch(radarrQueuedMovieIdsProvider.future);
-  return _radarrKpisFrom(movies, queued.length);
+  return _radarrKpisFrom(
+    movies,
+    await ref.watch(radarrQueueSnapshotProvider.future),
+  );
 }
 
 /// The same four figures for one **named** connection, whatever the lens is on.
@@ -531,23 +536,30 @@ Future<List<ServiceKpi>> _radarrKpisFor(Ref ref, String instanceId) async {
   } catch (error) {
     return _radarrKpisFrom(
       null,
-      null,
+      ArrQueueSnapshot.unknown,
       note: _notAnswering(ServiceKey.radarr, error),
     );
   }
-  final queue = await ref.watch(
-    radarrQueueSnapshotForProvider(instanceId).future,
+  return _radarrKpisFrom(
+    movies,
+    await ref.watch(radarrQueueSnapshotForProvider(instanceId).future),
   );
-  return _radarrKpisFrom(movies, queue.entriesById.length);
 }
 
 /// Null means the server did not answer — see [_figure]. Never `[]`, which is
 /// an answer: it says the library is there and empty.
+///
+/// The queue figure is the films in [queue], and only as much of a figure as
+/// the snapshot can stand behind: an em dash with its own reason when the
+/// queue did not answer (a library that reads fine over a queue endpoint that
+/// does not used to print `Queue 0`), and a floor (`200+`) when the walk
+/// stopped on a full page with no total.
 List<ServiceKpi> _radarrKpisFrom(
   List<RadarrMovie>? movies,
-  int? queued, {
+  ArrQueueSnapshot queue, {
   String? note,
 }) {
+  final queued = queue.entriesById.length;
   final monitored = movies?.where((m) => m.monitored).length;
   final missing = movies?.where((m) => m.monitored && !m.hasFile).length;
   return [
@@ -570,11 +582,24 @@ List<ServiceKpi> _radarrKpisFrom(
     ),
     _figure(
       label: 'Queue',
-      value: queued == null ? null : '$queued',
+      value: !queue.answered
+          ? null
+          : queue.cutShort
+          ? Lexicon.floor(queued)
+          : '$queued',
       icon: Icons.download_rounded,
+      // The library's note already says why when the whole server is dark.
+      note: queue.answered || movies == null
+          ? null
+          : _queueNote(ServiceKey.radarr, queue.error),
     ),
   ];
 }
+
+/// Why a queue figure reads an em dash when the queue is its own fetch:
+/// `Queue · Did not answer`.
+String _queueNote(ServiceKey service, Object? error) =>
+    'Queue · ${failureLabel(classifyConnectionFailure(error), credential: refusedCredentialOf(service))}';
 
 Future<List<ServiceKpi>> _sonarrKpis(Ref ref) async {
   try {
@@ -1009,10 +1034,10 @@ Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
     authors = null;
     authorsError = error;
   }
-  int? queued;
+  ArrRecordPage? queued;
   Object? queueError;
   try {
-    queued = (await ref.watch(readarrQueueProvider.future)).length;
+    queued = await ref.watch(readarrQueueProvider.future);
   } catch (error) {
     queued = null;
     queueError = error;
@@ -1042,8 +1067,8 @@ Future<List<ServiceKpi>> _readarrKpisFor(Ref ref, String instanceId) async {
     },
   );
   Object? queueError;
-  final queueFuture = service.getQueue().then<int?>(
-    (value) => value.length,
+  final queueFuture = service.getQueuePage().then<ArrRecordPage?>(
+    (value) => value,
     onError: (Object error) {
       queueError = error;
       return null;
@@ -1061,10 +1086,11 @@ Future<List<ServiceKpi>> _readarrKpisFor(Ref ref, String instanceId) async {
 }
 
 /// [error] is why the library read failed, for the note; null when it did not.
-/// [queueError] is the same for the queue, which is its own fetch.
+/// [queueError] is the same for the queue, which is its own fetch, and
+/// [queued] the queue walk: the figure is [queueFigure] of it.
 List<ServiceKpi> _readarrKpisFrom(
   List<ReadarrAuthor>? authors,
-  int? queued, {
+  ArrRecordPage? queued, {
   Object? error,
   Object? queueError,
 }) {
@@ -1096,16 +1122,31 @@ List<ServiceKpi> _readarrKpisFrom(
     ),
     _figure(
       label: 'Queue',
-      value: queued == null ? null : '$queued',
+      value: queued == null ? null : queueFigure(queued),
       icon: Icons.download_rounded,
       // Its own reason, because it is its own fetch: a Readarr whose library
       // reads fine and whose queue endpoint is down used to print `Queue 0` —
       // an idle downloader rather than an unread one.
-      note: queued == null
-          ? 'Queue · ${failureLabel(classifyConnectionFailure(queueError), credential: refusedCredentialOf(ServiceKey.readarr))}'
-          : null,
+      note: queued == null ? _queueNote(ServiceKey.readarr, queueError) : null,
     ),
   ];
+}
+
+/// A queue walk as a figure, the rule Activity's queue tile reads it by.
+///
+/// The server's own count when the walk has one, even when it ran out of
+/// pages before the rows did: the count stands, and only the rows are short.
+/// Without one the rows are all there is to go on, and they are the whole
+/// queue only when a short page ended it; a full page with no count to say
+/// whether another followed is a floor, `200+`. It used to be the rows' length
+/// whatever the walk said, so a proxy that drops `totalRecords` read
+/// `Queue 200` for any queue longer than one page.
+String queueFigure(ArrRecordPage page) {
+  final total = page.total;
+  if (total != null) return '$total';
+  return page.cutShort
+      ? Lexicon.floor(page.records.length)
+      : '${page.records.length}';
 }
 
 Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {

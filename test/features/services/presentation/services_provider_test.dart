@@ -27,6 +27,7 @@ import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -370,6 +371,44 @@ void main() {
       // APP-01: the eyebrow's figure is the count, not the preview's length —
       // eight transfers used to read "5 downloading".
       expect(inFlight.activeCount, 8);
+    });
+
+    test('a queue walk that stopped short makes the count a floor', () async {
+      // A full page and no `totalRecords`: the walk had no reason to ask for
+      // another page, and the region stated its rows as the queue.
+      final container = _container(
+        settings: bothArrs,
+        radarrService: _PageRadarrService(
+          ArrRecordPage(
+            records: [
+              for (var index = 0; index < 3; index++)
+                {
+                  'title': 'Release $index',
+                  'downloadId': 'id-$index',
+                  'size': 100,
+                  'sizeleft': 50,
+                },
+            ],
+            total: null,
+            cutShort: true,
+          ),
+        ),
+      );
+
+      final inFlight = await container.read(servicesInFlightProvider.future);
+
+      expect(inFlight.coverage.isFloor, isTrue);
+      expect(
+        inFlightEyebrow(
+          active: inFlight.activeCount,
+          rateBytesPerSecond: inFlight.rateBytesPerSecond,
+          clients: inFlight.clients,
+          coverage: inFlight.coverage,
+        ),
+        '3+ downloading',
+      );
+      // Nobody failed, so there is no one to name under the figure.
+      expect(coverageNote(inFlight.coverage), isNull);
     });
 
     // The provider fans out to seven services at once, so what it watches

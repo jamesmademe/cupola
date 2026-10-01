@@ -17,6 +17,9 @@
 ///  * every source failed — the figure reads `—` ([coveredFigure]);
 ///  * some failed — the figure is the total over the rest, and the line under
 ///    it names what is not in it ([coverageNote]);
+///  * one answered with only part of itself ([SourceCoverage.cutShort]: a
+///    queue walk that stopped on a full page with no total) — the figure is a
+///    floor, `200+`, and there is nobody to name;
 ///  * none failed — the figure is the total.
 library;
 
@@ -35,13 +38,16 @@ class SourceCoverage {
     this.answered = const <ServiceKey>{},
     this.failed = const <ServiceKey, ServiceFailureReason>{},
     this.pending = const <ServiceKey>{},
+    this.cutShort = const <ServiceKey>{},
   });
 
   /// No source at all: nothing configured feeds the merge.
   static const none = SourceCoverage();
 
-  /// [service] answered the read.
-  SourceCoverage.answeredBy(ServiceKey service) : this(answered: {service});
+  /// [service] answered the read — with only part of what it holds when
+  /// [cutShort], which takes the figure to a floor.
+  SourceCoverage.answeredBy(ServiceKey service, {bool cutShort = false})
+    : this(answered: {service}, cutShort: cutShort ? {service} : const {});
 
   /// [service]'s read failed with [error], classified once here so every
   /// surface that names it says the same words.
@@ -62,19 +68,38 @@ class SourceCoverage {
     final failed = <ServiceKey, ServiceFailureReason>{};
     final pending = <ServiceKey>{};
     final answered = <ServiceKey>{};
+    final cutShort = <ServiceKey>{};
     for (final part in parts) {
       failed.addAll(part.failed);
       pending.addAll(part.pending);
       answered.addAll(part.answered);
+      cutShort.addAll(part.cutShort);
     }
     pending.removeAll(failed.keys);
     answered
       ..removeAll(failed.keys)
       ..removeAll(pending);
-    return SourceCoverage(answered: answered, failed: failed, pending: pending);
+    cutShort.retainAll(answered);
+    return SourceCoverage(
+      answered: answered,
+      failed: failed,
+      pending: pending,
+      cutShort: cutShort,
+    );
   }
 
   final Set<ServiceKey> answered;
+
+  /// Sources that answered with only part of what they hold: a queue walk
+  /// that stopped on a full page with no total to say whether another
+  /// followed. Always a subset of [answered]. Their share of a figure is what
+  /// arrived, so the figure is a floor ([isFloor]); nothing is missing to name.
+  final Set<ServiceKey> cutShort;
+
+  /// The figure counts at least this much and maybe more: `200+`, never
+  /// `200`. Only for a source that answered short; a source that failed is
+  /// named under the figure instead ([coverageNote]).
+  bool get isFloor => cutShort.isNotEmpty && !everySourceFailed;
 
   /// Each source whose read failed, with why.
   final Map<ServiceKey, ServiceFailureReason> failed;
@@ -82,8 +107,8 @@ class SourceCoverage {
   /// Sources still being asked: neither a figure nor a failure yet.
   final Set<ServiceKey> pending;
 
-  /// Every source answered: the figure is the whole.
-  bool get isWhole => failed.isEmpty && pending.isEmpty;
+  /// Every source answered, and with all of itself: the figure is the whole.
+  bool get isWhole => failed.isEmpty && pending.isEmpty && cutShort.isEmpty;
 
   /// Some answered and some failed: the figure is a part, and has to say so.
   bool get isPartial => answered.isNotEmpty && failed.isNotEmpty;
@@ -103,20 +128,32 @@ class SourceCoverage {
         ..sort((a, b) => a.index.compareTo(b.index));
 }
 
-/// [count] as a figure over [coverage]: the number, or `—` when no source
-/// answered. Never `0` for a count nobody was able to take.
-String coveredFigure(int count, SourceCoverage coverage) =>
-    coverage.everySourceFailed ? Lexicon.noFigure : '$count';
+/// [count] as a figure over [coverage]: the number, `—` when no source
+/// answered, and a floor (`200+`) when one answered with only part of itself.
+/// Never `0` for a count nobody was able to take, and never a row count stated
+/// as the total of a queue the walk did not finish.
+String coveredFigure(int count, SourceCoverage coverage) {
+  if (coverage.everySourceFailed) return Lexicon.noFigure;
+  return coverage.isFloor ? Lexicon.floor(count) : '$count';
+}
 
 /// A `— downloading` figure phrase as a screen reader should say it.
 ///
 /// The dash is a glyph the eye reads as "no figure" and the ear hears as "em
 /// dash" or nothing at all, so the spoken form says it: `downloading, count
-/// unavailable`. A phrase with a number in it is left alone.
+/// unavailable`. A floor leading the phrase says what it is, `at least 200
+/// downloading`, where a screen reader says "200 plus" or drops the mark. A
+/// phrase with a plain number in it is left alone.
 String spokenCountPhrase(String phrase) {
   const lead = '${Lexicon.noFigure} ';
-  if (!phrase.startsWith(lead)) return phrase;
-  return '${phrase.substring(lead.length)}, count unavailable';
+  if (phrase.startsWith(lead)) {
+    return '${phrase.substring(lead.length)}, count unavailable';
+  }
+  final space = phrase.indexOf(' ');
+  final figure = space < 0 ? phrase : phrase.substring(0, space);
+  final spoken = Lexicon.spokenFigure(figure);
+  if (spoken == figure) return phrase;
+  return space < 0 ? spoken : '$spoken${phrase.substring(space)}';
 }
 
 /// The line under a total that leaves a source out: `Not in the total:

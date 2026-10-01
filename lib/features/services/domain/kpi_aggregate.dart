@@ -30,6 +30,7 @@
 library;
 
 import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 
@@ -87,11 +88,16 @@ ServiceKpi _foldOne(List<ServiceKpi> terms) {
     );
   }
 
-  final counts = [for (final term in terms) int.tryParse(term.value)];
+  // A floor (`200+`) is a count too, and a sum with one in it is a floor: the
+  // fleet holds at least that many. Left to the fall-through below, it was a
+  // string that is not a count, and the lens's own floor stood in for the
+  // fleet's figure.
+  final counts = [for (final term in terms) _count(term.value)];
   if (!counts.contains(null)) {
+    final sum = counts.fold<int>(0, (sum, count) => sum + count!.value);
     return ServiceKpi(
       label: lens.label,
-      value: '${counts.fold<int>(0, (sum, count) => sum + count!)}',
+      value: counts.any((count) => count!.floor) ? Lexicon.floor(sum) : '$sum',
       icon: lens.icon,
       tone: _worstTone(terms),
       note: _sharedNote(terms),
@@ -156,6 +162,15 @@ int _severity(StatusTone? tone) => switch (tone) {
 String? _sharedNote(List<ServiceKpi> terms) {
   final note = terms.first.note;
   return terms.every((term) => term.note == note) ? note : null;
+}
+
+/// `12` or the floor `200+` back into a count, or null if it is neither.
+({int value, bool floor})? _count(String value) {
+  final floor = value.endsWith('+');
+  final count = int.tryParse(
+    floor ? value.substring(0, value.length - 1) : value,
+  );
+  return count == null ? null : (value: count, floor: floor);
 }
 
 /// `2.0 MB/s` back into bytes per second, or null if it is not a rate.

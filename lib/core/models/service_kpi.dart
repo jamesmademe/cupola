@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 
 /// A single key metric shown in a [ServiceKpiPeek] rail.
@@ -93,9 +94,10 @@ class ServiceKpi {
   /// The em dash is the one character on the rail that assistive technology
   /// cannot render usefully — VoiceOver reads it as "dash" or skips it — so the
   /// figure that matters most is the figure that announced worst. Spelled out,
-  /// with the reason attached.
+  /// with the reason attached. A floor (`200+`) says `at least 200` for the
+  /// same reason ([Lexicon.spokenFigure]).
   String get semanticLabel {
-    final spoken = isUnavailable ? 'unavailable' : value;
+    final spoken = isUnavailable ? 'unavailable' : Lexicon.spokenFigure(value);
     return note == null ? '$label: $spoken' : '$label: $spoken, $note';
   }
 }

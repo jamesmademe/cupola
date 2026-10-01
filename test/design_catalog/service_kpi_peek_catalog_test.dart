@@ -29,6 +29,20 @@ const _radarr = [
   ServiceKpi(label: 'Queue', value: '3', icon: Icons.download_rounded),
 ];
 
+/// Readarr whose queue walk stopped on a full page with no total: the Queue
+/// figure is a floor.
+const _readarrFloor = [
+  ServiceKpi(label: 'Authors', value: '86', icon: Icons.person_rounded),
+  ServiceKpi(label: 'Books', value: '1,240', icon: Icons.menu_book_rounded),
+  ServiceKpi(
+    label: 'Missing',
+    value: '12',
+    icon: Icons.report_gmailerrorred_rounded,
+    tone: StatusTone.neutral,
+  ),
+  ServiceKpi(label: 'Queue', value: '200+', icon: Icons.download_rounded),
+];
+
 /// The same rail when Radarr did not answer: the same four cards, dashes.
 const _radarrSilent = [
   ServiceKpi.unavailable(
@@ -109,6 +123,12 @@ void main() {
         'TrueNAS · a pool past 80% and an active alert take the fault tone',
         const AsyncValue.data(_truenas),
         ServiceKey.truenas,
+      ),
+      _scene(
+        'Readarr, a queue walk cut short · the Queue figure is a floor, 200+, '
+        'spoken "at least 200"',
+        const AsyncValue.data(_readarrFloor),
+        ServiceKey.readarr,
       ),
       _scene(
         'ServiceKpi.unavailable · Radarr did not answer · the same four cards, '

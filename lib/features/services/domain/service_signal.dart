@@ -8,6 +8,7 @@ library;
 import 'package:flutter/widgets.dart';
 
 import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 
 /// A service's headline metric, already reduced to something paintable.
@@ -60,10 +61,11 @@ class ServiceSignal {
   ///
   /// Capitalised because it opens a clause of its own after the reachability
   /// word, and reduced to the bare [value] when there is no label — "Paused"
-  /// is already the whole fact.
+  /// is already the whole fact. A floor is said as one: `Queue at least 200`.
   String get spoken {
-    if (label.isEmpty) return value;
-    return '${label[0].toUpperCase()}${label.substring(1)} $value';
+    final figure = Lexicon.spokenFigure(value);
+    if (label.isEmpty) return figure;
+    return '${label[0].toUpperCase()}${label.substring(1)} $figure';
   }
 }
 

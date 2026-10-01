@@ -14,6 +14,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
@@ -339,17 +340,22 @@ bool _isImportFault(Map<String, dynamic> record) {
       arrQueueSeverity(record) != ArrQueueSeverity.ok;
 }
 
-/// The raw `/queue` page, string-keyed.
+/// The raw `/queue` walk, with its envelope.
 ///
 /// The equivalent of the private `_loadServiceQueueItems` in
 /// `services_provider.dart`, stopping one step earlier: that one maps straight
 /// to `ServiceQueueItem`, which carries title/subtitle/progress/warning and no
 /// timestamp at all.
-final radarrQueueRecordsProvider =
-    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-      final records = await ref.watch(radarrServiceProvider).getQueue();
-      return records.whereType<Map>().map(stringKeyMap).toList(growable: false);
-    });
+///
+/// The page and not its bare rows, so [ArrRecordPage.cutShort] reaches the
+/// section that counts faults in them: a walk that stopped on a full page with
+/// no total read its faults out of the first 200 records, and the header
+/// stated their count as if it were all of them.
+final radarrQueueRecordsProvider = FutureProvider.autoDispose<ArrRecordPage>((
+  ref,
+) {
+  return ref.watch(radarrServiceProvider).getQueuePage();
+});
 
 /// How many library files sit below the configured quality cutoff, or null
 /// when the server did not say.
@@ -378,13 +384,18 @@ final radarrCutoffUnmetCountProvider = FutureProvider.autoDispose<int?>((
 /// Faults first, backlog last.
 ///
 /// The order is the design's: what needs a decision before what is merely
-/// outstanding.
+/// outstanding. When the queue walk stopped short the faults are only those in
+/// the rows it read, and the section's count is a floor: read
+/// `radarrQueueRecordsProvider`'s `cutShort` beside this.
 final radarrNeedsAttentionProvider =
     FutureProvider.autoDispose<List<RadarrAttentionItem>>((ref) async {
-      final records = await ref.watch(radarrQueueRecordsProvider.future);
+      final page = await ref.watch(radarrQueueRecordsProvider.future);
       final cutoff = await ref.watch(radarrCutoffUnmetCountProvider.future);
       final backlog = radarrBelowCutoffItem(cutoff);
-      return [...radarrQueueFaults(records, now: DateTime.now()), ?backlog];
+      return [
+        ...radarrQueueFaults(page.recordMaps, now: DateTime.now()),
+        ?backlog,
+      ];
     });
 
 // ─── History today ──────────────────────────────────────────────────────────

@@ -62,6 +62,43 @@ void main() {
       );
       expect(spokenCountPhrase('3 downloading'), '3 downloading');
     });
+
+    test('a source that answered with part of itself makes the figure a '
+        'floor, with nobody to name', () {
+      // Radarr's queue walk stopped on a full page with no total: its rows
+      // are what arrived, not the queue.
+      final coverage = SourceCoverage.merge([
+        SourceCoverage.answeredBy(ServiceKey.radarr, cutShort: true),
+        SourceCoverage.answeredBy(ServiceKey.qbittorrent),
+      ]);
+
+      expect(coverage.isFloor, isTrue);
+      expect(coverage.isWhole, isFalse);
+      expect(coveredFigure(200, coverage), '200+');
+      expect(coverageNote(coverage), isNull);
+    });
+
+    test('a source that failed is not a floor of itself', () {
+      // Answered short in one read and failed in another: the failure wins,
+      // and the source is named under the figure instead.
+      final coverage = SourceCoverage.merge([
+        SourceCoverage.answeredBy(ServiceKey.radarr, cutShort: true),
+        SourceCoverage.failure(ServiceKey.radarr, silent),
+        SourceCoverage.answeredBy(ServiceKey.sonarr),
+      ]);
+
+      expect(coverage.cutShort, isEmpty);
+      expect(coverage.isFloor, isFalse);
+      expect(coveredFigure(3, coverage), '3');
+    });
+
+    test('a floor is spoken as the least there is', () {
+      expect(
+        spokenCountPhrase('200+ downloading, 2.0 MB/s across 1 client'),
+        'at least 200 downloading, 2.0 MB/s across 1 client',
+      );
+      expect(spokenCountPhrase('3+'), 'at least 3');
+    });
   });
 
   group('the note under a partial total', () {

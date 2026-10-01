@@ -29,10 +29,10 @@ An `AsyncValue<List<ServiceKpi>>` (label, value, icon, optional tone, optional n
 
 ## Semantics
 
-Each card is one container node speaking `ServiceKpi.semanticLabel` — *Movies: 1,284*, or *Movies: unavailable, Radarr · Did not answer*; the glyph, figure and eyebrow are excluded.
+Each card is one container node speaking `ServiceKpi.semanticLabel` — *Movies: 1,284*, *Queue: at least 200* for a floor, or *Movies: unavailable, Radarr · Did not answer*; the glyph, figure and eyebrow are excluded.
 
 ## Do / don't
 
 - Do state an unanswered figure as a dash.
-- Don't count inside a capped or paged response and present the result as a total.
+- Don't count inside a capped or paged response and present the result as a total. A queue walk that stopped on a full page with no total reads a floor, `200+`.
 - Don't tint a backlog figure (Missing) with a fault tone: it is neutral.

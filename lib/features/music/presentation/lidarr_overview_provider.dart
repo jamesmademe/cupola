@@ -371,17 +371,19 @@ LidarrAttentionItem? lidarrMissingAlbumsItem(ArrRecordPage page) {
   );
 }
 
-/// The raw `/queue` page, string-keyed.
+/// The raw `/queue` walk, with its envelope.
 ///
 /// The equivalent of the private `_loadServiceQueueItems` in
 /// `services_provider.dart`, stopping one step earlier: that one maps straight
 /// to `ServiceQueueItem`, which carries title/subtitle/progress/warning and no
-/// timestamp at all.
-final lidarrQueueRecordsProvider =
-    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-      final records = await ref.watch(lidarrServiceProvider).getQueue();
-      return records.whereType<Map>().map(stringKeyMap).toList(growable: false);
-    });
+/// timestamp at all. The page and not its bare rows, for the reason
+/// `radarrQueueRecordsProvider` gives: faults counted in a walk that stopped
+/// short are a floor.
+final lidarrQueueRecordsProvider = FutureProvider.autoDispose<ArrRecordPage>((
+  ref,
+) {
+  return ref.watch(lidarrServiceProvider).getQueuePage();
+});
 
 /// One page of the wishlist, kept as a page so its envelope survives.
 ///
@@ -401,10 +403,13 @@ final lidarrMissingPageProvider = FutureProvider.autoDispose<ArrRecordPage>((
 /// outstanding.
 final lidarrNeedsAttentionProvider =
     FutureProvider.autoDispose<List<LidarrAttentionItem>>((ref) async {
-      final records = await ref.watch(lidarrQueueRecordsProvider.future);
+      final page = await ref.watch(lidarrQueueRecordsProvider.future);
       final missing = await ref.watch(lidarrMissingPageProvider.future);
       final backlog = lidarrMissingAlbumsItem(missing);
-      return [...lidarrQueueFaults(records, now: DateTime.now()), ?backlog];
+      return [
+        ...lidarrQueueFaults(page.recordMaps, now: DateTime.now()),
+        ?backlog,
+      ];
     });
 
 // ─── History today ──────────────────────────────────────────────────────────

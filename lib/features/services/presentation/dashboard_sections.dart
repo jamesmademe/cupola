@@ -24,6 +24,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
@@ -94,7 +95,7 @@ class DashboardDecisionsSection extends ConsumerWidget {
           ),
           semanticLabel: joinSpokenParts([
             _title,
-            eyebrow,
+            if (eyebrow != null) spokenCountPhrase(eyebrow),
             if (note != null) spokenFromDotted(note),
           ]),
         );
@@ -145,8 +146,9 @@ class DashboardDecisionsSection extends ConsumerWidget {
       compact: AppBreakpoints.isCompactDesktop(context),
     );
     final shown = rankDecisions(decisions, cap: cap);
-    final eyebrow = decisionsEyebrow(decisions);
+    final eyebrow = decisionsEyebrow(decisions, floor: coverage.isFloor);
     final note = coverageNote(coverage);
+    final items = decisionItemCount(decisions);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,7 +158,8 @@ class DashboardDecisionsSection extends ConsumerWidget {
           note: note,
           // Items, not rows: a folded row of eighteen blocked imports is
           // eighteen things to see, and the row count is a layout fact.
-          seeAll: 'See all ${decisionItemCount(decisions)}',
+          seeAll:
+              'See all ${coverage.isFloor ? Lexicon.floor(items) : '$items'}',
         ),
         if (note != null) _CoverageNote(note: note, coverage: coverage),
         const SizedBox(height: AppSpacing.sm),

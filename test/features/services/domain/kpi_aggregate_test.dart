@@ -28,6 +28,18 @@ void main() {
       expect(folded!.single.value, '2038');
     });
 
+    test('a floor in the sum makes the sum a floor', () {
+      // One Readarr's queue walk stopped on a full page with no total. Left
+      // unparsed, the fold fell through to the lens and printed its "200+" as
+      // the fleet's figure, with the other connection's three left out.
+      final folded = aggregateServiceKpis([
+        [kpi('Queue', '200+')],
+        [kpi('Queue', '3')],
+      ]);
+
+      expect(folded!.single.value, '203+');
+    });
+
     test('a byte rate is the sum of the connections', () {
       // 2.0 MB/s + 512 KB/s is 2.5 MB/s, on the same binary ladder the cards
       // already print.

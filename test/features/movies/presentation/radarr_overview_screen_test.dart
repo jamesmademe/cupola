@@ -276,6 +276,27 @@ void main() {
     expect(_sectionHeader(tester, 'Needs attention').subtitle, '1');
   });
 
+  testWidgets('faults found in a queue walk that stopped short are a floor', (
+    tester,
+  ) async {
+    // A full page and no `totalRecords`: the fault is in the rows that
+    // arrived, and the rows behind them were never asked for.
+    await _pump(
+      tester,
+      service: _CutShortQueueRadarr(
+        queue: [
+          {
+            'movie': {'title': 'Nickel Boys'},
+            'trackedDownloadState': 'importFailed',
+            'errorMessage': 'Radarr could not match the file',
+          },
+        ],
+      ),
+    );
+
+    expect(_sectionHeader(tester, 'Needs attention').subtitle, '1+');
+  });
+
   testWidgets('a Radarr that was never set up gets its own door', (
     tester,
   ) async {
@@ -436,6 +457,20 @@ class _FlakyQueueRadarr extends _ScriptedRadarr {
     if (failFromNowOn) throw Exception('queue failed');
     return super.getQueue(queryParameters: queryParameters);
   }
+}
+
+/// A Radarr whose queue walk stopped on a full page with no total.
+class _CutShortQueueRadarr extends _ScriptedRadarr {
+  _CutShortQueueRadarr({super.queue});
+
+  @override
+  Future<ArrRecordPage> getQueuePage({
+    Map<String, dynamic>? queryParameters,
+  }) async => ArrRecordPage(
+    records: await getQueue(queryParameters: queryParameters),
+    total: null,
+    cutShort: true,
+  );
 }
 
 class _FailingHistoryRadarr extends _ScriptedRadarr {

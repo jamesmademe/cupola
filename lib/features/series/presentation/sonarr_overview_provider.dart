@@ -464,17 +464,19 @@ bool _isImportFault(Map<String, dynamic> record) {
       arrQueueSeverity(record) != ArrQueueSeverity.ok;
 }
 
-/// The raw `/queue` page, string-keyed.
+/// The raw `/queue` walk, with its envelope.
 ///
 /// The equivalent of the private `_loadServiceQueueItems` in
 /// `services_provider.dart`, stopping one step earlier: that one maps straight
 /// to `ServiceQueueItem`, which carries title/subtitle/progress/warning and no
-/// timestamp at all.
-final sonarrQueueRecordsProvider =
-    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-      final records = await ref.watch(sonarrServiceProvider).getQueue();
-      return records.whereType<Map>().map(stringKeyMap).toList(growable: false);
-    });
+/// timestamp at all. The page and not its bare rows, for the reason
+/// `radarrQueueRecordsProvider` gives: faults counted in a walk that stopped
+/// short are a floor.
+final sonarrQueueRecordsProvider = FutureProvider.autoDispose<ArrRecordPage>((
+  ref,
+) {
+  return ref.watch(sonarrServiceProvider).getQueuePage();
+});
 
 /// The two backlog rows, or as many of them as the server would answer.
 ///
@@ -522,9 +524,12 @@ final sonarrBacklogProvider =
 /// outstanding.
 final sonarrNeedsAttentionProvider =
     FutureProvider.autoDispose<List<SonarrAttentionItem>>((ref) async {
-      final records = await ref.watch(sonarrQueueRecordsProvider.future);
+      final page = await ref.watch(sonarrQueueRecordsProvider.future);
       final backlog = await ref.watch(sonarrBacklogProvider.future);
-      return [...sonarrQueueFaults(records, now: DateTime.now()), ...backlog];
+      return [
+        ...sonarrQueueFaults(page.recordMaps, now: DateTime.now()),
+        ...backlog,
+      ];
     });
 
 // ─── History, and the two sections built from it ────────────────────────────

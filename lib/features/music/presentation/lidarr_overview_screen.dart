@@ -32,6 +32,7 @@ import 'package:cupola/features/services/presentation/service_kpi_provider.dart'
 
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Lidarr's service home.
@@ -163,6 +164,9 @@ class _NeedsAttentionSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(lidarrNeedsAttentionProvider);
     final count = items.asData?.value.length;
+    // A queue walk that stopped short: see the Radarr home's twin.
+    final floor =
+        ref.watch(lidarrQueueRecordsProvider).value?.cutShort ?? false;
 
     return ServiceOverviewSection(
       service: ServiceKey.lidarr,
@@ -170,7 +174,7 @@ class _NeedsAttentionSection extends ConsumerWidget {
       // "—" while the queue and the wishlist are loading or after either
       // failed: a "0" printed over an unanswered question is a claim nobody
       // made, and it is the reassuring direction of wrong.
-      subtitle: count == null ? '—' : '$count',
+      subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
       // No link: the fault rows belong to Queue and the backlog row to Wanted,
       // and a single destination would have to lie about one of them.
       child: AsyncValueWidget<List<LidarrAttentionItem>>(

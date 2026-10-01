@@ -1188,7 +1188,7 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
 
   Future<ServicesQueue> from(
     ServiceKey service,
-    Future<List<ServiceQueueItem>> Function() load,
+    Future<_QueueRead> Function() load,
   ) async {
     // The connection the loaders below actually read, not the service. Gated on
     // `isServiceConfigured` — true as soon as *any* instance is set up — this
@@ -1198,9 +1198,12 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
       return (items: const <ServiceQueueItem>[], coverage: SourceCoverage.none);
     }
     try {
+      final read = await load();
       return (
-        items: await load(),
-        coverage: SourceCoverage.answeredBy(service),
+        items: read.items,
+        // A walk that stopped short answered, with part of its queue: the
+        // count over it is a floor.
+        coverage: SourceCoverage.answeredBy(service, cutShort: read.cutShort),
       );
     } catch (error) {
       return (
@@ -1219,10 +1222,14 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
     ])
       from(service, () => _loadServiceQueueItems(ref, service)),
   ];
+  // The clients answer with their whole queue in one read, so there is no
+  // walk to stop short.
+  Future<_QueueRead> whole(Future<List<ServiceQueueItem>> items) async =>
+      (items: await items, cutShort: false);
   final clientQueues = [
-    from(ServiceKey.qbittorrent, () => _loadQbittorrentQueueItems(ref)),
-    from(ServiceKey.sabnzbd, () => _loadSabnzbdQueueItems(ref)),
-    from(ServiceKey.nzbget, () => _loadNzbgetQueueItems(ref)),
+    from(ServiceKey.qbittorrent, () => whole(_loadQbittorrentQueueItems(ref))),
+    from(ServiceKey.sabnzbd, () => whole(_loadSabnzbdQueueItems(ref))),
+    from(ServiceKey.nzbget, () => whole(_loadNzbgetQueueItems(ref))),
   ];
   final results = await Future.wait([...arrQueues, ...clientQueues]);
 
@@ -1270,6 +1277,10 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
     coverage: SourceCoverage.merge(results.map((result) => result.coverage)),
   );
 });
+
+/// One source's queue rows, and whether the walk that read them stopped short
+/// of the end ([ArrRecordPage.cutShort]).
+typedef _QueueRead = ({List<ServiceQueueItem> items, bool cutShort});
 
 /// Every transfer the configured sources reported, and which of them answered.
 typedef ServicesQueue = ({
@@ -1599,20 +1610,25 @@ Future<ArrQueueSnapshot> _loadArrQueueSnapshot(
 /// One \*arr's queue as in-flight items. Throws when the queue cannot be read:
 /// the caller keeps the failure, so a dark arr is named rather than counted as
 /// an empty queue.
-Future<List<ServiceQueueItem>> _loadServiceQueueItems(
-  Ref ref,
-  ServiceKey service,
-) async {
+///
+/// Read off the walk's envelope rather than its bare rows, so a walk that
+/// stopped on a full page with no total says so: the region counted its rows
+/// and stated them as the queue, `200 downloading` for a queue of any length
+/// behind a proxy that drops `totalRecords`. The rows are grouped into
+/// downloads before they are counted, so the server's record total is never a
+/// figure here; a short walk only makes the count a floor.
+Future<_QueueRead> _loadServiceQueueItems(Ref ref, ServiceKey service) async {
   // The connection these records come off — the lens, which is what the
   // service providers below resolve to. Stamped on each row so a remedy that
   // opens a flow bound to one connection (the import wizard) opens it on this
   // one, even if the lens has moved by the time the user taps.
   final instanceId = ref.watch(activeInstanceProvider(service))?.id ?? '';
-  final items = switch (service) {
-    ServiceKey.radarr => await ref.watch(radarrServiceProvider).getQueue(),
-    ServiceKey.sonarr => await ref.watch(sonarrServiceProvider).getQueue(),
-    ServiceKey.lidarr => await ref.watch(lidarrServiceProvider).getQueue(),
-    ServiceKey.readarr => await ref.watch(readarrServiceProvider).getQueue(),
+  final page = switch (service) {
+    ServiceKey.radarr => await ref.watch(radarrServiceProvider).getQueuePage(),
+    ServiceKey.sonarr => await ref.watch(sonarrServiceProvider).getQueuePage(),
+    ServiceKey.lidarr => await ref.watch(lidarrServiceProvider).getQueuePage(),
+    ServiceKey.readarr =>
+      await ref.watch(readarrServiceProvider).getQueuePage(),
     // The download clients are not `/queue` shaped and have their own loaders;
     // the rest have no queue at all.
     ServiceKey.seerr ||
@@ -1632,13 +1648,16 @@ Future<List<ServiceQueueItem>> _loadServiceQueueItems(
     // outbound playback, which is a different record with different actions
     // and does not belong in a queue row.
     ServiceKey.jellyfin ||
-    ServiceKey.plex => const <dynamic>[],
+    ServiceKey.plex => const ArrRecordPage(records: [], total: 0),
   };
-  final records = items.whereType<Map>().map(stringKeyMap);
-  return [
-    for (final download in _groupQueueRecordsByDownload(records))
-      _queueItemFromRecords(service, download, instanceId: instanceId),
-  ];
+  final records = page.records.whereType<Map>().map(stringKeyMap);
+  return (
+    items: [
+      for (final download in _groupQueueRecordsByDownload(records))
+        _queueItemFromRecords(service, download, instanceId: instanceId),
+    ],
+    cutShort: page.cutShort,
+  );
 }
 
 /// The records of one \*arr queue, one list per download.

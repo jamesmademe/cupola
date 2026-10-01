@@ -194,6 +194,12 @@ void main() {
       // Every count surface reads the members, not the rows.
       expect(decisionItemCount(grouped), 18);
       expect(decisionsEyebrow(grouped), '18 items · blocked imports');
+      // Found in the rows of a queue walk that stopped short: there may be
+      // more behind them.
+      expect(
+        decisionsEyebrow(grouped, floor: true),
+        '18+ items · blocked imports',
+      );
     });
 
     test('a lone fault stays itself', () {

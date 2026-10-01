@@ -27,6 +27,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
@@ -296,17 +297,19 @@ bool _isImportFault(Map<String, dynamic> record) {
       arrQueueSeverity(record) != ArrQueueSeverity.ok;
 }
 
-/// The raw `/queue` page, string-keyed.
+/// The raw `/queue` walk, with its envelope.
 ///
-/// Not `readarrQueueProvider`: that one swallows its own failures into `[]` so
-/// a dead queue cannot take the KPI rail down, which is right for a count and
-/// wrong here — a section that cannot read the queue has to *say so* rather
-/// than claim nothing is wrong.
-final readarrQueueRecordsProvider =
-    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-      final records = await ref.watch(readarrServiceProvider).getQueue();
-      return records.whereType<Map>().map(stringKeyMap).toList(growable: false);
-    });
+/// Its own rather than `readarrQueueProvider`, which the KPI rail awaits
+/// inside a `catch` and keeps for the life of the app under `noProviderRetry`;
+/// this one goes with the section, and a section that cannot read the queue
+/// has to *say so* rather than claim nothing is wrong. The page and not its
+/// bare rows, for the reason `radarrQueueRecordsProvider` gives: faults
+/// counted in a walk that stopped short are a floor.
+final readarrQueueRecordsProvider = FutureProvider.autoDispose<ArrRecordPage>((
+  ref,
+) {
+  return ref.watch(readarrServiceProvider).getQueuePage();
+});
 
 /// The upgrade backlog, on its own so it cannot take the faults down with it.
 ///
@@ -339,12 +342,12 @@ final readarrBelowCutoffProvider =
 /// backoff that its source had declined.
 final readarrNeedsAttentionProvider =
     FutureProvider.autoDispose<List<ReadarrAttentionItem>>((ref) async {
-      final records = await ref.watch(readarrQueueRecordsProvider.future);
+      final page = await ref.watch(readarrQueueRecordsProvider.future);
       final authors = await ref.watch(readarrAuthorsProvider.future);
       final cutoff = await ref.watch(readarrBelowCutoffProvider.future);
       final backlog = readarrMissingBooksItem(authors);
       return [
-        ...readarrQueueFaults(records, now: DateTime.now()),
+        ...readarrQueueFaults(page.recordMaps, now: DateTime.now()),
         ?backlog,
         ?cutoff,
       ];

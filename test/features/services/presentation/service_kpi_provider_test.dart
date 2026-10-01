@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
@@ -417,6 +419,86 @@ void main() {
       // here would read as "Readarr is down" over three figures Readarr just
       // answered.
       expect(kpis['Authors']!.note, isNull);
+    });
+  });
+
+  group('a queue figure is only as much as the walk read', () {
+    // A proxy that drops `totalRecords` stops the queue walk on its first
+    // full page. The rails counted the rows and stated them as the queue.
+    final fullPage = [
+      for (var i = 0; i < 200; i++) {'id': i, 'movieId': i + 1},
+    ];
+
+    test('Readarr states the server\'s own count over the rows', () async {
+      final kpis = await _kpisFor(ServiceKey.readarr, [
+        readarrKpiLibraryProvider.overrideWith((ref) async => const []),
+        readarrQueueProvider.overrideWith(
+          (ref) async => ArrRecordPage(
+            records: fullPage.take(3).toList(),
+            total: 340,
+            cutShort: true,
+          ),
+        ),
+      ]);
+
+      expect(kpis['Queue']!.value, '340');
+    });
+
+    test('Readarr reads 200+ for a full page with no count', () async {
+      final kpis = await _kpisFor(ServiceKey.readarr, [
+        readarrKpiLibraryProvider.overrideWith((ref) async => const []),
+        readarrQueueProvider.overrideWith(
+          (ref) async =>
+              ArrRecordPage(records: fullPage, total: null, cutShort: true),
+        ),
+      ]);
+
+      expect(kpis['Queue']!.value, '200+');
+      expect(kpis['Queue']!.semanticLabel, 'Queue: at least 200');
+    });
+
+    test('Radarr reads 200+ over a queue snapshot cut short', () async {
+      final kpis = await _kpisFor(ServiceKey.radarr, [
+        radarrKpiLibraryProvider.overrideWith((ref) async => const []),
+        radarrQueueSnapshotProvider.overrideWith(
+          (ref) async => ArrQueueSnapshot.fromQueueItems(
+            fullPage,
+            idsFor: (item) => [item['movieId'] as int],
+            cutShort: true,
+          ),
+        ),
+      ]);
+
+      expect(kpis['Queue']!.value, '200+');
+    });
+
+    test('Radarr reads the queue it read to the end as it is', () async {
+      final kpis = await _kpisFor(ServiceKey.radarr, [
+        radarrKpiLibraryProvider.overrideWith((ref) async => const []),
+        radarrQueueSnapshotProvider.overrideWith(
+          (ref) async => ArrQueueSnapshot.fromQueueItems(
+            fullPage.take(3),
+            idsFor: (item) => [item['movieId'] as int],
+          ),
+        ),
+      ]);
+
+      expect(kpis['Queue']!.value, '3');
+    });
+
+    test('Radarr: a queue that did not answer under a library that did '
+        'reads "—" with its own reason, never Queue 0', () async {
+      final kpis = await _kpisFor(ServiceKey.radarr, [
+        radarrKpiLibraryProvider.overrideWith((ref) async => const []),
+        radarrQueueSnapshotProvider.overrideWith(
+          (ref) async => ArrQueueSnapshot.failed(Exception('queue down')),
+        ),
+      ]);
+
+      expect(kpis['Movies']!.value, '0');
+      expect(kpis['Queue']!.value, ServiceKpi.unavailableValue);
+      expect(kpis['Queue']!.note, startsWith('Queue · '));
+      expect(kpis['Movies']!.note, isNull);
     });
   });
 
