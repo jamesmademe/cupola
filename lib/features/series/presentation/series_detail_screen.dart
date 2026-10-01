@@ -498,11 +498,15 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
                     horizontal: AppSpacing.lg,
                   ),
                   child: ReleaseSearchStatusCard(
+                    // Stamped with the page's own connection, as the search
+                    // the series menu starts is: target equality includes
+                    // the connection, so an unstamped target matched no job
+                    // and the card stayed blank for the whole search.
                     target: sonarrSeasonTarget(
                       seriesId: widget.seriesId,
                       seasonNumber: null,
                       label: truncateTitle(viewModel.title),
-                    ),
+                    ).stampedWith(_instanceId),
                   ),
                 ),
                 // A refresh of the episodes failed over episodes already read:
