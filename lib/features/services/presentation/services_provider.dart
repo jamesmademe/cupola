@@ -47,6 +47,7 @@ import 'package:cupola/features/services/domain/arr_import.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/download_client_faults.dart';
 import 'package:cupola/features/services/domain/download_join.dart';
+import 'package:cupola/features/services/domain/download_names.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/request_ordering.dart';
@@ -1207,6 +1208,7 @@ class ServiceQueueItem {
     this.clientInstanceId = '',
     this.mediaId,
     this.outputPath,
+    this.category,
     MediaNames? names,
   }) : _names = names;
 
@@ -1314,6 +1316,39 @@ class ServiceQueueItem {
   /// today; these are what the row is.
   MediaNames get names => _names ?? MediaNames.raw(title);
 
+  /// The download client's category (or Transmission's first label) on a
+  /// client's own row: which arr the name can be put to
+  /// ([arrForClientCategory]). Null on an \*arr row.
+  final String? category;
+
+  /// This row named [names]: everything else as it was.
+  ServiceQueueItem withNames(MediaNames names) => ServiceQueueItem(
+    service: service,
+    title: title,
+    progress: progress,
+    clientLabel: clientLabel,
+    id: id,
+    quality: quality,
+    doneBytes: doneBytes,
+    totalBytes: totalBytes,
+    etaSeconds: etaSeconds,
+    fault: fault,
+    stalledSince: stalledSince,
+    warning: warning,
+    clientRateBytesPerSecond: clientRateBytesPerSecond,
+    route: route,
+    detail: detail,
+    downloadId: downloadId,
+    clientService: clientService,
+    instanceId: instanceId,
+    connectionName: connectionName,
+    clientInstanceId: clientInstanceId,
+    mediaId: mediaId,
+    outputPath: outputPath,
+    category: category,
+    names: names,
+  );
+
   /// Whether this transfer is genuinely moving, or waiting to.
   bool get isActive => fault == null;
 }
@@ -1357,12 +1392,13 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
         _readQueueSource(source, () => _loadServiceQueueItems(ref, source)),
   ];
   final clientQueues = _readDownloadClients(ref);
+  final namer = _watchDownloadNamer(ref);
   final results = await Future.wait([...arrQueues, ...clientQueues]);
 
   // One row per transfer, not one per source that can see it. A Radarr grab
   // moving through qBittorrent is in both queues, and concatenating them drew
   // it twice and counted it twice — and a stall in it became two decisions.
-  final items = joinQueueSources(
+  final joined = joinQueueSources(
     arr: results
         .take(arrQueues.length)
         .expand((result) => result.items)
@@ -1372,6 +1408,9 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
         .expand((result) => result.items)
         .toList(growable: false),
   );
+  // A client row no arr claims has only its raw name: the arrs are asked to
+  // read it, within this read's cap.
+  final items = await _nameClientRows(namer, joined);
 
   // Closest to landing first. An item whose client reports no progress sorts
   // last rather than as zero: unknown is not the same as "just started", and
@@ -1488,6 +1527,241 @@ List<Future<ServicesQueue>> _readDownloadClients(
         () => whole(_loadNzbgetQueueItems(ref, asked(source))),
       ),
   ];
+}
+
+/// How many `/parse` requests one read may send.
+///
+/// A name is put to an arr once and its answer kept ([DownloadNameCache]), so
+/// a list of new names is read a few per read rather than all in one burst; a
+/// name past the cap keeps its raw form until a later read reaches it.
+const int downloadNameParseCap = 6;
+
+/// The arrs' readings of download names, per connection and name, for the
+/// life of the app.
+///
+/// Only answers are kept. A connection that did not answer recognised
+/// nothing, and is asked again on the next read.
+class DownloadNameCache {
+  final Map<String, MediaNames?> _answers = {};
+
+  bool has(String key) => _answers.containsKey(key);
+
+  MediaNames? operator [](String key) => _answers[key];
+
+  void operator []=(String key, MediaNames? names) => _answers[key] = names;
+}
+
+final downloadNameCacheProvider = Provider<DownloadNameCache>(
+  (ref) => DownloadNameCache(),
+);
+
+/// A download to name: the client's id for it, its raw name, its category.
+typedef UnnamedDownload = ({String id, String name, String? category});
+
+/// The arrs that can read a download's name, each with its client, and their
+/// kept answers.
+///
+/// Taken at the start of a read, before it awaits anything
+/// ([_watchDownloadNamer]), so naming never reaches back into a provider
+/// that may have been rebuilt or dropped while its requests were out.
+class _DownloadNamer {
+  _DownloadNamer(this._cache, this._arrs);
+
+  final DownloadNameCache _cache;
+  final Map<
+    ServiceKey,
+    List<({_MergeConnection source, ArrActivityMixin parser})>
+  >
+  _arrs;
+
+  /// Names [downloads] no arr's queue claims, by asking the arrs to read them
+  /// (`parseTitle`), and answers each one's names by its id.
+  ///
+  /// The arrs asked are the one the client's category points at
+  /// ([arrForClientCategory]) when it is set up, every set-up one otherwise,
+  /// in [parsingArrs]'s order and each connection in the user's. A library
+  /// item from any of them wins; the first parser reading stands otherwise;
+  /// with neither, the raw name is the title. At most [cap] requests leave per
+  /// call, and every answer is kept, so a name is read once.
+  Future<Map<String, MediaNames>> name(
+    List<UnnamedDownload> downloads, {
+    int cap = downloadNameParseCap,
+  }) async {
+    if (downloads.isEmpty) return const {};
+    var budget = cap;
+
+    Future<MediaNames> read(UnnamedDownload download) async {
+      final hint = arrForClientCategory(download.category);
+      final asked = hint != null && (_arrs[hint]?.isNotEmpty ?? false)
+          ? _arrs[hint]!
+          : [for (final service in parsingArrs) ...?_arrs[service]];
+      MediaNames? parsed;
+      for (final (:source, :parser) in asked) {
+        final key = [
+          source.service.name,
+          source.instanceId,
+          source.connection.url,
+          download.name,
+        ].join('|');
+        MediaNames? answer;
+        if (_cache.has(key)) {
+          answer = _cache[key];
+        } else {
+          if (budget <= 0) break;
+          budget--;
+          try {
+            final reply = await parser.parseTitle(download.name);
+            answer = namesFromParse(source.service, download.name, reply);
+            _cache[key] = answer;
+          } catch (_) {
+            // Silent or refusing: it recognised nothing this time, and is
+            // asked again next time.
+            continue;
+          }
+        }
+        if (answer?.source == MediaTitleSource.library) return answer!;
+        parsed ??= answer;
+      }
+      return parsed ?? MediaNames.raw(download.name);
+    }
+
+    final named = await Future.wait(downloads.map(read));
+    return {
+      for (final (index, download) in downloads.indexed)
+        download.id: named[index],
+    };
+  }
+}
+
+/// The arrs a read may put names to, watched on their narrow keys: call it
+/// before the read's first `await`.
+_DownloadNamer _watchDownloadNamer(Ref ref) =>
+    _DownloadNamer(ref.read(downloadNameCacheProvider), {
+      for (final service in parsingArrs)
+        service: [
+          for (final source in _watchMergeConnections(ref, service))
+            (source: source, parser: _parserOf(ref, source)),
+        ],
+    });
+
+ArrActivityMixin _parserOf(
+  Ref ref,
+  _MergeConnection source,
+) => switch (source.service) {
+  ServiceKey.radarr => ref.watch(radarrServiceForProvider(source.instanceId)),
+  ServiceKey.sonarr => ref.watch(sonarrServiceForProvider(source.instanceId)),
+  ServiceKey.lidarr => ref.watch(lidarrServiceForProvider(source.instanceId)),
+  _ => throw ArgumentError.value(source.service, 'service'),
+};
+
+/// [rows] with every client row no arr claims named by the arrs
+/// ([_DownloadNamer.name]); the rest as they are.
+Future<List<ServiceQueueItem>> _nameClientRows(
+  _DownloadNamer namer,
+  List<ServiceQueueItem> rows,
+) async {
+  // Keyed on the connection too: two NZBGet both number their jobs from one.
+  String key(ServiceQueueItem row) =>
+      '${row.service.name}|${row.clientInstanceId}|${row.id}';
+  final unnamed = [
+    for (final row in rows)
+      if (row.clientService == row.service && row.names.isRaw)
+        (id: key(row), name: row.title, category: row.category),
+  ];
+  if (unnamed.isEmpty) return rows;
+  final names = await namer.name(unnamed);
+  return [
+    for (final row in rows)
+      if (row.clientService == row.service && names[key(row)] != null)
+        row.withNames(names[key(row)]!)
+      else
+        row,
+  ];
+}
+
+/// Every download in one client connection's own list, named: the arr's item
+/// for a download an arr's queue claims ([joinDownloads], the join In flight
+/// and Activity read), the arrs' reading for the rest ([_nameDownloads]),
+/// keyed on the client's id for it. Its machine name is the client's own
+/// name for it, as the client reported it.
+///
+/// What the clients' own pages read their rows' names off; the rows keep
+/// their look until those pages are redrawn. An arr whose queue does not
+/// answer claims nothing, and its downloads are asked about by name instead.
+final downloadClientNamesProvider = FutureProvider.autoDispose
+    .family<Map<String, MediaNames>, InstanceRef>((ref, client) async {
+      // Every read and every watch started before the first await: see
+      // [_DownloadNamer].
+      final list = _clientList(ref, client);
+      final queues = Future.wait([
+        for (final service in const [
+          ServiceKey.radarr,
+          ServiceKey.sonarr,
+          ServiceKey.lidarr,
+          ServiceKey.readarr,
+        ])
+          for (final source in _watchMergeConnections(ref, service))
+            _readQueueSource(source, () => _loadServiceQueueItems(ref, source)),
+      ]);
+      final namer = _watchDownloadNamer(ref);
+      final rows = await list;
+      final arrQueues = await queues;
+      final join = joinDownloads<ServiceQueueItem, UnnamedDownload>(
+        arr: [for (final queue in arrQueues) ...queue.items],
+        clients: rows,
+        arrDownloadId: (row) => row.downloadId,
+        clientDownloadId: (row) => row.id,
+      );
+      final claimed = <String, MediaNames>{};
+      for (final (:arr, :client) in join.joined) {
+        if (client == null || claimed.containsKey(client.id)) continue;
+        final title = arr.names.title;
+        claimed[client.id] = arr.names.isRaw || title == client.name
+            ? MediaNames.raw(client.name)
+            : MediaNames(
+                title: title,
+                machineName: client.name,
+                machineKind: MachineNameKind.release,
+                source: arr.names.source,
+              );
+      }
+      return {...claimed, ...await namer.name(join.unclaimed)};
+    }, retry: noProviderRetry);
+
+/// One client connection's whole list, every download in it: the torrent
+/// library, the usenet queue.
+Future<List<UnnamedDownload>> _clientList(Ref ref, InstanceRef client) async {
+  final id = client.instanceId;
+  return switch (client.service) {
+    ServiceKey.qbittorrent => [
+      for (final torrent
+          in await ref.watch(qbittorrentServiceForProvider(id)).getTorrents())
+        (id: torrent.hash, name: torrent.name, category: torrent.category),
+    ],
+    ServiceKey.transmission => [
+      for (final torrent
+          in await ref.watch(transmissionClientForProvider(id)).torrents())
+        (
+          id: torrent.hashString,
+          name: torrent.name,
+          category: torrent.labels.firstOrNull,
+        ),
+    ],
+    ServiceKey.sabnzbd => [
+      for (final slot
+          in (await ref
+                  .watch(sabnzbdClientForProvider(id))
+                  .getQueue(limit: SabnzbdClient.wholeQueue))
+              .slots)
+        (id: slot.nzoId, name: slot.filename, category: slot.category),
+    ],
+    ServiceKey.nzbget => [
+      for (final group
+          in await ref.watch(nzbgetClientForProvider(id)).listGroups())
+        (id: group.downloadId, name: group.name, category: group.category),
+    ],
+    _ => throw ArgumentError.value(client.service, 'service', 'not a client'),
+  };
 }
 
 /// Every configured download client's own queue, as transfer rows, and which
@@ -1701,6 +1975,7 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(
           '${torrent.seeders} seeds',
         ]),
         route: ServiceRoutes.qbittorrentTorrent(torrent.hash),
+        category: torrent.category,
       ),
   ];
 }
@@ -1769,6 +2044,7 @@ Future<List<ServiceQueueItem>> _loadTransmissionQueueItems(
           '${torrent.peersSendingToUs} peers',
         ]),
         route: ServiceRoutes.forService(ServiceKey.transmission),
+        category: torrent.labels.firstOrNull,
       ),
   ];
 }
@@ -1850,6 +2126,7 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(
         warning:
             reading.reason ?? (queue.paused ? StateWord.stopped.label : null),
         route: ServiceRoutes.forService(ServiceKey.sabnzbd),
+        category: slot.category,
       ),
   ];
 }
@@ -1932,6 +2209,7 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
           fault: row.reading.fault,
           warning: row.reading.reason,
           route: ServiceRoutes.forService(ServiceKey.nzbget),
+          category: row.group.category,
         ),
       )
       .toList(growable: false);

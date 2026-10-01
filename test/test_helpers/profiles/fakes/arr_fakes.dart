@@ -29,6 +29,22 @@ abstract class ArrFake extends ServiceFake {
   List<JsonMap> calendar(ServerContext c) => const [];
   List<JsonMap> missing(ServerContext c) => const [];
 
+  /// `/parse?title=`: the arr reading a release name. Unread by default, the
+  /// way an arr answers a name its parser cannot place: the title echoed and
+  /// nothing else.
+  JsonMap parse(ServerContext c, String title) => {'title': title};
+
+  /// The world title [release] is a release of, read the way the fakes write
+  /// release names (`Sprite.Fright.2021.1080p.WEB`), or null.
+  static WorldTitle? titleOfRelease(String release) {
+    for (final title in WorldTitles.all) {
+      if (release.startsWith('${title.title.replaceAll(' ', '.')}.')) {
+        return title;
+      }
+    }
+    return null;
+  }
+
   /// The service's own routes, tried after the shared ones.
   NetworkReply? own(NetworkRequest r, ServerContext c) => null;
 
@@ -65,6 +81,8 @@ abstract class ArrFake extends ServiceFake {
           return NetworkReply.json(pagedEnvelope(r, const []));
         case final p when p == '$_base/blocklist':
           return NetworkReply.json(pagedEnvelope(r, const []));
+        case final p when p == '$_base/parse':
+          return NetworkReply.json(parse(c, r.query['title'] ?? ''));
         case final p when p == '$_base/qualityprofile':
           return NetworkReply.json([
             {'id': 1, 'name': c.server.is4k ? 'Ultra-HD' : 'HD-1080p'},
@@ -275,6 +293,21 @@ class RadarrFake extends ArrFake {
     };
   }
 
+  @override
+  JsonMap parse(ServerContext c, String title) {
+    final world = ArrFake.titleOfRelease(title);
+    if (world == null || world.isSeries) return {'title': title};
+    return {
+      'title': title,
+      'parsedMovieInfo': {
+        'movieTitles': [world.title],
+        'primaryMovieTitle': world.title,
+        'year': world.year,
+      },
+      'movie': ?_movieFor(c, world),
+    };
+  }
+
   List<JsonMap> movies(ServerContext c) => [
     for (final entry in _library(c)) _movie(c, entry),
   ];
@@ -456,6 +489,28 @@ class SonarrFake extends ArrFake {
 
   List<(int, WorldTitle)> _library(ServerContext c) =>
       _anime(c) ? libraryAnime : libraryMain;
+
+  /// A release of a series this Sonarr holds names the series; the episode is
+  /// read off its `S02E04`.
+  @override
+  JsonMap parse(ServerContext c, String title) {
+    final world = ArrFake.titleOfRelease(title);
+    if (world == null || !world.isSeries) return {'title': title};
+    final code = RegExp(r'S(\d+)E(\d+)').firstMatch(title);
+    final held = [
+      for (final (id, t) in _library(c))
+        if (t == world) _series(c, id, t),
+    ];
+    return {
+      'title': title,
+      'parsedEpisodeInfo': {
+        'seriesTitle': world.title,
+        if (code != null) 'seasonNumber': int.parse(code.group(1)!),
+        'episodeNumbers': [if (code != null) int.parse(code.group(2)!)],
+      },
+      if (held.isNotEmpty) 'series': held.first,
+    };
+  }
 
   List<JsonMap> series(ServerContext c) => [
     for (final (id, t) in _library(c)) _series(c, id, t),

@@ -122,6 +122,11 @@ and NPM, a second Jellyfin and a second Seerr at the cabin
 (`jellyfinCabin`, `seerrCabin`, both labelled `Cabin`) beside the unnamed
 ones at home, and a second Lidarr (`lidarrVinyl`, labelled `Vinyl`).
 
+The arrs answer `/parse?title=` from the world: Radarr reads a release of a
+world film (`Tears.of.Steel.2012.2160p.WEB`) and names the film when it holds
+it, Sonarr a release of a world series with its `S02E04`; any other name, and
+Lidarr's every name, comes back unread (the title echoed alone).
+
 Names, hosts (`nas.home.arpa`) and titles come from the design brief's
 world (`world.dart`). Rows are built in Dart because they join across
 services by download id and their times are relative to `network.now`.

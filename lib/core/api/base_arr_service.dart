@@ -694,6 +694,24 @@ mixin ArrActivityMixin {
     return client.get('/api/${config.apiVersion}/system/status');
   }
 
+  /// Asks this server to read a release or file name with its own parser:
+  /// `GET /api/v3/parse?title=` on Radarr and Sonarr, `/api/v1/parse` on
+  /// Lidarr.
+  ///
+  /// The answer echoes `title` and carries the parser's reading
+  /// (`parsedMovieInfo`, `parsedEpisodeInfo`, `parsedAlbumInfo`) when it could
+  /// read the name, and the library item it matched (`movie`, `series` and
+  /// `episodes`, `artist` and `albums`) when it holds one. A failure travels:
+  /// a server that did not answer has recognised nothing.
+  Future<Map<String, dynamic>> parseTitle(String title) async {
+    final response = await client.get(
+      '/api/${config.apiVersion}/parse',
+      queryParameters: {'title': title},
+    );
+    final data = response.data;
+    return data is Map ? stringKeyMap(data) : const <String, dynamic>{};
+  }
+
   /// Fetches all quality profiles.
   Future<List<Map<String, dynamic>>> fetchQualityProfiles() async {
     try {
