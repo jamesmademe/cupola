@@ -70,6 +70,9 @@ class SeerrDecisionsSection extends ConsumerWidget {
 
         final waiting = decisions.total;
         final noun = waiting == 1 ? 'request' : 'requests';
+        // Counted over the requests that arrived, so a lost page leaves a
+        // floor: `3+ waiting`, "at least 3" to the ear.
+        final floor = decisions.isFloor;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -78,11 +81,13 @@ class SeerrDecisionsSection extends ConsumerWidget {
               title: 'Needs a decision',
               // Tabular in `SectionHeader`, which matters here: the count moves
               // under the user's finger as they approve.
-              subtitle: '$waiting waiting',
+              subtitle: '$waiting${floor ? '+' : ''} waiting',
               onTap: () => context.push(ServiceRoutes.seerrRequests),
               // The header silences its own subtree, so the visible count is
               // only spoken if it is folded in here.
-              semanticLabel: 'Needs a decision, $waiting $noun waiting',
+              semanticLabel:
+                  'Needs a decision, ${floor ? 'at least ' : ''}'
+                  '$waiting $noun waiting',
               semanticHint: 'Opens every Seerr request',
             ),
             const SizedBox(height: AppSpacing.sm),

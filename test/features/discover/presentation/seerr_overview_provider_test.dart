@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_provider.dart';
@@ -128,6 +129,21 @@ void main() {
 
       expect(section.rows, hasLength(3));
       expect(section.total, 9);
+      expect(section.isFloor, isFalse);
+    });
+
+    test('a lost page of requests leaves the total a floor', () {
+      final section = seerrProcessingSection(
+        SeerrRequestList(
+          [_request(id: 1, title: 'Andor', status: RequestStatus.approved)],
+          total: 80,
+          isPartial: true,
+        ),
+        now: now,
+      );
+
+      expect(section.total, 1);
+      expect(section.isFloor, isTrue);
     });
 
     test('newest first, and an undated request sorts last', () {

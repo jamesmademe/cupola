@@ -96,6 +96,40 @@ void main() {
       expect(decisions.preview, hasLength(seerrDecisionsPreviewLimit));
     });
 
+    group('a count over rows that are not all of them is a floor', () {
+      final waiting = [_request(id: 1), _request(id: 2)];
+
+      test('every request arrived: a total', () async {
+        final decisions = await _resolve(SeerrRequestList(waiting, total: 2));
+
+        expect(decisions.total, 2);
+        expect(decisions.isFloor, isFalse);
+      });
+
+      test('a page did not arrive', () async {
+        final decisions = await _resolve(
+          SeerrRequestList(waiting, total: 120, isPartial: true),
+        );
+
+        expect(decisions.total, 2);
+        expect(decisions.isFloor, isTrue);
+      });
+
+      test('Seerr counts rows that did not reach the list', () async {
+        // A request in a shape this app cannot read is still a request, and
+        // it may be one waiting on a person.
+        final decisions = await _resolve(SeerrRequestList(waiting, total: 3));
+
+        expect(decisions.isFloor, isTrue);
+      });
+
+      test('Seerr sent no count, so only its first page was read', () async {
+        final decisions = await _resolve(SeerrRequestList(waiting));
+
+        expect(decisions.isFloor, isTrue);
+      });
+    });
+
     test('newest first inside the waiting group', () async {
       final decisions = await _resolve([
         _request(id: 1, createdAt: '2026-09-01T00:00:00Z'),

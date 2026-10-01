@@ -104,6 +104,30 @@ void main() {
       expect(find.text('Sicario (2021)'), findsNothing);
     });
 
+    testWidgets('a lost page of requests makes the count a floor', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      // Seerr holds ten; a page of them did not arrive, so the two waiting
+      // ones counted here are the least there are.
+      await _pumpSection(
+        tester,
+        requests: SeerrRequestList(
+          [_request(id: 1, title: 'Dune'), _request(id: 2, title: 'Arrival')],
+          total: 10,
+          isPartial: true,
+        ),
+      );
+
+      expect(find.text('2+ waiting'), findsOneWidget);
+      expect(find.text('2 waiting'), findsNothing);
+      expect(
+        find.bySemanticsLabel('Needs a decision, at least 2 requests waiting'),
+        findsOneWidget,
+      );
+      handle.dispose();
+    });
+
     testWidgets('lists a waiting request whose media already landed', (
       tester,
     ) async {

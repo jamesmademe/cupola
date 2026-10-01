@@ -68,7 +68,13 @@ class SeerrOverviewRow {
 ///
 /// [total] is counted **before** [rows] is limited, so a header built from it
 /// tells the truth when there is more waiting than the section has room for.
-typedef SeerrOverviewSection = ({List<SeerrOverviewRow> rows, int total});
+/// [isFloor] when the request list it was counted over is not all of Seerr's
+/// ([holdsEveryRequest]): the header then reads `3+`, never `3`.
+typedef SeerrOverviewSection = ({
+  List<SeerrOverviewRow> rows,
+  int total,
+  bool isFloor,
+});
 
 /// `Severance — Season 2`, `Dune: Part Three`, `The Bear — 3 seasons`.
 ///
@@ -177,6 +183,7 @@ SeerrOverviewSection seerrProcessingSection(
         _row(request, now: now, tone: StatusTone.info),
     ]),
     total: working.length,
+    isFloor: !holdsEveryRequest(requests),
   );
 }
 
@@ -195,6 +202,7 @@ final seerrOverviewDecisionsProvider =
       return (
         rows: seerrDecisionRows(decisions.preview, now: DateTime.now()),
         total: decisions.total,
+        isFloor: decisions.isFloor,
       );
     }, retry: noProviderRetry);
 

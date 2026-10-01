@@ -75,7 +75,30 @@ const int seerrDecisionsPreviewLimit = 5;
 ///
 /// [total] is counted before [preview] is cut, so a header built from it tells
 /// the truth when there are more decisions than the section has room for.
-typedef SeerrDecisions = ({List<SeerrRequest> preview, int total});
+/// [isFloor] says it is only true of the rows that arrived: drawn `3+`.
+typedef SeerrDecisions = ({
+  List<SeerrRequest> preview,
+  int total,
+  bool isFloor,
+});
+
+/// Whether [requests] holds every request its Seerr has, so a count filtered
+/// out of it is a total rather than a floor.
+///
+/// Seerr has no count of the waiting requests to hand, only of all of them, so
+/// a waiting figure is counted over the rows. Rows that are not all of them
+/// make it a floor: a page that did not arrive ([SeerrRequestList.isPartial]),
+/// rows short of Seerr's own count (a request in a shape this app cannot read
+/// is still a request, and may be one waiting on a person), or no count at
+/// all, which leaves the first page as everything that was read. A list that
+/// is not a [SeerrRequestList] was built whole by whoever made it and claims
+/// nothing about pages.
+bool holdsEveryRequest(List<SeerrRequest> requests) => switch (requests) {
+  SeerrRequestList(:final total?, :final isPartial) =>
+    !isPartial && requests.length >= total,
+  SeerrRequestList() => false,
+  _ => true,
+};
 
 /// The Seerr home's first region: what is waiting on a decision.
 ///
@@ -107,7 +130,10 @@ final seerrDecisionsProvider = FutureProvider<SeerrDecisions>((ref) async {
       waiting,
       limit: seerrDecisionsPreviewLimit,
     ),
+    // Counted over the rows, so only as whole as they are. A lost page used
+    // to come out as a smaller, confident "3 waiting".
     total: waiting.length,
+    isFloor: !holdsEveryRequest(requests),
   );
 }, retry: noProviderRetry);
 

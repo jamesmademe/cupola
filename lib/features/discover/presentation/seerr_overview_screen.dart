@@ -132,6 +132,8 @@ class _DecisionsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final section = ref.watch(seerrOverviewDecisionsProvider);
     final total = section.asData?.value.total;
+    // A lost page of requests leaves the count a floor: `3+`.
+    final floor = section.asData?.value.isFloor ?? false;
 
     return ServiceOverviewSection(
       service: ServiceKey.seerr,
@@ -140,7 +142,8 @@ class _DecisionsSection extends ConsumerWidget {
       // over an unanswered question is a claim nobody made.
       subtitle: total == null
           ? '—'
-          : '$total ${total == 1 ? 'request' : 'requests'} waiting',
+          : '$total${floor ? '+' : ''} '
+                '${total == 1 ? 'request' : 'requests'} waiting',
       destination: ServiceTab.requests,
       child: AsyncValueWidget<SeerrOverviewSection>(
         value: section,
@@ -173,11 +176,12 @@ class _ProcessingSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final section = ref.watch(seerrOverviewProcessingProvider);
     final total = section.asData?.value.total;
+    final floor = section.asData?.value.isFloor ?? false;
 
     return ServiceOverviewSection(
       service: ServiceKey.seerr,
       title: 'Processing',
-      subtitle: total == null ? '—' : '$total',
+      subtitle: total == null ? '—' : '$total${floor ? '+' : ''}',
       destination: ServiceTab.requests,
       child: AsyncValueWidget<SeerrOverviewSection>(
         value: section,
