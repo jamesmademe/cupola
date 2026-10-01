@@ -106,17 +106,19 @@ String formatDoneOfTotal({int? doneBytes, int? totalBytes}) {
   if (totalBytes == null || totalBytes <= 0) return kAbsentFigure;
   if (doneBytes == null || doneBytes < 0) return kAbsentFigure;
 
-  final total = formatBytesPrecise(totalBytes);
-  final unit = total.split(' ').last;
+  final precise = formatBytesPrecise(totalBytes);
+  final unit = precise.split(' ').last;
   final divisor = _divisorFor(unit);
-  if (divisor == null) return '$doneBytes of $total';
+  if (divisor == null) return '$doneBytes of $precise';
+  if (unit == 'B') return '$doneBytes of $precise';
 
-  final done = doneBytes / divisor;
-  // One decimal on the done side, always: it is the half that moves, and a
-  // figure that changes its own width as it counts jitters even in tabular
-  // digits. `B` is the exception — bytes are whole things.
-  final text = unit == 'B' ? doneBytes.toString() : done.toStringAsFixed(1);
-  return '$text of $total';
+  // One decimal on both sides, always: the done half is the one that moves,
+  // and a figure that changes its own width as it counts jitters even in
+  // tabular digits; the total takes the same decimal so the pair reads as one
+  // measure (`1.0 of 4.0 GB`, never `1.0 of 4.00 GB`). Bytes are whole things.
+  final done = (doneBytes / divisor).toStringAsFixed(1);
+  final total = (totalBytes / divisor).toStringAsFixed(1);
+  return '$done of $total $unit';
 }
 
 double? _divisorFor(String unit) {

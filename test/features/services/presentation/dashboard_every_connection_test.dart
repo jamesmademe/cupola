@@ -90,7 +90,7 @@ void main() {
       _within(
         ServicesInFlightSection,
         find.text(
-          'Radarr 4K · Bluray-2160p · 2.9 of 9.40 GB · 6 min left · SABnzbd',
+          'Radarr 4K · Bluray-2160p · 2.9 of 9.4 GB · 6 min left · SABnzbd',
         ),
       ),
       findsOne,

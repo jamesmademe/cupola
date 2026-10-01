@@ -38,11 +38,23 @@ void main() {
       expect(formatDoneOfTotal(doneBytes: null, totalBytes: 100), isNot('0 B'));
     });
 
+    test('both sides carry one decimal, so the pair reads as one measure', () {
+      const gib = 1024 * 1024 * 1024;
+      expect(
+        formatDoneOfTotal(doneBytes: gib, totalBytes: 4 * gib),
+        '1.0 of 4.0 GB',
+      );
+      expect(
+        formatDoneOfTotal(doneBytes: 2 * gib, totalBytes: (9.4 * gib).round()),
+        '2.0 of 9.4 GB',
+      );
+    });
+
     test('nothing downloaded yet is 0, which is a reading', () {
       // The counterweight: zero *reported* is a fact, and must not be hidden.
       expect(
         formatDoneOfTotal(doneBytes: 0, totalBytes: 2 * 1024 * 1024 * 1024),
-        '0.0 of 2.00 GB',
+        '0.0 of 2.0 GB',
       );
     });
   });
