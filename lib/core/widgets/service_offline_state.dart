@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
-import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -125,7 +124,11 @@ class ServiceOfflineState extends StatelessWidget {
   }
 
   final String serviceName;
+
+  /// The service's accent, which this leaf no longer paints: a service's
+  /// colour is registry data, and the glyph carries the state's tone instead.
   final Color accent;
+
   final VoidCallback onRetry;
 
   /// How long it has been quiet. Absent until something records a first-failure
@@ -146,15 +149,19 @@ class ServiceOfflineState extends StatelessWidget {
     if (service == null) {
       final span = since == null ? null : formatElapsedSpan(since!);
       return _OfflineLeaf(
-        icon: Icons.cloud_off_rounded,
-        // The plain leaf has never known a cause, so it carries the service's
-        // own light rather than a verdict.
-        glyphColor: ServiceTheme.onTint(
-          accent,
-          surface: Theme.of(context).colorScheme.surface,
-          tintAlpha: 0,
+        icon: failureIcon(ServiceFailureReason.unreachable),
+        // The plain leaf says "did not answer" in its title, so its glyph
+        // carries that state's tone: red, walked against the page. It used to
+        // carry the service's light, which is the neutral lamp, and the one
+        // state red exists for drew the only grey glyph among the failures.
+        glyphColor: statusToneColor(
+          Theme.of(context).colorScheme,
+          failureTone(ServiceFailureReason.unreachable),
         ),
-        title: '$serviceName did not answer',
+        title: failureHeadline(
+          ServiceFailureReason.unreachable,
+          subject: serviceName,
+        ),
         body: span == null
             ? 'Anything it holds is missing from this page.'
             : 'It has not answered for $span. Anything it holds is missing '

@@ -7,7 +7,7 @@ Rendered from `lib/core/widgets/service_offline_state.dart` by `test/design_cata
 ## Values
 
 - Centred column, padding `space-xl`. No fill behind the glyph.
-- `cloud_off` at 32px through `onTint` with the service's accent against `surface` (tint 0) — the lamp, which resolves to the primary ink.
+- `cloud_off` (`failureIcon` for a host that did not answer) at 32px in that state's tone: red, `statusToneColor` walked against `surface`. The title names the state and the glyph carries its tone; the service's accent is registry data and is not painted.
 - `space-lg`, then the title *&lt;Service&gt; did not answer* in `title-medium` at 600.
 - `space-sm`, then the body in `body-small`, `on-surface-variant`: *It has not answered for 40 minutes. Anything it holds is missing from this page.* When no first-failure time is known the span is dropped, not invented: *Anything it holds is missing from this page.*
 - `space-xl`, then the actions: *Retry* with an 18px `refresh` glyph as a filled button (the theme's `primary` / `on-primary`, `radius-md`), and optionally, `space-sm` after it, a text button *Settings* in `primary` with a 56 × 44 minimum target.
@@ -27,7 +27,7 @@ Used by the library walls (`MediaBrowseScaffold(service:)`), Readarr's author li
 
 ## Consumer provides
 
-`serviceName`, `accent` and `onRetry`; optionally `since` (the age of the first failure, formatted as minutes or hours) and `onOpenSettings`.
+`serviceName`, `accent` (kept for the callers, no longer painted) and `onRetry`; optionally `since` (the age of the first failure, formatted as minutes or hours) and `onOpenSettings`.
 
 ## Semantics
 

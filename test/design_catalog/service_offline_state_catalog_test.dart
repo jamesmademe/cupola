@@ -31,8 +31,8 @@ void main() {
     ],
     scenes: [
       CatalogScene(
-        'ServiceOfflineState(since:, onOpenSettings:) · a known first-failure '
-        'age, Retry and Settings',
+        'ServiceOfflineState(since:, onOpenSettings:) · did not answer: the '
+        'red glyph, a known first-failure age, Retry and Settings',
         (_) => ServiceOfflineState(
           serviceName: 'SABnzbd',
           accent: ServiceKey.sabnzbd.accent,

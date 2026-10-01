@@ -9,8 +9,10 @@ import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_screen.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import '../../test_helpers/profiles/profiles.dart';
 import '../../test_helpers/settings_scope.dart';
 
 DioException _refused() => DioException.connectionError(
@@ -70,6 +72,46 @@ Color _glyphColor(WidgetTester tester) => tester
     .color!;
 
 void main() {
+  group('ServiceOfflineState', () {
+    testWidgets('the plain leaf says "did not answer" in red, never the lamp', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        ServiceOfflineState(
+          serviceName: 'SABnzbd',
+          accent: ServiceKey.sabnzbd.accent,
+          onRetry: () {},
+        ),
+      );
+
+      expect(find.text('SABnzbd did not answer'), findsOneWidget);
+      final scheme = AppTheme.darkTheme().colorScheme;
+      expect(_glyphColor(tester), statusToneColor(scheme, StatusTone.error));
+      // The service's light is the neutral lamp, which said nothing about the
+      // one state red exists for.
+      expect(_glyphColor(tester), isNot(ServiceKey.sabnzbd.accent));
+    });
+
+    testWidgets('P7: a SABnzbd that answers only at home is red away', (
+      tester,
+    ) async {
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p7,
+        child: const SabnzbdScreen(showAppBar: false),
+      );
+
+      expect(find.text('SABnzbd did not answer'), findsOneWidget);
+      expect(
+        _glyphColor(tester),
+        statusToneColor(AppTheme.darkTheme().colorScheme, StatusTone.error),
+      );
+
+      await harness.unmount(tester);
+    });
+  });
+
   group('ServiceOfflineState.failure', () {
     testWidgets('a server that did not answer: red, its address, Retry and '
         'Settings — and no exception text', (tester) async {
