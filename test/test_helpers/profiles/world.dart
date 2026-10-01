@@ -241,6 +241,11 @@ enum DownloadState {
   /// The data is not where the client left it: qBittorrent's `missingFiles`,
   /// Transmission's local error. Added the same way as [failed].
   missingFiles,
+
+  /// The client paused the job itself and waits on a person: a SABnzbd slot
+  /// `Paused` with an `ENCRYPTED` label, an NZBGet group paused by its health
+  /// check. The arr's queue calls it paused. Added the same way as [failed].
+  heldByClient,
 }
 
 /// One download of the world, as both the arr's queue and the client see it.

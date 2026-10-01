@@ -53,10 +53,30 @@ class SabnzbdQueue {
     required this.timeLeft,
     required this.slots,
     this.reportedSlots,
+    this.pauseInterval = '0',
+    this.downloadDiskFreeGb,
   });
 
+  /// `paused`: the downloader is stopped. SABnzbd sets it for a user's pause
+  /// and for its own: a full disk stops the queue through the same
+  /// `Downloader.pause()` (`assembler.py`), so the flag alone cannot say
+  /// which.
   final bool paused;
   final String status;
+
+  /// `pause_int`: the time left on a timed pause, `"0"` when there is none.
+  /// A timed pause is always somebody's decision.
+  final String pauseInterval;
+
+  /// `diskspace1`: free space in the download (incomplete) folder, in GB, or
+  /// null when the payload did not carry it.
+  final double? downloadDiskFreeGb;
+
+  /// A timed pause is running.
+  bool get isTimedPause {
+    final left = pauseInterval.trim();
+    return left.isNotEmpty && left != '0';
+  }
 
   /// Current download speed in kilobytes per second.
   final double kbPerSec;
@@ -118,6 +138,8 @@ class SabnzbdQueue {
       // reported is not a depth to invent.
       reportedSlots:
           intOrNull(json['noofslots_total']) ?? intOrNull(json['noofslots']),
+      pauseInterval: (json['pause_int'] ?? '0').toString(),
+      downloadDiskFreeGb: _asDoubleOrNull(json['diskspace1']),
     );
   }
 }
@@ -133,6 +155,7 @@ class SabnzbdQueueSlot {
     required this.timeLeft,
     required this.mbLeft,
     this.mb,
+    this.labels = const [],
   });
 
   final String nzoId;
@@ -155,6 +178,10 @@ class SabnzbdQueueSlot {
   /// a parse away — but a server that omits it must leave the clause off the
   /// row rather than have a total invented for it.
   final double? mb;
+
+  /// `labels`: SABnzbd's own marks on the job, in its own words and
+  /// language (`DUPLICATE`, `ENCRYPTED`, `TOO LARGE`, `PROPAGATING 5 min`).
+  final List<String> labels;
 
   double get progress => (percentage / 100).clamp(0, 1).toDouble();
   String get sizeLeftLabel => formatMegabytes(mbLeft);
@@ -195,6 +222,10 @@ class SabnzbdQueueSlot {
       // reason `_asPositiveDouble` exists: every other figure here has a
       // defensible zero, a total does not.
       mb: _asPositiveDouble(json['mb']),
+      labels: [
+        for (final label in (json['labels'] as List?) ?? const [])
+          if ('$label'.trim().isNotEmpty) '$label'.trim(),
+      ],
     );
   }
 }

@@ -55,6 +55,9 @@ Profiles can be varied:
 - `withDownloads([download])` adds downloads to the world: a torrent in
   error, say. Each is drawn by its client's fake and, when it names an arr,
   by that arr's queue.
+- `withFullDisk(id)` fills a download client's disk. SABnzbd answers its
+  queue paused, as it pauses itself on a full disk, with 0.42 GB free in its
+  download folder and every slot reporting its job's own status.
 
 A test can answer ahead of the world with
 `harness.network.on(id, 'GET', path, (request) => NetworkReply.json(…))`,
@@ -234,5 +237,8 @@ four-column user of the local sign-in.
 - **Plex non-owner.** Only the refused `/status/sessions` is modelled. There
   is no documented owner probe to answer.
 - **Client faults in the world itself.** The world as written has none. A
-  test adds one with `withDownloads`: `DownloadState.failed` is a
-  Transmission local error (`error: 3`, the daemon's own words).
+  test adds one with `withDownloads`: `DownloadState.failed` is qBittorrent's
+  `error` and a Transmission local error (`error: 3`, the daemon's own
+  words), `missingFiles` is qBittorrent's `missingFiles`, and `heldByClient`
+  is a SABnzbd slot `Paused` with an `ENCRYPTED` label (its arr says
+  paused).

@@ -712,6 +712,7 @@ class ConfigProfile {
     this.trustedCertificates = const {},
     this.bazarrFollows = const {ServiceKey.radarr, ServiceKey.sonarr},
     this.extraDownloads = const [],
+    this.fullDisks = const {},
   });
 
   /// `P1` … `P9`, as the inventory numbers them.
@@ -764,6 +765,12 @@ class ConfigProfile {
   /// client's fake and, when it names an arr, by that arr's queue, the way
   /// the world's own rows are. See [withDownloads].
   final List<WorldDownload> extraDownloads;
+
+  /// The download clients (connection ids) whose download disk is full. A
+  /// usenet client stops its own queue on a full disk, through the same
+  /// switch a user's pause flips: its fake answers paused, with almost no
+  /// free space. See [withFullDisk].
+  final Set<String> fullDisks;
 
   /// Every download of this profile's world.
   List<WorldDownload> get downloads => [
@@ -856,6 +863,12 @@ class ConfigProfile {
   ConfigProfile withDownloads(List<WorldDownload> downloads) =>
       _copy(extraDownloads: [...extraDownloads, ...downloads]);
 
+  /// A copy where [instanceId]'s download disk is full.
+  ConfigProfile withFullDisk(String instanceId) {
+    connection(instanceId);
+    return _copy(fullDisks: {...fullDisks, instanceId});
+  }
+
   /// A copy with the device at [place].
   ConfigProfile at(NetworkPlace place) => _copy(place: place);
 
@@ -912,6 +925,7 @@ class ConfigProfile {
     NetworkPlace? place,
     WorldSeerrUser? seerrRequester,
     List<WorldDownload>? extraDownloads,
+    Set<String>? fullDisks,
   }) => ConfigProfile(
     id: id,
     title: title,
@@ -926,6 +940,7 @@ class ConfigProfile {
     trustedCertificates: trustedCertificates,
     bazarrFollows: bazarrFollows,
     extraDownloads: extraDownloads ?? this.extraDownloads,
+    fullDisks: fullDisks ?? this.fullDisks,
   );
 
   @override

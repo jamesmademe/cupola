@@ -47,6 +47,7 @@ class QbittorrentFake extends ServiceFake {
     DownloadState.stopped => 'stoppedUP',
     DownloadState.failed => 'error',
     DownloadState.missingFiles => 'missingFiles',
+    DownloadState.heldByClient => 'stoppedDL',
   };
 
   static JsonMap torrent(ServerContext c, WorldDownload d) {
@@ -207,7 +208,8 @@ class TransmissionFake extends ServiceFake {
     DownloadState.importBlocked || DownloadState.seeding => 6,
     DownloadState.stopped ||
     DownloadState.failed ||
-    DownloadState.missingFiles => 0,
+    DownloadState.missingFiles ||
+    DownloadState.heldByClient => 0,
   };
 
   static bool _localError(WorldDownload d) =>
@@ -357,7 +359,9 @@ class SabnzbdFake extends ServiceFake {
   NetworkReply? answer(NetworkRequest r, ServerContext c) {
     final rows = _rowsOf(c, 'sabnzbd');
     final mbLeft = rows.fold<double>(0, (s, d) => s + d.sizeLeft / 1048576);
-    final speed = rows.fold<int>(0, (s, d) => s + d.speed);
+    // A full disk stops the queue as a pause does, and nothing moves.
+    final diskFull = c.profile.fullDisks.contains(c.server.id);
+    final speed = diskFull ? 0 : rows.fold<int>(0, (s, d) => s + d.speed);
     switch (_mode(r)) {
       case 'version':
         return NetworkReply.json({'version': '4.3.3'});
@@ -367,8 +371,9 @@ class SabnzbdFake extends ServiceFake {
         }
         return NetworkReply.json({
           'queue': {
-            'paused': false,
-            'status': 'Downloading',
+            'paused': diskFull,
+            'status': diskFull ? 'Paused' : 'Downloading',
+            'pause_int': '0',
             'kbpersec': (speed / 1024).toStringAsFixed(1),
             'speed': '${(speed / 1048576).toStringAsFixed(1)} M',
             'mbleft': mbLeft.toStringAsFixed(1),
@@ -376,7 +381,7 @@ class SabnzbdFake extends ServiceFake {
                 .fold<double>(0, (s, d) => s + d.size / 1048576)
                 .toStringAsFixed(1),
             'timeleft': '0:12:00',
-            'diskspace1': '12400.00',
+            'diskspace1': diskFull ? '0.42' : '12400.00',
             'diskspacetotal1': '43600.00',
             'noofslots': rows.length,
             'noofslots_total': rows.length,
@@ -386,9 +391,16 @@ class SabnzbdFake extends ServiceFake {
                   'index': i,
                   'nzo_id': d.id,
                   'filename': d.release,
-                  'status': d.state == DownloadState.queued
-                      ? 'Queued'
-                      : 'Downloading',
+                  'status': switch (d.state) {
+                    DownloadState.queued => 'Queued',
+                    DownloadState.heldByClient => 'Paused',
+                    // With the downloader paused, a slot reports its job's
+                    // own status (`api.py`, `build_queue`): queued.
+                    _ => diskFull ? 'Queued' : 'Downloading',
+                  },
+                  'labels': [
+                    if (d.state == DownloadState.heldByClient) 'ENCRYPTED',
+                  ],
                   'percentage': '${(d.progress * 100).round()}',
                   'cat': 'movies',
                   'priority': 'Normal',

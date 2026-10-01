@@ -72,6 +72,17 @@ const _nzbgetGrab = WorldDownload(
   speed: 8 * _mb,
 );
 
+/// A job somebody added to SABnzbd by hand, which SABnzbd paused because
+/// its archive is encrypted.
+const _sabEncrypted = WorldDownload(
+  id: 'SABnzbd_nzo_encrypted1',
+  release: 'Coffee.Run.Making.Of.2020.1080p',
+  client: 'sabnzbd',
+  state: DownloadState.heldByClient,
+  progress: 0.1,
+  size: _gb,
+);
+
 Future<ProviderContainer> _start(ConfigProfile profile) async {
   final harness = await ProfileHarness.start(profile);
   return harness.container(retry: (_, _) => null);
@@ -267,6 +278,79 @@ void main() {
             3 * _mb +
             8 * _mb,
       );
+    });
+  });
+
+  group('SABnzbd', () {
+    test('P1, SABnzbd\'s disk full: the queue it stopped is a fault on each '
+        'job, never a pause', () async {
+      final container = await _start(
+        Profiles.p1.withFullDisk(WorldIds.sabnzbd),
+      );
+      final inFlight = await container.read(servicesInFlightProvider.future);
+
+      for (final download in [
+        WorldDownloads.elephantsDream4k,
+        WorldDownloads.sintel4k,
+      ]) {
+        final row = inFlight.faults.singleWhere(
+          (item) => item.downloadId == download.id,
+        );
+        // Radarr 4K's row, which still says downloading, takes the fault.
+        expect(row.service, ServiceKey.radarr);
+        expect(row.connectionName, isNotNull);
+        expect(row.fault, InFlightFault.stalled);
+        expect(row.clientService, ServiceKey.sabnzbd);
+      }
+      expect(
+        inFlight.preview.map((item) => item.clientService),
+        isNot(contains(ServiceKey.sabnzbd)),
+      );
+
+      final decisions = await container.read(
+        dashboardDecisionSourceProvider(DecisionSource.queue).future,
+      );
+      expect(
+        decisions.decisions
+            .where((d) => d.detail.contains('Disk full'))
+            .map((d) => d.actionTarget)
+            .toSet(),
+        {ServiceKey.sabnzbd},
+      );
+    });
+
+    test('P1: a job SABnzbd paused itself is a decision in its words; the '
+        'answering queue stays in flight', () async {
+      final container = await _start(
+        Profiles.p1.withDownloads([_sabEncrypted]),
+      );
+      final inFlight = await container.read(servicesInFlightProvider.future);
+
+      final held = inFlight.faults.singleWhere(
+        (item) => item.id == _sabEncrypted.id,
+      );
+      expect(held.service, ServiceKey.sabnzbd);
+      expect(held.fault, InFlightFault.stalled);
+      expect(held.warning, 'ENCRYPTED');
+      expect(
+        inFlight.preview.where(
+          (item) => item.downloadId == WorldDownloads.elephantsDream4k.id,
+        ),
+        hasLength(1),
+      );
+    });
+
+    testWidgets('P1 on Home, SABnzbd\'s disk full: the stops are counted '
+        'under the region', (tester) async {
+      final harness = await _pumpHome(
+        tester,
+        Profiles.p1.withFullDisk(WorldIds.sabnzbd),
+      );
+
+      // Big Buck Bunny, and the two jobs the disk stopped.
+      expect(_inFlight(find.textContaining('3 stuck')), findsOneWidget);
+
+      await harness.unmount(tester);
     });
   });
 }

@@ -11,6 +11,7 @@
 library;
 
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
+import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 
@@ -106,3 +107,65 @@ InFlightReading? qbittorrentInFlight(String? state) {
 /// What a `missingFiles` torrent's decision says: its data is not where
 /// qBittorrent left it.
 const String qbittorrentMissingFiles = 'Files missing';
+
+/// What a job stopped by a full disk says: the queue cannot write another
+/// byte.
+const String diskFullReason = 'Disk full';
+
+/// Whether a usenet queue that is paused was stopped by its disk rather than
+/// by a person.
+///
+/// SABnzbd and NZBGet stop on a full disk by flipping the switch a user's
+/// pause flips (SABnzbd's `Downloader.pause()`, NZBGet's pause register), so
+/// the flag cannot tell the two apart. The free space can: a paused queue
+/// whose download folder cannot hold even the smallest job it still has to
+/// fetch was stopped by the disk. A queue with room left is read as paused on
+/// purpose, which the tone rule files under neutral: a pause the client took
+/// below a free-space threshold of its own is missed rather than a person's
+/// pause called a fault.
+///
+/// [timedPause] is always somebody's decision. A free space the client did not
+/// report proves nothing, and neither does a queue with nothing left to fetch.
+bool usenetQueueStoppedByDisk({
+  required bool paused,
+  required int? freeBytes,
+  required Iterable<int?> remainingBytes,
+  bool timedPause = false,
+}) {
+  if (!paused || timedPause || freeBytes == null) return false;
+  int? smallest;
+  for (final left in remainingBytes) {
+    if (left == null || left <= 0) continue;
+    if (smallest == null || left < smallest) smallest = left;
+  }
+  return smallest != null && freeBytes < smallest;
+}
+
+/// A SABnzbd queue slot (`mode=queue`), read. Every slot is in flight: the
+/// queue holds only jobs still to fetch.
+///
+/// * A slot `status` of `Paused` carrying `labels` is a job SABnzbd paused
+///   itself for the reason it labels (`ENCRYPTED`, `DUPLICATE`, `TOO LARGE`),
+///   waiting on a person: a stall, in SABnzbd's words. A paused slot with no
+///   label is somebody's pause and stays a transfer.
+/// * [stoppedByDisk] ([usenetQueueStoppedByDisk]) stalls every other job.
+InFlightReading sabnzbdSlotInFlight(
+  SabnzbdQueueSlot slot, {
+  required bool stoppedByDisk,
+}) {
+  if (slot.status.toLowerCase() == 'paused') {
+    return slot.labels.isEmpty
+        ? const InFlightReading.moving()
+        : InFlightReading.fault(
+            InFlightFault.stalled,
+            reason: slot.labels.join(' · '),
+          );
+  }
+  if (stoppedByDisk) {
+    return const InFlightReading.fault(
+      InFlightFault.stalled,
+      reason: diskFullReason,
+    );
+  }
+  return const InFlightReading.moving();
+}

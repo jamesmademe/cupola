@@ -1699,6 +1699,9 @@ int? _qbEta(int eta) => eta <= 0 || eta >= _qbNoEta ? null : eta;
 DateTime? _epochSeconds(int seconds) =>
     seconds <= 0 ? null : DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
 
+/// SABnzbd's queue, as in-flight items, with its faults: a job SABnzbd paused
+/// itself, and every job of a queue its disk stopped. See
+/// [sabnzbdSlotInFlight].
 Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(
   Ref ref,
   _MergeConnection source,
@@ -1709,38 +1712,61 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(
             .watch(sabnzbdClientForProvider(source.instanceId))
             .getQueue(limit: SabnzbdClient.wholeQueue);
   final rate = (queue.kbPerSec * 1024).round();
+  const megabyte = 1024 * 1024;
+  const gigabyte = 1024 * megabyte;
+  final free = queue.downloadDiskFreeGb;
+  final stoppedByDisk = usenetQueueStoppedByDisk(
+    paused: queue.paused,
+    timedPause: queue.isTimedPause,
+    freeBytes: free == null ? null : (free * gigabyte).round(),
+    remainingBytes: [
+      for (final slot in queue.slots)
+        if (slot.status.toLowerCase() != 'paused')
+          (slot.mbLeft * megabyte).round(),
+    ],
+  );
 
-  return queue.slots
-      .map(
-        (slot) => ServiceQueueItem(
-          service: ServiceKey.sabnzbd,
-          id: slot.nzoId,
-          title: slot.filename,
-          progress: slot.progress,
-          // SABnzbd reports what is *left*, not what the job weighs:
-          // `SabnzbdQueueSlot` parses `mbleft` and the response's `mb` is not
-          // modelled at all. So the pair is unknown rather than inferred from
-          // the percentage — a computed total is a number the server never
-          // said, and this row would be the only place in the app printing one.
-          doneBytes: null,
-          totalBytes: null,
-          etaSeconds: parseClockDuration(slot.timeLeft),
-          clientLabel: serviceWithConnection(
-            ServiceKey.sabnzbd,
-            source.name,
-            joiner: ' ',
-          ),
-          clientService: ServiceKey.sabnzbd,
-          instanceId: source.instanceId,
-          clientInstanceId: source.instanceId,
-          clientRateBytesPerSecond: rate,
-          // A paused queue is stopped *on purpose*, which the tone rule files
-          // under neutral — not a fault, and not a decision.
-          warning: queue.paused ? StateWord.stopped.label : null,
-          route: ServiceRoutes.forService(ServiceKey.sabnzbd),
+  final read = [
+    for (final slot in queue.slots)
+      (
+        slot: slot,
+        reading: sabnzbdSlotInFlight(slot, stoppedByDisk: stoppedByDisk),
+      ),
+  ];
+
+  return [
+    for (final (:slot, :reading) in read)
+      ServiceQueueItem(
+        service: ServiceKey.sabnzbd,
+        id: slot.nzoId,
+        title: slot.filename,
+        progress: slot.progress,
+        // SABnzbd reports what is *left*, not what the job weighs:
+        // `SabnzbdQueueSlot` parses `mbleft` and the response's `mb` is not
+        // modelled at all. So the pair is unknown rather than inferred from
+        // the percentage — a computed total is a number the server never
+        // said, and this row would be the only place in the app printing one.
+        doneBytes: null,
+        totalBytes: null,
+        etaSeconds: parseClockDuration(slot.timeLeft),
+        clientLabel: serviceWithConnection(
+          ServiceKey.sabnzbd,
+          source.name,
+          joiner: ' ',
         ),
-      )
-      .toList(growable: false);
+        clientService: ServiceKey.sabnzbd,
+        instanceId: source.instanceId,
+        clientInstanceId: source.instanceId,
+        clientRateBytesPerSecond: rate,
+        fault: reading.fault,
+        // A queue paused on purpose is stopped *on purpose*, which the tone
+        // rule files under neutral: not a fault, and not a decision. A queue
+        // its disk stopped is a fault, and says so.
+        warning:
+            reading.reason ?? (queue.paused ? StateWord.stopped.label : null),
+        route: ServiceRoutes.forService(ServiceKey.sabnzbd),
+      ),
+  ];
 }
 
 Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(

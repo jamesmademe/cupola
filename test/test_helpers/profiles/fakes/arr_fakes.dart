@@ -963,6 +963,13 @@ Map<String, Object?> arrQueueRecord(
       ],
     ),
     DownloadState.queued => ('queued', 'ok', 'downloading', const <Object?>[]),
+    // The client paused it; the arr only reports the pause.
+    DownloadState.heldByClient => (
+      'paused',
+      'ok',
+      'downloading',
+      const <Object?>[],
+    ),
     DownloadState.importBlocked => (
       'completed',
       'warning',
