@@ -1,0 +1,63 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/features/music/presentation/music_detail_screen.dart';
+
+import '../../../test_helpers/profiles/profiles.dart';
+
+void main() {
+  group('the quality profile row', () {
+    testWidgets('comes back once a later read answers', (tester) async {
+      // Tall enough that the Details card is built without scrolling.
+      await tester.binding.setSurfaceSize(const Size(800, 3000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var profilesAnswer = false;
+      final harness = await ProfileHarness.start(Profiles.p1);
+      harness.network.on(
+        WorldIds.lidarr,
+        'GET',
+        '/api/v1/qualityprofile',
+        (_) => profilesAnswer
+            ? null
+            : NetworkReply.json({'message': 'boom'}, status: 500),
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: harness.overrides,
+          child: MaterialApp(
+            theme: AppTheme.darkTheme(),
+            home: const MusicDetailScreen(artistId: 1, heroTag: 'artist-1'),
+          ),
+        ),
+      );
+      await harness.settle(tester);
+
+      // Omitted while the profiles are unknown, and asked for once.
+      expect(find.text('Details'), findsOneWidget);
+      expect(find.text('Quality profile'), findsNothing);
+      expect(
+        harness.network
+            .requestsTo(WorldIds.lidarr)
+            .where((r) => r.uri.path == '/api/v1/qualityprofile'),
+        hasLength(1),
+      );
+
+      profilesAnswer = true;
+      await tester
+          .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+          .onRefresh();
+      await harness.settle(tester);
+      // The profiles are asked for after the frame that drew the fresh artist,
+      // and that frame leaves nothing scheduled for `settle` to wait on.
+      await tester.pump(const Duration(milliseconds: 100));
+      await harness.settle(tester);
+
+      expect(find.text('Quality profile'), findsOneWidget);
+      expect(find.text('HD-1080p'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+  });
+}

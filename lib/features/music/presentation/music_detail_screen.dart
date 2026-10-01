@@ -166,6 +166,9 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
     ensureQualityProfiles(
       profileId: artist.qualityProfileId,
       fetchProfiles: () => _lidarr.getQualityProfiles(),
+      // The record itself, so a read that came back empty is asked again when
+      // a Retry or a pull brings a fresh one, not once and never again.
+      record: artist,
     );
   }
 
