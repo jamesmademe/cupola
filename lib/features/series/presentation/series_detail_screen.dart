@@ -575,9 +575,12 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
               failureShownAbove: sonarrFaultShown,
             ),
           ),
+          // The series' folder, labelled as the folder. Sonarr keeps one file
+          // per episode and this page names none of them, so "Files" promised
+          // what the row never drew.
           if (viewModel.hasFiles && viewModel.path != null)
             MediaDetailSlot.box(
-              label: 'Files',
+              label: FileInfoSection.folderLabel,
               child: FileInfoSection(path: viewModel.path, accent: accent),
             ),
         ],

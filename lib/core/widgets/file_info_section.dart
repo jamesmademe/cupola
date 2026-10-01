@@ -28,6 +28,11 @@ class FileInfoSection extends StatelessWidget {
 
   final _FileInfoShape _shape;
 
+  /// What the folder is called wherever it is drawn: the folder row's title,
+  /// the folder line's spoken label in [FileInfoSection.file], and the slot
+  /// label of a page whose section shows only the folder.
+  static const folderLabel = 'Library path';
+
   /// The folder alone, titled *Library path*: what a page shows when the
   /// service names no single file (a series keeps one per episode).
   const FileInfoSection({super.key, this.path, this.accent})
@@ -111,7 +116,7 @@ class FileInfoSection extends StatelessWidget {
         final folder = path;
         if (folder == null) return const SizedBox.shrink();
         return _InfoRow(
-          title: 'Library path',
+          title: folderLabel,
           subtitle: folder,
           icon: Icons.storage_rounded,
           iconColor: _glyphColor(colorScheme),
@@ -190,7 +195,7 @@ class _FileRow extends StatelessWidget {
                 if (folder != null)
                   Semantics(
                     container: true,
-                    label: 'Library path',
+                    label: FileInfoSection.folderLabel,
                     value: folder,
                     child: ExcludeSemantics(
                       child: Text(

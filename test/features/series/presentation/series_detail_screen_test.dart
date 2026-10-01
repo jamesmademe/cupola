@@ -157,6 +157,28 @@ void main() {
       expect(find.text('Tags'), findsNothing);
     });
 
+    testWidgets('the folder is labelled as the folder, never as files', (
+      tester,
+    ) async {
+      await _pumpSeriesDetail(
+        tester,
+        detailBuilder: (ref, seriesId) async => _series(),
+      );
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(tester, find.text('/tv/Breaking Bad'));
+
+      // It read "Files" over a row that draws the series' folder and no file.
+      final labels = tester
+          .widgetList<MediaDetailSectionLabel>(
+            find.byType(MediaDetailSectionLabel),
+          )
+          .map((label) => label.label);
+      expect(labels, isNot(contains('Files')));
+      expect(labels, contains('Library path'));
+      expect(find.byType(FileInfoSection), findsOneWidget);
+      expect(find.byType(MachineName), findsNothing);
+    });
+
     testWidgets('the canonical region order puts seasons above the catalogue', (
       tester,
     ) async {
