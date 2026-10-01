@@ -420,6 +420,149 @@ void main() {
     });
   });
 
+  group('the File section', () {
+    /// The machine names the section draws, in order.
+    List<String> machineNames(WidgetTester tester) => [
+      for (final name in tester.widgetList<MachineName>(
+        find.byType(MachineName),
+      ))
+        name.name,
+    ];
+
+    Future<ProfileHarness> pumpTall(
+      WidgetTester tester,
+      Widget child, {
+      ConfigProfile? profile,
+      void Function(ProfileNetwork network)? routes,
+    }) async {
+      // Tall enough that the File slot is built without scrolling.
+      await tester.binding.setSurfaceSize(const Size(800, 3000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      return _pump(tester, profile ?? Profiles.p1, child, routes: routes);
+    }
+
+    testWidgets('names the file inside the folder, not the folder, and what '
+        'Radarr renamed it from', (tester) async {
+      final harness = await pumpTall(
+        tester,
+        const MovieDetailScreen(movieId: 3, heroTag: 'movie-3'),
+      );
+
+      expect(find.text('File'), findsOneWidget);
+      // It used to read "Coffee Run (2020)": the last part of `path`, which in
+      // Radarr is the movie's folder.
+      expect(machineNames(tester), [
+        'Coffee Run (2020) Bluray-1080p.mkv',
+        'Coffee.Run.2020.1080p.BluRay.x264-WORLD',
+      ]);
+      expect(
+        tester.widgetList<MachineName>(find.byType(MachineName)).last.caption,
+        'Released as',
+      );
+      // The folder is still there, under its own name.
+      expect(find.text('/mnt/tank/media/films/Coffee Run (2020)'), findsOne);
+      expect(find.semantics.byLabel('Library path'), findsOne);
+      expect(find.byTooltip('Copy file name'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a file that kept its release name says nothing about a '
+        'release', (tester) async {
+      final harness = await pumpTall(
+        tester,
+        const MovieDetailScreen(movieId: 5, heroTag: 'movie-5'),
+      );
+
+      expect(machineNames(tester), [
+        'Tears.of.Steel.2012.1080p.BluRay.x264-WORLD.mkv',
+      ]);
+      expect(find.byTooltip('Copy release name'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('without a scene name, the original path is what it was '
+        'released as', (tester) async {
+      final harness = await pumpTall(
+        tester,
+        const MovieDetailScreen(movieId: 4, heroTag: 'movie-4'),
+      );
+
+      expect(machineNames(tester), [
+        'Sintel (2010) Bluray-1080p.mkv',
+        'Sintel.2010.1080p.BluRay.x264-WORLD/sintel.mkv',
+      ]);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('the file comes from the connection the page reads', (
+      tester,
+    ) async {
+      final harness = await pumpTall(
+        tester,
+        const MovieDetailScreen(
+          movieId: 3,
+          heroTag: 'movie-3-4k',
+          instanceId: WorldIds.radarr4k,
+        ),
+      );
+
+      // Film 3 on Radarr 4K is Spring, not Coffee Run.
+      expect(machineNames(tester), [
+        'Spring (2019) Bluray-2160p.mkv',
+        'Spring.2019.2160p.UHD.BluRay.x265-WORLD',
+      ]);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a movie with no file keeps its hint', (tester) async {
+      final harness = await pumpTall(
+        tester,
+        const MovieDetailScreen(movieId: 1, heroTag: 'movie-1'),
+      );
+
+      expect(find.text('Import a file you already have'), findsOneWidget);
+      expect(find.byType(MachineName), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a file Radarr did not name shows the folder as the folder', (
+      tester,
+    ) async {
+      final harness = await pumpTall(
+        tester,
+        const MovieDetailScreen(movieId: 3, heroTag: 'movie-3'),
+        routes: (network) => network.on(
+          WorldIds.radarr,
+          'GET',
+          '/api/v3/movie/3',
+          (_) => NetworkReply.json(const {
+            'id': 3,
+            'title': 'Coffee Run',
+            'year': 2020,
+            'status': 'released',
+            'hasFile': true,
+            'monitored': true,
+            'isAvailable': true,
+            'qualityProfileId': 1,
+            'path': '/mnt/tank/media/films/Coffee Run (2020)',
+          }),
+        ),
+      );
+
+      expect(find.byType(MachineName), findsNothing);
+      expect(find.text('Library path'), findsOneWidget);
+      expect(find.text('/mnt/tank/media/films/Coffee Run (2020)'), findsOne);
+      expect(find.text('Coffee Run (2020)'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+  });
+
   group('a queue that answered', () {
     testWidgets('names the download it holds', (tester) async {
       final harness = await _pump(

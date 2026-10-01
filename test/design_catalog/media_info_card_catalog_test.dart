@@ -118,25 +118,30 @@ void main() {
         ),
       ),
       CatalogScene(
-        'FileInfoSection · a file on disk, then .missing, then no accent · '
-        'one footprint, so the region does not jump when a file arrives',
+        'FileInfoSection.file · a renamed file, so Released as · a file that '
+        'kept its release name · .missing, the same footprint · the folder '
+        'alone (a series), no accent',
         (_) => SizedBox(
           width: 358,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              FileInfoSection(
-                filename: 'Nosferatu.1922.2160p.BluRay.x265.mkv',
+              FileInfoSection.file(
+                fileName: 'Nosferatu (1922) Bluray-2160p.mkv',
+                releasedAs: 'Nosferatu.1922.2160p.BluRay.x265-GROUP',
                 path: '/data/media/movies/Nosferatu (1922)',
+                accent: ServiceKey.radarr.accent,
+              ),
+              const SizedBox(height: 12),
+              FileInfoSection.file(
+                fileName: 'Metropolis.1927.1080p.BluRay.x264-GROUP.mkv',
+                path: '/data/media/movies/Metropolis (1927)',
                 accent: ServiceKey.radarr.accent,
               ),
               const SizedBox(height: 12),
               FileInfoSection.missing(accent: ServiceKey.radarr.accent),
               const SizedBox(height: 12),
-              const FileInfoSection(
-                filename: 'Metropolis.1927.1080p.BluRay.x264.mkv',
-                path: '/data/media/movies/Metropolis (1927)',
-              ),
+              const FileInfoSection(path: '/data/media/series/Sherlock'),
             ],
           ),
         ),

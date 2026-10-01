@@ -75,8 +75,9 @@ Widget _radarrPage({Widget? band}) {
       operate: [
         MediaDetailSlot.box(
           label: 'File',
-          child: FileInfoSection(
-            filename: 'Nosferatu.1922.2160p.BluRay.x265.mkv',
+          child: FileInfoSection.file(
+            fileName: 'Nosferatu (1922) Bluray-2160p.mkv',
+            releasedAs: 'Nosferatu.1922.2160p.BluRay.x265-GROUP',
             path: '/data/media/movies/Nosferatu (1922)',
             accent: accent,
           ),

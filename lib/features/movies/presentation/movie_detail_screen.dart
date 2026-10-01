@@ -453,16 +453,25 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         if (viewModel.isInLibrary)
           MediaDetailSlot.box(
             label: 'File',
-            child: viewModel.hasFile && viewModel.path != null
-                ? FileInfoSection(
-                    path: viewModel.path,
-                    filename: viewModel.filename,
-                    accent: accent,
-                  )
-                // One footprint in both states: the region does not jump when a
-                // file arrives, and the hint spends its two lines suggesting the
-                // route the promoted "Automatic search" button does not cover.
-                : FileInfoSection.missing(accent: accent),
+            child: switch ((viewModel.hasFile, viewModel.fileName)) {
+              (true, final fileName?) => FileInfoSection.file(
+                fileName: fileName,
+                releasedAs: viewModel.releasedAs,
+                path: viewModel.path,
+                accent: accent,
+              ),
+              // Radarr says there is a file and the payload did not name it:
+              // the folder, under its own name, rather than the folder passed
+              // off as the file.
+              (true, null) when viewModel.path != null => FileInfoSection(
+                path: viewModel.path,
+                accent: accent,
+              ),
+              // One footprint in both states: the region does not jump when a
+              // file arrives, and the hint spends its two lines suggesting the
+              // route the promoted "Automatic search" button does not cover.
+              _ => FileInfoSection.missing(accent: accent),
+            },
           ),
       ],
       synopsis: [

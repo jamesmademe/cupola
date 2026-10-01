@@ -232,12 +232,46 @@ class RadarrFake extends ArrFake {
       'qualityProfileId': 1,
       'minimumAvailability': 'released',
       'path': '${rootFolder(c)}/${title.title} (${title.year})',
+      if (hasFile) 'movieFile': _movieFile(c, id, title),
       'added': c.ago(added),
       if (spriteFright) 'digitalRelease': c.ago(const Duration(hours: 6)),
       if (spriteFright) 'physicalRelease': c.ahead(const Duration(days: 13)),
       'images': const <Object?>[],
       'genres': const ['Animation'],
       'ratings': const <String, Object?>{},
+    };
+  }
+
+  /// The file a movie with one carries, as Radarr embeds it
+  /// (`MovieFileResource`). The titles cover the ways a file relates to its
+  /// release: renamed, with the scene name kept (Coffee Run, Spring); kept as
+  /// released (Tears of Steel); renamed, with only the original path kept
+  /// (Sintel); renamed with no original recorded (Elephants Dream).
+  JsonMap _movieFile(ServerContext c, int id, WorldTitle title) {
+    final is4k = c.server.is4k;
+    final release =
+        '${title.title.replaceAll(' ', '.')}.${title.year}.'
+        '${is4k ? '2160p.UHD.BluRay.x265' : '1080p.BluRay.x264'}-WORLD';
+    final quality = is4k ? 'Bluray-2160p' : 'Bluray-1080p';
+    final renamed = '${title.title} (${title.year}) $quality.mkv';
+    final keptAsReleased = title == WorldTitles.tearsOfSteel;
+    final relativePath = keptAsReleased ? '$release.mkv' : renamed;
+    final folder = '${rootFolder(c)}/${title.title} (${title.year})';
+    return {
+      'id': 100 + id,
+      'movieId': id,
+      'relativePath': relativePath,
+      'path': '$folder/$relativePath',
+      'size': is4k ? 9800000000 : 1200000000,
+      'dateAdded': c.ago(const Duration(days: 1)),
+      if (title != WorldTitles.sintel && title != WorldTitles.elephantsDream)
+        'sceneName': release,
+      if (title == WorldTitles.sintel)
+        'originalFilePath': '$release/${title.slug}.mkv'
+      else if (title != WorldTitles.elephantsDream)
+        'originalFilePath': '$release.mkv',
+      'releaseGroup': 'WORLD',
+      'quality': _quality(quality),
     };
   }
 

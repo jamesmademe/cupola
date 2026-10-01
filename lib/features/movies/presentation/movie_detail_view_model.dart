@@ -20,8 +20,15 @@ class MovieDetailViewModel {
   final String? studio;
   final List<String> genres;
   final List<RatingSource> ratings;
+
+  /// The movie's folder on the server.
   final String? path;
-  final String? filename;
+
+  /// The file inside [path], in full: Radarr's `movieFile.relativePath`.
+  final String? fileName;
+
+  /// The release the file came from, when Radarr renamed it on import.
+  final String? releasedAs;
   final int? qualityProfileId;
   final String? certification;
   final String? originalLanguage;
@@ -45,7 +52,8 @@ class MovieDetailViewModel {
     required this.genres,
     required this.ratings,
     this.path,
-    this.filename,
+    this.fileName,
+    this.releasedAs,
     this.qualityProfileId,
     this.certification,
     this.originalLanguage,
@@ -150,6 +158,9 @@ class MovieDetailViewModel {
       coverTypes: const ['fanart'],
     );
     final moviePath = movie.path;
+    // The file, not the folder: Radarr's `path` is the movie's directory, so
+    // its last segment named the folder as though it were the file.
+    final file = movie.hasFile ? movie.movieFile : null;
     final isInLibrary = movie.id > 0 && moviePath?.isNotEmpty == true;
     // `formatRuntimeMinutes` answers '' for a runtime the service does not
     // have, and the metadata line only drops nulls — so the empty string has
@@ -174,9 +185,8 @@ class MovieDetailViewModel {
       genres: movie.genres,
       ratings: movie.ratings,
       path: moviePath,
-      filename: movie.hasFile && moviePath != null
-          ? moviePath.split(RegExp(r'[\\/]')).last
-          : null,
+      fileName: file?.fileName,
+      releasedAs: file?.releasedAs,
       qualityProfileId: movie.qualityProfileId,
       certification: movie.certification,
       originalLanguage: movie.originalLanguage?['name'] as String?,

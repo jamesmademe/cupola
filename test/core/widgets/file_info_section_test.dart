@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/widgets/file_info_section.dart';
+import 'package:cupola/core/widgets/machine_name.dart';
 
 void main() {
   group('FileInfoSection', () {
-    testWidgets('renders nothing when both path and filename are null', (
-      tester,
-    ) async {
+    testWidgets('renders nothing without a path', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: FileInfoSection())),
       );
@@ -30,36 +29,60 @@ void main() {
       expect(find.byIcon(Icons.storage_rounded), findsOneWidget);
     });
 
-    testWidgets('renders filename when provided', (tester) async {
+    testWidgets('.file names the file in full, then the folder', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: FileInfoSection(filename: 'Avatar.2009.1080p.mkv'),
-          ),
-        ),
-      );
-
-      expect(find.text('File'), findsNothing);
-      expect(find.text('Avatar.2009.1080p.mkv'), findsOneWidget);
-      expect(find.byIcon(Icons.storage_rounded), findsOneWidget);
-    });
-
-    testWidgets('renders both path and filename when provided', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: FileInfoSection(
-              path: '/movies/Avatar',
-              filename: 'Avatar.2009.1080p.mkv',
+            body: FileInfoSection.file(
+              fileName: 'Avatar (2009) Bluray-1080p.mkv',
+              path: '/movies/Avatar (2009)',
             ),
           ),
         ),
       );
 
       expect(find.text('File'), findsNothing);
-      expect(find.text('/movies/Avatar'), findsOneWidget);
-      expect(find.text('Avatar.2009.1080p.mkv'), findsOneWidget);
+      final name = tester.widget<MachineName>(find.byType(MachineName));
+      expect(name.name, 'Avatar (2009) Bluray-1080p.mkv');
+      expect(find.byTooltip('Copy file name'), findsOneWidget);
+      expect(find.byTooltip('Copy release name'), findsNothing);
+      expect(find.text('/movies/Avatar (2009)'), findsOneWidget);
       expect(find.byIcon(Icons.storage_rounded), findsOneWidget);
+      // The file and the folder, each read whole after its label.
+      expect(
+        find.semantics.byValue('Avatar (2009) Bluray-1080p.mkv'),
+        findsOne,
+      );
+      expect(find.semantics.byValue('/movies/Avatar (2009)'), findsOne);
+      expect(find.semantics.byLabel('Library path'), findsOne);
+    });
+
+    testWidgets('.file says what a renamed file was released as', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: FileInfoSection.file(
+              fileName: 'Avatar (2009) Bluray-1080p.mkv',
+              releasedAs: 'Avatar.2009.1080p.BluRay.x264-GROUP',
+              path: '/movies/Avatar (2009)',
+            ),
+          ),
+        ),
+      );
+
+      final names = tester
+          .widgetList<MachineName>(find.byType(MachineName))
+          .toList();
+      expect(names.map((name) => name.name), [
+        'Avatar (2009) Bluray-1080p.mkv',
+        'Avatar.2009.1080p.BluRay.x264-GROUP',
+      ]);
+      expect(names.last.caption, 'Released as');
+      expect(find.byTooltip('Copy release name'), findsOneWidget);
     });
 
     testWidgets('tints the storage glyph with the page accent', (tester) async {

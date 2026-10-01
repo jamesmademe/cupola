@@ -1,6 +1,8 @@
+import 'package:cupola/core/models/arr_media_file.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/models/rating_source.dart';
 import 'package:cupola/core/utils/arr_model_helpers.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 export 'package:cupola/core/models/rating_source.dart';
 
@@ -43,6 +45,12 @@ class RadarrMovie {
   /// re-deriving availability from [status].
   final bool? isAvailable;
 
+  /// The file on disk, as Radarr embeds it whenever [hasFile] is true.
+  ///
+  /// [path] is the movie's **folder**; this is the file inside it. Null when
+  /// the movie has no file, or when the payload did not carry it.
+  final ArrMediaFile? movieFile;
+
   const RadarrMovie({
     required this.id,
     required this.title,
@@ -70,6 +78,7 @@ class RadarrMovie {
     this.added,
     this.minimumAvailability,
     this.isAvailable,
+    this.movieFile,
   });
 
   /// Whether a file is expected to exist by now.
@@ -120,6 +129,10 @@ class RadarrMovie {
       isAvailable: json['isAvailable'] is bool
           ? json['isAvailable'] as bool
           : null,
+      movieFile: switch (mapOrNull(json['movieFile'])) {
+        final file? => ArrMediaFile.fromJson(file),
+        null => null,
+      },
     );
   }
 
