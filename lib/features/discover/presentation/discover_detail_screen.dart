@@ -139,11 +139,7 @@ class DiscoverDetailScreen extends ConsumerWidget {
           title: viewModel.title,
           posterRow: MediaDetailPosterRow(
             statusBadge: _SeerrStatusBadges(
-              standard: seerrMediaStatus(
-                viewModel.mediaInfo,
-                numbering: numbering,
-              ),
-              uhd: seerr4kMediaStatus(
+              statuses: seerrTitleStatuses(
                 viewModel.mediaInfo,
                 numbering: numbering,
               ),
@@ -368,28 +364,25 @@ class DiscoverDetailScreen extends ConsumerWidget {
 }
 
 /// The title's state in Seerr: the standard copy, and beside it the 4K copy
-/// when Seerr holds one.
+/// when Seerr holds one ([seerrTitleStatuses]).
 ///
 /// Two of the same badge rather than one carrying both: each resolution has
 /// its own state and its own tone, and a title on disk in HD with its 4K
 /// copy still waiting for approval is both of those at once.
 class _SeerrStatusBadges extends StatelessWidget {
-  const _SeerrStatusBadges({required this.standard, required this.uhd});
+  const _SeerrStatusBadges({required this.statuses});
 
-  final MediaStatusInfo standard;
-  final MediaStatusInfo? uhd;
+  final List<MediaStatusInfo> statuses;
 
   @override
   Widget build(BuildContext context) {
-    final uhd = this.uhd;
-    if (uhd == null) return StatusBadge.animated(info: standard);
+    if (statuses.length == 1) {
+      return StatusBadge.animated(info: statuses.single);
+    }
     return Wrap(
       spacing: AppSpacing.xs,
       runSpacing: AppSpacing.xs,
-      children: [
-        StatusBadge.animated(info: standard),
-        StatusBadge.animated(info: uhd),
-      ],
+      children: [for (final info in statuses) StatusBadge.animated(info: info)],
     );
   }
 }

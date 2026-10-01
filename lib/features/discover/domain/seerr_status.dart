@@ -112,6 +112,29 @@ MediaStatusInfo? seerr4kMediaStatus(
 /// Seerr's `MediaStatus.UNKNOWN`, the code of a resolution nobody asked for.
 const int _seerrUnknownCode = 1;
 
+/// Every state the page shows for a title: the standard copy's, then the 4K
+/// copy's when Seerr holds one ([seerr4kMediaStatus]). Never empty.
+///
+/// A title Seerr holds only in 4K has UNKNOWN (1) for its standard copy,
+/// which is Seerr's word for no record of that copy. It drew "Unknown"
+/// beside the 4K state, as if something about the title were in doubt; the
+/// standard badge is left out then. With no record of either copy the
+/// standard one is drawn as it always was.
+List<MediaStatusInfo> seerrTitleStatuses(
+  Map<String, dynamic>? mediaInfo, {
+  SeerrNumbering? numbering,
+}) {
+  final standard = seerrMediaStatus(mediaInfo, numbering: numbering);
+  final uhd = seerr4kMediaStatus(mediaInfo, numbering: numbering);
+  if (uhd == null) return [standard];
+
+  final code = intOrNull(mediaInfo?['status']);
+  final moving = seerrDownloadEntry(mediaInfo?['downloadStatus']) != null;
+  final noStandardRecord =
+      (code == null || code == _seerrUnknownCode) && !moving;
+  return noStandardRecord ? [uhd] : [standard, uhd];
+}
+
 /// Resolves a status for every season of a title, keyed by season number.
 ///
 /// Seerr reports per-season availability inside `mediaInfo.seasons`, a list of

@@ -231,6 +231,46 @@ void main() {
     });
   });
 
+  group('seerrTitleStatuses', () {
+    List<String> labels(Map<String, dynamic>? media) =>
+        seerrTitleStatuses(media).map((status) => status.label).toList();
+
+    test('a title only in 4K draws no standard badge', () {
+      // Seerr's 1 is no record of that copy: it drew "Unknown" beside the
+      // 4K state.
+      expect(labels({'status': 1, 'status4k': 2}), [
+        '4K: Waiting for approval',
+      ]);
+      expect(labels({'status4k': 5}), ['4K: Available']);
+    });
+
+    test('a standard download moving keeps its badge', () {
+      expect(
+        labels({
+          'status': 1,
+          'status4k': 5,
+          'downloadStatus': [
+            {'status': 'downloading', 'size': 100, 'sizeLeft': 50},
+          ],
+        }),
+        ['Downloading', '4K: Available'],
+      );
+    });
+
+    test('both copies with a record: both badges', () {
+      expect(labels({'status': 5, 'status4k': 3}), [
+        'Available',
+        '4K: Processing',
+      ]);
+    });
+
+    test('no record of either copy reads as it always did', () {
+      expect(labels({'status': 1, 'status4k': 1}), ['Unknown']);
+      expect(labels(null), ['Available to request']);
+      expect(labels({'status': 5}), ['Available']);
+    });
+  });
+
   group('seerrDownloadEntry', () {
     test('returns null for anything that is not a populated list', () {
       expect(seerrDownloadEntry(null), isNull);

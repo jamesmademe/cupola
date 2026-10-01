@@ -64,4 +64,16 @@ void main() {
 
     await harness.unmount(tester);
   });
+
+  testWidgets('P1: a title only in 4K reads its 4K state alone', (
+    tester,
+  ) async {
+    // Spring: no standard copy (Seerr's 1), on disk on Radarr 4K.
+    final harness = await pump(tester, WorldTitles.spring);
+
+    // It read "Unknown" beside the 4K state.
+    expect(badges(tester), ['4K: Available']);
+
+    await harness.unmount(tester);
+  });
 }
