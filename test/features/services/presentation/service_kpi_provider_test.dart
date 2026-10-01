@@ -176,10 +176,6 @@ void main() {
     test('Radarr prints em dashes, not "Movies 0"', () async {
       final kpis = await _kpisFor(ServiceKey.radarr, [
         radarrServiceProvider.overrideWithValue(RadarrService(_deadClient())),
-        // The queue snapshot swallows too, so it would print "Queue 0" for the
-        // same dark server. Pinned here to an honest empty set so the
-        // assertion below is about the builder and not about that provider.
-        radarrQueuedMovieIdsProvider.overrideWith((ref) async => <int>{}),
       ]);
 
       expect(kpis['Movies']!.value, ServiceKpi.unavailableValue);

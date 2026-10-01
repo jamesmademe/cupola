@@ -1026,8 +1026,11 @@ void main() {
     });
   });
 
-  group('queued membership providers', () {
-    test('extracts queued movie ids from Radarr queue items', () async {
+  // The ids a badge looks a title up by, read off each queue's own shape:
+  // the nested record or the flat id, and nothing for an id that names no
+  // title.
+  group('a queue snapshot is indexed by the title each record names', () {
+    test('Radarr records by movie id', () async {
       final container = _container(
         radarrService: _QueueRadarrService([
           {
@@ -1039,12 +1042,12 @@ void main() {
         ]),
       );
 
-      final ids = await container.read(radarrQueuedMovieIdsProvider.future);
+      final snapshot = await container.read(radarrQueueSnapshotProvider.future);
 
-      expect(ids, {10, 11});
+      expect(snapshot.entriesById.keys.toSet(), {10, 11});
     });
 
-    test('extracts queued series ids from Sonarr queue items', () async {
+    test('Sonarr records by series id', () async {
       final container = _container(
         sonarrService: _QueueSonarrService([
           {
@@ -1055,13 +1058,13 @@ void main() {
         ]),
       );
 
-      final ids = await container.read(sonarrQueuedSeriesIdsProvider.future);
+      final snapshot = await container.read(sonarrQueueSnapshotProvider.future);
 
-      expect(ids, {20, 21});
+      expect(snapshot.entriesById.keys.toSet(), {20, 21});
     });
 
     test(
-      'resolves queued Lidarr artists from direct and album matches',
+      'Lidarr records by artist, directly or through the album they name',
       () async {
         final container = _container(
           lidarrService: _QueueLidarrService(
@@ -1090,9 +1093,11 @@ void main() {
           ),
         );
 
-        final ids = await container.read(lidarrQueuedArtistIdsProvider.future);
+        final snapshots = await container.read(
+          lidarrQueueSnapshotsProvider.future,
+        );
 
-        expect(ids, {30, 31});
+        expect(snapshots.byArtist.entriesById.keys.toSet(), {30, 31});
       },
     );
   });

@@ -738,24 +738,6 @@ final lidarrQueueSnapshotsProvider = FutureProvider<LidarrQueueSnapshots>((
   }
 });
 
-/// Queued movie ids, derived from [radarrQueueSnapshotProvider].
-final radarrQueuedMovieIdsProvider = FutureProvider<Set<int>>((ref) async {
-  final snapshot = await ref.watch(radarrQueueSnapshotProvider.future);
-  return snapshot.entriesById.keys.toSet();
-});
-
-/// Queued series ids, derived from [sonarrQueueSnapshotProvider].
-final sonarrQueuedSeriesIdsProvider = FutureProvider<Set<int>>((ref) async {
-  final snapshot = await ref.watch(sonarrQueueSnapshotProvider.future);
-  return snapshot.entriesById.keys.toSet();
-});
-
-/// Queued artist ids, derived from [lidarrQueueSnapshotsProvider].
-final lidarrQueuedArtistIdsProvider = FutureProvider<Set<int>>((ref) async {
-  final snapshots = await ref.watch(lidarrQueueSnapshotsProvider.future);
-  return snapshots.byArtist.entriesById.keys.toSet();
-});
-
 /// How many items the merged Recently Added rail shows.
 ///
 /// Six, down from twelve, and the number is the region's anatomy speaking: the
