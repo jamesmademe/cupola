@@ -44,7 +44,6 @@ final List<_Read> _reads = [
     ('${kind.name} list', prowlarrProvidersProvider(kind)),
     ('${kind.name} schema', prowlarrProviderSchemaProvider(kind)),
   ],
-  ('applications', prowlarrApplicationsProvider),
   ('download clients', prowlarrDownloadClientsProvider),
   ('categories', prowlarrCategoriesProvider),
   ('tag details', prowlarrTagDetailsProvider),

@@ -211,14 +211,6 @@ final prowlarrProviderSchemaProvider = FutureProvider.autoDispose
       return ref.watch(prowlarrServiceProvider).getProviderSchema(kind);
     }, retry: noProviderRetry);
 
-/// Applications Prowlarr syncs its indexers to.
-final prowlarrApplicationsProvider =
-    FutureProvider<List<ProwlarrProviderResource>>((ref) async {
-      return ref.watch(
-        prowlarrProvidersProvider(ProwlarrProviderKind.application).future,
-      );
-    }, retry: noProviderRetry);
-
 /// Download clients, offered per indexer in the edit form.
 final prowlarrDownloadClientsProvider =
     FutureProvider<List<ProwlarrProviderResource>>((ref) async {
