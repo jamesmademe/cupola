@@ -3,10 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -151,40 +156,92 @@ class _LensOptions extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SettingsGroupCard(
       children: [
-        for (final instance in instances)
-          SettingsCard.grouped(
-            leading: Icon(service.icon),
-            // The label is the identity; the service name is already the
-            // sheet's title and repeating it in every row says nothing.
-            title:
-                ref.watch(connectionNameProvider(instance.id)) ?? service.title,
-            // Deliberately the address rather than a reachability pip: health
-            // is answered per *service* today, so a dot here would be a colour
-            // this screen cannot actually stand behind.
-            subtitle: service.extractHost(instance.url) ?? instance.url,
-            accentColor: service.accent,
-            trailing: instance.id == activeId
-                ? Icon(
-                    Icons.check_rounded,
-                    color: ServiceTheme.onTint(
-                      service.accent,
-                      surface: Theme.of(context).colorScheme.surfaceContainer,
-                      tintAlpha: 0,
-                    ),
-                  )
-                : null,
-            semanticHint: instance.id == activeId
-                ? 'currently being read'
-                : 'reads ${service.title} through this connection instead',
-            onTap: () async {
-              Navigator.of(context).pop();
-              if (instance.id == activeId) return;
-              await ref
-                  .read(activeInstancesProvider.notifier)
-                  .select(service, instance.id);
-            },
-          ),
+        for (final instance in instances) _row(context, ref, instance),
       ],
+    );
+  }
+
+  Widget _row(BuildContext context, WidgetRef ref, ServiceInstance instance) {
+    final colorScheme = Theme.of(context).colorScheme;
+    // Whether this connection answers, before the user points the whole app
+    // at it: the probe's own answer for this connection, in the connection
+    // vocabulary. Moving the lens onto a server that did not answer used to
+    // look exactly like moving it onto one that did. The same shape as a
+    // Connections row: the glyph in its tone always, the cause in words ahead
+    // of the address when there is one, and the word spoken either way.
+    final reachability = _reachabilityOf(ref, instance);
+    final tone = statusToneColor(
+      colorScheme,
+      reachability.tone,
+      surface: colorScheme.surfaceContainer,
+    );
+    final host = service.extractHost(instance.url) ?? instance.url;
+    // The label is the identity; the service name is already the sheet's
+    // title and repeating it in every row says nothing.
+    final title =
+        ref.watch(connectionNameProvider(instance.id)) ?? service.title;
+    return SettingsCard.grouped(
+      leading: Icon(service.icon),
+      title: title,
+      // One sentence, the cause said once.
+      semanticLabel: '$title, ${reachability.label}, $host',
+      subtitleLeading: Icon(reachability.icon, size: 14, color: tone),
+      subtitleLeadingLabel: reachability.label,
+      subtitle: reachability.needsAttention
+          ? joinDisplayParts([reachability.label, host])
+          : host,
+      subtitleColor: reachability.needsAttention ? tone : null,
+      accentColor: service.accent,
+      trailing: instance.id == activeId
+          ? Icon(
+              Icons.check_rounded,
+              color: ServiceTheme.onTint(
+                service.accent,
+                surface: colorScheme.surfaceContainer,
+                tintAlpha: 0,
+              ),
+            )
+          : null,
+      semanticHint: instance.id == activeId
+          ? 'currently being read'
+          : 'reads ${service.title} through this connection instead',
+      onTap: () async {
+        Navigator.of(context).pop();
+        if (instance.id == activeId) return;
+        await ref
+            .read(activeInstancesProvider.notifier)
+            .select(service, instance.id);
+      },
+    );
+  }
+
+  /// [instance]'s reachability, from the probe that already ran for it.
+  ///
+  /// Read, never asked again: `instanceSummaryProvider` is the one probe per
+  /// connection the matrix and the band read too, so the sheet and the card
+  /// beside it cannot disagree about the same server.
+  ConnectionPresentation _reachabilityOf(
+    WidgetRef ref,
+    ServiceInstance instance,
+  ) {
+    final summary = ref.watch(
+      instanceSummaryProvider((service: service, instanceId: instance.id)),
+    );
+    return describeConnection(
+      service,
+      status: switch (summary) {
+        AsyncData(:final value) =>
+          value.isOnline
+              ? ServiceConnectionStatus.connected
+              : ServiceConnectionStatus.disconnected,
+        AsyncError() => ServiceConnectionStatus.disconnected,
+        _ => ServiceConnectionStatus.checking,
+      },
+      reason: switch (summary) {
+        AsyncData(:final value) => value.failureReason,
+        AsyncError(:final error) => classifyConnectionFailure(error),
+        _ => null,
+      },
     );
   }
 }
