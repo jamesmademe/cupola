@@ -261,7 +261,7 @@ void main() {
       expect(transcode.bitrateIsNominal, isFalse);
       // An episode leads with the series; the episode is the detail line.
       expect(transcode.title, 'Severance');
-      expect(transcode.subtitle, "S2E4 · Woe's Hollow");
+      expect(transcode.subtitle, "S2 E4 · Woe's Hollow");
       expect(transcode.deviceLabel, 'Jellyfin Web · Chrome');
       expect(transcode.progress, 0.5);
       expect(transcode.isPaused, isTrue);
@@ -477,7 +477,7 @@ void main() {
           .firstWhere((group) => group.label == 'Episodes')
           .items
           .single;
-      expect(episode.subtitle, 'The Internet Is Made Of Cats · S2E4');
+      expect(episode.subtitle, 'The Internet Is Made Of Cats · S2 E4');
       expect(episode.kind, StreamItemKind.episode);
       // A hint carries no `UserData` at any setting, so watch state is absent by
       // construction rather than by a missing parameter.
@@ -684,7 +684,7 @@ void main() {
       final episode = items.first;
       expect(episode.kind, StreamItemKind.episode);
       expect(episode.title, "Woe's Hollow");
-      expect(episode.subtitle, 'Severance · S2E4');
+      expect(episode.subtitle, 'Severance · S2 E4');
       // This item reports `PlayedPercentage: 40.0` and no position ticks — a
       // 0-100 double, so 40% of 2 700 000 ms.
       expect(episode.runtimeMs, 2700000);
@@ -1005,7 +1005,7 @@ void main() {
       expect(episodes, hasLength(3));
       expect(episodes.first.kind, StreamItemKind.episode);
       expect(episodes.first.title, 'Hello, Ms. Cobel');
-      expect(episodes.first.subtitle, 'Severance · S2E1');
+      expect(episodes.first.subtitle, 'Severance · S2 E1');
       expect(episodes.first.isPlayed, isTrue);
       // 30 600 000 000 ticks → 51 minutes.
       expect(episodes.first.runtimeMs, 3060000);

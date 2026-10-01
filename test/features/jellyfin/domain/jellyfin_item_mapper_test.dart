@@ -226,7 +226,7 @@ void main() {
       expect(mapped.bitrateIsNominal, isFalse);
       // Series leads, episode is the detail — the inverse of `StreamItem`.
       expect(mapped.title, 'Severance');
-      expect(mapped.subtitle, "S2E4 · Woe's Hollow");
+      expect(mapped.subtitle, "S2 E4 · Woe's Hollow");
       expect(mapped.deviceLabel, 'Jellyfin Web · Chrome');
       expect(mapped.progress, 0.5);
       expect(mapped.isPaused, isFalse);

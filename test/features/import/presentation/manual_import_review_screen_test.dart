@@ -269,9 +269,9 @@ void main() {
     expect(find.text('The Pitt'), findsOneWidget);
 
     // Every row states its episode code and name, so the match is checkable.
-    expect(find.text('S01E11'), findsOneWidget);
+    expect(find.text('S1 E11'), findsOneWidget);
     expect(find.text('The Pain'), findsOneWidget);
-    expect(find.text('S02E01'), findsOneWidget);
+    expect(find.text('S2 E1'), findsOneWidget);
     expect(find.text('7:00 A.M.'), findsOneWidget);
 
     // The group's own checkbox takes every file of that series at once.
@@ -371,7 +371,7 @@ void main() {
       // The Pitt S02E01 is matched to season 2 while the payload's parsed
       // `seasonNumber` says 1, so an S01 chip here would mean the row is
       // rendering the guess rather than the match.
-      expect(find.text('S02E01'), findsOneWidget);
+      expect(find.text('S2 E1'), findsOneWidget);
       expect(find.text('7:00 A.M.'), findsOneWidget);
     });
 
@@ -384,7 +384,7 @@ void main() {
       // which is middle-elided to fit: the row must carry the real file, not
       // the service's extension-stripped `name`.
       final row = tester.getSemantics(
-        find.bySemanticsLabel(RegExp('^The Pitt, S02E01')).first,
+        find.bySemanticsLabel(RegExp('^The Pitt, S2 E1')).first,
       );
       expect(row.value, contains('The.Pitt.S02E01.2160p.HMAX.WEB-DL.mkv'));
     });
@@ -412,7 +412,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Title: the matched series plus the matched episode code, nothing else.
-      expect(find.text('The Pitt · S02E01'), findsOneWidget);
+      expect(find.text('The Pitt · S2 E1'), findsOneWidget);
       // Subtitle: the raw file, nothing else.
       expect(
         find.text('The.Pitt.S02E01.2160p.HMAX.WEB-DL.mkv'),
@@ -589,8 +589,8 @@ void main() {
 
       // In broadcast order among its siblings, which is the whole point: the
       // row explains the gap where the gap actually is.
-      final imported = tester.getTopLeft(find.text('S01E10')).dy;
-      final nextReady = tester.getTopLeft(find.text('S01E11')).dy;
+      final imported = tester.getTopLeft(find.text('S1 E10')).dy;
+      final nextReady = tester.getTopLeft(find.text('S1 E11')).dy;
       final groupHeader = tester.getTopLeft(find.text('Boruto')).dy;
       expect(groupHeader, lessThan(imported));
       expect(imported, lessThan(nextReady));
@@ -603,7 +603,7 @@ void main() {
       expect(find.text('Import 2 files'), findsOneWidget);
 
       await tester.tap(
-        find.bySemanticsLabel(RegExp('^Import Boruto S01E10 again')),
+        find.bySemanticsLabel(RegExp('^Import Boruto S1 E10 again')),
       );
       await tester.pump();
 
@@ -649,7 +649,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Imported'), findsNothing);
-      expect(find.text('S01E10'), findsNothing);
+      expect(find.text('S1 E10'), findsNothing);
       // The count survives the hiding, so the file is still accounted for.
       expect(find.text('1 imported'), findsOneWidget);
     });

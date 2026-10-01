@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
@@ -114,7 +115,7 @@ class DiscoverSeasonsList extends StatelessWidget {
     return MediaChildTile.numbered(
       ordinal: episodeNumber == null
           ? '--'
-          : 'E${episodeNumber.toString().padLeft(2, '0')}',
+          : formatEpisodeOrdinal(episodeNumber),
       ordinalLabel: episodeNumber == null
           ? ''
           : 'Episode ${episode.episodeNumber}',
@@ -132,7 +133,7 @@ class DiscoverSeasonsList extends StatelessWidget {
   }
 
   static String _shortLabel(TvSeason season) =>
-      season.seasonNumber == 0 ? 'Sp' : 'S${season.seasonNumber}';
+      season.seasonNumber == 0 ? 'Sp' : formatSeasonCode(season.seasonNumber);
 
   /// Ascending by season number, with specials last — an appendix, not season
   /// zero.

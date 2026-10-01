@@ -64,7 +64,7 @@ class RecentlyAddedItem {
   /// movie is its own unit, and whenever the record does not say.
   final int? unitId;
 
-  /// The record's own piece, as the service names it: `S01E03` for an episode,
+  /// The record's own piece, as the service names it: `S1 E3` for an episode,
   /// the artist behind an album. Null when there is none.
   final String? detail;
 
@@ -86,7 +86,7 @@ class RecentlyAddedItem {
     this.count = 1,
   });
 
-  /// The line under the title: `Season 1 · 6 episodes`, `S01E03`,
+  /// The line under the title: `Season 1 · 6 episodes`, `S1 E3`,
   /// `Cindy Lee · 12 tracks`. Empty on a movie.
   ///
   /// A folded season drops the episode code rather than listing six of them —

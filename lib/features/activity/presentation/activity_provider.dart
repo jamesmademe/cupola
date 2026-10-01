@@ -9,6 +9,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
@@ -1646,6 +1647,5 @@ String? _yearLabel(Map<String, dynamic> item) {
 String? _episodeLabel(Map<String, dynamic> item) {
   final season = intOrNull(item['seasonNumber']);
   final episode = intOrNull(item['episodeNumber']);
-  if (season == null || episode == null) return stringOrNull(item['title']);
-  return 'S${season.toString().padLeft(2, '0')}E${episode.toString().padLeft(2, '0')}';
+  return formatArrEpisodeCode(season, episode) ?? stringOrNull(item['title']);
 }

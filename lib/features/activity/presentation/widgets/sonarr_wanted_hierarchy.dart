@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/media_search_popup_menu.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
@@ -225,8 +226,7 @@ class _EpisodeListTile extends ConsumerWidget {
     final episodeTitle = stringOrNull(episode['title']) ?? 'Unknown episode';
     final isMonitored = episode['monitored'] != false;
     final episodeId = extractWantedItemId(ServiceType.series, episode);
-    final title =
-        'E${episodeNumber.toString().padLeft(2, '0')} · $episodeTitle';
+    final title = '${formatEpisodeOrdinal(episodeNumber)} · $episodeTitle';
     final subtitle = joinActivityParts([
       formatRelativeActivityDate(stringOrNull(episode['airDateUtc'])),
       if (!isMonitored) 'Unmonitored',

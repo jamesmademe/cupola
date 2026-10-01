@@ -377,7 +377,7 @@ class _BazarrWantedRow extends StatelessWidget {
   String? _rowSubtitle(BazarrWantedItem item, bool isMovie) {
     if (isMovie) return item.sceneName;
     final parts = <String>[];
-    if (item.episodeNumber != null) parts.add(item.episodeNumber!);
+    if (item.episodeCode != null) parts.add(item.episodeCode!);
     if (item.episodeTitle != null) parts.add(item.episodeTitle!);
     return parts.isNotEmpty ? parts.join(' · ') : null;
   }

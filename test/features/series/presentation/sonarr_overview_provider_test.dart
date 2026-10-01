@@ -100,14 +100,14 @@ void main() {
         sonarrEpisodeSlot({
           'episode': {'seasonNumber': 2, 'episodeNumber': 5},
         }),
-        'S02E05',
+        'S2 E5',
       );
     });
 
     test('a season pack falls back to the bare season', () {
       // The board's own example row. Without this the season pack loses the
       // only thing that identifies which part of the series failed.
-      expect(sonarrEpisodeSlot({'seasonNumber': 4}), 'S04');
+      expect(sonarrEpisodeSlot({'seasonNumber': 4}), 'S4');
     });
 
     test('a record naming neither says nothing rather than guessing', () {
@@ -122,7 +122,7 @@ void main() {
             'series': {'title': 'Slow Horses'},
             'seasonNumber': 4,
           }),
-          'Slow Horses S04',
+          'Slow Horses S4',
         );
         expect(
           sonarrRecordSubject({'sourceTitle': 'Some.Release.1080p'}),
@@ -149,7 +149,7 @@ void main() {
       ], now: now);
 
       expect(items.single.kind, SonarrAttentionKind.stalled);
-      expect(items.single.headline, 'Stuck · Andor S02E03');
+      expect(items.single.headline, 'Stuck · Andor S2 E3');
       expect(items.single.detail, contains('qBittorrent'));
       expect(items.single.detail, contains('3 h ago'));
     });
@@ -165,7 +165,7 @@ void main() {
       ], now: now);
 
       expect(items.single.kind, SonarrAttentionKind.importFailed);
-      expect(items.single.headline, 'Import failed · Slow Horses S04');
+      expect(items.single.headline, 'Import failed · Slow Horses S4');
     });
 
     test('a healthy queue record is not a fault', () {
@@ -309,8 +309,8 @@ void main() {
 
       expect(tiles.map((t) => t.seriesTitle), ['Severance', 'Silo']);
       // The newest record of the series is the one whose slot the caption shows.
-      expect(tiles.first.slot, 'S02E04');
-      expect(tiles.first.caption, 'S02E04 · just now');
+      expect(tiles.first.slot, 'S2 E4');
+      expect(tiles.first.caption, 'S2 E4 · just now');
     });
 
     test(
@@ -378,13 +378,13 @@ void main() {
       ], now: now);
 
       final entry = entries.single;
-      expect(entry.subject, 'Severance S02E04');
+      expect(entry.subject, 'Severance S2 E4');
       expect(entry.event, 'Imported');
       expect(entry.tone, StatusTone.success);
       expect(entry.detail, contains('WEB-DL 1080p'));
       expect(entry.detail, contains('40 min ago'));
       // One sentence for the ear, with the layout's dots turned into commas.
-      expect(entry.spoken, startsWith('Severance S02E04, Imported, '));
+      expect(entry.spoken, startsWith('Severance S2 E4, Imported, '));
       expect(entry.spoken, isNot(contains('·')));
     });
 

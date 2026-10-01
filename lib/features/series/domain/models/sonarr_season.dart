@@ -1,3 +1,5 @@
+import 'package:cupola/core/utils/episode_code.dart';
+
 /// One season of a Sonarr series.
 ///
 /// Sonarr returns seasons nested inside the series payload, so they arrived —
@@ -43,7 +45,7 @@ class SonarrSeason {
 
   /// One-line pill label. Kept to three characters so a 40-season rail stays
   /// scannable.
-  String get shortLabel => isSpecials ? 'Sp' : 'S$seasonNumber';
+  String get shortLabel => isSpecials ? 'Sp' : formatSeasonCode(seasonNumber);
 
   /// Share of the expected episodes that are on disk, or null when nothing is
   /// expected yet (an announced season that has not started airing) or when

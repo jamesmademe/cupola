@@ -150,7 +150,7 @@ void main() {
           },
         }),
       );
-      expect(identity.code, 'S02E01');
+      expect(identity.code, 'S2 E1');
       expect(identity.title, '7:00 A.M.');
       expect(identity.quality, 'WEBDL-2160p');
     });
@@ -166,7 +166,7 @@ void main() {
           ],
         }),
       );
-      expect(identity.code, 'S01E11-E12');
+      expect(identity.code, 'S1 E11–E12');
       expect(identity.title, 'A + B');
     });
 
@@ -221,8 +221,8 @@ void main() {
           ],
         }),
       );
-      expect(identity.code, 'S03E07');
-      expect(identity.code, isNot(contains('S01')));
+      expect(identity.code, 'S3 E7');
+      expect(identity.code, isNot(contains('S1 ')));
       expect(identity.title, 'DOG & CHAINSAW');
     });
 

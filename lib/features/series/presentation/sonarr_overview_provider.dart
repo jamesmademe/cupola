@@ -5,7 +5,7 @@
 /// `radarr_overview_provider.dart` and departs from it only where the record
 /// forces it to. The record here is an **episode inside a season inside a
 /// series**, and that is the one difference that runs through everything: a
-/// count of episodes must say episodes, a row names the slot (`S02E05`) as well
+/// count of episodes must say episodes, a row names the slot (`S2 E5`) as well
 /// as the series, and the week window can only be built out of what a *series*
 /// row carries.
 ///
@@ -29,6 +29,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/release_utils.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
@@ -297,7 +298,7 @@ class SonarrAttentionItem {
       joinSpokenParts([spokenFromDotted(headline), spokenFromDotted(detail)]);
 }
 
-/// The slot a queue or history record is about: `S02E05`, or `S04` for a season
+/// The slot a queue or history record is about: `S2 E5`, or `S4` for a season
 /// pack, or null when the record names neither.
 ///
 /// [arrEpisodeCode] needs both numbers and answers null without them — which is
@@ -313,10 +314,10 @@ String? sonarrEpisodeSlot(Map<String, dynamic> record) {
     mapOrNull(record['episode'])?['seasonNumber'] ?? record['seasonNumber'],
   );
   if (season == null) return null;
-  return 'S${season.toString().padLeft(2, '0')}';
+  return formatSeasonCode(season);
 }
 
-/// `Slow Horses S04E06` — the subject of a row, as far as the record names it.
+/// `Slow Horses S4 E6` — the subject of a row, as far as the record names it.
 String sonarrRecordSubject(Map<String, dynamic> record) {
   final named = joinDisplayParts([
     arrSeriesTitle(record),
@@ -566,7 +567,7 @@ class SonarrDownloadedEpisode {
 
   final String seriesTitle;
 
-  /// `S02E04`, or null when the record named no slot.
+  /// `S2 E4`, or null when the record named no slot.
   final String? slot;
 
   /// The embedded series' `images`, for the poster.
@@ -664,7 +665,7 @@ class SonarrHistoryEntry {
     required this.date,
   });
 
-  /// The series and the slot: `Severance S02E04`.
+  /// The series and the slot: `Severance S2 E4`.
   final String subject;
 
   /// What happened to it, in the shared history vocabulary — `Imported`,

@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -188,7 +189,7 @@ Widget _sonarrPage({Widget? band}) {
             accent: accent,
             childCount: (_) => _episodes.length,
             childBuilder: (context, group, index) => MediaChildTile.numbered(
-              ordinal: 'E0${index + 1}',
+              ordinal: formatEpisodeOrdinal(index + 1),
               ordinalLabel: 'Episode ${index + 1}',
               title: _episodes[index],
               facts: ['Jan ${1 + index * 7}, 1921'],

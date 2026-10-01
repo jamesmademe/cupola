@@ -103,7 +103,7 @@ void main() {
         find.textContaining('Frieren.S02.Pack.1080p.WEB-DL-GROUP'),
         findsOneWidget,
       );
-      expect(find.textContaining('S02E00'), findsNothing);
+      expect(find.textContaining('S2 E0'), findsNothing);
     });
   });
 
@@ -149,7 +149,7 @@ void main() {
         ),
       );
 
-      expect(find.text('S01E02'), findsWidgets);
+      expect(find.text('S1 E2'), findsWidgets);
       expect(find.text('Imported'), findsOneWidget);
     });
 
@@ -282,7 +282,7 @@ void main() {
         ),
       );
 
-      expect(find.text('S01E01 · Pilot'), findsOneWidget);
+      expect(find.text('S1 E1 · Pilot'), findsOneWidget);
       expect(find.text('Breaking Bad'), findsOneWidget);
     });
 
@@ -493,7 +493,7 @@ void main() {
                   serviceType: ServiceType.series,
                   title: 'Frieren: Beyond Journey\'s End',
                   subtitle:
-                      'S01E03 · Killing Magic · Frieren.S01E03.1080p.WEB-DL-GROUP',
+                      'S1 E3 · Killing Magic · Frieren.S01E03.1080p.WEB-DL-GROUP',
                   status: MediaStatusInfo(
                     availability: MediaAvailability.available,
                     labelOverride: 'Completed',

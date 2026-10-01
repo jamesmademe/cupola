@@ -97,7 +97,7 @@ void main() {
         ],
       });
 
-      expect(item.mediaSubtitle, contains('S02E05'));
+      expect(item.mediaSubtitle, contains('S2 E5'));
     });
 
     test('preserves original size when resolved with assignment', () {
@@ -154,7 +154,7 @@ void main() {
       );
 
       expect(resolved.size, 1300000000);
-      expect(resolved.mediaSubtitle, contains('S02E05'));
+      expect(resolved.mediaSubtitle, contains('S2 E5'));
       expect(resolved.hasMatchFor(ServiceKey.sonarr), isTrue);
     });
 

@@ -112,13 +112,15 @@ class BazarrWantedEpisodeTile extends StatelessWidget {
         .map((l) => l.name ?? l.code2)
         .whereType<String>()
         .join(', ');
-    final ordinal = item.episodeNumber;
+    // The whole code, not the episode alone: the list is one series' wanted
+    // episodes across all its seasons, under no season heading.
+    final ordinal = item.episodeCode;
 
     return MediaChildTile.numbered(
       ordinal: ordinal,
-      // `E04` reads as "E zero four" without this.
-      ordinalLabel: ordinal == null ? '' : 'Episode $ordinal',
-      title: item.episodeTitle ?? 'Episode ${ordinal ?? '?'}',
+      // `S2 E4` reads as letters and digits without this.
+      ordinalLabel: item.spokenEpisode ?? '',
+      title: item.episodeTitle ?? item.spokenEpisode ?? 'Episode ?',
       // The languages in words, not a colour-only badge: this row's whole
       // subject is which subtitles are absent, so it has to say so.
       facts: [if (langNames.isNotEmpty) 'Missing $langNames' else 'Wanted'],

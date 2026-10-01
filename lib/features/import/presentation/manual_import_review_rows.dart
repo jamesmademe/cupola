@@ -127,7 +127,7 @@ class FilenameText extends StatelessWidget {
   }
 }
 
-/// A short positional code — `S02E01`, a year, a track number.
+/// A short positional code — `S2 E1`, a year, a track number.
 class IdentityCodeChip extends StatelessWidget {
   final String code;
   final Color accent;

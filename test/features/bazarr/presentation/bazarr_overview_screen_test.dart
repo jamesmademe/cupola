@@ -121,7 +121,7 @@ void main() {
     await _pump(tester, service: service);
 
     expect(
-      find.semantics.byLabel('Severance S02E04, Italian, Sonarr'),
+      find.semantics.byLabel('Severance S2 E4, Italian, Sonarr'),
       findsOneWidget,
     );
     // The header's figure is Bazarr's own badge, not the length of the page.

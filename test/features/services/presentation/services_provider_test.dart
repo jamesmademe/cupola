@@ -297,7 +297,7 @@ void main() {
         // whose client reported no progress last and in source order.
         expect(items.map((item) => item.title), [
           'Furiosa',
-          'The Boys · S04E07',
+          'The Boys · S4 E7',
           'Shogun',
           'Slow Horses',
         ]);
@@ -795,7 +795,7 @@ void main() {
         final row = decisions.single;
         expect(row.kind, DecisionKind.importBlocked);
         expect(row.count, 1);
-        expect(row.title, 'Show · S01E07');
+        expect(row.title, 'Show · S1 E7');
         expect(row.detail, contains('No files found are eligible for import'));
         expect(row.actionId, 5);
         expect(row.importPath, '/downloads/Show.S01E7/Show.S01E7.mkv');

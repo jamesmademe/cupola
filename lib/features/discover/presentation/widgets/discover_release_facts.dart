@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
@@ -68,12 +69,11 @@ class DiscoverReleaseInfoCard extends StatelessWidget {
     if (nextEpisodeToAir != null &&
         (nextEpisodeToAir.airDate?.isNotEmpty ?? false)) {
       final parts = <String>[];
-      if (nextEpisodeToAir.seasonNumber != null &&
-          nextEpisodeToAir.episodeNumber != null) {
-        parts.add(
-          'S${nextEpisodeToAir.seasonNumber}E${nextEpisodeToAir.episodeNumber}',
-        );
-      }
+      final code = formatArrEpisodeCode(
+        nextEpisodeToAir.seasonNumber,
+        nextEpisodeToAir.episodeNumber,
+      );
+      if (code != null) parts.add(code);
       if ((nextEpisodeToAir.name?.isNotEmpty ?? false)) {
         parts.add(nextEpisodeToAir.name!);
       }

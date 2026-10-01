@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -252,7 +253,7 @@ List<_DetailField> _buildWantedFields(
       _detailField('Status', wantedStatusText(item, serviceType)),
       _detailField(
         'Episode code',
-        formatEpisodeCode(
+        formatArrEpisodeCode(
           intOrNull(item['seasonNumber']),
           intOrNull(item['episodeNumber']),
         ),

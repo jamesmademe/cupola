@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -57,7 +58,7 @@ Widget _episode(int index) {
   final status = _episodeStatus(index);
   final searchable = !status.isAvailable && !status.isInPipeline;
   return MediaChildTile.numbered(
-    ordinal: 'E${(index + 1).toString().padLeft(2, '0')}',
+    ordinal: formatEpisodeOrdinal(index + 1),
     ordinalLabel: 'Episode ${index + 1}',
     title: _titles[index],
     facts: [_airDate(index), ?mediaStatusWord(status)],
@@ -258,7 +259,7 @@ Widget _loose() => Column(
   children: [
     // A Seerr episode: availability is per season, so the row has no status.
     MediaChildTile.numbered(
-      ordinal: 'E08',
+      ordinal: 'E8',
       ordinalLabel: 'Episode 8',
       title: 'The Man with the Twisted Lip',
       facts: const ['Feb 15, 1921'],

@@ -1,4 +1,5 @@
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/status/media_status.dart';
 
 class BazarrSubtitleLanguage {
@@ -191,6 +192,28 @@ class BazarrWantedItem {
 
   int get missingSubtitlesCount => missingLanguages.length;
 
+  /// The episode in the app's one spelling, `S2 E4`.
+  ///
+  /// Bazarr formats [episodeNumber] itself, `2x4` (or `S02E04` on some
+  /// builds), and printed as it arrived it was a second spelling beside every
+  /// Sonarr row. Read back into its numbers and spelled by the shared
+  /// formatter; the string Bazarr sent when it is neither shape.
+  String? get episodeCode {
+    final parsed = _parseEpisodeNumber(episodeNumber);
+    if (parsed == null) return episodeNumber;
+    return formatEpisodeCode(parsed.season, parsed.episode);
+  }
+
+  /// What [episodeCode] is, in words: `Season 2, episode 4`. A code reads as
+  /// letters and digits otherwise.
+  String? get spokenEpisode {
+    final parsed = _parseEpisodeNumber(episodeNumber);
+    if (parsed == null) {
+      return episodeNumber == null ? null : 'Episode $episodeNumber';
+    }
+    return 'Season ${parsed.season}, episode ${parsed.episode}';
+  }
+
   factory BazarrWantedItem.fromJson(Map<String, dynamic> json) {
     final seasonRaw = intOrNull(json['season']);
     final episodeNumberRaw = stringOrNull(json['episode_number']);
@@ -221,12 +244,21 @@ class BazarrWantedItem {
     );
   }
 
-  static int? _seasonFromEpisodeCode(String? value) {
-    if (value == null || value.isEmpty) return null;
-    final separatorIndex = value.indexOf('x');
-    if (separatorIndex <= 0) return null;
-    final season = int.tryParse(value.substring(0, separatorIndex));
-    return season;
+  static int? _seasonFromEpisodeCode(String? value) =>
+      _parseEpisodeNumber(value)?.season;
+
+  /// `2x4`, `2x04` or `S02E04`, as Bazarr may write them.
+  static final _episodeNumberShape = RegExp(
+    r'^\s*[Ss]?(\d+)\s*[xXeE]\s*(\d+)\s*$',
+  );
+
+  static ({int season, int episode})? _parseEpisodeNumber(String? value) {
+    final match = _episodeNumberShape.firstMatch(value ?? '');
+    if (match == null) return null;
+    return (
+      season: int.parse(match.group(1)!),
+      episode: int.parse(match.group(2)!),
+    );
   }
 }
 

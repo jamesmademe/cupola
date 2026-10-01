@@ -5,6 +5,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
@@ -262,7 +263,7 @@ class _CalendarCard extends StatelessWidget {
 /// **The calendar record *is* the dated entity for all four services** — a
 /// movie, an episode, an album, a book. What the `include*` parameters embed is
 /// its *parent*, never itself. Reading `record['series']` as though it were the
-/// nested entity is what made every Sonarr row read `S05E14 · Breaking Bad`
+/// nested entity is what made every Sonarr row read `S5 E14 · Breaking Bad`
 /// and never name the episode at all; there is no nested-entity lookup here any
 /// more because there was never one to make.
 String _title(Map<String, dynamic> record, ServiceKey service) {
@@ -281,7 +282,7 @@ String _title(Map<String, dynamic> record, ServiceKey service) {
   };
 
   if (service == ServiceKey.sonarr) {
-    // `Breaking Bad · S05E14 · Ozymandias`: the show, where in it, then what
+    // `Breaking Bad · S5 E14 · Ozymandias`: the show, where in it, then what
     // it is called. Any of the three can be missing without the row losing its
     // shape.
     return [?parent, ?_episodeCode(record), own ?? 'Episode'].join(' · ');
@@ -290,14 +291,11 @@ String _title(Map<String, dynamic> record, ServiceKey service) {
   return own ?? parent ?? 'Scheduled item';
 }
 
-/// `S05E14`, or null when either half is missing.
-String? _episodeCode(Map<String, dynamic> record) {
-  final season = intOrNull(record['seasonNumber']);
-  final episode = intOrNull(record['episodeNumber']);
-  if (season == null || episode == null) return null;
-  return 'S${season.toString().padLeft(2, '0')}'
-      'E${episode.toString().padLeft(2, '0')}';
-}
+/// `S5 E14`, or null when either half is missing.
+String? _episodeCode(Map<String, dynamic> record) => formatArrEpisodeCode(
+  intOrNull(record['seasonNumber']),
+  intOrNull(record['episodeNumber']),
+);
 
 String? _subtitle(Map<String, dynamic> record, ServiceKey service) {
   final parts = <String>[

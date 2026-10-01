@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
@@ -186,7 +187,7 @@ class SeriesSeasonsList extends StatelessWidget {
     final status = sonarrEpisodeStatus(episode);
 
     return MediaChildTile.numbered(
-      ordinal: 'E${episode.episodeNumber.toString().padLeft(2, '0')}',
+      ordinal: formatEpisodeOrdinal(episode.episodeNumber),
       ordinalLabel: 'Episode ${episode.episodeNumber}',
       title: episode.title,
       facts: _episodeFacts(episode, status),

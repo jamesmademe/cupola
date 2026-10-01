@@ -1,4 +1,5 @@
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -172,7 +173,7 @@ String manualImportGroupTitle(ServiceKey service, ManualImportItem item) {
 /// the technical [quality] — instead of being mashed into one truncated line
 /// where the episode code is the first thing to disappear.
 class ManualImportIdentity {
-  /// Short positional code: `S02E01`, a release year, a track number.
+  /// Short positional code: `S2 E1`, a release year, a track number.
   final String? code;
 
   /// The name of the matched child: episode title, album title.
@@ -209,21 +210,19 @@ ManualImportIdentity manualImportIdentityFor(
   };
 }
 
-/// `S02E01`, or `S02E01-E02` for a multi-episode file.
+/// `S2 E1`, or `S2 E1–E2` for a multi-episode file.
 String? _episodeCode(List<Map<String, dynamic>> episodes) {
-  final codes = <String>[];
+  final numbers = <int>[];
   int? season;
   for (final episode in episodes) {
     final seasonNumber = intOrNull(episode['seasonNumber']);
     final episodeNumber = intOrNull(episode['episodeNumber']);
     if (seasonNumber == null || episodeNumber == null) continue;
     season ??= seasonNumber;
-    codes.add('E${episodeNumber.toString().padLeft(2, '0')}');
+    numbers.add(episodeNumber);
   }
-  if (season == null || codes.isEmpty) return null;
-  final seasonCode = 'S${season.toString().padLeft(2, '0')}';
-  if (codes.length == 1) return '$seasonCode${codes.first}';
-  return '$seasonCode${codes.first}-${codes.last}';
+  if (season == null) return null;
+  return formatEpisodeRange(season, numbers);
 }
 
 String? _episodeTitles(List<Map<String, dynamic>> episodes) {

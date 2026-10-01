@@ -194,7 +194,7 @@ void main() {
 
     expect(
       find.semantics.byLabel(
-        'Import failed, Slow Horses S04, name does not match',
+        'Import failed, Slow Horses S4, name does not match',
       ),
       findsOneWidget,
     );

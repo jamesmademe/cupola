@@ -81,12 +81,12 @@ class MediaChildTile extends StatelessWidget {
   ///
   /// Grown by the clamped reading scale rather than fixed, and applied as a
   /// *minimum* so a long ordinal widens the column instead of clipping in it.
-  /// Tabular figures then keep `E09` and `E10` on the same advance width.
+  /// Tabular figures then give `E8` and `E9`, or `E10` and `E11`, one width.
   static const double _ordinalBaseWidth = 30;
 
   final String? ordinal;
 
-  /// What [ordinal] is, in words. `E04` reads as "E zero four" otherwise.
+  /// What [ordinal] is, in words. `E4` reads as "E four" otherwise.
   ///
   /// Pass an empty string to drop it from the spoken name entirely — the season
   /// picker does that, because its title already says "Season 3".

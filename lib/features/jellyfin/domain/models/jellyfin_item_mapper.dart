@@ -10,6 +10,7 @@
 library;
 
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_transcode_reason.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_units.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -108,18 +109,15 @@ String? jellyfinPosterPath(Map<String, dynamic> item) {
   return null;
 }
 
-/// `S2E4`, or `E4` / `S2` when only one of the two numbers is present.
+/// `S2 E4`, or `E4` / `S2` when only one of the two numbers is present.
 ///
 /// Specials sit in season 0 and routinely arrive with a null `IndexNumber`, so
 /// both halves have to be independently optional.
 String? jellyfinEpisodeCode(Map<String, dynamic> item) {
-  final season = jellyfinInt(item['ParentIndexNumber']);
-  final episode = jellyfinInt(item['IndexNumber']);
-  if (season == null && episode == null) return null;
-  return [
-    if (season != null) 'S$season',
-    if (episode != null) 'E$episode',
-  ].join();
+  return formatPartialEpisodeCode(
+    season: jellyfinInt(item['ParentIndexNumber']),
+    episode: jellyfinInt(item['IndexNumber']),
+  );
 }
 
 /// The artist credit for a track or an album.

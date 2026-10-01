@@ -6,16 +6,33 @@ import 'package:cupola/features/bazarr/presentation/bazarr_overview_provider.dar
 
 void main() {
   group('bazarrWantedHeadline', () {
-    test('an episode is its series plus the code Bazarr already formatted', () {
+    test('an episode is its series plus the code, in the app\'s spelling '
+        'whichever way Bazarr wrote it', () {
+      for (final written in ['S02E04', '2x4', '2x04']) {
+        expect(
+          bazarrWantedHeadline(
+            BazarrWantedItem(
+              seriesTitle: 'Severance',
+              episodeNumber: written,
+              sonarrSeriesId: 3,
+            ),
+          ),
+          'Severance S2 E4',
+          reason: written,
+        );
+      }
+    });
+
+    test('a code in neither shape is printed as Bazarr sent it', () {
       expect(
         bazarrWantedHeadline(
           const BazarrWantedItem(
             seriesTitle: 'Severance',
-            episodeNumber: 'S02E04',
+            episodeNumber: 'Special 1',
             sonarrSeriesId: 3,
           ),
         ),
-        'Severance S02E04',
+        'Severance Special 1',
       );
     });
 

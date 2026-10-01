@@ -1,4 +1,5 @@
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 
 String joinDisplayParts(Iterable<String?> parts, {String separator = ' · '}) {
   return parts
@@ -6,15 +7,6 @@ String joinDisplayParts(Iterable<String?> parts, {String separator = ' · '}) {
       .map((part) => part.trim())
       .where((part) => part.isNotEmpty)
       .join(separator);
-}
-
-String? formatArrEpisodeCode(int? seasonNumber, int? episodeNumber) {
-  if (seasonNumber == null || episodeNumber == null) return null;
-
-  final season = seasonNumber.toString().padLeft(2, '0');
-  final episode = episodeNumber.toString().padLeft(2, '0');
-  return 'S$season'
-      'E$episode';
 }
 
 List<String> extractArrStatusMessages(dynamic rawMessages) {

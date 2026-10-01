@@ -881,7 +881,7 @@ class ArrHistoryEntry {
   /// Recently added folds on. Null on Radarr and when the record does not say.
   final int? unitId;
 
-  /// The record's own piece: `S01E03`, or the artist behind an album.
+  /// The record's own piece: `S1 E3`, or the artist behind an album.
   final String? detail;
 
   final String posterUrl;

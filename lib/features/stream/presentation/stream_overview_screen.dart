@@ -221,7 +221,7 @@ class _OverviewBody extends ConsumerWidget {
 /// found four times.
 ///
 /// **It says nothing about *whose* deck this is**, although the board's caption
-/// does (`nadia · S02E05`). A Plex token is one person: every row here is the
+/// does (`nadia · S2 E5`). A Plex token is one person: every row here is the
 /// owner's own, `/library/*` takes no impersonation parameter, and naming a
 /// household member beside a poster would invent a perspective the server never
 /// offered.

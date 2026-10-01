@@ -36,7 +36,7 @@ class BazarrOverviewRow {
     required this.tone,
   });
 
-  /// `Severance S02E04`, `Poor Things`.
+  /// `Severance S2 E4`, `Poor Things`.
   final String headline;
 
   /// `Italian · Sonarr`, `OpenSubtitles · score 94 · 20 min ago`.
@@ -55,15 +55,15 @@ typedef BazarrOverviewSection = ({List<BazarrOverviewRow> rows, int total});
 
 // ─── Wanted ─────────────────────────────────────────────────────────────────
 
-/// `Severance S02E04` for an episode, `Poor Things` for a film.
+/// `Severance S2 E4` for an episode, `Poor Things` for a movie.
 ///
-/// Bazarr already formats `episode_number` as `2x4` or `S02E04` depending on
-/// its own setting, so the code is printed as it arrived rather than
-/// re-derived: two spellings of the same episode on one screen is worse than
-/// either spelling.
+/// Bazarr formats `episode_number` itself (`2x4`, or `S02E04`), so the code
+/// is read back into its numbers and spelled the one way the app spells it
+/// ([BazarrWantedItem.episodeCode]): two spellings of the same episode on one
+/// screen is worse than either spelling.
 String bazarrWantedHeadline(BazarrWantedItem item) {
   final series = item.seriesTitle?.trim();
-  final code = item.episodeNumber?.trim();
+  final code = item.episodeCode?.trim();
   if (series != null && series.isNotEmpty) {
     return code == null || code.isEmpty ? series : '$series $code';
   }
@@ -149,7 +149,7 @@ StatusTone bazarrHistoryTone(BazarrHistoryItem item) {
   };
 }
 
-/// `Severance S02E03 · Italian downloaded`.
+/// `Severance S2 E3 · Italian downloaded`.
 String bazarrHistoryHeadline(BazarrHistoryItem item) {
   final title = item.title?.trim();
   final subject = title == null || title.isEmpty ? 'Unknown title' : title;

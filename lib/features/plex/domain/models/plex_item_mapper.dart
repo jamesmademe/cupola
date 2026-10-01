@@ -12,6 +12,7 @@
 /// every depth.
 library;
 
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/plex/domain/models/plex_transcode_session.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -314,15 +315,13 @@ StreamSession? plexSessionFromJson(Map<String, dynamic> json) {
   );
 }
 
-/// `S1 · E4 · Title`, skipping whatever the server did not send.
+/// `S1 E4 · Title`, skipping whatever the server did not send.
 String? _episodeSubtitle(Map<String, dynamic> json, String title) {
-  final season = plexInt(json['parentIndex']);
-  final episode = plexInt(json['index']);
-  final parts = <String>[
-    if (season != null) 'S$season',
-    if (episode != null) 'E$episode',
-    if (title.isNotEmpty) title,
-  ];
+  final code = formatPartialEpisodeCode(
+    season: plexInt(json['parentIndex']),
+    episode: plexInt(json['index']),
+  );
+  final parts = <String>[?code, if (title.isNotEmpty) title];
   return parts.isEmpty ? null : parts.join(' · ');
 }
 

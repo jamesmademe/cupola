@@ -1,4 +1,5 @@
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class ManualImportRootFolder {
@@ -627,8 +628,7 @@ class ManualImportEpisode {
     );
   }
 
-  String get label =>
-      'S${seasonNumber.toString().padLeft(2, '0')}E${episodeNumber.toString().padLeft(2, '0')}';
+  String get label => formatEpisodeCode(seasonNumber, episodeNumber);
 }
 
 class ManualImportAlbum {
@@ -905,10 +905,10 @@ String? _episodeSummary(List<Map<String, dynamic>> episodes) {
 
   final labels = episodes
       .map((episode) {
-        final season = intOrNull(episode['seasonNumber']);
-        final number = intOrNull(episode['episodeNumber']);
-        if (season == null || number == null) return null;
-        return 'S${season.toString().padLeft(2, '0')}E${number.toString().padLeft(2, '0')}';
+        return formatArrEpisodeCode(
+          intOrNull(episode['seasonNumber']),
+          intOrNull(episode['episodeNumber']),
+        );
       })
       .whereType<String>()
       .toList(growable: false);

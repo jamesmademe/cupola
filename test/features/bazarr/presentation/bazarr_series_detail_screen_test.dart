@@ -110,11 +110,11 @@ void main() {
     // On the shared dense-row primitive now, so the episode code is the ordinal
     // column rather than a second line reading "Episode 1x01", and the missing
     // languages are stated in words instead of as a colour-only badge.
-    expect(find.text('1x01'), findsOneWidget);
+    expect(find.text('S1 E1'), findsOneWidget);
     expect(find.textContaining('Missing'), findsWidgets);
     expect(
       tester.getSemantics(find.byType(BazarrWantedEpisodeTile)),
-      containsSemantics(label: 'Episode 1x01, The Emperor, Missing en'),
+      containsSemantics(label: 'Season 1, episode 1, The Emperor, Missing en'),
     );
     // The uppercase `EN` badge is gone with the hand-rolled row: the language is
     // now part of the row's own facts line, which a sighted low-vision user can

@@ -2,6 +2,7 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart'
     show intOrNull, mapOrNull, stringOrNull;
+import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/release_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
@@ -287,10 +288,6 @@ String? extractQualityName(Map<String, dynamic> item, {String? fileKey}) {
   return stringOrNull(nestedQuality?['name'] ?? quality?['name']);
 }
 
-String? formatEpisodeCode(int? seasonNumber, int? episodeNumber) {
-  return formatArrEpisodeCode(seasonNumber, episodeNumber);
-}
-
 String historyTitle(Map<String, dynamic> item, ServiceType serviceType) {
   return arrPrimaryMediaTitle(item, includeMovieYear: true) ??
       stringOrNull(item['sourceTitle']) ??
@@ -299,7 +296,7 @@ String historyTitle(Map<String, dynamic> item, ServiceType serviceType) {
 
 String? historyEpisodeCode(Map<String, dynamic> item) {
   final episode = asActivityMap(item['episode']);
-  return formatEpisodeCode(
+  return formatArrEpisodeCode(
     intOrNull(episode?['seasonNumber'] ?? item['seasonNumber']),
     intOrNull(episode?['episodeNumber'] ?? item['episodeNumber']),
   );
@@ -412,7 +409,7 @@ String wantedTitle(Map<String, dynamic> item, ServiceType serviceType) {
     case ServiceType.music:
       return stringOrNull(item['title']) ?? 'Unknown release';
     case ServiceType.series:
-      final episodeCode = formatEpisodeCode(
+      final episodeCode = formatArrEpisodeCode(
         intOrNull(item['seasonNumber']),
         intOrNull(item['episodeNumber']),
       );
