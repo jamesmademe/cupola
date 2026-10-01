@@ -4,12 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
-import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/truenas/presentation/reporting/truenas_reporting_screen.dart';
@@ -18,9 +18,12 @@ import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.
 import '../../test_helpers/profiles/profiles.dart';
 import '../../test_helpers/settings_scope.dart';
 
-Future<void> _pump(WidgetTester tester, AsyncValue<String> value) {
-  return tester.pumpWidget(
+Future<void> _pump(WidgetTester tester, AsyncValue<String> value) async {
+  await tester.pumpWidget(
     ProviderScope(
+      overrides: await settingsScopeOverrides(
+        configured: const [ServiceKey.truenas],
+      ),
       child: MaterialApp(
         home: Scaffold(
           body: TrueNasAsyncBody<String>(
@@ -33,6 +36,22 @@ Future<void> _pump(WidgetTester tester, AsyncValue<String> value) {
     ),
   );
 }
+
+Color? _glyph(WidgetTester tester) => tester
+    .widget<Icon>(
+      find
+          .descendant(
+            of: find.byType(ServiceOfflineState),
+            matching: find.byType(Icon),
+          )
+          .first,
+    )
+    .color;
+
+Color _tone(WidgetTester tester, StatusTone tone) => statusToneColor(
+  Theme.of(tester.element(find.byType(ServiceOfflineState))).colorScheme,
+  tone,
+);
 
 void main() {
   group('the TrueNAS connection well', () {
@@ -92,6 +111,8 @@ void main() {
 
       expect(find.byType(ServiceOfflineState), findsOneWidget);
       expect(find.byType(AppErrorState), findsNothing);
+      expect(find.text('TrueNAS did not answer'), findsOneWidget);
+      expect(_glyph(tester), _tone(tester, StatusTone.error));
     });
 
     testWidgets('a NAS that went quiet keeps its last readout under a band', (
@@ -184,9 +205,8 @@ void main() {
       expect(landedOn?.queryParameters['i'], isNotEmpty);
     });
 
-    testWidgets('a TLS refusal is the same fact as an unreachable host', (
-      tester,
-    ) async {
+    testWidgets('a certificate it does not trust is a fault with its remedy, '
+        'never silence', (tester) async {
       await _pump(
         tester,
         AsyncValue.error(
@@ -200,6 +220,39 @@ void main() {
       await tester.pump();
 
       expect(find.byType(ServiceOfflineState), findsOneWidget);
+      expect(
+        find.text('TrueNAS has a certificate Cupola does not trust'),
+        findsOneWidget,
+      );
+      expect(find.text('TrueNAS did not answer'), findsNothing);
+      expect(_glyph(tester), _tone(tester, StatusTone.warning));
+      expect(
+        find.widgetWithText(FilledButton, 'Check the certificate'),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(TextButton, 'Retry'), findsOneWidget);
+    });
+
+    testWidgets('a timeout after connecting is a fault, never silence', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        AsyncValue.error(
+          const TrueNasException(
+            'no reply',
+            reason: ServiceFailureReason.timeout,
+          ),
+          StackTrace.empty,
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        find.text('TrueNAS was reached but did not reply in time'),
+        findsOneWidget,
+      );
+      expect(_glyph(tester), _tone(tester, StatusTone.warning));
     });
 
     testWidgets('a server that answered and refused keeps the error card', (

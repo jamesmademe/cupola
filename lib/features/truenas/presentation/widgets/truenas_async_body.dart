@@ -43,15 +43,20 @@ import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 ///    `Change the address`, which opens its connection form. Amber: it is a
 ///    fault with one fix, in the form. It has no Retry, because retrying the
 ///    same address can only be refused again — the client never dials it.
-///  * **the host did not answer** ([ServiceFailureReason.unreachable],
+///  * **the connection failed on the way** ([ServiceFailureReason.unreachable],
 ///    [ServiceFailureReason.timeout], [ServiceFailureReason.tls],
-///    [ServiceFailureReason.localNetworkBlocked]) → [ServiceOfflineState]. Red
-///    belongs to a connection that did not answer and to nothing else, and this
-///    is the only branch that has earned it. Only with nothing retained: over
-///    a last readout, [AsyncValueWidget] keeps it under its red fault band.
+///    [ServiceFailureReason.localNetworkBlocked]) →
+///    [ServiceOfflineState.failure], which says which of them it was. Red
+///    belongs to a connection that did not answer and to nothing else: a
+///    timeout after connecting, a certificate Cupola does not trust and a
+///    blocked local network are faults, amber, the certificate with its remedy
+///    (`Check the certificate`) ahead of Retry. All four used to draw the plain
+///    "TrueNAS did not answer" leaf. Only with nothing retained: over a last
+///    readout, [AsyncValueWidget] keeps it under its fault band.
 ///  * anything else — a rejected API key, a method this SCALE build does not
-///    have, a malformed payload — is a real error with a retry that can work,
-///    so it goes to [AsyncValueWidget] and its [AppErrorState].
+///    have, a malformed payload — goes to [AsyncValueWidget] and its
+///    [AppErrorState], which leads with the remedy where the form holds one
+///    (`Paste the key again`) and with Retry where retrying can work.
 ///
 /// The well lives *inside* the console pane, so the 232 rail stays visible and
 /// live beside it at every width: callers put this under
@@ -110,9 +115,12 @@ class TrueNasAsyncBody<T> extends StatelessWidget {
       // fault band [AsyncValueWidget] draws over it. This well used to win
       // over a retained value too, and the pool vanished for a "did not
       // answer" page the moment one poll failed.
-      well = ServiceOfflineState(
-        serviceName: ServiceKey.truenas.title,
-        accent: ServiceKey.truenas.accent,
+      //
+      // Told why, so only silence reads as silence: a certificate or a
+      // timeout is a fault, amber, and the leaf names the host it was about.
+      well = ServiceOfflineState.failure(
+        service: ServiceKey.truenas,
+        error: value.error!,
         onRetry: onRetry,
       );
     } else {
