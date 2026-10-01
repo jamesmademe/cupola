@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/theme.dart';
@@ -383,7 +384,7 @@ List<ArrCalendarEntry> arrCalendarEntries(
       case ServiceKey.radarr:
         final dated = [
           for (final (field, event) in _radarrEvents)
-            if (_calendarDate(record[field]) case final day?)
+            if (arrCalendarDate(record[field]) case final day?)
               ArrCalendarEntry(record: record, day: day, event: event),
         ];
         final shown = [
@@ -398,7 +399,7 @@ List<ArrCalendarEntry> arrCalendarEntries(
           entries.add(
             ArrCalendarEntry(
               record: record,
-              day: _calendarDate(record['releaseDate']),
+              day: arrCalendarDate(record['releaseDate']),
             ),
           );
         }
@@ -409,7 +410,7 @@ List<ArrCalendarEntry> arrCalendarEntries(
         entries.add(
           ArrCalendarEntry(
             record: record,
-            day: aired ?? _calendarDate(record['airDate']),
+            day: aired ?? arrCalendarDate(record['airDate']),
           ),
         );
       default:
@@ -417,8 +418,8 @@ List<ArrCalendarEntry> arrCalendarEntries(
           ArrCalendarEntry(
             record: record,
             day:
-                _calendarDate(record['releaseDate']) ??
-                _calendarDate(record['airDate']),
+                arrCalendarDate(record['releaseDate']) ??
+                arrCalendarDate(record['airDate']),
           ),
         );
     }
@@ -449,21 +450,4 @@ String arrCalendarTitle(ArrCalendarEntry entry, ServiceKey service) {
   final title = _title(entry.record, service);
   final event = entry.event;
   return event == null ? title : '$title · $event';
-}
-
-final _leadingDate = RegExp(r'^(\d{4})-(\d{2})-(\d{2})');
-
-/// The calendar date [raw] spells, as a local midnight, or null.
-///
-/// The `YYYY-MM-DD` at the front is read as written and never converted: the
-/// \*arrs store a release date as midnight UTC, and that instant is the
-/// previous evening west of Greenwich.
-DateTime? _calendarDate(Object? raw) {
-  final match = _leadingDate.firstMatch(raw?.toString().trim() ?? '');
-  if (match == null) return null;
-  final year = int.parse(match.group(1)!);
-  final month = int.parse(match.group(2)!);
-  final day = int.parse(match.group(3)!);
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  return DateTime(year, month, day);
 }

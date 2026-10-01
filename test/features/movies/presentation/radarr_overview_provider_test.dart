@@ -183,6 +183,26 @@ void main() {
       expect(releases.map((release) => release.movie.title), ['Last minute']);
     });
 
+    test('a release date is the day it spells, in every timezone', () {
+      // Radarr sends "3 October" as midnight UTC. Converted to the device's
+      // clock it became the evening of the 2nd west of Greenwich, and 02:00 of
+      // the 3rd east of it: Coming up said a day before the calendar tab did.
+      final fixed = DateTime(2026, 10, 1, 15);
+      final releases = radarrUpcomingReleases([
+        _movie(id: 1, title: 'Today', inCinemas: '2026-10-01T00:00:00Z'),
+        _movie(
+          id: 2,
+          title: 'Saturday',
+          digitalRelease: '2026-10-03T00:00:00Z',
+        ),
+      ], now: fixed);
+
+      expect(releases.map((release) => release.date), [
+        DateTime(2026, 10, 1),
+        DateTime(2026, 10, 3),
+      ]);
+    });
+
     test('excludes yesterday', () {
       final releases = radarrUpcomingReleases([
         _movie(

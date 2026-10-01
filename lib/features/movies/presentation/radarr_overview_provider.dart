@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/release_utils.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
@@ -75,8 +76,9 @@ class RadarrUpcomingRelease {
 
   final RadarrMovie movie;
 
-  /// Local time. The window is a run of local calendar days, so an entry
-  /// compared in UTC would slip a day either side of midnight.
+  /// The calendar date the release spells, as a local midnight
+  /// ([arrCalendarDate]). The window is a run of local calendar days, and a
+  /// release date is one of them, not an instant to convert into one.
   final DateTime date;
 
   final RadarrReleaseKind kind;
@@ -109,7 +111,10 @@ List<RadarrUpcomingRelease> radarrUpcomingReleases(
       (movie.digitalRelease, RadarrReleaseKind.digital),
       (movie.physicalRelease, RadarrReleaseKind.physical),
     ]) {
-      final date = _parseLocal(raw);
+      // The day the date spells, not the instant it encodes: Radarr sends
+      // "12 October" as midnight UTC, and `.toLocal()` showed it on the 11th
+      // anywhere west of Greenwich, a day before the calendar tab did.
+      final date = arrCalendarDate(raw);
       if (date == null) continue;
       if (date.isBefore(start) || !date.isBefore(end)) continue;
       releases.add(RadarrUpcomingRelease(movie: movie, date: date, kind: kind));
@@ -475,7 +480,8 @@ final radarrHistoryTodayProvider =
 /// unreadable.
 ///
 /// Local, always: every window on this screen is a run of local calendar days,
-/// and Radarr answers in UTC.
+/// and Radarr answers in UTC. For a real instant only (`added`, a history
+/// `date`): a release date is a day, and reads through [arrCalendarDate].
 DateTime? _parseLocal(String? raw) {
   final value = raw?.trim();
   if (value == null || value.isEmpty) return null;

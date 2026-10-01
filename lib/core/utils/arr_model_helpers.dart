@@ -67,6 +67,29 @@ List<RatingSource> parseArrRatings(
   return ratings;
 }
 
+final _leadingDate = RegExp(r'^(\d{4})-(\d{2})-(\d{2})');
+
+/// The calendar date an \*arr release date spells, as a local midnight, or
+/// null when [raw] does not start with one.
+///
+/// The `YYYY-MM-DD` at the front is read as written and never converted:
+/// Radarr, Lidarr and Readarr store a release date as midnight UTC, and that
+/// instant is the previous evening west of Greenwich, so `.toLocal()` put
+/// "12 October" on the 11th. A release date is a day, not a moment. (Sonarr's
+/// `airDateUtc` is a real instant and is not read through this.)
+///
+/// The calendar and the Overviews' Coming up both read release dates here, so
+/// one film cannot land on two different days on two screens.
+DateTime? arrCalendarDate(Object? raw) {
+  final match = _leadingDate.firstMatch(raw?.toString().trim() ?? '');
+  if (match == null) return null;
+  final year = int.parse(match.group(1)!);
+  final month = int.parse(match.group(2)!);
+  final day = int.parse(match.group(3)!);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return DateTime(year, month, day);
+}
+
 /// Parses a JSON genres field into a typed `List<String>`.
 List<String> parseGenreList(dynamic genres) {
   if (genres is! List) {
