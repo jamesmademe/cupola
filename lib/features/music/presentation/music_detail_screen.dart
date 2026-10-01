@@ -141,7 +141,11 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
       posterHeaders: viewModel.posterHeaders,
       backdropUrl: viewModel.backdropUrl,
       title: viewModel.title,
-      posterRow: _buildPosterRow(context, viewModel, status),
+      posterRow: _buildPosterRow(
+        context,
+        viewModel,
+        badgeOverQueue(status, queues.byArtist),
+      ),
       onRefresh: widget.artistId > 0
           ? () async {
               ref.invalidate(musicDetailForProvider(detailRef));
@@ -196,10 +200,10 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
   Widget _buildPosterRow(
     BuildContext context,
     MusicDetailViewModel viewModel,
-    MediaStatusInfo status,
+    MediaStatusInfo? status,
   ) {
     return MediaDetailPosterRow.circular(
-      statusBadge: StatusBadge.animated(info: status),
+      statusBadge: status == null ? null : StatusBadge.animated(info: status),
       title: viewModel.title,
       // The counts are the chip slot's one meaning, so they are stated there and
       // not also in the metadata line, which used to carry the identical pair.

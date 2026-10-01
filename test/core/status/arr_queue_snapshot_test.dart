@@ -2,6 +2,51 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 
 void main() {
+  group('badgeOverQueue', () {
+    const missing = MediaStatusInfo(availability: MediaAvailability.missing);
+    const onDisk = MediaStatusInfo(availability: MediaAvailability.available);
+    MediaStatusInfo overQueue(ArrQueueSnapshot queue) => mediaStatusFromQueue(
+      availability: missing.availability,
+      monitored: true,
+      queueUnknown: !queue.isWhole,
+    );
+
+    test('while nothing has come back, a badge that needs the queue waits', () {
+      expect(ArrQueueSnapshot.unknown.isPending, isTrue);
+      expect(
+        badgeOverQueue(
+          overQueue(ArrQueueSnapshot.unknown),
+          ArrQueueSnapshot.unknown,
+        ),
+        isNull,
+      );
+    });
+
+    test('a title the library settles alone keeps its badge meanwhile', () {
+      expect(badgeOverQueue(onDisk, ArrQueueSnapshot.unknown), onDisk);
+    });
+
+    test('a queue that failed is no longer pending: Unknown shows', () {
+      final failed = ArrQueueSnapshot.failed(Exception('boom'));
+      expect(failed.isPending, isFalse);
+      expect(
+        badgeOverQueue(overQueue(failed), failed)?.availability,
+        MediaAvailability.unknown,
+      );
+    });
+
+    test('a queue that answered empty says Missing', () {
+      expect(ArrQueueSnapshot.empty.isPending, isFalse);
+      expect(
+        badgeOverQueue(
+          overQueue(ArrQueueSnapshot.empty),
+          ArrQueueSnapshot.empty,
+        )?.availability,
+        MediaAvailability.missing,
+      );
+    });
+  });
+
   group('ArrQueueEntry.fromQueueItem', () {
     test('trackedDownloadState wins for the post-download phases', () {
       // `status: completed` covers every post-download phase, so only

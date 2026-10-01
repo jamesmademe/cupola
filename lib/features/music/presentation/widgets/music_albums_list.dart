@@ -79,10 +79,13 @@ class MusicAlbumsList extends StatelessWidget {
   }
 
   Widget _albumRow(BuildContext context, LidarrAlbum album) {
-    final status = lidarrAlbumStatus(
-      album,
-      queueEntry: albumQueue.entryFor(album.id),
-      queueUnknown: !albumQueue.isWhole,
+    final status = badgeOverQueue(
+      lidarrAlbumStatus(
+        album,
+        queueEntry: albumQueue.entryFor(album.id),
+        queueUnknown: !albumQueue.isWhole,
+      ),
+      albumQueue,
     );
     final summary = lidarrAlbumSummary(album);
     final statusWord = mediaStatusWord(status);

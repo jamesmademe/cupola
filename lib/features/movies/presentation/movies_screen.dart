@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -46,8 +47,9 @@ class MoviesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Unknown until the queue answers, never empty: a film with no file reads
-    // `Missing` only once a queue read whole has no entry for it.
+    // No badge until the queue answers, never an empty queue: a film with no
+    // file reads `Missing` only once a queue read whole has no entry for it,
+    // and `Unknown` only once the read failed (`badgeOverQueue`).
     final queue = queueSnapshotOf(ref.watch(radarrQueueSnapshotProvider));
 
     return MediaBrowseScaffold<RadarrMovie>(
@@ -68,10 +70,13 @@ class MoviesScreen extends ConsumerWidget {
       sortTitleExtractor: (movie) => movie.sortTitle,
       imagesExtractor: (movie) => movie.images,
       idExtractor: (movie) => movie.id,
-      statusExtractor: (movie) => radarrMovieStatus(
-        movie,
-        queueEntry: queue.entryFor(movie.id),
-        queueUnknown: !queue.isWhole,
+      statusExtractor: (movie) => badgeOverQueue(
+        radarrMovieStatus(
+          movie,
+          queueEntry: queue.entryFor(movie.id),
+          queueUnknown: !queue.isWhole,
+        ),
+        queue,
       ),
       onRefresh: (ref) {
         ref.invalidate(radarrQueueSnapshotProvider);

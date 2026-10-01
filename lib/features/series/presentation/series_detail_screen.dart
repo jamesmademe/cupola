@@ -202,7 +202,11 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       posterHeaders: viewModel.posterHeaders,
       backdropUrl: viewModel.backdropUrl,
       title: viewModel.title,
-      posterRow: _buildPosterRow(context, viewModel, status),
+      posterRow: _buildPosterRow(
+        context,
+        viewModel,
+        badgeOverQueue(status, queue),
+      ),
       // Both loads share one outage, so one pull re-runs both — the same pair the
       // retry button re-runs.
       onRefresh: retry == null ? null : () async => retry(),
@@ -316,13 +320,13 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
   Widget _buildPosterRow(
     BuildContext context,
     SeriesDetailViewModel viewModel,
-    MediaStatusInfo status,
+    MediaStatusInfo? status,
   ) {
     final episodeCounter = _episodeCounter(viewModel);
     final seasonCounter = _seasonCounter(viewModel);
 
     return MediaDetailPosterRow(
-      statusBadge: StatusBadge.animated(info: status),
+      statusBadge: status == null ? null : StatusBadge.animated(info: status),
       title: viewModel.title,
       // The season/episode summary moved into the chip slot below, so it is
       // stated once rather than in the metadata line and in a chip.

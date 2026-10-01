@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
@@ -10,6 +14,7 @@ import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/music/presentation/music_screen.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/presentation/series_screen.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
 
 import '../../../test_helpers/model_builders.dart';
 import '../../../test_helpers/profiles/profiles.dart';
@@ -53,17 +58,33 @@ final LidarrArtist _emptyArtist = buildArtist(
   statistics: const {'trackCount': 10, 'trackFileCount': 0},
 );
 
-MediaStatusInfo _statusOf<T>(WidgetTester tester, T item) => tester
+MediaStatusInfo _statusOf<T>(WidgetTester tester, T item) =>
+    _badgeOf(tester, item)!;
+
+MediaStatusInfo? _badgeOf<T>(WidgetTester tester, T item) => tester
     .widget<MediaBrowseScaffold<T>>(find.byType(MediaBrowseScaffold<T>))
-    .statusExtractor!(item)!;
+    .statusExtractor!(item);
+
+/// A film already on disk: the library settles its badge without the queue.
+final _onDisk = RadarrMovie.fromJson(const {
+  'id': 78,
+  'title': 'Coffee Run',
+  'year': 2020,
+  'hasFile': true,
+  'monitored': true,
+  'isAvailable': true,
+  'status': 'released',
+});
 
 Future<ProfileHarness> _pump(
   WidgetTester tester,
   ConfigProfile profile,
   Widget child, {
   void Function(ProfileNetwork network)? routes,
+  List<Override> overrides = const [],
+  bool settle = true,
 }) async {
-  final harness = await ProfileHarness.start(profile);
+  final harness = await ProfileHarness.start(profile, overrides: overrides);
   routes?.call(harness.network);
   await tester.pumpWidget(
     ProviderScope(
@@ -71,7 +92,15 @@ Future<ProfileHarness> _pump(
       child: MaterialApp(theme: AppTheme.darkTheme(), home: child),
     ),
   );
-  await harness.settle(tester);
+  if (settle) {
+    await harness.settle(tester);
+  } else {
+    // A queue that never answers keeps its loading state moving, so the
+    // screen never settles: step time instead.
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+  }
   return harness;
 }
 
@@ -104,6 +133,31 @@ void main() {
       // read "Missing" on its poster.
       expect(_statusOf(tester, _spriteFright).label, 'Unknown');
       expect(_statusOf(tester, _notInQueue).label, 'Unknown');
+
+      await harness.unmount(tester);
+    });
+  });
+
+  group('while the queue is still being read', () {
+    // "Unknown" for a moment, then "Downloading", is a word the grid takes
+    // back. A badge that hangs on the queue waits for it instead.
+    testWidgets('a title that needs the queue shows no badge, and one on '
+        'disk keeps its own', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        const MoviesScreen(),
+        overrides: [
+          radarrQueueSnapshotProvider.overrideWith(
+            (ref) => Completer<ArrQueueSnapshot>().future,
+          ),
+        ],
+        settle: false,
+      );
+
+      expect(_badgeOf(tester, _spriteFright), isNull);
+      expect(_badgeOf(tester, _notInQueue), isNull);
+      expect(_statusOf(tester, _onDisk).label, 'Available');
 
       await harness.unmount(tester);
     });

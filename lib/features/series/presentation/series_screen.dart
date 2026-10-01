@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -43,7 +44,7 @@ class SeriesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Unknown until the queue answers: see `movies_screen.dart`.
+    // No badge until the queue answers: see `movies_screen.dart`.
     final queue = queueSnapshotOf(ref.watch(sonarrQueueSnapshotProvider));
 
     return MediaBrowseScaffold<SonarrSeries>(
@@ -64,10 +65,13 @@ class SeriesScreen extends ConsumerWidget {
       sortTitleExtractor: (series) => series.sortTitle,
       imagesExtractor: (series) => series.images,
       idExtractor: (series) => series.id,
-      statusExtractor: (series) => sonarrSeriesStatus(
-        series,
-        queueEntry: queue.entryFor(series.id),
-        queueUnknown: !queue.isWhole,
+      statusExtractor: (series) => badgeOverQueue(
+        sonarrSeriesStatus(
+          series,
+          queueEntry: queue.entryFor(series.id),
+          queueUnknown: !queue.isWhole,
+        ),
+        queue,
       ),
       onRefresh: (ref) {
         ref.invalidate(sonarrQueueSnapshotProvider);

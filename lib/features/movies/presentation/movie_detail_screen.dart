@@ -191,7 +191,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       posterHeaders: viewModel.posterHeaders,
       backdropUrl: viewModel.backdropUrl,
       title: viewModel.title,
-      posterRow: _buildPosterRow(context, viewModel, status),
+      posterRow: _buildPosterRow(
+        context,
+        viewModel,
+        badgeOverQueue(status, queue),
+      ),
       // The same load the retry button re-runs, on the gesture the hero was
       // already accepting and doing nothing with.
       onRefresh: widget.movieId > 0
@@ -298,10 +302,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
   Widget _buildPosterRow(
     BuildContext context,
     MovieDetailViewModel viewModel,
-    MediaStatusInfo status,
+    MediaStatusInfo? status,
   ) {
     return MediaDetailPosterRow(
-      statusBadge: StatusBadge.animated(info: status),
+      statusBadge: status == null ? null : StatusBadge.animated(info: status),
       title: viewModel.title,
       metadataItems: viewModel.metadataItems,
       // The hero's chip slot has one meaning on every variant: how much of the

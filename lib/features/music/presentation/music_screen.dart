@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -75,7 +76,7 @@ class MusicScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Unknown until the queue answers: see `movies_screen.dart`.
+    // No badge until the queue answers: see `movies_screen.dart`.
     final queue = lidarrQueueSnapshotsOf(
       ref.watch(lidarrQueueSnapshotsProvider),
     ).byArtist;
@@ -98,10 +99,13 @@ class MusicScreen extends ConsumerWidget {
       sortTitleExtractor: (artist) => artist.artistName,
       imagesExtractor: (artist) => artist.images,
       idExtractor: (artist) => artist.id,
-      statusExtractor: (artist) => lidarrArtistStatus(
-        artist,
-        queueEntry: queue.entryFor(artist.id),
-        queueUnknown: !queue.isWhole,
+      statusExtractor: (artist) => badgeOverQueue(
+        lidarrArtistStatus(
+          artist,
+          queueEntry: queue.entryFor(artist.id),
+          queueUnknown: !queue.isWhole,
+        ),
+        queue,
       ),
       onRefresh: (ref) {
         ref.invalidate(lidarrQueueSnapshotsProvider);

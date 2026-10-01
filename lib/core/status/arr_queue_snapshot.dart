@@ -208,6 +208,21 @@ ArrQueueEntry? mergeArrQueueEntries(Iterable<ArrQueueEntry> entries) {
   return accumulator?.freeze();
 }
 
+/// The badge a title shows over [queue], or none while the queue is still
+/// being read and the badge would hang on it.
+///
+/// A grid that opens on "Unknown" and turns to "Downloading" a moment later has
+/// said a word it then takes back. While [queue] has neither answered nor
+/// failed, a title whose state needs the queue (nothing on disk, no entry yet)
+/// shows no badge at all; one the library settles alone, a film on disk, keeps
+/// its own. Once the queue fails, "Unknown" is the honest word and shows.
+MediaStatusInfo? badgeOverQueue(
+  MediaStatusInfo status,
+  ArrQueueSnapshot queue,
+) => queue.isPending && status.availability == MediaAvailability.unknown
+    ? null
+    : status;
+
 /// Combines the availability axis with a queue entry into a renderable status.
 ///
 /// The single place where "what is on disk" meets "what is in flight", so every
@@ -292,6 +307,10 @@ class ArrQueueSnapshot {
   /// The queue answered and every record of it was read, so a title with no
   /// entry is not in the queue.
   bool get isWhole => answered && !cutShort;
+
+  /// Nothing has come back yet: the queue has neither answered nor failed.
+  /// [unknown] is this state; a failed read carries its error.
+  bool get isPending => !answered && error == null;
 
   /// When the records in this snapshot were read from the service.
   ///
