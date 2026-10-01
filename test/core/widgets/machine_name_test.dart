@@ -328,6 +328,43 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('a lead takes the ink, a name beside it the tertiary ink', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const Column(
+          children: [
+            MachineName.fileLead(_file),
+            MachineName.releaseInFull(_release, caption: 'Released as'),
+          ],
+        ),
+      );
+      final context = tester.element(find.byType(Column).last);
+      final styles = [
+        for (final text in tester.widgetList<SelectableText>(
+          find.byType(SelectableText),
+        ))
+          text.style!,
+      ];
+      expect(styles.first.color, Theme.of(context).colorScheme.onSurface);
+      expect(styles.last.color, CupolaThemeColors.of(context).dimText);
+      expect(styles.map((style) => style.fontFamily).toSet(), {
+        AppTheme.monoFontFamily,
+      });
+      // In full either way: whole, read after its label, with its button.
+      expect(
+        tester
+            .widgetList<SelectableText>(find.byType(SelectableText))
+            .first
+            .textSpan!
+            .toPlainText(),
+        machineNameWithBreaks(_file),
+      );
+      expect(find.semantics.byLabel('File name'), findsOne);
+      expect(find.byTooltip('Copy file name'), findsOneWidget);
+    });
+
     testWidgets('a caption is drawn ahead of the name and read with it', (
       tester,
     ) async {

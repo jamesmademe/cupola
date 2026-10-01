@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/file_info_section.dart';
 import 'package:cupola/core/widgets/machine_name.dart';
 
@@ -59,6 +60,60 @@ void main() {
       expect(find.semantics.byLabel('Library path'), findsOne);
     });
 
+    testWidgets('.file leads with the file in the ink; the release and the '
+        'folder are secondary, and the folder is mono', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: const Scaffold(
+            body: FileInfoSection.file(
+              fileName: 'Avatar (2009) Bluray-1080p.mkv',
+              releasedAs: 'Avatar.2009.1080p.BluRay.x264-GROUP',
+              path: '/movies/Avatar (2009)',
+            ),
+          ),
+        ),
+      );
+      final context = tester.element(find.byType(FileInfoSection));
+      final ink = Theme.of(context).colorScheme.onSurface;
+      final dim = CupolaThemeColors.of(context).dimText;
+
+      final names = tester
+          .widgetList<SelectableText>(find.byType(SelectableText))
+          .toList();
+      // The page title says what; this card says which copy, so the file is
+      // its lead. It used to be dim, under a brighter, heavier folder.
+      expect(names.first.style!.color, ink);
+      expect(names.first.style!.fontFamily, AppTheme.monoFontFamily);
+      expect(names.last.style!.color, dim);
+
+      final folder = tester.widget<Text>(find.text('/movies/Avatar (2009)'));
+      expect(folder.style!.fontFamily, AppTheme.monoFontFamily);
+      expect(folder.style!.color, dim);
+      expect(folder.maxLines, isNull);
+    });
+
+    testWidgets('the folder alone keeps its title in the text face and draws '
+        'the path in mono, dim', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: const Scaffold(body: FileInfoSection(path: '/tv/Breaking Bad')),
+        ),
+      );
+      final context = tester.element(find.byType(FileInfoSection));
+
+      final title = tester.widget<Text>(find.text('Library path'));
+      expect(title.style!.fontFamily, isNot(AppTheme.monoFontFamily));
+      final path = tester.widget<Text>(find.text('/tv/Breaking Bad'));
+      expect(path.style!.fontFamily, AppTheme.monoFontFamily);
+      expect(path.style!.color, CupolaThemeColors.of(context).dimText);
+      expect(
+        find.semantics.byLabel('Library path, /tv/Breaking Bad'),
+        findsOne,
+      );
+    });
+
     testWidgets('.file says what a renamed file was released as', (
       tester,
     ) async {
@@ -110,9 +165,9 @@ void main() {
       );
     });
 
-    testWidgets('handles long paths with ellipsis', (tester) async {
+    testWidgets('a long path wraps whole, without overflowing', (tester) async {
       const longPath =
-          '/very/long/path/to/movies/that/should/be/truncated/with/ellipsis';
+          '/very/long/path/to/movies/that/should/wrap/rather/than/be/cut';
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -123,7 +178,8 @@ void main() {
 
       expect(find.text('File'), findsNothing);
       expect(find.text('Library path'), findsOneWidget);
-      expect(find.byType(FileInfoSection), findsOneWidget);
+      expect(find.text(longPath), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 }

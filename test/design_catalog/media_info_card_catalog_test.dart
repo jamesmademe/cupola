@@ -118,9 +118,10 @@ void main() {
         ),
       ),
       CatalogScene(
-        'FileInfoSection.file · a renamed file, so Released as · a file that '
-        'kept its release name · .missing, the same footprint · the folder '
-        'alone (a series), no accent',
+        'FileInfoSection.file · the file leads in the ink; Released as and '
+        'the folder (a path, so mono) are secondary · a file that kept its '
+        'release name · .missing, the same footprint · the folder alone (a '
+        'series), its title in the text face, the path mono, no accent',
         (_) => SizedBox(
           width: 358,
           child: Column(

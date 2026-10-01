@@ -23,15 +23,19 @@ enum _MachineNameKind {
   final String spokenLabel;
 }
 
+/// Where a [MachineName] sits: under a row's title, beside the subject of a
+/// detail card, or as that subject.
+enum _MachineNameShape { row, inFull, lead }
+
 /// The exact string of an object on disk or in a download, drawn as it came.
 ///
 /// A title says *what* a thing is; a machine name says *which copy*: the file
 /// in the library, the torrent, the NZB. It is set in Geist Mono
-/// ([AppType.mono]) in the tertiary ink and is never rewritten: no dots turned
-/// into spaces, no year cut off. A cleaned-up name looks like a title and is
-/// wrong with confidence.
+/// ([AppType.mono]) and is never rewritten: no dots turned into spaces, no
+/// year cut off. A cleaned-up name looks like a title and is wrong with
+/// confidence.
 ///
-/// Four variants, as named constructors:
+/// Six variants, as named constructors:
 ///
 /// * [MachineName.file] and [MachineName.release] sit under a row's title. One
 ///   line, with the ellipsis **in the middle**, because the front says what the
@@ -39,9 +43,15 @@ enum _MachineNameKind {
 ///   ellipsis at the end deletes the half that answers "is this the right
 ///   file?". The extension is always kept whole. On a desktop the full name
 ///   shows on hover.
-/// * [MachineName.fileInFull] and [MachineName.releaseInFull] are for a detail
-///   page: the whole name, wrapping after its dots, selectable, with a copy
-///   button.
+/// * [MachineName.fileLead] and [MachineName.releaseLead] are the subject of
+///   a detail card, in the ink, as a card's title is: the File card of a movie,
+///   whose page title already says *what* and whose card says *which copy*.
+///   The whole name, wrapping after its dots, selectable, with a copy button.
+/// * [MachineName.fileInFull] and [MachineName.releaseInFull] are the same in
+///   full form beside that subject, secondary: what the file was released as.
+///
+/// A row's name and a secondary name are in the tertiary ink; only a lead
+/// takes the ink.
 ///
 /// Copying is the same gesture everywhere: a long press on a phone, the
 /// context menu on a desktop, the copy button in full, and a custom
@@ -61,37 +71,53 @@ class MachineName extends StatefulWidget {
   const MachineName.file(this.name, {super.key})
     : caption = null,
       _kind = _MachineNameKind.file,
-      _inFull = false;
+      _shape = _MachineNameShape.row;
 
   /// A release name (a torrent, an NZB, a grabbed release) under a row's
   /// title: one line, the ellipsis in the middle.
   const MachineName.release(this.name, {super.key})
     : caption = null,
       _kind = _MachineNameKind.release,
-      _inFull = false;
+      _shape = _MachineNameShape.row;
 
-  /// A file name on a detail page: whole, wrapping, selectable, with a copy
-  /// button.
+  /// A file name that is the subject of its detail card: in the ink, whole,
+  /// wrapping, selectable, with a copy button.
+  const MachineName.fileLead(this.name, {super.key})
+    : caption = null,
+      _kind = _MachineNameKind.file,
+      _shape = _MachineNameShape.lead;
+
+  /// A release name that is the subject of its detail card: in the ink,
+  /// whole, wrapping, selectable, with a copy button.
+  const MachineName.releaseLead(this.name, {super.key})
+    : caption = null,
+      _kind = _MachineNameKind.release,
+      _shape = _MachineNameShape.lead;
+
+  /// A file name beside the subject of a detail card, in the tertiary ink:
+  /// whole, wrapping, selectable, with a copy button.
   const MachineName.fileInFull(this.name, {super.key, this.caption})
     : _kind = _MachineNameKind.file,
-      _inFull = true;
+      _shape = _MachineNameShape.inFull;
 
-  /// A release name on a detail page: whole, wrapping, selectable, with a copy
-  /// button. The File section passes `caption: 'Released as'`.
+  /// A release name beside the subject of a detail card, in the tertiary ink:
+  /// whole, wrapping, selectable, with a copy button. The File section passes
+  /// `caption: 'Released as'` under the file it names.
   const MachineName.releaseInFull(this.name, {super.key, this.caption})
     : _kind = _MachineNameKind.release,
-      _inFull = true;
+      _shape = _MachineNameShape.inFull;
 
   /// The string, exactly as the service returned it.
   final String name;
 
-  /// In full only: the words drawn ahead of the name, in the text face, and
-  /// read before it (*Released as*). Null draws nothing ahead of the name and
+  /// [MachineName.fileInFull] and [MachineName.releaseInFull] only: the words
+  /// drawn ahead of the name, in the text face, and read before it
+  /// (*Released as*). Null draws nothing ahead of the name and
   /// reads it after *File name* or *Release name*.
   final String? caption;
 
   final _MachineNameKind _kind;
-  final bool _inFull;
+  final _MachineNameShape _shape;
 
   @override
   State<MachineName> createState() => _MachineNameState();
@@ -135,15 +161,20 @@ class _MachineNameState extends State<MachineName> {
     CustomSemanticsAction(label: widget._kind.copyLabel): _copy,
   };
 
-  TextStyle _nameStyle(BuildContext context) =>
-      AppType.mono.copyWith(color: CupolaThemeColors.of(context).dimText);
+  /// The ink for a lead, the tertiary ink for everything else: a name under
+  /// a row's title, and a name beside a card's subject.
+  TextStyle _nameStyle(BuildContext context) => AppType.mono.copyWith(
+    color: widget._shape == _MachineNameShape.lead
+        ? Theme.of(context).colorScheme.onSurface
+        : CupolaThemeColors.of(context).dimText,
+  );
 
   @override
   Widget build(BuildContext context) {
     final style = _nameStyle(context);
-    return widget._inFull
-        ? _buildInFull(context, style)
-        : _buildRow(context, style);
+    return widget._shape == _MachineNameShape.row
+        ? _buildRow(context, style)
+        : _buildInFull(context, style);
   }
 
   Widget _buildRow(BuildContext context, TextStyle style) {

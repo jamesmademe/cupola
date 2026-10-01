@@ -10,14 +10,15 @@ Only in a row about a **copy**, under its title: a download (In flight, the Acti
 
 ## Anatomy
 
-- Geist Mono, the `mono` role (`AppType.mono`, 13 / 18, 450, slashed zero), in the tertiary ink (`CupolaThemeColors.dimText`). The name is drawn as it came: no dots turned into spaces, no year cut off. A cleaned-up name looks like a title and is wrong with confidence.
+- Geist Mono, the `mono` role (`AppType.mono`, 13 / 18, 450, slashed zero). **The ink says where it sits:** under a row's title and beside a card's subject it is secondary, in the tertiary ink (`CupolaThemeColors.dimText`); as the subject of its card it is the lead, in the ink (`on-surface`, the card title's colour). The movie page's title already says *what*, so its File card is about *which copy*, and the file name leads it. The name is drawn as it came: no dots turned into spaces, no year cut off. A cleaned-up name looks like a title and is wrong with confidence.
 - **In a row: one line, the ellipsis in the middle.** The front says what the copy is and the back, the group and the extension, says which one; an ellipsis at the end deletes exactly the half that answers *is this the right file?* The kept length is bisected with a `TextPainter` against the width the line is given, as many characters of the front as of the back, cached per width. The extension is always kept whole (`….mkv` is the floor, and below it the line clips); a separator never touches the ellipsis (`Next.…264` would read as a run of dots). No plate, no padding of its own: the host's row places it.
-- **In full: the whole name, wrapping after its dots**, selectable, with a copy button (`Icons.copy_rounded` 18 in `on-surface-variant`, the theme's `IconButton`: 48 on a phone, 40 on a desktop, density pinned standard) centred beside it. A zero-width space after every dot and underscore is the break opportunity, because a dot between letters is not a break to the line breaker; it is drawn, never copied. The extension's dot gets none, so the extension stays on the segment before it. A `caption` is drawn ahead of the name in `body-small`, same ink: *Released as* `Coffee.Run.2020.1080p.WEB-DL.DDP5.1.H.264-WORLD`.
+- **In full: the whole name, wrapping after its dots**, selectable, with a copy button (`Icons.copy_rounded` 18 in `on-surface-variant`, the theme's `IconButton`: 48 on a phone, 40 on a desktop, density pinned standard) centred beside it. A zero-width space after every dot and underscore is the break opportunity, because a dot between letters is not a break to the line breaker; it is drawn, never copied. The extension's dot gets none, so the extension stays on the segment before it. A `caption` is drawn ahead of a secondary name in `body-small`, in its tertiary ink: *Released as* `Coffee.Run.2020.1080p.WEB-DL.DDP5.1.H.264-WORLD`.
 
 ## Variants
 
 - `MachineName.file(name)` and `MachineName.release(name)`: the row line.
-- `MachineName.fileInFull(name, {caption})` and `MachineName.releaseInFull(name, {caption})`: the detail form.
+- `MachineName.fileLead(name)` and `MachineName.releaseLead(name)`: in full, as the subject of its card, in the ink. The File card's file name.
+- `MachineName.fileInFull(name, {caption})` and `MachineName.releaseInFull(name, {caption})`: in full, beside that subject, in the tertiary ink. The File card's *Released as* line.
 
 File or release decides only the words of the copy action: *Copy file name*, *Copy release name*.
 
@@ -38,7 +39,7 @@ The name, exactly as the service returned it, and in full the `caption` when the
 ## Semantics
 
 - **In a row the name is not part of the row's sentence.** Read aloud it is unlistenable and it repeats the title. The text is excluded and the component contributes one custom action, *Copy file name* or *Copy release name*, which merges into the row's node: the row still speaks one sentence and offers the copy. A host must therefore not wrap it in `ExcludeSemantics`, or the action goes too.
-- **In full the name is read whole**, as its own node: the label is the caption (*Released as*) or *File name* / *Release name*, the value is the name, and the node carries the same custom action. The copy button is a sibling node, named by its tooltip.
+- **In full (lead or secondary) the name is read whole**, as its own node: the label is the caption (*Released as*) or *File name* / *Release name*, the value is the name, and the node carries the same custom action. The copy button is a sibling node, named by its tooltip.
 
 ## Do / don't
 

@@ -75,25 +75,26 @@ void main() {
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
-        '.fileInFull, then .releaseInFull(caption: \'Released as\') · the '
-        'detail File section on a phone (358) · whole, wrapping after its dots, '
-        'selectable, each with its copy button',
+        '.fileLead, then .releaseInFull(caption: \'Released as\') · the '
+        'detail File section on a phone (358) · the file leads in the ink, '
+        'the release beside it in the tertiary ink · whole, wrapping after its '
+        'dots, selectable, each with its copy button',
         (_) => const Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            MachineName.fileInFull(_renamed),
+            MachineName.fileLead(_renamed),
             MachineName.releaseInFull(_scene, caption: 'Released as'),
           ],
         ),
         width: 358,
       ),
       CatalogScene(
-        '.fileInFull, then .releaseInFull · on a desktop (560) · the copy button '
+        '.fileLead, then .releaseInFull · on a desktop (560) · the copy button '
         'keeps the pointer floor',
         (_) => const Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            MachineName.fileInFull(_file),
+            MachineName.fileLead(_file),
             MachineName.releaseInFull(_scene, caption: 'Released as'),
           ],
         ),

@@ -40,9 +40,14 @@ class FileInfoSection extends StatelessWidget {
       releasedAs = null,
       _shape = _FileInfoShape.folder;
 
-  /// The file on disk, named in full (a [MachineName] in full: wrapping,
-  /// selectable, with a copy button), then *Released as* and the release it
-  /// came from when the service renamed it, then the folder.
+  /// The file on disk, then *Released as* and the release it came from when
+  /// the service renamed it, then the folder.
+  ///
+  /// The page title already says *what*; this card says *which copy*, so the
+  /// file name is its lead: [MachineName.fileLead], in the ink, whole,
+  /// wrapping, selectable, with a copy button. The release and the folder are
+  /// secondary, in the tertiary ink, and the folder is a path, so it is mono
+  /// too.
   ///
   /// The file is the service's own record of it (Radarr's
   /// `movieFile.relativePath`), never the last part of the folder: that named
@@ -110,7 +115,6 @@ class FileInfoSection extends StatelessWidget {
           folder: path,
           iconColor: _glyphColor(colorScheme),
           colorScheme: colorScheme,
-          theme: theme,
         );
       case _FileInfoShape.folder:
         final folder = path;
@@ -118,6 +122,10 @@ class FileInfoSection extends StatelessWidget {
         return _InfoRow(
           title: folderLabel,
           subtitle: folder,
+          // A path is a machine string: mono, whole, in the tertiary ink
+          // under the title that names it.
+          subtitleStyle: _pathStyle(context),
+          subtitleMaxLines: null,
           icon: Icons.storage_rounded,
           iconColor: _glyphColor(colorScheme),
           colorScheme: colorScheme,
@@ -140,6 +148,11 @@ const _platePadding = EdgeInsets.symmetric(
   vertical: 11,
 );
 
+/// A folder path: a machine string, so mono, in the tertiary ink a secondary
+/// line takes.
+TextStyle _pathStyle(BuildContext context) =>
+    AppType.mono.copyWith(color: CupolaThemeColors.of(context).dimText);
+
 Widget _well(ColorScheme colorScheme, IconData icon, Color iconColor) =>
     Container(
       width: 38,
@@ -151,7 +164,7 @@ Widget _well(ColorScheme colorScheme, IconData icon, Color iconColor) =>
       child: Icon(icon, size: 18, color: iconColor),
     );
 
-/// The file, then the release it came from, then the folder.
+/// The file as the lead, then the release it came from and the folder.
 ///
 /// Three nodes rather than the folder row's one: each name is read whole after
 /// its label and carries its own copy action, and the folder reads *Library
@@ -163,7 +176,6 @@ class _FileRow extends StatelessWidget {
     required this.folder,
     required this.iconColor,
     required this.colorScheme,
-    required this.theme,
   });
 
   final String fileName;
@@ -171,7 +183,6 @@ class _FileRow extends StatelessWidget {
   final String? folder;
   final Color iconColor;
   final ColorScheme colorScheme;
-  final ThemeData theme;
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +200,7 @@ class _FileRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                MachineName.fileInFull(fileName),
+                MachineName.fileLead(fileName),
                 if (releasedAs != null)
                   MachineName.releaseInFull(releasedAs, caption: 'Released as'),
                 if (folder != null)
@@ -198,14 +209,7 @@ class _FileRow extends StatelessWidget {
                     label: FileInfoSection.folderLabel,
                     value: folder,
                     child: ExcludeSemantics(
-                      child: Text(
-                        folder,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+                      child: Text(folder, style: _pathStyle(context)),
                     ),
                   ),
               ],
@@ -224,7 +228,12 @@ class _InfoRow extends StatelessWidget {
   final Color iconColor;
   final ColorScheme colorScheme;
   final ThemeData theme;
-  final int subtitleMaxLines;
+
+  /// Null draws the subtitle whole.
+  final int? subtitleMaxLines;
+
+  /// The subtitle's style, when it is not prose: the folder row's path.
+  final TextStyle? subtitleStyle;
 
   const _InfoRow({
     required this.title,
@@ -234,6 +243,7 @@ class _InfoRow extends StatelessWidget {
     required this.theme,
     this.subtitle,
     this.subtitleMaxLines = 1,
+    this.subtitleStyle,
   });
 
   @override
@@ -268,10 +278,14 @@ class _InfoRow extends StatelessWidget {
                       Text(
                         subtitle!,
                         maxLines: subtitleMaxLines,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                        overflow: subtitleMaxLines == null
+                            ? null
+                            : TextOverflow.ellipsis,
+                        style:
+                            subtitleStyle ??
+                            theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                       ),
                     ],
                   ],
