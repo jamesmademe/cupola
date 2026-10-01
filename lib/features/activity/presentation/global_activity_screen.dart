@@ -1020,7 +1020,10 @@ class _ActivityData extends ConsumerWidget {
       itemBuilder: (context, index) => switch (rows[index]) {
         final ServiceKey service => _ServiceGroupHeader(
           service: service,
-          count: grouped[service]!.length,
+          // The tile's figure, so the header and the tile above it agree, with
+          // the rows on screen beside it for when the servers named no total.
+          count: activityCount(feed.results, service: service),
+          shown: grouped[service]!.length,
           collapsed: collapsed.contains(service),
           onToggle: () {
             final next = {...collapsed};
@@ -1270,15 +1273,26 @@ class _FeedFooter extends StatelessWidget {
 /// `expanded:` on the semantics node rather than an announcement, so the state is
 /// discoverable on re-focus and works on TalkBack, and the chevron rotation is
 /// the visual half only.
+///
+/// The figure is the server's total, the one the tile above prints. It used to
+/// be the rows loaded under it, so History read "Sonarr 50" beneath a tile
+/// that said 2369, and 100 after Show more. When no total was given it says
+/// how many rows are on screen (`50 shown`) rather than passing them off as
+/// the whole, and a connection that failed is named after the figure
+/// (`12 · Sonarr Anime not counted`), since the figure leaves it out.
 class _ServiceGroupHeader extends StatelessWidget {
   final ServiceKey service;
-  final int count;
+  final ActivityCount count;
+
+  /// The rows of this service drawn under the header.
+  final int shown;
   final bool collapsed;
   final VoidCallback onToggle;
 
   const _ServiceGroupHeader({
     required this.service,
     required this.count,
+    required this.shown,
     required this.collapsed,
     required this.onToggle,
   });
@@ -1286,6 +1300,18 @@ class _ServiceGroupHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final total = count.total;
+    final missing = count.notCounted.isEmpty
+        ? null
+        : notCountedClause(count.notCounted);
+    final figure = [total == null ? '$shown shown' : '$total', ?missing];
+    final spoken = [
+      service.title,
+      total == null
+          ? '$shown shown'
+          : '$total ${total == 1 ? 'item' : 'items'}',
+      ?missing,
+    ];
 
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.sm),
@@ -1295,9 +1321,7 @@ class _ServiceGroupHeader extends StatelessWidget {
         header: true,
         button: true,
         expanded: !collapsed,
-        label:
-            '${service.title}, $count '
-            '${count == 1 ? 'item' : 'items'}',
+        label: spoken.join(', '),
         hint: collapsed ? 'expands this service' : 'collapses this service',
         onTap: onToggle,
         child: InkWell(
@@ -1321,26 +1345,31 @@ class _ServiceGroupHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.xs),
+                  // The name at its own width and the figure taking the rest,
+                  // so a figure that names a missing connection ellipsises
+                  // inside the row instead of pushing it past the edge.
+                  Text(
+                    service.title,
+                    style: theme.textTheme.titleLarge?.weight(FontWeight.w600),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      service.title,
-                      style: theme.textTheme.titleLarge?.weight(
-                        FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '$count',
-                    style: theme.textTheme.labelMedium
-                        ?.weight(FontWeight.w600)
-                        .tabular
-                        .copyWith(
-                          color: ServiceTheme.onTint(
-                            service.accent,
-                            surface: theme.colorScheme.surface,
-                            tintAlpha: 0,
+                      figure.join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: theme.textTheme.labelMedium
+                          ?.weight(FontWeight.w600)
+                          .tabular
+                          .copyWith(
+                            color: ServiceTheme.onTint(
+                              service.accent,
+                              surface: theme.colorScheme.surface,
+                              tintAlpha: 0,
+                            ),
                           ),
-                        ),
+                    ),
                   ),
                 ],
               ),

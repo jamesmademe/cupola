@@ -320,13 +320,13 @@ void main() {
 
     // One real item was reached, so the pill prints it. The dash is reserved
     // for "no idea", which is only true when nothing of this service answered.
-    // It is a floor, though, and the pill says which connection it is short
-    // of rather than passing one Sonarr's count off as both.
+    // It is a floor, though, and the pill and the header both say which
+    // connection it is short of rather than passing one Sonarr's count off as
+    // both.
     expect(
       find.bySemanticsLabel('Sonarr, 1 item, Sonarr 2 not counted'),
-      findsOneWidget,
+      findsNWidgets(2),
     );
-    expect(find.bySemanticsLabel('Sonarr, 1 item'), findsOneWidget);
     // And the incompleteness is named by connection: "Sonarr did not respond"
     // is the wrong sentence while the other Sonarr is answering.
     expect(

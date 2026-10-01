@@ -538,9 +538,10 @@ void main() {
     await tester.tap(find.text('History'));
     await tester.pumpAndSettle();
 
-    // Fifty rows are loaded; the tile says how many there are.
-    expect(find.bySemanticsLabel('Radarr, 2369 items'), findsOneWidget);
-    expect(find.text('2369'), findsOneWidget);
+    // Fifty rows are loaded; the tile, and the group header under it, say how
+    // many there are.
+    expect(find.bySemanticsLabel('Radarr, 2369 items'), findsNWidgets(2));
+    expect(find.text('2369'), findsNWidgets(2));
 
     expect(find.bySemanticsLabel('Sonarr, count unavailable'), findsOneWidget);
     // A sum with an unknown term is unknown.

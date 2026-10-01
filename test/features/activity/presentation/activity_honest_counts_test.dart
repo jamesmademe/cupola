@@ -232,4 +232,115 @@ void main() {
       },
     );
   });
+
+  group('the group header', () {
+    testWidgets('P3: the header states the server\'s total, not the page', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p3,
+        child: const GlobalActivityScreen(),
+        settle: false,
+      );
+      _historyPage(harness, WorldIds.radarr, total: 2369);
+      await harness.settle(tester);
+      await tester.tap(find.text('History'));
+      await harness.settle(tester);
+
+      // Fifty rows under it; the tile and the header both say how many there
+      // are. The header used to say 50, and 100 after Show more.
+      expect(find.bySemanticsLabel('Radarr, 2369 items'), findsNWidgets(2));
+      expect(find.text('2369'), findsNWidgets(2));
+      expect(find.text('50'), findsNothing);
+
+      handle.dispose();
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P3: with no total given, the header says what is shown', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p3,
+        child: const GlobalActivityScreen(),
+        settle: false,
+      );
+      _historyPage(harness, WorldIds.radarr, total: null);
+      await harness.settle(tester);
+      await tester.tap(find.text('History'));
+      await harness.settle(tester);
+
+      expect(find.text('50 shown'), findsOneWidget);
+      expect(find.bySemanticsLabel('Radarr, 50 shown'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Radarr, count unavailable'),
+        findsOneWidget,
+      );
+
+      handle.dispose();
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P7: Radarr 4K does not answer, and Radarr\'s header says so', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p7.withBehaviour(
+          WorldIds.radarr4k,
+          ConnectionBehaviour.didNotAnswer,
+        ),
+        child: const GlobalActivityScreen(),
+      );
+      await tester.tap(find.text('History'));
+      await harness.settle(tester);
+
+      expect(
+        find.textContaining(RegExp(r'^\d+ · Radarr 4K not counted$')),
+        findsOneWidget,
+      );
+      // The header and the tile, saying the same sentence.
+      expect(
+        find.bySemanticsLabel(
+          RegExp(r'^Radarr, \d+ items?, Radarr 4K not counted$'),
+        ),
+        findsNWidgets(2),
+      );
+
+      handle.dispose();
+      await harness.unmount(tester);
+    });
+  });
+}
+
+/// Answers [connection]'s history with fifty records out of [total], or with
+/// no `totalRecords` at all when [total] is null.
+void _historyPage(ProfileHarness harness, String connection, {int? total}) {
+  harness.network.on(connection, 'GET', '/api/v3/history', (request) {
+    final page = int.tryParse(request.query['page'] ?? '') ?? 1;
+    return NetworkReply.json({
+      'page': page,
+      'pageSize': 50,
+      'totalRecords': ?total,
+      'records': page == 1
+          ? [
+              for (var i = 0; i < 50; i++)
+                {
+                  'id': i + 1,
+                  'eventType': 'grabbed',
+                  'sourceTitle': 'Release.$i',
+                  'date': harness.network.now
+                      .subtract(Duration(days: 2, minutes: i))
+                      .toUtc()
+                      .toIso8601String(),
+                },
+            ]
+          : const [],
+    });
+  });
 }
