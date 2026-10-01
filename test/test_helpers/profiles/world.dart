@@ -267,6 +267,7 @@ class WorldDownload {
     this.speed = 0,
     this.eta,
     this.onlyWithClient = false,
+    this.peers,
   });
 
   final String id;
@@ -295,6 +296,10 @@ class WorldDownload {
   /// P4 needs would otherwise sit in P1's Sonarr queue, where the brief has
   /// exactly five downloads in flight.
   final bool onlyWithClient;
+
+  /// How many peers are sending it (Transmission's `peersSendingToUs`,
+  /// qBittorrent's `num_seeds`), or null for the fakes' own default.
+  final int? peers;
 
   int get sizeLeft => (size * (1 - progress)).round();
 }

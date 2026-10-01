@@ -1972,7 +1972,7 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(
             : _epochSeconds(torrent.lastActivity),
         detail: joinDisplayParts([
           formatSpeed(torrent.dlSpeed),
-          '${torrent.seeders} seeds',
+          countedNoun(torrent.seeders, 'seed', 'seeds'),
         ]),
         route: ServiceRoutes.qbittorrentTorrent(torrent.hash),
         category: torrent.category,
@@ -2041,7 +2041,7 @@ Future<List<ServiceQueueItem>> _loadTransmissionQueueItems(
             : _epochSeconds(torrent.activityDate),
         detail: joinDisplayParts([
           formatSpeed(torrent.rateDownload),
-          '${torrent.peersSendingToUs} peers',
+          countedNoun(torrent.peersSendingToUs, 'peer', 'peers'),
         ]),
         route: ServiceRoutes.forService(ServiceKey.transmission),
         category: torrent.labels.firstOrNull,

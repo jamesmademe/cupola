@@ -84,6 +84,11 @@ InFlightFault? arrQueueFault(Map<String, dynamic> record) {
   };
 }
 
+/// `1 peer`, `6 peers`, `0 seeds`: a count and its noun, in the singular for
+/// one and only for one.
+String countedNoun(int count, String singular, String plural) =>
+    '$count ${count == 1 ? singular : plural}';
+
 /// The em dash every absent figure in this region prints.
 ///
 /// One constant so a second call site cannot invent a hyphen, an empty string or

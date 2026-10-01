@@ -209,6 +209,39 @@ void main() {
       expect(decision.actionInstanceId, WorldIds.transmission);
     });
 
+    test('P4: one peer is a peer, and one seed a seed', () async {
+      final container = await _start(
+        Profiles.p4.withDownloads([
+          const WorldDownload(
+            id: 'b2e1d4c5f6a70819304b5c6d7e8f901234567803',
+            release: 'Big.Buck.Bunny.2008.720p.WEB',
+            client: 'transmission',
+            state: DownloadState.failed,
+            progress: 0.5,
+            size: _gb,
+            peers: 1,
+          ),
+          const WorldDownload(
+            id: 'a1f0c3d4e5f60718293a4b5c6d7e8f9012345613',
+            release: 'Coffee.Run.2020.720p.WEB',
+            client: 'qbittorrent',
+            state: DownloadState.failed,
+            progress: 0.5,
+            size: _gb,
+            peers: 1,
+          ),
+        ]),
+      );
+      final decisions = await container.read(
+        dashboardDecisionSourceProvider(DecisionSource.queue).future,
+      );
+      String detailOf(String title) =>
+          decisions.decisions.singleWhere((d) => d.title == title).detail;
+
+      expect(detailOf('Big.Buck.Bunny.2008.720p.WEB'), contains('1 peer ·'));
+      expect(detailOf('Coffee.Run.2020.720p.WEB'), contains('1 seed ·'));
+    });
+
     testWidgets('P4 on Home: the eyebrow sums both clients', (tester) async {
       final harness = await _pumpHome(tester, Profiles.p4);
 

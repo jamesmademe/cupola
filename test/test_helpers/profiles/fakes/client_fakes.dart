@@ -79,7 +79,7 @@ class QbittorrentFake extends ServiceFake {
       'added_on': now - 3 * 3600,
       'completion_on': d.progress == 1 ? now - 3600 : -1,
       'last_activity': stuck ? now - 3 * 3600 : now - 5,
-      'num_seeds': stuck ? 0 : 12,
+      'num_seeds': d.peers ?? (stuck ? 0 : 12),
       'num_complete': stuck ? 0 : 40,
       'num_leechs': 3,
       'num_incomplete': 5,
@@ -299,7 +299,8 @@ class TransmissionFake extends ServiceFake {
                 'downloadDir': '/mnt/tank/downloads',
                 'labels': const ['sonarr'],
                 'peersConnected': 8,
-                'peersSendingToUs': d.state == DownloadState.stuck ? 0 : 6,
+                'peersSendingToUs':
+                    d.peers ?? (d.state == DownloadState.stuck ? 0 : 6),
                 'isStalled': d.state == DownloadState.stuck,
                 'isFinished': false,
               },

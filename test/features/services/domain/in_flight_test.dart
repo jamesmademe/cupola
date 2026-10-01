@@ -12,6 +12,12 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 const _silent = SocketException('Connection refused');
 
 void main() {
+  test('a count takes its noun in the singular for one, and only one', () {
+    expect(countedNoun(0, 'peer', 'peers'), '0 peers');
+    expect(countedNoun(1, 'peer', 'peers'), '1 peer');
+    expect(countedNoun(12, 'seed', 'seeds'), '12 seeds');
+  });
+
   group('done of total', () {
     test('renders both sides on the total\'s unit', () {
       expect(
