@@ -4,6 +4,7 @@ library;
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -66,11 +67,21 @@ void main() {
         width: 320,
       ),
       CatalogScene(
-        'ServiceOfflineState.failure · 401: it answered, so an amber fault '
-        'with describeConnection\'s label — never "did not answer"',
+        'ServiceOfflineState.failure · 401: it answered, so an amber fault, '
+        'never "did not answer", and its remedy leads with no Retry',
         (_) => ServiceOfflineState.failure(
           service: ServiceKey.radarr,
           error: _status(401),
+          onRetry: () {},
+        ),
+        width: 320,
+      ),
+      CatalogScene(
+        'ServiceOfflineState.failure · a certificate Cupola does not trust: '
+        'Check the certificate leads, Retry follows',
+        (_) => ServiceOfflineState.failure(
+          service: ServiceKey.radarr,
+          error: const ClassifiedFailure(ServiceFailureReason.tls),
           onRetry: () {},
         ),
         width: 320,

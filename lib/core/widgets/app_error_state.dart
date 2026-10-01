@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// A premium error state with an optional retry affordance.
+/// A failure state with the remedy that fits its cause.
 ///
 /// Replaces the private, retry-less error widget inside [AsyncValueWidget].
 /// When [onRetry] is provided a "Retry" button is shown, wired by callers
-/// to their existing `ref.invalidate(...)` refresh path.
+/// to their existing `ref.invalidate(...)` refresh path, unless the cause has
+/// a remedy that retrying cannot stand in for (see *The remedy leads*).
 ///
 /// ## What the user reads first
 ///
@@ -48,6 +51,21 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// the glyph — the brand book's Presence Rule: a fault is a quiet line, and a
 /// red fill is the disease drawn as chrome. The glyph alone carries the tone,
 /// measured against the ground it sits on.
+///
+/// ## The remedy leads
+///
+/// When the failure names a fix that lives in the connection's form, and
+/// [serviceName] says whose connection it is, that fix is the primary action
+/// ([FailureRemedy]): `Paste the key again` for a refused key, `Change the
+/// address` for an `http://` address the device would not dial, `Check the
+/// address` or `Check the certificate` when the server answered from the wrong
+/// place or with a certificate Cupola does not trust. It opens the form. Retry
+/// follows as the text action only where the same request can still succeed;
+/// a refused key or an address nothing was sent to can only be refused again,
+/// so there it is left out. A refused sign-in keeps it, because a ban for too
+/// many attempts runs out. Every caller gets this from the error and the name
+/// it already passes. A state that cannot name the service keeps Retry,
+/// and nothing else, because it cannot say whose form to open.
 class AppErrorState extends StatelessWidget {
   final Object error;
   final VoidCallback? onRetry;
@@ -78,16 +96,7 @@ class AppErrorState extends StatelessWidget {
   }) : compact = true;
 
   /// The service [serviceName] names, when it names one.
-  ServiceKey? get _service {
-    final name = serviceName?.trim();
-    if (name == null || name.isEmpty) return null;
-    for (final service in ServiceKey.values) {
-      if (name == service.title || name.startsWith('${service.title} ')) {
-        return service;
-      }
-    }
-    return null;
-  }
+  ServiceKey? get _service => FailureRemedy.serviceNamedBy(serviceName);
 
   String _headline(ServiceFailureReason reason) {
     final service = _service;
@@ -152,17 +161,44 @@ class AppErrorState extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-            if (onRetry != null) ...[
+            if (_actions(context, FailureRemedy.of(_service, error))
+                case final actions?) ...[
               const SizedBox(height: AppSpacing.xl),
-              FilledButton.tonalIcon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Retry'),
-              ),
+              actions,
             ],
           ],
         ),
       ),
+    );
+  }
+
+  /// The remedy as the ink button and Retry as the text action beside it, or
+  /// Retry alone when there is no remedy. See *The remedy leads*.
+  Widget? _actions(BuildContext context, FailureRemedy? remedy) {
+    final retry = onRetry;
+    if (remedy == null) {
+      if (retry == null) return null;
+      return FilledButton.tonalIcon(
+        onPressed: retry,
+        icon: const Icon(Icons.refresh_rounded, size: 18),
+        label: const Text(Lexicon.retry),
+      );
+    }
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: [
+        FilledButton(
+          onPressed: () => remedy.open(context),
+          child: Text(remedy.label),
+        ),
+        // In ink, never the fault's tone: a coloured cure looks like the
+        // disease. The theme's text button keeps the 44pt floor.
+        if (retry != null && remedy.retryHelps)
+          TextButton(onPressed: retry, child: const Text(Lexicon.retry)),
+      ],
     );
   }
 }

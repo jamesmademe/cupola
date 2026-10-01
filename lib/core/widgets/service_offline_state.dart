@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/sample_age.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
@@ -51,10 +52,17 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// `describeFailure`, the sentence from `connectionFailureMessage` (or the
 /// failure's own verbatim detail), and the address is the lens connection's
 /// host. Red only when nothing answered; a refused key, a 5xx, a timeout or a
-/// certificate is a **fault**, amber, with its remedy beside Retry (`Paste the
-/// key again`, or `Settings`) because that is usually where the fix is. It never
-/// prints the exception — a class name and a library's message are
-/// diagnostics, and they were the whole detail line of every failed load.
+/// certificate is a **fault**, amber. It never prints the exception — a class
+/// name and a library's message are diagnostics, and they were the whole
+/// detail line of every failed load.
+///
+/// When the fault names a fix that lives in the connection's form
+/// ([FailureRemedy]), the fix leads: `Paste the key again`, `Change the
+/// address`, `Check the certificate` is the filled button, and Retry follows
+/// as the text action only where the same request can still succeed. A
+/// refused key or an address nothing was sent to has no Retry at all. Every
+/// other cause keeps Retry first and `Settings` after it, because there the
+/// next request may well answer.
 
 class ServiceOfflineState extends StatelessWidget {
   const ServiceOfflineState({
@@ -166,8 +174,10 @@ class ServiceOfflineState extends StatelessWidget {
             ? 'Anything it holds is missing from this page.'
             : 'It has not answered for $span. Anything it holds is missing '
                   'from this page.',
-        onRetry: onRetry,
-        onOpenSettings: onOpenSettings,
+        primary: _LeafAction.retry(onRetry),
+        secondary: onOpenSettings == null
+            ? null
+            : _LeafAction('Settings', onOpenSettings!),
       );
     }
 
@@ -178,12 +188,18 @@ class ServiceOfflineState extends StatelessWidget {
     final message =
         connectionFailureDetail(_error) ??
         connectionFailureMessage(service, reason);
+    final remedy = FailureRemedy.forReason(service, reason);
 
     return Consumer(
       builder: (context, ref, _) {
         final host = service.extractHost(
           ref.watch(activeInstanceProvider(service))?.url,
         );
+        // The connection's own form, the lens's: after a failed read the
+        // address or the key is the likeliest thing to have changed.
+        void openForm() => onOpenSettings != null
+            ? onOpenSettings!()
+            : FailureRemedy.openConnectionForm(context, service);
         return _OfflineLeaf(
           icon: presentation.icon,
           // Red for silence, amber for a fault; walked, never raw.
@@ -199,17 +215,36 @@ class ServiceOfflineState extends StatelessWidget {
             if (silent && span != null) 'It has not answered for $span.',
             message,
           ].join(' '),
-          onRetry: onRetry,
-          // The remedy's own verb when the fix lives in the form (`Paste the
-          // key again`), and the plain way in otherwise.
-          settingsLabel: presentation.remedy ?? 'Settings',
-          onOpenSettings:
-              onOpenSettings ??
-              () => context.push('/settings/service/${service.routeParam}'),
+          // The remedy leads when the fix lives in the form (`Paste the key
+          // again`), with Retry after it only where retrying can still help.
+          // Otherwise Retry leads and the plain way in follows.
+          primary: remedy == null
+              ? _LeafAction.retry(onRetry)
+              : _LeafAction(remedy.label, openForm),
+          secondary: remedy == null
+              ? _LeafAction('Settings', openForm)
+              : remedy.retryHelps
+              ? _LeafAction(Lexicon.retry, onRetry)
+              : null,
         );
       },
     );
   }
+}
+
+/// One of the leaf's two actions.
+class _LeafAction {
+  const _LeafAction(this.label, this.onPressed) : isRetry = false;
+
+  const _LeafAction.retry(this.onPressed)
+    : label = Lexicon.retry,
+      isRetry = true;
+
+  final String label;
+  final VoidCallback onPressed;
+
+  /// Retry as the first action carries its glyph; a remedy is its verb alone.
+  final bool isRetry;
 }
 
 class _OfflineLeaf extends StatelessWidget {
@@ -218,24 +253,24 @@ class _OfflineLeaf extends StatelessWidget {
     required this.glyphColor,
     required this.title,
     required this.body,
-    required this.onRetry,
+    required this.primary,
+    this.secondary,
     this.address,
-    this.onOpenSettings,
-    this.settingsLabel = 'Settings',
   });
 
   final IconData icon;
   final Color glyphColor;
   final String title;
 
-  /// The words on the second action: the remedy's verb, or `Settings`.
-  final String settingsLabel;
-
   /// Which server this is about, when a connection names one.
   final String? address;
   final String body;
-  final VoidCallback onRetry;
-  final VoidCallback? onOpenSettings;
+
+  /// The filled button: Retry, or the remedy when the form holds the fix.
+  final _LeafAction primary;
+
+  /// The text action after it: `Settings`, or Retry beside a remedy.
+  final _LeafAction? secondary;
 
   @override
   Widget build(BuildContext context) {
@@ -290,31 +325,41 @@ class _OfflineLeaf extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              // A wrap rather than a row: `Check the certificate` beside Retry
+              // does not fit a narrow pane on one line.
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
                 children: [
-                  FilledButton.tonalIcon(
-                    onPressed: onRetry,
-                    icon: const Icon(Icons.refresh_rounded, size: 18),
-                    label: const Text('Retry'),
-                  ),
-                  if (onOpenSettings != null) ...[
-                    const SizedBox(width: AppSpacing.sm),
+                  if (primary.isRetry)
+                    FilledButton.tonalIcon(
+                      onPressed: primary.onPressed,
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: Text(primary.label),
+                    )
+                  else
+                    FilledButton(
+                      onPressed: primary.onPressed,
+                      child: Text(primary.label),
+                    ),
+                  if (secondary case final secondary?)
                     // A text action, not a second filled button: there is one
                     // thing to try first and one thing to try if it fails, and
                     // two equal buttons would not say which.
                     TextButton(
-                      onPressed: onOpenSettings,
+                      onPressed: secondary.onPressed,
                       style: TextButton.styleFrom(
                         // Never the error tone: painting the recovery in the
                         // fault's own colour makes the cure look like the
                         // disease.
                         foregroundColor: colorScheme.primary,
+                        visualDensity: VisualDensity.standard,
                         minimumSize: const Size(56, 44),
                       ),
-                      child: Text(settingsLabel),
+                      child: Text(secondary.label),
                     ),
-                  ],
                 ],
               ),
             ],

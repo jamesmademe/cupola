@@ -402,6 +402,34 @@ String? failureRemedy(
   ServiceFailureReason.unknown => null,
 };
 
+/// Whether sending the same request again can still change the answer, so
+/// `Retry` stays beside a remedy instead of giving way to it.
+///
+/// False for the two causes the next request is bound to repeat: a refused
+/// key, which the same key gets again, and an address the device will not
+/// dial, where nothing is sent at all. Every other cause can clear while the
+/// page is open: a reverse proxy that comes back, a certificate renewed at the
+/// server, a service that finishes restarting. A refused **sign-in** is one of
+/// them ([credential] is [kRefusedSignIn]): a ban for too many attempts runs
+/// out, and a password put back at the server works again, which is why
+/// qBittorrent's surfaces forget a held refusal on exactly that Retry.
+bool failureRetryHelps(
+  ServiceFailureReason reason, {
+  String credential = kRefusedCredential,
+}) => switch (reason) {
+  ServiceFailureReason.unauthorized => credential == kRefusedSignIn,
+  ServiceFailureReason.insecureTransport => false,
+  ServiceFailureReason.unreachable ||
+  ServiceFailureReason.timeout ||
+  ServiceFailureReason.tls ||
+  ServiceFailureReason.notFound ||
+  ServiceFailureReason.redirected ||
+  ServiceFailureReason.serverError ||
+  ServiceFailureReason.invalidResponse ||
+  ServiceFailureReason.localNetworkBlocked ||
+  ServiceFailureReason.unknown => true,
+};
+
 /// A failure that has already been classified, for a place that kept the
 /// verdict and lost the exception.
 ///

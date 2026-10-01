@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 
@@ -30,9 +31,44 @@ void main() {
         width: 320,
       ),
       CatalogScene(
-        'AppErrorState · a server that answered with 401: an amber fault',
+        'AppErrorState · a server that answered with 401: an amber fault whose '
+        'remedy leads, Paste the key again, and no Retry: the same key can '
+        'only be refused again',
         (_) => AppErrorState(
           serviceName: 'Radarr',
+          error: DioException(
+            requestOptions: RequestOptions(path: '/api/v3/movie'),
+            type: DioExceptionType.badResponse,
+            response: Response<dynamic>(
+              requestOptions: RequestOptions(path: '/api/v3/movie'),
+              statusCode: 401,
+            ),
+          ),
+          onRetry: () {},
+        ),
+        width: 320,
+      ),
+      CatalogScene(
+        'AppErrorState · 404, the API is not at this address: Check the '
+        'address leads, Retry follows as the text action',
+        (_) => AppErrorState(
+          serviceName: 'Radarr',
+          error: DioException(
+            requestOptions: RequestOptions(path: '/api/v3/movie'),
+            type: DioExceptionType.badResponse,
+            response: Response<dynamic>(
+              requestOptions: RequestOptions(path: '/api/v3/movie'),
+              statusCode: 404,
+            ),
+          ),
+          onRetry: () {},
+        ),
+        width: 320,
+      ),
+      CatalogScene(
+        'AppErrorState · 401 with no service named: Retry only, because it '
+        'cannot say whose form to open',
+        (_) => AppErrorState(
           error: DioException(
             requestOptions: RequestOptions(path: '/api/v3/movie'),
             type: DioExceptionType.badResponse,
@@ -64,7 +100,8 @@ void main() {
       ),
       CatalogScene(
         'InlineErrorRetry(error:) · a Discover rail Seerr refused: the glyph '
-        'takes the classification, amber',
+        'takes the classification, amber, and the remedy takes the place of '
+        'Retry',
         (_) => InlineErrorRetry(
           message:
               'Seerr answered but refused the key, so this row is missing.',
@@ -76,6 +113,18 @@ void main() {
               statusCode: 403,
             ),
           ),
+          onRetry: () {},
+        ),
+        width: 360,
+      ),
+      CatalogScene(
+        'InlineErrorRetry · a certificate Cupola does not trust: both verbs, '
+        'the remedy first, on their own row under the sentence',
+        (_) => InlineErrorRetry(
+          message:
+              'Unraid has a certificate Cupola does not trust, so its shares '
+              'are not shown.',
+          error: const ClassifiedFailure(ServiceFailureReason.tls),
           onRetry: () {},
         ),
         width: 360,

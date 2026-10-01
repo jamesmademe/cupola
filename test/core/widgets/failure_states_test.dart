@@ -4,13 +4,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:flutter_riverpod/misc.dart' show Override;
+
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_rss_screen.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_screen.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/truenas/presentation/reporting/truenas_reporting_screen.dart';
 
 import '../../test_helpers/profiles/profiles.dart';
 import '../../test_helpers/settings_scope.dart';
@@ -29,7 +36,15 @@ DioException _status(int code) => DioException(
   ),
 );
 
-Future<void> _pump(WidgetTester tester, Widget child) async {
+/// Where the last tap landed, as the router saw it: path and query.
+Uri? _landedOn;
+
+Future<void> _pump(
+  WidgetTester tester,
+  Widget child, {
+  List<Override>? overrides,
+}) async {
+  _landedOn = null;
   final router = GoRouter(
     routes: [
       GoRoute(
@@ -38,19 +53,26 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
       ),
       GoRoute(
         path: '/settings/service/:id',
-        builder: (_, state) =>
-            Scaffold(body: Text('Form ${state.pathParameters['id']}')),
+        builder: (_, state) {
+          _landedOn = state.uri;
+          return Scaffold(body: Text('Form ${state.pathParameters['id']}'));
+        },
       ),
     ],
   );
   addTearDown(router.dispose);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [
-        currentSettingsProvider.overrideWith(
-          (ref) => settingsWithServices(const [ServiceKey.radarr]),
-        ),
-      ],
+      overrides:
+          overrides ??
+          [
+            currentSettingsProvider.overrideWith(
+              (ref) => settingsWithServices(const [
+                ServiceKey.radarr,
+                ServiceKey.qbittorrent,
+              ]),
+            ),
+          ],
       child: MaterialApp.router(
         theme: AppTheme.darkTheme(),
         routerConfig: router,
@@ -59,6 +81,12 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
   );
   await tester.pumpAndSettle();
 }
+
+/// The ink button carrying [label]: the primary action.
+Finder _filled(String label) => find.widgetWithText(FilledButton, label);
+
+/// The text button carrying [label]: the secondary action.
+Finder _text(String label) => find.widgetWithText(TextButton, label);
 
 Color _glyphColor(WidgetTester tester) => tester
     .widget<Icon>(
@@ -163,13 +191,35 @@ void main() {
       );
       final scheme = AppTheme.darkTheme().colorScheme;
       expect(_glyphColor(tester), statusToneColor(scheme, StatusTone.warning));
-      // The remedy is the verb on the way into the form, not "Settings".
-      expect(find.text('Paste the key again'), findsOneWidget);
+      // The remedy is the verb on the way into the form, not "Settings", and
+      // it leads: the same key can only be refused again, so no Retry.
+      expect(_filled('Paste the key again'), findsOneWidget);
       expect(find.text('Settings'), findsNothing);
+      expect(find.text('Retry'), findsNothing);
       await tester.tap(find.text('Paste the key again'));
       await tester.pumpAndSettle();
       expect(find.text('Form radarr'), findsOneWidget);
     });
+
+    testWidgets(
+      'a certificate leads with its remedy and keeps Retry after it',
+      (tester) async {
+        var retried = 0;
+        await _pump(
+          tester,
+          ServiceOfflineState.failure(
+            service: ServiceKey.radarr,
+            error: const ClassifiedFailure(ServiceFailureReason.tls),
+            onRetry: () => retried++,
+          ),
+        );
+
+        expect(_filled('Check the certificate'), findsOneWidget);
+        expect(_text('Retry'), findsOneWidget);
+        await tester.tap(find.text('Retry'));
+        expect(retried, 1);
+      },
+    );
 
     testWidgets('a 5xx is a fault too, never "did not answer"', (tester) async {
       await _pump(
@@ -300,6 +350,242 @@ void main() {
             .color,
         statusToneColor(scheme, StatusTone.warning),
       );
+    });
+  });
+
+  group('the remedy leads', () {
+    testWidgets('AppErrorState: a refused key offers the key, and no Retry', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        AppErrorState(
+          serviceName: 'Radarr',
+          error: _status(401),
+          onRetry: () {},
+        ),
+      );
+
+      expect(find.text('Radarr answered but refused the key'), findsOneWidget);
+      expect(_filled('Paste the key again'), findsOneWidget);
+      // The same key can only be refused again.
+      expect(find.text('Retry'), findsNothing);
+
+      await tester.tap(find.text('Paste the key again'));
+      await tester.pumpAndSettle();
+      // The lens connection's own form.
+      expect(_landedOn?.path, '/settings/service/radarr');
+      expect(_landedOn?.queryParameters['i'], isNotEmpty);
+    });
+
+    testWidgets('AppErrorState: an API not at the address leads with the '
+        'address, and Retry follows', (tester) async {
+      var retried = 0;
+      await _pump(
+        tester,
+        AppErrorState(
+          serviceName: 'Radarr',
+          error: _status(404),
+          onRetry: () => retried++,
+        ),
+      );
+
+      expect(_filled('Check the address'), findsOneWidget);
+      expect(_text('Retry'), findsOneWidget);
+      // The remedy first, for the eye and for the screen reader.
+      expect(
+        tester.getTopLeft(find.text('Check the address')).dx,
+        lessThan(tester.getTopLeft(find.text('Retry')).dx),
+      );
+      await tester.tap(find.text('Retry'));
+      expect(retried, 1);
+    });
+
+    testWidgets(
+      'AppErrorState: a refused sign-in keeps Retry, a ban runs out',
+      (tester) async {
+        await _pump(
+          tester,
+          AppErrorState(
+            serviceName: 'qBittorrent',
+            error: _status(403),
+            onRetry: () {},
+          ),
+        );
+
+        expect(_filled('Sign in again'), findsOneWidget);
+        expect(_text('Retry'), findsOneWidget);
+      },
+    );
+
+    testWidgets('AppErrorState: nothing answered, so Retry is the remedy', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        AppErrorState(serviceName: 'Radarr', error: _refused(), onRetry: () {}),
+      );
+
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.byType(TextButton), findsNothing);
+      expect(find.text('Paste the key again'), findsNothing);
+    });
+
+    testWidgets('AppErrorState: a state that cannot name the service keeps '
+        'Retry, and opens no form', (tester) async {
+      await _pump(tester, AppErrorState(error: _status(401), onRetry: () {}));
+
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.text('Paste the key again'), findsNothing);
+    });
+
+    testWidgets('InlineErrorRetry: a section Radarr refused offers the key in '
+        'place of Retry', (tester) async {
+      final error = _status(401);
+      await _pump(
+        tester,
+        InlineErrorRetry(
+          message: sectionFailureMessage(
+            ServiceKey.radarr,
+            error,
+            consequence: 'its queue is not shown',
+          ),
+          error: error,
+          onRetry: () {},
+        ),
+      );
+
+      expect(_text('Paste the key again'), findsOneWidget);
+      expect(find.text('Retry'), findsNothing);
+      await tester.tap(find.text('Paste the key again'));
+      await tester.pumpAndSettle();
+      expect(find.text('Form radarr'), findsOneWidget);
+    });
+
+    testWidgets('InlineErrorRetry: a certificate keeps both verbs, the remedy '
+        'first, under the sentence', (tester) async {
+      const error = ClassifiedFailure(ServiceFailureReason.tls);
+      await _pump(
+        tester,
+        InlineErrorRetry(
+          message: sectionFailureMessage(
+            ServiceKey.radarr,
+            error,
+            consequence: 'its queue is not shown',
+          ),
+          error: error,
+          onRetry: () {},
+        ),
+      );
+
+      expect(_text('Check the certificate'), findsOneWidget);
+      expect(_text('Retry'), findsOneWidget);
+      final sentence = tester.getBottomLeft(
+        find.textContaining('Radarr has a certificate'),
+      );
+      expect(
+        tester.getTopLeft(find.text('Check the certificate')).dy,
+        greaterThanOrEqualTo(sentence.dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('Check the certificate')).dx,
+        lessThan(tester.getTopLeft(find.text('Retry')).dx),
+      );
+      // Each verb keeps the touch floor.
+      for (final label in ['Check the certificate', 'Retry']) {
+        expect(tester.getSize(_text(label)).height, greaterThanOrEqualTo(44));
+      }
+    });
+
+    testWidgets('InlineErrorRetry: the fixed-height slot holds two verbs', (
+      tester,
+    ) async {
+      Future<double> slotFor(Object error) async {
+        await _pump(
+          tester,
+          // Wide enough for both verbs on one line in the test font, whose
+          // glyphs are all a full em: a real phone fits them in 360.
+          SizedBox(
+            width: 600,
+            child: InlineErrorRetry.fixedHeight(
+              message: sectionFailureMessage(
+                ServiceKey.radarr,
+                error,
+                consequence: 'this row is missing',
+              ),
+              error: error,
+              onRetry: () {},
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull);
+        return tester.getSize(find.byType(InlineErrorRetry)).height;
+      }
+
+      final one = await slotFor(_refused());
+      final two = await slotFor(
+        const ClassifiedFailure(ServiceFailureReason.notFound),
+      );
+      expect(_text('Check the address'), findsOneWidget);
+      expect(_text('Retry'), findsOneWidget);
+      // A carousel row that fails does not jump for having two verbs.
+      expect(two, one);
+    });
+
+    testWidgets('the remedy opens the connection the lens rests on', (
+      tester,
+    ) async {
+      // P1 has two Radarrs. With the lens on the 4K one, its refused key is
+      // pasted into the 4K form, not into the first connection's.
+      final harness = await ProfileHarness.start(
+        Profiles.p1.withLens(ServiceKey.radarr, WorldIds.radarr4k),
+      );
+      await _pump(
+        tester,
+        AppErrorState(
+          serviceName: 'Radarr',
+          error: _status(401),
+          onRetry: () {},
+        ),
+        overrides: harness.overrides,
+      );
+
+      await tester.tap(find.text('Paste the key again'));
+      await tester.pumpAndSettle();
+      expect(_landedOn?.queryParameters['i'], WorldIds.radarr4k);
+    });
+
+    testWidgets('P1, TrueNAS refused the key: its reporting page offers the '
+        'key, with no per-screen wiring', (tester) async {
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p1.withBehaviour(
+          WorldIds.truenas,
+          ConnectionBehaviour.refusesKey,
+        ),
+        child: const TrueNasReportingScreen(),
+      );
+
+      expect(find.byType(AppErrorState), findsOneWidget);
+      expect(find.text('Paste the key again'), findsOneWidget);
+      expect(find.text('Retry'), findsNothing);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('P7, qBittorrent refused the sign-in: its RSS sections lead '
+        'with the sign-in and keep Retry', (tester) async {
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p7,
+        child: const QbittorrentRssScreen(),
+      );
+
+      expect(find.byType(InlineErrorRetry), findsNWidgets(2));
+      expect(_text('Sign in again'), findsNWidgets(2));
+      expect(_text('Retry'), findsNWidgets(2));
+
+      await harness.unmount(tester);
     });
   });
 }

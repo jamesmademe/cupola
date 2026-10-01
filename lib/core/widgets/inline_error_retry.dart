@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 
@@ -50,6 +52,18 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 /// key read exactly like a switched-off box. Word the [message] from the same
 /// classification (`sectionFailureMessage`), so the glyph and the sentence
 /// cannot disagree.
+///
+/// ## The remedy leads
+///
+/// The same classification decides the verb. A cause whose fix lives in the
+/// connection's form offers that fix ([FailureRemedy]) in place of Retry: a
+/// refused key reads `Paste the key again` and opens the form, and Retry is
+/// left out because the same key can only be refused again. Where the same
+/// request can still succeed (a refused sign-in whose ban runs out, a
+/// certificate or an address the server may yet fix) both stay, the remedy first, on a row of their own under the sentence
+/// so it keeps its width. The service is the one [message] starts by naming,
+/// which the classification's sentence always does; a message that names none
+/// keeps Retry.
 class InlineErrorRetry extends StatelessWidget {
   const InlineErrorRetry({
     super.key,
@@ -96,6 +110,41 @@ class InlineErrorRetry extends StatelessWidget {
       surface: colorScheme.surface,
     );
     final glyph = failureIcon(reason);
+    final remedy = FailureRemedy.of(
+      FailureRemedy.serviceNamedBy(message),
+      error,
+    );
+    final verbs = [
+      if (remedy != null)
+        TextButton(
+          onPressed: () => remedy.open(context),
+          style: _verbStyle(colorScheme),
+          child: Text(remedy.label),
+        ),
+      if (remedy == null || remedy.retryHelps)
+        TextButton(
+          onPressed: onRetry,
+          style: _verbStyle(colorScheme),
+          child: const Text(Lexicon.retry),
+        ),
+    ];
+    // In the fixed slot the second row of verbs takes the height a third line
+    // of the sentence would need, so the sentence stops at two there. The
+    // screen reader still hears all of it: the label is the whole message.
+    final clipped = _height != null && verbs.length > 1;
+    final sentence = ExcludeSemantics(
+      child: Text(
+        message,
+        maxLines: clipped ? 2 : null,
+        overflow: clipped ? TextOverflow.ellipsis : null,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+    final glyphMark = ExcludeSemantics(
+      child: Icon(glyph, size: 16, color: alarm),
+    );
 
     return Container(
       width: double.infinity,
@@ -113,38 +162,51 @@ class InlineErrorRetry extends StatelessWidget {
         // through `announce()` as well: that double-reads on iOS.
         liveRegion: true,
         label: message,
-        child: Row(
-          children: [
-            ExcludeSemantics(child: Icon(glyph, size: 16, color: alarm)),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: ExcludeSemantics(
-                child: Text(
-                  message,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+        child: verbs.length == 1
+            ? Row(
+                children: [
+                  glyphMark,
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: sentence),
+                  const SizedBox(width: AppSpacing.sm),
+                  verbs.single,
+                ],
+              )
+            // Two verbs beside the sentence would leave it a third of the
+            // line on a phone, so they take the row under it, at the trailing
+            // edge where the one verb sits otherwise.
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      glyphMark,
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(child: sentence),
+                    ],
                   ),
-                ),
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: AppSpacing.xs,
+                    children: verbs,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            TextButton(
-              onPressed: onRetry,
-              style: TextButton.styleFrom(
-                // Rule 2. Brand primary, never the error tone.
-                foregroundColor: colorScheme.primary,
-                // 44pt on iOS / 48dp on Android is the floor, and this button
-                // shares its row with body text that would otherwise size it.
-                // No `VisualDensity.compact`: it silently takes 8 off
-                // `minimumSize`, and 44 declared measured 40.
-                minimumSize: const Size(56, 44),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-              ),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
       ),
     );
   }
+
+  static ButtonStyle _verbStyle(ColorScheme colorScheme) =>
+      TextButton.styleFrom(
+        // Rule 2. Brand primary, never the error tone.
+        foregroundColor: colorScheme.primary,
+        // 44pt on iOS / 48dp on Android is the floor, and this button shares
+        // its row with body text that would otherwise size it. Standard
+        // density, pinned: compact silently takes 8 off `minimumSize`, and 44
+        // declared measured 40.
+        visualDensity: VisualDensity.standard,
+        minimumSize: const Size(56, 44),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      );
 }
