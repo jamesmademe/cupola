@@ -18,6 +18,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 /// One library item, flattened to just what the rail paints and sorts on.
 ///
@@ -30,6 +31,16 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// with the same poster and the same title.
 class RecentlyAddedItem {
   final ServiceKey service;
+
+  /// The connection the record came off. Its [id] is that server's: each
+  /// Radarr numbers its films from one, so the same id names a different
+  /// film on the other, and the tile has to open this one's.
+  final String instanceId;
+
+  /// What tells [instanceId] apart from the service's other connections, by
+  /// the app's one rule, or null while the service has only the one.
+  final String? connectionName;
+
   final int id;
   final String title;
   final String posterUrl;
@@ -63,6 +74,8 @@ class RecentlyAddedItem {
 
   const RecentlyAddedItem({
     required this.service,
+    this.instanceId = '',
+    this.connectionName,
     required this.id,
     required this.title,
     required this.posterUrl,
@@ -93,11 +106,13 @@ class RecentlyAddedItem {
 
   /// Hero tag shared with the destination screen.
   ///
-  /// Carries the unit and the outcome as well as the id: two seasons of one
-  /// series, or a season that half landed and half failed, are two rows over
-  /// one library item, and two heroes with one tag assert on the flight.
+  /// Carries the connection, the unit and the outcome as well as the id: film
+  /// 3 on the HD Radarr and film 3 on the 4K, two seasons of one series, or a
+  /// season that half landed and half failed, are two rows, and two heroes
+  /// with one tag assert on the flight.
   String get heroTag => [
     'services_recent_${service.routeParam}_$id',
+    if (instanceId.isNotEmpty) instanceId,
     if (unitId != null) '$unitId',
     if (failed) 'failed',
   ].join('_');
@@ -106,6 +121,8 @@ class RecentlyAddedItem {
     final newer = _newerFirst(this, other) <= 0 ? this : other;
     return RecentlyAddedItem(
       service: service,
+      instanceId: instanceId,
+      connectionName: connectionName,
       id: id,
       title: title,
       // The first record that carried a poster keeps it: history embeds the
@@ -144,7 +161,7 @@ List<RecentlyAddedItem> groupRecentlyAdded(List<RecentlyAddedItem> items) {
   for (final item in items) {
     final Object key = item.id <= 0
         ? loose++
-        : (item.service, item.id, item.unitId, item.failed);
+        : (item.service, item.instanceId, item.id, item.unitId, item.failed);
     final existing = groups[key];
     groups[key] = existing == null ? item : existing._foldedWith(item);
   }
@@ -196,7 +213,8 @@ String recentlyAddedTileLabel(
 }) => [
   item.title,
   if (item.subtitle.isNotEmpty) item.subtitle,
-  item.service.title,
+  // `Radarr 4K` once there are two, said as the eye reads it on the row.
+  serviceWithConnection(item.service, item.connectionName, joiner: ' '),
   if (item.failed) 'failed import',
   if (timeLabel.isNotEmpty) timeLabel,
 ].join(', ');

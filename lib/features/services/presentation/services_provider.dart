@@ -224,6 +224,49 @@ _ServiceConnection _watchConnection(Ref ref, ServiceKey service) {
   );
 }
 
+/// One configured connection a merged Home region reads, and what its rows
+/// and its coverage are stamped with.
+///
+/// [name] is the connection's name by the app's one rule, null while its
+/// service has a single connection; [connection] is what the reads need of it
+/// (the poster URLs carry its address and key).
+typedef _MergeConnection = ({
+  ServiceKey service,
+  String instanceId,
+  String? name,
+  bool isLens,
+  _ServiceConnection connection,
+});
+
+/// Every configured connection of [service], in the user's order, for a
+/// region that reads them all.
+///
+/// Home folds every connection of a service, the way its header does: a
+/// stall, a failed import or a request on the second Radarr is the user's as
+/// much as one on the first. Each connection is watched on its own narrow
+/// key, so editing one re-reads it and a theme toggle re-reads nothing. The
+/// lens is watched too, because which connection the shared lens providers
+/// stand for moves with it.
+List<_MergeConnection> _watchMergeConnections(Ref ref, ServiceKey service) {
+  final ids = ref.watch(serviceInstanceIdsProvider(service));
+  final lens = ref.watch(activeInstanceProvider(service))?.id ?? '';
+  final merged = <_MergeConnection>[];
+  for (final id in ids) {
+    final connection = ref.watch(
+      currentSettingsProvider.select((s) => _connectionOfInstance(s, id)),
+    );
+    if (!connection.configured) continue;
+    merged.add((
+      service: service,
+      instanceId: id,
+      name: ref.watch(connectionNameProvider(id)),
+      isLens: id == lens,
+      connection: connection,
+    ));
+  }
+  return merged;
+}
+
 _ServiceConnection _connectionOfInstance(
   SettingsModel settings,
   String instanceId,
@@ -772,9 +815,14 @@ class ArrHistoryEntry {
     required this.at,
     required this.reason,
     this.instanceId = '',
+    this.connectionName,
   });
 
   final ServiceKey service;
+
+  /// What tells [instanceId] apart from the service's other connections, by
+  /// the app's one rule, or null while the service has only the one.
+  final String? connectionName;
 
   /// The connection this record came off.
   ///
@@ -825,87 +873,81 @@ typedef ArrHistory = ({List<ArrHistoryEntry> entries, SourceCoverage coverage});
 /// [ArrHistory.coverage]: the rail can show what the others answered, but the
 /// count above it cannot claim to be the whole without knowing who is missing.
 final servicesArrHistoryProvider = FutureProvider<ArrHistory>((ref) async {
-  // One narrow watch per source rather than the whole `SettingsModel`: this
-  // depends on three URL/key pairs, and watching the object refetched every
-  // history page on any settings write, a theme toggle included.
-  final connections = {
-    for (final service in const [
-      ServiceKey.radarr,
-      ServiceKey.sonarr,
-      ServiceKey.lidarr,
-    ])
-      service: _watchConnection(ref, service),
-  };
-
-  Future<ArrHistory> from(
-    ServiceKey service,
-    Future<List<dynamic>> Function() load,
-  ) async {
-    final connection = connections[service];
-    if (connection == null || !connection.configured) {
-      return (
-        entries: const <ArrHistoryEntry>[],
-        coverage: SourceCoverage.none,
-      );
-    }
-    // The connection these records come off — the lens, which is what the
-    // service providers below resolve to — stamped on each, so a remedy bound
-    // to one connection opens on this one even after the lens has moved.
-    final instanceId = ref.read(activeInstanceProvider(service))?.id ?? '';
+  // Every configured connection of each arr, each on its own narrow watch:
+  // watching the whole `SettingsModel` refetched every history page on any
+  // settings write, a theme toggle included.
+  Future<ArrHistory> from(_MergeConnection source) async {
     try {
-      final records = await load();
+      final records = await switch (source.service) {
+        ServiceKey.radarr =>
+          ref
+              .watch(radarrServiceForProvider(source.instanceId))
+              .getHistory(pageSize: servicesHistoryPageSize),
+        ServiceKey.sonarr =>
+          ref
+              .watch(sonarrServiceForProvider(source.instanceId))
+              .getHistory(pageSize: servicesHistoryPageSize),
+        // Lidarr's records DO arrive with their artist and their album:
+        // `LidarrService` overrides `getHistoryPage`, which this `getHistory`
+        // delegates through, and injects `includeArtist`/`includeAlbum` there.
+        // So the title resolves to the album (`arrPrimaryMediaTitle` reads
+        // `album` then `artist`) rather than falling back to the raw
+        // `sourceTitle`, and the tile's artwork is the album cover — see
+        // `_historyPosterUrl`.
+        _ =>
+          ref
+              .watch(lidarrServiceForProvider(source.instanceId))
+              .getHistory(pageSize: servicesHistoryPageSize),
+      };
       return (
         entries: records
             .whereType<Map>()
             .map(stringKeyMap)
             .map(
               (record) => _historyEntryFrom(
-                service,
+                source.service,
                 record,
-                instanceId: instanceId,
-                baseUrl: connection.url,
-                apiKey: connection.apiKey,
+                // The connection these records come off, stamped on each, so
+                // a remedy bound to one connection opens on this one, whatever
+                // the lens is on when the user taps.
+                instanceId: source.instanceId,
+                connectionName: source.name,
+                baseUrl: source.connection.url,
+                apiKey: source.connection.apiKey,
               ),
             )
             .toList(growable: false),
-        coverage: SourceCoverage.answeredBy(service),
+        coverage: SourceCoverage.answeredBy(
+          source.service,
+          instanceId: source.instanceId,
+          name: source.name,
+        ),
       );
     } catch (error) {
       // The convention: a browse degrades to `[]` rather than taking the region
       // down — but the failure is kept, classified, so the count above the
-      // rail can leave this arr out by name instead of counting it as zero.
+      // rail can leave this connection out by name instead of counting it as
+      // zero. A second Radarr that did not answer leaves the first one's
+      // imports on the rail.
       return (
         entries: const <ArrHistoryEntry>[],
-        coverage: SourceCoverage.failure(service, error),
+        coverage: SourceCoverage.failure(
+          source.service,
+          error,
+          instanceId: source.instanceId,
+          name: source.name,
+        ),
       );
     }
   }
 
   final results = await Future.wait([
-    from(
+    for (final service in const [
       ServiceKey.radarr,
-      () => ref
-          .watch(radarrServiceProvider)
-          .getHistory(pageSize: servicesHistoryPageSize),
-    ),
-    from(
       ServiceKey.sonarr,
-      () => ref
-          .watch(sonarrServiceProvider)
-          .getHistory(pageSize: servicesHistoryPageSize),
-    ),
-    // Lidarr's records DO arrive with their artist and their album:
-    // `LidarrService` overrides `getHistoryPage`, which this `getHistory`
-    // delegates through, and injects `includeArtist`/`includeAlbum` there. So
-    // the title resolves to the album (`arrPrimaryMediaTitle` reads `album`
-    // then `artist`) rather than falling back to the raw `sourceTitle`, and
-    // the tile's artwork is the album cover — see `_historyPosterUrl`.
-    from(
       ServiceKey.lidarr,
-      () => ref
-          .watch(lidarrServiceProvider)
-          .getHistory(pageSize: servicesHistoryPageSize),
-    ),
+    ])
+      for (final source in _watchMergeConnections(ref, service)) from(source),
   ]);
 
   return (
@@ -918,6 +960,7 @@ ArrHistoryEntry _historyEntryFrom(
   ServiceKey service,
   Map<String, dynamic> record, {
   required String instanceId,
+  String? connectionName,
   required String baseUrl,
   required String apiKey,
 }) {
@@ -928,6 +971,7 @@ ArrHistoryEntry _historyEntryFrom(
   return ArrHistoryEntry(
     service: service,
     instanceId: instanceId,
+    connectionName: connectionName,
     id: intOrNull(record['id']) ?? 0,
     mediaId:
         intOrNull(record['movieId']) ??
@@ -1008,6 +1052,11 @@ String _historyPosterUrl(
 ///
 /// Carries the history's coverage through, so the eyebrow counts only the
 /// libraries that answered.
+///
+/// Every row, newest first, and **not** cut to the rail: the eyebrow is a
+/// count, and it used to count the six tiles the rail draws, so with a second
+/// Radarr's imports folded in, a busy evening read "6 imported" whatever had
+/// landed. The rail takes its [servicesRecentlyAddedLimit] off the front.
 final servicesRecentlyAddedProvider = FutureProvider<ServicesRecentlyAdded>((
   ref,
 ) async {
@@ -1018,6 +1067,8 @@ final servicesRecentlyAddedProvider = FutureProvider<ServicesRecentlyAdded>((
       if (entry.outcome != ArrImportOutcome.other)
         RecentlyAddedItem(
           service: entry.service,
+          instanceId: entry.instanceId,
+          connectionName: entry.connectionName,
           id: entry.mediaId,
           title: entry.title,
           posterUrl: entry.posterUrl,
@@ -1028,16 +1079,15 @@ final servicesRecentlyAddedProvider = FutureProvider<ServicesRecentlyAdded>((
         ),
   ];
 
+  final rows = groupRecentlyAdded(items);
   return (
-    items: sortRecentlyAdded(
-      groupRecentlyAdded(items),
-      limit: servicesRecentlyAddedLimit,
-    ),
+    items: sortRecentlyAdded(rows, limit: rows.length),
     coverage: history.coverage,
   );
 });
 
-/// What the Recently added rail draws, and which libraries answered for it.
+/// What the Recently added region counts, newest first, and which libraries
+/// answered for it. The rail draws the first [servicesRecentlyAddedLimit].
 typedef ServicesRecentlyAdded = ({
   List<RecentlyAddedItem> items,
   SourceCoverage coverage,
@@ -1077,6 +1127,8 @@ class ServiceQueueItem {
     this.downloadId,
     this.clientService,
     this.instanceId = '',
+    this.connectionName,
+    this.clientInstanceId = '',
     this.mediaId,
     this.outputPath,
   });
@@ -1151,9 +1203,21 @@ class ServiceQueueItem {
   /// torrent carries the torrent's client rate.
   final ServiceKey? clientService;
 
-  /// The connection an \*arr row was read from, for a remedy that opens a flow
-  /// bound to one connection — the import wizard's `?i=`.
+  /// The connection the row was read from, for a remedy that opens a flow
+  /// bound to one connection — the import wizard's `?i=` — and for a route
+  /// into a detail page, whose ids are that server's.
   final String instanceId;
+
+  /// What tells [instanceId] apart from the service's other connections, by
+  /// the app's one rule, or null while the service has only the one. On the
+  /// row's line, so two Radarr rows say which Radarr.
+  final String? connectionName;
+
+  /// The connection of the download client moving these bytes: the row's own
+  /// on a client's row, and the client row's on an \*arr row joined to one.
+  /// Empty while nothing has said which. What "Open in qBittorrent" opens,
+  /// and what the eyebrow keys a client's rate on.
+  final String clientInstanceId;
 
   /// The library item an \*arr row belongs to — the movie, series, artist or
   /// author — which a manual import is filed under. Null when the record names
@@ -1186,52 +1250,43 @@ class ServiceQueueItem {
 /// kept, classified, in [ServicesQueue.coverage]: the rows can do without a dark
 /// client, but the count above them cannot count it as zero.
 final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
-  // Watch the seven connections this actually depends on, not the whole model.
-  // A bare `ref.watch(currentSettingsProvider)` re-ran seven concurrent queue
-  // fetches on every settings write — including a theme-mode toggle, which
-  // cannot change a queue. Same shape as `serviceSummaryProvider`: watch the
-  // narrow keys, read the model for the work.
+  // Every configured connection of the seven sources, each watched on its own
+  // narrow key rather than the whole model. A bare
+  // `ref.watch(currentSettingsProvider)` re-ran every queue fetch on every
+  // settings write — including a theme-mode toggle, which cannot change a
+  // queue.
   //
-  // A record rather than a list, and that is the load-bearing part: `select`
-  // compares with `==`, and a `List` has identity equality, so a list would
-  // report a change on every rebuild and quietly preserve the bug it was meant
-  // to fix. Records compare structurally, nested records included.
-  final connections = {
-    for (final service in const [
-      ServiceKey.radarr,
-      ServiceKey.sonarr,
-      ServiceKey.lidarr,
-      ServiceKey.readarr,
-      ServiceKey.qbittorrent,
-      ServiceKey.sabnzbd,
-      ServiceKey.nzbget,
-    ])
-      service: _watchConnection(ref, service),
-  };
-
+  // Every connection rather than the lens: Home counts the whole household,
+  // the way its header does. A stall on the second Radarr, or a blocked
+  // import on it, is the user's as much as one on the first, and reading the
+  // lens alone left it off Home with nothing saying so.
   Future<ServicesQueue> from(
-    ServiceKey service,
+    _MergeConnection source,
     Future<_QueueRead> Function() load,
   ) async {
-    // The connection the loaders below actually read, not the service. Gated on
-    // `isServiceConfigured` — true as soon as *any* instance is set up — this
-    // asked the second Radarr for its queue on the first one's account, and the
-    // failure went into the `catch` as an empty list.
-    if (!(connections[service]?.configured ?? false)) {
-      return (items: const <ServiceQueueItem>[], coverage: SourceCoverage.none);
-    }
     try {
       final read = await load();
       return (
         items: read.items,
         // A walk that stopped short answered, with part of its queue: the
         // count over it is a floor.
-        coverage: SourceCoverage.answeredBy(service, cutShort: read.cutShort),
+        coverage: SourceCoverage.answeredBy(
+          source.service,
+          cutShort: read.cutShort,
+          instanceId: source.instanceId,
+          name: source.name,
+        ),
       );
     } catch (error) {
+      // One connection that fails takes its own rows out and nobody else's.
       return (
         items: const <ServiceQueueItem>[],
-        coverage: SourceCoverage.failure(service, error),
+        coverage: SourceCoverage.failure(
+          source.service,
+          error,
+          instanceId: source.instanceId,
+          name: source.name,
+        ),
       );
     }
   }
@@ -1243,16 +1298,20 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
       ServiceKey.lidarr,
       ServiceKey.readarr,
     ])
-      from(service, () => _loadServiceQueueItems(ref, service)),
+      for (final source in _watchMergeConnections(ref, service))
+        from(source, () => _loadServiceQueueItems(ref, source)),
   ];
   // The clients answer with their whole queue in one read, so there is no
   // walk to stop short.
   Future<_QueueRead> whole(Future<List<ServiceQueueItem>> items) async =>
       (items: await items, cutShort: false);
   final clientQueues = [
-    from(ServiceKey.qbittorrent, () => whole(_loadQbittorrentQueueItems(ref))),
-    from(ServiceKey.sabnzbd, () => whole(_loadSabnzbdQueueItems(ref))),
-    from(ServiceKey.nzbget, () => whole(_loadNzbgetQueueItems(ref))),
+    for (final source in _watchMergeConnections(ref, ServiceKey.qbittorrent))
+      from(source, () => whole(_loadQbittorrentQueueItems(ref, source))),
+    for (final source in _watchMergeConnections(ref, ServiceKey.sabnzbd))
+      from(source, () => whole(_loadSabnzbdQueueItems(ref, source))),
+    for (final source in _watchMergeConnections(ref, ServiceKey.nzbget))
+      from(source, () => whole(_loadNzbgetQueueItems(ref, source))),
   ];
   final results = await Future.wait([...arrQueues, ...clientQueues]);
 
@@ -1343,11 +1402,16 @@ final servicesInFlightProvider = FutureProvider<ServicesInFlight>((ref) async {
   // [ServiceQueueItem.clientRateBytesPerSecond]. Keyed on the client rather
   // than on the row's service, because an \*arr row that absorbed a torrent
   // carries that torrent's client rate.
-  final rates = <ServiceKey, int>{};
+  // Keyed on the client's connection too: two qBittorrent are two clients,
+  // and keyed on the service alone the second one's rate replaced the
+  // first's.
+  final rates = <(ServiceKey, String), int>{};
   for (final item in items) {
     final rate = item.clientRateBytesPerSecond;
     final client = item.clientService;
-    if (rate != null && client != null) rates[client] = rate;
+    if (rate != null && client != null) {
+      rates[(client, item.clientInstanceId)] = rate;
+    }
   }
 
   return (
@@ -1437,6 +1501,8 @@ ServiceQueueItem _joinedQueueItem(
     downloadId: arr.downloadId,
     clientService: client.clientService,
     instanceId: arr.instanceId,
+    connectionName: arr.connectionName,
+    clientInstanceId: client.clientInstanceId,
     mediaId: arr.mediaId,
     outputPath: arr.outputPath,
   );
@@ -1447,8 +1513,17 @@ ServiceQueueItem _joinedQueueItem(
 /// Filters to transfers that are genuinely moving or waiting to: a seeding
 /// library of four hundred torrents is not "in flight", and unfiltered it would
 /// crowd out every other source.
-Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(Ref ref) async {
-  final torrents = await ref.watch(allTorrentsProvider.future);
+Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(
+  Ref ref,
+  _MergeConnection source,
+) async {
+  // The lens's own list is the one the qBittorrent page already holds; any
+  // other connection is asked through its own long-lived client.
+  final torrents = source.isLens
+      ? await ref.watch(allTorrentsProvider.future)
+      : await ref
+            .watch(qbittorrentServiceForProvider(source.instanceId))
+            .getTorrents();
   final moving = torrents
       .where(
         (torrent) => switch (torrent.parsedState) {
@@ -1490,8 +1565,15 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(Ref ref) async {
               : (torrent.size * torrent.progress).round(),
           totalBytes: torrent.size > 0 ? torrent.size : null,
           etaSeconds: _qbEta(torrent.eta),
-          clientLabel: ServiceKey.qbittorrent.title,
+          // Named when there are two, so a stall says which qBittorrent.
+          clientLabel: serviceWithConnection(
+            ServiceKey.qbittorrent,
+            source.name,
+            joiner: ' ',
+          ),
           clientService: ServiceKey.qbittorrent,
+          instanceId: source.instanceId,
+          clientInstanceId: source.instanceId,
           clientRateBytesPerSecond: clientRate,
           // A stalled transfer is the one qBittorrent state worth surfacing on a
           // hub: it looks identical to a slow download until you notice it has
@@ -1523,8 +1605,15 @@ int? _qbEta(int eta) => eta <= 0 || eta >= _qbNoEta ? null : eta;
 DateTime? _epochSeconds(int seconds) =>
     seconds <= 0 ? null : DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
 
-Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(Ref ref) async {
-  final queue = await ref.watch(sabnzbdQueueProvider.future);
+Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(
+  Ref ref,
+  _MergeConnection source,
+) async {
+  final queue = source.isLens
+      ? await ref.watch(sabnzbdQueueProvider.future)
+      : await ref
+            .watch(sabnzbdClientForProvider(source.instanceId))
+            .getQueue(limit: SabnzbdClient.wholeQueue);
   final rate = (queue.kbPerSec * 1024).round();
 
   return queue.slots
@@ -1542,8 +1631,14 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(Ref ref) async {
           doneBytes: null,
           totalBytes: null,
           etaSeconds: parseClockDuration(slot.timeLeft),
-          clientLabel: ServiceKey.sabnzbd.title,
+          clientLabel: serviceWithConnection(
+            ServiceKey.sabnzbd,
+            source.name,
+            joiner: ' ',
+          ),
           clientService: ServiceKey.sabnzbd,
+          instanceId: source.instanceId,
+          clientInstanceId: source.instanceId,
           clientRateBytesPerSecond: rate,
           // A paused queue is stopped *on purpose*, which the tone rule files
           // under neutral — not a fault, and not a decision.
@@ -1554,8 +1649,15 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(Ref ref) async {
       .toList(growable: false);
 }
 
-Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(Ref ref) async {
-  final groups = await ref.watch(nzbgetQueueProvider.future);
+Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
+  Ref ref,
+  _MergeConnection source,
+) async {
+  final groups = source.isLens
+      ? await ref.watch(nzbgetQueueProvider.future)
+      : await ref
+            .watch(nzbgetClientForProvider(source.instanceId))
+            .listGroups();
   const megabyte = 1024 * 1024;
 
   return groups
@@ -1581,8 +1683,14 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(Ref ref) async {
           // NZBGet reports a rate for the whole client and none per group, so
           // there is nothing to divide into an estimate. `—`, not a guess.
           etaSeconds: null,
-          clientLabel: ServiceKey.nzbget.title,
+          clientLabel: serviceWithConnection(
+            ServiceKey.nzbget,
+            source.name,
+            joiner: ' ',
+          ),
           clientService: ServiceKey.nzbget,
+          instanceId: source.instanceId,
+          clientInstanceId: source.instanceId,
           route: ServiceRoutes.forService(ServiceKey.nzbget),
         ),
       )
@@ -1640,18 +1748,24 @@ Future<ArrQueueSnapshot> _loadArrQueueSnapshot(
 /// behind a proxy that drops `totalRecords`. The rows are grouped into
 /// downloads before they are counted, so the server's record total is never a
 /// figure here; a short walk only makes the count a floor.
-Future<_QueueRead> _loadServiceQueueItems(Ref ref, ServiceKey service) async {
-  // The connection these records come off — the lens, which is what the
-  // service providers below resolve to. Stamped on each row so a remedy that
-  // opens a flow bound to one connection (the import wizard) opens it on this
-  // one, even if the lens has moved by the time the user taps.
-  final instanceId = ref.watch(activeInstanceProvider(service))?.id ?? '';
-  final page = switch (service) {
-    ServiceKey.radarr => await ref.watch(radarrServiceProvider).getQueuePage(),
-    ServiceKey.sonarr => await ref.watch(sonarrServiceProvider).getQueuePage(),
-    ServiceKey.lidarr => await ref.watch(lidarrServiceProvider).getQueuePage(),
+Future<_QueueRead> _loadServiceQueueItems(
+  Ref ref,
+  _MergeConnection source,
+) async {
+  // The connection these records come off, stamped on each row so a remedy
+  // that opens a flow bound to one connection (the import wizard) opens it on
+  // this one, and the row's route opens this server's film, whatever the lens
+  // is on by the time the user taps.
+  final id = source.instanceId;
+  final page = switch (source.service) {
+    ServiceKey.radarr =>
+      await ref.watch(radarrServiceForProvider(id)).getQueuePage(),
+    ServiceKey.sonarr =>
+      await ref.watch(sonarrServiceForProvider(id)).getQueuePage(),
+    ServiceKey.lidarr =>
+      await ref.watch(lidarrServiceForProvider(id)).getQueuePage(),
     ServiceKey.readarr =>
-      await ref.watch(readarrServiceProvider).getQueuePage(),
+      await ref.watch(readarrServiceForProvider(id)).getQueuePage(),
     // The download clients are not `/queue` shaped and have their own loaders;
     // the rest have no queue at all.
     ServiceKey.seerr ||
@@ -1677,7 +1791,12 @@ Future<_QueueRead> _loadServiceQueueItems(Ref ref, ServiceKey service) async {
   return (
     items: [
       for (final download in _groupQueueRecordsByDownload(records))
-        _queueItemFromRecords(service, download, instanceId: instanceId),
+        _queueItemFromRecords(
+          source.service,
+          download,
+          instanceId: id,
+          connectionName: source.name,
+        ),
     ],
     cutShort: page.cutShort,
   );
@@ -1727,6 +1846,7 @@ ServiceQueueItem _queueItemFromRecords(
   ServiceKey service,
   List<Map<String, dynamic>> records, {
   required String instanceId,
+  String? connectionName,
 }) {
   // One download, so its figures are the first record's: every record of a
   // pack reports the pack's size, and summing them would multiply it.
@@ -1789,21 +1909,33 @@ ServiceQueueItem _queueItemFromRecords(
     detail: warning,
     downloadId: stringOrNull(typedItem['downloadId']),
     instanceId: instanceId,
+    connectionName: connectionName,
     mediaId: mediaId,
     outputPath: stringOrNull(typedItem['outputPath']),
+    // With the connection: a queue record's ids are its server's, and the
+    // same film id names a different film on the other Radarr.
     route: switch (service) {
       ServiceKey.radarr =>
         intOrNull(typedItem['movieId']) == null
             ? null
-            : ServiceRoutes.radarrMovie(intOrNull(typedItem['movieId'])!),
+            : ServiceRoutes.radarrMovie(
+                intOrNull(typedItem['movieId'])!,
+                instanceId: instanceId,
+              ),
       ServiceKey.sonarr =>
         intOrNull(typedItem['seriesId']) == null
             ? null
-            : ServiceRoutes.sonarrSeries(intOrNull(typedItem['seriesId'])!),
+            : ServiceRoutes.sonarrSeries(
+                intOrNull(typedItem['seriesId'])!,
+                instanceId: instanceId,
+              ),
       ServiceKey.lidarr =>
         intOrNull(typedItem['artistId']) == null
             ? null
-            : ServiceRoutes.lidarrArtist(intOrNull(typedItem['artistId'])!),
+            : ServiceRoutes.lidarrArtist(
+                intOrNull(typedItem['artistId'])!,
+                instanceId: instanceId,
+              ),
       _ => ServiceRoutes.forService(service),
     },
   );
@@ -1902,11 +2034,9 @@ final dashboardDecisionSourceProvider =
     ) async {
       switch (source) {
         case DecisionSource.requests:
-          return _decisionsFrom(
-            ref,
-            ServiceKey.seerr,
-            () => _pendingRequestDecisions(ref),
-          );
+          // Every Seerr, each answering for itself: a request waiting on the
+          // second one is waiting on the user as much as one on the first.
+          return _pendingRequestDecisions(ref);
         case DecisionSource.indexers:
           return _decisionsFrom(
             ref,
@@ -2012,31 +2142,95 @@ final dashboardDecisionsProvider = Provider<DashboardDecisions>((ref) {
   );
 });
 
-Future<List<DashboardDecision>> _pendingRequestDecisions(Ref ref) async {
-  final requests = await ref.watch(servicesRequestsProvider.future);
-  return [
-    for (final request in requests)
-      // `isAwaitingApproval` keys off the request's own status, never
-      // `displayStatus` — a request for media that already exists reports
-      // "Available" while nobody has approved it. See `request_ordering.dart`.
-      if (isAwaitingApproval(request))
-        DashboardDecision(
-          kind: DecisionKind.pendingRequest,
-          id: 'seerr-${request.id}',
-          service: ServiceKey.seerr,
-          title: request.media?.title ?? 'Unknown media',
-          detail: joinDisplayParts([
-            'Request',
-            request.requestedBy?.displayName,
-            request.type == 'tv' ? 'Series' : 'Movie',
-          ]),
-          occurredAt: parseAddedTimestamp(request.createdAt),
-          actionId: request.id,
-          posterUrl: ImageUtils.buildTmdbPosterUrl(request.media?.posterPath),
-          route: _seerrRequestRoute(request),
+/// The requests waiting on a person, from every configured Seerr.
+///
+/// Each connection is its own source: one that does not answer is named under
+/// the region and takes nobody else's requests with it. A request carries the
+/// connection it came off, because a Seerr request id is per server and the
+/// row's Approve has to reach the Seerr that holds it.
+Future<DashboardDecisions> _pendingRequestDecisions(Ref ref) async {
+  Future<DashboardDecisions> from(_MergeConnection source) async {
+    try {
+      final requests = await ref.watch(
+        requestsForProvider(source.instanceId).future,
+      );
+      return (
+        decisions: [
+          for (final request in requests)
+            // `isAwaitingApproval` keys off the request's own status, never
+            // `displayStatus` — a request for media that already exists
+            // reports "Available" while nobody has approved it. See
+            // `request_ordering.dart`.
+            if (isAwaitingApproval(request))
+              DashboardDecision(
+                kind: DecisionKind.pendingRequest,
+                id: 'seerr-${source.instanceId}-${request.id}',
+                service: ServiceKey.seerr,
+                title: request.media?.title ?? 'Unknown media',
+                detail: joinDisplayParts([
+                  'Request',
+                  if (source.name != null)
+                    serviceWithConnection(
+                      ServiceKey.seerr,
+                      source.name,
+                      joiner: ' ',
+                    ),
+                  request.requestedBy?.displayName,
+                  request.type == 'tv' ? 'Series' : 'Movie',
+                ]),
+                occurredAt: parseAddedTimestamp(request.createdAt),
+                actionId: request.id,
+                instanceId: source.instanceId,
+                connectionName: source.name,
+                posterUrl: ImageUtils.buildTmdbPosterUrl(
+                  request.media?.posterPath,
+                ),
+                // Discover resolves through the lens end to end, so a request
+                // off another Seerr opens that Seerr's own requests list,
+                // which honours `?i=`, rather than a media page asking the
+                // lens.
+                route: source.isLens
+                    ? _seerrRequestRoute(request)
+                    : _seerrRequestsListRoute(source.instanceId),
+              ),
+        ],
+        coverage: SourceCoverage.answeredBy(
+          ServiceKey.seerr,
+          instanceId: source.instanceId,
+          name: source.name,
         ),
-  ];
+      );
+    } catch (error) {
+      return (
+        decisions: const <DashboardDecision>[],
+        coverage: SourceCoverage.failure(
+          ServiceKey.seerr,
+          error,
+          instanceId: source.instanceId,
+          name: source.name,
+        ),
+      );
+    }
+  }
+
+  final results = await Future.wait([
+    for (final source in _watchMergeConnections(ref, ServiceKey.seerr))
+      from(source),
+  ]);
+  return (
+    decisions: results
+        .expand((result) => result.decisions)
+        .toList(growable: false),
+    coverage: SourceCoverage.merge(results.map((result) => result.coverage)),
+  );
 }
+
+/// The requests list of one Seerr connection, the one destination that
+/// honours a connection in its link.
+String _seerrRequestsListRoute(String instanceId) => Uri(
+  path: '/activity/discover',
+  queryParameters: {'i': instanceId},
+).toString();
 
 String _seerrRequestRoute(SeerrRequest request) {
   final media = request.media;
@@ -2154,28 +2348,32 @@ DashboardDecision _queueFaultDecision(ServiceQueueItem item) {
   if (item.fault == InFlightFault.needsImport) {
     return DashboardDecision(
       kind: DecisionKind.importBlocked,
-      id: 'import-blocked-${item.service.routeParam}-${item.id}',
+      // With the connection: two Radarr both number their queues from one.
+      id: 'import-blocked-${item.service.routeParam}-${item.instanceId}-${item.id}',
       service: item.service,
       title: item.title,
       // The shape `_failedImportDecision` prints, so the two import faults read
       // alike. No client: the bytes are on disk, and the client is not where
-      // this is fixed.
+      // this is fixed. The connection is named when there are two.
       detail: joinDisplayParts([
         'Import blocked',
-        item.service.title,
+        serviceWithConnection(item.service, item.connectionName, joiner: ' '),
         item.warning,
       ]),
       occurredAt: item.stalledSince,
       route: item.route,
       actionId: item.mediaId,
       instanceId: item.instanceId,
+      connectionName: item.connectionName,
+      actionInstanceId: item.instanceId,
       importPath: item.outputPath,
     );
   }
 
+  final isClientRow = item.clientService == item.service;
   return DashboardDecision(
     kind: DecisionKind.stalledDownload,
-    id: 'stall-${item.service.routeParam}-${item.id}',
+    id: 'stall-${item.service.routeParam}-${item.instanceId}-${item.id}',
     service: item.service,
     title: item.title,
     detail: joinDisplayParts([
@@ -2187,10 +2385,18 @@ DashboardDecision _queueFaultDecision(ServiceQueueItem item) {
             null => StateWord.stuck.label,
           },
       item.detail == item.warning ? null : item.detail,
+      // Which arr asked for it, once there are two to tell apart. A client's
+      // own row is already named by its client label.
+      if (!isClientRow && item.connectionName != null)
+        serviceWithConnection(item.service, item.connectionName, joiner: ' '),
       item.clientLabel,
     ]),
     occurredAt: item.stalledSince,
     route: item.route,
+    instanceId: item.instanceId,
+    connectionName: item.connectionName,
+    // The client the control opens, on the connection moving the bytes.
+    actionInstanceId: item.clientInstanceId,
     // The decision acts on the client, which may not be a service this user has
     // set up at all — an \*arr can name a download client Cupola has no
     // connection to. The control stays drawn and tappable either way; see the
@@ -2221,12 +2427,13 @@ ServiceKey? _clientServiceFor(ServiceQueueItem item) {
 DashboardDecision _failedImportDecision(ArrHistoryEntry entry) =>
     DashboardDecision(
       kind: DecisionKind.failedImport,
-      id: 'import-${entry.service.routeParam}-${entry.id}',
+      // With the connection: each arr numbers its history from one.
+      id: 'import-${entry.service.routeParam}-${entry.instanceId}-${entry.id}',
       service: entry.service,
       title: entry.title,
       detail: joinDisplayParts([
         'Import failed',
-        entry.service.title,
+        serviceWithConnection(entry.service, entry.connectionName, joiner: ' '),
         entry.reason,
       ]),
       occurredAt: entry.at,
@@ -2236,13 +2443,24 @@ DashboardDecision _failedImportDecision(ArrHistoryEntry entry) =>
       // The connection the record came off: the wizard files into that
       // server's library, under that server's id for the film.
       instanceId: entry.instanceId,
+      connectionName: entry.connectionName,
+      actionInstanceId: entry.instanceId,
       posterUrl: entry.posterUrl,
       route: entry.mediaId <= 0
           ? ServiceRoutes.forService(entry.service)
           : switch (entry.service) {
-              ServiceKey.radarr => ServiceRoutes.radarrMovie(entry.mediaId),
-              ServiceKey.sonarr => ServiceRoutes.sonarrSeries(entry.mediaId),
-              ServiceKey.lidarr => ServiceRoutes.lidarrArtist(entry.mediaId),
+              ServiceKey.radarr => ServiceRoutes.radarrMovie(
+                entry.mediaId,
+                instanceId: entry.instanceId,
+              ),
+              ServiceKey.sonarr => ServiceRoutes.sonarrSeries(
+                entry.mediaId,
+                instanceId: entry.instanceId,
+              ),
+              ServiceKey.lidarr => ServiceRoutes.lidarrArtist(
+                entry.mediaId,
+                instanceId: entry.instanceId,
+              ),
               _ => ServiceRoutes.forService(entry.service),
             },
     );

@@ -144,7 +144,7 @@ void main() {
     // The refusal is said in its own words; red because the rest are silent.
     expect(
       band.message,
-      'Seerr, Radarr and 5 others did not answer. qBittorrent answered but '
+      'Seerr, Radarr 1 and 6 others did not answer. qBittorrent answered but '
       'refused the sign-in.',
     );
     expect(band.tone, StatusTone.error);
@@ -221,7 +221,9 @@ void main() {
       ),
       findsOne,
     );
-    expect(find.text('Elephants.Dream.2006.2160p.UHD.BluRay'), findsNothing);
+    // SABnzbd's rate is missing from the sum: its rows are joined to the 4K
+    // Radarr's, and the rate is the part only SABnzbd can say.
+    expect(find.textContaining('across 2 clients'), findsNothing);
 
     down = false;
     await tester.tap(
@@ -236,7 +238,6 @@ void main() {
     // band, the note under In flight, and SABnzbd's own rows.
     expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
     expect(find.textContaining('Not in the total'), findsNothing);
-    expect(find.text('Elephants.Dream.2006.2160p.UHD.BluRay'), findsOne);
     expect(find.text('5 downloading · 40 MB/s across 2 clients'), findsOne);
 
     await harness.unmount(tester);

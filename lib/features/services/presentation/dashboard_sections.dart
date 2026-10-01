@@ -58,6 +58,7 @@ import 'package:cupola/features/services/presentation/dashboard_retry.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 /// Region 3 — everything waiting on a human, from every source, in one list.
 ///
@@ -129,7 +130,8 @@ class DashboardDecisionsSection extends ConsumerWidget {
             header(),
             _SourcesFaultLine(
               coverage: coverage,
-              onRetry: () => retryDashboardServices(ref, coverage.failed.keys),
+              onRetry: () =>
+                  retryDashboardServices(ref, coverage.failedServices),
             ),
             const SizedBox(height: AppSpacing.lg),
           ],
@@ -265,7 +267,7 @@ class ServicesInFlightSection extends ConsumerWidget {
               return _SourcesFaultLine(
                 coverage: value.coverage,
                 onRetry: () =>
-                    retryDashboardServices(ref, value.coverage.failed.keys),
+                    retryDashboardServices(ref, value.coverage.failedServices),
               );
             }
             if (value.preview.isEmpty) {
@@ -287,7 +289,11 @@ class ServicesInFlightSection extends ConsumerWidget {
                 children: [
                   for (final item in value.preview)
                     _InFlightRow(
-                      key: ValueKey('${item.service}-${item.id}'),
+                      // With the connection: two Radarr both number their
+                      // queues from one.
+                      key: ValueKey(
+                        '${item.service}-${item.instanceId}-${item.id}',
+                      ),
                       item: item,
                     ),
                 ],
@@ -392,7 +398,7 @@ class ServicesRecentlyAddedSection extends ConsumerWidget {
               return _SourcesFaultLine(
                 coverage: data.coverage,
                 onRetry: () =>
-                    retryDashboardServices(ref, data.coverage.failed.keys),
+                    retryDashboardServices(ref, data.coverage.failedServices),
               );
             }
             if (data.items.isEmpty) {
@@ -406,9 +412,13 @@ class ServicesRecentlyAddedSection extends ConsumerWidget {
             // carry the title, the time and the service without truncating any
             // of the three. The reduction rule is Reflow's — fewer items, never
             // smaller ones — and a row is not a smaller tile.
+            // The eyebrow counted every row; the rail draws the newest few.
+            final shown = data.items
+                .take(servicesRecentlyAddedLimit)
+                .toList(growable: false);
             return AppBreakpoints.isDesktopShell(context)
-                ? _RecentlyAddedRows(items: data.items)
-                : _RecentlyAddedRail(items: data.items);
+                ? _RecentlyAddedRows(items: shown)
+                : _RecentlyAddedRail(items: shown);
           },
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -562,13 +572,40 @@ class _RecentTile extends StatelessWidget {
                         ],
                       ),
                     ),
-                    child: Text(
-                      item.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall
-                          ?.weight(FontWeight.w600)
-                          .copyWith(color: Colors.white),
+                    // The connection under the title once the service has
+                    // two: the HD and the 4K copy of one movie are otherwise
+                    // two identical tiles. The title gives up its second
+                    // line for it, so the scrim keeps its height and a tile
+                    // without one draws exactly as before.
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.title,
+                          maxLines: item.connectionName == null ? 2 : 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall
+                              ?.weight(FontWeight.w600)
+                              .copyWith(color: Colors.white),
+                        ),
+                        if (item.connectionName != null)
+                          Text(
+                            // The form the desktop row and the Home rows
+                            // use, `Radarr 4K`, so one rail never mixes a
+                            // bare label with a service and a place.
+                            serviceWithConnection(
+                              item.service,
+                              item.connectionName,
+                              joiner: ' ',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -650,7 +687,13 @@ class _RecentlyAddedRows extends StatelessWidget {
               icon: item.service.icon,
               title: item.title,
               subtitle: joinDisplayParts([
-                item.failed ? 'failed import' : item.service.title,
+                item.failed
+                    ? 'failed import'
+                    : serviceWithConnection(
+                        item.service,
+                        item.connectionName,
+                        joiner: ' ',
+                      ),
                 item.subtitle,
                 formatImportedAt(item.addedAt),
               ]),
@@ -677,18 +720,22 @@ void _openRecentlyAdded(BuildContext context, RecentlyAddedItem item) {
     context.go(ServiceRoutes.forService(item.service));
     return;
   }
+  // With the connection the record came off: its id is that server's.
   final route = switch (item.service) {
     ServiceKey.radarr => ServiceRoutes.radarrMovie(
       item.id,
       heroTag: item.heroTag,
+      instanceId: item.instanceId,
     ),
     ServiceKey.sonarr => ServiceRoutes.sonarrSeries(
       item.id,
       heroTag: item.heroTag,
+      instanceId: item.instanceId,
     ),
     ServiceKey.lidarr => ServiceRoutes.lidarrArtist(
       item.id,
       heroTag: item.heroTag,
+      instanceId: item.instanceId,
     ),
     // Unreachable: the provider only emits these three. Falling back to the
     // service hub rather than throwing keeps a future fourth source from
@@ -820,11 +867,9 @@ class _DecisionControls extends ConsumerWidget {
                 : () => ActivityActions.approveRequest(
                     context,
                     ref,
-                    // The lens, and correctly: the decisions provider reads
-                    // `servicesRequestsProvider`, which is the lens's Seerr. The
-                    // aggregated list is /activity's, and its rows carry their
-                    // own.
-                    instanceId: '',
+                    // The Seerr the request came off: the region reads every
+                    // one, and a request id is per server.
+                    instanceId: decision.instanceId,
                     requestId: id,
                     title: decision.title,
                   ),
@@ -836,7 +881,7 @@ class _DecisionControls extends ConsumerWidget {
                 : () => ActivityActions.declineRequest(
                     context,
                     ref,
-                    instanceId: '',
+                    instanceId: decision.instanceId,
                     requestId: id,
                     title: decision.title,
                   ),
@@ -894,7 +939,20 @@ Future<void> _runDecision(
     case DecisionKind.pendingRequest:
       return;
     case DecisionKind.stalledDownload:
-      context.go(ServiceRoutes.forService(decision.actionTarget));
+      // A service's page reads its lens, so the client this transfer is on
+      // is brought under the lens first: with two qBittorrent, "Open in
+      // qBittorrent" on the seedbox's stall opened the one at home.
+      final target = decision.actionTarget;
+      final connection = decision.actionInstanceId;
+      if (connection.isNotEmpty &&
+          connection != ref.read(activeInstanceProvider(target))?.id &&
+          ref.read(currentSettingsProvider).instanceById(connection) != null) {
+        await ref
+            .read(activeInstancesProvider.notifier)
+            .select(target, connection);
+      }
+      if (!context.mounted) return;
+      context.go(ServiceRoutes.forService(target));
     case DecisionKind.importBlocked:
       // Where the wizard does not exist, the control said "Open in …" and
       // goes there. Otherwise: the wizard, bound to the connection the record
@@ -1106,6 +1164,15 @@ class _InFlightRow extends StatelessWidget {
       surface: colorScheme.surfaceContainer,
     );
     final line = formatInFlightLine(
+      // A client's own row is named by its client label already.
+      connection:
+          item.connectionName == null || item.clientService == item.service
+          ? null
+          : serviceWithConnection(
+              item.service,
+              item.connectionName,
+              joiner: ' ',
+            ),
       quality: item.quality,
       doneBytes: item.doneBytes,
       totalBytes: item.totalBytes,

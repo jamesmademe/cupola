@@ -20,11 +20,36 @@ void main() {
         SourceCoverage.pendingOf([ServiceKey.sonarr, ServiceKey.dockge]),
       ]);
 
-      expect(merged.answered, {ServiceKey.radarr});
+      expect(merged.answered, {const CoverageSource(ServiceKey.radarr)});
       expect(merged.failed, {
-        ServiceKey.lidarr: ServiceFailureReason.unreachable,
+        const CoverageSource(ServiceKey.lidarr):
+            ServiceFailureReason.unreachable,
       });
-      expect(merged.pending, {ServiceKey.sonarr, ServiceKey.dockge});
+      expect(merged.pending, {
+        const CoverageSource(ServiceKey.sonarr),
+        const CoverageSource(ServiceKey.dockge),
+      });
+    });
+
+    test('two connections of one service each keep their own answer', () {
+      // The 4K Radarr did not answer. The HD one did, and its share of the
+      // figure stands: keyed on the service alone, the 4K's silence took the
+      // HD's answer out with it and a Radarr-only region read a dash.
+      final merged = SourceCoverage.merge([
+        SourceCoverage.answeredBy(ServiceKey.radarr, instanceId: 'radarr'),
+        SourceCoverage.failure(
+          ServiceKey.radarr,
+          silent,
+          instanceId: 'radarr-4k',
+          name: '4K',
+        ),
+      ]);
+
+      expect(merged.everySourceFailed, isFalse);
+      expect(merged.isPartial, isTrue);
+      expect(coveredFigure(3, merged), '3');
+      expect(coverageNote(merged), 'Not in the total: Radarr 4K');
+      expect(merged.failedServices, {ServiceKey.radarr});
     });
 
     test('nothing configured is whole, and is not a failure', () {

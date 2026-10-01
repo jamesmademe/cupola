@@ -501,8 +501,10 @@ void main() {
       expect(items.single.title, 'Shogun');
       // And the failure is kept, not swallowed into an empty Radarr queue: the
       // count above the rows can only be a count of what answered.
-      expect(queue.coverage.answered, {ServiceKey.sonarr});
-      expect(queue.coverage.failed.keys, [ServiceKey.radarr]);
+      expect(queue.coverage.answered.map((source) => source.service), [
+        ServiceKey.sonarr,
+      ]);
+      expect(queue.coverage.failedServices, {ServiceKey.radarr});
       expect(queue.coverage.isPartial, isTrue);
     });
   });

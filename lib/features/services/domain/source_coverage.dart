@@ -30,45 +30,112 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
-/// The answer of each source a merge read, by service.
+/// One source a merge reads: a service, and which of its connections.
+///
+/// A merge reads every connection of a service, and two Radarr are two
+/// sources: one can answer while the other does not, and the figure is then
+/// the one that answered, with the other named under it. Keyed on the service
+/// alone, the second Radarr's silence took the first one's answer out of the
+/// total too, and a region fed by Radarr only read `—` over a Radarr that had
+/// answered.
+///
+/// Equal by service and connection. [name] is how a sentence calls it and is
+/// not part of its identity.
+@immutable
+class CoverageSource {
+  const CoverageSource(this.service, {this.instanceId = '', this.name});
+
+  final ServiceKey service;
+
+  /// The connection read, or empty for a read of the service as a whole: a
+  /// source with one connection, or one that has not been resolved to one.
+  final String instanceId;
+
+  /// What tells this connection apart from the service's others, by the
+  /// app's one rule (`SettingsModel.connectionName`), or null when the
+  /// service has only the one.
+  final String? name;
+
+  /// How a sentence names it: `Radarr`, `Radarr 4K`, `Radarr 2`. Joined with
+  /// a space rather than ` · `, because it is listed with commas inside lines
+  /// that already use ` · ` between their clauses.
+  String get title => serviceWithConnection(service, name, joiner: ' ');
+
+  @override
+  bool operator ==(Object other) =>
+      other is CoverageSource &&
+      other.service == service &&
+      other.instanceId == instanceId;
+
+  @override
+  int get hashCode => Object.hash(service, instanceId);
+
+  @override
+  String toString() =>
+      'CoverageSource(${service.name}${instanceId.isEmpty ? '' : '/$instanceId'})';
+}
+
+/// The answer of each source a merge read, by connection.
 @immutable
 class SourceCoverage {
   const SourceCoverage({
-    this.answered = const <ServiceKey>{},
-    this.failed = const <ServiceKey, ServiceFailureReason>{},
-    this.pending = const <ServiceKey>{},
-    this.cutShort = const <ServiceKey>{},
+    this.answered = const <CoverageSource>{},
+    this.failed = const <CoverageSource, ServiceFailureReason>{},
+    this.pending = const <CoverageSource>{},
+    this.cutShort = const <CoverageSource>{},
   });
 
   /// No source at all: nothing configured feeds the merge.
   static const none = SourceCoverage();
 
   /// [service] answered the read — with only part of what it holds when
-  /// [cutShort], which takes the figure to a floor.
-  SourceCoverage.answeredBy(ServiceKey service, {bool cutShort = false})
-    : this(answered: {service}, cutShort: cutShort ? {service} : const {});
+  /// [cutShort], which takes the figure to a floor. [instanceId] and [name]
+  /// say which connection, for a service with more than one.
+  factory SourceCoverage.answeredBy(
+    ServiceKey service, {
+    bool cutShort = false,
+    String instanceId = '',
+    String? name,
+  }) {
+    final source = CoverageSource(service, instanceId: instanceId, name: name);
+    return SourceCoverage(
+      answered: {source},
+      cutShort: cutShort ? {source} : const {},
+    );
+  }
 
   /// [service]'s read failed with [error], classified once here so every
   /// surface that names it says the same words.
-  SourceCoverage.failure(ServiceKey service, Object? error)
-    : this(failed: {service: classifyConnectionFailure(error)});
+  SourceCoverage.failure(
+    ServiceKey service,
+    Object? error, {
+    String instanceId = '',
+    String? name,
+  }) : this(
+         failed: {
+           CoverageSource(service, instanceId: instanceId, name: name):
+               classifyConnectionFailure(error),
+         },
+       );
 
   /// [services] have been asked and have not said anything yet.
   SourceCoverage.pendingOf(Iterable<ServiceKey> services)
-    : this(pending: services.toSet());
+    : this(pending: {for (final service in services) CoverageSource(service)});
 
   /// The coverage of several reads taken together.
   ///
-  /// A service read more than once — Radarr's queue and Radarr's history — is
-  /// only answered when every one of its reads answered: one that failed takes
-  /// its share out of the total, and one still out has not finished saying.
-  /// Failed outranks pending, which outranks answered.
+  /// A connection read more than once — Radarr's queue and Radarr's history —
+  /// is only answered when every one of its reads answered: one that failed
+  /// takes its share out of the total, and one still out has not finished
+  /// saying. Failed outranks pending, which outranks answered. Two connections
+  /// of one service are two sources, and each keeps its own answer.
   factory SourceCoverage.merge(Iterable<SourceCoverage> parts) {
-    final failed = <ServiceKey, ServiceFailureReason>{};
-    final pending = <ServiceKey>{};
-    final answered = <ServiceKey>{};
-    final cutShort = <ServiceKey>{};
+    final failed = <CoverageSource, ServiceFailureReason>{};
+    final pending = <CoverageSource>{};
+    final answered = <CoverageSource>{};
+    final cutShort = <CoverageSource>{};
     for (final part in parts) {
       failed.addAll(part.failed);
       pending.addAll(part.pending);
@@ -88,13 +155,13 @@ class SourceCoverage {
     );
   }
 
-  final Set<ServiceKey> answered;
+  final Set<CoverageSource> answered;
 
   /// Sources that answered with only part of what they hold: a queue walk
   /// that stopped on a full page with no total to say whether another
   /// followed. Always a subset of [answered]. Their share of a figure is what
   /// arrived, so the figure is a floor ([isFloor]); nothing is missing to name.
-  final Set<ServiceKey> cutShort;
+  final Set<CoverageSource> cutShort;
 
   /// The figure counts at least this much and maybe more: `200+`, never
   /// `200`. Only for a source that answered short; a source that failed is
@@ -102,10 +169,16 @@ class SourceCoverage {
   bool get isFloor => cutShort.isNotEmpty && !everySourceFailed;
 
   /// Each source whose read failed, with why.
-  final Map<ServiceKey, ServiceFailureReason> failed;
+  final Map<CoverageSource, ServiceFailureReason> failed;
 
   /// Sources still being asked: neither a figure nor a failure yet.
-  final Set<ServiceKey> pending;
+  final Set<CoverageSource> pending;
+
+  /// The services with a source that failed, for a Retry that asks them
+  /// again.
+  Set<ServiceKey> get failedServices => {
+    for (final source in failed.keys) source.service,
+  };
 
   /// Every source answered, and with all of itself: the figure is the whole.
   bool get isWhole => failed.isEmpty && pending.isEmpty && cutShort.isEmpty;
@@ -121,11 +194,22 @@ class SourceCoverage {
   /// spent on. A line naming several takes red when one of them is silent.
   bool get anyDidNotAnswer => failed.values.any(failureDidNotAnswer);
 
-  /// The failed sources in registry order, so the same outage names its
-  /// services in the same order on every region.
-  List<ServiceKey> get failedInOrder =>
-      failed.keys.toList(growable: false)
-        ..sort((a, b) => a.index.compareTo(b.index));
+  /// The failed sources in registry order, and a service's connections in the
+  /// order they were read, so the same outage names its sources in the same
+  /// order on every region.
+  List<CoverageSource> get failedInOrder {
+    final keys = failed.keys.toList(growable: false);
+    final indexed = [
+      for (var i = 0; i < keys.length; i++) (index: i, source: keys[i]),
+    ];
+    indexed.sort((a, b) {
+      final byService = a.source.service.index.compareTo(
+        b.source.service.index,
+      );
+      return byService != 0 ? byService : a.index.compareTo(b.index);
+    });
+    return [for (final entry in indexed) entry.source];
+  }
 }
 
 /// [count] as a figure over [coverage]: the number, `—` when no source
@@ -173,14 +257,14 @@ String? coverageNote(SourceCoverage coverage) {
   if (!coverage.isPartial) return null;
   final groups = <String, List<String>>{};
   final silent = <String>[];
-  for (final service in coverage.failedInOrder) {
-    final reason = coverage.failed[service]!;
+  for (final source in coverage.failedInOrder) {
+    final reason = coverage.failed[source]!;
     if (failureDidNotAnswer(reason)) {
-      silent.add(service.title);
+      silent.add(source.title);
       continue;
     }
-    final label = describeFailure(service, reason).label;
-    (groups[label] ??= []).add(service.title);
+    final label = describeFailure(source.service, reason).label;
+    (groups[label] ??= []).add(source.title);
   }
   final named = <String>[];
   var hidden = 0;
@@ -208,12 +292,17 @@ const _namesPerKind = 2;
 String coverageFailureSentence(SourceCoverage coverage) {
   final silent = <String>[];
   final faults = <String>[];
-  for (final service in coverage.failedInOrder) {
-    final reason = coverage.failed[service]!;
+  for (final source in coverage.failedInOrder) {
+    final reason = coverage.failed[source]!;
     if (failureDidNotAnswer(reason)) {
-      silent.add(service.title);
+      silent.add(source.title);
     } else {
-      faults.add('${describeFailure(service, reason).headline}.');
+      final headline = describeFailure(
+        source.service,
+        reason,
+        subject: source.title,
+      ).headline;
+      faults.add('$headline.');
     }
   }
   return [

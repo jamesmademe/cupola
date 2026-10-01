@@ -148,8 +148,11 @@ String formatTimeLeft(int? seconds) {
 ///
 /// The client is last and always present — it is the answer to "where do I go to
 /// touch this", and it is the one part of the line a merged region cannot leave
-/// to a glyph.
+/// to a glyph. [connection] leads when the row's service has two connections
+/// to tell apart (`Radarr 4K · 2160p · …`): the glyph says Radarr, and only
+/// the words can say which.
 String formatInFlightLine({
+  String? connection,
   String? quality,
   int? doneBytes,
   int? totalBytes,
@@ -157,6 +160,7 @@ String formatInFlightLine({
   required String client,
 }) {
   final parts = <String>[
+    if (connection != null && connection.trim().isNotEmpty) connection.trim(),
     if (quality != null && quality.trim().isNotEmpty) quality.trim(),
     formatDoneOfTotal(doneBytes: doneBytes, totalBytes: totalBytes),
     formatTimeLeft(etaSeconds),

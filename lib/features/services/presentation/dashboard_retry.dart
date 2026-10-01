@@ -15,6 +15,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
@@ -38,7 +39,8 @@ List<ProviderOrFamily> dashboardSourcesOf(ServiceKey service) =>
       ServiceKey.qbittorrent => [allTorrentsProvider],
       ServiceKey.sabnzbd => [sabnzbdQueueProvider],
       ServiceKey.nzbget => [nzbgetQueueProvider],
-      ServiceKey.seerr => [servicesRequestsProvider],
+      // The lens's list, and every other Seerr's, which the region reads too.
+      ServiceKey.seerr => [servicesRequestsProvider, requestsForProvider],
       // The status list *is* the failing-indexer list; the indexers name them.
       ServiceKey.prowlarr => [
         prowlarrIndexerStatusProvider,

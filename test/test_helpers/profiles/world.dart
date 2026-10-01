@@ -35,6 +35,10 @@ abstract final class WorldHosts {
   /// with `ConfigProfile.withConnection` — two of a media server.
   static const jellyfinCabin = 'http://cabin.home.arpa:8096';
 
+  /// The cabin's Seerr, likewise in no profile: two Seerr, each with its own
+  /// requests.
+  static const seerrCabin = 'http://cabin.home.arpa:5055';
+
   // World B.
   static const readarr = 'http://tower.home.arpa:8787';
   static const nzbget = 'http://tower.home.arpa:6789';
@@ -62,6 +66,7 @@ abstract final class WorldIds {
   static const plex = 'plex';
   static const transmission = 'transmission';
   static const jellyfinCabin = 'jellyfin-cabin01';
+  static const seerrCabin = 'seerr-cabin001';
 }
 
 /// One film or series of the world, with the ids every service agrees on.

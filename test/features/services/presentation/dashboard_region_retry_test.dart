@@ -93,9 +93,10 @@ void main() {
       _within(ServicesInFlightSection, find.byType(FaultBand)),
       findsNothing,
     );
+    // Both clients' rates are back in the sum: SABnzbd's rows are joined to
+    // the 4K Radarr's, so its rate is the one thing only it can say.
     expect(find.text('5 downloading · 40 MB/s across 2 clients'), findsOne);
     expect(find.textContaining('Not in the total'), findsNothing);
-    expect(find.text('Elephants.Dream.2006.2160p.UHD.BluRay'), findsOne);
 
     await harness.unmount(tester);
   });
@@ -125,7 +126,7 @@ void main() {
     await tester.tap(_within(ServicesRecentlyAddedSection, find.text('Retry')));
     await harness.settle(tester);
 
-    expect(find.text('5 imported'), findsOne);
+    expect(find.text('7 imported'), findsOne);
     // The probe itself was asked, not the summary that awaits its old answer.
     expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
     expect(find.textContaining('did not answer'), findsNothing);

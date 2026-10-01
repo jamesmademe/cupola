@@ -82,8 +82,9 @@ classifiers turn it into a verdict.
 
 `WorldConnections` also holds connections no profile configures, for a
 test that adds one with `withConnection`: World B's Readarr, NZBGet, Unraid
-and NPM, and a second Jellyfin at the cabin (`jellyfinCabin`, labelled
-`Cabin`) beside the unnamed one at home.
+and NPM, and a second Jellyfin and a second Seerr at the cabin
+(`jellyfinCabin`, `seerrCabin`, both labelled `Cabin`) beside the unnamed
+ones at home.
 
 Names, hosts (`nas.home.arpa`) and titles come from the design brief's
 world (`world.dart`). Rows are built in Dart because they join across

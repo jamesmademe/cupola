@@ -37,6 +37,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 /// Where decisions come from — each one read on its own.
 ///
@@ -178,6 +179,8 @@ class DashboardDecision {
     this.actionId,
     this.count = 1,
     this.instanceId = '',
+    this.connectionName,
+    this.actionInstanceId = '',
     this.importPath,
   });
 
@@ -231,9 +234,18 @@ class DashboardDecision {
   /// [groupDecisions] folded identical faults into.
   final int count;
 
-  /// The connection the action is bound to, for an action that opens a flow
-  /// bound to one — the import wizard. Empty means "whatever the lens is on".
+  /// The connection the row was read from, and the one an action that opens
+  /// a flow bound to one — the import wizard, Approve — is bound to. Empty
+  /// means "whatever the lens is on".
   final String instanceId;
+
+  /// What tells [instanceId] apart from the service's other connections, by
+  /// the app's one rule, or null while the service has only the one.
+  final String? connectionName;
+
+  /// The connection of [actionTarget] the control opens: the arr's for an
+  /// import, the client's for a stall. Empty means "whatever the lens is on".
+  final String actionInstanceId;
 
   /// Where the download sits on disk, for a manual import to be seeded from.
   /// The queue record's `outputPath`, raw; the control derives the folder.
@@ -286,6 +298,7 @@ List<DashboardDecision> groupDecisions(List<DashboardDecision> decisions) {
             decision.service,
             decision.instanceId,
             decision.requiresService,
+            decision.actionInstanceId,
           )
         : decision;
     final bucket = buckets[key];
@@ -332,11 +345,12 @@ DashboardDecision _groupOf(List<DashboardDecision> members) {
       first.service.routeParam,
       first.instanceId,
       first.requiresService?.routeParam ?? '',
+      first.actionInstanceId,
     ].join('-'),
     service: first.service,
     title: _groupTitle(first.kind, count),
     detail: joinDisplayParts([
-      first.service.title,
+      serviceWithConnection(first.service, first.connectionName, joiner: ' '),
       _titlesSummary([for (final member in members) member.title]),
     ]),
     occurredAt: oldest,
@@ -347,6 +361,8 @@ DashboardDecision _groupOf(List<DashboardDecision> members) {
     actionId: shared((member) => member.actionId),
     count: count,
     instanceId: first.instanceId,
+    connectionName: first.connectionName,
+    actionInstanceId: first.actionInstanceId,
     importPath: shared((member) => member.importPath),
   );
 }

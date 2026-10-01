@@ -149,6 +149,16 @@ abstract final class WorldConnections {
     viewerId: JellyfinFake.operatorId,
   );
 
+  /// The cabin's Seerr, named by the user: in no profile, for a test that
+  /// adds it beside the unnamed one at home — two Seerr, each answering for
+  /// its own requests.
+  static final seerrCabin = _api(
+    WorldIds.seerrCabin,
+    ServiceKey.seerr,
+    WorldHosts.seerrCabin,
+    label: 'Cabin',
+  );
+
   // World B, on `tower`: in no profile, for a test that adds one with
   // `ConfigProfile.withConnection` — the NPM and Unraid read-only cases.
   static final readarr = _api(

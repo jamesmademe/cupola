@@ -9,6 +9,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/services/domain/arr_import.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -44,7 +45,7 @@ void main() {
 
     final history = await container.read(servicesArrHistoryProvider.future);
     final entry = history.entries.singleWhere(
-      (entry) => entry.title == 'Elephants Dream',
+      (entry) => entry.outcome == ArrImportOutcome.failed,
     );
     expect(entry.instanceId, WorldIds.radarr4k);
 

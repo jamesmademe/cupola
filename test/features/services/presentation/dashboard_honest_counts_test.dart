@@ -38,7 +38,8 @@ void main() {
     );
 
     expect(find.text('5 downloading · 40 MB/s across 2 clients'), findsOne);
-    expect(find.text('5 imported'), findsOne);
+    // Both Radarr: the HD's four imports and the 4K's two, and Sonarr's one.
+    expect(find.text('7 imported'), findsOne);
     expect(find.textContaining('Not in the total'), findsNothing);
     expect(find.byType(FaultNote), findsNothing);
 
@@ -55,15 +56,16 @@ void main() {
       surfaceSize: _tall,
     );
 
-    // Radarr and Sonarr answered; Lidarr and SABnzbd are home-only and the
-    // device is away; qBittorrent refused the sign-in. The count is theirs,
-    // and the line under it names the rest. Why each is missing is the alert
-    // band's sentence, so the note does not say it a second time.
-    expect(find.text('3 downloading'), findsOne);
+    // Both Radarr and Sonarr answered; Lidarr and SABnzbd are home-only and
+    // the device is away; qBittorrent refused the sign-in. The count is
+    // theirs, the 4K's two films included, and the line under it names the
+    // rest. Why each is missing is the alert band's sentence, so the note does
+    // not say it a second time.
+    expect(find.text('5 downloading'), findsOne);
     const inFlightNote = 'Not in the total: Lidarr, SABnzbd, qBittorrent';
     expect(find.text(inFlightNote), findsOne);
 
-    expect(find.text('5 imported'), findsOne);
+    expect(find.text('7 imported'), findsOne);
     expect(find.text('Not in the total: Lidarr'), findsOne);
 
     // Red is spent on the glyph and only because a source did not answer;
@@ -83,7 +85,7 @@ void main() {
     // The header speaks the figure and what qualifies it as one sentence.
     expect(
       find.bySemanticsLabel(
-        'In flight, 3 downloading, '
+        'In flight, 5 downloading, '
         'Not in the total: Lidarr, SABnzbd, qBittorrent',
       ),
       findsOne,
@@ -128,15 +130,15 @@ void main() {
     expect(
       find.widgetWithText(
         FaultBand,
-        'Radarr, Sonarr and 2 others did not answer. qBittorrent answered '
-        'but refused the sign-in.',
+        'Radarr 1, Radarr 4K and 3 others did not answer. qBittorrent '
+        'answered but refused the sign-in.',
       ),
       findsOne,
     );
     expect(
       find.widgetWithText(
         FaultBand,
-        'Radarr, Sonarr and 1 other did not answer.',
+        'Radarr 1, Radarr 4K and 2 others did not answer.',
       ),
       findsOne,
     );
