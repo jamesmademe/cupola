@@ -40,7 +40,7 @@ List<ProviderOrFamily> dashboardSourcesOf(ServiceKey service) =>
       ServiceKey.qbittorrent => [allTorrentsProvider],
       ServiceKey.transmission => [transmissionTorrentsProvider],
       ServiceKey.sabnzbd => [sabnzbdQueueProvider],
-      ServiceKey.nzbget => [nzbgetQueueProvider],
+      ServiceKey.nzbget => [nzbgetQueueProvider, nzbgetStatusProvider],
       // The lens's list, and every other Seerr's, which the region reads too.
       ServiceKey.seerr => [servicesRequestsProvider, requestsForProvider],
       // The status list *is* the failing-indexer list; the indexers name them.

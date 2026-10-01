@@ -57,6 +57,21 @@ const _qbMissing = WorldDownload(
   size: _gb,
 );
 
+/// A Sonarr grab moving through NZBGet, tagged with the arr's drone id.
+const _nzbgetGrab = WorldDownload(
+  id: '5f0b7c1e-9d2a-4e51-8c3b-2a6d7e8f9a01',
+  release: 'Night.Shift.S02E03.1080p.WEB',
+  client: 'nzbget',
+  state: DownloadState.downloading,
+  progress: 0.5,
+  size: 2 * _gb,
+  arr: WorldIds.sonarr,
+  title: WorldTitles.nightShift,
+  season: 2,
+  episode: 3,
+  speed: 8 * _mb,
+);
+
 Future<ProviderContainer> _start(ConfigProfile profile) async {
   final harness = await ProfileHarness.start(profile);
   return harness.container(retry: (_, _) => null);
@@ -223,6 +238,35 @@ void main() {
       expect(find.textContaining('Files missing'), findsOneWidget);
 
       await harness.unmount(tester);
+    });
+  });
+
+  group('NZBGet', () {
+    test('P4 + NZBGet: its rate enters the sum, once, keyed on the '
+        'client', () async {
+      final container = await _start(
+        Profiles.p4.withConnection(WorldConnections.nzbget).withDownloads([
+          _nzbgetGrab,
+        ]),
+      );
+      final inFlight = await container.read(servicesInFlightProvider.future);
+
+      final grab = inFlight.preview.singleWhere(
+        (item) => item.downloadId == _nzbgetGrab.id,
+      );
+      expect(grab.service, ServiceKey.sonarr);
+      expect(grab.clientService, ServiceKey.nzbget);
+      expect(grab.clientRateBytesPerSecond, 8 * _mb);
+
+      expect(inFlight.clients, 3);
+      expect(
+        inFlight.rateBytesPerSecond,
+        (4.2 * _mb) ~/ 1 +
+            (12.1 * _mb) ~/ 1 +
+            (6.1 * _mb) ~/ 1 +
+            3 * _mb +
+            8 * _mb,
+      );
     });
   });
 }

@@ -670,6 +670,15 @@ void main() {
               }),
             ],
           ),
+          // The rate the eyebrow sums comes off `status`, read beside the
+          // queue.
+          nzbgetStatusProvider.overrideWith(
+            (ref) async => const NzbgetStatus(
+              downloadRateBytes: 0,
+              remainingSizeMb: 550,
+              paused: false,
+            ),
+          ),
         ],
       );
 

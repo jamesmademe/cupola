@@ -494,14 +494,50 @@ class NzbgetFake extends ServiceFake {
     final id = body is Map ? body['id'] : null;
     NetworkReply result(Object? value) =>
         NetworkReply.json({'version': '1.1', 'id': id, 'result': value});
+    final rows = _rowsOf(c, 'nzbget');
     return switch (_method(r)) {
       'version' => result(
         jsonFixture('nzbget/version.json')['result'] ?? '24.3',
       ),
-      'status' => result(jsonFixtureMap('nzbget/status.json')['result']),
-      'listgroups' => result(const <Object?>[]),
+      'status' => result(status(rows)),
+      'listgroups' => result([
+        for (final (i, d) in rows.indexed) group(d, nzbId: i + 1),
+      ]),
       'history' => result(const <Object?>[]),
       _ => result(true),
     };
   }
+
+  /// `status`, with the rate summed over the world's NZBGet jobs. With none,
+  /// the fixture as it was.
+  static JsonMap status(List<WorldDownload> rows) {
+    final fixture = jsonFixtureMap('nzbget/status.json')['result'] as Map;
+    if (rows.isEmpty) return fixture.cast<String, Object?>();
+    final rate = rows.fold<int>(0, (sum, d) => sum + d.speed);
+    return {
+      ...fixture.cast<String, Object?>(),
+      'DownloadRate': rate,
+      'DownloadRateLo': rate,
+      'DownloadRateHi': 0,
+      'RemainingSizeMB': rows.fold<int>(0, (s, d) => s + d.sizeLeft ~/ _mib),
+    };
+  }
+
+  static const _mib = 1024 * 1024;
+
+  /// One `listgroups` entry. An arr tags the NZB it sends with `drone=<id>`
+  /// and records that id as its queue row's `downloadId`.
+  static JsonMap group(WorldDownload d, {required int nzbId}) => {
+    'NZBID': nzbId,
+    'NZBName': d.release,
+    'Status': d.state == DownloadState.queued ? 'QUEUED' : 'DOWNLOADING',
+    'Category': d.arr == null ? '' : 'tv',
+    'FileSizeMB': d.size ~/ _mib,
+    'RemainingSizeMB': d.sizeLeft ~/ _mib,
+    'Health': 1000,
+    'CriticalHealth': 898,
+    'Parameters': [
+      if (d.arr != null) {'Name': 'drone', 'Value': d.id},
+    ],
+  };
 }

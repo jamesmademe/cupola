@@ -1008,16 +1008,17 @@ Map<String, Object?> arrQueueRecord(
     'statusMessages': messages,
     if (d.state == DownloadState.stuck)
       'errorMessage': 'The download is stalled with no connections',
-    'downloadId': d.id.toUpperCase().startsWith('SABNZBD')
-        ? d.id
-        : d.id.toUpperCase(),
-    'protocol': d.client == 'sabnzbd' ? 'usenet' : 'torrent',
+    // A torrent's hash upper-cased, as the arrs record it; a usenet job's
+    // id as its client handed it out.
+    'downloadId': _usenet(d) ? d.id : d.id.toUpperCase(),
+    'protocol': _usenet(d) ? 'usenet' : 'torrent',
     'downloadClient': switch (d.client) {
       'sabnzbd' => 'SABnzbd',
+      'nzbget' => 'NZBGet',
       'transmission' => 'Transmission',
       _ => 'qBittorrent',
     },
-    'indexer': d.client == 'sabnzbd' ? 'Atlas NZB' : 'Fjord Tracker',
+    'indexer': _usenet(d) ? 'Atlas NZB' : 'Fjord Tracker',
     'outputPath': '/mnt/tank/downloads/complete/${d.release}',
     'quality': _quality(
       d.release.contains('2160p')
@@ -1032,6 +1033,8 @@ Map<String, Object?> arrQueueRecord(
     'customFormats': const <Object?>[],
   };
 }
+
+bool _usenet(WorldDownload d) => d.client == 'sabnzbd' || d.client == 'nzbget';
 
 Map<String, Object?> _quality(String name) => {
   'quality': {

@@ -1747,11 +1747,19 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
   Ref ref,
   _MergeConnection source,
 ) async {
-  final groups = source.isLens
-      ? await ref.watch(nzbgetQueueProvider.future)
-      : await ref
-            .watch(nzbgetClientForProvider(source.instanceId))
-            .listGroups();
+  // The queue and the client's status, side by side: `listgroups` carries no
+  // rate at all, and NZBGet reports one only for the whole client, in
+  // `status`. Read without it, NZBGet's bytes were the one transfer the
+  // eyebrow's sum left out.
+  final (groups, status) = source.isLens
+      ? await (
+          ref.watch(nzbgetQueueProvider.future),
+          ref.watch(nzbgetStatusProvider.future),
+        ).wait
+      : await (
+          ref.watch(nzbgetClientForProvider(source.instanceId)).listGroups(),
+          ref.watch(nzbgetClientForProvider(source.instanceId)).status(),
+        ).wait;
   const megabyte = 1024 * 1024;
 
   return groups
@@ -1785,6 +1793,7 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
           clientService: ServiceKey.nzbget,
           instanceId: source.instanceId,
           clientInstanceId: source.instanceId,
+          clientRateBytesPerSecond: status.downloadRateBytes,
           route: ServiceRoutes.forService(ServiceKey.nzbget),
         ),
       )
