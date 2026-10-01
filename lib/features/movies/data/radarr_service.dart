@@ -92,9 +92,30 @@ class RadarrService with ArrActivityMixin {
     return fetchAllItemsOrThrow('movie', RadarrMovie.fromJson);
   }
 
-  /// Fetches a single movie by its Radarr ID.
+  /// Fetches a single movie by its Radarr ID, answering `null` when it cannot
+  /// be read.
   Future<RadarrMovie?> getMovie(int movieId) async {
     return fetchItem('movie', movieId, RadarrMovie.fromJson);
+  }
+
+  /// The same movie, with a failed fetch allowed to reach the caller.
+  ///
+  /// [getMovie] answers `null` for every failure, so the detail page could not
+  /// tell a Radarr that did not answer from a film it does not have: opened
+  /// with a preloaded film, it drew that film as if Radarr had just confirmed
+  /// it; opened cold, it reported the request as not completed in both cases.
+  /// A 404 still answers `null`, because it is an answer (Radarr has no movie
+  /// by that id), and every other failure travels.
+  Future<RadarrMovie?> getMovieOrThrow(int movieId) async {
+    try {
+      final response = await client.get(
+        '/api/${config.apiVersion}/movie/$movieId',
+      );
+      return RadarrMovie.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) return null;
+      rethrow;
+    }
   }
 
   /// On the **page** primitive, not on `getHistory`.

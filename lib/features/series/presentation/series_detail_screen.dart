@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/api/arr_detail_actions_mixin.dart';
 import 'package:cupola/core/api/quality_profile_mixin.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/rating_display.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/string_utils.dart';
@@ -89,8 +90,8 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       currentSettingsProvider.select((s) => s.instanceById(instanceId)),
     );
     // Asked before either provider is read: see the movie screen. The series
-    // and its episodes would both throw and both retry with backoff for a
-    // condition no waiting changes.
+    // and its episodes would both throw, under a client retrying a condition
+    // no waiting changes.
     if (connection?.isConfigured != true) {
       return MediaDetailPlaceholderView.error(
         error: '${ServiceKey.sonarr.title} not configured',
@@ -105,7 +106,17 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     final episodesAsync = widget.seriesId > 0
         ? ref.watch(seriesEpisodesForProvider(detailRef))
         : const AsyncData<List<SonarrEpisode>>(<SonarrEpisode>[]);
-    final series = seriesAsync.asData?.value ?? widget.initialSeries;
+    // `value`, not `asData`: see the movie screen.
+    final series = seriesAsync.value ?? widget.initialSeries;
+    // Recover in place. Both loads share one outage, so one retry re-runs
+    // both. With no id there is no provider to re-run, so no retry is offered
+    // rather than one that does nothing.
+    final VoidCallback? retry = widget.seriesId > 0
+        ? () {
+            ref.invalidate(seriesDetailForProvider(detailRef));
+            ref.invalidate(seriesEpisodesForProvider(detailRef));
+          }
+        : null;
 
     if (series == null) {
       if (seriesAsync.isLoading) {
@@ -117,21 +128,29 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         );
       }
 
-      return MediaDetailPlaceholderView.error(
-        error: seriesAsync.asError?.error ?? 'Series not found.',
+      if (seriesAsync.hasError) {
+        return MediaDetailPlaceholderView.error(
+          error: seriesAsync.error!,
+          serviceName: 'Sonarr',
+          accent: ServiceKey.sonarr.accent,
+          onRetry: retry,
+        );
+      }
+
+      // Sonarr answered, and has no series by this id: see the movie screen.
+      return MediaDetailPlaceholderView.notFound(
+        icon: Icons.tv_off_rounded,
+        title: 'Sonarr has no record of this series',
+        message: 'It may have been removed from Sonarr.',
         serviceName: 'Sonarr',
         accent: ServiceKey.sonarr.accent,
-        // Recover in place. Both loads share one outage, so one retry re-runs
-        // both. With no id there is no provider to re-run, so no retry is
-        // offered rather than one that does nothing.
-        onRetry: widget.seriesId > 0
-            ? () {
-                ref.invalidate(seriesDetailForProvider(detailRef));
-                ref.invalidate(seriesEpisodesForProvider(detailRef));
-              }
-            : null,
+        onRetry: retry,
       );
     }
+
+    // The series read failed while something is on screen: see the movie
+    // screen. The episode list keeps its own failure line below.
+    final failure = seriesAsync.hasError ? seriesAsync.error : null;
 
     _syncQualityProfiles(series);
 
@@ -181,12 +200,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       posterRow: _buildPosterRow(context, viewModel, status),
       // Both loads share one outage, so one pull re-runs both — the same pair the
       // retry button re-runs.
-      onRefresh: widget.seriesId > 0
-          ? () async {
-              ref.invalidate(seriesDetailForProvider(detailRef));
-              ref.invalidate(seriesEpisodesForProvider(detailRef));
-            }
-          : null,
+      onRefresh: retry == null ? null : () async => retry(),
       body: _buildBody(
         viewModel,
         status,
@@ -195,8 +209,28 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         series.id > 0 ? series.id : widget.seriesId,
         series.tmdbId,
         series.tvdbId,
+        fault: failure == null || retry == null
+            ? null
+            : _faultBand(failure, instanceId, onRetry: retry),
       ),
     );
+  }
+
+  /// The band over a page whose read failed. See the movie screen.
+  Widget _faultBand(
+    Object failure,
+    String instanceId, {
+    required VoidCallback onRetry,
+  }) {
+    final name = ref.watch(
+      currentSettingsProvider.select(
+        (s) => s.connectionTitle(instanceId, ServiceKey.sonarr),
+      ),
+    );
+    final reason = classifyConnectionFailure(failure);
+    return failureDidNotAnswer(reason)
+        ? FaultBand.unreachable(serviceName: name, onRetry: onRetry)
+        : FaultBand.fault(serviceName: name, reason: reason, onRetry: onRetry);
   }
 
   /// `41/48 episodes` — how much of the manifest exists, for the hero chip slot.
@@ -264,8 +298,9 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     AsyncValue<List<SonarrEpisode>> episodesAsync,
     int seriesId,
     int tmdbId,
-    int tvdbId,
-  ) {
+    int tvdbId, {
+    Widget? fault,
+  }) {
     final accent = ServiceKey.sonarr.accent;
 
     // Decision 25 — the profile is edited where it is read, not from the deck's
@@ -298,45 +333,49 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       // manifest rather than the subject. The 380 column takes the fact grid and
       // the catalogue.
       sideTrack: const {'Details', 'Scores', 'Genres', 'Collection'},
-      deck: viewModel.isInLibrary
-          ? LibraryDetailActions(
-              service: ServiceKey.sonarr,
-              status: status,
-              mediaTitle: viewModel.title,
-              isMonitored: viewModel.isMonitored,
-              partialSummary: counts == null
-                  ? null
-                  : '${counts.onDisk} of ${counts.expected} episodes on disk.',
-              isBusy: isAutoSearching || isUpdatingMonitoredState || isDeleting,
-              isConfirmed: isAutoSearchConfirmed,
-              onSearch: () => _triggerSearch(context),
-              onInteractiveSearch: () =>
-                  _showInteractiveSearch(context, title: viewModel.title),
-              onImport: openManualImportCallback(
-                context,
-                ServiceKey.sonarr,
-                seriesId,
-                instanceId: _instanceId,
+      deck: _underFault(
+        fault,
+        viewModel.isInLibrary
+            ? LibraryDetailActions(
+                service: ServiceKey.sonarr,
+                status: status,
+                mediaTitle: viewModel.title,
+                isMonitored: viewModel.isMonitored,
+                partialSummary: counts == null
+                    ? null
+                    : '${counts.onDisk} of ${counts.expected} episodes on disk.',
+                isBusy:
+                    isAutoSearching || isUpdatingMonitoredState || isDeleting,
+                isConfirmed: isAutoSearchConfirmed,
+                onSearch: () => _triggerSearch(context),
+                onInteractiveSearch: () =>
+                    _showInteractiveSearch(context, title: viewModel.title),
+                onImport: openManualImportCallback(
+                  context,
+                  ServiceKey.sonarr,
+                  seriesId,
+                  instanceId: _instanceId,
+                ),
+                // Every in-flight pipeline state promotes 'Open queue' only if the
+                // host actually has a route for it; without this the most common
+                // transient state on a real page degraded to a sentence. Pushed, not
+                // gone: checking on a download should leave the title behind you.
+                onOpenQueue: () => context.push('/activity/series'),
+                onMonitoredChanged: (monitored) => _updateMonitoredState(
+                  context,
+                  seriesId: seriesId,
+                  monitored: monitored,
+                ),
+                onDelete: () => _confirmDelete(context, title: viewModel.title),
+              )
+            // See the Radarr screen: no add path from this view, so an untracked
+            // title gets a sentence instead of a CTA that apologises.
+            : const MediaDetailUnavailableSection(
+                message:
+                    'Sonarr is not tracking this series, so there is nothing to '
+                    'manage here yet. Add it in Sonarr, or request it in Seerr.',
               ),
-              // Every in-flight pipeline state promotes 'Open queue' only if the
-              // host actually has a route for it; without this the most common
-              // transient state on a real page degraded to a sentence. Pushed, not
-              // gone: checking on a download should leave the title behind you.
-              onOpenQueue: () => context.push('/activity/series'),
-              onMonitoredChanged: (monitored) => _updateMonitoredState(
-                context,
-                seriesId: seriesId,
-                monitored: monitored,
-              ),
-              onDelete: () => _confirmDelete(context, title: viewModel.title),
-            )
-          // See the Radarr screen: no add path from this view, so an untracked
-          // title gets a sentence instead of a CTA that apologises.
-          : const MediaDetailUnavailableSection(
-              message:
-                  'Sonarr is not tracking this series, so there is nothing to '
-                  'manage here yet. Add it in Sonarr, or request it in Seerr.',
-            ),
+      ),
       // Region 3 — the manifest: the episodes Sonarr expects under this title,
       // checked against what actually arrived. It sits above the synopsis
       // because prose about a show is never more operational than the list of
@@ -697,4 +736,18 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       ),
     );
   }
+}
+
+/// [deck] with [fault] above it, when there is one. See the movie screen.
+Widget _underFault(Widget? fault, Widget deck) {
+  if (fault == null) return deck;
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      fault,
+      const SizedBox(height: AppSpacing.sm),
+      deck,
+    ],
+  );
 }

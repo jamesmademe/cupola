@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/api/arr_detail_actions_mixin.dart';
 import 'package:cupola/core/api/quality_profile_mixin.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/rating_display.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -89,12 +91,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       currentSettingsProvider.select((s) => s.instanceById(instanceId)),
     );
     // Asked before any provider is read. A connection with no address or key
-    // makes the detail provider throw, and a provider that throws retries with
-    // backoff: the page sat on its skeleton for the better part of a minute
-    // before it said what one look at the settings already knew. The resolved
-    // connection rather than the service, because that is the one the page
-    // would read, and a `?i=` naming a connection since removed is not set up
-    // either.
+    // makes every provider below throw: the client under them retries a
+    // condition no waiting changes, and a preloaded film was drawn as if
+    // Radarr had just answered for it. The resolved connection rather than the
+    // service, because that is the one the page would read, and a `?i=`
+    // naming a connection since removed is not set up either.
     if (connection?.isConfigured != true) {
       return MediaDetailPlaceholderView.error(
         // The missing-config marker the placeholder turns into "Radarr is not
@@ -108,7 +109,15 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     final movieAsync = widget.movieId > 0
         ? ref.watch(movieDetailForProvider(item))
         : const AsyncData<RadarrMovie?>(null);
-    final movie = movieAsync.asData?.value ?? widget.initialMovie;
+    // `value`, not `asData`: a failed refresh keeps the answer it had, and
+    // what Radarr said a minute ago is truer than the preload the route
+    // carried before that.
+    final movie = movieAsync.value ?? widget.initialMovie;
+    // Recover in place. With no id there is no provider to re-run, so the
+    // retry is withheld rather than offered and doing nothing.
+    final VoidCallback? retry = widget.movieId > 0
+        ? () => ref.invalidate(movieDetailForProvider(item))
+        : null;
 
     if (movie == null) {
       if (movieAsync.isLoading) {
@@ -118,17 +127,33 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         );
       }
 
-      return MediaDetailPlaceholderView.error(
-        error: movieAsync.asError?.error ?? 'Movie not found.',
+      if (movieAsync.hasError) {
+        return MediaDetailPlaceholderView.error(
+          error: movieAsync.error!,
+          serviceName: 'Radarr',
+          accent: ServiceKey.radarr.accent,
+          onRetry: retry,
+        );
+      }
+
+      // Radarr answered, and has no movie by this id. Not an error: the
+      // request completed, and saying it did not sent the user to check a
+      // server that had just replied.
+      return MediaDetailPlaceholderView.notFound(
+        icon: Icons.movie_filter_outlined,
+        title: 'Radarr has no record of this movie',
+        message: 'It may have been removed from Radarr.',
         serviceName: 'Radarr',
         accent: ServiceKey.radarr.accent,
-        // Recover in place. With no id there is no provider to re-run, so the
-        // retry is withheld rather than offered and doing nothing.
-        onRetry: widget.movieId > 0
-            ? () => ref.invalidate(movieDetailForProvider(item))
-            : null,
+        onRetry: retry,
       );
     }
+
+    // The read behind this page failed while something is on screen: a
+    // preload from the list it was opened from, or the answer a refresh could
+    // not replace. That stays, under a band that says so, rather than passing
+    // for what Radarr says now.
+    final failure = movieAsync.hasError ? movieAsync.error : null;
 
     _syncQualityProfiles(movie);
 
@@ -174,8 +199,33 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         infoGroups,
         movie.id > 0 ? movie.id : widget.movieId,
         movie.tmdbId,
+        fault: failure == null || retry == null
+            ? null
+            : _faultBand(failure, instanceId, onRetry: retry),
       ),
     );
+  }
+
+  /// The band over a page whose read failed: red only when Radarr did not
+  /// answer, amber when it answered with a fault. The same two arms
+  /// `AsyncValueWidget` draws over a retained readout, so a film page and a
+  /// list page say an outage the same way.
+  Widget _faultBand(
+    Object failure,
+    String instanceId, {
+    required VoidCallback onRetry,
+  }) {
+    // The connection, by the name the rest of the app gives it: "Radarr" with
+    // one, its own name when there are two to tell apart.
+    final name = ref.watch(
+      currentSettingsProvider.select(
+        (s) => s.connectionTitle(instanceId, ServiceKey.radarr),
+      ),
+    );
+    final reason = classifyConnectionFailure(failure);
+    return failureDidNotAnswer(reason)
+        ? FaultBand.unreachable(serviceName: name, onRetry: onRetry)
+        : FaultBand.fault(serviceName: name, reason: reason, onRetry: onRetry);
   }
 
   void _syncQualityProfiles(RadarrMovie movie) {
@@ -222,8 +272,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     MediaStatusInfo status,
     List<MediaInfoGroup> infoGroups,
     int movieId,
-    int tmdbId,
-  ) {
+    int tmdbId, {
+    Widget? fault,
+  }) {
     final accent = ServiceKey.radarr.accent;
 
     // Decision 25 — the profile is edited where it is read, not from the deck's
@@ -261,45 +312,49 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         'Genres',
         'Collection',
       },
-      deck: viewModel.isInLibrary
-          ? LibraryDetailActions(
-              service: ServiceKey.radarr,
-              status: status,
-              mediaTitle: viewModel.title,
-              isMonitored: viewModel.isMonitored,
-              // One flag, mapped from whichever per-action flag can be in flight
-              // on this page: only one action is ever promoted.
-              isBusy: isAutoSearching || isUpdatingMonitoredState || isDeleting,
-              isConfirmed: isAutoSearchConfirmed,
-              onSearch: () => _triggerSearch(context),
-              onInteractiveSearch: () =>
-                  _showInteractiveSearch(context, title: viewModel.title),
-              onImport: openManualImportCallback(
-                context,
-                ServiceKey.radarr,
-                movieId,
-                instanceId: _instanceId,
+      deck: _underFault(
+        fault,
+        viewModel.isInLibrary
+            ? LibraryDetailActions(
+                service: ServiceKey.radarr,
+                status: status,
+                mediaTitle: viewModel.title,
+                isMonitored: viewModel.isMonitored,
+                // One flag, mapped from whichever per-action flag can be in flight
+                // on this page: only one action is ever promoted.
+                isBusy:
+                    isAutoSearching || isUpdatingMonitoredState || isDeleting,
+                isConfirmed: isAutoSearchConfirmed,
+                onSearch: () => _triggerSearch(context),
+                onInteractiveSearch: () =>
+                    _showInteractiveSearch(context, title: viewModel.title),
+                onImport: openManualImportCallback(
+                  context,
+                  ServiceKey.radarr,
+                  movieId,
+                  instanceId: _instanceId,
+                ),
+                // Every in-flight pipeline state promotes 'Open queue' only if the
+                // host actually has a route for it; without this the most common
+                // transient state on a real page degraded to a sentence. Pushed, not
+                // gone: checking on a download should leave the title behind you.
+                onOpenQueue: () => context.push('/activity/movies'),
+                onMonitoredChanged: (monitored) => _updateMonitoredState(
+                  context,
+                  movieId: movieId,
+                  monitored: monitored,
+                ),
+                onDelete: () => _confirmDelete(context, title: viewModel.title),
+              )
+            // No add path exists from this view, so an untracked title falls
+            // through to a sentence rather than to the full-width accent CTA whose
+            // only behaviour was a snackbar saying it is not available.
+            : const MediaDetailUnavailableSection(
+                message:
+                    'Radarr is not tracking this movie, so there is nothing to '
+                    'manage here yet. Add it in Radarr, or request it in Seerr.',
               ),
-              // Every in-flight pipeline state promotes 'Open queue' only if the
-              // host actually has a route for it; without this the most common
-              // transient state on a real page degraded to a sentence. Pushed, not
-              // gone: checking on a download should leave the title behind you.
-              onOpenQueue: () => context.push('/activity/movies'),
-              onMonitoredChanged: (monitored) => _updateMonitoredState(
-                context,
-                movieId: movieId,
-                monitored: monitored,
-              ),
-              onDelete: () => _confirmDelete(context, title: viewModel.title),
-            )
-          // No add path exists from this view, so an untracked title falls
-          // through to a sentence rather than to the full-width accent CTA whose
-          // only behaviour was a snackbar saying it is not available.
-          : const MediaDetailUnavailableSection(
-              message:
-                  'Radarr is not tracking this movie, so there is nothing to '
-                  'manage here yet. Add it in Radarr, or request it in Seerr.',
-            ),
+      ),
       // Region 3 — the manifest. A movie has no child records, so the manifest
       // is the file, and the path a self-hoster actually hunts for lives here
       // rather than at the bottom of an encyclopaedic grid.
@@ -472,4 +527,22 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       ).stampedWith(_instanceId),
     );
   }
+}
+
+/// [deck] with [fault] above it, when there is one.
+///
+/// The top of the body, so the band sits over everything it qualifies: the
+/// promoted action below it acts on what Radarr said last, and a write will
+/// fail until it answers again.
+Widget _underFault(Widget? fault, Widget deck) {
+  if (fault == null) return deck;
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      fault,
+      const SizedBox(height: AppSpacing.sm),
+      deck,
+    ],
+  );
 }

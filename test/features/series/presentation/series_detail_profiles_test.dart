@@ -108,6 +108,78 @@ void main() {
       await harness.unmount(tester);
     });
   });
+
+  group('a Sonarr that does not answer', () {
+    final sonarrDown = Profiles.p7.withBehaviour(
+      WorldIds.sonarr,
+      ConnectionBehaviour.didNotAnswer,
+    );
+
+    testWidgets('a preloaded series stays, under a red band that says so', (
+      tester,
+    ) async {
+      final harness = await _pump(
+        tester,
+        sonarrDown,
+        SeriesDetailScreen(
+          seriesId: 1,
+          heroTag: 'series-1',
+          initialSeries: SonarrSeries.fromJson(const {
+            'id': 1,
+            'title': 'Cosmos Laundromat',
+            'year': 2015,
+            'monitored': true,
+            'qualityProfileId': 1,
+            'path': '/mnt/tank/media/series/Cosmos Laundromat',
+          }),
+        ),
+      );
+
+      expect(find.text('Cosmos Laundromat'), findsWidgets);
+      final band = tester.widget<FaultBand>(find.byType(FaultBand));
+      expect(band.tone, StatusTone.error);
+      expect(
+        band.message,
+        'Sonarr did not answer. Everything below is what it said last.',
+      );
+
+      final asked = harness.network.requestsTo(WorldIds.sonarr).length;
+      await tester.tap(
+        find.descendant(
+          of: find.byType(FaultBand),
+          matching: find.text('Retry'),
+        ),
+      );
+      await harness.settle(tester);
+      // The series and its episodes, both: one outage, one Retry.
+      final paths = harness.network
+          .requestsTo(WorldIds.sonarr)
+          .skip(asked)
+          .map((r) => r.uri.path)
+          .toSet();
+      expect(paths, containsAll(['/api/v3/series/1', '/api/v3/episode']));
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a cold open says it did not answer, at once', (tester) async {
+      final harness = await _pump(
+        tester,
+        sonarrDown,
+        const SeriesDetailScreen(seriesId: 1, heroTag: 'series-1'),
+      );
+
+      expect(find.text('Sonarr did not answer'), findsOneWidget);
+      expect(
+        harness.network
+            .requestsTo(WorldIds.sonarr)
+            .where((r) => r.uri.path == '/api/v3/series/1'),
+        hasLength(1),
+      );
+
+      await harness.unmount(tester);
+    });
+  });
 }
 
 /// Pumps [child] under [profile] with [routes] answering ahead of the world

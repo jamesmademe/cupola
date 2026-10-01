@@ -113,9 +113,26 @@ class SonarrService with ArrActivityMixin {
     return Isolate.run(() => _mapSeries(data));
   }
 
-  /// Fetches a single series by its Sonarr ID.
+  /// Fetches a single series by its Sonarr ID, answering `null` when it cannot
+  /// be read.
   Future<SonarrSeries?> getSeriesById(int seriesId) async {
     return fetchItem('series', seriesId, SonarrSeries.fromJson);
+  }
+
+  /// The same series, with a failed fetch allowed to reach the caller. See
+  /// `RadarrService.getMovieOrThrow`: a 404 is an answer and reads `null`,
+  /// everything else travels, so the detail page can say Sonarr did not
+  /// answer instead of drawing what it was handed as confirmed.
+  Future<SonarrSeries?> getSeriesByIdOrThrow(int seriesId) async {
+    try {
+      final response = await client.get(
+        '/api/${config.apiVersion}/series/$seriesId',
+      );
+      return SonarrSeries.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) return null;
+      rethrow;
+    }
   }
 
   /// On the **page** primitive, not on `getHistory`.
