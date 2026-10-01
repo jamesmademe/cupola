@@ -226,10 +226,18 @@ void main() {
 
       await _press(tester, LogicalKeyboardKey.keyK, meta: true);
       expect(find.byType(CommandDeck), findsOneWidget);
-      // The deck offers its own connections by name, so a service with a labelled
-      // connection is reachable without knowing where it lives.
-      expect(find.text('Radarr · 4K'), findsOneWidget);
-      final radarr = find.bySemanticsLabel('Radarr · 4K, four-k.lan');
+      // The deck offers its own connections by name, so a connection is
+      // reachable without knowing where it lives. One Radarr is just Radarr:
+      // the `4K` it kept from a sibling since removed is not printed.
+      expect(
+        find.descendant(
+          of: find.byType(CommandDeck),
+          matching: find.text('Radarr'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Radarr · 4K'), findsNothing);
+      final radarr = find.bySemanticsLabel('Radarr, four-k.lan');
       expect(radarr, findsOneWidget);
       final semantics = tester.getSemantics(radarr).getSemanticsData();
       expect(semantics.flagsCollection.isButton, isTrue);
@@ -282,6 +290,46 @@ void main() {
     });
   });
 
+  group(
+    'the deck and the chrome name a connection only when there are two',
+    () {
+      testWidgets('one Radarr: no label, whatever it kept from a sibling', (
+        tester,
+      ) async {
+        await onPlatform(TargetPlatform.macOS, () async {
+          await _pumpShell(
+            tester,
+            initialLocation: '/dashboard/radarr/library/item/42',
+            overrides: await _world(),
+          );
+          expect(find.text('4K'), findsNothing);
+          expect(find.textContaining('Lens: '), findsNothing);
+        });
+      });
+
+      testWidgets('two Radarr, the lens unnamed: called by its place', (
+        tester,
+      ) async {
+        await onPlatform(TargetPlatform.macOS, () async {
+          final semantics = tester.ensureSemantics();
+          try {
+            await _pumpShell(
+              tester,
+              initialLocation: '/dashboard/radarr/library/item/42',
+              overrides: await _world(instances: _twoRadarr),
+            );
+            // The derived name is the room's title, with no second label
+            // repeating the service.
+            expect(find.bySemanticsLabel('Viewing Radarr 1'), findsOneWidget);
+            expect(find.textContaining('Lens: Radarr 1'), findsOneWidget);
+          } finally {
+            semantics.dispose();
+          }
+        });
+      });
+    },
+  );
+
   group('the deck names the room only when the page does not', () {
     testWidgets('a service tab root: the tab row names it, the deck does not', (
       tester,
@@ -294,7 +342,10 @@ void main() {
             initialLocation: '/dashboard/radarr/library',
             overrides: await _world(),
           );
-          expect(find.bySemanticsLabel('Viewing Radarr, 4K'), findsNothing);
+          expect(
+            find.bySemanticsLabel(RegExp(r'^Viewing Radarr')),
+            findsNothing,
+          );
         } finally {
           semantics.dispose();
         }
@@ -312,7 +363,9 @@ void main() {
             initialLocation: '/dashboard/radarr/library/item/42',
             overrides: await _world(),
           );
-          expect(find.bySemanticsLabel('Viewing Radarr, 4K'), findsOneWidget);
+          // One Radarr, so the room alone: its `4K` label outlived the
+          // sibling that made it necessary, and is not printed.
+          expect(find.bySemanticsLabel('Viewing Radarr'), findsOneWidget);
         } finally {
           semantics.dispose();
         }
@@ -407,17 +460,36 @@ const _instances = [
   ),
 ];
 
+/// Two Radarr, the first one nobody named.
+const _twoRadarr = [
+  ServiceInstance(
+    id: 'radarr',
+    service: ServiceKey.radarr,
+    url: 'https://hd.lan:7878',
+    credential: 'k',
+  ),
+  ServiceInstance(
+    id: 'radarr-4k00001',
+    service: ServiceKey.radarr,
+    label: '4K',
+    url: 'https://four-k.lan:7878',
+    credential: 'k',
+  ),
+];
+
 /// One configured connection, already answered, so nothing reaches a socket.
-Future<List<Override>> _world() async {
+Future<List<Override>> _world({
+  List<ServiceInstance> instances = _instances,
+}) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   return [
     sharedPreferencesProvider.overrideWithValue(prefs),
     secureSettingsStoreProvider.overrideWithValue(FakeSecureSettingsStore()),
     initialSettingsProvider.overrideWithValue(
-      const SettingsModel(instances: _instances),
+      SettingsModel(instances: instances),
     ),
-    for (final instance in _instances)
+    for (final instance in instances)
       instanceSummaryProvider((
         service: instance.service,
         instanceId: instance.id,

@@ -11,6 +11,7 @@ import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
 import 'package:cupola/features/shell/presentation/desktop/shell_freshness.dart';
@@ -133,7 +134,20 @@ class _ActiveChip extends ConsumerWidget {
     final instance = service == null
         ? null
         : ref.watch(activeInstanceProvider(service));
-    final label = instance?.label.trim() ?? '';
+    // The app's one rule for naming a connection: nothing while the service
+    // has one, whatever label it kept from a sibling since removed, and
+    // `Radarr 2` for one nobody named.
+    final name = instance == null
+        ? null
+        : ref.watch(connectionNameProvider(instance.id));
+    // A derived name already says the service (`Radarr 2`): it is the title,
+    // with no second label repeating it.
+    final derived =
+        service != null &&
+        name != null &&
+        serviceWithConnection(service, name) == name;
+    final title = derived ? name : (service?.title ?? 'All services');
+    final label = derived ? '' : (name ?? '');
 
     final chip = Container(
       height: compact ? 26 : 32,
@@ -162,7 +176,7 @@ class _ActiveChip extends ConsumerWidget {
           if (compact)
             Flexible(
               child: Text(
-                service?.title ?? 'All services',
+                title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTheme.chrome(
@@ -175,7 +189,7 @@ class _ActiveChip extends ConsumerWidget {
             )
           else ...[
             Text(
-              service?.title ?? 'All services',
+              title,
               style: AppTheme.chrome(
                 context,
                 size: 13,
@@ -206,7 +220,7 @@ class _ActiveChip extends ConsumerWidget {
     return Semantics(
       label: service == null
           ? 'All services'
-          : 'Viewing ${service.title}${label.isEmpty ? '' : ', $label'}',
+          : 'Viewing $title${label.isEmpty ? '' : ', $label'}',
       excludeSemantics: true,
       child: compact
           ? ConstrainedBox(

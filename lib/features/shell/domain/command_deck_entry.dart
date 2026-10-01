@@ -124,10 +124,11 @@ final commandDeckEntriesProvider = Provider<List<CommandDeckEntry>>((ref) {
       ),
     for (final service in ServiceKey.values)
       ...settings.configuredInstancesOf(service).map((instance) {
-        final label = instance.label.trim();
         return CommandDeckEntry(
           kind: CommandDeckKind.connection,
-          label: label.isEmpty ? service.title : '${service.title} · $label',
+          // The app's one rule: `Radarr` while there is one, whatever label it
+          // kept, and `Radarr · 4K` or `Radarr 2` once there are two.
+          label: settings.connectionTitle(instance.id, service),
           location: '${NavTab.dashboard.routePath}/${service.routeParam}',
           service: service,
           instanceId: instance.id,

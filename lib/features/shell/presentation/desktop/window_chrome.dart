@@ -11,6 +11,7 @@ import 'package:cupola/core/platform/desktop_window.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/domain/shell_breadcrumb.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 
@@ -86,7 +87,7 @@ class WindowChrome extends ConsumerWidget {
                       icon: Icons.dns_outlined,
                       on: true,
                       tooltip:
-                          'Showing ${lens.service.title} · ${lens.label}. '
+                          'Showing ${serviceWithConnection(lens.service, lens.label)}. '
                           'Change it from the deck.',
                     ),
                     const SizedBox(width: AppSpacing.sm),
@@ -140,8 +141,11 @@ class WindowChrome extends ConsumerWidget {
     );
     if (service.routeParam != crumbSegments[1]) return null;
     final instance = ref.watch(activeInstanceProvider(service));
-    final label = instance?.label.trim() ?? '';
-    if (label.isEmpty) return null;
+    if (instance == null) return null;
+    // The app's one rule for naming a connection: no chip while the service
+    // has one, whatever label it kept from a sibling since removed.
+    final label = ref.watch(connectionNameProvider(instance.id));
+    if (label == null) return null;
     return (service: service, label: label);
   }
 }
