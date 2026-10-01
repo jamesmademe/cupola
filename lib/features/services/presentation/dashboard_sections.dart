@@ -958,9 +958,10 @@ class _DecisionControls extends ConsumerWidget {
 /// single confirmed call this app already owns. The other three *navigate to
 /// where the act happens*: a manual import is a three-station wizard, opening a
 /// stalled transfer is by design a jump into its client (decision 30: resume in
-/// place needs a downloadId-to-hash bridge no client has), and NPM's client has
-/// no renew call at all, so `Renew` opens the screen that owns renewal rather
-/// than pretending to fire one.
+/// place needs a downloadId-to-hash bridge no client has), and `Renew` opens
+/// the Certificates tab, which owns renewal and its confirmation: the call
+/// reaches Let's Encrypt, and a renewal fired from a row on Home is one
+/// mis-tap from spending the account's rate limits.
 Future<void> _runDecision(
   BuildContext context,
   WidgetRef ref,
@@ -1028,7 +1029,10 @@ Future<void> _runDecision(
         invalidate: [dockgeStackListProvider],
       );
     case DecisionKind.expiringCertificate:
-      context.go(ServiceRoutes.forService(ServiceKey.nginxProxyManager));
+      // The Certificates tab, where Renew and its confirmation are: the
+      // service's root is its Overview, which offers no writes at all, so
+      // Renew used to land on a page with nothing to renew on it.
+      context.go(ServiceRoutes.npmCertificates);
   }
 }
 
