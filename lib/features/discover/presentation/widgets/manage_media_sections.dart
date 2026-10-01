@@ -245,7 +245,9 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final displayStatus = request.displayStatus;
+    // The word from the same reading the tone comes from: the request's own
+    // state, the media's only past approval.
+    final displayStatus = request.lifecycleStatus;
 
     // The tone comes from the one resolver every other request row uses, so
     // this badge cannot disagree with Activity about the same request. That

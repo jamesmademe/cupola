@@ -351,6 +351,12 @@ MediaStatusInfo resolveWantedStatus(
 /// the language the user sees in Seerr itself — while the tone comes from the
 /// request's display kind.
 ///
+/// It reads the request's own state first (`lifecycleStatus`), the test the
+/// "N waiting" counts and the Pending filter make. It read `displayStatus`,
+/// which lets the media's availability stand in, so a request still waiting
+/// for approval for a title already on disk read "Available", in green,
+/// beside its own Approve.
+///
 /// `pending` is blue — queued, waiting its turn — like every other thing in
 /// the app that is in line and not broken. It used to be amber on the argument
 /// that it waits on a *human*, but amber is the fault arm and a request awaiting
@@ -360,7 +366,7 @@ MediaStatusInfo resolveWantedStatus(
 /// the same request neutral inside its decisions list, where the presence of
 /// the row is already the signal.
 MediaStatusInfo resolveRequestStatus(SeerrRequest request) {
-  final display = request.displayStatus;
+  final display = request.lifecycleStatus;
   final tone = switch (display.kind) {
     SeerrRequestDisplayKind.available ||
     SeerrRequestDisplayKind.completed => StatusTone.success,

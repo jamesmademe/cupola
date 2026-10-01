@@ -252,6 +252,46 @@ extension SeerrRequestDisplayStatusX on SeerrRequest {
     return is4k ? media.status4k : media.status;
   }
 
+  /// The request's state as a row about the **request** says it.
+  ///
+  /// Its own status first, the same test every "N waiting" count and the
+  /// Pending filter make: a request still waiting for approval reads
+  /// "Waiting for approval" whatever its media says, and a declined or
+  /// failed one says so. [displayStatus], which lets the media's
+  /// availability stand in, is read only for a request past approval, where
+  /// the row is about the media on its way. A request already decided whose
+  /// media Seerr still marks pending, under another request, reads its own
+  /// status rather than the media's.
+  SeerrRequestDisplayStatus get lifecycleStatus {
+    switch (status) {
+      case RequestStatus.pendingApproval:
+        return (
+          label: StateWord.waitingForApproval.label,
+          kind: SeerrRequestDisplayKind.pending,
+        );
+      case RequestStatus.declined:
+        return (label: 'Declined', kind: SeerrRequestDisplayKind.declined);
+      case RequestStatus.failed:
+        return (label: 'Failed', kind: SeerrRequestDisplayKind.failed);
+      case RequestStatus.approved:
+      case RequestStatus.completed:
+      case RequestStatus.unknown:
+        final display = displayStatus;
+        if (display.kind != SeerrRequestDisplayKind.pending) return display;
+        return switch (status) {
+          RequestStatus.approved => (
+            label: 'Approved',
+            kind: SeerrRequestDisplayKind.approved,
+          ),
+          RequestStatus.completed => (
+            label: 'Completed',
+            kind: SeerrRequestDisplayKind.completed,
+          ),
+          _ => (label: 'Unknown', kind: SeerrRequestDisplayKind.unknown),
+        };
+    }
+  }
+
   SeerrRequestDisplayStatus get displayStatus {
     final mediaStatus = mediaAvailability;
 

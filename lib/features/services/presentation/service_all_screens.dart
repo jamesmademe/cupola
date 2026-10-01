@@ -227,7 +227,9 @@ class _RequestListRow extends ConsumerWidget {
     final title = media?.title ?? 'Unknown media';
     final requester = request.requestedBy?.displayName ?? 'Unknown';
     final mediaType = request.type == 'tv' ? 'Series' : 'Movie';
-    final displayStatus = request.displayStatus;
+    // The request's own state, the media's only past approval: the same
+    // reading the Pending chip and the counts make.
+    final displayStatus = request.lifecycleStatus;
     final heroTag = 'services_all_request_${request.id}';
 
     return AppCard.outlined(
@@ -275,7 +277,9 @@ class _RequestListRow extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final media = request.media;
     final mediaType = request.type == 'tv' ? 'Series' : 'Movie';
-    final displayStatus = request.displayStatus;
+    // The request's own state, the media's only past approval: the same
+    // reading the Pending chip and the counts make.
+    final displayStatus = request.lifecycleStatus;
     final statusTone = resolveRequestStatus(request).tone;
     final posterUrl = ImageUtils.buildTmdbPosterUrl(media?.posterPath);
     final heroTag = 'services_all_request_${request.id}';

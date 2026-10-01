@@ -46,7 +46,9 @@ enum SeerrRequestFilter {
     if (this == SeerrRequestFilter.pending) return waiting;
     if (waiting) return false;
 
-    final kind = _lifecycleKind(request);
+    // The reading the row's pill says: the request's own state, and the
+    // media's only past approval (`lifecycleStatus`).
+    final kind = request.lifecycleStatus.kind;
     return switch (this) {
       SeerrRequestFilter.all || SeerrRequestFilter.pending => false,
       SeerrRequestFilter.approved =>
@@ -65,23 +67,6 @@ enum SeerrRequestFilter {
             kind == SeerrRequestDisplayKind.failed ||
             kind == SeerrRequestDisplayKind.blocklisted ||
             kind == SeerrRequestDisplayKind.deleted,
-    };
-  }
-
-  /// Where a request no longer waiting is in its life: its display status,
-  /// except where that only says the **media** is pending. The media can be
-  /// pending under another request while this one was already decided, and
-  /// then the request's own status is the answer.
-  static SeerrRequestDisplayKind _lifecycleKind(SeerrRequest request) {
-    final kind = request.displayStatus.kind;
-    if (kind != SeerrRequestDisplayKind.pending) return kind;
-    return switch (request.status) {
-      RequestStatus.approved => SeerrRequestDisplayKind.approved,
-      RequestStatus.completed => SeerrRequestDisplayKind.completed,
-      RequestStatus.declined => SeerrRequestDisplayKind.declined,
-      RequestStatus.failed => SeerrRequestDisplayKind.failed,
-      RequestStatus.pendingApproval => SeerrRequestDisplayKind.pending,
-      RequestStatus.unknown => SeerrRequestDisplayKind.unknown,
     };
   }
 

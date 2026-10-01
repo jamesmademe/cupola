@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 
@@ -24,14 +26,14 @@ void main() {
 
     expect(find.text('All requests'), findsOneWidget);
     expect(find.text('All'), findsOneWidget);
-    expect(find.text('Waiting for approval'), findsOneWidget);
+    // The chip, and A Quiet Place's pill: it still waits for approval.
+    expect(find.text('Waiting for approval'), findsNWidgets(2));
     expect(find.text('Approved'), findsOneWidget);
     expect(find.text('Declined'), findsOneWidget);
     expect(find.text('A Quiet Place'), findsOneWidget);
     expect(find.text('sarah'), findsOneWidget);
     expect(find.text('Movie'), findsOneWidget);
     // Sentence case: a per-row pill is a dense label, not an eyebrow.
-    expect(find.text('Available'), findsOneWidget);
     expect(find.text('Partially available'), findsOneWidget);
     expect(_contentCardWithImage('/quiet-place.jpg'), findsOneWidget);
   });
@@ -41,9 +43,10 @@ void main() {
       await _pumpAllRequests(tester);
       await _pumpAsyncContent(tester);
 
-      // A Quiet Place still waits for approval though the film is on disk,
-      // so its pill reads "Available": the trap. Approved keeps only Shogun,
-      // which was approved and is partly on disk...
+      // A Quiet Place still waits for approval though the film is on disk:
+      // the trap, where the media's word stands in for the request's.
+      // Approved keeps only Shogun, which was approved and is partly on
+      // disk...
       await tester.tap(find.text('Approved'));
       await _settle(tester);
 
@@ -58,6 +61,35 @@ void main() {
 
       expect(find.text('A Quiet Place'), findsOneWidget);
       expect(find.text('Shogun'), findsNothing);
+    });
+
+    testWidgets('a waiting request reads waiting on its row, though the film '
+        'is on disk', (tester) async {
+      await _pumpAllRequests(tester);
+      await _pumpAsyncContent(tester);
+
+      final row = find.ancestor(
+        of: find.text('A Quiet Place'),
+        matching: find.byType(AppCard),
+      );
+      // The trap: its pill read "Available" beside its own Approve.
+      expect(
+        find.descendant(of: row, matching: find.text('Waiting for approval')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: row, matching: find.text('Available')),
+        findsNothing,
+      );
+      // Past approval the row is about the media: Shogun is partly on disk.
+      final shogun = find.ancestor(
+        of: find.text('Shogun'),
+        matching: find.byType(AppCard),
+      );
+      expect(
+        find.descendant(of: shogun, matching: find.text('Partially available')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('the selected chip reports its state to a screen reader', (
@@ -158,7 +190,8 @@ void main() {
       expect(
         find.semantics.byLabel('A Quiet Place'),
         containsSemantics(
-          value: 'Movie, requested by sarah, Available, 2026-05-02',
+          // The request's own state: it read "Available", the media's.
+          value: 'Movie, requested by sarah, Waiting for approval, 2026-05-02',
           isButton: true,
           hasTapAction: true,
         ),

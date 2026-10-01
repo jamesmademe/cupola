@@ -410,6 +410,23 @@ void main() {
       );
     });
 
+    test('a waiting request reads waiting, even with the film on disk', () {
+      // The trap: the media's availability stood in, and the row read
+      // "Available", in green, beside its own Approve.
+      final status = resolveRequestStatus(
+        const SeerrRequest(
+          id: 1,
+          status: RequestStatus.pendingApproval,
+          media: RequestMedia(status: SeerrMediaAvailability.available),
+          createdAt: '2026-04-03T09:05:00Z',
+          type: 'movie',
+        ),
+      );
+
+      expect(status.label, 'Waiting for approval');
+      expect(status.tone, StatusTone.info);
+    });
+
     test("preserves Seerr's own wording as the label", () {
       final status = resolveRequestStatus(
         requestWith(RequestStatus.pendingApproval),

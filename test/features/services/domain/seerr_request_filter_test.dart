@@ -150,6 +150,18 @@ void main() {
       );
     });
 
+    test('a declined request is declined, whatever its media says', () {
+      // Another request delivered the film; this one was declined.
+      final declined = _request(
+        id: 1,
+        status: RequestStatus.declined,
+        mediaStatus: SeerrMediaAvailability.available,
+      );
+
+      expect(SeerrRequestFilter.declined.apply([declined]).length, 1);
+      expect(SeerrRequestFilter.approved.apply([declined]), isEmpty);
+    });
+
     test('no request sits in two buckets', () {
       final requests = [
         for (final status in RequestStatus.values)

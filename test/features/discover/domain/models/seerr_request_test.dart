@@ -178,4 +178,61 @@ void main() {
       expect(request.tags, isNull);
     });
   });
+
+  group('lifecycleStatus', () {
+    SeerrRequest request(RequestStatus status, SeerrMediaAvailability media) =>
+        SeerrRequest(
+          id: 1,
+          status: status,
+          media: RequestMedia(status: media),
+          createdAt: '2026-09-30T10:00:00Z',
+          type: 'movie',
+        );
+
+    test('a waiting request reads waiting, whatever its media says', () {
+      // The trap: displayStatus lets the film on disk stand in.
+      final waiting = request(
+        RequestStatus.pendingApproval,
+        SeerrMediaAvailability.available,
+      );
+
+      expect(waiting.displayStatus.label, 'Available');
+      expect(waiting.lifecycleStatus.label, 'Waiting for approval');
+      expect(waiting.lifecycleStatus.kind, SeerrRequestDisplayKind.pending);
+    });
+
+    test('a declined or failed request says so', () {
+      expect(
+        request(
+          RequestStatus.declined,
+          SeerrMediaAvailability.available,
+        ).lifecycleStatus.label,
+        'Declined',
+      );
+      expect(
+        request(
+          RequestStatus.failed,
+          SeerrMediaAvailability.processing,
+        ).lifecycleStatus.label,
+        'Failed',
+      );
+    });
+
+    test('past approval the row is about the media on its way', () {
+      expect(
+        request(
+          RequestStatus.approved,
+          SeerrMediaAvailability.processing,
+        ).lifecycleStatus.label,
+        'Processing',
+      );
+      expect(
+        request(
+          RequestStatus.approved,
+          SeerrMediaAvailability.pending,
+        ).lifecycleStatus.label,
+        'Approved',
+      );
+    });
+  });
 }
