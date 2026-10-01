@@ -866,7 +866,8 @@ class PagedArrFeedState {
 }
 
 /// Loads a bucket's records a window at a time, the way the official web UI
-/// pages its History, Wanted and Blocklist tables.
+/// pages its History and Wanted tables. The blocklist is not paged here: it is
+/// small, and `globalBlocklistItemsProvider` reads it whole in one walk.
 ///
 /// `build` watches [activityRefreshVersionProvider] so the one pull-to-refresh
 /// mechanism reloads every bucket that is alive, paged or not; the previous

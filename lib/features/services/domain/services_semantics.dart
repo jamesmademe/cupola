@@ -130,37 +130,14 @@ String decisionRowSpokenValue({
   required String actionLabel,
 }) => joinSpokenParts([serviceTitle, spokenFromDotted(detail), actionLabel]);
 
-/// The trailing "set up n more services" cell in the stack matrix.
-///
-/// Used **both** on screen and by the screen reader. It used to be two strings:
-/// the cell painted a bare count — "9 more services" — and this returned "9 more
-/// services available to set up" to make sense of it. The spoken version having
-/// to add the verb was the tell that the visible one was missing it: beside a
-/// `+` icon, "9 more services" reads as the tail of a truncated list rather than
-/// as somewhere to go. Naming the action once fixes the eye and the ear
-/// together, and matches the verb on the all-unconfigured empty state.
-String servicesUnconfiguredCellLabel({required int count}) {
-  final noun = count == 1 ? 'service' : 'services';
-  return 'Set up $count more $noun';
-}
-
 /// The × that acknowledges an outage notice.
 ///
-/// Names the outage rather than the gesture, for the same reason the
-/// more-services × does: the row holds a Retry and a dismiss, and "Dismiss"
-/// alone leaves a screen-reader user to guess which of the two they are on —
-/// where one re-checks the connection and the other hides the notice.
+/// Names the outage rather than the gesture: the row holds a Retry and a
+/// dismiss, and "Dismiss" alone leaves a screen-reader user to guess which of
+/// the two they are on — where one re-checks the connection and the other
+/// hides the notice.
 String servicesDismissAlertLabel(List<String> offlineServiceTitles) =>
     'Dismiss: ${servicesAlertBandMessage(offlineServiceTitles)}';
-
-/// The × beside that hint.
-///
-/// Names what disappears, not the gesture. "Dismiss" alone, on a row whose
-/// sibling node is already called "Set up 8 more services", leaves a screen
-/// reader user to infer which of the two things on the row it acts on — and
-/// the answer matters, because one navigates and one is permanent.
-String servicesDismissMoreServicesLabel({required int count}) =>
-    'Dismiss the $count remaining services hint';
 
 /// What a folded domain band announces, after its name.
 ///

@@ -587,8 +587,11 @@ void main() {
         addTearDown(() => tester.binding.setSurfaceSize(null));
         final harness = await ProfileHarness.start(Profiles.p3);
         // Fifty records of Radarr's 300, every one of them from today: the
-        // page cannot prove the day ends inside it.
-        final at = DateTime.now().toUtc().toIso8601String();
+        // page cannot prove the day ends inside it. Stamped at the group's
+        // fixed 15:00 and read against it, never the wall clock: records
+        // stamped "now" and a band reading "now" a moment later fall on two
+        // days when the run straddles midnight.
+        final at = now.toUtc().toIso8601String();
         harness.network.on(WorldIds.radarr, 'GET', '/api/v3/history', (r) {
           final page = int.tryParse(r.query['page'] ?? '') ?? 1;
           return NetworkReply.json({
@@ -610,7 +613,16 @@ void main() {
         });
         await tester.pumpWidget(
           ProviderScope(
-            overrides: harness.overrides,
+            overrides: [
+              ...harness.overrides,
+              // The provider's own reading, with the clock pinned.
+              finishedTodayProvider.overrideWith(
+                (ref) => finishedTodayOf(
+                  ref.watch(globalHistoryFeedProvider),
+                  now: now,
+                ),
+              ),
+            ],
             child: MaterialApp(
               theme: AppTheme.darkTheme(),
               home: const GlobalActivityScreen(),

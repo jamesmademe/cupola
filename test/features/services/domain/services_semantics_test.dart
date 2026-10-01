@@ -71,19 +71,6 @@ void main() {
     });
   });
 
-  group('servicesUnconfiguredCellLabel', () {
-    test('leads with the verb the bare count was missing', () {
-      // One string for the eye and the ear. A bare "4 more services" beside a
-      // `+` icon reads as the tail of a truncated list, which is why the spoken
-      // form used to have to append "available to set up".
-      expect(servicesUnconfiguredCellLabel(count: 4), 'Set up 4 more services');
-    });
-
-    test('singularizes the last one', () {
-      expect(servicesUnconfiguredCellLabel(count: 1), 'Set up 1 more service');
-    });
-  });
-
   group('serviceDomainBandValue', () {
     test('a band announces its size and nothing else', () {
       // It used to carry the offline services too, because a folded band was a
@@ -96,17 +83,6 @@ void main() {
 
     test('agrees in number', () {
       expect(serviceDomainBandValue(serviceCount: 1), '1 service');
-    });
-  });
-
-  group('servicesDismissMoreServicesLabel', () {
-    test('names what it dismisses, not the gesture', () {
-      // A bare "Dismiss" on a row whose sibling is "Set up 8 more services"
-      // leaves the user to guess which of the two the button acts on.
-      expect(
-        servicesDismissMoreServicesLabel(count: 8),
-        'Dismiss the 8 remaining services hint',
-      );
     });
   });
 
