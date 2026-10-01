@@ -254,6 +254,9 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     ensureQualityProfiles(
       profileId: series.qualityProfileId,
       fetchProfiles: () => _sonarr.getQualityProfiles(),
+      // The record itself, so a read that came back empty is asked again when
+      // a Retry or a pull brings a fresh one, not once and never again.
+      record: series,
     );
   }
 

@@ -236,6 +236,56 @@ void main() {
       await harness.unmount(tester);
     });
   });
+
+  group('the quality profile row', () {
+    testWidgets('comes back once a later read answers', (tester) async {
+      // Tall enough that the Details card is built without scrolling.
+      await tester.binding.setSurfaceSize(const Size(800, 3000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var profilesAnswer = false;
+      final harness = await _pump(
+        tester,
+        Profiles.p7,
+        const MovieDetailScreen(movieId: 1, heroTag: 'movie-1'),
+        routes: (network) => network.on(
+          WorldIds.radarr,
+          'GET',
+          '/api/v3/qualityprofile',
+          (_) => profilesAnswer
+              ? null
+              : NetworkReply.json({'message': 'boom'}, status: 500),
+        ),
+      );
+
+      // Omitted while the profiles are unknown: never a value nobody read.
+      expect(find.text('Details'), findsOneWidget);
+      expect(find.text('Quality profile'), findsNothing);
+      // Asked once, not on every rebuild that followed the failure.
+      expect(
+        harness.network
+            .requestsTo(WorldIds.radarr)
+            .where((r) => r.uri.path == '/api/v3/qualityprofile'),
+        hasLength(1),
+      );
+
+      profilesAnswer = true;
+      await tester
+          .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+          .onRefresh();
+      await harness.settle(tester);
+      // The profiles are asked for after the frame that drew the fresh film,
+      // and that frame leaves nothing scheduled for `settle` to wait on.
+      await tester.pump(const Duration(milliseconds: 100));
+      await harness.settle(tester);
+
+      // It used to be asked for once per page, so this row stayed gone until
+      // the user left and came back.
+      expect(find.text('Quality profile'), findsOneWidget);
+      expect(find.text('HD-1080p'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+  });
 }
 
 /// Pumps [child] under [profile] with [routes] answering ahead of the world
