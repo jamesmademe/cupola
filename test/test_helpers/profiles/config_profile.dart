@@ -37,11 +37,43 @@ enum ConfigCase {
 /// How one connection behaves on the fake network.
 ///
 /// Each value is mapped onto what the real client would see on the wire —
-/// a refused socket, a 401, qBittorrent's `Fails.` — so the app's own
-/// classification code (`classifyConnectionFailure`, the qB login reader, the
-/// capability probes) is what turns it into a verdict. Nothing here hands the
-/// app a pre-classified error.
-enum ConnectionBehaviour {
+/// a refused socket, a 401, qBittorrent's `Fails.`, a proxy's web page — so
+/// the app's own classification code (`classifyConnectionFailure`, the qB
+/// login reader, the capability probes) is what turns it into a verdict.
+/// Nothing here hands the app a pre-classified error.
+///
+/// A sealed type rather than an enum because some behaviours carry a value
+/// (which service answers instead, which gateway mode). The plain ones are
+/// [PlainBehaviour] values, reachable under the names they always had
+/// (`ConnectionBehaviour.refusesKey`), so a call site reads the same whether
+/// the behaviour it names takes a value or not.
+sealed class ConnectionBehaviour {
+  const ConnectionBehaviour();
+
+  /// Every request answers from the world's canned data.
+  static const answers = PlainBehaviour.answers;
+
+  /// The host refuses the connection. See [PlainBehaviour.didNotAnswer].
+  static const didNotAnswer = PlainBehaviour.didNotAnswer;
+
+  /// The host never completes the handshake. See [PlainBehaviour.timesOut].
+  static const timesOut = PlainBehaviour.timesOut;
+
+  /// The server refuses the credential. See [PlainBehaviour.refusesKey].
+  static const refusesKey = PlainBehaviour.refusesKey;
+
+  /// The credential may read and not write. See [PlainBehaviour.readOnly].
+  static const readOnly = PlainBehaviour.readOnly;
+
+  /// A web page answers every request. See [PlainBehaviour.servesHtmlPage].
+  static const servesHtmlPage = PlainBehaviour.servesHtmlPage;
+
+  /// A short name for a test's description.
+  String get label;
+}
+
+/// The behaviours that take no value.
+enum PlainBehaviour implements ConnectionBehaviour {
   /// Every request answers from the world's canned data.
   answers,
 
@@ -70,6 +102,15 @@ enum ConnectionBehaviour {
   /// other service has one admin key, so read-only there means only "a write
   /// is refused with 403" — the generic failure path the legend describes.
   readOnly,
+
+  /// Something other than the service answers every HTTP request with `200`
+  /// and a web page: a reverse proxy's default page, an address missing its
+  /// base path. The case behind "answering, and the library is empty".
+  /// WebSocket upgrades are not affected.
+  servesHtmlPage;
+
+  @override
+  String get label => name;
 }
 
 /// Where the device is, for [ProfileConnection.homeOnly].

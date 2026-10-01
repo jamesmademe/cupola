@@ -67,16 +67,20 @@ abstract class ServiceFake {
   /// never reach here — they fail at dial time, before a request exists.
   NetworkReply? gate(NetworkRequest request, ServerContext context) {
     switch (context.behaviour) {
-      case ConnectionBehaviour.refusesKey:
+      case PlainBehaviour.refusesKey:
         return isPublic(request) ? null : refuseKey(request);
-      case ConnectionBehaviour.readOnly:
+      case PlainBehaviour.readOnly:
         if (isWrite(request) || isAdminRead(request)) {
           return refuseWrite(request);
         }
         return null;
-      case ConnectionBehaviour.answers:
-      case ConnectionBehaviour.didNotAnswer:
-      case ConnectionBehaviour.timesOut:
+      // In front of every route, public ones included: the page is what is
+      // at the address, whichever path was asked for.
+      case PlainBehaviour.servesHtmlPage:
+        return NetworkReply.html(proxyDefaultPage);
+      case PlainBehaviour.answers:
+      case PlainBehaviour.didNotAnswer:
+      case PlainBehaviour.timesOut:
         return null;
     }
   }

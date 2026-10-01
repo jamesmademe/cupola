@@ -89,11 +89,31 @@ class NetworkReply {
     headers: headers,
   );
 
+  /// A web page, the way a reverse proxy, a sign-in page or a gateway
+  /// answers.
+  factory NetworkReply.html(
+    String body, {
+    int status = 200,
+    Map<String, List<String>> headers = const {},
+  }) => NetworkReply(
+    status,
+    body: body,
+    contentType: 'text/html; charset=utf-8',
+    headers: headers,
+  );
+
   final int status;
   final String body;
   final String contentType;
   final Map<String, List<String>> headers;
 }
+
+/// The page a reverse proxy serves when nothing is routed to the path asked
+/// for: what answers an address missing its base path.
+const proxyDefaultPage =
+    '<!DOCTYPE html><html><head><title>Welcome to nginx!</title></head>'
+    '<body><h1>Welcome to nginx!</h1><p>If you see this page, the nginx web '
+    'server is successfully installed and working.</p></body></html>';
 
 /// A test-supplied answer for one route. Returning null falls through to the
 /// world's canned answer.

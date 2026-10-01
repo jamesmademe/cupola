@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import 'package:cupola/core/network/answer_guard.dart';
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 
@@ -214,6 +215,10 @@ class SameOriginRedirectInterceptor extends Interceptor {
 /// together here is what keeps seven call sites from drifting apart; the reason
 /// *each* service cannot afford the leak is documented at its own call site.
 ///
+/// After the redirect guard comes [AnswerGuardInterceptor], so the final answer
+/// to a request that asked for JSON is JSON, or a classified failure: a web
+/// page answering with a 200 is not the service answering.
+///
 /// [injected] is returned untouched. A caller supplying its own transport — a
 /// test stub, in practice — owns redirect handling and TLS along with it, and
 /// installing a pinned adapter over it would replace the very thing it was
@@ -245,7 +250,9 @@ Dio guardedDio({
       headers: headers,
     ),
   );
-  dio.interceptors.add(SameOriginRedirectInterceptor(dio));
+  dio.interceptors
+    ..add(SameOriginRedirectInterceptor(dio))
+    ..add(AnswerGuardInterceptor());
   final adapter = pinnedHttpClientAdapterFor(
     baseUrl,
     pinnedFingerprint: certFingerprint,

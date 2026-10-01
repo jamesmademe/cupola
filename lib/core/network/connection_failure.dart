@@ -108,6 +108,95 @@ abstract interface class HasFailureDetail {
   String get failureDetail;
 }
 
+/// A request that asked for JSON and got an answer that is not JSON: a web
+/// page, or a body nothing can decode.
+///
+/// The answer to a reverse proxy's default page, a missing base path, a
+/// sign-in page nobody recognised, another app on the port. Before this, a 2xx
+/// was a success whatever came back, so the probe read the service as
+/// answering and every list read turned the page into `[]`: "Answering" over
+/// an empty library. [AnswerGuardInterceptor] raises this instead, so every
+/// read gets a failure it can classify.
+///
+/// It keeps what classification needs and nothing more: the status, the few
+/// headers that say who answered ([relevantHeaders]) and the first
+/// [bodyPrefixLimit] characters of the body. **None of it is ever printed**:
+/// [toString] names the status only, and [failureDetail] says what kind of
+/// answer it was without quoting it, because a body or a header can carry a
+/// session, a token or an address the user did not mean to show.
+class UnexpectedAnswer
+    implements Exception, HasFailureReason, HasFailureDetail {
+  UnexpectedAnswer({
+    this.status,
+    Map<String, List<String>> headers = const {},
+    String? body,
+    this.host,
+  }) : headers = {
+         for (final entry in headers.entries)
+           if (relevantHeaders.contains(entry.key.toLowerCase()))
+             entry.key.toLowerCase(): List.unmodifiable(entry.value),
+       },
+       bodyPrefix = body == null || body.length <= bodyPrefixLimit
+           ? body
+           : body.substring(0, bodyPrefixLimit);
+
+  /// How much of the body is kept: enough to tell a sign-in form or a
+  /// Cloudflare page from an API, and bounded so a large page is not held.
+  static const bodyPrefixLimit = 4096;
+
+  /// The headers worth keeping, lower-cased: what the body is, who served it,
+  /// and where it pointed.
+  static const relevantHeaders = {
+    'content-type',
+    'server',
+    'cf-ray',
+    'www-authenticate',
+    'location',
+  };
+
+  /// The HTTP status, or null when the body failed to decode before a
+  /// response was built.
+  final int? status;
+
+  /// [relevantHeaders] only, lower-cased names.
+  final Map<String, List<String>> headers;
+
+  /// The start of the body, at most [bodyPrefixLimit] characters.
+  final String? bodyPrefix;
+
+  /// The address that answered, as the UI prints one (`radarr.example.com`,
+  /// `nas.home.arpa:7878`).
+  final String? host;
+
+  String? get contentType => headers['content-type']?.firstOrNull;
+
+  /// Whether the answer was a web page: labelled HTML, or shaped like one.
+  bool get isWebPage {
+    final type = contentType?.toLowerCase() ?? '';
+    if (type.contains('text/html') || type.contains('xhtml')) return true;
+    final start = bodyPrefix?.trimLeft().toLowerCase() ?? '';
+    return start.startsWith('<!doctype html') || start.startsWith('<html');
+  }
+
+  @override
+  ServiceFailureReason get reason => ServiceFailureReason.invalidResponse;
+
+  /// The sentence for a web page, which is the case worth naming: the user
+  /// can go and look at the address. Anything else keeps the classification's
+  /// own words (an empty detail is no detail).
+  @override
+  String get failureDetail {
+    if (!isWebPage) return '';
+    final where = host == null || host!.isEmpty ? '' : ' at $host';
+    return 'A web page answered$where instead of the API. A reverse proxy '
+        'page, or a missing base path in the address, is the usual cause.';
+  }
+
+  @override
+  String toString() =>
+      status == null ? 'UnexpectedAnswer' : 'UnexpectedAnswer($status)';
+}
+
 /// The verbatim explanation [error] carries, or null when it has none — which
 /// is the common case, and means "use the message for the reason instead".
 ///

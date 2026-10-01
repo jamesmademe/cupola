@@ -288,19 +288,7 @@ class PlexClient implements StreamServerClient {
     var decoded = raw;
     if (decoded is String) {
       final text = decoded.trimLeft();
-      // Plex serves XML unless `Accept: application/json` is honoured. Reaching
-      // here means either the header was stripped in transit — a reverse proxy
-      // that rewrites Accept — or the address points at something that is not a
-      // Plex server. Both are configuration problems, and saying so beats the
-      // `FormatException` a bare `jsonDecode` would raise.
-      if (text.startsWith('<')) {
-        throw const PlexException(
-          'The server answered XML instead of JSON. Check that the address '
-          'points at Plex and that nothing between here and it rewrites the '
-          'Accept header.',
-          reason: ServiceFailureReason.notFound,
-        );
-      }
+      if (text.startsWith('<')) throw _xmlAnswer;
       try {
         decoded = jsonDecode(text);
       } on FormatException {
@@ -320,11 +308,35 @@ class PlexClient implements StreamServerClient {
     );
   }
 
+  /// Plex serves XML unless `Accept: application/json` is honoured. An
+  /// answer that starts with `<` means either the header was stripped in
+  /// transit (a reverse proxy that rewrites Accept) or the address points at
+  /// something that is not a Plex server. Both are configuration problems, and
+  /// saying so beats the `FormatException` a bare `jsonDecode` would raise.
+  static const _xmlAnswer = PlexException(
+    'The server answered XML instead of JSON. Check that the address '
+    'points at Plex and that nothing between here and it rewrites the '
+    'Accept header.',
+    reason: ServiceFailureReason.notFound,
+  );
+
   PlexException _mapDioError(DioException error) {
     final status = error.response?.statusCode;
-    // A body Dio could not decode. Reached when a reverse proxy labels an XML
-    // reply `application/json`, in which case Dio's transformer fails before
-    // [_mediaContainer] can see the leading `<` and explain it.
+    // An answer that is not JSON. The shared client's answer guard raises it
+    // for a body that does not decode (`UnexpectedAnswer`), and Dio's
+    // transformer for one labelled `application/json` that does not parse:
+    // either way the Plex API is not what answered, which is this client's
+    // `notFound`, with the XML sentence when the body starts like markup.
+    final unexpected = error.error;
+    if (unexpected is UnexpectedAnswer) {
+      final text = unexpected.bodyPrefix?.trimLeft() ?? '';
+      return text.startsWith('<')
+          ? _xmlAnswer
+          : const PlexException(
+              kPlexNotJsonMessage,
+              reason: ServiceFailureReason.notFound,
+            );
+    }
     if (error.error is FormatException) {
       return const PlexException(
         kPlexNotJsonMessage,

@@ -57,9 +57,17 @@ recorded in `network.unanswered`.
 Each behaviour is sent in the service's own wire shape, so the app's own
 classifiers turn it into a verdict.
 
+`ConnectionBehaviour` is a sealed type, not an enum, because some behaviours
+carry a value. The plain ones are `PlainBehaviour` values, still reached as
+`ConnectionBehaviour.refusesKey` and the like, so a call site reads the same
+either way. A `switch` over a behaviour matches `PlainBehaviour.x` for the
+plain ones and the class for the others; `behaviour.label` names it in a
+test's description.
+
 | Behaviour | On the wire |
 |---|---|
 | `answers` | Canned world data. |
+| `servesHtmlPage` | Every HTTP request, public routes included, gets `200` with a web server's default page (`text/html`). An address missing its base path, a proxy with nothing routed. WebSocket upgrades are untouched. |
 | `didNotAnswer` | `SocketException('Connection refused')` at dial time. The attempt is logged with `dialRefused`. |
 | `timesOut` | `SocketException('Connection timed out')`, which Dio reports as `connectionTimeout`. It is raised at once, and the app reads it as did not answer: the connection never completed. |
 | `refusesKey` | The arrs answer 401. Seerr answers 403. qBittorrent answers `200 Fails.` on login. SABnzbd answers `status: false`. TrueNAS answers `false` to the key login. Dockge answers `ok: false` to login. Public probes keep answering: Jellyfin `/System/Info/Public`, Plex `/identity`, NPM `/api/`, Seerr `/status` and SABnzbd `mode=version`. |
