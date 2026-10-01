@@ -150,6 +150,50 @@ void main() {
         );
       });
 
+      test('accepts them where the form takes them off the address', () {
+        expect(
+          UrlUtils.validateServiceHost(
+            'https://user:pass@host.example.com',
+            allowCredentials: true,
+          ),
+          isNull,
+        );
+      });
+
+      test('an address that carries credentials names them, decoded', () {
+        expect(
+          UrlUtils.credentialsInAddress(
+            'https://matt:p%40ss%3Aw@radarr.example.com/radarr',
+          ),
+          (username: 'matt', password: 'p@ss:w'),
+        );
+        expect(UrlUtils.credentialsInAddress('matt@radarr.example.com'), (
+          username: 'matt',
+          password: '',
+        ));
+        expect(
+          UrlUtils.credentialsInAddress('https://radarr.example.com'),
+          isNull,
+        );
+      });
+
+      test('an address is cleaned of its credentials, and of nothing else', () {
+        expect(
+          UrlUtils.withoutCredentials(
+            'https://matt:pw@radarr.example.com:8443/radarr?x=1',
+          ),
+          'https://radarr.example.com:8443/radarr?x=1',
+        );
+        expect(
+          UrlUtils.withoutCredentials('matt:pw@nas.home.arpa:7878'),
+          'nas.home.arpa:7878',
+        );
+        expect(
+          UrlUtils.withoutCredentials('https://radarr.example.com/a@b'),
+          'https://radarr.example.com/a@b',
+        );
+      });
+
       // `Uri.tryParse` is far looser than DNS — it reports `hello!world` and
       // `a,b.com` as hosts — so free text used to sail through the form and
       // come back as "couldn't reach it", sending the user hunting for a

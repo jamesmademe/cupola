@@ -39,8 +39,9 @@ class UrlUtils {
 
   /// Strips any `user:password@` from an address.
   ///
-  /// [validateServiceHost] already rejects embedded credentials, and both UI
-  /// entry points run it, so nothing reaches storage with them today. This is
+  /// [validateServiceHost] already rejects embedded credentials in onboarding,
+  /// and the connection form takes them off the address before it saves
+  /// ([credentialsInAddress]), so nothing reaches storage with them today. This is
   /// the belt to that braces, and it belongs here rather than only in the
   /// validator because *this* is the function whose output becomes
   /// `BaseOptions.baseUrl` — a credential that ever slipped past the form would
@@ -83,7 +84,15 @@ class UrlUtils {
   /// So is an internationalised name (`münchen.de`) — same class of input, and
   /// telling the user their address is malformed because it is not ASCII is the
   /// same false report the character rule exists to prevent.
-  static String? validateServiceHost(String? value) {
+  ///
+  /// [allowCredentials] is for the connection form, which takes an address's
+  /// `user:password@` off it on save and puts it where it belongs (the proxy
+  /// password on the Access row, or the service's own sign-in): see
+  /// [credentialsInAddress]. Everywhere else such an address is refused.
+  static String? validateServiceHost(
+    String? value, {
+    bool allowCredentials = false,
+  }) {
     if (value == null || value.trim().isEmpty) {
       return 'Server URL is required';
     }
@@ -103,15 +112,63 @@ class UrlUtils {
       trimmed = 'https://$trimmed';
     }
 
-    return _validateParsed(trimmed);
+    return _validateParsed(trimmed, allowCredentials: allowCredentials);
   }
 
-  static String? _validateParsed(String url) {
+  /// The `user:password@` an address carries, decoded, or null when it
+  /// carries none: `https://matt:p%40ss@radarr.example.com` reads as `matt`
+  /// and `p@ss`. A user with no password reads with an empty one.
+  static ({String username, String password})? credentialsInAddress(
+    String url,
+  ) {
+    final trimmed = url.trim();
+    final schemed =
+        RegExp(r'^https?://', caseSensitive: false).hasMatch(trimmed)
+        ? trimmed
+        : 'https://$trimmed';
+    final userInfo = Uri.tryParse(schemed)?.userInfo ?? '';
+    if (userInfo.isEmpty) return null;
+    final colon = userInfo.indexOf(':');
+    String decoded(String part) {
+      try {
+        return Uri.decodeComponent(part);
+      } on ArgumentError {
+        return part;
+      }
+    }
+
+    return colon < 0
+        ? (username: decoded(userInfo), password: '')
+        : (
+            username: decoded(userInfo.substring(0, colon)),
+            password: decoded(userInfo.substring(colon + 1)),
+          );
+  }
+
+  /// [url] without the `user:password@` it carries, as typed otherwise.
+  static String withoutCredentials(String url) {
+    final trimmed = url.trim();
+    if (credentialsInAddress(trimmed) == null) return trimmed;
+    final scheme = RegExp(
+      r'^https?://',
+      caseSensitive: false,
+    ).firstMatch(trimmed)?.group(0);
+    final rest = scheme == null ? trimmed : trimmed.substring(scheme.length);
+    // The authority ends at the path, the query or the fragment, and its
+    // user info at the last `@` before that.
+    final end = rest.indexOf(RegExp('[/?#]'));
+    final authority = end < 0 ? rest : rest.substring(0, end);
+    final at = authority.lastIndexOf('@');
+    if (at < 0) return trimmed;
+    return '${scheme ?? ''}${rest.substring(at + 1)}';
+  }
+
+  static String? _validateParsed(String url, {bool allowCredentials = false}) {
     if (RegExp(r'\s').hasMatch(url)) return _invalidUrl;
 
     final uri = Uri.tryParse(url);
     if (uri == null || uri.host.isEmpty) return _invalidUrl;
-    if (uri.userInfo.isNotEmpty) return _credentialsInUrl;
+    if (uri.userInfo.isNotEmpty && !allowCredentials) return _credentialsInUrl;
     if (!_isPlausibleHost(uri.host)) return _invalidUrl;
 
     return null;

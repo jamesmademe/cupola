@@ -307,6 +307,60 @@ void main() {
     });
   });
 
+  group('an address typed with user:password@', () {
+    testWidgets('becomes a proxy password, and the address is cleaned', (
+      tester,
+    ) async {
+      final (harness, container) = await _pumpForm(
+        tester,
+        Profiles.p3,
+        WorldIds.radarr,
+      );
+
+      await tester.enterText(
+        _field('Server URL'),
+        'https://matt:p%40ss@radarr.example.com',
+      );
+      await _save(tester, harness);
+
+      final saved = container
+          .read(settingsProvider)
+          .instanceById(WorldIds.radarr);
+      expect(saved?.url, 'https://radarr.example.com');
+      expect(
+        saved?.access,
+        const ProxyPassword(username: 'matt', password: 'p@ss'),
+      );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('is the sign-in of a service that signs in with '
+        'Authorization itself', (tester) async {
+      final (harness, container) = await _pumpForm(
+        tester,
+        Profiles.p1.withConnection(WorldConnections.nzbget),
+        WorldConnections.nzbget.id,
+      );
+
+      await tester.enterText(
+        _field('Server URL'),
+        'http://nzbget:tegbzn6789@tower.home.arpa:6789',
+      );
+      await _save(tester, harness);
+
+      final saved = container
+          .read(settingsProvider)
+          .instanceById(WorldConnections.nzbget.id);
+      expect(saved?.url, 'http://tower.home.arpa:6789');
+      expect(saved?.username, 'nzbget');
+      expect(saved?.credential, 'tegbzn6789');
+      expect(saved?.access, const NoAccess());
+
+      await harness.unmount(tester);
+    });
+  });
+
   group('the connection test of a Cloudflare service token, under P8', () {
     testWidgets('Access let it through', (tester) async {
       final (harness, _) = await _pumpForm(

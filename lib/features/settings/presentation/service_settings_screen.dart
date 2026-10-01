@@ -343,6 +343,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   Future<void> _testConnection() async {
     if (_testing || _saving) return;
     if (!_formKey.currentState!.validate()) return;
+    _liftCredentialsFromAddress();
 
     // The answer to a test is rendered under the fields, and behind a reverse
     // proxy the wait for it can run to fifteen seconds — spending them behind
@@ -446,6 +447,25 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     }
   }
 
+  /// Takes an address's `user:password@` off it and puts it where it
+  /// belongs: the proxy password on the Access row, or, for a service that
+  /// signs in with Authorization itself (NZBGet, Transmission, Nginx Proxy
+  /// Manager), its own username and password. The address is left clean, so
+  /// no credential is ever stored in it or sent in a request's URL.
+  void _liftCredentialsFromAddress() {
+    final credentials = UrlUtils.credentialsInAddress(_urlController.text);
+    if (credentials == null) return;
+    _urlController.text = UrlUtils.withoutCredentials(_urlController.text);
+    if (service.offersProxyPassword) {
+      _proxyUsernameController.text = credentials.username;
+      _proxyPasswordController.text = credentials.password;
+      setState(() => _accessKind = AccessKind.password);
+    } else {
+      _usernameController.text = credentials.username;
+      _passwordController.text = credentials.password;
+    }
+  }
+
   /// Confirms before dropping unsaved edits.
   Future<bool> _confirmDiscard() async {
     if (!_isDirty) return true;
@@ -463,6 +483,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   Future<void> _saveSettings() async {
     if (_saving) return;
     if (!_formKey.currentState!.validate()) return;
+    _liftCredentialsFromAddress();
 
     final current = ref.read(currentSettingsProvider);
     // Captured before the write: an edited URL moves this service off an origin
@@ -1697,7 +1718,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             // Same rule as onboarding: a bare host is accepted here too and
             // normalised to HTTPS on save. Two rules for one field meant an
             // address typed during setup was rejected when reopened here.
-            validator: UrlUtils.validateServiceHost,
+            // An address that carries `user:password@` is accepted here and
+            // cleaned on test or save: see [_liftCredentialsFromAddress].
+            validator: (value) =>
+                UrlUtils.validateServiceHost(value, allowCredentials: true),
           ),
         );
       },
