@@ -5,6 +5,7 @@ import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
+import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Premium collection page: backdrop hero, overview and a rail of the
@@ -21,6 +22,8 @@ class CollectionDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!watchSeerrConfigured(ref)) return const SeerrDetailNotSetUpView();
+
     final collectionAsync = ref.watch(collectionDetailProvider(collectionId));
 
     return collectionAsync.when(

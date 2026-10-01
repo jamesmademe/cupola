@@ -15,6 +15,7 @@ import 'package:cupola/features/discover/presentation/widgets/discover_collectio
 import 'package:cupola/features/discover/presentation/widgets/discover_release_facts.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_seasons_list.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_watch_providers.dart';
+import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -34,6 +35,10 @@ class DiscoverDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Before any provider: with no Seerr the lookup below can only throw, and
+    // a lookup that throws is asked again on a backoff no waiting can answer.
+    if (!watchSeerrConfigured(ref)) return const SeerrDetailNotSetUpView();
+
     final normalizedMediaType = mediaType == 'movie' ? 'movie' : 'tv';
     final region = ref.watch(regionProvider);
     final detailsAsync = ref.watch(

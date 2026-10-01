@@ -7,6 +7,7 @@ import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
+import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Premium person (cast member) page: profile hero, biography and a filmography
@@ -28,6 +29,8 @@ class PersonDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!watchSeerrConfigured(ref)) return const SeerrDetailNotSetUpView();
+
     final personAsync = ref.watch(personDetailProvider(personId));
     final tag = heroTag ?? 'person_$personId';
     final hasInitial =

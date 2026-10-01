@@ -6,6 +6,12 @@ import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/collection_detail.dart';
 import 'package:cupola/features/discover/domain/models/person_detail.dart';
 
+/// A title's Seerr record for the detail page.
+///
+/// `noProviderRetry`, like the person and collection lookups below: a failure
+/// is asked once and reaches the page in its own words, under a Retry that
+/// asks again. Riverpod's default re-ran the lookup ten times on a backoff,
+/// behind a page that was already showing the failure.
 final discoverDetailProvider = FutureProvider.autoDispose
     .family<Map<String, dynamic>, ({int id, String type})>((ref, arg) async {
       final service = ref.watch(seerrServiceProvider);
@@ -14,7 +20,7 @@ final discoverDetailProvider = FutureProvider.autoDispose
       } else {
         return service.getTv(arg.id);
       }
-    });
+    }, retry: noProviderRetry);
 
 /// Person (cast/crew) details for the Person page.
 ///

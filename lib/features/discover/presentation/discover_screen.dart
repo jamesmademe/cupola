@@ -28,6 +28,7 @@ import 'package:cupola/features/discover/presentation/discover_search_provider.d
 import 'package:cupola/features/discover/presentation/widgets/discover_carousel.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_region_chip.dart';
 import 'package:cupola/features/discover/presentation/widgets/seerr_decisions_section.dart';
+import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -57,6 +58,22 @@ class DiscoverScreen extends ConsumerWidget {
       ref.read(discoverSearchQueryProvider.notifier).state = '';
       _invalidateCatalog(ref);
     });
+
+    // Before a rail is asked for anything. With no Seerr every one of them
+    // could only fail, each rail stood aside so the page could say it once,
+    // and the page never did: a search bar, a region chip and nothing under
+    // them, for a service nobody had added.
+    if (!watchSeerrConfigured(ref)) {
+      return AmbientScaffold(
+        accent: ServiceKey.seerr.accent,
+        appBar: showAppBar ? const GlassAppBar(title: Text('Discover')) : null,
+        // `.forService`: the door goes to Seerr's own form, as the Overview
+        // tab beside this one does.
+        body: SafeArea(
+          child: NotConfiguredPlaceholder.forService(ServiceKey.seerr),
+        ),
+      );
+    }
 
     return AmbientScaffold(
       accent: ServiceKey.seerr.accent,

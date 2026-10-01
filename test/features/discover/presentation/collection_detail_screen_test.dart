@@ -9,6 +9,10 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/domain/models/collection_detail.dart';
 import 'package:cupola/features/discover/presentation/collection_detail_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 const _collectionId = 42;
 
@@ -30,7 +34,12 @@ Future<void> _pump(
       // would make the load count non-deterministic. Switched off so the test
       // measures only what the retry button does.
       retry: (retryCount, error) => null,
-      overrides: [collectionDetailProvider.overrideWith(builder)],
+      overrides: [
+        currentSettingsProvider.overrideWith(
+          (ref) => settingsWithServices([ServiceKey.seerr]),
+        ),
+        collectionDetailProvider.overrideWith(builder),
+      ],
       child: const MaterialApp(
         home: CollectionDetailScreen(collectionId: _collectionId),
       ),

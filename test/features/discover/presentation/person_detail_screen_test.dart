@@ -9,6 +9,10 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/domain/models/person_detail.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/discover/presentation/person_detail_screen.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 const _personId = 9;
 
@@ -22,6 +26,9 @@ Future<void> _pump(
       // make the load count non-deterministic.
       retry: (retryCount, error) => null,
       overrides: [
+        currentSettingsProvider.overrideWith(
+          (ref) => settingsWithServices([ServiceKey.seerr]),
+        ),
         personDetailProvider.overrideWith(builder),
         personCreditsProvider.overrideWith(
           (ref, id) async => const <MediaPreview>[],

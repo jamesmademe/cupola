@@ -14,6 +14,9 @@ import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_search_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 const _movies = [
   MediaPreview(id: 1, title: 'Movie One', mediaType: 'movie'),
@@ -242,6 +245,10 @@ Future<void> _pumpDiscover(
         // `sharedPreferencesProvider` — wired in main.dart and throwing
         // anywhere else. One value is all this screen needs from it.
         regionProvider.overrideWithValue('IT'),
+        // The catalogue is drawn only once there is a Seerr to ask.
+        currentSettingsProvider.overrideWith(
+          (ref) => settingsWithServices([ServiceKey.seerr]),
+        ),
         discoverTrendingProvider.overrideWith(
           trendingBuilder ?? (ref) async => _trending,
         ),

@@ -10,6 +10,9 @@ import 'package:cupola/features/discover/presentation/discover_detail_screen.dar
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_seasons_list.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+import '../../../test_helpers/settings_scope.dart';
 
 /// Screen-level coverage for the Seerr detail page.
 ///
@@ -101,6 +104,10 @@ Future<int> _pump(
       // would make any load count non-deterministic.
       retry: (retryCount, error) => null,
       overrides: [
+        // The page asks whether there is a Seerr before it asks Seerr.
+        currentSettingsProvider.overrideWith(
+          (ref) => settingsWithServices([ServiceKey.seerr]),
+        ),
         discoverDetailProvider.overrideWith((ref, arg) {
           loads++;
           onLoad?.call(loads);

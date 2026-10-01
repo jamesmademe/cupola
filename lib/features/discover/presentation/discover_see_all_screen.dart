@@ -11,8 +11,10 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class DiscoverSeeAllScreen extends ConsumerStatefulWidget {
@@ -88,6 +90,15 @@ class _DiscoverSeeAllScreenState extends ConsumerState<DiscoverSeeAllScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Before the pager asks for its first page: with no Seerr that page can
+    // only fail, and the failure state would offer a Retry that asks nobody.
+    if (!watchSeerrConfigured(ref)) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.title)),
+        body: NotConfiguredPlaceholder.forService(ServiceKey.seerr),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       body: PagingListener<int, MediaPreview>(
