@@ -9,6 +9,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
@@ -19,6 +20,7 @@ import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/music/presentation/music_screen.dart';
+import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/series/presentation/series_screen.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
@@ -220,6 +222,78 @@ void main() {
         diagnosis.messageFor(ServiceKey.radarr),
         failureMessageOf(ServiceKey.radarr, summary.failure),
       );
+    });
+  });
+
+  group('SABnzbd\'s lists are a fault, not empty, when SABnzbd did not '
+      'answer them', () {
+    Future<Object> failureOf(
+      ConfigProfile profile,
+      ProviderListenable<Future<Object?>> provider, {
+      void Function(ProfileNetwork network)? routes,
+    }) async {
+      final harness = await ProfileHarness.start(profile);
+      routes?.call(harness.network);
+      final container = harness.container(retry: (_, _) => null);
+      try {
+        await container.read(provider);
+      } catch (error) {
+        return error;
+      }
+      fail('expected the read to fail');
+    }
+
+    test('a web page answering the queue and the history', () async {
+      final profile = Profiles.p1.withBehaviour(
+        WorldIds.sabnzbd,
+        ConnectionBehaviour.servesHtmlPage,
+      );
+      for (final provider in <ProviderListenable<Future<Object?>>>[
+        sabnzbdQueueProvider.future,
+        sabnzbdHistoryProvider.future,
+      ]) {
+        final error = await failureOf(profile, provider);
+
+        expect(classifyConnectionFailure(error), ServiceFailureReason.notFound);
+        expect(
+          failureMessageOf(ServiceKey.sabnzbd, error),
+          'A web page answered at nas.home.arpa:8085 instead of SABnzbd.\n'
+          'If SABnzbd sits under a path, add it: '
+          'http://nas.home.arpa:8085/sabnzbd',
+        );
+      }
+    });
+
+    test('an answer without SABnzbd\'s envelope', () async {
+      final error = await failureOf(
+        Profiles.p1,
+        sabnzbdQueueProvider.future,
+        routes: (network) => network.on(
+          WorldIds.sabnzbd,
+          'GET',
+          '/api',
+          (request) => request.query['mode'] == 'queue'
+              ? NetworkReply.json(<String, Object?>{})
+              : null,
+        ),
+      );
+
+      expect(classifyConnectionFailure(error), ServiceFailureReason.notFound);
+      expect(
+        failureMessageOf(ServiceKey.sabnzbd, error),
+        startsWith(
+          "Something answered at nas.home.arpa:8085, but it isn't SABnzbd.",
+        ),
+      );
+    });
+
+    test('a genuine SABnzbd still reads its queue', () async {
+      final harness = await ProfileHarness.start(Profiles.p1);
+      final container = harness.container(retry: (_, _) => null);
+
+      final queue = await container.read(sabnzbdQueueProvider.future);
+
+      expect(queue, isNotNull);
     });
   });
 

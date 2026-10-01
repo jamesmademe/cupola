@@ -124,6 +124,23 @@ class SabnzbdClient {
         return data;
       }
       if (data is String) {
+        // A web page where the API should be (a proxy's page, an address
+        // missing its base path): not SABnzbd, and never a read with nothing
+        // in it. Any other text is kept for the caller to read.
+        final page = UnexpectedAnswer(
+          status: response.statusCode,
+          headers: response.headers.map,
+          body: data,
+          host: ServiceKey.sabnzbd.extractHost(baseUrl),
+          baseUrl: baseUrl,
+        );
+        if (page.isWebPage) {
+          throw SabnzbdException(
+            'A web page answered instead of SABnzbd',
+            reason: page.reason,
+            cause: page,
+          );
+        }
         return {'_raw': data};
       }
       return const {};
@@ -172,22 +189,41 @@ class SabnzbdClient {
 
   /// The active download queue: the first [limit] jobs, or all of them for
   /// [wholeQueue].
+  ///
+  /// An answer without SABnzbd's `queue` envelope is something that is not
+  /// SABnzbd, and fails: read as an empty queue it was a confident "nothing
+  /// downloading" about a server nobody reached.
   Future<SabnzbdQueue> getQueue({int limit = 50}) async {
     final data = await _call('queue', extra: {'start': 0, 'limit': limit});
-    final queue = (data['queue'] as Map?)?.cast<String, dynamic>();
-    return SabnzbdQueue.fromJson(queue ?? const {});
+    final queue = data['queue'];
+    if (queue is! Map) throw _notSabnzbd();
+    return SabnzbdQueue.fromJson(queue.cast<String, dynamic>());
   }
 
-  /// Recent completed/failed downloads.
+  /// Recent completed/failed downloads. Without SABnzbd's `history`
+  /// envelope, a failure, as for [getQueue].
   Future<List<SabnzbdHistorySlot>> getHistory({int limit = 20}) async {
     final data = await _call('history', extra: {'start': 0, 'limit': limit});
-    final history = (data['history'] as Map?)?.cast<String, dynamic>();
-    final slots = (history?['slots'] as List?) ?? const [];
+    final history = data['history'];
+    if (history is! Map) throw _notSabnzbd();
+    final slots = (history['slots'] as List?) ?? const [];
     return slots
         .whereType<Map>()
         .map((e) => SabnzbdHistorySlot.fromJson(e.cast<String, dynamic>()))
         .toList(growable: false);
   }
+
+  /// The failure of a read whose answer has no SABnzbd envelope: something
+  /// answered at the address, and it is not SABnzbd.
+  SabnzbdException _notSabnzbd() => SabnzbdException(
+    'SABnzbd did not answer at this address',
+    reason: ServiceFailureReason.notFound,
+    cause: WrongServiceAnswer(
+      ServiceKey.sabnzbd,
+      ProbeIdentity.notThisService,
+      url: baseUrl,
+    ),
+  );
 
   /// Aggregate transfer statistics (total / month / week / day bytes).
   Future<SabnzbdServerStats> getServerStats() async {
