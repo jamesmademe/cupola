@@ -66,4 +66,35 @@ void main() {
     final harness = await ProfileHarness.start(Profiles.p1);
     expect(_names(_legs(harness), ServiceKey.jellyfin), ['']);
   });
+
+  test(
+    'P1: on a household where everything answers, every lane answers',
+    () async {
+      // The Lidarr fake had no search route, so its lane read "Lidarr is not at
+      // this address" in a world where Lidarr is up: a fault the fixture made,
+      // under every search test run against the profiles.
+      final harness = await ProfileHarness.start(Profiles.p1);
+      final container = harness.container();
+      final sub = container.listen(globalSearchLanesProvider, (_, _) {});
+      addTearDown(sub.close);
+      container.read(globalSearchQueryProvider.notifier).state = 'sintel';
+
+      for (final leg in container.read(globalSearchLegsProvider)) {
+        final lane = await container.read(globalSearchLegProvider(leg).future);
+        expect(
+          lane.state,
+          SearchLaneState.answered,
+          reason: '${lane.laneTitle}: ${lane.faultSentence}',
+        );
+      }
+      final lidarr = container
+          .read(globalSearchLegsProvider)
+          .singleWhere((leg) => leg.instance.service == ServiceKey.lidarr);
+      final artists = await container.read(
+        globalSearchLegProvider(lidarr).future,
+      );
+      expect(artists.results.map((r) => r.title), contains('Jan Morgenstern'));
+      expect(harness.network.unanswered, isEmpty);
+    },
+  );
 }

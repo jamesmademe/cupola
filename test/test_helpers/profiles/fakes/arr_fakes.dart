@@ -782,6 +782,9 @@ class LidarrFake extends ArrFake {
     return switch (r.path) {
       '/api/v1/artist' => NetworkReply.json([_artist(c)]),
       '/api/v1/artist/1' => NetworkReply.json(_artist(c)),
+      // The search route, as Radarr's and Sonarr's fakes answer theirs: the
+      // world's artist, with its library id, whatever the term.
+      '/api/v1/artist/lookup' => NetworkReply.json([_artist(c)]),
       '/api/v1/album' => NetworkReply.json(_albums(c)),
       '/api/v1/metadataprofile' => NetworkReply.json([
         {'id': 1, 'name': 'Standard'},
