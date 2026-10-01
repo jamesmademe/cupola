@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
@@ -7,6 +10,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/presentation/series_detail_provider.dart';
 import 'package:cupola/features/series/presentation/series_detail_screen.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -180,6 +184,31 @@ void main() {
       await harness.unmount(tester);
     });
   });
+
+  group('a queue the page could not read', () {
+    testWidgets('is said over a series not all on disk', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p7,
+        const SeriesDetailScreen(seriesId: 1, heroTag: 'series-1'),
+        overrides: [
+          sonarrQueueSnapshotForProvider.overrideWith(
+            (ref, id) => throw const SocketException('Connection refused'),
+          ),
+        ],
+      );
+
+      expect(
+        find.text(
+          "Sonarr's queue did not answer, so this page cannot tell whether "
+          'any of it is downloading.',
+        ),
+        findsOneWidget,
+      );
+
+      await harness.unmount(tester);
+    });
+  });
 }
 
 /// Pumps [child] under [profile] with [routes] answering ahead of the world
@@ -190,8 +219,9 @@ Future<ProfileHarness> _pump(
   ConfigProfile profile,
   Widget child, {
   void Function(ProfileNetwork network)? routes,
+  List<Override> overrides = const [],
 }) async {
-  final harness = await ProfileHarness.start(profile);
+  final harness = await ProfileHarness.start(profile, overrides: overrides);
   routes?.call(harness.network);
   await tester.pumpWidget(
     ProviderScope(

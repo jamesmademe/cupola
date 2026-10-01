@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
@@ -7,6 +10,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_provider.dart';
 import 'package:cupola/features/movies/presentation/movie_detail_screen.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -286,6 +290,68 @@ void main() {
       await harness.unmount(tester);
     });
   });
+
+  group('a queue the page could not read', () {
+    testWidgets('is said over a film not on disk, with its own Retry', (
+      tester,
+    ) async {
+      var queueReads = 0;
+      final harness = await _pump(
+        tester,
+        Profiles.p7,
+        // Sprite Fright has no file on this Radarr, so the badge needs the
+        // queue to know whether it is missing or on its way.
+        const MovieDetailScreen(movieId: 1, heroTag: 'movie-1'),
+        // The contract the shared snapshot is moving to: a failed queue read
+        // reaches the page as a failure rather than as an empty queue.
+        overrides: [
+          radarrQueueSnapshotForProvider.overrideWith((ref, id) {
+            queueReads++;
+            throw const SocketException('Connection refused');
+          }),
+        ],
+      );
+
+      expect(find.byType(FaultBand), findsNothing);
+      expect(
+        find.text(
+          "Radarr's queue did not answer, so this page cannot tell whether "
+          'the movie is downloading.',
+        ),
+        findsOneWidget,
+      );
+
+      final asked = queueReads;
+      await tester.tap(
+        find.descendant(
+          of: find.byType(InlineErrorRetry),
+          matching: find.text('Retry'),
+        ),
+      );
+      await harness.settle(tester);
+      expect(queueReads, greaterThan(asked));
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('says nothing over a film already on disk', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p7,
+        // Coffee Run is on disk: whatever the queue holds, the badge is right.
+        const MovieDetailScreen(movieId: 3, heroTag: 'movie-3'),
+        overrides: [
+          radarrQueueSnapshotForProvider.overrideWith(
+            (ref, id) => throw const SocketException('Connection refused'),
+          ),
+        ],
+      );
+
+      expect(find.byType(InlineErrorRetry), findsNothing);
+
+      await harness.unmount(tester);
+    });
+  });
 }
 
 /// Pumps [child] under [profile] with [routes] answering ahead of the world
@@ -296,8 +362,9 @@ Future<ProfileHarness> _pump(
   ConfigProfile profile,
   Widget child, {
   void Function(ProfileNetwork network)? routes,
+  List<Override> overrides = const [],
 }) async {
-  final harness = await ProfileHarness.start(profile);
+  final harness = await ProfileHarness.start(profile, overrides: overrides);
   routes?.call(harness.network);
   await tester.pumpWidget(
     ProviderScope(

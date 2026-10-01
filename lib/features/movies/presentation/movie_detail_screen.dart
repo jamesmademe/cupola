@@ -6,6 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/api/arr_detail_actions_mixin.dart';
 import 'package:cupola/core/api/quality_profile_mixin.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/utils/rating_display.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -24,6 +25,7 @@ import 'package:cupola/features/movies/presentation/movie_detail_view_model.dart
 import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Detail screen for a Radarr movie with M3 styling.
@@ -172,12 +174,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
 
     // Without the queue the badge cannot tell "nothing on disk" from "being
     // downloaded right now", and every in-flight movie reads as Missing.
-    final queueEntry = ref
-        .watch(radarrQueueSnapshotForProvider(instanceId))
-        .maybeWhen(
-          data: (snapshot) => snapshot.entryFor(movie.id),
-          orElse: () => null,
-        );
+    //
+    // `value`, not `maybeWhen(data:)`: a queue that answered and then failed
+    // keeps its last entry, which is what it said last rather than nothing.
+    final queueAsync = ref.watch(radarrQueueSnapshotForProvider(instanceId));
+    final queueEntry = queueAsync.value?.entryFor(movie.id);
     final status = radarrMovieStatus(movie, queueEntry: queueEntry);
 
     return MediaDetailView(
@@ -199,9 +200,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         infoGroups,
         movie.id > 0 ? movie.id : widget.movieId,
         movie.tmdbId,
-        fault: failure == null || retry == null
-            ? null
-            : _faultBand(failure, instanceId, onRetry: retry),
+        fault: failure != null && retry != null
+            ? _faultBand(failure, instanceId, onRetry: retry)
+            : _queueUnknown(
+                queueAsync,
+                instanceId,
+                inLibrary: viewModel.isInLibrary,
+                status: status,
+              ),
       ),
     );
   }
@@ -226,6 +232,47 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
     return failureDidNotAnswer(reason)
         ? FaultBand.unreachable(serviceName: name, onRetry: onRetry)
         : FaultBand.fault(serviceName: name, reason: reason, onRetry: onRetry);
+  }
+
+  /// A quiet line when the queue could not be read and the badge may be
+  /// naming the backlog for a title that is on its way.
+  ///
+  /// The badge reads the queue to tell "nothing on disk" from "downloading",
+  /// so without it an in-flight title reads as missing, and the promoted
+  /// search would ask for a second copy. Only where that can happen: a title
+  /// Radarr tracks, not already on disk, and not shown in flight by a last
+  /// known entry.
+  ///
+  /// Drawn when the queue read fails *as* a failure. The shared snapshot
+  /// folds a failed read into an empty queue today, so until it reports one
+  /// this stays silent; see the queue snapshot provider.
+  Widget? _queueUnknown(
+    AsyncValue<ArrQueueSnapshot> queue,
+    String instanceId, {
+    required bool inLibrary,
+    required MediaStatusInfo status,
+  }) {
+    if (!queue.hasError || !inLibrary) return null;
+    final onDisk = switch (status.availability) {
+      MediaAvailability.available || MediaAvailability.upgradable => true,
+      _ => false,
+    };
+    if (onDisk || status.isInPipeline) return null;
+    final name = ref.watch(
+      currentSettingsProvider.select(
+        (s) => s.connectionTitle(instanceId, ServiceKey.radarr),
+      ),
+    );
+    return InlineErrorRetry(
+      message: sectionFailureMessage(
+        ServiceKey.radarr,
+        queue.error,
+        subject: "$name's queue",
+        consequence: 'this page cannot tell whether the movie is downloading',
+      ),
+      error: queue.error,
+      onRetry: () => ref.invalidate(radarrQueueSnapshotForProvider(instanceId)),
+    );
   }
 
   void _syncQualityProfiles(RadarrMovie movie) {
