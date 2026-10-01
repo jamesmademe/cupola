@@ -112,16 +112,11 @@ class StreamNowPlayingSection extends ConsumerWidget {
   /// fine. A session with no server-side id cannot be terminated at all, which is
   /// a real Plex shape, not a defensive guard.
   ///
-  /// **Through [PlexServerCapabilities.canTerminateSessions], not through
-  /// `myPlexSubscription` again.** This re-derived the gate as
-  /// `myPlexSubscription != true`, which is the opposite of what that getter
-  /// decided for two whole populations: a server that does not send the
-  /// attribute at all (it is absent on several builds) lost the button, and so
-  /// did every session drawn before `plexCapabilitiesProvider` had resolved —
-  /// the control appeared a beat later, which on a live list reads as a glitch.
-  /// The getter's own comment says it treats silence as available so a missing
-  /// attribute hides the button on nobody's server by mistake; a widget is not
-  /// the place to disagree with it.
+  /// **Through [plexStopOfferedProvider], the one gate Activity reads too.**
+  /// Each surface used to derive its own, and they disagreed: this one treated
+  /// a sheet still loading as available, Activity as refused, so the same
+  /// session had Stop here and none there. This section reads the lens, which is
+  /// the connection its sessions come from.
   VoidCallback? _stopHandler(
     BuildContext context,
     WidgetRef ref,
@@ -129,14 +124,8 @@ class StreamNowPlayingSection extends ConsumerWidget {
   ) {
     if (session.id.isEmpty) return null;
 
-    if (service == ServiceKey.plex) {
-      final capabilities = ref.watch(plexCapabilitiesProvider).value;
-      // Null while the sheet is still loading, and `canTerminateSessions` is
-      // true by default, so an unanswered probe keeps the control rather than
-      // flickering one in.
-      if (capabilities != null && !capabilities.canTerminateSessions) {
-        return null;
-      }
+    if (service == ServiceKey.plex && !ref.watch(plexStopOfferedProvider(''))) {
+      return null;
     }
 
     return () => _confirmStop(context, ref, session);

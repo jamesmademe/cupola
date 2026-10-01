@@ -137,21 +137,20 @@ class StreamActivitySection extends ConsumerWidget {
 
   /// The stop control, or null where stopping is not permitted.
   ///
-  /// Same gate as the board: Plex puts termination behind Plex Pass and admin
-  /// scope, and answers a server without it with a 401 that has nothing to do with
-  /// the token — so the control is absent rather than present-and-failing. The
-  /// gate is the serving connection's own: Plex Pass is per server.
+  /// Now playing's gate, [plexStopOfferedProvider], asked of the serving
+  /// connection: Plex Pass is per server. It used to re-derive the gate as
+  /// `myPlexSubscription != true`, so Stop was missing on every Plex session
+  /// until the capability sheet answered, and for good on a build that does
+  /// not send the attribute, while Plex's own Now playing drew Stop.
   VoidCallback? _stopHandler(
     BuildContext context,
     WidgetRef ref,
     StreamActivityRow row,
   ) {
     if (row.session.id.isEmpty) return null;
-    if (row.service == ServiceKey.plex) {
-      final capabilities = ref
-          .watch(streamPlexCapabilitiesForProvider(row.instanceId))
-          .value;
-      if (capabilities?.myPlexSubscription != true) return null;
+    if (row.service == ServiceKey.plex &&
+        !ref.watch(plexStopOfferedProvider(row.instanceId))) {
+      return null;
     }
     return () => _confirmStop(context, ref, row);
   }

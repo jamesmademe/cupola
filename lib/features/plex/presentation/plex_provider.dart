@@ -101,6 +101,43 @@ final plexCapabilitiesProvider = FutureProvider<PlexServerCapabilities?>((
   // Plex is a spinner rather than an unreachable band with a Retry on it.
 }, retry: noProviderRetry);
 
+/// The capability sheet of one named Plex connection.
+///
+/// The lens's is [plexCapabilitiesProvider], so the service's own pages and
+/// Activity share one answer; another connection is asked on its own, because
+/// Plex Pass and the owner's scope are per server.
+final plexCapabilitiesForProvider =
+    FutureProvider.family<PlexServerCapabilities?, String>((
+      ref,
+      instanceId,
+    ) async {
+      final lens = ref.watch(activeInstanceProvider(ServiceKey.plex))?.id ?? '';
+      if (instanceId.isEmpty || instanceId == lens) {
+        return ref.watch(plexCapabilitiesProvider.future);
+      }
+      return ref.watch(plexClientForProvider(instanceId)).getCapabilities();
+    }, retry: noProviderRetry);
+
+/// Whether a playback on one Plex connection is offered a Stop: the one gate
+/// every surface that draws Stop reads. Empty id is the lens.
+///
+/// Plex puts termination behind Plex Pass and answers a server without it
+/// with a 401 that has nothing to do with the token, so a server that says it
+/// has no Plex Pass gets no Stop: a control with no way to make it work. It
+/// is [PlexServerCapabilities.canTerminateSessions] and nothing else, which
+/// treats silence as available. Two populations depend on that: a session
+/// drawn before the sheet has answered (a control that appears a beat later
+/// reads as a glitch on a live list) and a build that never sends
+/// `myPlexSubscription` (it would never get one). An unanswered sheet keeps
+/// the control too, and a refused stop explains itself.
+final plexStopOfferedProvider = Provider.family<bool, String>((
+  ref,
+  instanceId,
+) {
+  final capabilities = ref.watch(plexCapabilitiesForProvider(instanceId)).value;
+  return capabilities?.canTerminateSessions ?? true;
+});
+
 /// Everything playing right now, most expensive first.
 ///
 /// Not self-polling: the Stream board owns its own refresh cadence, and a timer

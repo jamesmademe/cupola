@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
-import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -57,22 +56,6 @@ final streamSessionsForProvider =
           ? ref.watch(jellyfinClientForProvider(key.instanceId))
           : ref.watch(plexClientForProvider(key.instanceId));
       return client.getSessions();
-    }, retry: noProviderRetry);
-
-/// Whether one Plex connection may stop a playback, for the stop control.
-///
-/// The lens's is [plexCapabilitiesProvider]; another connection is asked on
-/// its own, because Plex Pass and the owner's scope are per server.
-final streamPlexCapabilitiesForProvider =
-    FutureProvider.family<PlexServerCapabilities?, String>((
-      ref,
-      instanceId,
-    ) async {
-      final lens = ref.watch(activeInstanceProvider(ServiceKey.plex))?.id ?? '';
-      if (instanceId.isEmpty || instanceId == lens) {
-        return ref.watch(plexCapabilitiesProvider.future);
-      }
-      return ref.watch(plexClientForProvider(instanceId)).getCapabilities();
     }, retry: noProviderRetry);
 
 /// Every configured connection of the media servers, in registry and then
