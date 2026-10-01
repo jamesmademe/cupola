@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -496,4 +497,74 @@ void main() {
       expect(find.text('Job and its files deleted'), findsOneWidget);
     });
   });
+
+  testWidgets(
+    'the add dialog closes on Add, sends the URL and lets its field go',
+    (tester) async {
+      // The dialog owns its field's controller, so it lives exactly as long
+      // as the field: disposing it when `showDialog` returns is what made
+      // the NZBGet and Transmission dialogs fail on their way out.
+      final created = <Object>[];
+      final disposed = <Object>[];
+      void record(ObjectEvent event) {
+        if (event.object is! TextEditingController) return;
+        if (event is ObjectCreated) created.add(event.object);
+        if (event is ObjectDisposed) disposed.add(event.object);
+      }
+
+      FlutterMemoryAllocations.instance.addListener(record);
+      addTearDown(
+        () => FlutterMemoryAllocations.instance.removeListener(record),
+      );
+      final client = _AddingSabnzbd();
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentSettingsProvider.overrideWith((ref) => _configured),
+            ..._ambient(),
+            sabnzbdClientProvider.overrideWith((ref) => client),
+            sabnzbdQueueProvider.overrideWith((ref) async => _queue()),
+            sabnzbdCategoriesProvider.overrideWith(
+              (ref) async => const <String>[],
+            ),
+          ],
+          child: const MaterialApp(home: SabnzbdScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add NZB'));
+      await tester.pumpAndSettle();
+      expect(created, hasLength(1));
+
+      await tester.enterText(
+        find.byType(TextField),
+        'https://indexer.example.com/get/42.nzb',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Add'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add NZB by URL'), findsNothing);
+      expect(client.added, ['https://indexer.example.com/get/42.nzb']);
+      expect(find.text('NZB added'), findsOneWidget);
+      expect(disposed, unorderedEquals(created));
+    },
+  );
+}
+
+/// Records the URLs an add handed SABnzbd.
+class _AddingSabnzbd implements SabnzbdClient {
+  final added = <String>[];
+
+  @override
+  Future<void> addUrl(
+    String nzbUrl, {
+    String? category,
+    int priority = 0,
+  }) async {
+    added.add(nzbUrl);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

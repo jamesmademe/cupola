@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -298,4 +299,101 @@ void main() {
     expect(client.deleted, [12]);
     expect(find.text('Job removed'), findsOneWidget);
   });
+
+  group('the add dialog', () {
+    // Its field's controller was disposed the moment `showDialog` returned,
+    // which is when the exit animation starts with the field still on screen:
+    // the dialog threw "A TextEditingController was used after being disposed"
+    // on its way out, whichever way it was closed.
+    Future<_AppendingNzbget> openAdd(WidgetTester tester) async {
+      final client = _AppendingNzbget();
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, _) => null,
+          overrides: [
+            currentSettingsProvider.overrideWith((ref) => _configured),
+            ..._ambient(),
+            nzbgetClientProvider.overrideWith((ref) => client),
+            nzbgetStatusProvider.overrideWith((ref) async => _status),
+          ],
+          child: const MaterialApp(home: NzbgetScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add NZB'));
+      await tester.pumpAndSettle();
+      return client;
+    }
+
+    testWidgets('closes on Add, sends the URL and lets its field go', (
+      tester,
+    ) async {
+      final fields = _trackTextControllers();
+      final client = await openAdd(tester);
+      expect(fields.created, hasLength(1));
+
+      await tester.enterText(
+        find.byType(TextField),
+        ' https://indexer.example.com/get/42.nzb ',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Add'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add NZB by URL'), findsNothing);
+      expect(client.appended, [
+        (name: '42.nzb', url: 'https://indexer.example.com/get/42.nzb'),
+      ]);
+      expect(find.text('NZB added'), findsOneWidget);
+      expect(fields.disposed, unorderedEquals(fields.created));
+    });
+
+    testWidgets('closes on Cancel, sends nothing and lets its field go', (
+      tester,
+    ) async {
+      final fields = _trackTextControllers();
+      final client = await openAdd(tester);
+
+      await tester.enterText(find.byType(TextField), 'https://example.com/a');
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add NZB by URL'), findsNothing);
+      expect(client.appended, isEmpty);
+      expect(fields.disposed, unorderedEquals(fields.created));
+    });
+  });
+}
+
+/// Records what an add asked NZBGet to fetch.
+class _AppendingNzbget implements NzbgetClient {
+  final appended = <({String name, String url})>[];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName == #append) {
+      appended.add((
+        name: invocation.positionalArguments[0] as String,
+        url: invocation.positionalArguments[1] as String,
+      ));
+      // A real NZBID: anything above 0 is NZBGet taking the job.
+      return Future<int>.value(42);
+    }
+    return super.noSuchMethod(invocation);
+  }
+}
+
+/// The text controllers created and disposed from here to the end of the
+/// test, as the framework reports them in debug builds.
+({List<Object> created, List<Object> disposed}) _trackTextControllers() {
+  final created = <Object>[];
+  final disposed = <Object>[];
+  void record(ObjectEvent event) {
+    if (event.object is! TextEditingController) return;
+    if (event is ObjectCreated) created.add(event.object);
+    if (event is ObjectDisposed) disposed.add(event.object);
+  }
+
+  FlutterMemoryAllocations.instance.addListener(record);
+  addTearDown(() => FlutterMemoryAllocations.instance.removeListener(record));
+  return (created: created, disposed: disposed);
 }

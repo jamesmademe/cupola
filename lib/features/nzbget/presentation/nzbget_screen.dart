@@ -234,40 +234,11 @@ class _NzbgetActionsBar extends ConsumerWidget {
 
 /// Prompts for an NZB URL and enqueues it via `append`.
 Future<void> _showAddNzbDialog(BuildContext context, WidgetRef ref) async {
-  final urlController = TextEditingController();
-  final submitted = await showDialog<bool>(
+  final url = (await showDialog<String>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Add NZB by URL'),
-      content: TextField(
-        controller: urlController,
-        autofocus: true,
-        keyboardType: TextInputType.url,
-        decoration: const InputDecoration(
-          labelText: 'NZB URL',
-          hintText: 'https://…/download.nzb',
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Add'),
-        ),
-      ],
-    ),
-  );
-
-  if (submitted != true) {
-    urlController.dispose();
-    return;
-  }
-  final url = urlController.text.trim();
-  urlController.dispose();
-  if (url.isEmpty || !context.mounted) return;
+    builder: (context) => const _AddNzbDialog(),
+  ))?.trim();
+  if (url == null || url.isEmpty || !context.mounted) return;
 
   // NZBGet fetches the URL server-side; the filename is only a display label.
   final name = url.split('/').last.split('?').first;
@@ -279,6 +250,56 @@ Future<void> _showAddNzbDialog(BuildContext context, WidgetRef ref) async {
     failureMessage: 'Failed to add the NZB',
     invalidate: _nzbgetInvalidateAfterAction,
   );
+}
+
+/// The URL field of the add flow. Pops with the text on Add, null on Cancel.
+///
+/// A widget of its own so the field's controller lives exactly as long as the
+/// field. It used to be disposed the moment `showDialog` returned, which is
+/// when the route *starts* its exit animation, with the field still on screen
+/// and still listening to it: the dialog failed while closing, on Add, Cancel
+/// and a tap outside alike.
+class _AddNzbDialog extends StatefulWidget {
+  const _AddNzbDialog();
+
+  @override
+  State<_AddNzbDialog> createState() => _AddNzbDialogState();
+}
+
+class _AddNzbDialogState extends State<_AddNzbDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add NZB by URL'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.url,
+        decoration: const InputDecoration(
+          labelText: 'NZB URL',
+          hintText: 'https://…/download.nzb',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: const Text('Add'),
+        ),
+      ],
+    );
+  }
 }
 
 class _QueueTile extends ConsumerWidget {
