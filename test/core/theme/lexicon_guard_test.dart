@@ -210,6 +210,10 @@ final _never = <String, RegExp>{
   'Connect X → Set up X': RegExp(r'\bConnect (\S)|^Connect$'),
   'Try again → Retry': RegExp(r'\btry again\b', caseSensitive: false),
   'Film → Movie': RegExp(r'\bfilms?\b', caseSensitive: false),
+  'X copied to clipboard → Copied': RegExp(
+    r'\b(name|hash) copied\b|\bcopied to (the )?clipboard\b',
+    caseSensitive: false,
+  ),
   'Paused → Stopped': RegExp(r'\bpaused\b', caseSensitive: false),
   'Stalled → Stuck': RegExp(r'\bstalled\b', caseSensitive: false),
   'Live': RegExp(r'\bLive\b'),

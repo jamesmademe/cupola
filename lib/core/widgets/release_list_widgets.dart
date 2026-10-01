@@ -412,7 +412,7 @@ class _ReleaseDetails extends StatelessWidget {
               onPressed: () async {
                 await Clipboard.setData(ClipboardData(text: releaseTitle));
                 if (context.mounted) {
-                  SnackBarHelper.info(context, 'Release name copied');
+                  SnackBarHelper.info(context, 'Copied');
                 }
               },
             ),

@@ -765,7 +765,7 @@ class _ActionsTab extends ConsumerWidget {
         OutlinedButton.icon(
           onPressed: () {
             Clipboard.setData(ClipboardData(text: torrent.hash));
-            SnackBarHelper.info(context, 'Hash copied to clipboard');
+            SnackBarHelper.info(context, 'Copied');
           },
           icon: const Icon(Icons.copy_rounded, size: 16),
           label: const Text('Copy hash'),
@@ -774,7 +774,7 @@ class _ActionsTab extends ConsumerWidget {
         OutlinedButton.icon(
           onPressed: () {
             Clipboard.setData(ClipboardData(text: torrent.name));
-            SnackBarHelper.info(context, 'Name copied to clipboard');
+            SnackBarHelper.info(context, 'Copied');
           },
           icon: const Icon(Icons.copy_rounded, size: 16),
           label: const Text('Copy name'),
