@@ -1,3 +1,4 @@
+import 'dart:io' show SocketException;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -12,6 +13,8 @@ import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
+import 'package:cupola/core/widgets/fault_band.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/media_detail_body_metrics.dart';
 import 'package:cupola/core/widgets/media_detail_header_metrics.dart';
 import 'package:cupola/core/widgets/media_detail_poster_row.dart';
@@ -598,6 +601,60 @@ void main() {
         tester.getRect(find.byKey(const ValueKey('cell'))).left,
         MediaDetailMetrics.gutterOf(1400),
       );
+    });
+
+    testWidgets('lands a band\'s glyph on the deck\'s leading edge, above it, '
+        'at both widths', (tester) async {
+      // A FaultBand and an InlineErrorRetry carry the screen gutter
+      // themselves. Inside the deck they paid it twice, and the glyph sat
+      // 16pt in from the actions it qualifies.
+      Widget page(Widget band) => _wrap(
+        _detailView(
+          staggerSections: false,
+          body: MediaDetailBody(
+            band: band,
+            deck: const SizedBox(
+              key: ValueKey('deck'),
+              height: 40,
+              width: double.infinity,
+            ),
+          ),
+        ),
+      );
+      final bands = <Widget>[
+        FaultBand.unreachable(serviceName: 'Radarr', onRetry: () {}),
+        InlineErrorRetry(
+          message:
+              "Radarr's queue did not answer, so this page cannot tell "
+              'whether the movie is downloading.',
+          error: const SocketException('Connection refused'),
+          onRetry: () {},
+        ),
+      ];
+
+      for (final (size, ratio) in const [
+        (Size(390 * 3, 1200 * 3), 3.0),
+        (Size(1400, 1200), 1.0),
+      ]) {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = ratio;
+        addTearDown(tester.view.reset);
+        for (final band in bands) {
+          await tester.pumpWidget(page(band));
+          await tester.pump();
+
+          final deck = tester.getRect(find.byKey(const ValueKey('deck')));
+          final glyph = tester.getRect(
+            find.byIcon(Icons.cloud_off_rounded).first,
+          );
+          expect(glyph.left, deck.left, reason: '${band.runtimeType} $size');
+          expect(
+            glyph.bottom,
+            lessThanOrEqualTo(deck.top),
+            reason: '${band.runtimeType} $size',
+          );
+        }
+      }
     });
 
     testWidgets('hands the gutter to a rail so it can bleed past the column', (

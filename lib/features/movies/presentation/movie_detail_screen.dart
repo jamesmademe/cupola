@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/api/arr_detail_actions_mixin.dart';
 import 'package:cupola/core/api/quality_profile_mixin.dart';
 import 'package:cupola/core/network/connection_failure.dart';
@@ -369,49 +368,49 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         'Genres',
         'Collection',
       },
-      deck: _underFault(
-        fault,
-        viewModel.isInLibrary
-            ? LibraryDetailActions(
-                service: ServiceKey.radarr,
-                status: status,
-                mediaTitle: viewModel.title,
-                isMonitored: viewModel.isMonitored,
-                // One flag, mapped from whichever per-action flag can be in flight
-                // on this page: only one action is ever promoted.
-                isBusy:
-                    isAutoSearching || isUpdatingMonitoredState || isDeleting,
-                isConfirmed: isAutoSearchConfirmed,
-                onSearch: () => _triggerSearch(context),
-                onInteractiveSearch: () =>
-                    _showInteractiveSearch(context, title: viewModel.title),
-                onImport: openManualImportCallback(
-                  context,
-                  ServiceKey.radarr,
-                  movieId,
-                  instanceId: _instanceId,
-                ),
-                // Every in-flight pipeline state promotes 'Open queue' only if the
-                // host actually has a route for it; without this the most common
-                // transient state on a real page degraded to a sentence. Pushed, not
-                // gone: checking on a download should leave the title behind you.
-                onOpenQueue: () => context.push('/activity/movies'),
-                onMonitoredChanged: (monitored) => _updateMonitoredState(
-                  context,
-                  movieId: movieId,
-                  monitored: monitored,
-                ),
-                onDelete: () => _confirmDelete(context, title: viewModel.title),
-              )
-            // No add path exists from this view, so an untracked title falls
-            // through to a sentence rather than to the full-width accent CTA whose
-            // only behaviour was a snackbar saying it is not available.
-            : const MediaDetailUnavailableSection(
-                message:
-                    'Radarr is not tracking this movie, so there is nothing to '
-                    'manage here yet. Add it in Radarr, or request it in Seerr.',
+      // A line over the whole page: the band over a read that failed, or the
+      // queue line. Its own slot, so the spine lands its glyph on the column
+      // edge rather than a gutter inside the actions it qualifies.
+      band: fault,
+      deck: viewModel.isInLibrary
+          ? LibraryDetailActions(
+              service: ServiceKey.radarr,
+              status: status,
+              mediaTitle: viewModel.title,
+              isMonitored: viewModel.isMonitored,
+              // One flag, mapped from whichever per-action flag can be in flight
+              // on this page: only one action is ever promoted.
+              isBusy: isAutoSearching || isUpdatingMonitoredState || isDeleting,
+              isConfirmed: isAutoSearchConfirmed,
+              onSearch: () => _triggerSearch(context),
+              onInteractiveSearch: () =>
+                  _showInteractiveSearch(context, title: viewModel.title),
+              onImport: openManualImportCallback(
+                context,
+                ServiceKey.radarr,
+                movieId,
+                instanceId: _instanceId,
               ),
-      ),
+              // Every in-flight pipeline state promotes 'Open queue' only if the
+              // host actually has a route for it; without this the most common
+              // transient state on a real page degraded to a sentence. Pushed, not
+              // gone: checking on a download should leave the title behind you.
+              onOpenQueue: () => context.push('/activity/movies'),
+              onMonitoredChanged: (monitored) => _updateMonitoredState(
+                context,
+                movieId: movieId,
+                monitored: monitored,
+              ),
+              onDelete: () => _confirmDelete(context, title: viewModel.title),
+            )
+          // No add path exists from this view, so an untracked title falls
+          // through to a sentence rather than to the full-width accent CTA whose
+          // only behaviour was a snackbar saying it is not available.
+          : const MediaDetailUnavailableSection(
+              message:
+                  'Radarr is not tracking this movie, so there is nothing to '
+                  'manage here yet. Add it in Radarr, or request it in Seerr.',
+            ),
       // Region 3 — the manifest. A movie has no child records, so the manifest
       // is the file, and the path a self-hoster actually hunts for lives here
       // rather than at the bottom of an encyclopaedic grid.
@@ -584,22 +583,4 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
       ).stampedWith(_instanceId),
     );
   }
-}
-
-/// [deck] with [fault] above it, when there is one.
-///
-/// The top of the body, so the band sits over everything it qualifies: the
-/// promoted action below it acts on what Radarr said last, and a write will
-/// fail until it answers again.
-Widget _underFault(Widget? fault, Widget deck) {
-  if (fault == null) return deck;
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      fault,
-      const SizedBox(height: AppSpacing.sm),
-      deck,
-    ],
-  );
 }

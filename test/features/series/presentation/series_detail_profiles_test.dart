@@ -197,6 +197,13 @@ void main() {
         band.message,
         'Sonarr did not answer. Everything below is what it said last.',
       );
+      // Over the page, not inside the deck: the glyph on the leading edge of
+      // the actions it qualifies, where the deck's gutter used to push it 16pt
+      // further in.
+      expect(
+        tester.getRect(find.byIcon(Icons.cloud_off_rounded)).left,
+        tester.getRect(find.byType(LibraryDetailActions)).left,
+      );
 
       final asked = harness.network.requestsTo(WorldIds.sonarr).length;
       await tester.tap(

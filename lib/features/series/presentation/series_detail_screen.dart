@@ -400,49 +400,49 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       // manifest rather than the subject. The 380 column takes the fact grid and
       // the catalogue.
       sideTrack: const {'Details', 'Scores', 'Genres', 'Collection'},
-      deck: _underFault(
-        fault,
-        viewModel.isInLibrary
-            ? LibraryDetailActions(
-                service: ServiceKey.sonarr,
-                status: status,
-                mediaTitle: viewModel.title,
-                isMonitored: viewModel.isMonitored,
-                partialSummary: counts == null
-                    ? null
-                    : '${counts.onDisk} of ${counts.expected} episodes on disk.',
-                isBusy:
-                    isAutoSearching || isUpdatingMonitoredState || isDeleting,
-                isConfirmed: isAutoSearchConfirmed,
-                onSearch: () => _triggerSearch(context),
-                onInteractiveSearch: () =>
-                    _showInteractiveSearch(context, title: viewModel.title),
-                onImport: openManualImportCallback(
-                  context,
-                  ServiceKey.sonarr,
-                  seriesId,
-                  instanceId: _instanceId,
-                ),
-                // Every in-flight pipeline state promotes 'Open queue' only if the
-                // host actually has a route for it; without this the most common
-                // transient state on a real page degraded to a sentence. Pushed, not
-                // gone: checking on a download should leave the title behind you.
-                onOpenQueue: () => context.push('/activity/series'),
-                onMonitoredChanged: (monitored) => _updateMonitoredState(
-                  context,
-                  seriesId: seriesId,
-                  monitored: monitored,
-                ),
-                onDelete: () => _confirmDelete(context, title: viewModel.title),
-              )
-            // See the Radarr screen: no add path from this view, so an untracked
-            // title gets a sentence instead of a CTA that apologises.
-            : const MediaDetailUnavailableSection(
-                message:
-                    'Sonarr is not tracking this series, so there is nothing to '
-                    'manage here yet. Add it in Sonarr, or request it in Seerr.',
+      // A line over the whole page: the band over a read that failed, or the
+      // queue line. Its own slot, so the spine lands its glyph on the column
+      // edge rather than a gutter inside the actions it qualifies.
+      band: fault,
+      deck: viewModel.isInLibrary
+          ? LibraryDetailActions(
+              service: ServiceKey.sonarr,
+              status: status,
+              mediaTitle: viewModel.title,
+              isMonitored: viewModel.isMonitored,
+              partialSummary: counts == null
+                  ? null
+                  : '${counts.onDisk} of ${counts.expected} episodes on disk.',
+              isBusy: isAutoSearching || isUpdatingMonitoredState || isDeleting,
+              isConfirmed: isAutoSearchConfirmed,
+              onSearch: () => _triggerSearch(context),
+              onInteractiveSearch: () =>
+                  _showInteractiveSearch(context, title: viewModel.title),
+              onImport: openManualImportCallback(
+                context,
+                ServiceKey.sonarr,
+                seriesId,
+                instanceId: _instanceId,
               ),
-      ),
+              // Every in-flight pipeline state promotes 'Open queue' only if the
+              // host actually has a route for it; without this the most common
+              // transient state on a real page degraded to a sentence. Pushed, not
+              // gone: checking on a download should leave the title behind you.
+              onOpenQueue: () => context.push('/activity/series'),
+              onMonitoredChanged: (monitored) => _updateMonitoredState(
+                context,
+                seriesId: seriesId,
+                monitored: monitored,
+              ),
+              onDelete: () => _confirmDelete(context, title: viewModel.title),
+            )
+          // See the Radarr screen: no add path from this view, so an untracked
+          // title gets a sentence instead of a CTA that apologises.
+          : const MediaDetailUnavailableSection(
+              message:
+                  'Sonarr is not tracking this series, so there is nothing to '
+                  'manage here yet. Add it in Sonarr, or request it in Seerr.',
+            ),
       // Region 3 — the manifest: the episodes Sonarr expects under this title,
       // checked against what actually arrived. It sits above the synopsis
       // because prose about a show is never more operational than the list of
@@ -828,18 +828,4 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
       ),
     );
   }
-}
-
-/// [deck] with [fault] above it, when there is one. See the movie screen.
-Widget _underFault(Widget? fault, Widget deck) {
-  if (fault == null) return deck;
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      fault,
-      const SizedBox(height: AppSpacing.sm),
-      deck,
-    ],
-  );
 }

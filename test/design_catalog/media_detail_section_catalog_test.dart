@@ -1,6 +1,7 @@
 @Tags(['catalog'])
 library;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -38,8 +39,8 @@ Widget _profileRow(
 );
 
 /// Radarr's page for a movie on disk, region by region, with the side track
-/// Radarr declares.
-Widget _radarrPage() {
+/// Radarr declares. [band] is a line over the whole page.
+Widget _radarrPage({Widget? band}) {
   final accent = ServiceKey.radarr.accent;
   return MediaDetailView(
     accent: accent,
@@ -60,6 +61,7 @@ Widget _radarrPage() {
     ),
     body: MediaDetailBody(
       sideTrack: const {'Overview', 'Details', 'Genres'},
+      band: band,
       deck: LibraryDetailActions(
         service: ServiceKey.radarr,
         status: _available,
@@ -120,8 +122,9 @@ const _episodes = [
 ];
 
 /// A Sonarr page: a lazy season list in the manifest, with a count on its
-/// label, and real Sonarr tags under Tags.
-Widget _sonarrPage() {
+/// label, and real Sonarr tags under Tags. [band] is a line over the whole
+/// page.
+Widget _sonarrPage({Widget? band}) {
   final accent = ServiceKey.sonarr.accent;
   const partial = MediaStatusInfo(availability: MediaAvailability.partial);
   return MediaDetailView(
@@ -140,6 +143,7 @@ Widget _sonarrPage() {
       tags: [TagChip(text: '41 of 45 episodes', color: accent)],
     ),
     body: MediaDetailBody(
+      band: band,
       deck: LibraryDetailActions(
         service: ServiceKey.sonarr,
         status: partial,
@@ -310,6 +314,43 @@ void main() {
         (_) => _row([_phone(_radarrPage()), _phone(_sonarrPage())]),
       ),
       CatalogScene(
+        'MediaDetailBody.band · a line over the whole page, above the deck · '
+        'Radarr did not answer (FaultBand.unreachable), then Sonarr\'s queue '
+        'answered with an error (InlineErrorRetry); the slot hands the line '
+        'only the column\'s surplus, so its glyph lands on the leading edge '
+        'of the actions below it',
+        (_) => _row([
+          _phone(
+            _radarrPage(
+              band: FaultBand.unreachable(
+                serviceName: 'Radarr',
+                onRetry: () {},
+              ),
+            ),
+            height: 620,
+          ),
+          _phone(
+            _sonarrPage(
+              band: InlineErrorRetry(
+                message:
+                    "Sonarr's queue answered with an error, so this page "
+                    'cannot tell whether any of it is downloading.',
+                error: DioException.badResponse(
+                  statusCode: 500,
+                  requestOptions: RequestOptions(path: '/api/v3/queue'),
+                  response: Response(
+                    requestOptions: RequestOptions(path: '/api/v3/queue'),
+                    statusCode: 500,
+                  ),
+                ),
+                onRetry: () {},
+              ),
+            ),
+            height: 620,
+          ),
+        ]),
+      ),
+      CatalogScene(
         'MediaDetailSectionLabel · plain, with a count, with a trailing '
         'control, a long label on two lines, and 1.5× reading size · the '
         'page accent (the lamp) resolved to ink; the control drops under '
@@ -334,8 +375,10 @@ void main() {
       CatalogScene(
         'MediaDetailView.body · Radarr in a 1280 desktop window · two tracks '
         'past 1140: the slots named in sideTrack stand in the 380 column, '
-        'deck and manifest stay wide',
-        (_) => _radarrPage(),
+        'band, deck and manifest stay wide',
+        (_) => _radarrPage(
+          band: FaultBand.unreachable(serviceName: 'Radarr', onRetry: () {}),
+        ),
         width: 1280,
         height: 1000,
         platform: CatalogPlatform.desktop,

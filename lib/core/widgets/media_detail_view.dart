@@ -257,6 +257,7 @@ class MediaDetailView extends StatelessWidget {
       side = body.partition(inSideTrack: true);
     } else {
       main = MediaDetailBody(
+        band: body.band,
         deck: body.deck,
         readout: body.readout,
         synopsis: body.synopsis,
@@ -345,17 +346,43 @@ class MediaDetailView extends StatelessWidget {
       );
     }
 
+    // Above region 1 — the band. A FaultBand or an InlineErrorRetry carries
+    // the screen gutter itself, so it is handed only the surplus a centred
+    // column takes on (zero on a phone): its glyph lands on the column edge,
+    // over the leading edge of the deck below it. Padded by the full gutter
+    // inside the deck, it sat 16pt in from everything it qualified. It shares
+    // the deck's clock, so the line and the actions it is about arrive as one.
+    final band = body.band;
+    if (band != null) {
+      final surplus = math.max(0.0, gutter - AppSpacing.lg);
+      slivers.add(
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(surplus, AppSpacing.lg, surplus, 0),
+            child: stagger(band, staggerIndex),
+          ),
+        ),
+      );
+      if (body.deck == null) staggerIndex++;
+    }
+
     // Region 1 — the deck. Never labelled: it is the answer, not a section.
     //
     // Skipped entirely when null rather than padded around a blank box: the four
     // variants whose status resolver does not exist yet used to pass
     // `SizedBox.shrink()`, and this padding then sat their first region 16pt
-    // lower than every other page's.
+    // lower than every other page's. Under a band it takes `space-sm`: the
+    // band brings its own air above.
     if (body.deck != null) {
       slivers.add(
         SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(gutter, AppSpacing.lg, gutter, 0),
+            padding: EdgeInsets.fromLTRB(
+              gutter,
+              band != null ? AppSpacing.sm : AppSpacing.lg,
+              gutter,
+              0,
+            ),
             child: stagger(body.deck!, staggerIndex++),
           ),
         ),

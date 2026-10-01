@@ -155,6 +155,20 @@ class MediaDetailSlot {
 /// wanted episodes after Details and Tags for exactly that reason.
 @immutable
 class MediaDetailBody {
+  /// Above region 1 — one line about the whole page: a `FaultBand` over a
+  /// read that failed, or the `InlineErrorRetry` that says a source the
+  /// answer needs did not answer. No label, and drawn only when there is
+  /// one.
+  ///
+  /// Its own slot rather than a line inside [deck], because both lines carry
+  /// the screen gutter themselves (`space-lg` on their leading edge) so they
+  /// align on a page that has no gutter of its own. Inside the deck the
+  /// gutter was paid twice and the glyph landed 16pt inside the edge of the
+  /// actions under it. The spine hands this slot only the surplus a centred
+  /// column takes on, as it does [readout], so the glyph lands on the column
+  /// edge at every width.
+  final Widget? band;
+
   /// Region 1 — the answer. One box, no label: every variant is *supposed* to
   /// have a state, even a reference page whose state is 'seven movies'.
   ///
@@ -241,6 +255,7 @@ class MediaDetailBody {
   final Set<String>? sideTrack;
 
   const MediaDetailBody({
+    this.band,
     this.deck,
     this.readout,
     this.operate = const <MediaDetailSlot>[],
@@ -252,8 +267,9 @@ class MediaDetailBody {
 
   /// This body with only the slots on [inSideTrack]'s side of [sideTrack].
   ///
-  /// The deck and the readout never move: the answer and the decisive facts are
-  /// the top of the page in both layouts.
+  /// The band, the deck and the readout never move: the answer and the
+  /// decisive facts are the top of the page in both layouts, and a line about
+  /// the whole page stays over them.
   MediaDetailBody partition({required bool inSideTrack}) {
     final side = sideTrack ?? const <String>{};
     List<MediaDetailSlot> keep(List<MediaDetailSlot> slots) => slots
@@ -261,6 +277,7 @@ class MediaDetailBody {
         .toList(growable: false);
 
     return MediaDetailBody(
+      band: inSideTrack ? null : band,
       deck: inSideTrack ? null : deck,
       readout: inSideTrack ? null : readout,
       operate: keep(operate),
