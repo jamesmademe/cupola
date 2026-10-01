@@ -247,11 +247,25 @@ mixin ArrActivityMixin {
       queryParameters: {
         'page': page,
         'pageSize': pageSize,
+        ..._historySort,
         ...?queryParameters,
       },
     );
     return ArrRecordPage.fromEnvelope(response.data);
   }
+
+  /// Newest first, asked for rather than assumed.
+  ///
+  /// Every reader of a history page treats it as the most recent records: the
+  /// Overviews' "today" sections and Activity's "Finished today" count the day
+  /// off page one, and stop believing in it at the first record older than
+  /// today. A request with no sort key gets whatever order that server build
+  /// defaults to, and an oldest-first page would read as a day with nothing
+  /// in it. The four forks share the names: `date`, `descending`.
+  static const _historySort = {
+    'sortKey': 'date',
+    'sortDirection': 'descending',
+  };
 
   /// Fetches recent history, records only.
   ///
@@ -338,7 +352,7 @@ mixin ArrActivityMixin {
   }) async {
     final result = await _fetchAllPages(
       'history',
-      extraParams: queryParameters ?? const {},
+      extraParams: {..._historySort, ...?queryParameters},
     );
     return result.records;
   }

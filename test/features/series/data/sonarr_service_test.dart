@@ -88,6 +88,8 @@ void main() {
       expect(client.lastGetQueryParameters, {
         'page': 1,
         'pageSize': 20,
+        'sortKey': 'date',
+        'sortDirection': 'descending',
         'includeSeries': true,
         'includeEpisode': true,
       });
@@ -118,6 +120,8 @@ void main() {
         expect(client.lastGetQueryParameters, {
           'page': 1,
           'pageSize': 20,
+          'sortKey': 'date',
+          'sortDirection': 'descending',
           'includeSeries': true,
           'includeEpisode': true,
         });

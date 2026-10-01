@@ -52,6 +52,8 @@ void main() {
       expect(client.lastGetQueryParameters, {
         'page': 1,
         'pageSize': 20,
+        'sortKey': 'date',
+        'sortDirection': 'descending',
         'includeMovie': true,
       });
     });
@@ -78,6 +80,8 @@ void main() {
       expect(client.lastGetQueryParameters, {
         'page': 1,
         'pageSize': 20,
+        'sortKey': 'date',
+        'sortDirection': 'descending',
         'includeMovie': true,
       });
       // And the total survives: how many there ARE, not how many we fetched.
