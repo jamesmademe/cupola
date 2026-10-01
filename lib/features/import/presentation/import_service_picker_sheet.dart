@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/import/presentation/manual_import_widgets.dart';
@@ -59,16 +61,20 @@ class _ImportServicePickerSheet extends ConsumerWidget {
     ServiceKey service,
     List<ServiceInstance> instances,
   ) {
-    // No configured connection: the row stays, dimmed by its own destination —
-    // the wizard opens and says the service is not set up, which is the fact
-    // the user came here to find out. Hiding the row hides the fact.
+    // No configured connection: the row stays, because hiding it hides the
+    // fact. It is dimmed but tappable, says "Not set up", and its tap is the
+    // fix: that service's own setup. It used to open the wizard against no
+    // connection, which could only fail and offer a Retry that asked nobody.
+    if (instances.isEmpty) {
+      return [_notSetUpRow(context, service: service)];
+    }
     if (instances.length < 2) {
       return [
         _row(
           context,
           service: service,
           subtitle: service.manualImportSubtitle,
-          instanceId: instances.isEmpty ? null : instances.first.id,
+          instanceId: instances.first.id,
         ),
       ];
     }
@@ -90,7 +96,7 @@ class _ImportServicePickerSheet extends ConsumerWidget {
     BuildContext context, {
     required ServiceKey service,
     required String subtitle,
-    required String? instanceId,
+    required String instanceId,
   }) {
     return SettingsCard.grouped(
       leading: Icon(service.icon),
@@ -99,8 +105,9 @@ class _ImportServicePickerSheet extends ConsumerWidget {
       accentColor: service.accent,
       semanticHint: 'starts a ${service.title} manual import',
       onTap: () {
+        final router = GoRouter.of(context);
         Navigator.of(context).pop();
-        context.push(
+        router.push(
           manualImportLocation(
             manualImportBrowsePath,
             service,
@@ -108,6 +115,31 @@ class _ImportServicePickerSheet extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  /// A service with nothing set up yet: the cross-service rule, in a row.
+  ///
+  /// The foreground drains to the one dim the app uses for "precondition
+  /// unmet"; the row keeps its full height, its button role and a hint that
+  /// names the service. The tap goes straight to that service's setup rather
+  /// than raising the toast a `CrossServiceAction` would: this sheet sits over
+  /// the page the toast would land on, so the fix has to be the tap itself.
+  Widget _notSetUpRow(BuildContext context, {required ServiceKey service}) {
+    return Opacity(
+      opacity: GatedAffordance.dimmedOpacity,
+      child: SettingsCard.grouped(
+        leading: Icon(service.icon),
+        title: service.title,
+        subtitle: StateWord.notSetUp.label,
+        accentColor: service.accent,
+        semanticHint: 'requires ${service.title}, opens its setup',
+        onTap: () {
+          final router = GoRouter.of(context);
+          Navigator.of(context).pop();
+          router.go(ServiceRoutes.setUp(service));
+        },
+      ),
     );
   }
 }
