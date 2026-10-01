@@ -8,6 +8,10 @@ import 'package:cupola/features/activity/presentation/widgets/activity_tab.dart'
 import 'package:cupola/features/activity/presentation/widgets/wanted_tab.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+import '../../../../test_helpers/settings_scope.dart';
 
 void main() {
   group('ActivityTab', () {
@@ -197,7 +201,13 @@ Future<void> _pumpWithRadarrService(
 }) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [radarrServiceProvider.overrideWith((ref) => service)],
+      overrides: [
+        // ActivityTab asks whether there is a Radarr before it reads one.
+        currentSettingsProvider.overrideWith(
+          (ref) => settingsWithServices([ServiceKey.radarr]),
+        ),
+        radarrServiceProvider.overrideWith((ref) => service),
+      ],
       child: MaterialApp(home: Scaffold(body: child)),
     ),
   );
