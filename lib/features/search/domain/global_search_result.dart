@@ -269,10 +269,28 @@ class GlobalSearchServiceResults {
     SearchLaneState.unreachable =>
       'No $laneTitle results, that connection did not answer at all. '
           'Retry is per lane.',
-    _ =>
-      'No $laneTitle results, $_failureWord. '
-          'Retry is per lane.',
+    _ => 'No $laneTitle results: $_failureClause. Retry is per lane.',
   };
+
+  /// What went wrong, as the clause after the colon: the classification's
+  /// headline in sentence form, never a state label, whose capital would land
+  /// in the middle of the sentence ("No Radarr results, Behind Cloudflare
+  /// Access."). Its first word keeps its capital only when it is a name: the
+  /// lane's own, or the gateway's (`Cloudflare Access answered instead of
+  /// Radarr`); `A sign-in page`, `The request` and the like go lower case.
+  String get _failureClause {
+    final headline = failureHeadline(
+      reason ?? ServiceFailureReason.unknown,
+      subject: laneTitle,
+      credential: refusedCredentialOf(service),
+      gateway: gateway,
+    );
+    final named =
+        headline.startsWith(laneTitle) || headline.startsWith('Cloudflare');
+    return named
+        ? headline
+        : '${headline[0].toLowerCase()}${headline.substring(1)}';
+  }
 
   /// The words this app already uses for each refusal, so the search screen and
   /// the settings rows cannot describe one failure two different ways.

@@ -68,7 +68,57 @@ void main() {
     expect(lane.stateWord, 'Behind Cloudflare Access');
     expect(
       lane.faultSentence,
-      'No Radarr results, Behind Cloudflare Access. Retry is per lane.',
+      'No Radarr results: Cloudflare Access answered instead of Radarr. '
+      'Retry is per lane.',
+    );
+  });
+
+  test('a lane\'s fault is one sentence, with no label capitalised in its '
+      'middle', () {
+    GlobalSearchServiceResults lane(Object error) =>
+        GlobalSearchServiceResults.fault((
+          instance: const ServiceInstance(
+            id: 'radarr',
+            service: ServiceKey.radarr,
+            url: 'https://radarr.example.com',
+            credential: 'k',
+          ),
+          name: '',
+        ), error);
+    DioException status(int code, {Object? error}) => DioException(
+      requestOptions: RequestOptions(path: '/api/v3/movie'),
+      type: DioExceptionType.badResponse,
+      response: Response<dynamic>(
+        requestOptions: RequestOptions(path: '/api/v3/movie'),
+        statusCode: code,
+      ),
+      error: error,
+    );
+
+    expect(
+      lane(status(401)).faultSentence,
+      'No Radarr results: Radarr answered but refused the key. Retry is per '
+      'lane.',
+    );
+    expect(
+      lane(
+        status(
+          200,
+          error: const AccessGatewayAnswer(
+            kind: AccessGatewayKind.signInPage,
+            credentialsSent: false,
+            gatewayHost: 'auth.example.net',
+            serviceHost: 'radarr.example.com',
+          ),
+        ),
+      ).faultSentence,
+      'No Radarr results: a sign-in page answered instead of Radarr. Retry is '
+      'per lane.',
+    );
+    expect(
+      lane(StateError('nobody knows')).faultSentence,
+      'No Radarr results: the request to Radarr did not complete. Retry is '
+      'per lane.',
     );
   });
 
