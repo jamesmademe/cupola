@@ -108,7 +108,7 @@ void main() {
       expect(bound.connection?.id, 'radarr');
     });
 
-    test('a server Cupola has no connection to is known only to Seerr', () {
+    test('a server Cupola has no connection to is Seerr\'s alone', () {
       final bound = SeerrBoundCopy.of(
         const SeerrMediaCopy(is4k: false, externalId: 6, serverId: 2),
         arr: ServiceKey.radarr,

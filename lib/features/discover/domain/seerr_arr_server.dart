@@ -236,8 +236,9 @@ class SeerrApproveTarget {
   ///
   /// [connectionTitle] names a connection the way the rest of the app does
   /// (`SettingsModel.connectionTitle`): `Radarr` while there is one, `Radarr ·
-  /// 4K` once there are two. A server known only to Seerr goes by Seerr's
-  /// name for it, with that said.
+  /// 4K` once there are two. A server Cupola has no connection to goes by
+  /// Seerr's name for it, and a second sentence says Cupola has no
+  /// connection to it.
   String confirmation(
     String title, {
     required String Function(ServiceInstance connection) connectionTitle,
@@ -250,8 +251,10 @@ class SeerrApproveTarget {
     }
     if (server != null) {
       final name = server.name.isEmpty ? "Seerr's $_kind" : server.name;
-      return '$title goes to $name, known only to Seerr, and starts '
-          'downloading.';
+      // "Connected" is on the brand book's Never list; a connection is
+      // the word Settings uses for what Cupola has.
+      return '$title goes to $name and starts downloading. Cupola has no '
+          'connection to that server.';
     }
     if (serversRead) {
       return 'Seerr has no $_kind to send $title to, so nothing will '

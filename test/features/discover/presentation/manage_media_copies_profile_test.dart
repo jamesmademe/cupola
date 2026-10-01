@@ -157,24 +157,33 @@ void main() {
     await harness.unmount(tester);
   });
 
-  testWidgets('P5: a Radarr known only to Seerr is said to be, and Open '
-      'leads to its setup', (tester) async {
-    final (harness, _) = await pump(tester, Profiles.p5, WorldTitles.coffeeRun);
+  testWidgets(
+    'P5: a Radarr Cupola has no connection to is said to be, and Open '
+    'leads to its setup',
+    (tester) async {
+      final (harness, _) = await pump(
+        tester,
+        Profiles.p5,
+        WorldTitles.coffeeRun,
+      );
 
-    final dimmed = find.byWidgetPredicate(
-      (w) => w is Opacity && w.opacity == GatedAffordance.dimmedOpacity,
-    );
-    expect(
-      find.ancestor(of: find.text('Open in Radarr'), matching: dimmed),
-      findsOneWidget,
-    );
-    await tapInSheet(tester, harness, 'Open in Radarr');
-    expect(
-      find.text('Radarr is known only to Seerr. Set it up to open this movie.'),
-      findsOneWidget,
-    );
-    expect(find.text('Set up Radarr'), findsOneWidget);
+      final dimmed = find.byWidgetPredicate(
+        (w) => w is Opacity && w.opacity == GatedAffordance.dimmedOpacity,
+      );
+      expect(
+        find.ancestor(of: find.text('Open in Radarr'), matching: dimmed),
+        findsOneWidget,
+      );
+      await tapInSheet(tester, harness, 'Open in Radarr');
+      expect(
+        find.text(
+          'Cupola has no connection to Radarr. Set it up to open this movie.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Set up Radarr'), findsOneWidget);
 
-    await harness.unmount(tester);
-  });
+      await harness.unmount(tester);
+    },
+  );
 }

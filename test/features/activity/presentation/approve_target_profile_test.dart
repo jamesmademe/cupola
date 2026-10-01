@@ -95,13 +95,16 @@ void main() {
     await harness.unmount(tester);
   });
 
-  testWidgets('P5: a Radarr known only to Seerr is said to be', (tester) async {
+  testWidgets('P5: a Radarr Cupola has no connection to is said to be', (
+    tester,
+  ) async {
     final harness = await pump(tester, Profiles.p5);
     await openApprove(tester, harness);
 
     expect(
       find.text(
-        'Charge goes to Radarr, known only to Seerr, and starts downloading.',
+        'Charge goes to Radarr and starts downloading. Cupola has no '
+        'connection to that server.',
       ),
       findsOneWidget,
     );

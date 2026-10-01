@@ -184,7 +184,7 @@ void main() {
       expect(target.rootFolder, '/archive');
     });
 
-    test('a server known only to Seerr says so, in one clause', () {
+    test('a server Cupola has no connection to says so, plainly', () {
       final target = SeerrApproveTarget.of(
         _request(serverId: 2),
         servers: [hd, uhd, spare],
@@ -195,8 +195,8 @@ void main() {
       expect(target.connection, isNull);
       expect(
         target.confirmation('Charge', connectionTitle: title),
-        'Charge goes to Radarr spare, known only to Seerr, and starts '
-        'downloading.',
+        'Charge goes to Radarr spare and starts downloading. Cupola has no '
+        'connection to that server.',
       );
     });
 

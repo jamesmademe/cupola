@@ -422,7 +422,8 @@ class _CopyControls extends StatelessWidget {
               onTap: copy.onOpen,
               onBlocked: () => SnackBarHelper.withAction(
                 context,
-                '$name is known only to Seerr. Set it up to open this $noun.',
+                'Cupola has no connection to $name. Set it up to open '
+                'this $noun.',
                 actionLabel: Lexicon.setUp(target.title),
                 onAction: () => context.go(ServiceRoutes.setUp(target)),
               ),
