@@ -11,7 +11,7 @@ import '../service_fakes.dart';
 import '../world.dart';
 
 List<WorldDownload> _rowsOf(ServerContext c, String client) => [
-  for (final d in WorldDownloads.all)
+  for (final d in c.profile.downloads)
     if (d.client == client) d,
 ];
 
@@ -45,6 +45,7 @@ class QbittorrentFake extends ServiceFake {
     DownloadState.queued => 'queuedDL',
     DownloadState.importBlocked || DownloadState.seeding => 'stalledUP',
     DownloadState.stopped => 'stoppedUP',
+    DownloadState.failed => 'error',
   };
 
   static JsonMap torrent(ServerContext c, WorldDownload d) {
@@ -197,6 +198,15 @@ class TransmissionFake extends ServiceFake {
     return body is Map ? '${body['method']}' : '';
   }
 
+  /// Transmission's `status`: 0 stopped, 3 queued to download, 4
+  /// downloading, 6 seeding. A local error stops the torrent.
+  static int _status(WorldDownload d) => switch (d.state) {
+    DownloadState.downloading || DownloadState.stuck => 4,
+    DownloadState.queued => 3,
+    DownloadState.importBlocked || DownloadState.seeding => 6,
+    DownloadState.stopped || DownloadState.failed => 0,
+  };
+
   @override
   bool isWrite(NetworkRequest r) => !_reads.contains(_method(r));
 
@@ -250,6 +260,7 @@ class TransmissionFake extends ServiceFake {
           'torrentCount': rows.length,
         });
       case 'torrent-get':
+        final now = c.now.millisecondsSinceEpoch ~/ 1000;
         return ok({
           'torrents': [
             for (final (i, d) in rows.indexed)
@@ -257,7 +268,7 @@ class TransmissionFake extends ServiceFake {
                 'id': i + 1,
                 'hashString': d.id.toLowerCase(),
                 'name': d.release,
-                'status': 4,
+                'status': _status(d),
                 'percentDone': d.progress,
                 'totalSize': d.size,
                 'sizeWhenDone': d.size,
@@ -266,12 +277,22 @@ class TransmissionFake extends ServiceFake {
                 'rateUpload': 0,
                 'eta': d.eta?.inSeconds ?? -1,
                 'uploadRatio': 0.0,
-                'error': 0,
-                'errorString': '',
-                'addedDate': c.now.millisecondsSinceEpoch ~/ 1000 - 3600,
+                // A local error, in the daemon's own words for missing data.
+                'error': d.state == DownloadState.failed ? 3 : 0,
+                'errorString': d.state == DownloadState.failed
+                    ? 'No data found! Ensure your drives are connected or use '
+                          '"Set Location". To re-download, remove the torrent '
+                          'and re-add it.'
+                    : '',
+                'addedDate': now - 3600,
+                'activityDate': d.state == DownloadState.stuck
+                    ? now - 3 * 3600
+                    : now - 5,
                 'downloadDir': '/mnt/tank/downloads',
                 'labels': const ['sonarr'],
                 'peersConnected': 8,
+                'peersSendingToUs': d.state == DownloadState.stuck ? 0 : 6,
+                'isStalled': d.state == DownloadState.stuck,
                 'isFinished': false,
               },
           ],

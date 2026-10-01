@@ -711,6 +711,7 @@ class ConfigProfile {
     this.seerrRequester,
     this.trustedCertificates = const {},
     this.bazarrFollows = const {ServiceKey.radarr, ServiceKey.sonarr},
+    this.extraDownloads = const [],
   });
 
   /// `P1` … `P9`, as the inventory numbers them.
@@ -757,6 +758,18 @@ class ConfigProfile {
   /// only, so its episode side answers empty. Bazarr knows no Cupola
   /// connection: it follows one server of each, whichever that is.
   final Set<ServiceKey> bazarrFollows;
+
+  /// Downloads this profile's world holds beside [WorldDownloads.all]: a
+  /// torrent in error, a usenet job its client paused. Each is drawn by its
+  /// client's fake and, when it names an arr, by that arr's queue, the way
+  /// the world's own rows are. See [withDownloads].
+  final List<WorldDownload> extraDownloads;
+
+  /// Every download of this profile's world.
+  List<WorldDownload> get downloads => [
+    ...WorldDownloads.all,
+    ...extraDownloads,
+  ];
 
   /// The settings model the app starts from.
   SettingsModel get settings => SettingsModel(
@@ -838,6 +851,11 @@ class ConfigProfile {
     return _copy(lens: {...lens, service: instanceId});
   }
 
+  /// A copy whose world also holds [downloads]. The world as written has no
+  /// client fault in it; a test that needs one adds it here.
+  ConfigProfile withDownloads(List<WorldDownload> downloads) =>
+      _copy(extraDownloads: [...extraDownloads, ...downloads]);
+
   /// A copy with the device at [place].
   ConfigProfile at(NetworkPlace place) => _copy(place: place);
 
@@ -893,6 +911,7 @@ class ConfigProfile {
     Map<ServiceKey, String>? lens,
     NetworkPlace? place,
     WorldSeerrUser? seerrRequester,
+    List<WorldDownload>? extraDownloads,
   }) => ConfigProfile(
     id: id,
     title: title,
@@ -906,6 +925,7 @@ class ConfigProfile {
     seerrRequester: seerrRequester ?? this.seerrRequester,
     trustedCertificates: trustedCertificates,
     bazarrFollows: bazarrFollows,
+    extraDownloads: extraDownloads ?? this.extraDownloads,
   );
 
   @override

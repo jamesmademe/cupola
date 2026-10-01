@@ -933,7 +933,7 @@ class BazarrFake extends ServiceFake {
 
 /// The world's downloads whose arr row lives on the server [c] reached.
 List<WorldDownload> arrDownloads(ServerContext c) => [
-  for (final d in WorldDownloads.all)
+  for (final d in c.profile.downloads)
     if (d.arr == c.server.id &&
         d.state != DownloadState.seeding &&
         d.state != DownloadState.stopped &&

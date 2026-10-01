@@ -44,6 +44,7 @@ import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/services/domain/arr_import.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
+import 'package:cupola/features/services/domain/download_client_faults.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/recently_added.dart';
 import 'package:cupola/features/services/domain/request_ordering.dart';
@@ -58,6 +59,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
+import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
 import 'package:cupola/features/truenas/data/truenas_service.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/unraid/data/unraid_client.dart';
@@ -1278,7 +1280,7 @@ class ServiceQueueItem {
 /// This is the region the old dashboard put *last*, below three browse rails,
 /// while sourcing it from Radarr and Sonarr only — so the most time-sensitive
 /// thing on a control-room screen was both buried and mostly blind. It now covers
-/// the two arr services it always did, plus Lidarr and Readarr, plus the three
+/// the two arr services it always did, plus Lidarr and Readarr, plus the four
 /// download clients that actually move the bytes.
 ///
 /// Stalls are **not** filtered out here: they are in the list, flagged, because
@@ -1291,7 +1293,7 @@ class ServiceQueueItem {
 /// kept, classified, in [ServicesQueue.coverage]: the rows can do without a dark
 /// client, but the count above them cannot count it as zero.
 final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
-  // Every configured connection of the seven sources, each watched on its own
+  // Every configured connection of the eight sources, each watched on its own
   // narrow key rather than the whole model. A bare
   // `ref.watch(currentSettingsProvider)` re-ran every queue fetch on every
   // settings write — including a theme-mode toggle, which cannot change a
@@ -1349,6 +1351,8 @@ final servicesQueueProvider = FutureProvider<ServicesQueue>((ref) async {
   final clientQueues = [
     for (final source in _watchMergeConnections(ref, ServiceKey.qbittorrent))
       from(source, () => whole(_loadQbittorrentQueueItems(ref, source))),
+    for (final source in _watchMergeConnections(ref, ServiceKey.transmission))
+      from(source, () => whole(_loadTransmissionQueueItems(ref, source))),
     for (final source in _watchMergeConnections(ref, ServiceKey.sabnzbd))
       from(source, () => whole(_loadSabnzbdQueueItems(ref, source))),
     for (final source in _watchMergeConnections(ref, ServiceKey.nzbget))
@@ -1633,6 +1637,74 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(
         ),
       )
       .toList(growable: false);
+}
+
+/// Transmission's torrents, as in-flight items: the incoming ones, and any
+/// torrent reporting a fault. See [transmissionInFlight] for the rule.
+///
+/// It used to be no source at all. A Sonarr grab moving through Transmission
+/// was drawn off the arr's queue alone, with the arr's minute-old progress and
+/// no rate, and a torrent added by hand was not on Home anywhere.
+Future<List<ServiceQueueItem>> _loadTransmissionQueueItems(
+  Ref ref,
+  _MergeConnection source,
+) async {
+  // As qBittorrent: the lens's list is the one the Transmission page holds.
+  final torrents = source.isLens
+      ? await ref.watch(transmissionTorrentsProvider.future)
+      : await ref
+            .watch(transmissionClientForProvider(source.instanceId))
+            .torrents();
+  final read = [
+    for (final torrent in torrents)
+      if (transmissionInFlight(torrent) case final reading?)
+        (torrent: torrent, reading: reading),
+  ];
+
+  // `rateDownload` is per torrent; the client's rate is their sum, carried on
+  // each of its rows and counted once.
+  final clientRate = read.fold<int>(
+    0,
+    (sum, row) => sum + row.torrent.rateDownload,
+  );
+
+  return [
+    for (final (:torrent, :reading) in read)
+      ServiceQueueItem(
+        service: ServiceKey.transmission,
+        id: torrent.hashString,
+        title: torrent.name,
+        progress: torrent.progress,
+        // `sizeWhenDone` is what this torrent will weigh with its unwanted
+        // files skipped, and `leftUntilDone` is measured against it, so the
+        // pair is taken together or not at all.
+        doneBytes: torrent.sizeWhenDone > 0
+            ? torrent.sizeWhenDone - torrent.leftUntilDone
+            : null,
+        totalBytes: torrent.sizeWhenDone > 0 ? torrent.sizeWhenDone : null,
+        // Negative is "not available" (-1) or "unknown" (-2), never a time.
+        etaSeconds: torrent.eta < 0 ? null : torrent.eta,
+        clientLabel: serviceWithConnection(
+          ServiceKey.transmission,
+          source.name,
+          joiner: ' ',
+        ),
+        clientService: ServiceKey.transmission,
+        instanceId: source.instanceId,
+        clientInstanceId: source.instanceId,
+        clientRateBytesPerSecond: clientRate,
+        fault: reading.fault,
+        warning: reading.reason,
+        stalledSince: reading.fault == null
+            ? null
+            : _epochSeconds(torrent.activityDate),
+        detail: joinDisplayParts([
+          formatSpeed(torrent.rateDownload),
+          '${torrent.peersSendingToUs} peers',
+        ]),
+        route: ServiceRoutes.forService(ServiceKey.transmission),
+      ),
+  ];
 }
 
 /// qBittorrent's "no estimate" sentinel, in seconds (100 days).
@@ -2097,7 +2169,7 @@ final dashboardDecisionSourceProvider =
             () => _expiringCertificateDecisions(ref),
           );
         case DecisionSource.queue:
-          // Not gated on one service: the faults come from whichever of seven
+          // Not gated on one service: the faults come from whichever of eight
           // sources reported one, and the queue has already gated each of those
           // and kept which of them answered.
           final inFlight = await ref.watch(servicesInFlightProvider.future);

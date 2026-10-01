@@ -60,7 +60,7 @@ enum DecisionSource {
   /// Nginx Proxy Manager's certificates close to expiry.
   certificates([ServiceKey.nginxProxyManager]),
 
-  /// The transfers that stopped being transfers. One source and not seven: a
+  /// The transfers that stopped being transfers. One source and not eight: a
   /// stall is joined across an \*arr and the client moving its bytes, and read
   /// apart the same stall would be two decisions until the second arrived.
   queue([
@@ -69,6 +69,7 @@ enum DecisionSource {
     ServiceKey.lidarr,
     ServiceKey.readarr,
     ServiceKey.qbittorrent,
+    ServiceKey.transmission,
     ServiceKey.sabnzbd,
     ServiceKey.nzbget,
   ]),

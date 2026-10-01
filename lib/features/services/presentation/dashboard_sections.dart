@@ -196,6 +196,7 @@ class ServicesInFlightSection extends ConsumerWidget {
     ServiceKey.lidarr,
     ServiceKey.readarr,
     ServiceKey.qbittorrent,
+    ServiceKey.transmission,
     ServiceKey.sabnzbd,
     ServiceKey.nzbget,
   ];
@@ -245,7 +246,7 @@ class ServicesInFlightSection extends ConsumerWidget {
           subtitle: eyebrow,
           trailing: _SectionAction(
             label: 'Activity',
-            // Brand primary, not a service accent: the region spans up to seven
+            // Brand primary, not a service accent: the region spans up to eight
             // sources and no one of them owns it.
             color: Theme.of(context).colorScheme.primary,
             onTap: () => context.go('/activity'),
@@ -1155,7 +1156,7 @@ class _InFlightRow extends StatelessWidget {
     // The primary ink, not the source service's colour, for both the figure and
     // the bar. Contrast: SABnzbd's gold measured about 1.9:1 as `labelSmall` on
     // the light card and NZBGet's green about 2.9:1, well under AA. Identity:
-    // seven download sources each putting a hue on a percentage said nothing
+    // eight download sources each putting a hue on a percentage said nothing
     // the row's name did not. Walked against the row's card.
     final accent = statusToneColor(
       colorScheme,

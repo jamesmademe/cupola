@@ -52,6 +52,9 @@ Profiles can be varied:
   mask from `SeerrPermission` values.
 - `withSeerrRelease(SeerrRelease.overseerr)` puts another release behind
   Seerr, at one connection with `instanceId:` or at all of them.
+- `withDownloads([download])` adds downloads to the world: a torrent in
+  error, say. Each is drawn by its client's fake and, when it names an arr,
+  by that arr's queue.
 
 A test can answer ahead of the world with
 `harness.network.on(id, 'GET', path, (request) => NetworkReply.json(…))`,
@@ -230,6 +233,6 @@ four-column user of the local sign-in.
   `SecureSocket`, which bypasses `HttpOverrides`) are out of reach.
 - **Plex non-owner.** Only the refused `/status/sessions` is modelled. There
   is no documented owner probe to answer.
-- **qBittorrent `error` torrents, SABnzbd/NZBGet faults, the World-B
-  Transmission error.** The world as written has none. Script them with
-  `network.on`.
+- **Client faults in the world itself.** The world as written has none. A
+  test adds one with `withDownloads`: `DownloadState.failed` is a
+  Transmission local error (`error: 3`, the daemon's own words).

@@ -26,6 +26,7 @@ import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
 
 /// The providers the Dashboard's merged regions read from [service] and that
 /// keep an answer of their own — what has to be dropped for that service's
@@ -37,6 +38,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 List<ProviderOrFamily> dashboardSourcesOf(ServiceKey service) =>
     switch (service) {
       ServiceKey.qbittorrent => [allTorrentsProvider],
+      ServiceKey.transmission => [transmissionTorrentsProvider],
       ServiceKey.sabnzbd => [sabnzbdQueueProvider],
       ServiceKey.nzbget => [nzbgetQueueProvider],
       // The lens's list, and every other Seerr's, which the region reads too.
@@ -52,7 +54,6 @@ List<ProviderOrFamily> dashboardSourcesOf(ServiceKey service) =>
       ServiceKey.sonarr ||
       ServiceKey.lidarr ||
       ServiceKey.readarr ||
-      ServiceKey.transmission ||
       ServiceKey.bazarr ||
       ServiceKey.truenas ||
       ServiceKey.unraid ||

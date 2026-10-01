@@ -232,6 +232,11 @@ enum DownloadState {
   importBlocked,
   seeding,
   stopped,
+
+  /// The client cannot read or write the data: qBittorrent's `error`,
+  /// Transmission's local error. None of the world's own downloads is in this
+  /// state; a test adds one with `ConfigProfile.withDownloads`.
+  failed,
 }
 
 /// One download of the world, as both the arr's queue and the client see it.
