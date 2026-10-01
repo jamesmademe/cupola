@@ -257,11 +257,6 @@ const _allowed = <({String file, String literal, String reason})>[
         'playback, which is a different session state',
   ),
   (
-    file: 'lib/features/services/presentation/service_kpi_provider.dart',
-    literal: 'Down',
-    reason: 'the download half of a speed figure (Down · Up), not a state',
-  ),
-  (
     file: 'lib/features/dockge/presentation/dockge_stack_detail_screen.dart',
     literal: 'Down',
     reason:

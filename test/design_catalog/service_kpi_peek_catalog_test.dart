@@ -62,12 +62,12 @@ const _radarrSilent = [
 const _qbittorrent = [
   ServiceKpi(label: 'Active', value: '4', icon: Icons.bolt_rounded),
   ServiceKpi(
-    label: 'Down',
+    label: 'Download',
     value: '12.4 MB/s',
     icon: Icons.south_rounded,
     tone: StatusTone.info,
   ),
-  ServiceKpi(label: 'Up', value: '860 KB/s', icon: Icons.north_rounded),
+  ServiceKpi(label: 'Upload', value: '860 KB/s', icon: Icons.north_rounded),
   ServiceKpi(label: 'Seeding', value: '41', icon: Icons.upload_rounded),
   ServiceKpi(label: 'Downloading', value: '2', icon: Icons.download_rounded),
 ];
@@ -114,7 +114,8 @@ void main() {
         ServiceKey.radarr,
       ),
       _scene(
-        'qBittorrent · Down in the info tone while bytes move; the rail '
+        'qBittorrent · the speed pair reads ↓ 12.4 MB/s ↑ 860 KB/s, Download in '
+        'the info tone while bytes move; the rail '
         'scrolls past the edge',
         const AsyncValue.data(_qbittorrent),
         ServiceKey.qbittorrent,

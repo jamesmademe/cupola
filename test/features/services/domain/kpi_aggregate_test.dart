@@ -44,8 +44,8 @@ void main() {
       // 2.0 MB/s + 512 KB/s is 2.5 MB/s, on the same binary ladder the cards
       // already print.
       final folded = aggregateServiceKpis([
-        [kpi('Down', '2.0 MB/s')],
-        [kpi('Down', '512 KB/s')],
+        [kpi('Download', '2.0 MB/s')],
+        [kpi('Download', '512 KB/s')],
       ]);
 
       expect(folded!.single.value, '2.5 MB/s');

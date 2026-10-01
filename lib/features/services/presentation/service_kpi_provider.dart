@@ -749,13 +749,21 @@ List<ServiceKpi> _qbittorrentKpisFrom(List<Torrent> torrents) {
   }
   return [
     ServiceKpi(label: 'Active', value: '$active', icon: Icons.bolt_rounded),
+    // The brand book's pair, `↓ 22.4 MB/s ↑ 1.1 MB/s`: the arrow is the
+    // card's glyph and the rate its figure, so the word under them names the
+    // rate rather than repeating the arrow. It said `Down` and `Up`, and
+    // `Down` is the one state word the lexicon bans outright.
     ServiceKpi(
-      label: 'Down',
+      label: 'Download',
       value: formatSpeed(dl),
       icon: Icons.south_rounded,
       tone: _activityIf(dl > 0),
     ),
-    ServiceKpi(label: 'Up', value: formatSpeed(up), icon: Icons.north_rounded),
+    ServiceKpi(
+      label: 'Upload',
+      value: formatSpeed(up),
+      icon: Icons.north_rounded,
+    ),
     ServiceKpi(label: 'Seeding', value: '$seeding', icon: Icons.upload_rounded),
     ServiceKpi(
       label: 'Downloading',
@@ -1179,7 +1187,7 @@ List<ServiceKpi> _sabnzbdKpisFrom(
 ) {
   final kpis = <ServiceKpi>[
     ServiceKpi(
-      label: 'Down',
+      label: 'Download',
       value: queue.speedLabel,
       icon: Icons.south_rounded,
       tone: _activityIf(queue.kbPerSec > 0),
@@ -1251,7 +1259,7 @@ List<ServiceKpi> _nzbgetKpisFrom(
 ) {
   return [
     ServiceKpi(
-      label: 'Down',
+      label: 'Download',
       value: status.rateLabel,
       icon: Icons.south_rounded,
       tone: _activityIf(status.downloadRateBytes > 0),
@@ -1278,7 +1286,7 @@ List<ServiceKpi> _nzbgetKpisFrom(
 }
 
 /// Transmission's rail, shaped like qBittorrent's so the two torrent clients
-/// read the same way in the matrix — `Down` first, flagged while bytes are
+/// read the same way in the matrix — `Download` first, flagged while bytes are
 /// actually moving, so the resting cell says "0 B/s" rather than a library
 /// total.
 Future<List<ServiceKpi>> _transmissionKpis(Ref ref) async {
@@ -1313,13 +1321,13 @@ List<ServiceKpi> _transmissionKpisFrom(
 
   return [
     ServiceKpi(
-      label: 'Down',
+      label: 'Download',
       value: stats.downloadSpeedLabel,
       icon: Icons.south_rounded,
       tone: _activityIf(stats.downloadSpeed > 0),
     ),
     ServiceKpi(
-      label: 'Up',
+      label: 'Upload',
       value: stats.uploadSpeedLabel,
       icon: Icons.north_rounded,
     ),

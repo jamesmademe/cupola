@@ -76,14 +76,15 @@ class ServiceSignal {
 /// beside its figure, in a grid of up to thirteen cells whose other possible
 /// live line is the word "Offline" — and that context breaks three of them:
 ///
-///  * **`Down`** is the download *rate*. Beside `Up` on a peek it cannot be
-///    misread; on a reachability instrument `2.4 MB/s down` says the service is
-///    down. It is the one word this screen cannot borrow, and the KPI builder
-///    already knew as much — it flags the rate as *activity*, never as a fault.
-///    `incoming` rather than `downloading` because the cell has to fit a rate,
-///    an icon and a word into 168pt: measured, `2.4 MB/s downloading` ellipsises
-///    to "downloa…" at the *default* reading size, and a truncated word is a
-///    worse label than a shorter one.
+///  * **`Download`** is the download *rate* (it was `Down`, which on a
+///    reachability instrument read `2.4 MB/s down`: the service is down).
+///    Beside `Upload` on a peek it is a column heading; beside a figure it is
+///    a noun where the cell wants what the client is doing. The KPI builder
+///    flags the rate as *activity*, never as a fault. `incoming` rather than
+///    `downloading` because the cell has to fit a rate, an icon and a word
+///    into 168pt: measured, `2.4 MB/s downloading` ellipsises to "downloa…" at
+///    the *default* reading size, and a truncated word is a worse label than a
+///    shorter one.
 ///  * **`Fails`** is Prowlarr's own truncation, and it is not a noun. The figure
 ///    counts failed queries.
 ///  * **`Status`** names a field, not a fact. Its value is already the state
@@ -93,8 +94,8 @@ class ServiceSignal {
 /// terms the audience genuinely knows — Bazarr's `Wanted`, Docker's `Exited`.
 /// Plain-languaging those would flatten terminology, not clarify it.
 const Map<String, String> _matrixLabelOverrides = {
-  'Down': 'incoming',
-  'Up': 'outgoing',
+  'Download': 'incoming',
+  'Upload': 'outgoing',
   'Fails': 'failures',
   'Status': '',
   // `Streams` is a fine column heading on a four-KPI peek and a poor phrase
