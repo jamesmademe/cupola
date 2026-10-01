@@ -217,7 +217,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byType(ServicesInFlightSection),
-        matching: find.text('SABnzbd did not answer · not in the total'),
+        matching: find.text('Not in the total: SABnzbd'),
       ),
       findsOne,
     );
@@ -235,7 +235,7 @@ void main() {
     // The probe came back answering, and so did everything that reads it: the
     // band, the note under In flight, and SABnzbd's own rows.
     expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
-    expect(find.textContaining('not in the total'), findsNothing);
+    expect(find.textContaining('Not in the total'), findsNothing);
     expect(find.text('Elephants.Dream.2006.2160p.UHD.BluRay'), findsOne);
     expect(find.text('5 downloading · 40 MB/s across 2 clients'), findsOne);
 

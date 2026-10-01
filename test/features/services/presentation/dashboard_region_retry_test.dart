@@ -94,7 +94,7 @@ void main() {
       findsNothing,
     );
     expect(find.text('5 downloading · 40 MB/s across 2 clients'), findsOne);
-    expect(find.textContaining('not in the total'), findsNothing);
+    expect(find.textContaining('Not in the total'), findsNothing);
     expect(find.text('Elephants.Dream.2006.2160p.UHD.BluRay'), findsOne);
 
     await harness.unmount(tester);

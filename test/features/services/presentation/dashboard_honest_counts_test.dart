@@ -39,7 +39,7 @@ void main() {
 
     expect(find.text('5 downloading · 40 MB/s across 2 clients'), findsOne);
     expect(find.text('5 imported'), findsOne);
-    expect(find.textContaining('not in the total'), findsNothing);
+    expect(find.textContaining('Not in the total'), findsNothing);
     expect(find.byType(FaultNote), findsNothing);
 
     await harness.unmount(tester);
@@ -57,16 +57,14 @@ void main() {
 
     // Radarr and Sonarr answered; Lidarr and SABnzbd are home-only and the
     // device is away; qBittorrent refused the sign-in. The count is theirs,
-    // and the line under it says so — in the classification's words, so the
-    // refusal is not called silence.
+    // and the line under it names the rest. Why each is missing is the alert
+    // band's sentence, so the note does not say it a second time.
     expect(find.text('3 downloading'), findsOne);
-    const inFlightNote =
-        'Lidarr and SABnzbd did not answer · qBittorrent refused the sign-in '
-        '· not in the total';
+    const inFlightNote = 'Not in the total: Lidarr, SABnzbd, qBittorrent';
     expect(find.text(inFlightNote), findsOne);
 
     expect(find.text('5 imported'), findsOne);
-    expect(find.text('Lidarr did not answer · not in the total'), findsOne);
+    expect(find.text('Not in the total: Lidarr'), findsOne);
 
     // Red is spent on the glyph and only because a source did not answer;
     // the sentence stays in secondary ink.
@@ -85,8 +83,8 @@ void main() {
     // The header speaks the figure and what qualifies it as one sentence.
     expect(
       find.bySemanticsLabel(
-        'In flight, 3 downloading, Lidarr and SABnzbd did not answer, '
-        'qBittorrent refused the sign-in, not in the total',
+        'In flight, 3 downloading, '
+        'Not in the total: Lidarr, SABnzbd, qBittorrent',
       ),
       findsOne,
     );
@@ -119,7 +117,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(region),
-          matching: find.textContaining('not in the total'),
+          matching: find.textContaining('Not in the total'),
         ),
         findsNothing,
       );

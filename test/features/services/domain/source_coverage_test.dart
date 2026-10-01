@@ -65,7 +65,7 @@ void main() {
   });
 
   group('the note under a partial total', () {
-    test('names what is missing, silence first, in the lexicon', () {
+    test('names what is missing, silence first, and no reasons', () {
       final coverage = SourceCoverage.merge([
         SourceCoverage.answeredBy(ServiceKey.radarr),
         SourceCoverage.failure(ServiceKey.qbittorrent, refused),
@@ -75,8 +75,7 @@ void main() {
 
       expect(
         coverageNote(coverage),
-        'Lidarr and SABnzbd did not answer · qBittorrent refused the sign-in '
-        '· not in the total',
+        'Not in the total: Lidarr, SABnzbd, qBittorrent',
       );
       expect(coverage.anyDidNotAnswer, isTrue);
     });
@@ -95,7 +94,25 @@ void main() {
 
       expect(
         coverageNote(coverage),
-        'Sonarr, Lidarr and 2 others did not answer · not in the total',
+        'Not in the total: Sonarr, Lidarr and 2 others',
+      );
+    });
+
+    test('the cap is per kind of failure, as it always was', () {
+      final coverage = SourceCoverage.merge([
+        SourceCoverage.answeredBy(ServiceKey.radarr),
+        for (final service in const [
+          ServiceKey.sonarr,
+          ServiceKey.lidarr,
+          ServiceKey.prowlarr,
+        ])
+          SourceCoverage.failure(service, silent),
+        SourceCoverage.failure(ServiceKey.qbittorrent, refused),
+      ]);
+
+      expect(
+        coverageNote(coverage),
+        'Not in the total: Sonarr, Lidarr, qBittorrent and 1 other',
       );
     });
 
@@ -116,10 +133,7 @@ void main() {
         SourceCoverage.failure(ServiceKey.sonarr, refused),
       ]);
       expect(coverage.anyDidNotAnswer, isFalse);
-      expect(
-        coverageNote(coverage),
-        'Sonarr refused the key · not in the total',
-      );
+      expect(coverageNote(coverage), 'Not in the total: Sonarr');
     });
   });
 

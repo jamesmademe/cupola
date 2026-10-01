@@ -1353,8 +1353,8 @@ class _SectionEmptyLabel extends StatelessWidget {
   }
 }
 
-/// The line under a total that leaves sources out: `SABnzbd did not answer ·
-/// not in the total`.
+/// The line under a total that leaves sources out: `Not in the total:
+/// SABnzbd`.
 ///
 /// A [FaultNote] — the tone on one glyph, the sentence in secondary ink — and
 /// silent to a screen reader, because the section header already speaks it as

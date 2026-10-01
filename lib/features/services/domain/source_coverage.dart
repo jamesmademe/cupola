@@ -119,15 +119,19 @@ String spokenCountPhrase(String phrase) {
   return '${phrase.substring(lead.length)}, count unavailable';
 }
 
-/// The line under a total that leaves a source out: `SABnzbd did not answer ·
-/// not in the total`, or null when nothing is missing — or when nothing
-/// answered, which has no total to qualify and says [coverageFailureSentence]
-/// instead.
+/// The line under a total that leaves a source out: `Not in the total:
+/// Lidarr, SABnzbd, qBittorrent`, or null when nothing is missing — or when
+/// nothing answered, which has no total to qualify and says
+/// [coverageFailureSentence] instead.
 ///
-/// Failed sources are grouped by what happened to them, in the
-/// classification's words — `Lidarr and SABnzbd did not answer · qBittorrent
-/// refused the sign-in` — silence first, because it is the red half. At most
-/// two names per group; the rest are counted.
+/// Names only. Who did not answer and why is the alert band's sentence at the
+/// top of the page, and the note used to say it again under every figure it
+/// qualified (`Lidarr and SABnzbd did not answer · qBittorrent refused the
+/// sign-in · not in the total`), long enough that a phone cut it off before
+/// the part that mattered here. Every failed source is named, silent or
+/// refusing alike, silence first because it is the red half, and the same
+/// cap holds: at most two of each kind of failure, the rest counted. The
+/// glyph still says which kind leads ([SourceCoverage.anyDidNotAnswer]).
 String? coverageNote(SourceCoverage coverage) {
   if (!coverage.isPartial) return null;
   final groups = <String, List<String>>{};
@@ -138,17 +142,24 @@ String? coverageNote(SourceCoverage coverage) {
       silent.add(service.title);
       continue;
     }
-    final label = Lexicon.inline(describeFailure(service, reason).label);
+    final label = describeFailure(service, reason).label;
     (groups[label] ??= []).add(service.title);
   }
-  final clauses = [
-    if (silent.isNotEmpty)
-      '${_namesUpTo(silent)} ${StateWord.didNotAnswer.inline}',
-    for (final MapEntry(key: label, value: titles) in groups.entries)
-      '${_namesUpTo(titles)} $label',
-  ];
-  return '${clauses.join(' · ')} · not in the total';
+  final named = <String>[];
+  var hidden = 0;
+  for (final titles in [silent, ...groups.values]) {
+    named.addAll(titles.take(_namesPerKind));
+    if (titles.length > _namesPerKind) hidden += titles.length - _namesPerKind;
+  }
+  final names = named.join(', ');
+  return hidden == 0
+      ? 'Not in the total: $names'
+      : 'Not in the total: $names and ${hidden == 1 ? '1 other' : '$hidden others'}';
 }
+
+/// How many sources of one kind of failure a note names before it counts the
+/// rest.
+const _namesPerKind = 2;
 
 /// What a region says when every one of its sources failed, in place of
 /// anything it would have shown: `Radarr and Sonarr did not answer.` — and,
@@ -172,11 +183,4 @@ String coverageFailureSentence(SourceCoverage coverage) {
     if (silent.isNotEmpty) servicesSectionOfflineMessage(silent),
     ...faults,
   ].join(' ');
-}
-
-String _namesUpTo(List<String> titles, {int max = 2}) {
-  if (titles.length <= max) return Lexicon.names(titles);
-  final hidden = titles.length - max;
-  return '${titles.take(max).join(', ')} and '
-      '${hidden == 1 ? '1 other' : '$hidden others'}';
 }
