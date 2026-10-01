@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 
 /// Every assertion here guards a **rule**, not a rendering.
@@ -299,5 +300,93 @@ void main() {
     await tester.pump();
     expect(retried, 1);
     expect(settings, 1);
+  });
+
+  group('the remedy leads', () {
+    Finder filled(String label) => find.ancestor(
+      of: find.text(label),
+      matching: find.byType(FilledButton),
+    );
+
+    testWidgets('a refused key: the key first, in the amber fill, no Retry', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        FaultBand.fault(
+          serviceName: 'Radarr',
+          reason: ServiceFailureReason.unauthorized,
+          onRetry: () {},
+          onOpenSettings: () {},
+        ),
+      );
+      expect(filled('Paste the key again'), findsOneWidget);
+      // The same key can only be refused again.
+      expect(find.text('Retry'), findsNothing);
+      final room = CupolaRoom.of(tester.element(find.byType(FaultBand)));
+      expect(
+        tester
+            .widget<FilledButton>(filled('Paste the key again'))
+            .style!
+            .backgroundColor!
+            .resolve({}),
+        room.toneAmberFill,
+      );
+    });
+
+    testWidgets('a refused sign-in reads as one, and keeps Retry', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        FaultBand.fault(
+          serviceName: 'qBittorrent',
+          reason: ServiceFailureReason.unauthorized,
+          onRetry: () {},
+          onOpenSettings: () {},
+        ),
+      );
+      expect(
+        find.textContaining('qBittorrent answered but refused the sign-in'),
+        findsOneWidget,
+      );
+      expect(filled('Sign in again'), findsOneWidget);
+      expect(_verbColour(tester, 'Retry'), isNot(_glyphColour(tester)));
+      expect(
+        tester.getTopLeft(find.text('Sign in again')).dx,
+        lessThan(tester.getTopLeft(find.text('Retry')).dx),
+      );
+    });
+
+    testWidgets('Plex refuses a token, not a key', (tester) async {
+      await _pump(
+        tester,
+        FaultBand.fault(
+          serviceName: 'Plex',
+          reason: ServiceFailureReason.unauthorized,
+          onRetry: () {},
+          onOpenSettings: () {},
+        ),
+      );
+      expect(
+        find.textContaining('Plex answered but refused the token'),
+        findsOneWidget,
+      );
+      expect(filled('Paste the token again'), findsOneWidget);
+    });
+
+    testWidgets('no form remedy: Retry is the remedy, in the amber fill', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        FaultBand.fault(
+          serviceName: 'Radarr',
+          reason: ServiceFailureReason.serverError,
+          onRetry: () {},
+        ),
+      );
+      expect(filled('Retry'), findsOneWidget);
+    });
   });
 }

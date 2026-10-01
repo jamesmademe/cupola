@@ -29,12 +29,31 @@ void main() {
       ),
       CatalogScene(
         '.fault(reason: unauthorized) · the service answered and refused the '
-        'key: amber, Retry · the remedy',
+        'key: amber, the remedy first in the amber fill, no Retry',
         (_) => FaultBand.fault(
           serviceName: 'Radarr',
           reason: ServiceFailureReason.unauthorized,
           onRetry: () {},
           onOpenSettings: () {},
+        ),
+      ),
+      CatalogScene(
+        '.fault(serviceName: qBittorrent, reason: unauthorized) · a refused '
+        'sign-in, in its own words: Sign in again, then Retry, a ban runs out',
+        (_) => FaultBand.fault(
+          serviceName: 'qBittorrent',
+          reason: ServiceFailureReason.unauthorized,
+          onRetry: () {},
+          onOpenSettings: () {},
+        ),
+      ),
+      CatalogScene(
+        '.fault(reason: serverError) · no form remedy: Retry is the remedy, in '
+        'the amber fill',
+        (_) => FaultBand.fault(
+          serviceName: 'Radarr',
+          reason: ServiceFailureReason.serverError,
+          onRetry: () {},
         ),
       ),
       CatalogScene(
@@ -50,7 +69,7 @@ void main() {
       ),
       CatalogScene(
         '.partial · the service answered part of a paged read: amber, never '
-        'red, Retry only',
+        'red, Retry only, in the amber fill',
         (_) => FaultBand.partial(
           message:
               'Seerr returned 50 of 300 users; later pages are unavailable.',

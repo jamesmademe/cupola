@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -530,6 +531,24 @@ void main() {
       expect(_text('Retry'), findsOneWidget);
       // A carousel row that fails does not jump for having two verbs.
       expect(two, one);
+    });
+
+    testWidgets('FaultBand.fault opens the form itself when its caller gives '
+        'it no way in', (tester) async {
+      // AsyncValueWidget hands the band a service name and a Retry, nothing
+      // else: the remedy still has to lead somewhere.
+      await _pump(
+        tester,
+        FaultBand.fault(
+          serviceName: 'Radarr',
+          reason: ServiceFailureReason.unauthorized,
+          onRetry: () {},
+        ),
+      );
+
+      await tester.tap(find.text('Paste the key again'));
+      await tester.pumpAndSettle();
+      expect(_landedOn?.path, '/settings/service/radarr');
     });
 
     testWidgets('the remedy opens the connection the lens rests on', (

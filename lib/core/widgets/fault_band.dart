@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/sample_age.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 
@@ -41,9 +42,11 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 ///    one 16pt glyph and nowhere else. The band appearing at all is the alarm;
 ///    a page that shouts every time a home server is rebuilding is a page whose
 ///    shouting stops being read.
-/// 2. **The recovery verb is never painted in the fault tone.** Retry, Refresh
-///    and Settings are the primary ink. A red Retry makes the cure look like the
-///    disease, and there is no reading of "try again" that is itself alarming.
+/// 2. **The recovery verb is never painted red.** Beside silence Retry,
+///    Refresh and Settings are the primary ink: a red Retry makes the cure look
+///    like the disease, and there is no reading of "try again" that is itself
+///    alarming. An amber fault's remedy is the one fill a fault gets, the
+///    compact amber fill ([remedyFillStyle]); every other verb stays ink.
 /// 3. **Nothing is dimmed for being unreachable.** Dimming means *not
 ///    configured* everywhere else on this canvas, and the two states need
 ///    opposite responses — one is "go set this up", the other is "this is what
@@ -84,26 +87,66 @@ class FaultBand extends StatelessWidget {
   /// Amber, never [FaultBand.unreachable]'s red: the service is there, and
   /// telling the user it did not answer sends them to check a box that just
   /// replied. [reason] is the classification; the sentence names who and
-  /// what, and the readout below stays at full ink for the same reason it does
-  /// under silence.
-  FaultBand.fault({
-    super.key,
+  /// what, in the service's own word for what it refused (`key`, `sign-in`,
+  /// `token`), and the readout below stays at full ink for the same reason it
+  /// does under silence.
+  ///
+  /// **The remedy leads.** When the classification names a fix in the
+  /// connection's form (`Paste the key again`, `Sign in again`, `Check the
+  /// address`) it is the first verb, in the amber fill, and opens
+  /// [onOpenSettings] or, without one, the form of the connection the lens
+  /// rests on ([FailureRemedy]) for the service [serviceName] starts by
+  /// naming. Retry follows only where the same request can still succeed
+  /// ([failureRetryHelps]). With no such fix Retry is the remedy, in the
+  /// amber fill, and `Settings` follows when there is a way in.
+  factory FaultBand.fault({
+    Key? key,
     required String serviceName,
     required ServiceFailureReason reason,
     required VoidCallback onRetry,
     VoidCallback? onOpenSettings,
-  }) : tone = failureTone(reason),
-       icon = failureIcon(reason),
-       message =
-           '${failureHeadline(reason, subject: serviceName)}. Everything '
-           'below is what it said last.',
-       primaryAction = FaultBandAction('Retry', onRetry),
-       secondaryAction = onOpenSettings == null
-           ? null
-           : FaultBandAction(
-               failureRemedy(reason) ?? 'Settings',
-               onOpenSettings,
-             );
+  }) {
+    final service = FailureRemedy.serviceNamedBy(serviceName);
+    final credential = service == null
+        ? kRefusedCredential
+        : refusedCredentialOf(service);
+    final remedy = failureRemedy(reason, credential: credential);
+    final formRemedy = service == null
+        ? null
+        : FailureRemedy.forReason(service, reason);
+    final FaultBandAction? fix = remedy == null
+        ? null
+        : onOpenSettings != null
+        ? FaultBandAction.remedy(remedy, onOpenSettings)
+        : formRemedy == null
+        ? null
+        : FaultBandAction._form(formRemedy);
+    return FaultBand._raw(
+      key: key,
+      tone: failureTone(reason),
+      icon: failureIcon(reason),
+      message:
+          '${failureHeadline(reason, subject: serviceName, credential: credential)}. '
+          'Everything below is what it said last.',
+      primaryAction: fix ?? FaultBandAction.remedy('Retry', onRetry),
+      secondaryAction: fix != null
+          ? (failureRetryHelps(reason, credential: credential)
+                ? FaultBandAction('Retry', onRetry)
+                : null)
+          : onOpenSettings == null
+          ? null
+          : FaultBandAction('Settings', onOpenSettings),
+    );
+  }
+
+  const FaultBand._raw({
+    super.key,
+    required this.tone,
+    required this.icon,
+    required this.message,
+    required this.primaryAction,
+    this.secondaryAction,
+  });
 
   /// Level 2 — the service answered; one source inside it did not.
   ///
@@ -140,7 +183,8 @@ class FaultBand extends StatelessWidget {
     required VoidCallback onRetry,
   }) : tone = StatusTone.warning,
        icon = Icons.playlist_remove_rounded,
-       primaryAction = FaultBandAction('Retry', onRetry),
+       // Asking for the rest again is this fault's remedy: the amber fill.
+       primaryAction = FaultBandAction.remedy('Retry', onRetry),
        secondaryAction = null;
 
   /// Level 3 — the poll stopped coming back.
@@ -277,23 +321,34 @@ class FaultBand extends StatelessWidget {
               ),
             ),
             for (final action in actions)
-              TextButton(
-                onPressed: action.onPressed,
-                style: TextButton.styleFrom(
-                  // Rule 2.
-                  foregroundColor: colorScheme.primary,
-                  // 44pt on iOS / 48dp on Android is the floor, and these
-                  // buttons share a row with body text that would otherwise
-                  // size them.
-                  minimumSize: const Size(56, 44),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
+              if (action.fill)
+                // Rule 2: an amber fault's remedy, the one fill it gets.
+                Padding(
+                  padding: const EdgeInsets.only(left: AppSpacing.xs),
+                  child: FilledButton(
+                    onPressed: () => action._press(context),
+                    style: remedyFillStyle(context, compact: true),
+                    child: Text(action.label),
                   ),
-                  // No `VisualDensity.compact`: it silently takes 8 off
-                  // `minimumSize`, and 44 declared measured 40.
+                )
+              else
+                TextButton(
+                  onPressed: () => action._press(context),
+                  style: TextButton.styleFrom(
+                    // Rule 2.
+                    foregroundColor: colorScheme.primary,
+                    // 44pt on iOS / 48dp on Android is the floor, and these
+                    // buttons share a row with body text that would otherwise
+                    // size them. Standard density, pinned: compact silently
+                    // takes 8 off `minimumSize`, and 44 declared measured 40.
+                    visualDensity: VisualDensity.standard,
+                    minimumSize: const Size(56, 44),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
+                  ),
+                  child: Text(action.label),
                 ),
-                child: Text(action.label),
-              ),
           ],
         ),
       ),
@@ -304,12 +359,45 @@ class FaultBand extends StatelessWidget {
 /// A verb and what it does.
 ///
 /// A label and a callback rather than a `Widget`: the band owns rule 2 — the
-/// recovery verb is never painted in the fault tone — and a caller that could
-/// hand in its own styled button would be able to break it from outside.
+/// recovery verb is never painted red, and only an amber fault's remedy is
+/// filled — and a caller that could hand in its own styled button would be
+/// able to break it from outside.
 @immutable
 class FaultBandAction {
-  const FaultBandAction(this.label, this.onPressed);
+  /// A verb in ink.
+  const FaultBandAction(this.label, VoidCallback this.onPressed)
+    : fill = false,
+      _remedy = null;
+
+  /// An amber fault's remedy, which the band draws in the amber fill.
+  const FaultBandAction.remedy(this.label, VoidCallback this.onPressed)
+    : fill = true,
+      _remedy = null;
+
+  /// The form's fix, which the band opens itself when the caller gave it no
+  /// way in of its own.
+  FaultBandAction._form(FailureRemedy remedy)
+    : label = remedy.label,
+      onPressed = null,
+      fill = true,
+      _remedy = remedy;
 
   final String label;
-  final VoidCallback onPressed;
+
+  /// What the verb does. Null only for a form remedy the band opens itself.
+  final VoidCallback? onPressed;
+
+  /// Whether this is an amber fault's remedy, drawn in the amber fill.
+  final bool fill;
+
+  final FailureRemedy? _remedy;
+
+  void _press(BuildContext context) {
+    final press = onPressed;
+    if (press != null) {
+      press();
+    } else {
+      _remedy!.open(context);
+    }
+  }
 }
