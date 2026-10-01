@@ -149,6 +149,10 @@ void main() {
     final metrics = container.read(truenasDashboardMetricsProvider);
     expect(metrics.isLoading, isFalse);
     expect(metrics.hasValue, isTrue);
+    // ...and it says that nothing arrived. The reporting API used to swallow
+    // the failure into an empty answer, which the dashboard stamped as an
+    // arrival, so its stale band could never appear.
+    expect(metrics.requireValue.answered, isFalse);
 
     final attempts = nas.calls;
     await tester.pump(const Duration(minutes: 1));

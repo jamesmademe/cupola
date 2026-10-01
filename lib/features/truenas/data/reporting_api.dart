@@ -1,4 +1,5 @@
 import 'package:cupola/features/truenas/data/truenas_api_base.dart';
+import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/truenas/domain/models/reporting.dart';
 
 /// Reporting graphs from Netdata (`reporting.get_data`).
@@ -14,6 +15,15 @@ class TrueNasReportingApi extends TrueNasApiBase {
   /// [identifier] narrows graphs that need one (e.g. an interface name).
   /// [unit]/[page] select a rolling window (`HOUR`, `DAY`, `WEEK`, ...).
   /// [maxPoints] caps how many of the newest samples are mapped per graph.
+  ///
+  /// **Throws when nothing was read.** This used to catch every failure, fall
+  /// back graph by graph, swallow those too and return `[]` — so a TrueNAS that
+  /// had stopped answering produced a successful, empty answer. The Reporting
+  /// page drew "No reporting data available." instead of a fault, and the
+  /// dashboard counted each empty reply as an arrival, so its stale band could
+  /// never appear. Now only a call the server *rejected* is retried graph by
+  /// graph; a transport failure propagates at once, and a fallback in which no
+  /// graph succeeded rethrows the batch's error.
   Future<List<TrueNasReportingGraph>> getGraphs(
     List<String> names, {
     String? identifier,
@@ -29,11 +39,12 @@ class TrueNasReportingApi extends TrueNasApiBase {
         query: query,
         maxPoints: maxPoints,
       );
-    } catch (_) {
+    } on TrueNasRpcException catch (batchError, batchStack) {
       // A single unsupported graph (e.g. one that requires an `identifier`)
       // can make the batched `reporting.get_data` call reject and blank the
       // whole request. Fall back to fetching each graph independently and
-      // keep whatever succeeds, so one bad name never hides the rest.
+      // keep whatever succeeds, so one bad name never hides the rest. Only a
+      // rejection is skipped: a socket that dies mid-loop fails the read.
       final out = <TrueNasReportingGraph>[];
       for (final name in names) {
         try {
@@ -45,9 +56,14 @@ class TrueNasReportingApi extends TrueNasApiBase {
               maxPoints: maxPoints,
             ),
           );
-        } catch (_) {
+        } on TrueNasRpcException {
           // Skip graphs the server can't satisfy for this request.
         }
+      }
+      // Every graph refused: the server answered, and its answer was no. That
+      // is a fault to show, not an empty page.
+      if (out.isEmpty && names.isNotEmpty) {
+        Error.throwWithStackTrace(batchError, batchStack);
       }
       return out;
     }
@@ -82,8 +98,11 @@ class TrueNasReportingApi extends TrueNasApiBase {
         // An accepted-but-empty answer counts as unsupported: some builds
         // ignore the range rather than rejecting it.
         if (graphs.any((g) => g.data.isNotEmpty)) return graphs;
-      } catch (_) {
-        // Fall through to the rolling window below.
+      } on TrueNasRpcException {
+        // The server refused the range: fall through to the rolling window
+        // below. Only a refusal — a failed connection says nothing about what
+        // the server supports, and must not switch the narrow query off for
+        // the rest of the session; it propagates, so the poll sees a failure.
       }
       _windowQuerySupported = false;
     }

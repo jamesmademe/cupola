@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
+
 import 'package:cupola/features/truenas/data/reporting_api.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/truenas/domain/models/reporting.dart';
@@ -84,7 +86,7 @@ void main() {
         final client = _FakeClient((query) {
           if (query.containsKey('start')) {
             rangeCalls++;
-            throw const TrueNasException('Invalid params');
+            throw const TrueNasRpcException('Invalid params');
           }
           return [_graph('cpu', 4)];
         });
@@ -100,6 +102,34 @@ void main() {
         expect(rangeCalls, 1);
       },
     );
+
+    test('a dead socket fails the read and keeps the range query on', () async {
+      // A failed connection says nothing about what the server supports. It
+      // used to switch the narrow query off for the session and fall through
+      // to `getGraphs`, which swallowed it into `[]`: the dashboard counted
+      // that as an arrival, and its stale band could never appear.
+      var down = true;
+      final client = _FakeClient((query) {
+        if (down) {
+          throw const TrueNasException(
+            'Connection closed',
+            reason: ServiceFailureReason.unreachable,
+          );
+        }
+        return [_graph('cpu', 4)];
+      });
+      final api = TrueNasReportingApi(client);
+
+      await expectLater(
+        api.getLiveGraphs(['cpu']),
+        throwsA(isA<TrueNasException>()),
+      );
+      expect(client.queries, hasLength(1), reason: 'no fallback round trip');
+
+      down = false;
+      await api.getLiveGraphs(['cpu']);
+      expect(client.queries.last.containsKey('start'), isTrue);
+    });
 
     test('treats an accepted-but-empty range answer as unsupported', () async {
       final client = _FakeClient((query) {
@@ -128,7 +158,7 @@ void main() {
       var calls = 0;
       final client = _FakeClient((_) {
         calls++;
-        if (calls == 1) throw const TrueNasException('bad graph');
+        if (calls == 1) throw const TrueNasRpcException('bad graph');
         return [_graph('cpu', 1)];
       });
       final graphs = await TrueNasReportingApi(
@@ -137,6 +167,42 @@ void main() {
 
       expect(calls, 3); // batch + one per name
       expect(graphs, hasLength(2));
+    });
+
+    test('a transport failure propagates without a graph-by-graph retry', () {
+      var calls = 0;
+      final client = _FakeClient((_) {
+        calls++;
+        throw const TrueNasException(
+          'Could not connect',
+          reason: ServiceFailureReason.unreachable,
+        );
+      });
+
+      return expectLater(
+        TrueNasReportingApi(client).getGraphs(['cpu', 'memory']),
+        throwsA(
+          isA<TrueNasException>().having(
+            (e) => e.reason,
+            'reason',
+            ServiceFailureReason.unreachable,
+          ),
+        ),
+      ).then((_) => expect(calls, 1));
+    });
+
+    test('every graph refused is a failure, not an empty answer', () async {
+      var calls = 0;
+      final client = _FakeClient((_) {
+        calls++;
+        throw const TrueNasRpcException('Invalid params');
+      });
+
+      await expectLater(
+        TrueNasReportingApi(client).getGraphs(['cpu', 'memory']),
+        throwsA(isA<TrueNasRpcException>()),
+      );
+      expect(calls, 3); // batch + one per name, then the batch's error
     });
   });
 }

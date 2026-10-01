@@ -37,6 +37,19 @@ class TrueNasException
   String toString() => 'TrueNasException: $message';
 }
 
+/// The server answered this call with a JSON-RPC `error` frame: the socket is
+/// alive and the middleware refused *this* request — invalid params, a missing
+/// role, a method this build lacks.
+///
+/// Distinct from the transport's own failures (a refused dial, a timeout, a
+/// socket that closed), because the right response differs: a rejected call
+/// may be worth asking again in another shape, as the reporting graphs do one
+/// by one; a dead socket fails every shape the same way, so asking again only
+/// delays the failure the screen is waiting to show.
+class TrueNasRpcException extends TrueNasException {
+  const TrueNasRpcException(super.message, {super.reason, super.forbidden});
+}
+
 /// Thrown instead of dialling an address that would carry the API key in
 /// cleartext: an `http://` (or `ws://`) TrueNAS URL.
 ///
@@ -124,11 +137,11 @@ class _NoRedirectUpgradeClient implements HttpClient {
 ///  * `EPERM` (errno 1) from a `service.*` method is the second, in-body check
 ///    those methods make for the service being changed, and is a refusal too.
 @visibleForTesting
-TrueNasException trueNasRpcError(Object? error, {required String method}) {
-  if (error is! Map) return TrueNasException(error.toString());
+TrueNasRpcException trueNasRpcError(Object? error, {required String method}) {
+  if (error is! Map) return TrueNasRpcException(error.toString());
   final data = error['data'];
   final message = error['message']?.toString() ?? 'RPC error';
-  if (data is! Map) return TrueNasException(message);
+  if (data is! Map) return TrueNasRpcException(message);
 
   final reason = data['reason']?.toString();
   final errname = data['errname']?.toString().toUpperCase();
@@ -138,12 +151,12 @@ TrueNasException trueNasRpcError(Object? error, {required String method}) {
   final eacces = errname == 'EACCES' || (errname == null && errno == 13);
   final eperm = errname == 'EPERM' || (errname == null && errno == 1);
   if (eacces && text.toLowerCase().contains('session is expired')) {
-    return TrueNasException(text, reason: ServiceFailureReason.unauthorized);
+    return TrueNasRpcException(text, reason: ServiceFailureReason.unauthorized);
   }
   if (eacces || (eperm && method.startsWith('service.'))) {
-    return TrueNasException(text, forbidden: true);
+    return TrueNasRpcException(text, forbidden: true);
   }
-  return TrueNasException(text);
+  return TrueNasRpcException(text);
 }
 
 /// An RPC error frame, held until [TrueNasWsClient._rawCall] knows which
