@@ -210,7 +210,15 @@ void main() {
         // "Unreachable" blamed the network for a field nobody had typed into yet
         // and left nothing to act on.
         expect(
-          find.textContaining('Enter the address and the api key'),
+          find.textContaining('Enter the address and the API key'),
+          findsOneWidget,
+        );
+        // The initialism keeps its capitals inside the sentence too.
+        expect(
+          find.text(
+            'Nothing to send yet, enter the address and the API key, then '
+            'test.',
+          ),
           findsOneWidget,
         );
       },
@@ -696,7 +704,7 @@ void main() {
       await _tap(tester, 'Continue with 1');
 
       expect(
-        find.text('Enter the address and the api key, then test.'),
+        find.text('Enter the address and the API key, then test.'),
         findsOneWidget,
       );
     });
@@ -858,7 +866,7 @@ void main() {
       expect(tester.widget<TextField>(apiKey).focusNode?.hasFocus, isFalse);
       expect(tester.testTextInput.isVisible, isFalse);
       expect(
-        find.textContaining('Enter the address and the api key'),
+        find.textContaining('Enter the address and the API key'),
         findsOneWidget,
       );
     });

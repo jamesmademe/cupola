@@ -156,7 +156,9 @@ class OnboardingWalkSubject extends StatelessWidget {
 /// under the headline as a standing instruction, and, when a test runs against
 /// an empty form, as the reason nothing was sent.
 String walkInstruction(ServiceKey service) => service.usesApiKey
-    ? 'Enter the address and the ${service.credentialLabel.toLowerCase()}, '
+    // The credential as the registry spells it: `API key` keeps the capitals
+    // of its initialism, and `Plex token` its name.
+    ? 'Enter the address and the ${service.credentialLabel}, '
           'then test.'
     : 'Enter the address, then test.';
 
@@ -445,7 +447,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           focusNode: _credential,
           action: TextInputAction.done,
           onSubmitted: (_) => _submit(),
-          hint: 'Paste the ${service.credentialLabel.toLowerCase()}',
+          hint: 'Paste the ${service.credentialLabel}',
           // On the label row, not under the field. Under it, a Plex token
           // warning replaced the very breadcrumb that says where a better
           // token lives — the note slot is validation's, and this is not a
@@ -678,7 +680,7 @@ class _Outcome extends StatelessWidget {
       // press with the sentence the user is already looking at. What the press
       // actually found is that there is nothing to send.
       ServiceConnectionStatus.notConfigured =>
-        'Nothing to send yet, ${walkInstruction(service).toLowerCase()}',
+        'Nothing to send yet, ${_lowerFirst(walkInstruction(service))}',
       // The detail when the failure carried one, the reason-derived sentence
       // otherwise — the same rule `ServiceDiagnosis.messageFor` applies on the
       // settings screen, so the two surfaces cannot describe one test
@@ -951,3 +953,9 @@ String? _plexTokenWarning(String value) => value.trim().startsWith('eyJ')
     ? 'That token expires in 7 days and cannot be renewed here. Paste a '
           'long-lived device token instead.'
     : null;
+
+/// [text] with its first letter in lower case and the rest as written, for a
+/// sentence that continues another: the whole of it lowered would spell
+/// `api key`.
+String _lowerFirst(String text) =>
+    text.isEmpty ? text : '${text[0].toLowerCase()}${text.substring(1)}';
