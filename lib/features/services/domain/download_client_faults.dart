@@ -10,6 +10,7 @@
 /// Pure and top-level, so each mapping is testable without a container.
 library;
 
+import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 
@@ -70,3 +71,38 @@ InFlightReading? transmissionInFlight(TransmissionTorrent torrent) {
   }
   return const InFlightReading.moving();
 }
+
+/// A qBittorrent torrent (`/api/v2/torrents/info`), or null when it is not in
+/// flight. Decided on `state`, the raw wire value.
+///
+/// `stalledDL` is a stall. `error` and `missingFiles` are failures on any
+/// row, a finished one included: qBittorrent stops a torrent it cannot read
+/// or write, and dropping it with the seeding library made a broken download
+/// vanish from Home with nothing saying so. `missingFiles` says why; a bare
+/// `error` does not, and the API carries no message for it. Paused, stopped,
+/// seeding and checking rows are not in flight.
+InFlightReading? qbittorrentInFlight(String? state) {
+  if (state == 'missingFiles') {
+    return const InFlightReading.fault(
+      InFlightFault.failed,
+      reason: qbittorrentMissingFiles,
+    );
+  }
+  return switch (TorrentState.fromString(state)) {
+    TorrentState.downloading ||
+    TorrentState.metaDownloading ||
+    TorrentState.queuedDl => const InFlightReading.moving(),
+    // `stalled` is only ever `stalledDL`: a stalled upload parses as seeding.
+    TorrentState.stalled => const InFlightReading.fault(InFlightFault.stalled),
+    TorrentState.error => const InFlightReading.fault(InFlightFault.failed),
+    TorrentState.seeding ||
+    TorrentState.checking ||
+    TorrentState.paused ||
+    TorrentState.queuedUp ||
+    TorrentState.unknown => null,
+  };
+}
+
+/// What a `missingFiles` torrent's decision says: its data is not where
+/// qBittorrent left it.
+const String qbittorrentMissingFiles = 'Files missing';

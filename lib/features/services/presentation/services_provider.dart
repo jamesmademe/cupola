@@ -32,7 +32,6 @@ import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/presentation/series_provider.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
-import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -1553,11 +1552,12 @@ ServiceQueueItem _joinedQueueItem(
   );
 }
 
-/// Active torrents, as in-flight items.
+/// Active torrents, and any torrent reporting a fault, as in-flight items.
 ///
 /// Filters to transfers that are genuinely moving or waiting to: a seeding
 /// library of four hundred torrents is not "in flight", and unfiltered it would
-/// crowd out every other source.
+/// crowd out every other source. A torrent in `error` or `missingFiles` is
+/// kept whatever it was doing, as a fault: see [qbittorrentInFlight].
 Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(
   Ref ref,
   _MergeConnection source,
@@ -1569,74 +1569,55 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(
       : await ref
             .watch(qbittorrentServiceForProvider(source.instanceId))
             .getTorrents();
-  final moving = torrents
-      .where(
-        (torrent) => switch (torrent.parsedState) {
-          // `stalled` is only ever `stalledDL` — a stalled *upload* parses as
-          // seeding — so it belongs here rather than being filtered out with the
-          // rest of the seeding library. It arrives flagged and leaves this
-          // region for the decisions above it.
-          TorrentState.downloading ||
-          TorrentState.metaDownloading ||
-          TorrentState.stalled ||
-          TorrentState.queuedDl => true,
-          TorrentState.seeding ||
-          TorrentState.checking ||
-          TorrentState.paused ||
-          TorrentState.queuedUp ||
-          TorrentState.error ||
-          TorrentState.unknown => false,
-        },
-      )
-      .toList(growable: false);
+  final read = [
+    for (final torrent in torrents)
+      if (qbittorrentInFlight(torrent.state) case final reading?)
+        (torrent: torrent, reading: reading),
+  ];
 
   // The client's rate, summed over what it is actually downloading, and carried
   // on each of its rows.
-  final clientRate = moving.fold<int>(
-    0,
-    (sum, torrent) => sum + torrent.dlSpeed,
-  );
+  final clientRate = read.fold<int>(0, (sum, row) => sum + row.torrent.dlSpeed);
 
-  return moving
-      .map(
-        (torrent) => ServiceQueueItem(
-          service: ServiceKey.qbittorrent,
-          id: torrent.hash,
-          title: torrent.name,
-          progress: torrent.progress.clamp(0, 1).toDouble(),
-          // No quality: a torrent client sees a file name, not a profile.
-          doneBytes: torrent.downloaded > 0
-              ? torrent.downloaded
-              : (torrent.size * torrent.progress).round(),
-          totalBytes: torrent.size > 0 ? torrent.size : null,
-          etaSeconds: _qbEta(torrent.eta),
-          // Named when there are two, so a stall says which qBittorrent.
-          clientLabel: serviceWithConnection(
-            ServiceKey.qbittorrent,
-            source.name,
-            joiner: ' ',
-          ),
-          clientService: ServiceKey.qbittorrent,
-          instanceId: source.instanceId,
-          clientInstanceId: source.instanceId,
-          clientRateBytesPerSecond: clientRate,
-          // A stalled transfer is the one qBittorrent state worth surfacing on a
-          // hub: it looks identical to a slow download until you notice it has
-          // not moved.
-          fault: torrent.parsedState == TorrentState.stalled
-              ? InFlightFault.stalled
-              : null,
-          stalledSince: torrent.parsedState == TorrentState.stalled
-              ? _epochSeconds(torrent.lastActivity)
-              : null,
-          detail: joinDisplayParts([
-            formatSpeed(torrent.dlSpeed),
-            '${torrent.seeders} seeds',
-          ]),
-          route: ServiceRoutes.qbittorrentTorrent(torrent.hash),
+  return [
+    for (final (:torrent, :reading) in read)
+      ServiceQueueItem(
+        service: ServiceKey.qbittorrent,
+        id: torrent.hash,
+        title: torrent.name,
+        progress: torrent.progress.clamp(0, 1).toDouble(),
+        // No quality: a torrent client sees a file name, not a profile.
+        doneBytes: torrent.downloaded > 0
+            ? torrent.downloaded
+            : (torrent.size * torrent.progress).round(),
+        totalBytes: torrent.size > 0 ? torrent.size : null,
+        etaSeconds: _qbEta(torrent.eta),
+        // Named when there are two, so a stall says which qBittorrent.
+        clientLabel: serviceWithConnection(
+          ServiceKey.qbittorrent,
+          source.name,
+          joiner: ' ',
         ),
-      )
-      .toList(growable: false);
+        clientService: ServiceKey.qbittorrent,
+        instanceId: source.instanceId,
+        clientInstanceId: source.instanceId,
+        clientRateBytesPerSecond: clientRate,
+        // A stall looks identical to a slow download until you notice it has
+        // not moved, and a torrent in error looked like nothing at all: it was
+        // dropped with the seeding library. Both leave the region as a
+        // decision now, each by its own fault.
+        fault: reading.fault,
+        warning: reading.reason,
+        stalledSince: reading.fault == null
+            ? null
+            : _epochSeconds(torrent.lastActivity),
+        detail: joinDisplayParts([
+          formatSpeed(torrent.dlSpeed),
+          '${torrent.seeders} seeds',
+        ]),
+        route: ServiceRoutes.qbittorrentTorrent(torrent.hash),
+      ),
+  ];
 }
 
 /// Transmission's torrents, as in-flight items: the incoming ones, and any

@@ -34,6 +34,29 @@ const _brokenTransmission = WorldDownload(
   size: 12 * _gb,
 );
 
+/// An upgrade Radarr grabbed whose torrent qBittorrent can no longer write:
+/// Radarr still calls it downloading.
+const _qbError = WorldDownload(
+  id: 'a1f0c3d4e5f60718293a4b5c6d7e8f9012345611',
+  release: 'Coffee.Run.2020.2160p.WEB',
+  client: 'qbittorrent',
+  state: DownloadState.failed,
+  progress: 0.55,
+  size: 3 * _gb,
+  arr: WorldIds.radarr,
+  title: WorldTitles.coffeeRun,
+);
+
+/// A torrent added by hand whose files were moved away.
+const _qbMissing = WorldDownload(
+  id: 'a1f0c3d4e5f60718293a4b5c6d7e8f9012345612',
+  release: 'Agent.327.Operation.Barbershop.1080p',
+  client: 'qbittorrent',
+  state: DownloadState.missingFiles,
+  progress: 1,
+  size: _gb,
+);
+
 Future<ProviderContainer> _start(ConfigProfile profile) async {
   final harness = await ProfileHarness.start(profile);
   return harness.container(retry: (_, _) => null);
@@ -154,6 +177,50 @@ void main() {
         _inFlight(find.textContaining('across 2 clients')),
         findsOneWidget,
       );
+
+      await harness.unmount(tester);
+    });
+  });
+
+  group('qBittorrent', () {
+    test('P1: a torrent in error and one missing its files are counted as '
+        'faults, never dropped', () async {
+      final container = await _start(
+        Profiles.p1.withDownloads([_qbError, _qbMissing]),
+      );
+      final inFlight = await container.read(servicesInFlightProvider.future);
+
+      // Radarr still says downloading; qBittorrent knows better, and the
+      // joined row takes the client's fault.
+      final coffeeRun = inFlight.faults.singleWhere(
+        (item) => item.downloadId?.toLowerCase() == _qbError.id,
+      );
+      expect(coffeeRun.service, ServiceKey.radarr);
+      expect(coffeeRun.fault, InFlightFault.failed);
+      expect(coffeeRun.clientService, ServiceKey.qbittorrent);
+
+      final missing = inFlight.faults.singleWhere(
+        (item) => item.id == _qbMissing.id,
+      );
+      expect(missing.service, ServiceKey.qbittorrent);
+      expect(missing.fault, InFlightFault.failed);
+      expect(missing.warning, 'Files missing');
+
+      expect(
+        inFlight.preview.map((item) => item.id),
+        isNot(contains(_qbMissing.id)),
+      );
+    });
+
+    testWidgets('P1 on Home: the two broken torrents are counted under the '
+        'region and listed as decisions', (tester) async {
+      final harness = await _pumpHome(
+        tester,
+        Profiles.p1.withDownloads([_qbError, _qbMissing]),
+      );
+
+      expect(_inFlight(find.textContaining('2 failed')), findsOneWidget);
+      expect(find.textContaining('Files missing'), findsOneWidget);
 
       await harness.unmount(tester);
     });

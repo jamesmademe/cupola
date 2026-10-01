@@ -79,4 +79,63 @@ void main() {
       );
     });
   });
+
+  group('qbittorrentInFlight', () {
+    test('downloading, fetching metadata, moving and queued are '
+        'transfers', () {
+      for (final state in [
+        'downloading',
+        'forcedDL',
+        'metaDL',
+        'queuedDL',
+        'moving',
+        'allocating',
+      ]) {
+        expect(
+          qbittorrentInFlight(state),
+          const InFlightReading.moving(),
+          reason: state,
+        );
+      }
+    });
+
+    test('a stalled download is a stall', () {
+      expect(
+        qbittorrentInFlight('stalledDL'),
+        const InFlightReading.fault(InFlightFault.stalled),
+      );
+    });
+
+    test('error and missingFiles are failures, never dropped', () {
+      expect(
+        qbittorrentInFlight('error'),
+        const InFlightReading.fault(InFlightFault.failed),
+      );
+      expect(
+        qbittorrentInFlight('missingFiles'),
+        const InFlightReading.fault(
+          InFlightFault.failed,
+          reason: qbittorrentMissingFiles,
+        ),
+      );
+    });
+
+    test('seeding, paused, stopped and checking torrents are not in '
+        'flight', () {
+      for (final state in [
+        'uploading',
+        'stalledUP',
+        'forcedUP',
+        'queuedUP',
+        'pausedDL',
+        'stoppedDL',
+        'stoppedUP',
+        'checkingDL',
+        'checkingUP',
+        'something-new',
+      ]) {
+        expect(qbittorrentInFlight(state), isNull, reason: state);
+      }
+    });
+  });
 }

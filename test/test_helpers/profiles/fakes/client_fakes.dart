@@ -46,6 +46,7 @@ class QbittorrentFake extends ServiceFake {
     DownloadState.importBlocked || DownloadState.seeding => 'stalledUP',
     DownloadState.stopped => 'stoppedUP',
     DownloadState.failed => 'error',
+    DownloadState.missingFiles => 'missingFiles',
   };
 
   static JsonMap torrent(ServerContext c, WorldDownload d) {
@@ -204,8 +205,13 @@ class TransmissionFake extends ServiceFake {
     DownloadState.downloading || DownloadState.stuck => 4,
     DownloadState.queued => 3,
     DownloadState.importBlocked || DownloadState.seeding => 6,
-    DownloadState.stopped || DownloadState.failed => 0,
+    DownloadState.stopped ||
+    DownloadState.failed ||
+    DownloadState.missingFiles => 0,
   };
+
+  static bool _localError(WorldDownload d) =>
+      d.state == DownloadState.failed || d.state == DownloadState.missingFiles;
 
   @override
   bool isWrite(NetworkRequest r) => !_reads.contains(_method(r));
@@ -278,8 +284,8 @@ class TransmissionFake extends ServiceFake {
                 'eta': d.eta?.inSeconds ?? -1,
                 'uploadRatio': 0.0,
                 // A local error, in the daemon's own words for missing data.
-                'error': d.state == DownloadState.failed ? 3 : 0,
-                'errorString': d.state == DownloadState.failed
+                'error': _localError(d) ? 3 : 0,
+                'errorString': _localError(d)
                     ? 'No data found! Ensure your drives are connected or use '
                           '"Set Location". To re-download, remove the torrent '
                           'and re-add it.'

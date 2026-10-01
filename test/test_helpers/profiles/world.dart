@@ -237,6 +237,10 @@ enum DownloadState {
   /// Transmission's local error. None of the world's own downloads is in this
   /// state; a test adds one with `ConfigProfile.withDownloads`.
   failed,
+
+  /// The data is not where the client left it: qBittorrent's `missingFiles`,
+  /// Transmission's local error. Added the same way as [failed].
+  missingFiles,
 }
 
 /// One download of the world, as both the arr's queue and the client see it.
