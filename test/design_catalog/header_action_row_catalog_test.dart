@@ -209,6 +209,7 @@ Widget _seerrDeck({
   List<TvSeason> seasons = const [],
   List<RelatedVideo> videos = const [_trailer],
   SeerrNumbering numbering = SeerrNumbering.seerr,
+  bool has4kServer = false,
 }) => DiscoverActionButtons(
   mediaId: 603,
   mediaType: mediaType,
@@ -219,6 +220,7 @@ Widget _seerrDeck({
     isMovie: mediaType == 'movie',
     seasons: seasons,
     numbering: numbering,
+    has4kServer: has4kServer,
   ),
   tvdbId: mediaType == 'tv' ? 81189 : null,
   mediaInfo: mediaInfo,
@@ -365,6 +367,18 @@ List<CatalogScene> _bands(CatalogPlatform platform, double width) => [
       mediaInfo: const {'id': 1, 'status': 5},
       isInService: true,
       videos: const [],
+    ),
+    width: width,
+    platform: platform,
+  ),
+  CatalogScene(
+    'Seerr deck · on disk in HD, Seerr has a 4K server · Request stays open '
+    'for the 4K copy, and says so',
+    (_) => _seerrDeck(
+      mediaInfo: const {'id': 1, 'status': 5, 'status4k': 1},
+      isInService: true,
+      videos: const [],
+      has4kServer: true,
     ),
     width: width,
     platform: platform,

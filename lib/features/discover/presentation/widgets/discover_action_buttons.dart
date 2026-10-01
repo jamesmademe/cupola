@@ -121,11 +121,16 @@ class DiscoverActionButtons extends ConsumerWidget {
     // A series partly held already: which seasons a request would add, since
     // the request asks for every season Seerr does not have yet.
     final missing = requestGate.missingSeasons;
+    // Open for the 4K copy alone: the standard one is on disk or asked for
+    // already, so a request now asks for 4K, and the sheet offers only the
+    // 4K servers. Said, since the badge above may read "Available".
+    final only4k = requestGate.copies == SeerrRequestCopies.uhd;
     final requestNote = missing.isEmpty
-        ? null
+        ? (only4k ? 'Only the 4K copy can be requested.' : null)
         : '${missing.length == 1 ? 'Season' : 'Seasons'} '
               '${Lexicon.names(missing.map((season) => '$season'))} '
-              '${missing.length == 1 ? 'is' : 'are'} not requested yet.';
+              '${missing.length == 1 ? 'is' : 'are'} not requested '
+              '${only4k ? 'in 4K ' : ''}yet.';
     final canRequest = disabledReason == null;
     final openAction = _openAction(context, ref);
 
@@ -256,6 +261,7 @@ class DiscoverActionButtons extends ConsumerWidget {
       builder: (sheetContext) => RequestBottomSheet(
         mediaId: mediaId,
         mediaType: _normalizedMediaType,
+        copies: requestGate.copies,
         onRequestComplete: () {
           if (!context.mounted) {
             return;

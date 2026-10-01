@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/presentation/request_form_provider.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -10,7 +11,11 @@ import '../../../test_helpers/profiles/profiles.dart';
 /// The request sheet against P6's Seerr, which sends to Radarr (server 0) and
 /// to Radarr 4K (server 1, the default 4K server).
 void main() {
-  const args = (mediaId: 45745, mediaType: 'movie'); // Sintel
+  const args = (
+    mediaId: 45745,
+    mediaType: 'movie',
+    copies: SeerrRequestCopies.both,
+  ); // Sintel
 
   Future<(ProfileHarness, ProviderContainer)> open() async {
     final harness = await ProfileHarness.start(Profiles.p6);

@@ -333,4 +333,96 @@ void main() {
       expect(bare(3), SeerrRequestState.onItsWay);
     });
   });
+
+  group('the 4K copy, on a Seerr with a 4K server', () {
+    SeerrRequestGate film(Map<String, dynamic> mediaInfo, {bool uhd = true}) =>
+        seerrRequestGate(
+          mediaInfo,
+          isMovie: true,
+          numbering: SeerrNumbering.seerr,
+          has4kServer: uhd,
+        );
+
+    test('a film on disk in HD only can still be asked for in 4K', () {
+      final gate = film({'id': 1, 'status': 5, 'status4k': 1});
+
+      // It read Available, and Request was closed.
+      expect(gate.state, SeerrRequestState.open);
+      expect(gate.copies, SeerrRequestCopies.uhd);
+    });
+
+    test('without a 4K server it closes as it always did', () {
+      final gate = film({'id': 1, 'status': 5, 'status4k': 1}, uhd: false);
+
+      expect(gate.state, SeerrRequestState.available);
+      expect(gate.copies, SeerrRequestCopies.none);
+    });
+
+    test('both copies on disk: closed, with the standard reason', () {
+      final gate = film({'id': 1, 'status': 5, 'status4k': 5});
+
+      expect(gate.state, SeerrRequestState.available);
+      expect(gate.copies, SeerrRequestCopies.none);
+    });
+
+    test('on disk in HD and asked for in 4K: closed', () {
+      final gate = film({
+        'id': 1,
+        'status': 5,
+        'status4k': 2,
+        'requests': [_request(1, is4k: true)],
+      });
+
+      expect(gate.state, SeerrRequestState.available);
+      expect(gate.copies, SeerrRequestCopies.none);
+    });
+
+    test('neither copy held: either may be asked for', () {
+      expect(
+        film({'id': 1, 'status': 1, 'status4k': 1}).copies,
+        SeerrRequestCopies.both,
+      );
+      expect(film(const {}).copies, SeerrRequestCopies.both);
+    });
+
+    test('on disk in 4K only: the standard copy is open, the 4K one not', () {
+      final gate = film({'id': 1, 'status': 1, 'status4k': 5});
+
+      expect(gate.state, SeerrRequestState.open);
+      expect(gate.copies, SeerrRequestCopies.standard);
+    });
+
+    test('a blocklisted title takes no request in either copy', () {
+      final gate = film({'id': 1, 'status': 6, 'status4k': 1});
+
+      expect(gate.state, SeerrRequestState.blocklisted);
+      expect(gate.copies, SeerrRequestCopies.none);
+    });
+
+    test('a series held in HD reads its seasons in 4K', () {
+      final gate = seerrRequestGate(
+        {
+          'id': 1,
+          'status': 5,
+          'status4k': 4,
+          'seasons': [
+            for (var number = 1; number <= 3; number++)
+              {
+                'seasonNumber': number,
+                'status': 5,
+                'status4k': number == 1 ? 5 : 1,
+              },
+          ],
+        },
+        isMovie: false,
+        seasons: [_season(1), _season(2), _season(3)],
+        numbering: SeerrNumbering.seerr,
+        has4kServer: true,
+      );
+
+      expect(gate.state, SeerrRequestState.open);
+      expect(gate.copies, SeerrRequestCopies.uhd);
+      expect(gate.missingSeasons, [2, 3]);
+    });
+  });
 }

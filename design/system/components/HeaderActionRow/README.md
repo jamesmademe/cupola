@@ -34,11 +34,12 @@ A disc in a 72pt column (`captionMeasure`, the 48 square plus `AppSpacing.xl`), 
 - **Trailers** only when Seerr sent something to play. With nothing to play there is no button, never a disabled one.
 - **Manage** when Seerr holds a row for the title; otherwise **Open** (*Open in Radarr*, *Open in Sonarr*), the cross-service jump. Never both. Open is dimmed but tappable when that service is not set up here, and absent when it answered that it does not hold the title, or for a series Seerr sent without a TVDB id.
 
-The primary says what Seerr would do with a request (`seerrRequestGate`, read from Seerr's record alone, its codes decoded in the server's own numbering: Seerr's 6 is a blocklisted title, Overseerr's 6 and Seerr's 7 a deleted one, which can be requested again), with one `bodySmall` line under it when it does not act:
+The primary says what Seerr would do with a request (`seerrRequestGate`, read from Seerr's record alone, its codes decoded in the server's own numbering: Seerr's 6 is a blocklisted title, Overseerr's 6 and Seerr's 7 a deleted one, which can be requested again; the 4K copy is read from its own fields once Seerr is known to have a 4K server), with one `bodySmall` line under it when it does not act or acts for one copy only:
 
 | State | Label | Line under it |
 |---|---|---|
 | Seerr would take a request | **Request** | none, or for a series partly on disk the seasons a request would add: *Seasons 3 and 4 are not requested yet.* |
+| Seerr would take only a 4K request: the standard copy is on disk or asked for, and Seerr has a 4K server | **Request** | *Only the 4K copy can be requested.*, or for a series partly on disk in 4K *Seasons 3 and 4 are not requested in 4K yet.* The sheet offers the 4K servers only and opens on the default one. |
 | Everything Seerr can hold is on disk | **Available** | *Already in your library, nothing to request.* |
 | A request is waiting on somebody | **Requested** | *Waiting for approval in Seerr.* |
 | Approved, or already in the arr | **Requested** | *Radarr is already tracking this.* |

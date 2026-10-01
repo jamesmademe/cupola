@@ -62,6 +62,22 @@ final requestsForProvider = FutureProvider.family<List<SeerrRequest>, String>((
   return ref.watch(seerrServiceForProvider(instanceId)).getRequests();
 }, retry: noProviderRetry);
 
+/// Whether the lens's Seerr has a server that takes 4K requests of [arr]
+/// (Radarr or Sonarr), from the list the request sheet reads
+/// (`/api/v1/service/radarr|sonarr`, which a requester may read too).
+///
+/// The request gate reads the 4K copy of a title only when this says yes.
+/// While it loads or after it failed the gate reads the standard copy alone,
+/// as it always did, and never offers a 4K request on a guess.
+final seerrTakes4kProvider = FutureProvider.autoDispose
+    .family<bool, ServiceKey>((ref, arr) async {
+      final service = ref.watch(seerrServiceProvider);
+      final servers = arr == ServiceKey.sonarr
+          ? await service.getSonarrServers()
+          : await service.getRadarrServers();
+      return servers.any((server) => server['is4k'] == true);
+    }, retry: noProviderRetry);
+
 /// How many waiting requests the Seerr home lists before deferring to the full
 /// list.
 ///

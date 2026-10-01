@@ -2,12 +2,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 const Object _noSelectionUpdate = Object();
 
-typedef RequestFormArgs = ({int mediaId, String mediaType});
+/// The title a request is for, and which of its copies may be asked for
+/// ([SeerrRequestCopies], from the request gate): the sheet lists the servers
+/// of those copies only, and opens on the 4K one when only the 4K copy is
+/// open.
+typedef RequestFormArgs = ({
+  int mediaId,
+  String mediaType,
+  SeerrRequestCopies copies,
+});
 
 class SeerrServer {
   final int id;
@@ -62,11 +71,40 @@ class SeerrServer {
 /// one, and then send the request without `is4k`: a standard request filed on
 /// a 4K server. A 4K copy is a choice the person makes by picking a 4K
 /// server, never the sheet's default while a standard server exists.
-SeerrServer? defaultRequestServer(List<SeerrServer> servers) {
-  return servers.where((s) => s.isDefault && !s.is4k).firstOrNull ??
-      servers.where((s) => !s.is4k).firstOrNull ??
+///
+/// [is4k] when only the 4K copy may be asked for: the default 4K server, as
+/// Seerr would pick it for a 4K request.
+SeerrServer? defaultRequestServer(
+  List<SeerrServer> servers, {
+  bool is4k = false,
+}) {
+  return servers.where((s) => s.isDefault && s.is4k == is4k).firstOrNull ??
+      servers.where((s) => s.is4k == is4k).firstOrNull ??
       servers.where((s) => s.isDefault).firstOrNull ??
       servers.firstOrNull;
+}
+
+/// The servers the sheet offers for [copies]: those that take a copy a
+/// request may be for. A 4K server is not offered while the 4K copy is on
+/// disk or asked for already, nor a standard one while the standard copy
+/// is; Seerr would refuse the request. When the filter would leave nothing,
+/// every server is offered, as the sheet always did.
+List<SeerrServer> requestServersFor(
+  List<SeerrServer> servers,
+  SeerrRequestCopies copies,
+) {
+  final offered = switch (copies) {
+    SeerrRequestCopies.standard => [
+      for (final server in servers)
+        if (!server.is4k) server,
+    ],
+    SeerrRequestCopies.uhd => [
+      for (final server in servers)
+        if (server.is4k) server,
+    ],
+    SeerrRequestCopies.both || SeerrRequestCopies.none => servers,
+  };
+  return offered.isEmpty ? servers : offered;
 }
 
 class QualityProfileOption {
@@ -207,7 +245,10 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
       final serverMaps = arg.mediaType == 'movie'
           ? await service.getRadarrServers()
           : await service.getSonarrServers();
-      final servers = serverMaps.map(SeerrServer.fromJson).toList();
+      final servers = requestServersFor(
+        serverMaps.map(SeerrServer.fromJson).toList(),
+        arg.copies,
+      );
 
       if (servers.isEmpty) {
         // Seerr answered, with no server to send to: a fault with its
@@ -224,7 +265,10 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
         return;
       }
 
-      final chosen = defaultRequestServer(servers)!;
+      final chosen = defaultRequestServer(
+        servers,
+        is4k: arg.copies == SeerrRequestCopies.uhd,
+      )!;
       state = state.copyWith(
         servers: servers,
         selectedServerId: chosen.id,

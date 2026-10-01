@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/fault_note.dart';
+import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/presentation/request_form_provider.dart';
 
 /// Bottom sheet for selecting quality profile and submitting request to Seerr.
@@ -13,18 +14,23 @@ import 'package:cupola/features/discover/presentation/request_form_provider.dart
 class RequestBottomSheet extends ConsumerWidget {
   final int mediaId;
   final String mediaType;
+
+  /// The copies a request may be for, from the request gate. Every server is
+  /// offered when both are.
+  final SeerrRequestCopies copies;
   final VoidCallback onRequestComplete;
 
   const RequestBottomSheet({
     super.key,
     required this.mediaId,
     required this.mediaType,
+    this.copies = SeerrRequestCopies.both,
     required this.onRequestComplete,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final args = (mediaId: mediaId, mediaType: mediaType);
+    final args = (mediaId: mediaId, mediaType: mediaType, copies: copies);
     final state = ref.watch(requestFormProvider(args));
     final notifier = ref.read(requestFormProvider(args).notifier);
     final theme = Theme.of(context);

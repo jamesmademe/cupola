@@ -10,6 +10,7 @@ import 'package:cupola/features/discover/domain/seerr_status.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_extras_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_action_buttons.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_cast_list.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_collection_banner.dart';
@@ -184,6 +185,17 @@ class DiscoverDetailScreen extends ConsumerWidget {
                 isMovie: isMovie,
                 seasons: viewModel.seasons,
                 numbering: numbering,
+                // The 4K copy is read only once Seerr is known to take 4K
+                // requests: a title on disk in HD then stays requestable.
+                has4kServer:
+                    ref
+                        .watch(
+                          seerrTakes4kProvider(
+                            isMovie ? ServiceKey.radarr : ServiceKey.sonarr,
+                          ),
+                        )
+                        .value ??
+                    false,
               ),
               tvdbId: viewModel.tvdbId,
               mediaInfo: viewModel.mediaInfo,

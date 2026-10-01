@@ -25,14 +25,44 @@ enum SeerrRequestState {
   blocklisted,
 }
 
+/// Which copies of a title a request may be for now.
+///
+/// Seerr keeps a standard and a 4K copy of a title apart, each with its own
+/// state and its own requests, and a request is for one of them: the server
+/// it is sent to decides which.
+enum SeerrRequestCopies {
+  /// Neither: Request is closed.
+  none,
+
+  /// The standard copy only.
+  standard,
+
+  /// The 4K copy only: the standard one is on disk or asked for already.
+  uhd,
+
+  /// Either.
+  both;
+
+  bool get standardOpen =>
+      this == SeerrRequestCopies.standard || this == SeerrRequestCopies.both;
+
+  bool get uhdOpen =>
+      this == SeerrRequestCopies.uhd || this == SeerrRequestCopies.both;
+}
+
 /// What Request can do for one title, read from Seerr's own record of it.
 typedef SeerrRequestGate = ({
   SeerrRequestState state,
 
   /// For a series that is [SeerrRequestState.open] while some of it is held
   /// or asked for already: the seasons a request would add, in order. Empty
-  /// otherwise, including for a series nothing of which is held yet.
+  /// otherwise, including for a series nothing of which is held yet. The
+  /// seasons of the standard copy while it is open, else of the 4K one.
   List<int> missingSeasons,
+
+  /// The copies a request may be for. [SeerrRequestCopies.none] exactly
+  /// when [state] is not open.
+  SeerrRequestCopies copies,
 });
 
 /// Whether Seerr would take a request for this title, and if not, why.
@@ -43,11 +73,14 @@ typedef SeerrRequestGate = ({
 /// seasons on disk and others not, a title whose files were deleted, and any
 /// title on a stack whose Radarr is known only through Seerr.
 ///
-/// Only the standard copy. The sheet opens on the standard server and sends a
-/// 4K request only when a 4K server is picked, so `status4k` and the 4K
-/// requests are not this gate's to read. The cost is known: a title already
-/// on disk in HD closes Request even where Seerr has a 4K server that would
-/// take it.
+/// Both copies, when Seerr has a server that takes 4K requests
+/// ([has4kServer]): each is read from its own fields (`status` or
+/// `status4k`, each season's the same, and the requests of that copy).
+/// Request is open while either copy would take a request. A title on disk
+/// in HD only used to close Request on a Seerr that would take it in 4K;
+/// with both copies on disk or asked for, it closes as it always did, with
+/// the standard copy's reason. Without a 4K server, or while Cupola does not
+/// know of one, only the standard copy is read.
 ///
 /// The codes are decoded with [numbering], the server's own
 /// ([SeerrMediaAvailability.fromCode]), as the badge decodes them, so the
@@ -64,16 +97,67 @@ SeerrRequestGate seerrRequestGate(
   required bool isMovie,
   List<TvSeason> seasons = const [],
   SeerrNumbering? numbering,
+  bool has4kServer = false,
+}) {
+  final standard = _copyGate(
+    mediaInfo,
+    isMovie: isMovie,
+    seasons: seasons,
+    numbering: numbering,
+    is4k: false,
+  );
+  final standardOpen = standard.state == SeerrRequestState.open;
+  if (!has4kServer) {
+    return _withCopies(
+      standard,
+      standardOpen ? SeerrRequestCopies.standard : SeerrRequestCopies.none,
+    );
+  }
+
+  final uhd = _copyGate(
+    mediaInfo,
+    isMovie: isMovie,
+    seasons: seasons,
+    numbering: numbering,
+    is4k: true,
+  );
+  final uhdOpen = uhd.state == SeerrRequestState.open;
+  if (standardOpen) {
+    return _withCopies(
+      standard,
+      uhdOpen ? SeerrRequestCopies.both : SeerrRequestCopies.standard,
+    );
+  }
+  if (uhdOpen) return _withCopies(uhd, SeerrRequestCopies.uhd);
+  return _withCopies(standard, SeerrRequestCopies.none);
+}
+
+SeerrRequestGate _withCopies(
+  ({SeerrRequestState state, List<int> missingSeasons}) gate,
+  SeerrRequestCopies copies,
+) => (state: gate.state, missingSeasons: gate.missingSeasons, copies: copies);
+
+/// The gate of one copy, read from that copy's fields alone.
+({SeerrRequestState state, List<int> missingSeasons}) _copyGate(
+  Map<String, dynamic>? mediaInfo, {
+  required bool isMovie,
+  required List<TvSeason> seasons,
+  required SeerrNumbering? numbering,
+  required bool is4k,
 }) {
   SeerrMediaAvailability? decode(Object? code) => code == null
       ? null
       : SeerrMediaAvailability.fromCode(code, numbering: numbering);
+  final statusField = is4k ? 'status4k' : 'status';
 
-  final media = decode(intOrNull(mediaInfo?['status']));
-  final requests = _activeRequests(mediaInfo);
+  final media = decode(intOrNull(mediaInfo?[statusField]));
+  final requests = _activeRequests(mediaInfo, is4k: is4k);
 
-  // Seerr refuses any request for a barred title, by season or whole.
-  if (media == SeerrMediaAvailability.blocklisted) {
+  // Seerr refuses any request for a barred title, by season or whole, and in
+  // either copy: the blocklist names the title.
+  if (media == SeerrMediaAvailability.blocklisted ||
+      decode(intOrNull(mediaInfo?['status'])) ==
+          SeerrMediaAvailability.blocklisted) {
     return _gate(SeerrRequestState.blocklisted);
   }
 
@@ -131,7 +215,7 @@ SeerrRequestGate seerrRequestGate(
     for (final raw in rawSeasons) {
       final entry = mapOrNull(raw);
       final number = intOrNull(entry?['seasonNumber']);
-      final status = decode(intOrNull(entry?['status']));
+      final status = decode(intOrNull(entry?[statusField]));
       if (number == null || status == null || _isUnheld(status)) continue;
       held[number] = status;
     }
@@ -165,8 +249,9 @@ SeerrRequestGate seerrRequestGate(
   return _gate(SeerrRequestState.onItsWay);
 }
 
-SeerrRequestGate _gate(SeerrRequestState state) =>
-    (state: state, missingSeasons: const <int>[]);
+({SeerrRequestState state, List<int> missingSeasons}) _gate(
+  SeerrRequestState state,
+) => (state: state, missingSeasons: const <int>[]);
 
 // Request codes, Seerr's `MediaRequestStatus`.
 const _requestPending = 1;
@@ -187,18 +272,19 @@ SeerrRequestState _stateOf(int requestStatus) => switch (requestStatus) {
   _ => SeerrRequestState.onItsWay,
 };
 
-/// The standard requests Seerr still counts against a new one: every request
-/// that was neither declined nor completed.
+/// The requests of one copy, the 4K one when [is4k], that Seerr still counts
+/// against a new one: every request that was neither declined nor completed.
 List<({int status, List<int> seasons})> _activeRequests(
-  Map<String, dynamic>? mediaInfo,
-) {
+  Map<String, dynamic>? mediaInfo, {
+  required bool is4k,
+}) {
   final raw = mediaInfo?['requests'];
   if (raw is! List) return const [];
 
   final active = <({int status, List<int> seasons})>[];
   for (final item in raw) {
     final request = mapOrNull(item);
-    if (request == null || boolOrFalse(request['is4k'])) continue;
+    if (request == null || boolOrFalse(request['is4k']) != is4k) continue;
     final status = intOrNull(request['status']);
     if (status == null ||
         status == _requestDeclined ||

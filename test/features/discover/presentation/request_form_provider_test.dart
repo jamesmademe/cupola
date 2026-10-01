@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/presentation/request_form_provider.dart';
 
 import '../../../test_helpers/fake_services.dart' as shared;
@@ -80,6 +81,33 @@ void main() {
           hdSpare,
         ]),
         same(hdSpare),
+      );
+    });
+
+    test('a 4K request opens on the default 4K server', () {
+      expect(
+        defaultRequestServer(const [
+          hdDefault,
+          hdSpare,
+          uhdDefault,
+        ], is4k: true),
+        same(uhdDefault),
+      );
+    });
+
+    test('the servers offered follow the copies a request may be for', () {
+      const servers = [hdDefault, uhdDefault, hdSpare];
+
+      expect(requestServersFor(servers, SeerrRequestCopies.uhd), [uhdDefault]);
+      expect(requestServersFor(servers, SeerrRequestCopies.standard), [
+        hdDefault,
+        hdSpare,
+      ]);
+      expect(requestServersFor(servers, SeerrRequestCopies.both), servers);
+      // Nothing to filter down to: every server, as the sheet always did.
+      expect(
+        requestServersFor(const [hdDefault], SeerrRequestCopies.uhd),
+        const [hdDefault],
       );
     });
 
@@ -203,7 +231,11 @@ void main() {
         },
       );
       final container = createContainer(service);
-      const args = (mediaId: 123, mediaType: 'movie');
+      const args = (
+        mediaId: 123,
+        mediaType: 'movie',
+        copies: SeerrRequestCopies.both,
+      );
       keepAlive(container, args);
 
       await _flushProviderTasks();
@@ -221,7 +253,11 @@ void main() {
 
     test('reports empty server configuration', () async {
       final container = createContainer(_FakeSeerr(radarrServers: const []));
-      const args = (mediaId: 123, mediaType: 'movie');
+      const args = (
+        mediaId: 123,
+        mediaType: 'movie',
+        copies: SeerrRequestCopies.both,
+      );
       keepAlive(container, args);
 
       await _flushProviderTasks();
@@ -247,7 +283,11 @@ void main() {
           ),
         ),
       );
-      const args = (mediaId: 123, mediaType: 'movie');
+      const args = (
+        mediaId: 123,
+        mediaType: 'movie',
+        copies: SeerrRequestCopies.both,
+      );
       keepAlive(container, args);
 
       await _flushProviderTasks();
@@ -273,7 +313,11 @@ void main() {
           ),
         ),
       );
-      const args = (mediaId: 123, mediaType: 'movie');
+      const args = (
+        mediaId: 123,
+        mediaType: 'movie',
+        copies: SeerrRequestCopies.both,
+      );
       keepAlive(container, args);
 
       await _flushProviderTasks();
@@ -310,7 +354,11 @@ void main() {
         },
       );
       final container = createContainer(service);
-      const args = (mediaId: 456, mediaType: 'tv');
+      const args = (
+        mediaId: 456,
+        mediaType: 'tv',
+        copies: SeerrRequestCopies.both,
+      );
       keepAlive(container, args);
 
       await _flushProviderTasks();
@@ -345,7 +393,11 @@ void main() {
         },
       );
       final container = createContainer(service);
-      const args = (mediaId: 321, mediaType: 'movie');
+      const args = (
+        mediaId: 321,
+        mediaType: 'movie',
+        copies: SeerrRequestCopies.both,
+      );
       keepAlive(container, args);
 
       await _flushProviderTasks();
@@ -400,7 +452,11 @@ void main() {
       test('the sheet opens on the default standard server', () async {
         final service = twoServers();
         final container = createContainer(service);
-        const args = (mediaId: 321, mediaType: 'movie');
+        const args = (
+          mediaId: 321,
+          mediaType: 'movie',
+          copies: SeerrRequestCopies.both,
+        );
         keepAlive(container, args);
 
         await _flushProviderTasks();
@@ -414,7 +470,11 @@ void main() {
       test('a request sent to the 4K server is a 4K request', () async {
         final service = twoServers();
         final container = createContainer(service);
-        const args = (mediaId: 321, mediaType: 'movie');
+        const args = (
+          mediaId: 321,
+          mediaType: 'movie',
+          copies: SeerrRequestCopies.both,
+        );
         keepAlive(container, args);
 
         await _flushProviderTasks();
@@ -436,7 +496,11 @@ void main() {
 
     test('submitRequest fails when no profile is selected', () async {
       final container = createContainer(_FakeSeerr());
-      const args = (mediaId: 111, mediaType: 'movie');
+      const args = (
+        mediaId: 111,
+        mediaType: 'movie',
+        copies: SeerrRequestCopies.both,
+      );
 
       final error = await container
           .read(requestFormProvider(args).notifier)
