@@ -228,6 +228,8 @@ class OnboardingWalk extends StatefulWidget {
     this.showAccess = false,
     this.testedAccess,
     required this.onShowAccess,
+    this.sharedTokenFrom,
+    this.onUseSharedToken,
     required this.status,
     required this.reason,
     this.gateway,
@@ -266,6 +268,12 @@ class OnboardingWalk extends StatefulWidget {
   /// Takes a gateway's remedy in the step: shows the Access row with the
   /// choice the gateway wants.
   final ValueChanged<AccessKind> onShowAccess;
+
+  /// The service whose Cloudflare token passed this step's Access team
+  /// earlier in the walk, when the step was stopped there with no token: the
+  /// remedy is then that token ([onUseSharedToken]), not an empty row.
+  final ServiceKey? sharedTokenFrom;
+  final VoidCallback? onUseSharedToken;
 
   final ServiceConnectionStatus? status;
   final ServiceFailureReason? reason;
@@ -581,6 +589,8 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           testedAccess: widget.testedAccess,
           // Until the row is on screen, the remedy is the way to it.
           onAddAccess: widget.showAccess ? null : _addAccess,
+          sharedTokenFrom: widget.sharedTokenFrom,
+          onUseSharedToken: widget.onUseSharedToken,
         ),
       ],
       if (widget.trustedFingerprint != null &&
@@ -690,6 +700,8 @@ class _Outcome extends StatelessWidget {
     required this.serverVersion,
     this.testedAccess,
     this.onAddAccess,
+    this.sharedTokenFrom,
+    this.onUseSharedToken,
   });
 
   final ServiceKey service;
@@ -706,6 +718,11 @@ class _Outcome extends StatelessWidget {
   /// Takes a gateway's remedy in the step, or null when there is none to
   /// offer (no gateway, or its Access row already on screen).
   final ValueChanged<AccessKind>? onAddAccess;
+
+  /// A token another step passed this Access team with, offered as the
+  /// remedy in place of an empty row: `Use Radarr's token`.
+  final ServiceKey? sharedTokenFrom;
+  final VoidCallback? onUseSharedToken;
 
   @override
   Widget build(BuildContext context) {
@@ -743,8 +760,12 @@ class _Outcome extends StatelessWidget {
         : null;
     // A gateway in front of the service: its remedy, the same verb Home and
     // the connection form offer, opens the Access row right here.
-    final remedy =
-        reason == ServiceFailureReason.accessGateway && onAddAccess != null
+    final sharedFrom = reason == ServiceFailureReason.accessGateway
+        ? sharedTokenFrom
+        : null;
+    final remedy = sharedFrom != null && onUseSharedToken != null
+        ? "Use ${sharedFrom.title}'s token"
+        : reason == ServiceFailureReason.accessGateway && onAddAccess != null
         ? failureRemedy(
             ServiceFailureReason.accessGateway,
             credential: refusedCredentialOf(service),
@@ -788,8 +809,11 @@ class _Outcome extends StatelessWidget {
                     child: FilledButton(
                       // An amber fault's remedy is its one amber fill.
                       style: remedyFillStyle(context, compact: true),
-                      onPressed: () =>
-                          onAddAccess!(accessKindForGateway(service, gateway)),
+                      onPressed: sharedFrom != null && onUseSharedToken != null
+                          ? onUseSharedToken
+                          : () => onAddAccess!(
+                              accessKindForGateway(service, gateway),
+                            ),
                       child: Text(remedy),
                     ),
                   ),

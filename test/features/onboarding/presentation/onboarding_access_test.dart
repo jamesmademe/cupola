@@ -31,6 +31,7 @@ Future<(ProfileHarness, ProviderContainer)> _firstRunAtRadarr(
   ConfigProfile profile, {
   String address = WorldHosts.radarr,
   Size viewport = const Size(800, 2400),
+  List<String> alsoPick = const [],
 }) async {
   final harness = await ProfileHarness.start(profile);
   tester.view.devicePixelRatio = 1;
@@ -66,8 +67,11 @@ Future<(ProfileHarness, ProviderContainer)> _firstRunAtRadarr(
   await harness.settle(tester);
   await _tap(tester, harness, 'Set up my stack');
   await tester.tap(find.text('Radarr').first);
+  for (final other in alsoPick) {
+    await tester.tap(find.text(other).first);
+  }
   await harness.settle(tester);
-  await _tap(tester, harness, 'Continue with 1');
+  await _tap(tester, harness, 'Continue with ${1 + alsoPick.length}');
   final fields = find.byType(TextField);
   await tester.enterText(fields.at(0), address);
   await tester.enterText(fields.at(1), worldKey(WorldIds.radarr));
@@ -103,6 +107,80 @@ bool _selected(WidgetTester tester, String choice) =>
     Tristate.isTrue;
 
 void main() {
+  testWidgets('a token that passed Radarr is offered to Sonarr behind the same '
+      'Access team, and Sonarr answers with it', (tester) async {
+    // One team, one token: Sonarr's application admits Radarr's token too.
+    final profile = Profiles.p8.withBehaviour(
+      WorldIds.sonarr,
+      const ConnectionBehaviour.behindCloudflareAccess(
+        serviceToken: WorldTokens.radarr,
+      ),
+    );
+    final (harness, _) = await _firstRunAtRadarr(
+      tester,
+      profile,
+      alsoPick: const ['Sonarr'],
+    );
+
+    // Radarr: stopped by Access, then the token, which passes.
+    await _tap(tester, harness, 'Test connection');
+    await _tap(tester, harness, 'Add a service token');
+    await tester.enterText(_field('Client ID'), WorldTokens.radarr.id);
+    await tester.enterText(_field('Client secret'), WorldTokens.radarr.secret);
+    await _tap(tester, harness, 'Test connection');
+    expect(
+      find.text('Access let the token through and Radarr answered.'),
+      findsOneWidget,
+    );
+    await _tap(tester, harness, 'Next service');
+
+    // Sonarr: stopped by the same team, with no token sent. The remedy is the
+    // token that already passed, not an empty row.
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), WorldHosts.sonarr);
+    await tester.enterText(fields.at(1), worldKey(WorldIds.sonarr));
+    await _tap(tester, harness, 'Test connection');
+    expect(find.text("Use Radarr's token"), findsOneWidget);
+    expect(find.text('Add a service token'), findsNothing);
+
+    await _tap(tester, harness, "Use Radarr's token");
+    // The row shows what was sent, and the step tested again with it.
+    expect(_selected(tester, 'Cloudflare Access'), isTrue);
+    expect(
+      find.text('Access let the token through and Sonarr answered.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a token is not offered to a step stopped by another Access '
+      'team', (tester) async {
+    final profile = Profiles.p8.withBehaviour(
+      WorldIds.sonarr,
+      const ConnectionBehaviour.behindCloudflareAccess(
+        team: 'someone-else',
+        serviceToken: WorldTokens.radarr,
+      ),
+    );
+    final (harness, _) = await _firstRunAtRadarr(
+      tester,
+      profile,
+      alsoPick: const ['Sonarr'],
+    );
+    await _tap(tester, harness, 'Test connection');
+    await _tap(tester, harness, 'Add a service token');
+    await tester.enterText(_field('Client ID'), WorldTokens.radarr.id);
+    await tester.enterText(_field('Client secret'), WorldTokens.radarr.secret);
+    await _tap(tester, harness, 'Test connection');
+    await _tap(tester, harness, 'Next service');
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), WorldHosts.sonarr);
+    await tester.enterText(fields.at(1), worldKey(WorldIds.sonarr));
+    await _tap(tester, harness, 'Test connection');
+    expect(find.text("Use Radarr's token"), findsNothing);
+    expect(find.text('Add a service token'), findsOneWidget);
+  });
+
   testWidgets('on a phone, a test meeting Cloudflare Access brings its verdict '
       'and its remedy into view above the pinned actions', (tester) async {
     // An iPhone 17 Pro, 402 by 874: the hero and the fields fill the screen,

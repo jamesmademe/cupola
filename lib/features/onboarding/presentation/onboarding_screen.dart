@@ -20,6 +20,7 @@ import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/connection_access_rules.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/connection_access_fields.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
@@ -103,6 +104,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   /// What answered in a service's place, when its last test met a gateway.
   final Map<ServiceKey, AccessGatewayAnswer?> _gateway = {};
+
+  /// The Cloudflare service tokens that passed a test in this walk, by the
+  /// Access team they passed (`myteam.cloudflareaccess.com`), with the service
+  /// they passed for. A later step stopped by the same team is offered the
+  /// token instead of an empty Access row: one team, one token, typed once.
+  final Map<String, ({ServiceKey from, CloudflareServiceToken token})>
+  _passedTokens = {};
 
   /// The verbatim sentence a failure carried, for the few that carry one — see
   /// `ServiceDiagnosis.detail`. Kept beside [_reason] rather than folded into it
@@ -370,6 +378,41 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     });
   }
 
+  /// The token another step of this walk passed with, when [service]'s last
+  /// test was stopped, with no token, by the same Access team.
+  ({ServiceKey from, CloudflareServiceToken token})? _sharedTokenFor(
+    ServiceKey service,
+  ) {
+    final gateway = _gateway[service];
+    if (gateway == null || gateway.credentialsSent) return null;
+    final team = accessTeamOf(gateway);
+    if (team == null) return null;
+    final passed = _passedTokens[team];
+    if (passed == null || passed.from == service) return null;
+    return passed;
+  }
+
+  /// A service left out of the walk is not offered as the source of a token:
+  /// "Use Radarr's token" would name a service the user dropped.
+  void _forgetPassedToken(ServiceKey service) =>
+      _passedTokens.removeWhere((_, passed) => passed.from == service);
+
+  /// Takes the token another step passed with: the Access row shows it, so
+  /// what is sent is on screen, and the step tests again with it.
+  Future<void> _useSharedToken(
+    ServiceKey service,
+    CloudflareServiceToken token,
+  ) async {
+    final access = _accessCtrl[service]!;
+    setState(() {
+      _accessShown.add(service);
+      access.select(AccessKind.cloudflare);
+      access.cloudflareId.text = token.clientId;
+      access.cloudflareSecret.text = token.clientSecret;
+    });
+    await _test(service);
+  }
+
   Future<void> _test(ServiceKey service) async {
     // An Access row with half a token says so under its field, and nothing is
     // sent until it is whole.
@@ -403,6 +446,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // test simply runs again, deny it and the step says so instead of blaming
     // the address the user just typed.
     final access = _accessCtrl[service]!.access;
+    // The team this step's last failure named, read before the test replaces
+    // it: a token that passes now passed that team.
+    final previousTeam = accessTeamOf(_gateway[service]);
     final result = await diagnoseThroughLocalNetworkGate(
       () => diagnoseCredentials(
         service,
@@ -454,6 +500,37 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       _verifiedAgainst[service] = _fingerprintOf(service);
       if (certProbe != null) _pendingCert[service] = certProbe;
     });
+    if (result.status == ServiceConnectionStatus.connected &&
+        access is CloudflareServiceToken) {
+      await _rememberPassedToken(service, access, previousTeam);
+    }
+  }
+
+  /// Records that [token] passed [service]'s Access team. When no earlier
+  /// failure named the team (the token was typed before the first test), the
+  /// address is asked once without it: Access answers an unauthenticated
+  /// request by sending it to its team's sign-in, which names the team.
+  Future<void> _rememberPassedToken(
+    ServiceKey service,
+    CloudflareServiceToken token,
+    String? knownTeam,
+  ) async {
+    var team = knownTeam;
+    if (team == null) {
+      final bare = await diagnoseCredentials(
+        service,
+        access: const NoAccess(),
+        url: _urlCtrl[service]!.text,
+        apiKey: _apiKeyCtrl[service]!.text,
+        username: _usernameCtrl[service]!.text,
+        password: _passwordCtrl[service]!.text,
+        certFingerprint: _pinFor(service) ?? '',
+        clientIdentifier: ref.read(currentSettingsProvider).plexClientId,
+      );
+      team = accessTeamOf(bare.gateway);
+    }
+    if (team == null || !mounted) return;
+    setState(() => _passedTokens[team!] = (from: service, token: token));
   }
 
   Future<void> _trustCertificate(ServiceKey service) async {
@@ -660,6 +737,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       _status.remove(service);
       _reason.remove(service);
       _gateway.remove(service);
+      _forgetPassedToken(service);
       _failureDetail.remove(service);
       _serverVersion.remove(service);
       _pendingCert.remove(service);
@@ -953,6 +1031,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                         _status.remove(service);
                                         _reason.remove(service);
                                         _gateway.remove(service);
+                                        _forgetPassedToken(service);
                                         _serverVersion.remove(service);
                                         _pendingCert.remove(service);
                                       } else {
@@ -983,6 +1062,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                       status: _status[walk[i]],
                                       reason: _reason[walk[i]],
                                       gateway: _gateway[walk[i]],
+                                      sharedTokenFrom: _sharedTokenFor(
+                                        walk[i],
+                                      )?.from,
+                                      onUseSharedToken: () {
+                                        final shared = _sharedTokenFor(walk[i]);
+                                        if (shared == null) return;
+                                        _useSharedToken(walk[i], shared.token);
+                                      },
                                       failureDetail: _failureDetail[walk[i]],
                                       serverVersion: _serverVersion[walk[i]],
                                       verifying: _verifying[walk[i]] ?? false,
