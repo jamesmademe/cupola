@@ -106,6 +106,7 @@ class AnswerGuardInterceptor extends Interceptor {
           error: UnexpectedAnswer(
             status: err.response?.statusCode,
             host: answeringHost(err.requestOptions.uri),
+            baseUrl: err.requestOptions.baseUrl,
           ),
           stackTrace: err.stackTrace,
           message: 'The answer was not the JSON that was asked for.',
@@ -137,6 +138,7 @@ UnexpectedAnswer? unexpectedAnswerOf(Response response) {
     headers: response.headers.map,
     body: data,
     host: answeringHost(request.uri),
+    baseUrl: request.baseUrl,
   );
 }
 

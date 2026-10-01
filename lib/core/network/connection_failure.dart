@@ -128,19 +128,27 @@ abstract interface class HasFailureDetail {
 /// an empty library. [AnswerGuardInterceptor] raises this instead, so every
 /// read gets a failure it can classify.
 ///
+/// A **web page** is the address's fault ([ServiceFailureReason.notFound]): a
+/// proxy's page or a missing base path, whatever request met it, so the probe,
+/// the connection test and a library read all say `Radarr is not at this
+/// address` and `A web page answered at radarr.example.com instead of
+/// Radarr.` (`webPageSentence`, which names the service and so lives with the
+/// registry). Any other body that does not decode is
+/// [ServiceFailureReason.invalidResponse], an answer nobody can read.
+///
 /// It keeps what classification needs and nothing more: the status, the few
-/// headers that say who answered ([relevantHeaders]) and the first
-/// [bodyPrefixLimit] characters of the body. **None of it is ever printed**:
-/// [toString] names the status only, and [failureDetail] says what kind of
-/// answer it was without quoting it, because a body or a header can carry a
-/// session, a token or an address the user did not mean to show.
-class UnexpectedAnswer
-    implements Exception, HasFailureReason, HasFailureDetail {
+/// headers that say who answered ([relevantHeaders]), the first
+/// [bodyPrefixLimit] characters of the body and the address the client was
+/// built on. **None of it is ever printed**: [toString] names the status
+/// only, because a body or a header can carry a session, a token or an
+/// address the user did not mean to show.
+class UnexpectedAnswer implements Exception, HasFailureReason {
   UnexpectedAnswer({
     this.status,
     Map<String, List<String>> headers = const {},
     String? body,
     this.host,
+    this.baseUrl,
   }) : headers = {
          for (final entry in headers.entries)
            if (relevantHeaders.contains(entry.key.toLowerCase()))
@@ -178,6 +186,10 @@ class UnexpectedAnswer
   /// `nas.home.arpa:7878`).
   final String? host;
 
+  /// The address the client was built on: the configured one, whose path
+  /// says whether a base path could be what is missing.
+  final String? baseUrl;
+
   String? get contentType => headers['content-type']?.firstOrNull;
 
   /// Whether the answer was a web page: labelled HTML, or shaped like one.
@@ -189,18 +201,9 @@ class UnexpectedAnswer
   }
 
   @override
-  ServiceFailureReason get reason => ServiceFailureReason.invalidResponse;
-
-  /// The sentence for a web page, which is the case worth naming: the user
-  /// can go and look at the address. Anything else keeps the classification's
-  /// own words (an empty detail is no detail).
-  @override
-  String get failureDetail {
-    if (!isWebPage) return '';
-    final where = host == null || host!.isEmpty ? '' : ' at $host';
-    return 'A web page answered$where instead of the API. A reverse proxy '
-        'page, or a missing base path in the address, is the usual cause.';
-  }
+  ServiceFailureReason get reason => isWebPage
+      ? ServiceFailureReason.notFound
+      : ServiceFailureReason.invalidResponse;
 
   @override
   String toString() =>
@@ -280,6 +283,28 @@ class AccessGatewayAnswer implements Exception, HasFailureReason {
       'AccessGatewayAnswer(${kind.name}, credentialsSent: $credentialsSent)';
 }
 
+/// The web page [error] met in place of the service ([UnexpectedAnswer] with
+/// [UnexpectedAnswer.isWebPage]), or null; found wherever [accessGatewayOf]
+/// looks.
+UnexpectedAnswer? webPageAnswerOf(Object? error) {
+  Object? current = unwrapFailure(error);
+  for (var depth = 0; depth < 4 && current != null; depth++) {
+    switch (current) {
+      case final UnexpectedAnswer answer:
+        return answer.isWebPage ? answer : null;
+      case final ClassifiedFailure classified:
+        return classified.webPage;
+      case final DioException dio:
+        current = dio.error;
+      case final HasFailureCause wrapper:
+        current = wrapper.failureCause;
+      default:
+        return null;
+    }
+  }
+  return null;
+}
+
 /// The [AccessGatewayAnswer] [error] carries, or null: directly, inside the
 /// [DioException] an interceptor rejected with, kept by a [ClassifiedFailure],
 /// or under a client's own exception ([HasFailureCause]).
@@ -308,12 +333,21 @@ AccessGatewayAnswer? accessGatewayOf(Object? error) {
 /// Unwraps one [DioException] level the same way [classifyConnectionFailure]
 /// does, because an interceptor's rejection reaches the caller wrapped.
 String? connectionFailureDetail(Object? error) {
-  error = unwrapFailure(error);
+  Object? current = unwrapFailure(error);
   String? present(String detail) => detail.trim().isEmpty ? null : detail;
-  if (error is HasFailureDetail) return present(error.failureDetail);
-  if (error is DioException) {
-    final inner = error.error;
-    if (inner is HasFailureDetail) return present(inner.failureDetail);
+  // Through a client's own exception too ([HasFailureCause]): a refused
+  // redirect inside a SABnzbd failure still knows where it was sent.
+  for (var depth = 0; depth < 4 && current != null; depth++) {
+    switch (current) {
+      case final HasFailureDetail own:
+        return present(own.failureDetail);
+      case final DioException dio:
+        current = dio.error;
+      case final HasFailureCause wrapper:
+        current = wrapper.failureCause;
+      default:
+        return null;
+    }
   }
   return null;
 }
@@ -679,7 +713,12 @@ bool failureRetryHelps(
 /// one of its own) across without inventing an exception type per client.
 class ClassifiedFailure
     implements Exception, HasFailureReason, HasFailureDetail {
-  const ClassifiedFailure(this.reason, {this.detail, this.gateway});
+  const ClassifiedFailure(
+    this.reason, {
+    this.detail,
+    this.gateway,
+    this.webPage,
+  });
 
   /// Classifies [error] once and keeps what the words need.
   factory ClassifiedFailure.of(Object? error) => error is ClassifiedFailure
@@ -688,6 +727,7 @@ class ClassifiedFailure
           classifyConnectionFailure(error),
           detail: connectionFailureDetail(error),
           gateway: accessGatewayOf(error),
+          webPage: webPageAnswerOf(error),
         );
 
   @override
@@ -699,6 +739,10 @@ class ClassifiedFailure
   /// What answered in front of the service, for an
   /// [ServiceFailureReason.accessGateway]: the words name it.
   final AccessGatewayAnswer? gateway;
+
+  /// The web page that answered in the service's place, when one did: its
+  /// sentence names where.
+  final UnexpectedAnswer? webPage;
 
   @override
   String get failureDetail => detail ?? '';
@@ -766,6 +810,13 @@ String connectionFailureSentence(
 }) {
   final detail = connectionFailureDetail(error);
   if (detail != null && detail.trim().isNotEmpty) return detail;
+  final page = webPageAnswerOf(error);
+  if (page != null) {
+    final where = page.host == null || page.host!.isEmpty
+        ? ''
+        : ' at ${page.host}';
+    return 'A web page answered$where instead of ${subject ?? 'the service'}.';
+  }
   return switch (classifyConnectionFailure(error)) {
     ServiceFailureReason.unreachable =>
       'Nothing answered at the saved address. Check that the server is '

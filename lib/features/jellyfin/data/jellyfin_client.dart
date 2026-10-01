@@ -196,17 +196,14 @@ class JellyfinClient implements StreamServerClient {
       final response = await _api.get('/System/Info');
       requireProbeIdentity(ServiceKey.jellyfin, response.data, url: _baseUrl);
       return _versionOf(response.data);
-    } on DioException catch (error, stack) {
+    } on DioException catch (error) {
       // A 403 from Jellyfin itself is a narrower token; one from something
       // in front of it is not Jellyfin's answer at all.
       if (error.response?.statusCode == 403 &&
           error.error is! AccessGatewayAnswer) {
         return probeVersion();
       }
-      Error.throwWithStackTrace(
-        probeFailureOf(ServiceKey.jellyfin, error, url: _baseUrl),
-        stack,
-      );
+      rethrow;
     }
   }
 

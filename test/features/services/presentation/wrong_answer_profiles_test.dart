@@ -8,6 +8,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
@@ -23,6 +24,7 @@ import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/service_settings_screen.dart';
 
@@ -67,28 +69,31 @@ void main() {
       expect(summary.status, ServiceSummaryStatus.fault);
     });
 
-    final libraries = <(String, ServiceKey, String, Widget)>[
+    final libraries = <(String, ServiceKey, String, String, Widget)>[
       (
         'Radarr',
         ServiceKey.radarr,
         WorldIds.radarr,
+        'nas.home.arpa:7878',
         const MoviesScreen(showAppBar: false),
       ),
       (
         'Sonarr',
         ServiceKey.sonarr,
         WorldIds.sonarr,
+        'nas.home.arpa:8989',
         const SeriesScreen(showAppBar: false),
       ),
       (
         'Lidarr',
         ServiceKey.lidarr,
         WorldIds.lidarr,
+        'nas.home.arpa:8686',
         const MusicScreen(showAppBar: false),
       ),
     ];
 
-    for (final (name, service, id, screen) in libraries) {
+    for (final (name, _, id, host, screen) in libraries) {
       testWidgets('the $name library says what answered, not that it is '
           'empty', (tester) async {
         final harness = await pumpWithProfile(
@@ -98,7 +103,7 @@ void main() {
         );
 
         expect(find.byType(ServiceOfflineState), findsOneWidget);
-        expect(find.text(describeUnreadable(service)), findsOneWidget);
+        expect(find.text('$name is not at this address'), findsOneWidget);
         expect(find.text('No items found'), findsNothing);
         final glyph = tester.widget<Icon>(
           find
@@ -110,13 +115,112 @@ void main() {
         );
         expect(glyph.color, _amber());
         expect(
-          find.textContaining('A web page answered at nas.home.arpa:'),
+          find.text(
+            'A web page answered at $host instead of $name.\n'
+            'If $name sits under a path, add it: http://$host/'
+            '${name.toLowerCase()}',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.widgetWithText(FilledButton, 'Check the address'),
           findsOneWidget,
         );
 
         await harness.unmount(tester);
       });
     }
+
+    testWidgets('Home, Settings and the library say one thing about it', (
+      tester,
+    ) async {
+      final profile = Profiles.p1.withBehaviour(
+        WorldIds.radarr,
+        ConnectionBehaviour.servesHtmlPage,
+      );
+      final harness = await pumpWithProfile(
+        tester,
+        profile,
+        child: const MoviesScreen(showAppBar: false),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MoviesScreen)),
+      );
+      // Asked in real time: the probe and the test run their own deadlines.
+      final (summary, diagnosis) = (await tester.runAsync(
+        () async => (
+          await container.read(
+            instanceSummaryProvider((
+              service: ServiceKey.radarr,
+              instanceId: WorldIds.radarr,
+            )).future,
+          ),
+          await diagnoseInstance(
+            profile.connection(WorldIds.radarr).instance,
+            profile.settings,
+          ),
+        ),
+      ))!;
+
+      final home = describeFailureOf(ServiceKey.radarr, summary.failure);
+      final settings = describeConnection(
+        ServiceKey.radarr,
+        status: diagnosis.status,
+        reason: diagnosis.reason,
+        gateway: diagnosis.gateway,
+      );
+      const sentence =
+          'A web page answered at nas.home.arpa:7878 instead of Radarr.\n'
+          'If Radarr sits under a path, add it: http://nas.home.arpa:7878/radarr';
+
+      // Home: the summary's own words.
+      expect(home.headline, 'Radarr is not at this address');
+      expect(home.label, 'API not at this address');
+      expect(home.remedy, 'Check the address');
+      expect(failureMessageOf(ServiceKey.radarr, summary.failure), sentence);
+      // Settings: the same label and sentence.
+      expect(settings.label, home.label);
+      expect(diagnosis.messageFor(ServiceKey.radarr), sentence);
+      // The library: the same headline, sentence and remedy on screen.
+      expect(find.text(home.headline), findsOneWidget);
+      expect(find.text(sentence), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, home.remedy!), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    test('a body that is not a page and does not decode is unreadable, on '
+        'Home and in Settings alike', () async {
+      final harness = await ProfileHarness.start(Profiles.p1);
+      harness.network.on(
+        WorldIds.radarr,
+        'GET',
+        '/api/v3/system/status',
+        (_) => NetworkReply.text('{"appName": "Radarr", "vers'),
+      );
+      final container = harness.container(retry: (_, _) => null);
+      final summary = await container.read(
+        instanceSummaryProvider((
+          service: ServiceKey.radarr,
+          instanceId: WorldIds.radarr,
+        )).future,
+      );
+      final diagnosis = await diagnoseInstance(
+        Profiles.p1.connection(WorldIds.radarr).instance,
+        Profiles.p1.settings,
+      );
+
+      expect(summary.failureReason, ServiceFailureReason.invalidResponse);
+      expect(
+        describeFailureOf(ServiceKey.radarr, summary.failure).headline,
+        describeUnreadable(ServiceKey.radarr),
+      );
+      expect(diagnosis.reason, ServiceFailureReason.invalidResponse);
+      expect(
+        diagnosis.messageFor(ServiceKey.radarr),
+        failureMessageOf(ServiceKey.radarr, summary.failure),
+      );
+    });
   });
 
   group('the probe checks who answered', () {
@@ -153,29 +257,50 @@ void main() {
       },
     );
 
-    test(
-      'a web page is something that is not Radarr, with the path hint',
-      () async {
-        final summary = await _probe(
-          pageForRadarr,
-          ServiceKey.radarr,
-          WorldIds.radarr,
-        );
-        final diagnosis = await _test(pageForRadarr, WorldIds.radarr);
+    test('a web page names where it answered, with the path hint', () async {
+      final summary = await _probe(
+        pageForRadarr,
+        ServiceKey.radarr,
+        WorldIds.radarr,
+      );
+      final diagnosis = await _test(pageForRadarr, WorldIds.radarr);
 
-        expect(summary.failureReason, ServiceFailureReason.notFound);
-        expect(
-          summary.failure?.detail,
-          "Something answered at nas.home.arpa:7878, but it isn't Radarr.\n"
-          'If Radarr sits under a path, add it: http://nas.home.arpa:7878/radarr',
-        );
-        expect(diagnosis.reason, ServiceFailureReason.notFound);
-        expect(
-          diagnosis.messageFor(ServiceKey.radarr),
-          summary.failure?.detail,
-        );
-      },
-    );
+      expect(summary.failureReason, ServiceFailureReason.notFound);
+      expect(
+        failureMessageOf(ServiceKey.radarr, summary.failure),
+        'A web page answered at nas.home.arpa:7878 instead of Radarr.\n'
+        'If Radarr sits under a path, add it: http://nas.home.arpa:7878/radarr',
+      );
+      expect(diagnosis.reason, ServiceFailureReason.notFound);
+      expect(
+        diagnosis.messageFor(ServiceKey.radarr),
+        failureMessageOf(ServiceKey.radarr, summary.failure),
+      );
+    });
+
+    test('JSON that is not Radarr\'s is something that is not Radarr', () async {
+      final harness = await ProfileHarness.start(Profiles.p1);
+      harness.network.on(
+        WorldIds.radarr,
+        'GET',
+        '/api/v3/system/status',
+        (_) => NetworkReply.json({'status': 'ok'}),
+      );
+      final container = harness.container(retry: (_, _) => null);
+      final summary = await container.read(
+        instanceSummaryProvider((
+          service: ServiceKey.radarr,
+          instanceId: WorldIds.radarr,
+        )).future,
+      );
+
+      expect(summary.failureReason, ServiceFailureReason.notFound);
+      expect(
+        summary.failure?.detail,
+        "Something answered at nas.home.arpa:7878, but it isn't Radarr.\n"
+        'If Radarr sits under a path, add it: http://nas.home.arpa:7878/radarr',
+      );
+    });
 
     final special = <(String, ServiceKey, String, String)>[
       ('Seerr', ServiceKey.seerr, WorldIds.seerr, 'nas.home.arpa:5055'),
@@ -205,12 +330,13 @@ void main() {
           final diagnosis = await _test(profile, id);
 
           expect(summary.failureReason, ServiceFailureReason.notFound);
+          final home = failureMessageOf(service, summary.failure);
           expect(
-            summary.failure?.detail,
-            startsWith("Something answered at $host, but it isn't $name."),
+            home,
+            startsWith('A web page answered at $host instead of $name.'),
           );
           expect(diagnosis.reason, ServiceFailureReason.notFound);
-          expect(diagnosis.messageFor(service), summary.failure?.detail);
+          expect(diagnosis.messageFor(service), home);
         },
       );
     }

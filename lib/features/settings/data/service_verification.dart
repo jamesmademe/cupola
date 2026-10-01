@@ -45,7 +45,8 @@ class ServiceDiagnosis {
     this.certificateProbe,
     this.detail,
   ]) : serverVersion = null,
-       gateway = null;
+       gateway = null,
+       webPage = null;
 
   /// The full form, for the places that set a field the positional list cannot
   /// reach — Dart allows optional positionals or optional named, not both, and
@@ -57,6 +58,7 @@ class ServiceDiagnosis {
     this.detail,
     this.serverVersion,
     this.gateway,
+    this.webPage,
   });
 
   const ServiceDiagnosis.connected() : this(ServiceConnectionStatus.connected);
@@ -102,6 +104,7 @@ class ServiceDiagnosis {
          reason: classifyConnectionFailure(error, fallback: fallback),
          detail: connectionFailureDetail(error),
          gateway: accessGatewayOf(error),
+         webPage: webPageAnswerOf(error),
        );
 
   final ServiceConnectionStatus status;
@@ -136,14 +139,25 @@ class ServiceDiagnosis {
   /// ([ServiceFailureReason.accessGateway]): the words name it, as Home's do.
   final AccessGatewayAnswer? gateway;
 
+  /// The web page that answered in the service's place, when the test met
+  /// one: its sentence names where, as Home's and the library's do.
+  final UnexpectedAnswer? webPage;
+
   /// What the UI should actually say about this outcome.
   ///
   /// One accessor rather than `detail ?? connectionFailureMessage(...)` repeated
   /// at each surface — the settings screen and the onboarding walk both report
   /// the same test, and them disagreeing is exactly the drift this codebase
   /// keeps paying for elsewhere.
-  String messageFor(ServiceKey service) =>
-      detail ?? connectionFailureMessage(service, reason, gateway: gateway);
+  String messageFor(ServiceKey service) => failureMessageOf(
+    service,
+    ClassifiedFailure(
+      reason ?? ServiceFailureReason.unknown,
+      detail: detail,
+      gateway: gateway,
+      webPage: webPage,
+    ),
+  );
 
   bool get isConnected => status == ServiceConnectionStatus.connected;
 
@@ -159,6 +173,7 @@ class ServiceDiagnosis {
         detail: detail,
         serverVersion: serverVersion,
         gateway: gateway,
+        webPage: webPage,
       );
 }
 
@@ -301,9 +316,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       await readServiceStatus(client, service, url: urlTrimmed);
       return const ServiceDiagnosis.connected();
     } catch (e) {
-      return ServiceDiagnosis.failed(
-        probeFailureOf(service, e, url: urlTrimmed),
-      );
+      return ServiceDiagnosis.failed(e);
     } finally {
       client.close();
     }
@@ -724,8 +737,29 @@ Future<ServiceDiagnosis> diagnoseInstanceWithCertProbe(
   return diagnosis.withCertificateProbe(certProbe);
 }
 
+/// The sentence under a failure of [service], from the failure itself: what
+/// [error] knew beyond its reason (a web page that answered in the service's
+/// place, a gateway, a sentence of its own), and the reason's words
+/// otherwise.
+///
+/// The one sentence the Dashboard's summary, the connection test and a
+/// library's failure state say about one failure, which is why each hands
+/// over the failure (the exception, or the `ClassifiedFailure` that kept it)
+/// rather than its reason.
+String failureMessageOf(ServiceKey service, Object? error) {
+  final page = webPageAnswerOf(error);
+  if (page != null) return webPageSentence(service, page);
+  return connectionFailureDetail(error) ??
+      connectionFailureMessage(
+        service,
+        classifyConnectionFailure(error),
+        gateway: accessGatewayOf(error),
+      );
+}
+
 /// User-facing copy for a failed verification. Each cause names the thing the
-/// user can actually change.
+/// user can actually change. Prefer [failureMessageOf], which reads what the
+/// failure knew; this is the reason's own words.
 ///
 /// [gateway] is what answered in front of the service for an
 /// [ServiceFailureReason.accessGateway] ([accessGatewayOf] the failure).

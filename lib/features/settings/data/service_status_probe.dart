@@ -10,23 +10,19 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// The one reading the Dashboard's probe and the connection test share, so
 /// the Dashboard and Settings say the same thing about the same address: a
-/// Sonarr answering on Radarr's port is [WrongServiceAnswer] in both, and so
-/// is a web page answering for Radarr ([probeFailureOf]). [url] is the
-/// configured address the words name.
+/// Sonarr answering on Radarr's port is [WrongServiceAnswer] in both. [url] is
+/// the configured address the words name.
 ///
-/// Throws whatever the read threw otherwise, classified as before.
+/// Throws whatever the read threw otherwise, classified as before: a web page
+/// at the address is the answer guard's `UnexpectedAnswer`, which reads the
+/// same here as on any other read.
 Future<String?> readServiceStatus(
   ApiClient client,
   ServiceKey service, {
   required String url,
   Duration timeout = const Duration(seconds: 5),
 }) async {
-  final Object? data;
-  try {
-    data = (await client.get(service.statusEndpoint).timeout(timeout)).data;
-  } catch (error, stack) {
-    Error.throwWithStackTrace(probeFailureOf(service, error, url: url), stack);
-  }
+  final data = (await client.get(service.statusEndpoint).timeout(timeout)).data;
   requireProbeIdentity(service, data, url: url);
   return statusVersionOf(service, data);
 }

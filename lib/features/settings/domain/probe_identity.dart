@@ -1,5 +1,3 @@
-import 'package:dio/dio.dart';
-
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -165,7 +163,7 @@ class WrongServiceAnswer
     }
     final sentence =
         "Something answered at $host, but it isn't ${expected.title}.";
-    final hint = _basePathHint(expected, url);
+    final hint = basePathHint(expected, url);
     return hint == null ? sentence : '$sentence\n$hint';
   }
 
@@ -175,8 +173,12 @@ class WrongServiceAnswer
       '${answered?.name ?? 'notThisService'})';
 }
 
-/// Throws [WrongServiceAnswer] unless [body] is [service]'s own answer. See
-/// [identifyProbeAnswer].
+/// Throws unless [body] is [service]'s own answer. See [identifyProbeAnswer].
+///
+/// A web page read as text (the clients that ask for no JSON get one as a
+/// string) throws the same [UnexpectedAnswer] a JSON client meets, so it
+/// reads the same everywhere ([webPageSentence]). Anything else that is not
+/// the service throws [WrongServiceAnswer].
 void requireProbeIdentity(
   ServiceKey service,
   Object? body, {
@@ -184,22 +186,37 @@ void requireProbeIdentity(
 }) {
   final identity = identifyProbeAnswer(service, body);
   if (identity is ProbeMatches) return;
+  if (body is String) {
+    final page = UnexpectedAnswer(
+      body: body,
+      host: service.extractHost(url),
+      baseUrl: url,
+    );
+    if (page.isWebPage) throw page;
+  }
   throw WrongServiceAnswer(service, identity, url: url);
 }
 
-/// [error] as a probe of [service] at [url] should report it: an answer that
-/// was not JSON where the status route answers JSON ([UnexpectedAnswer]) is
-/// something that is not the service, and anything else is left as it is.
-Object probeFailureOf(ServiceKey service, Object error, {required String url}) {
-  final cause = error is DioException ? error.error : error;
-  return cause is UnexpectedAnswer
-      ? WrongServiceAnswer(service, ProbeIdentity.notThisService, url: url)
-      : error;
+/// What a web page answering in [service]'s place says, wherever it met the
+/// request (the probe, the connection test, a library read): `A web page
+/// answered at radarr.example.com instead of Radarr.`, and under it the path
+/// hint when the address has no path ([basePathHint]).
+///
+/// The sentence under `Radarr is not at this address` (the web page's reason
+/// is [ServiceFailureReason.notFound]), with `Check the address` as its remedy.
+String webPageSentence(ServiceKey service, UnexpectedAnswer page) {
+  final host = page.host;
+  final where = host == null || host.isEmpty ? '' : ' at $host';
+  final sentence = 'A web page answered$where instead of ${service.title}.';
+  final url = page.baseUrl;
+  final hint = url == null ? null : basePathHint(service, url);
+  return hint == null ? sentence : '$sentence\n$hint';
 }
 
 /// "If Radarr sits under a path, add it: https://example.com/radarr", when
-/// the configured address has no path to be missing one.
-String? _basePathHint(ServiceKey service, String url) {
+/// the configured address [url] has no path to be missing one; null when it
+/// has one, or [service] is not put under a path.
+String? basePathHint(ServiceKey service, String url) {
   final slug = conventionalBasePath(service);
   if (slug == null) return null;
   final normalized = UrlUtils.normalizeBaseUrl(url);

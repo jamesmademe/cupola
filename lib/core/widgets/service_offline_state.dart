@@ -189,9 +189,9 @@ class ServiceOfflineState extends StatelessWidget {
     );
     final span = since == null ? null : formatElapsedSpan(since!);
     final silent = presentation.didNotAnswer;
-    final message =
-        connectionFailureDetail(_error) ??
-        connectionFailureMessage(service, reason, gateway: gateway);
+    // From the failure, not its reason: a web page that answered in the
+    // service's place names where, as Home and the connection test do.
+    final message = failureMessageOf(service, _error);
     final remedy = FailureRemedy.forReason(service, reason, gateway: gateway);
 
     return Consumer(

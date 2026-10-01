@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
@@ -239,32 +238,66 @@ void main() {
     });
   });
 
-  group('probeFailureOf', () {
-    test('a probe answered with a web page reached something else', () {
-      final error = DioException(
-        requestOptions: RequestOptions(path: '/api/v3/system/status'),
-        error: UnexpectedAnswer(status: 200, body: _page),
+  group('a web page in the service\'s place', () {
+    test('reads the same wherever it met the request', () {
+      final page = UnexpectedAnswer(
+        status: 200,
+        body: _page,
+        host: 'radarr.example.com',
+        baseUrl: 'https://radarr.example.com',
       );
 
-      final failure = probeFailureOf(
-        ServiceKey.radarr,
-        error,
-        url: 'https://radarr.example.com',
+      expect(page.reason, ServiceFailureReason.notFound);
+      expect(
+        webPageSentence(ServiceKey.radarr, page),
+        'A web page answered at radarr.example.com instead of Radarr.\n'
+        'If Radarr sits under a path, add it: https://radarr.example.com/radarr',
       );
-
-      expect(failure, isA<WrongServiceAnswer>());
-      expect((failure as WrongServiceAnswer).answered, isNull);
     });
 
-    test('anything else is left as it was', () {
-      final error = DioException.connectionError(
-        requestOptions: RequestOptions(path: '/api/v3/system/status'),
-        reason: 'Connection refused',
+    test('no path hint when the address has a path', () {
+      final page = UnexpectedAnswer(
+        body: _page,
+        host: 'example.com',
+        baseUrl: 'https://example.com/movies',
       );
 
       expect(
-        probeFailureOf(ServiceKey.radarr, error, url: 'https://x.example.com'),
-        same(error),
+        webPageSentence(ServiceKey.radarr, page),
+        'A web page answered at example.com instead of Radarr.',
+      );
+    });
+
+    test('a page read as text is the same answer, not "isn\'t Radarr"', () {
+      // qBittorrent and SABnzbd ask for no JSON, so a page reaches their
+      // identity check as text.
+      expect(
+        () => requireProbeIdentity(
+          ServiceKey.qbittorrent,
+          _page,
+          url: 'http://nas.home.arpa:8080',
+        ),
+        throwsA(
+          isA<UnexpectedAnswer>()
+              .having((e) => e.isWebPage, 'isWebPage', isTrue)
+              .having((e) => e.host, 'host', 'nas.home.arpa:8080'),
+        ),
+      );
+      // Text that is not a page is still not qBittorrent.
+      expect(
+        () => requireProbeIdentity(
+          ServiceKey.qbittorrent,
+          'Welcome',
+          url: 'http://nas.home.arpa:8080',
+        ),
+        throwsA(isA<WrongServiceAnswer>()),
+      );
+    });
+
+    test('a body that is not a page and does not decode stays unreadable', () {
+      expect(
+        UnexpectedAnswer(status: 200, body: '{"records": [').reason,
+        ServiceFailureReason.invalidResponse,
       );
     });
   });

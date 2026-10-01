@@ -378,11 +378,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     setState(() {
       _status[service] = result.status;
       _reason[service] = result.reason;
-      // A gateway's sentence names what answered, which the reason alone
-      // cannot, so it travels as the test's own words.
-      _failureDetail[service] = result.gateway == null
-          ? result.detail
-          : result.messageFor(service);
+      // The test's own sentence, from the failure: a gateway or a web page
+      // names what answered, which the reason alone cannot.
+      _failureDetail[service] = result.isDisconnected
+          ? result.messageFor(service)
+          : result.detail;
       _serverVersion[service] = result.serverVersion;
       _verifiedAgainst[service] = _fingerprintOf(service);
       if (certProbe != null) _pendingCert[service] = certProbe;

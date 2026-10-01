@@ -90,6 +90,27 @@ void main() {
         width: 320,
       ),
       CatalogScene(
+        'ServiceOfflineState.failure · a web page answered for Radarr: the '
+        'address\'s fault, its sentence naming where with the path hint, Check '
+        'the address in the amber fill',
+        (_) => ServiceOfflineState.failure(
+          service: ServiceKey.radarr,
+          error: DioException(
+            requestOptions: RequestOptions(path: '/api/v3/movie'),
+            type: DioExceptionType.badResponse,
+            error: UnexpectedAnswer(
+              status: 200,
+              body:
+                  '<!DOCTYPE html><html><body>Welcome to nginx!</body></html>',
+              host: 'radarr.example.com',
+              baseUrl: 'https://radarr.example.com',
+            ),
+          ),
+          onRetry: () {},
+        ),
+        width: 320,
+      ),
+      CatalogScene(
         'ServiceOfflineState.failure · Cloudflare Access answered in Radarr\'s '
         'place: the gateway named in the title and the sentence, Add a service '
         'token in the amber fill, no Retry',

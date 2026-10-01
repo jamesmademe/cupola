@@ -77,22 +77,22 @@ void main() {
       expect(error, isA<DioException>());
       final unexpected = (error as DioException).error;
       expect(unexpected, isA<UnexpectedAnswer>());
-      expect(
-        classifyConnectionFailure(error),
-        ServiceFailureReason.invalidResponse,
-      );
+      // A web page is the address's fault, wherever it met the request.
+      expect(classifyConnectionFailure(error), ServiceFailureReason.notFound);
       final answer = unexpected as UnexpectedAnswer;
       expect(answer.status, 200);
       expect(answer.isWebPage, isTrue);
       expect(answer.host, 'radarr.example.com');
+      expect(answer.baseUrl, 'https://radarr.example.com');
+      expect(webPageAnswerOf(error), same(answer));
       // What classification reads is kept; a cookie never is.
       expect(answer.headers.keys, containsAll(['content-type', 'server']));
       expect(answer.headers.containsKey('set-cookie'), isFalse);
+      // Its words name the service, so they come from the surface.
+      expect(connectionFailureDetail(error), isNull);
       expect(
-        connectionFailureDetail(error),
-        'A web page answered at radarr.example.com instead of the API. A '
-        'reverse proxy page, or a missing base path in the address, is the '
-        'usual cause.',
+        connectionFailureSentence(error, subject: 'Radarr'),
+        'A web page answered at radarr.example.com instead of Radarr.',
       );
     });
 
@@ -236,7 +236,7 @@ void main() {
       );
       final printed = [
         answer.toString(),
-        answer.failureDetail,
+        connectionFailureSentence(answer),
         DioException(
           requestOptions: RequestOptions(path: '/api/v3/movie'),
           error: answer,

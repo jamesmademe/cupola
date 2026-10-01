@@ -53,7 +53,6 @@ import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/service_status_probe.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/probe_identity.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -527,16 +526,9 @@ Future<String?> _loadVersion(
       // Seerr's status endpoint is public. Probe one authenticated request
       // first, otherwise a wrong API key paints the dashboard green while
       // Activity and Overview fail with 403 later.
-      try {
-        await SeerrService(
-          client,
-        ).testConnection().timeout(const Duration(seconds: 5));
-      } catch (error, stack) {
-        Error.throwWithStackTrace(
-          probeFailureOf(service, error, url: url),
-          stack,
-        );
-      }
+      await SeerrService(
+        client,
+      ).testConnection().timeout(const Duration(seconds: 5));
     }
     // Who answered, not only that something did: the reading the connection
     // test shares, so Home and Settings name the same answer.

@@ -7,6 +7,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/probe_identity.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// A failure state with the remedy that fits its cause.
@@ -152,6 +153,10 @@ class AppErrorState extends StatelessWidget {
   }) {
     final own = connectionFailureDetail(error);
     if (own != null && own.trim().isNotEmpty) return own;
+    // A web page in the service's place says where, in the words every other
+    // surface uses for it, path hint included.
+    final page = webPageAnswerOf(error);
+    if (service != null && page != null) return webPageSentence(service, page);
     if (reason == ServiceFailureReason.unknown) return null;
     return connectionFailureSentence(
       error,
