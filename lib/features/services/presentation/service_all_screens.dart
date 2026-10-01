@@ -23,6 +23,7 @@ import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
+import 'package:cupola/features/discover/presentation/widgets/seerr_decisions_section.dart';
 import 'package:cupola/features/services/domain/seerr_request_filter.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -227,8 +228,6 @@ class _RequestListRow extends ConsumerWidget {
     final requester = request.requestedBy?.displayName ?? 'Unknown';
     final mediaType = request.type == 'tv' ? 'Series' : 'Movie';
     final displayStatus = request.displayStatus;
-    final statusTone = resolveRequestStatus(request).tone;
-    final posterUrl = ImageUtils.buildTmdbPosterUrl(media?.posterPath);
     final heroTag = 'services_all_request_${request.id}';
 
     return AppCard.outlined(
@@ -245,138 +244,179 @@ class _RequestListRow extends ConsumerWidget {
       ),
       backgroundColor: colorScheme.surfaceContainer,
       padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ExcludeSemantics(
-            child: SizedBox(
-              width: 38,
-              height: 54,
-              child: posterUrl.isEmpty
-                  ? Container(
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(
-                          DesignTokens.radiusXs2,
+          _rowBody(context, ref, title: title, requester: requester),
+          // A waiting request is answered where it is listed, with the
+          // dashboard's own pair, on a line of its own so the title keeps its
+          // width on a phone. "N waiting" links here, and this was the one
+          // list of them without the answer. Gated on the request's own
+          // status, never on displayStatus.
+          if (request.status == RequestStatus.pendingApproval)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                SeerrDecisionButton.decline(request: request, title: title),
+                SeerrDecisionButton.approve(request: request, title: title),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _rowBody(
+    BuildContext context,
+    WidgetRef ref, {
+    required String title,
+    required String requester,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final media = request.media;
+    final mediaType = request.type == 'tv' ? 'Series' : 'Movie';
+    final displayStatus = request.displayStatus;
+    final statusTone = resolveRequestStatus(request).tone;
+    final posterUrl = ImageUtils.buildTmdbPosterUrl(media?.posterPath);
+    final heroTag = 'services_all_request_${request.id}';
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ExcludeSemantics(
+          child: SizedBox(
+            width: 38,
+            height: 54,
+            child: posterUrl.isEmpty
+                ? Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(
+                        DesignTokens.radiusXs2,
+                      ),
+                    ),
+                    child: Icon(
+                      request.type == 'tv'
+                          ? Icons.tv_rounded
+                          : Icons.movie_rounded,
+                      size: 18,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  )
+                : Hero(
+                    tag: heroTag,
+                    transitionOnUserGestures:
+                        MediaPosterCard.flightOnUserGestures,
+                    child: ContentCard(imageUrl: posterUrl),
+                  ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: ExcludeSemantics(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.weight(FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    _RequesterAvatar(name: requester),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        requester,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      child: Icon(
-                        request.type == 'tv'
-                            ? Icons.tv_rounded
-                            : Icons.movie_rounded,
-                        size: 18,
+                    ),
+                    Text(
+                      '·',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
-                    )
-                  : Hero(
-                      tag: heroTag,
-                      transitionOnUserGestures:
-                          MediaPosterCard.flightOnUserGestures,
-                      child: ContentCard(imageUrl: posterUrl),
                     ),
+                    const SizedBox(width: 5),
+                    Text(
+                      mediaType,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _formatRequestDate(request.createdAt),
+                  style: Theme.of(context).textTheme.labelSmall?.tabular
+                      .copyWith(color: colorScheme.onSurfaceVariant),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: ExcludeSemantics(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.weight(FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      _RequesterAvatar(name: requester),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          requester,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ),
-                      Text(
-                        '·',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        mediaType,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _formatRequestDate(request.createdAt),
-                    style: Theme.of(context).textTheme.labelSmall?.tabular
-                        .copyWith(color: colorScheme.onSurfaceVariant),
-                  ),
-                ],
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            ExcludeSemantics(
+              child: _SmallPill(
+                label: displayStatus.label,
+                tone: statusTone,
+                // The row's own card, which is what the pill's wash sits on.
+                surface: colorScheme.surfaceContainer,
               ),
             ),
+            const SizedBox(height: AppSpacing.sm),
+            _deleteButton(context, ref, title),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _deleteButton(BuildContext context, WidgetRef ref, String title) {
+    final colorScheme = Theme.of(context).colorScheme;
+    // The plate stays the 28pt square the row was drawn with; what grows is
+    // the square around it. `Center` loosens the constraints so
+    // `MaterialTapTargetSize.padded` can spread the hit box out to fill it —
+    // a tight 28 square capped it at 28.
+    return SizedBox.square(
+      dimension: _deleteTarget,
+      child: Center(
+        child: IconButton.filledTonal(
+          icon: const Icon(Icons.delete_outline_rounded, size: 14),
+          // Neutral: the instrument-face plate chips sit on, and
+          // the secondary ink. Red means unreachable and nothing
+          // else; the confirmation says what the tap deletes.
+          color: colorScheme.onSurfaceVariant,
+          style: IconButton.styleFrom(
+            backgroundColor: colorScheme.surfaceContainerHighest,
+            padding: EdgeInsets.zero,
+            // `minimumSize` as well as `fixedSize`: `fixedSize` is
+            // clamped into the resolved minimum, and IconButton's M3
+            // default minimum is 48.
+            minimumSize: const Size.square(_deletePlate),
+            fixedSize: const Size.square(_deletePlate),
+            visualDensity: VisualDensity.standard,
+            tapTargetSize: AppBreakpoints.isDesktopPlatform
+                ? MaterialTapTargetSize.shrinkWrap
+                : MaterialTapTargetSize.padded,
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              ExcludeSemantics(
-                child: _SmallPill(
-                  label: displayStatus.label,
-                  tone: statusTone,
-                  // The row's own card, which is what the pill's wash sits on.
-                  surface: colorScheme.surfaceContainer,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              // The plate stays the 28pt square the row was drawn with; what
-              // grows is the square around it. `Center` loosens the
-              // constraints so `MaterialTapTargetSize.padded` can spread the
-              // hit box out to fill it — a tight 28 square capped it at 28.
-              SizedBox.square(
-                dimension: _deleteTarget,
-                child: Center(
-                  child: IconButton.filledTonal(
-                    icon: const Icon(Icons.delete_outline_rounded, size: 14),
-                    // Neutral: the instrument-face plate chips sit on, and
-                    // the secondary ink. Red means unreachable and nothing
-                    // else; the confirmation says what the tap deletes.
-                    color: colorScheme.onSurfaceVariant,
-                    style: IconButton.styleFrom(
-                      backgroundColor: colorScheme.surfaceContainerHighest,
-                      padding: EdgeInsets.zero,
-                      // `minimumSize` as well as `fixedSize`: `fixedSize` is
-                      // clamped into the resolved minimum, and IconButton's M3
-                      // default minimum is 48.
-                      minimumSize: const Size.square(_deletePlate),
-                      fixedSize: const Size.square(_deletePlate),
-                      visualDensity: VisualDensity.standard,
-                      tapTargetSize: AppBreakpoints.isDesktopPlatform
-                          ? MaterialTapTargetSize.shrinkWrap
-                          : MaterialTapTargetSize.padded,
-                    ),
-                    onPressed: () => _deleteRequest(context, ref, title),
-                    // Names which request: there is one of these per row.
-                    tooltip: 'Delete request for $title',
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+          onPressed: () => _deleteRequest(context, ref, title),
+          // Names which request: there is one of these per row.
+          tooltip: 'Delete request for $title',
+        ),
       ),
     );
   }

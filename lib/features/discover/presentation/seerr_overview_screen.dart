@@ -24,6 +24,8 @@ import 'package:cupola/features/discover/presentation/discover_provider.dart';
 
 import 'package:cupola/features/discover/presentation/seerr_overview_provider.dart';
 
+import 'package:cupola/features/discover/presentation/widgets/seerr_decisions_section.dart';
+
 import 'package:cupola/features/services/domain/service_tab.dart';
 
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
@@ -159,9 +161,34 @@ class _DecisionsSection extends ConsumerWidget {
           label: 'Nothing waiting on you',
         ),
         data: (data) => Column(
-          children: [for (final row in data.rows) _RequestRow(row: row)],
+          children: [for (final row in data.rows) _DecisionRow(row: row)],
         ),
       ),
+    );
+  }
+}
+
+/// A waiting request and its two answers.
+///
+/// The header links to the Requests tab, which answers it; this row used to
+/// be the one place the waiting request was listed without the answer. The
+/// pair is the dashboard's own ([SeerrDecisionButton]), kept out of the row's
+/// sentence so each button keeps a node of its own.
+class _DecisionRow extends StatelessWidget {
+  const _DecisionRow({required this.row});
+
+  final SeerrOverviewRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: _RequestRow(row: row)),
+        const SizedBox(width: AppSpacing.sm),
+        SeerrDecisionButton.decline(request: row.request, title: row.headline),
+        SeerrDecisionButton.approve(request: row.request, title: row.headline),
+      ],
     );
   }
 }

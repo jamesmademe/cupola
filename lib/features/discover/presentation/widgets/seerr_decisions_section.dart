@@ -229,8 +229,8 @@ class _DecisionRow extends ConsumerWidget {
             // Left outside the card's label so each keeps a node of its own,
             // and each names the title: there is one pair of these per row and
             // "Approve" alone would be four identical buttons in the rotor.
-            _DecisionButton.decline(request: request, title: title),
-            _DecisionButton.approve(request: request, title: title),
+            SeerrDecisionButton.decline(request: request, title: title),
+            SeerrDecisionButton.approve(request: request, title: title),
           ],
         ),
       ),
@@ -238,22 +238,39 @@ class _DecisionRow extends ConsumerWidget {
   }
 }
 
-/// One of the two answers.
+/// One of the two answers to a waiting request.
 ///
 /// Both dispatch through [ActivityActions], which is the app's single Seerr
 /// write path: it owns the confirm dialog, the `SeerrRequestConflict` case —
 /// somebody else approved it from the web UI a moment ago — the toast, and the
 /// invalidation of the request list this section derives from. A private copy
 /// here would be the third and would be the one that drifts.
-class _DecisionButton extends ConsumerWidget {
-  const _DecisionButton.approve({required this.request, required this.title})
-    : _isApprove = true;
+///
+/// Public because every list a "waiting" header links to answers with the
+/// same pair: this section, the Seerr Overview's Needs a decision rows and
+/// the Requests tab.
+class SeerrDecisionButton extends ConsumerWidget {
+  const SeerrDecisionButton.approve({
+    super.key,
+    required this.request,
+    required this.title,
+    this.instanceId = _lensConnection,
+  }) : _isApprove = true;
 
-  const _DecisionButton.decline({required this.request, required this.title})
-    : _isApprove = false;
+  const SeerrDecisionButton.decline({
+    super.key,
+    required this.request,
+    required this.title,
+    this.instanceId = _lensConnection,
+  }) : _isApprove = false;
 
   final SeerrRequest request;
+
+  /// What the tooltip and the confirmation call the request.
   final String title;
+
+  /// The Seerr the request lives on; the lens by default.
+  final String instanceId;
   final bool _isApprove;
 
   @override
@@ -288,7 +305,7 @@ class _DecisionButton extends ConsumerWidget {
           ? ActivityActions.approveRequest(
               context,
               ref,
-              instanceId: _lensConnection,
+              instanceId: instanceId,
               requestId: request.id,
               title: title,
               request: request,
@@ -296,17 +313,17 @@ class _DecisionButton extends ConsumerWidget {
           : ActivityActions.declineRequest(
               context,
               ref,
-              instanceId: _lensConnection,
+              instanceId: instanceId,
               requestId: request.id,
               title: title,
             ),
     );
   }
 
-  /// This page is the lens's own Seerr — it reads [requestsProvider], not the
-  /// per-connection family — so the write goes to the lens too. An empty id is
-  /// how that is spelled, and it matters: a Seerr request id is per instance,
-  /// so id 42 sent to the wrong server approves a different person's request
-  /// and reports success.
+  /// The pages that draw this read the lens's own Seerr — [requestsProvider],
+  /// not the per-connection family — so the write goes to the lens too. An
+  /// empty id is how that is spelled, and it matters: a Seerr request id is
+  /// per instance, so id 42 sent to the wrong server approves a different
+  /// person's request and reports success.
   static const String _lensConnection = '';
 }
