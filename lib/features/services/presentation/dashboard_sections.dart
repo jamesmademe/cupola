@@ -227,6 +227,9 @@ class ServicesInFlightSection extends ConsumerWidget {
             stalled: faultsOf(InFlightFault.stalled),
             needsImport: faultsOf(InFlightFault.needsImport),
             failed: faultsOf(InFlightFault.failed),
+            // The faults are rows of the same walks the eyebrow counts: a
+            // walk cut short makes them floors too.
+            coverage: data.coverage,
           );
 
     return Column(
@@ -302,6 +305,7 @@ class ServicesInFlightSection extends ConsumerWidget {
             ),
             child: Text(
               footnote,
+              semanticsLabel: spokenFaultFootnote(footnote),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

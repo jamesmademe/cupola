@@ -527,24 +527,40 @@ class _ActivityTitle extends ConsumerWidget {
   // The rows are a floor when a queue walk stopped short of the end — a full
   // page and no count, or out of pages — so the figure counted from them is
   // too: `200+ in the queue`, never `200`.
+  //
+  // The faults are counted from the same rows, so they are floors with it:
+  // `18+ need a manual import · 2+ stuck`.
   final atLeast = feed.arrConnections.any(
     (r) => r.reached && (r.cutShort || r.incomplete),
   );
-  String clauses(String queue) => [
-    queue,
-    if (needsImport > 0) needsManualImportClause(needsImport),
-    if (stalled > 0) '$stalled ${StateWord.stuck.inline}',
-    if (importing > 0) '$importing importing',
-    if (notCounted.isNotEmpty) notCountedClause(notCounted),
-  ].join(' · ');
+  String clauses(String queue, {required bool spoken}) {
+    String figure(int count) => !atLeast
+        ? '$count'
+        : spoken
+        ? 'at least $count'
+        : Lexicon.floor(count);
+    return [
+      queue,
+      if (needsImport > 0)
+        needsManualImportClause(needsImport, floor: atLeast, spoken: spoken),
+      if (stalled > 0) '${figure(stalled)} ${StateWord.stuck.inline}',
+      if (importing > 0) '${figure(importing)} importing',
+      if (notCounted.isNotEmpty) notCountedClause(notCounted),
+    ].join(' · ');
+  }
+
   if (queued.isEmpty) {
-    final text = clauses('Nothing in the queue');
+    final text = clauses('Nothing in the queue', spoken: false);
     return (text: text, spoken: text);
   }
   return (
-    text: clauses('${queued.length}${atLeast ? '+' : ''} in the queue'),
+    text: clauses(
+      '${atLeast ? Lexicon.floor(queued.length) : queued.length} in the queue',
+      spoken: false,
+    ),
     spoken: clauses(
       '${atLeast ? 'at least ' : ''}${queued.length} in the queue',
+      spoken: true,
     ),
   );
 }

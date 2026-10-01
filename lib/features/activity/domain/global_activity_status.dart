@@ -15,6 +15,7 @@
 library;
 
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
@@ -99,8 +100,24 @@ bool queueNeedsManualImport({
 /// The one phrase for [queueNeedsManualImport], shared by the Activity readout
 /// and the Dashboard so the two surfaces name the fault in the same words — and
 /// name it by its remedy, which is the verb on the row.
-String needsManualImportClause(int count) =>
-    count == 1 ? '1 needs a manual import' : '$count need a manual import';
+///
+/// [floor] when the rows it counts are only the ones a queue walk read before
+/// it stopped short: `18+ need a manual import`, never `18`, and for the ear
+/// ([spoken]) `at least 18 need a manual import`.
+String needsManualImportClause(
+  int count, {
+  bool floor = false,
+  bool spoken = false,
+}) {
+  final figure = !floor
+      ? '$count'
+      : spoken
+      ? 'at least $count'
+      : Lexicon.floor(count);
+  return count == 1
+      ? '$figure needs a manual import'
+      : '$figure need a manual import';
+}
 
 /// Resolves a history record from its `eventType`.
 ///

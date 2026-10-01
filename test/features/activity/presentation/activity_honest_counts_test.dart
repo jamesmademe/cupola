@@ -119,6 +119,56 @@ void main() {
       expect(readout.spoken, readout.text);
     });
 
+    test('a walk cut short makes the faults it counted floors too', () {
+      const blocked = MediaStatusInfo(pipeline: MediaPipeline.importBlocked);
+      const stuck = MediaStatusInfo(pipeline: MediaPipeline.stalled);
+      final sonarr = [
+        for (var i = 0; i < 18; i++)
+          GlobalActivityItem(
+            kind: GlobalActivityKind.queue,
+            service: ServiceKey.sonarr,
+            serviceType: ServiceType.series,
+            title: 'Blocked $i',
+            subtitle: '',
+            status: blocked,
+          ),
+        for (var i = 0; i < 2; i++)
+          GlobalActivityItem(
+            kind: GlobalActivityKind.queue,
+            service: ServiceKey.sonarr,
+            serviceType: ServiceType.series,
+            title: 'Stuck $i',
+            subtitle: '',
+            status: stuck,
+          ),
+      ];
+      final feed = ActivityFeed(
+        items: sonarr,
+        results: [
+          ActivityServiceResult(
+            service: ServiceKey.sonarr,
+            items: sonarr,
+            total: sonarr.length,
+            configured: true,
+            cutShort: true,
+          ),
+        ],
+      );
+
+      final readout = nowReadout(feed)!;
+      // The count was already a floor; the faults beside it were counted
+      // from the same rows and read as if they were the whole queue's.
+      expect(
+        readout.text,
+        '20+ in the queue · 18+ need a manual import · 2+ stuck',
+      );
+      expect(
+        readout.spoken,
+        'at least 20 in the queue · at least 18 need a manual import · at '
+        'least 2 stuck',
+      );
+    });
+
     // "Nothing in the queue" was the sentence for a queue that answered empty
     // and for a queue that could not be asked. Only the first one is true.
     test('an empty answer beside a failure is not "nothing"', () {

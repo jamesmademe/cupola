@@ -155,6 +155,47 @@ void main() {
       expect(inFlightFaultFootnote(needsImport: 18), isNot(contains('stall')));
     });
 
+    test('a walk cut short makes every count a floor', () {
+      // Sonarr's queue walk stopped on a full page with no total: the part it
+      // did not read may hold more of any fault, and the figures counted
+      // rows, not the queue.
+      final cutShort = SourceCoverage.merge([
+        SourceCoverage.answeredBy(ServiceKey.sonarr, cutShort: true),
+        SourceCoverage.answeredBy(ServiceKey.qbittorrent),
+      ]);
+      final footnote = inFlightFaultFootnote(
+        stalled: 2,
+        needsImport: 18,
+        failed: 1,
+        coverage: cutShort,
+      )!;
+      expect(
+        footnote,
+        '18+ need a manual import · 2+ stuck · 1+ failed · under Needs a '
+        'decision',
+      );
+      expect(
+        spokenFaultFootnote(footnote),
+        'at least 18 need a manual import, at least 2 stuck, at least 1 '
+        'failed, under Needs a decision',
+      );
+
+      // Read whole, the counts are the counts.
+      final whole = inFlightFaultFootnote(
+        stalled: 2,
+        needsImport: 18,
+        coverage: SourceCoverage.answeredBy(ServiceKey.sonarr),
+      )!;
+      expect(
+        whole,
+        '18 need a manual import · 2 stuck · under Needs a decision',
+      );
+      expect(
+        spokenFaultFootnote(whole),
+        '18 need a manual import, 2 stuck, under Needs a decision',
+      );
+    });
+
     test('the queue is empty only when it holds nothing', () {
       expect(inFlightEmptyLabel(faults: 0), 'The queue is empty');
       // Eighteen records in the queue, none of them moving: not empty.

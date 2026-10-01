@@ -205,19 +205,34 @@ String inFlightEyebrow({
 /// Names the region by its heading rather than "under a decision": identical
 /// faults are folded into one row (`groupDecisions`), so how many *rows* the
 /// faults occupy is not something this count can say.
+///
+/// The counts are rows of the queues [coverage] read. When one of those walks
+/// stopped short of the end, the part it did not read may hold more of any
+/// fault, so every count is a floor: `18+ need a manual import · 2+ stuck`.
 String? inFlightFaultFootnote({
   int stalled = 0,
   int needsImport = 0,
   int failed = 0,
+  SourceCoverage coverage = SourceCoverage.none,
 }) {
+  final floor = coverage.isFloor;
+  String figure(int count) => floor ? Lexicon.floor(count) : '$count';
   final clauses = [
-    if (needsImport > 0) needsManualImportClause(needsImport),
-    if (stalled > 0) '$stalled ${StateWord.stuck.inline}',
-    if (failed > 0) '$failed failed',
+    if (needsImport > 0) needsManualImportClause(needsImport, floor: floor),
+    if (stalled > 0) '${figure(stalled)} ${StateWord.stuck.inline}',
+    if (failed > 0) '${figure(failed)} failed',
   ];
   if (clauses.isEmpty) return null;
   return '${clauses.join(' · ')} · under Needs a decision';
 }
+
+/// [inFlightFaultFootnote] as a screen reader should say it: each clause on
+/// its own pause, and a floor as `at least 18`, where a screen reader says
+/// "18 plus" or drops the mark.
+String spokenFaultFootnote(String footnote) => footnote
+    .split('·')
+    .map((clause) => spokenCountPhrase(clause.trim()))
+    .join(', ');
 
 /// What the region says when nothing is moving.
 ///
