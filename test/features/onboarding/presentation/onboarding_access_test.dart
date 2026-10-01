@@ -7,6 +7,7 @@ library;
 import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,10 +29,11 @@ Future<(ProfileHarness, ProviderContainer)> _firstRunAtRadarr(
   WidgetTester tester,
   ConfigProfile profile, {
   String address = WorldHosts.radarr,
+  Size viewport = const Size(800, 2400),
 }) async {
   final harness = await ProfileHarness.start(profile);
   tester.view.devicePixelRatio = 1;
-  tester.view.physicalSize = const Size(800, 2400);
+  tester.view.physicalSize = viewport;
   addTearDown(tester.view.reset);
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
@@ -95,6 +97,34 @@ bool _selected(WidgetTester tester, String choice) =>
     Tristate.isTrue;
 
 void main() {
+  for (final width in [320.0, 390.0]) {
+    testWidgets('at ${width.round()}pt the step\'s Access choices are whole on '
+        'screen', (tester) async {
+      final (harness, _) = await _firstRunAtRadarr(
+        tester,
+        Profiles.p8,
+        viewport: Size(width, 2400),
+      );
+      await _tap(tester, harness, 'Test connection');
+      await _tap(tester, harness, 'Add a service token');
+
+      for (final choice in const [
+        'None',
+        'Cloudflare Access',
+        'Password',
+        'Custom headers',
+      ]) {
+        final rect = tester.getRect(find.bySemanticsLabel(choice));
+        expect(rect.left, greaterThanOrEqualTo(0), reason: choice);
+        expect(rect.right, lessThanOrEqualTo(width), reason: choice);
+        final label = tester.renderObject<RenderParagraph>(find.text(choice));
+        expect(label.didExceedMaxLines, isFalse, reason: choice);
+      }
+
+      await harness.unmount(tester);
+    });
+  }
+
   testWidgets('Cloudflare Access at first run: the remedy opens the Access '
       'row in the step, and the walk saves Radarr with its token', (
     tester,

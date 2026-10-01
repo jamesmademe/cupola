@@ -67,10 +67,46 @@ class SelectionPills<T> extends StatelessWidget {
     required this.labelBuilder,
     required this.onSelected,
     this.padding = gutter,
-  });
+  }) : _wraps = false;
+
+  /// The pills on as many lines as they need, with no row to scroll.
+  ///
+  /// For a choice the user has to see whole: a setting with a handful of
+  /// answers, where a pill scrolled off the edge is an answer that does not
+  /// exist (the Access row's four, `Custom headers` cut to `Cust…` on a
+  /// 390pt phone). A view switcher keeps the scrolling row, which is the one
+  /// line a section can spare. Sits on its host's gutter, like
+  /// [SelectionPills.flush].
+  const SelectionPills.wrap({
+    super.key,
+    required this.values,
+    required this.selected,
+    required this.labelBuilder,
+    required this.onSelected,
+  }) : padding = flush,
+       _wraps = true;
+
+  final bool _wraps;
 
   @override
   Widget build(BuildContext context) {
+    if (_wraps) {
+      return Padding(
+        padding: padding,
+        child: Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (final value in values)
+              _Pill(
+                label: labelBuilder(value),
+                selected: value == selected,
+                onTap: () => onSelected(value),
+              ),
+          ],
+        ),
+      );
+    }
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: padding,

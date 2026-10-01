@@ -7,6 +7,7 @@ library;
 import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,11 +36,12 @@ Future<(ProfileHarness, ProviderContainer)> _pumpForm(
   String id, {
   AccessKind? initialAccess,
   Future<void> Function(ProviderContainer container)? before,
+  Size surface = _surface,
 }) async {
   final harness = await ProfileHarness.start(profile);
   final container = harness.container();
   if (before != null) await tester.runAsync(() => before(container));
-  await tester.binding.setSurfaceSize(_surface);
+  await tester.binding.setSurfaceSize(surface);
   addTearDown(() => tester.binding.setSurfaceSize(null));
   final service = profile.connection(id).service;
   await tester.pumpWidget(
@@ -107,6 +109,23 @@ bool _selected(WidgetTester tester, String choice) =>
         .isSelected ==
     Tristate.isTrue;
 
+/// Every Access choice drawn inside the [width] of the screen, its label on
+/// one line and uncut.
+void _expectChoicesWhole(WidgetTester tester, double width) {
+  for (final choice in const [
+    'None',
+    'Cloudflare Access',
+    'Password',
+    'Custom headers',
+  ]) {
+    final rect = tester.getRect(find.bySemanticsLabel(choice));
+    expect(rect.left, greaterThanOrEqualTo(0), reason: choice);
+    expect(rect.right, lessThanOrEqualTo(width), reason: choice);
+    final label = tester.renderObject<RenderParagraph>(find.text(choice));
+    expect(label.didExceedMaxLines, isFalse, reason: choice);
+  }
+}
+
 void main() {
   group('the Access row', () {
     testWidgets('offers four choices, None by default', (tester) async {
@@ -130,6 +149,22 @@ void main() {
 
       await harness.unmount(tester);
     });
+
+    for (final width in [320.0, 390.0]) {
+      testWidgets('at ${width.round()}pt every choice is whole on screen, '
+          'none behind a scroll', (tester) async {
+        final (harness, _) = await _pumpForm(
+          tester,
+          Profiles.p3,
+          WorldIds.radarr,
+          surface: Size(width, 2600),
+        );
+
+        _expectChoicesWhole(tester, width);
+
+        await harness.unmount(tester);
+      });
+    }
 
     testWidgets('has no Password where the service signs in with '
         'Authorization, and says why', (tester) async {

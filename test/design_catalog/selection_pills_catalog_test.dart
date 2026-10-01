@@ -68,6 +68,23 @@ void main() {
         ),
         width: 390,
       ),
+      CatalogScene(
+        'SelectionPills.wrap() · a choice that must be seen whole, on a 320pt '
+        'phone: the four Access choices take a second line rather than a '
+        'hidden scroll',
+        (_) => SelectionPills<int>.wrap(
+          values: const [0, 1, 2, 3],
+          selected: 1,
+          labelBuilder: (i) => const [
+            'None',
+            'Cloudflare Access',
+            'Password',
+            'Custom headers',
+          ][i],
+          onSelected: (_) {},
+        ),
+        width: 320,
+      ),
     ],
   );
 }

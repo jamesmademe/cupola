@@ -230,12 +230,13 @@ class _ConnectionAccessFieldsState extends State<ConnectionAccessFields> {
         children: [
           const SettingsSectionLabel('Access'),
           const SizedBox(height: AppSpacing.sm),
-          SelectionPills<AccessKind>(
+          // Wrapped, never scrolled: a choice cut off at the edge of a phone
+          // is a choice the user cannot see.
+          SelectionPills<AccessKind>.wrap(
             values: accessKindsFor(_service),
             selected: _access.kind,
             labelBuilder: (kind) => kind.label,
             onSelected: _access.select,
-            padding: SelectionPills.flush,
           ),
           if (_service.proxyPasswordUnavailable case final why?)
             _note(context, why),

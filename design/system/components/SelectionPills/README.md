@@ -1,12 +1,13 @@
 # SelectionPills
 
-A horizontally scrolling segment row — one selected at a time — for switching views inside a section.
+A horizontally scrolling segment row — one selected at a time — for switching views inside a section; `SelectionPills.wrap` lays the same pills on as many lines as they need, for a choice that must be seen whole.
 
 Rendered from `lib/core/widgets/selection_pills.dart` by `test/design_catalog/selection_pills_catalog_test.dart`.
 
 ## Anatomy
 
 - Row: `SingleChildScrollView` scrolling horizontally; `padding` defaults to `SelectionPills.gutter` — `AppSpacing.lg` leading and trailing inside a row that runs edge to edge, so the first pill sits on the screen gutter and a scrolled pill bleeds off the screen — with `AppSpacing.sm` under the row; pills `AppSpacing.sm` apart. A host already on the gutter (a detail slot, a padded header) passes `SelectionPills.flush` (no side inset, `AppSpacing.sm` under), never wraps the default in a second side padding.
+- Wrap (`SelectionPills.wrap`): no scroll; the pills flow onto further lines, `AppSpacing.sm` apart in both directions, with the `flush` inset (the host is on the gutter). For a setting with a handful of answers, where a pill scrolled off the edge is an answer the user cannot see: the Access row's four choices take a second line on a 320–390pt phone.
 - Pill: minimum height 48 (the stricter of the two platform minimums), padding `AppSpacing.lg` horizontal × `AppSpacing.sm` vertical, `AppRadius.borderRadiusPill` (fully rounded) — the same radius the navigation bar's selected state uses. `AppRadius.pill` and `AppRadius.full` resolve to the same value now; `pill` is the name for the interactive one. Sized by its label, not fixed, so a pill grows with the reading size or a long label instead of overflowing.
 - Label in `textTheme.labelMedium` at weight 600.
 - Unselected: `colorScheme.surfaceContainer` fill, 1px `outlineVariant` border, `onSurfaceVariant` label.
@@ -24,5 +25,6 @@ Each pill is one `Semantics` node: `button: true`, `selected: <bool>`, labelled 
 ## Do / don't
 
 - Do use it for every "which view" choice, on a service page and an aggregate one alike: one selected language for the app.
+- Do use `SelectionPills.wrap` for a choice in a form, whose every answer has to be on screen; keep the scrolling row for a view switcher, where one line is what the section can spare.
 - Don't give it a fixed height: the pill is sized by its label on purpose, so it grows instead of overflowing at a large reading size.
 - Don't reach for `AppRadius.full` on an interactive pill: use `AppRadius.pill`. The two are the same value now, but the names still tell a reader which shape is a control and which is metadata.
