@@ -2102,13 +2102,18 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(
         id: slot.nzoId,
         title: slot.filename,
         progress: slot.progress,
-        // SABnzbd reports what is *left*, not what the job weighs:
-        // `SabnzbdQueueSlot` parses `mbleft` and the response's `mb` is not
-        // modelled at all. So the pair is unknown rather than inferred from
-        // the percentage — a computed total is a number the server never
-        // said, and this row would be the only place in the app printing one.
-        doneBytes: null,
-        totalBytes: null,
+        // The slot's own `mb` (what the job weighs) and `mbleft` (what is
+        // still to come), taken together or not at all: a slot that carried
+        // no usable `mb` reads `—`, never a total inferred from the
+        // percentage.
+        doneBytes: switch (slot.mb) {
+          final double total => ((total - slot.mbLeft) * megabyte).round(),
+          null => null,
+        },
+        totalBytes: switch (slot.mb) {
+          final double total => (total * megabyte).round(),
+          null => null,
+        },
         etaSeconds: parseClockDuration(slot.timeLeft),
         clientLabel: serviceWithConnection(
           ServiceKey.sabnzbd,

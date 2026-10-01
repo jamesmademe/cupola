@@ -432,6 +432,33 @@ void main() {
       );
     });
 
+    test('P1: a SABnzbd job shows what it weighs and how much has come, '
+        'like every other client\'s', () async {
+      final container = await _start(
+        Profiles.p1.withDownloads([
+          const WorldDownload(
+            id: 'SABnzbd_nzo_byhand01',
+            release: 'Agent.327.Making.Of.1080p',
+            client: 'sabnzbd',
+            state: DownloadState.downloading,
+            progress: 0.25,
+            size: 4 * _gb,
+          ),
+        ]),
+      );
+      final inFlight = await container.read(servicesInFlightProvider.future);
+      final job = inFlight.preview.singleWhere(
+        (item) => item.id == 'SABnzbd_nzo_byhand01',
+      );
+
+      expect(job.totalBytes, 4 * _gb);
+      expect(job.doneBytes, _gb);
+      expect(
+        formatDoneOfTotal(doneBytes: job.doneBytes, totalBytes: job.totalBytes),
+        '1.0 of 4.00 GB',
+      );
+    });
+
     testWidgets('P1 on Home, SABnzbd\'s disk full: the stops are counted '
         'under the region', (tester) async {
       final harness = await _pumpHome(
