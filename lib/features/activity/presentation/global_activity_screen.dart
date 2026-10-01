@@ -1360,12 +1360,24 @@ class _StackHealthStrip extends StatelessWidget {
         .where((r) => !r.didNotAnswer)
         .toList(growable: false);
 
+    // Each band in a subtree of its own key. Both lines carry the one
+    // `activity-fault-line` key, so as bare siblings a load with one silent
+    // connection and one refusing connection, both at once, threw "Duplicate
+    // keys found" and took the page down with it.
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (silent.isNotEmpty) _silentBand(context, silent),
-        if (faulted.isNotEmpty) _faultBand(context, faulted),
+        if (silent.isNotEmpty)
+          KeyedSubtree(
+            key: const ValueKey('activity-fault-line.silent'),
+            child: _silentBand(context, silent),
+          ),
+        if (faulted.isNotEmpty)
+          KeyedSubtree(
+            key: const ValueKey('activity-fault-line.faulted'),
+            child: _faultBand(context, faulted),
+          ),
       ],
     );
   }
