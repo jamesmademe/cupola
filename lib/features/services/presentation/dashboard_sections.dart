@@ -258,11 +258,8 @@ class ServicesInFlightSection extends ConsumerWidget {
             if (value.coverage.everySourceFailed) {
               return _SourcesFaultLine(
                 coverage: value.coverage,
-                onRetry: () => _retrySourcesSummaries(
-                  ref,
-                  value.coverage,
-                  then: () => ref.invalidate(servicesQueueProvider),
-                ),
+                onRetry: () =>
+                    retryDashboardServices(ref, value.coverage.failed.keys),
               );
             }
             if (value.preview.isEmpty) {
@@ -387,11 +384,8 @@ class ServicesRecentlyAddedSection extends ConsumerWidget {
             if (data.coverage.everySourceFailed) {
               return _SourcesFaultLine(
                 coverage: data.coverage,
-                onRetry: () => _retrySourcesSummaries(
-                  ref,
-                  data.coverage,
-                  then: () => ref.invalidate(servicesArrHistoryProvider),
-                ),
+                onRetry: () =>
+                    retryDashboardServices(ref, data.coverage.failed.keys),
               );
             }
             if (data.items.isEmpty) {
@@ -1397,6 +1391,11 @@ class _CoverageNote extends StatelessWidget {
 /// refused key among them is said in its own words. Amber when every one of
 /// them answered with a fault. Never a coloured box: the presence rule keeps
 /// the tone on the glyph and the recovery verb in ink.
+///
+/// Its Retry is `retryDashboardServices` over the failed sources, never the
+/// summary or the merge alone: both re-read an answer already in the cache —
+/// the probe behind the summary, the client queues behind the merge — so the
+/// line used to outlive the recovery it was asking about.
 class _SourcesFaultLine extends StatelessWidget {
   const _SourcesFaultLine({required this.coverage, required this.onRetry});
 
@@ -1410,20 +1409,6 @@ class _SourcesFaultLine extends StatelessWidget {
         ? FaultBand.section(message: message, onRetry: onRetry)
         : FaultBand.partial(message: message, onRetry: onRetry);
   }
-}
-
-/// Re-asks the probes of the sources that failed, then [then].
-void _retrySourcesSummaries(
-  WidgetRef ref,
-  SourceCoverage coverage, {
-  required VoidCallback then,
-}) {
-  // Re-check the connections as well: refreshing only the list would leave
-  // the stack above insisting the services are down.
-  for (final service in coverage.failed.keys) {
-    ref.invalidate(serviceSummaryProvider(service));
-  }
-  then();
 }
 
 /// Skeleton placeholder for one decision row while the merge resolves.
