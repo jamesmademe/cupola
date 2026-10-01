@@ -183,6 +183,7 @@ class DashboardDecision {
     this.connectionName,
     this.actionInstanceId = '',
     this.importPath,
+    this.reason,
   });
 
   final DecisionKind kind;
@@ -251,6 +252,12 @@ class DashboardDecision {
   /// Where the download sits on disk, for a manual import to be seeded from.
   /// The queue record's `outputPath`, raw; the control derives the folder.
   final String? importPath;
+
+  /// Why it is waiting, in one clause, when its source said: `Disk full`,
+  /// `Password needed`, the client's own message. Already the first clause
+  /// of [detail]; kept apart so a folded row ([groupDecisions]) can carry it
+  /// when every member shares it. Null when the source gave no cause.
+  final String? reason;
 
   bool get isFault => kind.isFault;
 
@@ -350,10 +357,16 @@ DashboardDecision _groupOf(List<DashboardDecision> members) {
     ].join('-'),
     service: first.service,
     title: _groupTitle(first.kind, count),
+    // The members' cause, first as it is on each of their own rows, when they
+    // all share it: `Disk full · Radarr 4K · Elephants Dream, Sintel`. When
+    // they differ, no one member's cause stands for the rest, and the count
+    // in the title is all the row says.
     detail: joinDisplayParts([
+      shared((member) => member.reason),
       serviceWithConnection(first.service, first.connectionName, joiner: ' '),
       _titlesSummary([for (final member in members) member.title]),
     ]),
+    reason: shared((member) => member.reason),
     occurredAt: oldest,
     // The service that raised them, where the whole group is listed. No one
     // member's page stands for the rest.

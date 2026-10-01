@@ -2927,6 +2927,9 @@ DashboardDecision _queueFaultDecision(ServiceQueueItem item) {
   final isClientRow = item.clientService == item.service;
   return DashboardDecision(
     kind: DecisionKind.stalledDownload,
+    // The cause, when the source gave one: what a folded row of several keeps
+    // if they all share it.
+    reason: item.warning,
     id: 'stall-${item.service.routeParam}-${item.instanceId}-${item.id}',
     service: item.service,
     title: item.title,

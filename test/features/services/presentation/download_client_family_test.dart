@@ -472,6 +472,8 @@ void main() {
 
       // Big Buck Bunny, and the two jobs the disk stopped.
       expect(_inFlight(find.textContaining('3 stuck')), findsOneWidget);
+      // The 4K's two stops fold into one row, which keeps their shared cause.
+      expect(find.textContaining('Disk full'), findsOneWidget);
 
       await harness.unmount(tester);
     });

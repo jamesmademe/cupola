@@ -202,6 +202,37 @@ void main() {
       );
     });
 
+    test('a folded row keeps the cause every member shares, and only '
+        'then', () {
+      List<DashboardDecision> stalls(List<String?> reasons) => [
+        for (final (i, reason) in reasons.indexed)
+          _decision(
+            DecisionKind.stalledDownload,
+            'Film $i',
+            at: null,
+            requires: ServiceKey.sabnzbd,
+            reason: reason,
+          ),
+      ];
+
+      final shared = groupDecisions(
+        stalls(['Disk full', 'Disk full', 'Disk full']),
+      ).single;
+      expect(shared.title, '3 stuck downloads');
+      expect(shared.detail, 'Disk full · Radarr · Film 0, Film 1 and 1 more');
+      expect(shared.reason, 'Disk full');
+
+      final differing = groupDecisions(
+        stalls(['Disk full', 'Password needed']),
+      ).single;
+      expect(differing.title, '2 stuck downloads');
+      expect(differing.detail, 'Radarr · Film 0, Film 1');
+      expect(differing.reason, isNull);
+
+      // A member that gave no cause is not one that shares it.
+      expect(groupDecisions(stalls(['Disk full', null])).single.reason, isNull);
+    });
+
     test('a lone fault stays itself', () {
       final lone = _decision(
         DecisionKind.importBlocked,
@@ -390,6 +421,7 @@ DashboardDecision _decision(
   String instanceId = '',
   int? actionId,
   String? importPath,
+  String? reason,
 }) => DashboardDecision(
   kind: kind,
   id: '$kind-$title',
@@ -401,4 +433,5 @@ DashboardDecision _decision(
   instanceId: instanceId,
   actionId: actionId,
   importPath: importPath,
+  reason: reason,
 );
