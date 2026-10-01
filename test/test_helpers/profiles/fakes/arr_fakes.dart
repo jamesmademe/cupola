@@ -560,20 +560,39 @@ class SonarrFake extends ArrFake {
     ];
   }
 
+  /// The id Sonarr gives episode [episode] of season [season] of series
+  /// [seriesId]: Cosmos Laundromat's are its episode list's, 1001 onwards;
+  /// another series' sit in their own thousand (Night Shift's S2 E5, on the
+  /// calendar, is 2105).
+  static int episodeIdOf(int seriesId, int season, int episode) => seriesId == 1
+      ? 1000 + (season - 1) * 10 + episode
+      : seriesId * 1000 + (season - 1) * 100 + episode;
+
+  /// The series this Sonarr holds [title] under, as its id and its record.
+  (int, JsonMap)? _seriesFor(ServerContext c, WorldTitle? title) {
+    for (final (id, t) in _library(c)) {
+      if (t == title) return (id, _series(c, id, t));
+    }
+    return null;
+  }
+
+  /// Each record names its own series and episode: Night Shift's are Night
+  /// Shift's, never Cosmos Laundromat's.
   @override
-  List<JsonMap> queue(ServerContext c) {
-    final cosmos = _series(c, 1, WorldTitles.cosmosLaundromat);
-    return [
-      for (final (i, d) in arrDownloads(c).indexed)
+  List<JsonMap> queue(ServerContext c) => [
+    for (final (i, d) in arrDownloads(c).indexed)
+      if (_seriesFor(c, d.title) case final held)
         arrQueueRecord(
           c,
           d,
           index: i + 1,
           media: 'series',
-          item: _anime(c) ? null : cosmos,
+          item: held?.$2,
+          episodeId: held == null || d.season == null || d.episode == null
+              ? null
+              : episodeIdOf(held.$1, d.season!, d.episode!),
         ),
-    ];
-  }
+  ];
 
   @override
   List<JsonMap> history(ServerContext c) => _anime(c)
@@ -628,15 +647,18 @@ class SonarrFake extends ArrFake {
   }) {
     final base = super.manualImportItem(c, d, id: id);
     final placed = d.season != null && d.episode != null;
+    final (seriesId, series) =
+        _seriesFor(c, d.title) ??
+        (1, _series(c, 1, WorldTitles.cosmosLaundromat));
     return {
       ...base,
-      'series': _series(c, 1, WorldTitles.cosmosLaundromat),
+      'series': series,
       if (placed) 'seasonNumber': d.season,
       'episodes': placed
           ? [
               {
-                'id': 1000 + (d.season! - 1) * 10 + d.episode!,
-                'seriesId': 1,
+                'id': episodeIdOf(seriesId, d.season!, d.episode!),
+                'seriesId': seriesId,
                 'seasonNumber': d.season,
                 'episodeNumber': d.episode,
                 'title': 'Episode ${d.episode}',
@@ -1012,6 +1034,7 @@ Map<String, Object?> arrQueueRecord(
   required int index,
   required String media,
   Map<String, Object?>? item,
+  int? episodeId,
 }) {
   final (status, trackedStatus, trackedState, messages) = switch (d.state) {
     DownloadState.stuck => (
@@ -1054,11 +1077,10 @@ Map<String, Object?> arrQueueRecord(
     if (media == 'series') 'seriesId': item?['id'],
     if (media == 'series' && item != null) 'series': item,
     if (media == 'series' && d.season != null) 'seasonNumber': d.season,
-    if (media == 'series' && d.episode != null)
-      'episodeId': 1000 + (d.season! - 1) * 10 + d.episode!,
-    if (media == 'series' && d.episode != null)
+    if (media == 'series' && episodeId != null) 'episodeId': episodeId,
+    if (media == 'series' && episodeId != null)
       'episode': {
-        'id': 1000 + (d.season! - 1) * 10 + d.episode!,
+        'id': episodeId,
         'seriesId': item?['id'],
         'seasonNumber': d.season,
         'episodeNumber': d.episode,

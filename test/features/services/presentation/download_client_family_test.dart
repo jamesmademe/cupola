@@ -136,6 +136,9 @@ void main() {
             WorldDownloads.nightShiftTransmission.id,
       );
       expect(nightShift.service, ServiceKey.sonarr);
+      // Night Shift's own record: series 2, never Cosmos Laundromat.
+      expect(nightShift.title, startsWith('Night Shift · S'));
+      expect(nightShift.mediaId, 2);
       expect(nightShift.clientService, ServiceKey.transmission);
       expect(nightShift.clientInstanceId, WorldIds.transmission);
       expect(nightShift.etaSeconds, 240);
