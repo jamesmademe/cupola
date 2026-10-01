@@ -113,6 +113,60 @@ void main() {
     });
   });
 
+  group('a refresh of the episodes that fails', () {
+    testWidgets('keeps the episodes it had, under a line with Retry', (
+      tester,
+    ) async {
+      var episodesFail = false;
+      final harness = await _pump(
+        tester,
+        Profiles.p7,
+        const SeriesDetailScreen(seriesId: 1, heroTag: 'series-1'),
+        routes: (network) => network.on(
+          WorldIds.sonarr,
+          'GET',
+          '/api/v3/episode',
+          (_) => episodesFail
+              ? NetworkReply.json({'message': 'boom'}, status: 500)
+              : null,
+        ),
+      );
+      expect(find.byType(MediaChildTile), findsWidgets);
+
+      episodesFail = true;
+      await tester
+          .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+          .onRefresh();
+      await harness.settle(tester);
+
+      // The series answered, so no page band; the rows stay, and the line
+      // above them says what they are.
+      expect(find.byType(FaultBand), findsNothing);
+      expect(find.byType(AppErrorState), findsNothing);
+      expect(find.byType(MediaChildTile), findsWidgets);
+      final line = find.text(
+        'Sonarr answered with an error, so these are the episodes it listed '
+        'last.',
+      );
+      expect(line, findsOneWidget);
+
+      episodesFail = false;
+      final retry = find.descendant(
+        of: find.byType(InlineErrorRetry),
+        matching: find.text('Retry'),
+      );
+      await tester.ensureVisible(retry);
+      await harness.settle(tester);
+      await tester.tap(retry);
+      await harness.settle(tester);
+
+      expect(line, findsNothing);
+      expect(find.byType(MediaChildTile), findsWidgets);
+
+      await harness.unmount(tester);
+    });
+  });
+
   group('a Sonarr that does not answer', () {
     final sonarrDown = Profiles.p7.withBehaviour(
       WorldIds.sonarr,

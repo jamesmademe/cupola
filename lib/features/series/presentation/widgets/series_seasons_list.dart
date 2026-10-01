@@ -123,7 +123,9 @@ class SeriesSeasonsList extends StatelessWidget {
 
   Map<int, List<SonarrEpisode>> _episodesBySeason() {
     final bySeason = <int, List<SonarrEpisode>>{};
-    for (final episode in episodesAsync.asData?.value ?? const []) {
+    // `value`, not `asData`: a refresh that failed keeps the episodes it
+    // already had. The page says the read failed above the list.
+    for (final episode in episodesAsync.value ?? const []) {
       bySeason.putIfAbsent(episode.seasonNumber, () => []).add(episode);
     }
     for (final episodes in bySeason.values) {
@@ -138,12 +140,14 @@ class SeriesSeasonsList extends StatelessWidget {
     MediaChildGroup group,
     Map<int, List<SonarrEpisode>> episodesBySeason,
   ) {
-    final loaded = episodesAsync.asData;
-    if (loaded == null && episodesAsync.isLoading) {
+    // Only with nothing to show: a failed or running refresh over episodes
+    // already read keeps them on screen.
+    final loaded = episodesAsync.hasValue;
+    if (!loaded && episodesAsync.isLoading) {
       return const _EpisodesLoading();
     }
 
-    if (loaded == null && episodesAsync.hasError) {
+    if (!loaded && episodesAsync.hasError) {
       return AppErrorState.compact(
         error: episodesAsync.error ?? 'Unknown error',
         serviceName: 'Sonarr',

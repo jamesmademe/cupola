@@ -374,6 +374,12 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
           )
         : null;
     final counts = viewModel.diskCounts;
+    // The episodes alone, on the key the page watches them under: the series
+    // above them answered, so asking for it again would only repaint what is
+    // already right.
+    void retryEpisodes() => ref.invalidate(
+      seriesEpisodesForProvider((instanceId: _instanceId, id: widget.seriesId)),
+    );
 
     return MediaDetailBody(
       // Sonarr's column, and it is not Radarr's. The wide track is the season
@@ -445,15 +451,43 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
             // State at the point of intent: a live search for this title's
             // primary target rewrites what the action would have promised. The
             // caller owns this box's gutter — see MediaDetailSlot.leadingBox.
-            leadingBox: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: ReleaseSearchStatusCard(
-                target: sonarrSeasonTarget(
-                  seriesId: widget.seriesId,
-                  seasonNumber: null,
-                  label: truncateTitle(viewModel.title),
+            leadingBox: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
+                  child: ReleaseSearchStatusCard(
+                    target: sonarrSeasonTarget(
+                      seriesId: widget.seriesId,
+                      seasonNumber: null,
+                      label: truncateTitle(viewModel.title),
+                    ),
+                  ),
                 ),
-              ),
+                // A refresh of the episodes failed over episodes already read:
+                // the list keeps them, and this says they are the last ones
+                // Sonarr gave. Here rather than inside the list because this
+                // box owns its gutter, so the line lands on the column edge.
+                if (episodesAsync.hasValue && episodesAsync.hasError)
+                  InlineErrorRetry(
+                    message: sectionFailureMessage(
+                      ServiceKey.sonarr,
+                      episodesAsync.error,
+                      subject: ref.watch(
+                        currentSettingsProvider.select(
+                          (s) =>
+                              s.connectionTitle(_instanceId, ServiceKey.sonarr),
+                        ),
+                      ),
+                      consequence: 'these are the episodes it listed last',
+                    ),
+                    error: episodesAsync.error,
+                    onRetry: retryEpisodes,
+                  ),
+              ],
             ),
             // A lazy sliver mid-page: a 250-episode season builds the rows on
             // screen instead of all 250 inside one box adapter.
@@ -500,15 +534,7 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
                   ),
               searchingSeasons: _searchingSeasons,
               searchingEpisodes: _searchingEpisodes,
-              // The episodes alone, on the key the page watches them under:
-              // the series above them answered, so asking for it again would
-              // only repaint what is already right.
-              onRetryEpisodes: () => ref.invalidate(
-                seriesEpisodesForProvider((
-                  instanceId: _instanceId,
-                  id: widget.seriesId,
-                )),
-              ),
+              onRetryEpisodes: retryEpisodes,
             ),
           ),
           if (viewModel.hasFiles && viewModel.path != null)
