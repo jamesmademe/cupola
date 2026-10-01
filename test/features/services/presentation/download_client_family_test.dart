@@ -411,26 +411,30 @@ void main() {
       );
     });
 
-    test('P1: a job SABnzbd paused itself is a decision in its words; the '
-        'answering queue stays in flight', () async {
-      final container = await _start(
-        Profiles.p1.withDownloads([_sabEncrypted]),
-      );
-      final inFlight = await container.read(servicesInFlightProvider.future);
+    test(
+      'P1: a job SABnzbd paused itself is a decision in the house words; the '
+      'answering queue stays in flight',
+      () async {
+        final container = await _start(
+          Profiles.p1.withDownloads([_sabEncrypted]),
+        );
+        final inFlight = await container.read(servicesInFlightProvider.future);
 
-      final held = inFlight.faults.singleWhere(
-        (item) => item.id == _sabEncrypted.id,
-      );
-      expect(held.service, ServiceKey.sabnzbd);
-      expect(held.fault, InFlightFault.stalled);
-      expect(held.warning, 'ENCRYPTED');
-      expect(
-        inFlight.preview.where(
-          (item) => item.downloadId == WorldDownloads.elephantsDream4k.id,
-        ),
-        hasLength(1),
-      );
-    });
+        final held = inFlight.faults.singleWhere(
+          (item) => item.id == _sabEncrypted.id,
+        );
+        expect(held.service, ServiceKey.sabnzbd);
+        expect(held.fault, InFlightFault.stalled);
+        // SABnzbd's ENCRYPTED, in the word NZBGet's own case uses.
+        expect(held.warning, 'Password needed');
+        expect(
+          inFlight.preview.where(
+            (item) => item.downloadId == WorldDownloads.elephantsDream4k.id,
+          ),
+          hasLength(1),
+        );
+      },
+    );
 
     test('P1: a SABnzbd job shows what it weighs and how much has come, '
         'like every other client\'s', () async {

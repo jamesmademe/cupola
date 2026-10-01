@@ -240,13 +240,50 @@ void main() {
       expect(plain.downloadDiskFreeGb, isNull);
     });
 
-    test('a job SABnzbd paused itself is a stall in its own words', () {
+    test('a job SABnzbd paused itself is a stall, in the house words', () {
       expect(
         sabnzbdSlotInFlight(
           slot(status: 'Paused', labels: ['ENCRYPTED']),
           stoppedByDisk: false,
         ),
-        const InFlightReading.fault(InFlightFault.stalled, reason: 'ENCRYPTED'),
+        const InFlightReading.fault(
+          InFlightFault.stalled,
+          reason: 'Password needed',
+        ),
+      );
+      expect(
+        sabnzbdSlotInFlight(
+          slot(status: 'Paused', labels: ['DUPLICATE', 'TOO LARGE']),
+          stoppedByDisk: false,
+        ),
+        const InFlightReading.fault(
+          InFlightFault.stalled,
+          reason: 'Duplicate · Too large',
+        ),
+      );
+    });
+
+    test('every documented label has its word; a wait is no fault; an '
+        'unknown label stays as sent', () {
+      expect(sabnzbdLabelReason('ENCRYPTED'), passwordNeededReason);
+      expect(sabnzbdLabelReason('DUPLICATE'), 'Duplicate');
+      expect(sabnzbdLabelReason('TOO LARGE'), 'Too large');
+      expect(sabnzbdLabelReason('INCOMPLETE'), 'Incomplete');
+      expect(sabnzbdLabelReason('UNWANTED'), 'Unwanted file type');
+      expect(sabnzbdLabelReason('ALTERNATIVE'), isNull);
+      expect(sabnzbdLabelReason('WAIT 12 sec'), isNull);
+      expect(sabnzbdLabelReason('PROPAGATING 5 min'), isNull);
+      // SABnzbd in German, say: not ours to translate.
+      expect(sabnzbdLabelReason('VERSCHLÜSSELT'), 'VERSCHLÜSSELT');
+    });
+
+    test('a job paused only to wait out propagation stays a transfer', () {
+      expect(
+        sabnzbdSlotInFlight(
+          slot(status: 'Paused', labels: ['PROPAGATING 5 min']),
+          stoppedByDisk: false,
+        ),
+        const InFlightReading.moving(),
       );
     });
 
@@ -330,7 +367,7 @@ void main() {
           ),
           const InFlightReading.fault(
             InFlightFault.failed,
-            reason: nzbgetBeyondRepair,
+            reason: beyondRepairReason,
           ),
           reason: status,
         );
@@ -347,14 +384,14 @@ void main() {
         read(par: 'FAILURE'),
         const InFlightReading.fault(
           InFlightFault.failed,
-          reason: nzbgetRepairFailed,
+          reason: repairFailedReason,
         ),
       );
       expect(
         read(unpack: 'FAILURE'),
         const InFlightReading.fault(
           InFlightFault.failed,
-          reason: nzbgetUnpackFailed,
+          reason: unpackFailedReason,
         ),
       );
       expect(
@@ -368,7 +405,7 @@ void main() {
         read(unpack: 'PASSWORD'),
         const InFlightReading.fault(
           InFlightFault.failed,
-          reason: nzbgetPasswordNeeded,
+          reason: passwordNeededReason,
         ),
       );
       expect(

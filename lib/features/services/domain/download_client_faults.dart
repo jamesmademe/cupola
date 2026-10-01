@@ -142,24 +142,65 @@ bool usenetQueueStoppedByDisk({
   return smallest != null && freeBytes < smallest;
 }
 
+/// What one of SABnzbd's job `labels` says about a paused job, in the house
+/// words: the reason it was held, or null for a label that marks a wait.
+///
+/// SABnzbd's set (`NzbObject.labels`, `sabnzbd/nzb/object.py`), and which
+/// of them it pauses a job for:
+///
+/// * `ENCRYPTED`: an encrypted archive, paused when `pause_on_pwrar` is set
+///   (`assembler.py`). [passwordNeededReason], NZBGet's word for the same.
+/// * `DUPLICATE`: a job it already has, paused by the duplicate check.
+/// * `TOO LARGE`: over the configured size, paused on arrival.
+/// * `INCOMPLETE`: an NZB missing files, paused when incomplete NZBs are
+///   allowed.
+/// * `UNWANTED`: an unwanted file type, paused when that is the configured
+///   action.
+/// * `ALTERNATIVE`, `WAIT n sec`, `PROPAGATING n min`: a spare kept by the
+///   duplicate check, a URL fetch waiting its turn, Usenet's propagation
+///   delay. Waits by design, not faults.
+///
+/// SABnzbd translates its labels into its own language. One it does not
+/// document, or a translated one, is kept exactly as sent: a machine string,
+/// never rewritten by a guess.
+String? sabnzbdLabelReason(String label) {
+  final value = label.trim();
+  final upper = value.toUpperCase();
+  if (upper.startsWith('WAIT ') || upper.startsWith('PROPAGATING ')) {
+    return null;
+  }
+  return switch (upper) {
+    'ALTERNATIVE' => null,
+    'ENCRYPTED' => passwordNeededReason,
+    'DUPLICATE' => duplicateReason,
+    'TOO LARGE' => tooLargeReason,
+    'INCOMPLETE' => incompleteReason,
+    'UNWANTED' => unwantedFileReason,
+    _ => value.isEmpty ? null : value,
+  };
+}
+
 /// A SABnzbd queue slot (`mode=queue`), read. Every slot is in flight: the
 /// queue holds only jobs still to fetch.
 ///
-/// * A slot `status` of `Paused` carrying `labels` is a job SABnzbd paused
-///   itself for the reason it labels (`ENCRYPTED`, `DUPLICATE`, `TOO LARGE`),
-///   waiting on a person: a stall, in SABnzbd's words. A paused slot with no
-///   label is somebody's pause and stays a transfer.
+/// * A slot `status` of `Paused` carrying a label SABnzbd pauses for
+///   ([sabnzbdLabelReason]) is a job SABnzbd held itself, waiting on a
+///   person: a stall, in the house words. A paused slot with no such label is
+///   somebody's pause and stays a transfer.
 /// * [stoppedByDisk] ([usenetQueueStoppedByDisk]) stalls every other job.
 InFlightReading sabnzbdSlotInFlight(
   SabnzbdQueueSlot slot, {
   required bool stoppedByDisk,
 }) {
   if (slot.status.toLowerCase() == 'paused') {
-    return slot.labels.isEmpty
+    final reasons = [
+      for (final label in slot.labels) ?sabnzbdLabelReason(label),
+    ];
+    return reasons.isEmpty
         ? const InFlightReading.moving()
         : InFlightReading.fault(
             InFlightFault.stalled,
-            reason: slot.labels.join(' · '),
+            reason: reasons.toSet().join(' · '),
           );
   }
   if (stoppedByDisk) {
@@ -179,17 +220,33 @@ bool nzbgetIsFetching(String status) => switch (status.toUpperCase()) {
   _ => false,
 };
 
-/// What a group that cannot be repaired says.
-const String nzbgetBeyondRepair = 'Damaged beyond repair';
+/// A download that cannot be repaired: an NZBGet group below its critical
+/// health.
+const String beyondRepairReason = 'Damaged beyond repair';
 
-/// What a group whose par repair failed says.
-const String nzbgetRepairFailed = 'Repair failed';
+/// An NZBGet group whose par repair failed.
+const String repairFailedReason = 'Repair failed';
 
-/// What a group whose unpack failed says.
-const String nzbgetUnpackFailed = 'Unpack failed';
+/// An NZBGet group whose unpack failed.
+const String unpackFailedReason = 'Unpack failed';
 
-/// What a group whose unpack wants a password says.
-const String nzbgetPasswordNeeded = 'Password needed';
+/// A download whose archive wants a password: NZBGet's unpack `PASSWORD`,
+/// SABnzbd's `ENCRYPTED`.
+const String passwordNeededReason = 'Password needed';
+
+/// A job its client holds as a copy of one it already has: SABnzbd's
+/// `DUPLICATE`.
+const String duplicateReason = 'Duplicate';
+
+/// A job over the size its client is set to take: SABnzbd's `TOO LARGE`.
+const String tooLargeReason = 'Too large';
+
+/// A job whose NZB lacks some of its files: SABnzbd's `INCOMPLETE`.
+const String incompleteReason = 'Incomplete';
+
+/// A job carrying a file type its client is set to refuse: SABnzbd's
+/// `UNWANTED`.
+const String unwantedFileReason = 'Unwanted file type';
 
 /// An NZBGet group (`listgroups`), read. Every group is in flight: the queue
 /// holds only jobs NZBGet has not moved to its history.
@@ -210,20 +267,20 @@ InFlightReading nzbgetGroupInFlight(
   if (health != null && critical != null && health < critical) {
     return const InFlightReading.fault(
       InFlightFault.failed,
-      reason: nzbgetBeyondRepair,
+      reason: beyondRepairReason,
     );
   }
   if (group.parStatus == 'FAILURE') {
     return const InFlightReading.fault(
       InFlightFault.failed,
-      reason: nzbgetRepairFailed,
+      reason: repairFailedReason,
     );
   }
   switch (group.unpackStatus) {
     case 'FAILURE':
       return const InFlightReading.fault(
         InFlightFault.failed,
-        reason: nzbgetUnpackFailed,
+        reason: unpackFailedReason,
       );
     case 'SPACE':
       return const InFlightReading.fault(
@@ -233,7 +290,7 @@ InFlightReading nzbgetGroupInFlight(
     case 'PASSWORD':
       return const InFlightReading.fault(
         InFlightFault.failed,
-        reason: nzbgetPasswordNeeded,
+        reason: passwordNeededReason,
       );
   }
   final status = group.status.toUpperCase();
