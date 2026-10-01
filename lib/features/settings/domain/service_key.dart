@@ -358,15 +358,19 @@ extension ServiceKeyExtension on ServiceKey {
   bool get hasScopedCredential => switch (this) {
     // An Unraid key carries roles and per-resource actions; a TrueNAS key
     // carries its user's roles; an NPM account carries a role and a
-    // per-resource permission map. All three can read and not write.
+    // per-resource permission map. All three can read and not write. A Plex
+    // token is a person's: a shared account's reads the libraries and is
+    // refused who is watching, which only the owner's sees
+    // (`plex_capability.dart`).
     ServiceKey.unraid ||
     ServiceKey.truenas ||
-    ServiceKey.nginxProxyManager => true,
+    ServiceKey.nginxProxyManager ||
+    ServiceKey.plex => true,
     // Jellyfin's slot can hold a non-admin user's token, but a non-admin is
     // only ever shown sessions it may control, so no write Cupola draws can be
-    // refused (see `jellyfin_client.dart`). Plex's owner-versus-shared token is
-    // real but has no documented probe.
-    ServiceKey.jellyfin || ServiceKey.plex => false,
+    // refused (see `jellyfin_client.dart`). What it loses are reads, a read
+    // scope `jellyfin_provider.dart` answers.
+    ServiceKey.jellyfin => false,
     // One key compared for equality, or one account with no role: nothing to
     // be narrower than. SABnzbd's NZB key and NZBGet's add-only user are
     // narrower, but they cannot *read* either, which makes them a connection
@@ -389,8 +393,12 @@ extension ServiceKeyExtension on ServiceKey {
   /// an *account* with a role, everything else here hands out a *key*.
   ///
   /// One getter so no banner, hint or toast picks the noun for itself.
-  String get capabilityCredentialNoun =>
-      this == ServiceKey.nginxProxyManager ? 'account' : 'key';
+  String get capabilityCredentialNoun => switch (this) {
+    ServiceKey.nginxProxyManager => 'account',
+    // What Plex and the connection form call it.
+    ServiceKey.plex => 'token',
+    _ => 'key',
+  };
 
   /// The verb that fixes a credential too narrow for a write. NPM hands out a
   /// role on an account, not a key, and "Update the key" would send the user

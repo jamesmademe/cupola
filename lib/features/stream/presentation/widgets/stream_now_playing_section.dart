@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/plex/presentation/plex_capability.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -55,6 +57,27 @@ class StreamNowPlayingSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // A Plex token refused the sessions may be a shared account's, which is
+    // not a fault: only the owner's token sees who is watching. The probe
+    // says whose it is; until it has, the region keeps loading rather than
+    // drawing a refusal it may take back a moment later.
+    var value = sessions;
+    var ownerOnly = false;
+    if (service == ServiceKey.plex && sessions.hasError && !sessions.hasValue) {
+      switch (plexSessionsRefusal(
+        ref,
+        capabilityConnectionId(ref, ServiceKey.plex),
+        sessions.error,
+      )) {
+        case PlexSessionsRefusal.ownerOnly:
+          ownerOnly = true;
+        case PlexSessionsRefusal.pending:
+          value = const AsyncLoading<List<StreamSession>>();
+        case PlexSessionsRefusal.failure:
+          break;
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -62,43 +85,49 @@ class StreamNowPlayingSection extends ConsumerWidget {
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: SectionHeader(title: 'Now playing', showChevron: false),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: AsyncValueWidget<List<StreamSession>>(
-            value: sessions,
-            serviceName: service.title,
-            onRetry: () {
-              if (service == ServiceKey.jellyfin) {
-                ref.invalidate(jellyfinSessionsProvider);
-              } else {
-                ref.invalidate(plexSessionsProvider);
-              }
-            },
-            isEmpty: (list) => list.isEmpty,
-            emptyBuilder: const _IdleRoom(),
-            data: (list) => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var i = 0; i < list.length; i++)
-                  Padding(
-                    padding: EdgeInsets.only(
-                      bottom: i == list.length - 1 ? 0 : AppSpacing.md,
-                    ),
-                    child: StaggeredEntrance(
-                      index: i,
-                      child: StreamSessionCard(
-                        session: list[i],
-                        accent: service.accent,
-                        onStop: _stopHandler(context, ref, list[i]),
-                        onTogglePause: _pauseHandler(context, ref, list[i]),
-                        onMessage: _messageHandler(context, ref, list[i]),
+        if (ownerOnly)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: PlexOwnerOnlyNote(),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: AsyncValueWidget<List<StreamSession>>(
+              value: value,
+              serviceName: service.title,
+              onRetry: () {
+                if (service == ServiceKey.jellyfin) {
+                  ref.invalidate(jellyfinSessionsProvider);
+                } else {
+                  ref.invalidate(plexSessionsProvider);
+                }
+              },
+              isEmpty: (list) => list.isEmpty,
+              emptyBuilder: const _IdleRoom(),
+              data: (list) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < list.length; i++)
+                    Padding(
+                      padding: EdgeInsets.only(
+                        bottom: i == list.length - 1 ? 0 : AppSpacing.md,
+                      ),
+                      child: StaggeredEntrance(
+                        index: i,
+                        child: StreamSessionCard(
+                          session: list[i],
+                          accent: service.accent,
+                          onStop: _stopHandler(context, ref, list[i]),
+                          onTogglePause: _pauseHandler(context, ref, list[i]),
+                          onMessage: _messageHandler(context, ref, list[i]),
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
       ],
     );
   }

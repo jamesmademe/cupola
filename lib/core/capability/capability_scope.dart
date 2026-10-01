@@ -8,6 +8,12 @@
 /// press it, and report the refusal as if something had broken. Nothing broke.
 /// The credential is doing exactly what it was issued to do.
 ///
+/// Plex is a fourth, with a narrower answer. A token is a person's: the
+/// owner's reads who is watching, and a shared account's is refused it while
+/// the libraries read. Its probe answers `partial({})` for the second, and
+/// what that costs is a read, so Plex owes no banner and dims no write: Now
+/// playing says, in blue, that only the owner sees it.
+///
 /// Jellyfin is deliberately not one of them. Its slot can hold a non-admin
 /// user's token, but every session control Cupola draws is on a session that
 /// token may control — a non-admin is only ever *shown* sessions it owns — so

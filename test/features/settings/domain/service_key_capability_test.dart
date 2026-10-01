@@ -4,11 +4,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
   group('hasScopedCredential', () {
-    test('is true for exactly Unraid, TrueNAS and Nginx Proxy Manager', () {
+    test('is true for exactly Unraid, TrueNAS, Nginx Proxy Manager and '
+        'Plex', () {
       expect(ServiceKey.values.where((s) => s.hasScopedCredential).toSet(), {
         ServiceKey.unraid,
         ServiceKey.truenas,
         ServiceKey.nginxProxyManager,
+        // A shared account's token is refused who is watching.
+        ServiceKey.plex,
       });
     });
 
@@ -27,6 +30,10 @@ void main() {
         expect(service.capabilityFixLabel, 'Update the key');
         expect(service.capabilityCredentialNoun, 'key');
       }
+    });
+
+    test('a Plex credential is a token, as Plex and its form call it', () {
+      expect(ServiceKey.plex.capabilityCredentialNoun, 'token');
     });
   });
 }

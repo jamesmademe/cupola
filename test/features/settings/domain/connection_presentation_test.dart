@@ -319,6 +319,17 @@ void main() {
       );
     });
 
+    test('a Plex token that reads and is refused the sessions is a shared '
+        'account\'s', () {
+      expect(
+        credentialScopeQualifier(
+          ServiceKey.plex,
+          const CapabilityGrant.partial({}),
+        ),
+        'shared account',
+      );
+    });
+
     test('nothing is claimed that nobody established', () {
       for (final grant in const [
         CapabilityGrant.unanswered(),

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/plex/presentation/plex_capability.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -72,6 +73,13 @@ List<({StreamConnection key, String? name})> _streamConnections(Ref ref) {
   ];
 }
 
+/// Whether a connection whose sessions read failed is a Plex holding a shared
+/// account's token: not a server that is down or refused, one whose sessions
+/// only the owner sees. Asks the probe.
+Future<bool> _ownerOnly(Ref ref, StreamConnection key, Object error) async =>
+    key.service == ServiceKey.plex &&
+    await plexSessionsOwnerOnly(ref, key.instanceId, error);
+
 /// Every live playback across every connection of both media servers, most
 /// expensive first.
 ///
@@ -131,6 +139,9 @@ final streamActivityProvider = FutureProvider<List<StreamActivityRow>>((
         ),
       );
     } catch (error, stack) {
+      // A shared account's Plex is not a failure, and is named by
+      // [streamActivityOwnerOnlyProvider] instead.
+      if (await _ownerOnly(ref, connection.key, error)) continue;
       // Reported through streamActivityOfflineProvider rather than thrown: one
       // dark server must not hide the other's sessions.
       failure = error;
@@ -185,7 +196,10 @@ final streamActivityOfflineProvider = FutureProvider<List<StreamOfflineSource>>(
     for (final connection in _streamConnections(ref)) {
       try {
         await ref.watch(streamSessionsForProvider(connection.key).future);
-      } catch (_) {
+      } catch (error) {
+        // Answered and refused only the sessions: named in blue by
+        // [streamActivityOwnerOnlyProvider], never as a server that is down.
+        if (await _ownerOnly(ref, connection.key, error)) continue;
         offline.add((
           service: connection.key.service,
           instanceId: connection.key.instanceId,
@@ -202,6 +216,38 @@ final streamActivityOfflineProvider = FutureProvider<List<StreamOfflineSource>>(
   },
   retry: noProviderRetry,
 );
+
+/// A Plex connection whose sessions only the owner's token sees.
+///
+/// [server] is what the note calls it once the household has two Plex
+/// servers (`Plex Cabin`), and null while there is one, which the note calls
+/// "this Plex server".
+typedef StreamOwnerOnlySource = ({String instanceId, String? server});
+
+/// Configured Plex connections whose sessions only the owner's token sees,
+/// because the one saved is a shared account's. Never throws.
+final streamActivityOwnerOnlyProvider =
+    FutureProvider<List<StreamOwnerOnlySource>>((ref) async {
+      final ownerOnly = <StreamOwnerOnlySource>[];
+      for (final connection in _streamConnections(ref)) {
+        try {
+          await ref.watch(streamSessionsForProvider(connection.key).future);
+        } catch (error) {
+          if (!await _ownerOnly(ref, connection.key, error)) continue;
+          ownerOnly.add((
+            instanceId: connection.key.instanceId,
+            server: connection.name == null
+                ? null
+                : serviceWithConnection(
+                    connection.key.service,
+                    connection.name,
+                    joiner: ' ',
+                  ),
+          ));
+        }
+      }
+      return ownerOnly;
+    }, retry: noProviderRetry);
 
 /// Whether any media server is configured at all.
 ///

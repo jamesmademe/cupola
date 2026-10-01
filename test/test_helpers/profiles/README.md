@@ -246,8 +246,11 @@ four-column user of the local sign-in.
 - **TLS.** No certificate crosses the fake network. Pins are threaded
   through, but TOFU prompts and `probeServerCertificate` (a raw
   `SecureSocket`, which bypasses `HttpOverrides`) are out of reach.
-- **Plex non-owner.** Only the refused `/status/sessions` is modelled. There
-  is no documented owner probe to answer.
+- **Plex non-owner beyond the sessions.** The shared account's token is
+  refused `/status/sessions` and reads everything else, `/` included, which
+  is what the app's probe tells it apart from a wrong token by. Plex has no
+  endpoint that says whose a token is, and the libraries a shared account
+  was not given are not modelled.
 - **Client faults in the world itself.** The world as written has none. A
   test adds one with `withDownloads`: `DownloadState.failed` is qBittorrent's
   `error` and a Transmission local error (`error: 3`, the daemon's own

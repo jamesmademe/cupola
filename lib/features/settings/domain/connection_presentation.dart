@@ -41,7 +41,7 @@ class ConnectionPresentation {
 
 /// The words a connection's label gains when it answers with a credential
 /// narrower than the service's writes: `read-only key`, `view-only account`,
-/// `limited key`. Null when there is nothing to add.
+/// `limited key`, `shared account`. Null when there is nothing to add.
 ///
 /// Only answers the service gave (or a refusal it made) qualify the label. A
 /// probe that could not ask says nothing here: "Answering · read-only key"
@@ -57,7 +57,12 @@ String? credentialScopeQualifier(ServiceKey service, CapabilityGrant grant) {
         ? 'view-only $noun'
         : 'read-only $noun';
   }
-  if (grant.writable != null) return 'limited $noun';
+  if (grant.writable != null) {
+    // A Plex token that reads the server and not who is watching belongs to
+    // an account the owner shared the server with, and Plex users know that
+    // as a shared account rather than as a narrower token.
+    return service == ServiceKey.plex ? 'shared account' : 'limited $noun';
+  }
   return null;
 }
 

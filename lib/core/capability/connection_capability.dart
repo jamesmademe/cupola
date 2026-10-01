@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/npm/presentation/npm_capability.dart';
+import 'package:cupola/features/plex/presentation/plex_capability.dart';
 import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
 import 'package:cupola/features/unraid/presentation/unraid_capability.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -38,6 +39,7 @@ final capabilityProbesProvider = Provider<Map<ServiceKey, CapabilityProbe>>(
     ServiceKey.unraid: probeUnraidCapability,
     ServiceKey.truenas: probeTrueNasCapability,
     ServiceKey.nginxProxyManager: probeNpmCapability,
+    ServiceKey.plex: probePlexCapability,
   },
 );
 
@@ -100,7 +102,7 @@ final connectionCapabilityProvider =
 
 /// The connection a page of [service] is reading through — the lens.
 ///
-/// Every page of the three gated services reads through its lens client, so
+/// Every page of the gated services reads through its lens client, so
 /// this is the id every banner and gated control on those pages asks about.
 /// Empty when the service has no connection, which resolves to
 /// [CapabilityGrant.unknown]: live, and correct for a service that is not set

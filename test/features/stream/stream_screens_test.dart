@@ -330,8 +330,9 @@ void main() {
     testWidgets('session controls are never capability-gated', (tester) async {
       // A non-administrator Jellyfin token is only ever shown sessions it may
       // control, so there is no refusal to gate against; dimming these would
-      // dim controls that work. Plex has no documented probe. Neither service
-      // is `hasScopedCredential`, and this keeps it that way on the screen.
+      // dim controls that work. A shared account's Plex token is refused the
+      // sessions themselves, so a session on screen is one the owner's token
+      // read. Neither draws a capability gate on a session control.
       final handle = tester.ensureSemantics();
       for (final pump in [
         () => _pumpNowPlaying(tester, sessions: [_session()]),

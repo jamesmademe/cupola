@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -10,6 +11,7 @@ import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
+import 'package:cupola/features/plex/presentation/plex_capability.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -156,7 +158,17 @@ class _PlexActivitiesBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessions = ref.watch(plexSessionsProvider);
-    if (sessions.hasError && !sessions.hasValue) {
+    // A refusal that turns out to be a shared account's token is Now
+    // playing's to say, in blue, and so is the moment before the probe has
+    // said: the page is not offline.
+    if (sessions.hasError &&
+        !sessions.hasValue &&
+        plexSessionsRefusal(
+              ref,
+              capabilityConnectionId(ref, ServiceKey.plex),
+              sessions.error,
+            ) ==
+            PlexSessionsRefusal.failure) {
       return AmbientScaffold(
         accent: ServiceKey.plex.accent,
         body: Padding(

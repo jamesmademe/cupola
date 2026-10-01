@@ -8,6 +8,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/plex/presentation/plex_capability.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -43,17 +44,30 @@ class StreamActivitySection extends ConsumerWidget {
 
     final rowsAsync = ref.watch(streamActivityProvider);
     final offline = ref.watch(streamActivityOfflineProvider).value ?? const [];
+    final ownerOnly =
+        ref.watch(streamActivityOwnerOnlyProvider).value ?? const [];
+    // Above the rows, and above the idle room: the servers that did not
+    // answer, in red, then the shared Plex accounts, in blue.
+    final notes = [
+      if (offline.isNotEmpty) _OfflineNote(offline: offline),
+      for (final source in ownerOnly) PlexOwnerOnlyNote(server: source.server),
+    ];
+    final settings = ref.watch(currentSettingsProvider);
+    // The servers that could say who is watching: a shared Plex account's
+    // cannot.
+    final askable = [
+      for (final service in ServiceDomain.stream.services)
+        for (final instance in settings.configuredInstancesOf(service))
+          if (!ownerOnly.any((source) => source.instanceId == instance.id))
+            instance,
+    ];
 
     // Every configured server dark. With one connection that is its own leaf —
     // the cause, its address, Settings; with several, the plain-words error
     // state names them together. Counted by connection: two Jellyfin both
     // dark are two servers, not one.
     if (rowsAsync.hasError && !rowsAsync.hasValue) {
-      final settings = ref.watch(currentSettingsProvider);
-      final configured = [
-        for (final service in ServiceDomain.stream.services)
-          ...settings.configuredInstancesOf(service),
-      ];
+      final configured = askable;
       void retry() => _reread(ref);
 
       return Padding(
@@ -82,7 +96,14 @@ class StreamActivitySection extends ConsumerWidget {
           _reread(ref);
         },
         isEmpty: (rows) => rows.isEmpty,
-        emptyBuilder: _IdleFeed(offline: offline, bottomPadding: bottomPadding),
+        emptyBuilder: _IdleFeed(
+          notes: notes,
+          offline: offline.isNotEmpty,
+          // Every server a shared Plex account: nobody here could say whether
+          // anyone is watching, so the idle room would be a claim nobody made.
+          idle: askable.isNotEmpty,
+          bottomPadding: bottomPadding,
+        ),
         data: (rows) => ListView.separated(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
@@ -90,15 +111,13 @@ class StreamActivitySection extends ConsumerWidget {
             AppSpacing.lg,
             bottomPadding,
           ),
-          itemCount: rows.length + (offline.isEmpty ? 0 : 1),
+          itemCount: rows.length + notes.length,
           separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
           itemBuilder: (context, index) {
-            // The offline note rides at the top of the list rather than above it,
-            // so it scrolls with the rows instead of pinning a band over content.
-            if (offline.isNotEmpty && index == 0) {
-              return _OfflineNote(offline: offline);
-            }
-            final row = rows[index - (offline.isEmpty ? 0 : 1)];
+            // The notes ride at the top of the list rather than above it, so
+            // they scroll with the rows instead of pinning a band over content.
+            if (index < notes.length) return notes[index];
+            final row = rows[index - notes.length];
             return StaggeredEntrance(
               index: index,
               child: StreamSessionCard(
@@ -198,10 +217,26 @@ class StreamActivitySection extends ConsumerWidget {
 /// Reuses the board's own sentence so the two surfaces cannot disagree about the
 /// same fact, and states an unreachable source by name when there is one —
 /// otherwise a dark server and a quiet house look identical.
+///
+/// When every server is a Plex whose sessions only its owner sees, the notes
+/// say so and the room is not drawn: "nobody is watching" would be a claim
+/// about servers that told nobody.
 class _IdleFeed extends StatelessWidget {
-  const _IdleFeed({required this.offline, required this.bottomPadding});
+  const _IdleFeed({
+    required this.notes,
+    required this.offline,
+    required this.idle,
+    required this.bottomPadding,
+  });
 
-  final List<StreamOfflineSource> offline;
+  /// The offline note and the shared-account notes, in that order.
+  final List<Widget> notes;
+
+  /// Whether a server did not answer, which takes the room's second line.
+  final bool offline;
+
+  /// Whether the idle room is drawn under the notes.
+  final bool idle;
   final double bottomPadding;
 
   @override
@@ -214,17 +249,18 @@ class _IdleFeed extends StatelessWidget {
         bottomPadding,
       ),
       children: [
-        if (offline.isNotEmpty) ...[
-          _OfflineNote(offline: offline),
+        for (final note in notes) ...[
+          note,
           const SizedBox(height: AppSpacing.lg),
         ],
-        AppEmptyState(
-          icon: Icons.nights_stay_outlined,
-          title: streamIdleMessage,
-          message: offline.isEmpty
-              ? 'Playback shows up here the moment someone presses play.'
-              : null,
-        ),
+        if (idle)
+          AppEmptyState(
+            icon: Icons.nights_stay_outlined,
+            title: streamIdleMessage,
+            message: offline
+                ? null
+                : 'Playback shows up here the moment someone presses play.',
+          ),
       ],
     );
   }

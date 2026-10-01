@@ -242,7 +242,7 @@ Pages read across services — a Media page shows one title through Seerr, Jelly
 11. A write the credential may not make stays visible, dimmed, with the service's own reason; a refused write says nothing changed. Never hidden, never blamed on reachability. The one exception: an option the viewer may not use at all — 4K for a requester who may not ask for it — is left out.
 12. One situation, one set of words on every surface: the lexicon above.
 
-A connection reachable only at home says `Home only` while away and is never asked, so it never reads `Did not answer`. **Today** a connection has one address, so away reads as case c; capability probes exist only for Unraid, TrueNAS and Nginx Proxy Manager; and nothing is drawn from another service's knowledge (case b). The households in `test/test_helpers/profiles/` (P1 full household to P7 degraded and away, checked by `test/core/profiles/`) are the fixtures: a cross-service screen test runs the profiles its surface touches.
+A connection reachable only at home says `Home only` while away and is never asked, so it never reads `Did not answer`. **Today** a connection has one address, so away reads as case c; capability probes exist only for Unraid, TrueNAS, Nginx Proxy Manager and Plex; and nothing is drawn from another service's knowledge (case b). The households in `test/test_helpers/profiles/` (P1 full household to P7 degraded and away, checked by `test/core/profiles/`) are the fixtures: a cross-service screen test runs the profiles its surface touches.
 
 ## Failure states
 
@@ -269,7 +269,8 @@ A credential can work and still not be allowed to write: an Unraid or TrueNAS ke
 
 - **The banner** is one quiet blue line at the top of the page — glyph, sentence, one verb (`Update the key`, `Change account`, or `Check again` when the app could not ask). It is a standing fact, not an event, so it is not announced on every visit.
 - **Every write stays on the page**, dimmed but tappable, with the service's own reason (*This TrueNAS key can read. Changing anything here needs a key whose user holds a write role.*); its toast leads to that connection's settings. A write the service refused says `Nothing changed`.
-- **Settings** names the scope beside the connection: `Answering · read-only key` (or `view-only account`).
+- **Settings** names the scope beside the connection: `Answering · read-only key` (or `view-only account`, or `shared account` for Plex).
+- A Plex token of an account the owner shared the server with reads the libraries and is refused who is watching. Now playing and Activity say so in blue, *Only the owner of this Plex server sees what's playing.*, never a refusal and never `Did not answer`; nothing is dimmed, because the sessions it cannot read are never drawn.
 - A Jellyfin account that is not an administrator sees `Your streams` and a calm note on the tabs it cannot read, naming what they need — never an error.
 
 ## Accessibility
