@@ -2,7 +2,7 @@
 
 The action band on a media detail page: one wide control that fills the row, optional square discs beside it, and the consequence sentence underneath.
 
-Rendered from `lib/core/widgets/header_action_row.dart` (`HeaderActionRow`, `ActionStateGlyph`, `HeaderActionButton`) by `test/design_catalog/header_action_row_catalog_test.dart`. The scenes compose the row the way `lib/core/widgets/library_detail_actions.dart` and `lib/features/discover/presentation/widgets/discover_action_buttons.dart` do, with the real ladder strings from `lib/core/status/media_action.dart`.
+Rendered from `lib/core/widgets/header_action_row.dart` (`HeaderActionRow`, `ActionStateGlyph`, `HeaderActionButton`) and `lib/features/discover/presentation/widgets/discover_action_buttons.dart` (`DiscoverActionButtons`, the Seerr deck) by `test/design_catalog/header_action_row_catalog_test.dart`. The library bands compose the row the way `lib/core/widgets/library_detail_actions.dart` does, with the real ladder strings from `lib/core/status/media_action.dart`; the Seerr deck scenes render the widget itself, fed through `seerrRequestGate`.
 
 ## The row
 
@@ -26,6 +26,25 @@ Idle icon (18pt) → busy spinner (16pt, 2pt stroke, this control's work only) �
 A disc in a 72pt column (`captionMeasure`, the 48 square plus `AppSpacing.xl`), with a `labelSmall` caption at 600 `AppSpacing.xs` below it: two lines, wrapping, centred, under the 1.6× clamp. The measure does not grow with the reading size — three of these beside a primary are a fixed budget on a 360pt phone — so a long caption takes its second line instead. `isBusy` and `isConfirmed` drive the glyph; `onPressed: null` dims the glyph only.
 
 **Gated** (`annotate`, handed in by `CrossServiceAction.builder` or `CapabilityGatedAction.builder`): glyph and caption drain to 38% together while the plate and the 48pt target stay; the button keeps its name and gains the hint (*Open in Radarr*, *requires Radarr*). A tap raises the toast whose action opens that service's settings.
+
+## The Seerr deck
+
+`DiscoverActionButtons` is the band on a Seerr title, `crossAxisAlignment: start` so the captions hang under tops that align. It is the Request primary and at most two captioned buttons:
+
+- **Trailers** only when Seerr sent something to play. With nothing to play there is no button, never a disabled one.
+- **Manage** when Seerr holds a row for the title; otherwise **Open** (*Open in Radarr*, *Open in Sonarr*), the cross-service jump. Never both. Open is dimmed but tappable when that service is not set up here, and absent when it answered that it does not hold the title, or for a series Seerr sent without a TVDB id.
+
+The primary says what Seerr would do with a request (`seerrRequestGate`, read from Seerr's record alone), with one `bodySmall` line under it when it does not act:
+
+| State | Label | Line under it |
+|---|---|---|
+| Seerr would take a request | **Request** | none, or for a series partly on disk the seasons a request would add: *Seasons 3 and 4 are not requested yet.* |
+| Everything Seerr can hold is on disk | **Available** | *Already in your library, nothing to request.* |
+| A request is waiting on somebody | **Requested** | *Waiting for approval in Seerr.* |
+| Approved, or already in the arr | **Requested** | *Radarr is already tracking this.* |
+| The last request failed | **Request failed** | *Seerr could not send the last request to Radarr.* |
+
+A state that does not act keeps its label legible: the secondary ink on the room's strong fill, not Material's 38% grey.
 
 ## Rungs
 

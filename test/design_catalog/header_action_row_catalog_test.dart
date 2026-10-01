@@ -6,8 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/text_scale.dart';
-import 'package:cupola/core/widgets/cross_service_action.dart';
 import 'package:cupola/core/widgets/header_action_row.dart';
+import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
+import 'package:cupola/features/discover/presentation/widgets/discover_action_buttons.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -176,61 +178,65 @@ Widget _sentenceBand() => Builder(
   ),
 );
 
-/// Seerr's discover band: a Request primary and three captioned buttons whose
-/// tops align with it, the last one gated on Radarr.
-Widget _captionedBand() => Builder(
-  builder: (context) {
-    final scheme = Theme.of(context).colorScheme;
-    return HeaderActionRow(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      expanded: FilledButton.icon(
-        onPressed: () {},
-        icon: const Icon(
-          Icons.add_circle_outline_rounded,
-          size: ActionStateGlyph.glyphSize,
-        ),
-        label: _clamped(
-          const Text('Request', maxLines: 2, textAlign: TextAlign.center),
-        ),
-        style: HeaderActionRow.expandedButtonStyle(
-          foregroundColor: scheme.onPrimary,
-          backgroundColor: scheme.primary,
-        ),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          HeaderActionButton(
-            icon: Icons.play_circle_outline_rounded,
-            label: 'Trailers',
-            semanticLabel: 'Trailers and teasers',
-            onPressed: () {},
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          HeaderActionButton(
-            icon: Icons.settings_outlined,
-            label: 'Manage',
-            semanticLabel: 'Manage movie',
-            onPressed: () {},
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          CrossServiceAction.builder(
-            target: ServiceKey.radarr,
-            blockedMessage: 'Set up Radarr to open this movie',
-            onTap: () {},
-            builder: (context, onPressed, annotate) => HeaderActionButton(
-              icon: Icons.open_in_new_rounded,
-              label: 'Open',
-              semanticLabel: 'Open in Radarr',
-              onPressed: onPressed,
-              annotate: annotate,
-            ),
-          ),
-        ],
-      ),
-    );
+const _trailer = RelatedVideo(
+  url: 'https://www.youtube.com/watch?v=catalog',
+  key: 'catalog',
+  name: 'Official Trailer',
+  type: 'Trailer',
+  site: 'YouTube',
+);
+
+TvSeason _season(int number) => TvSeason(
+  id: number,
+  seasonNumber: number,
+  name: 'Season $number',
+  episodeCount: 8,
+);
+
+/// Seerr's deck itself, `DiscoverActionButtons`, in one of its states: the
+/// Request primary, then at most two captioned buttons whose tops align with
+/// it. Trailers only when Seerr sent something to play; Manage when Seerr
+/// holds a row for the title, otherwise the jump into Radarr or Sonarr.
+///
+/// The real widget rather than a composition of its parts: the composition
+/// this replaced drew Manage and Open side by side, which the deck never does.
+/// [mediaInfo] goes through the same `seerrRequestGate` the page uses.
+Widget _seerrDeck({
+  String mediaType = 'movie',
+  Map<String, dynamic>? mediaInfo,
+  bool? isInService,
+  List<TvSeason> seasons = const [],
+  List<RelatedVideo> videos = const [_trailer],
+}) => DiscoverActionButtons(
+  mediaId: 603,
+  mediaType: mediaType,
+  hasManageableMedia: mediaInfo?['id'] != null,
+  isInService: isInService,
+  requestGate: seerrRequestGate(
+    mediaInfo,
+    isMovie: mediaType == 'movie',
+    seasons: seasons,
+  ),
+  tvdbId: mediaType == 'tv' ? 81189 : null,
+  mediaInfo: mediaInfo,
+  title: mediaType == 'movie' ? 'Sprite Fright' : 'Night Shift',
+  voteAverage: 7.4,
+  videos: videos,
+);
+
+/// A series with its first two seasons on disk and two more to ask for.
+Widget _partlyHeldSeries() => _seerrDeck(
+  mediaType: 'tv',
+  mediaInfo: const {
+    'id': 2,
+    'status': 4,
+    'seasons': [
+      {'seasonNumber': 1, 'status': 5},
+      {'seasonNumber': 2, 'status': 5},
+    ],
   },
+  isInService: true,
+  seasons: [for (var s = 1; s <= 4; s++) _season(s)],
 );
 
 /// The captioned button's own states, side by side.
@@ -259,8 +265,9 @@ Widget _buttonStates() => const Wrap(
       isConfirmed: true,
     ),
     HeaderActionButton(
-      icon: Icons.play_circle_outline_rounded,
-      label: 'Trailers',
+      icon: Icons.saved_search_rounded,
+      label: 'Auto search',
+      semanticLabel: 'Automatic search',
     ),
     HeaderActionButton(
       icon: Icons.manage_search_rounded,
@@ -334,9 +341,59 @@ List<CatalogScene> _bands(CatalogPlatform platform, double width) => [
     platform: platform,
   ),
   CatalogScene(
-    'crossAxisAlignment: start · Seerr, Request with captioned buttons · tops '
-    'align, captions hang; Open is gated on Radarr, dimmed and still tappable',
-    (_) => _captionedBand(),
+    'Seerr deck · nothing requested yet · Request, Trailers and Open; Open is '
+    'gated on a Radarr not set up, dimmed and still tappable; tops align, '
+    'captions hang',
+    (_) => _seerrDeck(),
+    width: width,
+    platform: platform,
+  ),
+  CatalogScene(
+    'Seerr deck · a series partly on disk · Request stays open and names the '
+    'seasons it would add; Manage takes the place of Open',
+    (_) => _partlyHeldSeries(),
+    width: width,
+    platform: platform,
+  ),
+  CatalogScene(
+    'Seerr deck · Available · a state read, not a dead control, with why '
+    'nothing is offered; no Trailers when Seerr sent nothing to play',
+    (_) => _seerrDeck(
+      mediaInfo: const {'id': 1, 'status': 5},
+      isInService: true,
+      videos: const [],
+    ),
+    width: width,
+    platform: platform,
+  ),
+  CatalogScene(
+    'Seerr deck · Requested, waiting for approval in Seerr',
+    (_) => _seerrDeck(
+      mediaInfo: const {
+        'id': 1,
+        'status': 2,
+        'requests': [
+          {'id': 9, 'status': 1, 'is4k': false},
+        ],
+      },
+      isInService: false,
+    ),
+    width: width,
+    platform: platform,
+  ),
+  CatalogScene(
+    'Seerr deck · Request failed · Seerr takes no second request while the '
+    'failed one stands; Manage is where it is removed',
+    (_) => _seerrDeck(
+      mediaInfo: const {
+        'id': 1,
+        'status': 1,
+        'requests': [
+          {'id': 9, 'status': 4, 'is4k': false},
+        ],
+      },
+      isInService: false,
+    ),
     width: width,
     platform: platform,
   ),
@@ -362,7 +419,7 @@ void main() {
       CatalogScene(
         'At 2× reading size · the captions and the primary label clamp at 1.6× '
         'and wrap; the measure does not grow',
-        (_) => _atReadingSize(2, _captionedBand()),
+        (_) => _atReadingSize(2, _partlyHeldSeries()),
         width: 390,
       ),
       ..._bands(CatalogPlatform.desktop, 560),
