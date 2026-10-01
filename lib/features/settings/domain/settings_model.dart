@@ -372,6 +372,18 @@ class SettingsModel {
     return '${instance.service.title} $place';
   }
 
+  /// The address and the credential of the connection [id], or two empty
+  /// strings when it names none.
+  ///
+  /// What a screen showing one connection's library keys itself on: its
+  /// artwork is that server's, at that server's address under that server's
+  /// key. As a record, so a `select` over it settles: editing another
+  /// connection changes nothing here.
+  (String, String) addressAndCredentialOf(String id) {
+    final instance = instanceById(id);
+    return (instance?.url ?? '', instance?.credential ?? '');
+  }
+
   /// Whether any instance of [service] is set up enough to talk to.
   bool isServiceConfigured(ServiceKey service) =>
       instancesOf(service).any((instance) => instance.isConfigured);

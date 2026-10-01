@@ -13,6 +13,7 @@ import 'package:cupola/features/series/presentation/series_provider.dart';
 import 'package:cupola/features/series/presentation/series_search_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The series ids Sonarr reports under `wanted/cutoff`.
@@ -46,6 +47,7 @@ class SeriesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // No badge until the queue answers: see `movies_screen.dart`.
     final queue = queueSnapshotOf(ref.watch(sonarrQueueSnapshotProvider));
+    final lens = ref.watch(activeInstanceProvider(ServiceKey.sonarr))?.id ?? '';
 
     return MediaBrowseScaffold<SonarrSeries>(
       title: 'TV series',
@@ -80,8 +82,8 @@ class SeriesScreen extends ConsumerWidget {
         // The rail's own non-swallowing read. See `movies_screen.dart`.
         ref.invalidate(sonarrKpiLibraryProvider);
       },
-      settingsSelector: (settings) =>
-          (settings.sonarrUrl, settings.sonarrApiKey),
+      // The lens's connection, never the first one's: see `movies_screen.dart`.
+      settingsSelector: (settings) => settings.addressAndCredentialOf(lens),
       onItemTap: (context, series, heroTag) {
         context.push(
           ServiceRoutes.sonarrSeries(series.id, heroTag: heroTag),

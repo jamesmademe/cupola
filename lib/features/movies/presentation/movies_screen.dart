@@ -13,6 +13,7 @@ import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/movies/presentation/movies_search_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The movie ids Radarr reports under `wanted/cutoff`.
@@ -51,6 +52,7 @@ class MoviesScreen extends ConsumerWidget {
     // file reads `Missing` only once a queue read whole has no entry for it,
     // and `Unknown` only once the read failed (`badgeOverQueue`).
     final queue = queueSnapshotOf(ref.watch(radarrQueueSnapshotProvider));
+    final lens = ref.watch(activeInstanceProvider(ServiceKey.radarr))?.id ?? '';
 
     return MediaBrowseScaffold<RadarrMovie>(
       title: 'Movies',
@@ -90,8 +92,12 @@ class MoviesScreen extends ConsumerWidget {
         // line the pull refreshed the posters and left the figures frozen.
         ref.invalidate(radarrKpiLibraryProvider);
       },
-      settingsSelector: (settings) =>
-          (settings.radarrUrl, settings.radarrApiKey),
+      // The connection the grid shows, which is the lens's, never the first
+      // one's: the posters are built off this address and key, so a 4K grid
+      // keyed on the first Radarr drew its movies' artwork from the other
+      // server, under that server's ids. Editing the lens's connection re-keys
+      // the grid, and editing another does not.
+      settingsSelector: (settings) => settings.addressAndCredentialOf(lens),
       onItemTap: (context, movie, heroTag) {
         context.push(
           ServiceRoutes.radarrMovie(movie.id, heroTag: heroTag),
