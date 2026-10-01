@@ -131,6 +131,7 @@ class ConnectionsSummaryCard extends ConsumerWidget {
             : (async.asData?.value.status ??
                   ServiceConnectionStatus.disconnected),
         reason: async.asData?.value.reason,
+        gateway: async.asData?.value.gateway,
       );
     }
 

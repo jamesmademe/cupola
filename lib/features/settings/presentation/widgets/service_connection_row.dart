@@ -75,6 +75,7 @@ class ServiceConnectionRow extends ConsumerWidget {
       service,
       status: diagnosis.status,
       reason: diagnosis.reason,
+      gateway: diagnosis.gateway,
     );
     final toneColor = statusToneColor(colorScheme, presentation.tone);
 

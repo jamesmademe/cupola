@@ -30,6 +30,7 @@ class FailureRemedy {
     this.reason,
     this.label, {
     this.instanceId,
+    this.gateway,
   });
 
   /// The remedy for [error] on [service], or null. See the class comment.
@@ -46,19 +47,28 @@ class FailureRemedy {
           service,
           classifyConnectionFailure(error),
           instanceId: instanceId,
+          gateway: accessGatewayOf(error),
         );
 
   /// The remedy for a failure already classified as [reason], or null when
-  /// `Retry` is the remedy.
+  /// `Retry` is the remedy. [gateway] names what answered in front of the
+  /// service, for an [ServiceFailureReason.accessGateway].
   static FailureRemedy? forReason(
     ServiceKey service,
     ServiceFailureReason reason, {
     String? instanceId,
+    AccessGatewayAnswer? gateway,
   }) {
-    final label = describeFailure(service, reason).remedy;
+    final label = describeFailure(service, reason, gateway: gateway).remedy;
     return label == null
         ? null
-        : FailureRemedy._(service, reason, label, instanceId: instanceId);
+        : FailureRemedy._(
+            service,
+            reason,
+            label,
+            instanceId: instanceId,
+            gateway: gateway,
+          );
   }
 
   /// The service [text] starts by naming, or null.
@@ -101,6 +111,12 @@ class FailureRemedy {
 
   /// The connection whose form holds the fix, or null for the lens's.
   final String? instanceId;
+
+  /// What answered in front of the service, when that is the fault: which
+  /// gateway, and whether it was sent the access it asks for. [open] lands on
+  /// the connection's form today; the form can read this to open on the
+  /// access the gateway wants.
+  final AccessGatewayAnswer? gateway;
 
   /// The remedy's verb, which is the action's label: `Paste the key again`.
   final String label;

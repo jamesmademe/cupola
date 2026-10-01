@@ -113,12 +113,20 @@ const int _kIsolateMappingThreshold = 50;
 /// rejected token, and [tokenIssue] so it can distinguish *which* token problem —
 /// a 401 asks for a fresh paste, whereas a JWT can never be made to work here at
 /// all and the user needs different advice.
-class PlexException implements Exception, HasFailureReason {
+class PlexException implements Exception, HasFailureReason, HasFailureCause {
   const PlexException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
     this.tokenIssue = PlexTokenIssue.none,
+    this.cause,
   });
+
+  /// The failure this wraps, when it wraps one: what it knew (which gateway
+  /// answered, for one) survives the wrapping.
+  final Object? cause;
+
+  @override
+  Object? get failureCause => cause;
 
   final String message;
 
@@ -322,6 +330,15 @@ class PlexClient implements StreamServerClient {
 
   PlexException _mapDioError(DioException error) {
     final status = error.response?.statusCode;
+    // Something in front of Plex answered: its 401 says nothing about the
+    // token, which Plex never saw.
+    if (error.error is AccessGatewayAnswer) {
+      return PlexException(
+        error.message ?? 'Plex request failed',
+        reason: ServiceFailureReason.accessGateway,
+        cause: error,
+      );
+    }
     // An answer that is not JSON. The shared client's answer guard raises it
     // for a body that does not decode (`UnexpectedAnswer`), and Dio's
     // transformer for one labelled `application/json` that does not parse:
@@ -354,6 +371,7 @@ class PlexClient implements StreamServerClient {
     return PlexException(
       error.message ?? 'Plex request failed',
       reason: classifyConnectionFailure(error),
+      cause: error,
     );
   }
 
@@ -540,6 +558,7 @@ class PlexClient implements StreamServerClient {
   }
 
   Future<PlexException> _mapTerminateError(DioException error) async {
+    if (error.error is AccessGatewayAnswer) return _mapDioError(error);
     final status = error.response?.statusCode;
     if (status == 401) {
       // The session list just answered with this same token, so it reads —

@@ -77,6 +77,7 @@ ConnectionPresentation describeConnection(
   ServiceKey service, {
   required ServiceConnectionStatus status,
   ServiceFailureReason? reason,
+  AccessGatewayAnswer? gateway,
 }) {
   switch (status) {
     case ServiceConnectionStatus.notConfigured:
@@ -106,6 +107,7 @@ ConnectionPresentation describeConnection(
       final failure = describeFailure(
         service,
         reason ?? ServiceFailureReason.unreachable,
+        gateway: gateway,
       );
       return ConnectionPresentation(
         tone: failure.tone,
@@ -185,25 +187,44 @@ class FailurePresentation {
 ///
 /// "Slow" is not in the vocabulary: a request that ran out of time is reported
 /// as timed out, because "slow" invites the user to wait rather than to look.
+///
+/// [gateway] names what answered in front of the service for an
+/// [ServiceFailureReason.accessGateway]; [describeFailureOf] reads it, and the
+/// reason, off the failure itself.
 FailurePresentation describeFailure(
   ServiceKey service,
   ServiceFailureReason reason, {
   String? subject,
+  AccessGatewayAnswer? gateway,
 }) {
   final credential = refusedCredentialOf(service);
   return FailurePresentation(
     reason: reason,
     tone: failureTone(reason),
     icon: failureIcon(reason),
-    label: failureLabel(reason, credential: credential),
+    label: failureLabel(reason, credential: credential, gateway: gateway),
     headline: failureHeadline(
       reason,
       subject: subject ?? service.title,
       credential: credential,
+      gateway: gateway,
     ),
-    remedy: failureRemedy(reason, credential: credential),
+    remedy: failureRemedy(reason, credential: credential, gateway: gateway),
   );
 }
+
+/// [describeFailure] for the failure [error] itself: its classification, and
+/// the gateway it names when one answered.
+FailurePresentation describeFailureOf(
+  ServiceKey service,
+  Object? error, {
+  String? subject,
+}) => describeFailure(
+  service,
+  classifyConnectionFailure(error),
+  subject: subject,
+  gateway: accessGatewayOf(error),
+);
 
 /// A section of a page whose read failed, in one line: what happened, then
 /// what the page is without because of it — `Unraid did not answer, so its
@@ -221,11 +242,7 @@ String sectionFailureMessage(
   required String consequence,
   String? subject,
 }) {
-  final headline = describeFailure(
-    service,
-    classifyConnectionFailure(error),
-    subject: subject,
-  ).headline;
+  final headline = describeFailureOf(service, error, subject: subject).headline;
   return '$headline, so $consequence.';
 }
 
@@ -243,7 +260,7 @@ String writeFailureReason(
   String? subject,
 }) {
   final reason = classifyConnectionFailure(error);
-  final headline = describeFailure(service, reason, subject: subject).headline;
+  final headline = describeFailureOf(service, error, subject: subject).headline;
   return reason == ServiceFailureReason.unauthorized
       ? '$headline. Nothing changed.'
       : '$headline.';
@@ -287,6 +304,8 @@ IconData failureIcon(ServiceFailureReason reason) => switch (reason) {
   // Kept apart from `notFound` because the thing to go and fix is the proxy in
   // front of the service, not the address in the form.
   ServiceFailureReason.redirected => Icons.alt_route_rounded,
+  // A lock with someone behind it: access, not the service's own key.
+  ServiceFailureReason.accessGateway => Icons.lock_person_rounded,
   ServiceFailureReason.localNetworkBlocked => Icons.wifi_lock_rounded,
   ServiceFailureReason.tls => Icons.gpp_bad_rounded,
   ServiceFailureReason.timeout => Icons.timer_off_rounded,

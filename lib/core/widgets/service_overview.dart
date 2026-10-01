@@ -353,6 +353,11 @@ class ServiceOverviewIdentity extends ConsumerWidget {
       service,
       status: status,
       reason: reason,
+      gateway: summary.when(
+        loading: () => null,
+        error: (error, _) => accessGatewayOf(error),
+        data: (value) => value.failure?.gateway,
+      ),
     );
     final toneColor = statusToneColor(colorScheme, presentation.tone);
 

@@ -126,6 +126,8 @@ class TransmissionAddReport {
         ServiceFailureReason.unauthorized ||
         ServiceFailureReason.notFound ||
         ServiceFailureReason.redirected ||
+        // The gateway answered in the daemon's place: nothing reached it.
+        ServiceFailureReason.accessGateway ||
         ServiceFailureReason.insecureTransport => TransmissionAddReport(
           TransmissionAddVerdict.notSent,
           'The torrent was not added',

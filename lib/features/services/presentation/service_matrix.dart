@@ -536,6 +536,15 @@ ServiceFailureReason? _failureOf(AsyncValue<ServiceSummary> summary) =>
       _ => null,
     };
 
+/// What answered in front of the service behind [summary], when a gateway
+/// did: the state word names it.
+AccessGatewayAnswer? _gatewayOf(AsyncValue<ServiceSummary> summary) =>
+    switch (summary) {
+      AsyncData(:final value) => value.failure?.gateway,
+      AsyncError(:final error) => accessGatewayOf(error),
+      _ => null,
+    };
+
 /// Where every card in one grid sits.
 ///
 /// Still not a `GridView`: this sits inside the page's own scroll view, and a
@@ -726,6 +735,7 @@ class ServiceMatrixCell extends ConsumerWidget {
           ? ServiceReachability.fault
           : reachability,
       failure: _failureOf(summary),
+      failureGateway: _gatewayOf(summary),
       faultedOf: foldedFault ? folded : null,
       // And it never shows a live figure summed over an incomplete set: a total
       // that silently drops an unreachable connection is a wrong number, not a
@@ -834,6 +844,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
     this.degradedOf,
     this.faultedOf,
     this.failure,
+    this.failureGateway,
     this.instanceId,
     this.instanceCount,
     required this.displayName,
@@ -842,6 +853,9 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
   /// Why the probe failed, for the state word of a single connection. Null
   /// while answering or still asking.
   final ServiceFailureReason? failure;
+
+  /// What answered in front of the service, when [failure] is a gateway's.
+  final AccessGatewayAnswer? failureGateway;
 
   /// Set only when this service has more than one connection, none dark and
   /// at least one answering with a fault.
@@ -908,6 +922,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
             ServiceReachability.fault => failureLabel(
               failure ?? ServiceFailureReason.unknown,
               credential: refusedCredentialOf(service),
+              gateway: failureGateway,
             ),
             // A bare state word, and deliberately so: "Did not answer since
             // 20:41" needs a `firstFailedAt` notifier keyed by TLS origin and a

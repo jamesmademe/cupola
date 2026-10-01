@@ -99,21 +99,30 @@ class FaultBand extends StatelessWidget {
   /// naming. Retry follows only where the same request can still succeed
   /// ([failureRetryHelps]). With no such fix Retry is the remedy, in the
   /// amber fill, and `Settings` follows when there is a way in.
+  ///
+  /// [gateway] names what answered in front of the service when that is the
+  /// fault ([ServiceFailureReason.accessGateway]): `Cloudflare Access answered
+  /// instead of Radarr` · *Add a service token*.
   factory FaultBand.fault({
     Key? key,
     required String serviceName,
     required ServiceFailureReason reason,
     required VoidCallback onRetry,
     VoidCallback? onOpenSettings,
+    AccessGatewayAnswer? gateway,
   }) {
     final service = FailureRemedy.serviceNamedBy(serviceName);
     final credential = service == null
         ? kRefusedCredential
         : refusedCredentialOf(service);
-    final remedy = failureRemedy(reason, credential: credential);
+    final remedy = failureRemedy(
+      reason,
+      credential: credential,
+      gateway: gateway,
+    );
     final formRemedy = service == null
         ? null
-        : FailureRemedy.forReason(service, reason);
+        : FailureRemedy.forReason(service, reason, gateway: gateway);
     final FaultBandAction? fix = remedy == null
         ? null
         : onOpenSettings != null
@@ -126,7 +135,7 @@ class FaultBand extends StatelessWidget {
       tone: failureTone(reason),
       icon: failureIcon(reason),
       message:
-          '${failureHeadline(reason, subject: serviceName, credential: credential)}. '
+          '${failureHeadline(reason, subject: serviceName, credential: credential, gateway: gateway)}. '
           'Everything below is what it said last.',
       primaryAction: fix ?? FaultBandAction.remedy('Retry', onRetry),
       secondaryAction: fix != null

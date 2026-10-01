@@ -21,6 +21,13 @@ DioException _status(int code) => DioException(
   ),
 );
 
+const _access = AccessGatewayAnswer(
+  kind: AccessGatewayKind.cloudflareAccess,
+  credentialsSent: false,
+  gatewayHost: 'cupola-home.cloudflareaccess.com',
+  serviceHost: 'radarr.example.com',
+);
+
 void main() {
   catalogCard(
     'ServiceOfflineState',
@@ -78,6 +85,21 @@ void main() {
         (_) => ServiceOfflineState.failure(
           service: ServiceKey.radarr,
           error: const ClassifiedFailure(ServiceFailureReason.tls),
+          onRetry: () {},
+        ),
+        width: 320,
+      ),
+      CatalogScene(
+        'ServiceOfflineState.failure · Cloudflare Access answered in Radarr\'s '
+        'place: the gateway named in the title and the sentence, Add a service '
+        'token in the amber fill, no Retry',
+        (_) => ServiceOfflineState.failure(
+          service: ServiceKey.radarr,
+          error: DioException(
+            requestOptions: RequestOptions(path: '/api/v3/movie'),
+            type: DioExceptionType.badResponse,
+            error: _access,
+          ),
           onRetry: () {},
         ),
         width: 320,

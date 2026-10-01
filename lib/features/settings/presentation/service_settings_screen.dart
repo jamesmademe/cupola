@@ -750,6 +750,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       service,
       status: result.status,
       reason: result.reason,
+      gateway: result.gateway,
     );
     final tone = result.isConnected ? StatusTone.success : presentation.tone;
     // The wash keeps the tone's byte; the glyph and the verdict are walked
@@ -1506,6 +1507,7 @@ class _SavedConnectionStatus extends ConsumerWidget {
       service,
       status: diagnosis.status,
       reason: diagnosis.reason,
+      gateway: diagnosis.gateway,
     );
 
     // "Answering · read-only key": a credential that reads and may not write

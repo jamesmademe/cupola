@@ -13,14 +13,22 @@ import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 /// URL query string) can never reach a log, snackbar or crash report. Carries
 /// the [reason] so a caller verifying the connection can tell an unreachable
 /// host from a rejected API key.
-class SabnzbdException implements Exception, HasFailureReason {
+class SabnzbdException implements Exception, HasFailureReason, HasFailureCause {
   const SabnzbdException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
+    this.cause,
   });
   final String message;
   @override
   final ServiceFailureReason reason;
+
+  /// The failure this wraps, when it wraps one: what it knew (which gateway
+  /// answered, for one) survives the wrapping.
+  final Object? cause;
+
+  @override
+  Object? get failureCause => cause;
   @override
   String toString() => 'SabnzbdException: $message';
 }
@@ -123,6 +131,7 @@ class SabnzbdClient {
       throw SabnzbdException(
         redactSabnzbdSecrets(e.message ?? 'SABnzbd request failed'),
         reason: classifyConnectionFailure(e),
+        cause: e,
       );
     }
   }

@@ -126,8 +126,15 @@ class AppErrorState extends StatelessWidget {
 
   String _headline(ServiceFailureReason reason) {
     final service = _service;
-    if (service != null) return describeFailure(service, reason).headline;
-    final headline = failureHeadline(reason, subject: 'the server');
+    final gateway = accessGatewayOf(error);
+    if (service != null) {
+      return describeFailure(service, reason, gateway: gateway).headline;
+    }
+    final headline = failureHeadline(
+      reason,
+      subject: 'the server',
+      gateway: gateway,
+    );
     return headline[0].toUpperCase() + headline.substring(1);
   }
 
@@ -141,11 +148,16 @@ class AppErrorState extends StatelessWidget {
     Object error,
     ServiceFailureReason reason, {
     required bool remedyBeside,
+    ServiceKey? service,
   }) {
     final own = connectionFailureDetail(error);
     if (own != null && own.trim().isNotEmpty) return own;
     if (reason == ServiceFailureReason.unknown) return null;
-    return connectionFailureSentence(error, remedyBeside: remedyBeside);
+    return connectionFailureSentence(
+      error,
+      remedyBeside: remedyBeside,
+      subject: service?.title,
+    );
   }
 
   @override
@@ -181,7 +193,12 @@ class AppErrorState extends StatelessWidget {
             // dimmer. Plain words from the classification — see the class
             // comment — and left out when they would only restate the
             // headline.
-            if (_detail(error, reason, remedyBeside: remedy != null)
+            if (_detail(
+                  error,
+                  reason,
+                  remedyBeside: remedy != null,
+                  service: _service,
+                )
                 case final detail?) ...[
               const SizedBox(height: AppSpacing.xs),
               Text(

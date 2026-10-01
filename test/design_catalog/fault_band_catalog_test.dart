@@ -8,6 +8,13 @@ import 'package:cupola/core/widgets/fault_band.dart';
 
 import 'catalog.dart';
 
+const _access = AccessGatewayAnswer(
+  kind: AccessGatewayKind.cloudflareAccess,
+  credentialsSent: false,
+  gatewayHost: 'cupola-home.cloudflareaccess.com',
+  serviceHost: 'radarr.example.com',
+);
+
 void main() {
   catalogCard(
     'FaultBand',
@@ -43,6 +50,17 @@ void main() {
         (_) => FaultBand.fault(
           serviceName: 'qBittorrent',
           reason: ServiceFailureReason.unauthorized,
+          onRetry: () {},
+          onOpenSettings: () {},
+        ),
+      ),
+      CatalogScene(
+        '.fault(reason: accessGateway, gateway:) · Cloudflare Access in front '
+        'of Radarr, named: Add a service token in the amber fill, no Retry',
+        (_) => FaultBand.fault(
+          serviceName: 'Radarr',
+          reason: ServiceFailureReason.accessGateway,
+          gateway: _access,
           onRetry: () {},
           onOpenSettings: () {},
         ),

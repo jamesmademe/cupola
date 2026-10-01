@@ -54,6 +54,16 @@ enum ServiceFailureReason {
   /// probe: the handshake already succeeded.
   redirected,
 
+  /// Something in front of the service answered in its place and asks for
+  /// access the request did not carry, or refused the access it did: a
+  /// Cloudflare Access application, a sign-in page, a proxy's password
+  /// prompt. [AccessGatewayAnswer] says which.
+  ///
+  /// Distinct from [unauthorized], which is the service refusing its own key:
+  /// here the service never saw the request, so pasting its key again cannot
+  /// help, and neither can sending the same request again.
+  accessGateway,
+
   /// The service answered with a 5xx.
   serverError,
 
@@ -195,6 +205,101 @@ class UnexpectedAnswer
   @override
   String toString() =>
       status == null ? 'UnexpectedAnswer' : 'UnexpectedAnswer($status)';
+}
+
+/// Implemented by a client's own exception when it wraps the failure that
+/// caused it, so what that failure knew (which gateway answered, for one)
+/// survives the wrapping.
+abstract interface class HasFailureCause {
+  Object? get failureCause;
+}
+
+/// What answered in front of a service.
+enum AccessGatewayKind {
+  /// A Cloudflare Access application: its login redirect, or its refusal of a
+  /// request without a valid service token.
+  cloudflareAccess,
+
+  /// A sign-in page Cupola cannot complete: a redirect to an identity
+  /// provider (Authelia, Authentik, an OAuth login), or a page with a
+  /// password field answering where the API should be.
+  signInPage,
+
+  /// A proxy's own username and password prompt (`401` with
+  /// `WWW-Authenticate: Basic`) in front of a service that does not sign in
+  /// that way itself. NZBGet and Transmission do, so for them a Basic `401`
+  /// stays their own refusal.
+  passwordPrompt,
+}
+
+/// Something in front of the service answered in its place: the request never
+/// reached the service. [ServiceFailureReason.accessGateway].
+///
+/// Raised by the answer guard and the redirect guard `guardedDio` installs,
+/// from what the answer itself shows: where a redirect pointed, the
+/// `WWW-Authenticate` and `Server` headers of a refusal, a password field in
+/// a page.
+///
+/// [credentialsSent] is read from the request's own headers, not from
+/// settings: a `CF-Access-Client-Id` for Cloudflare Access, an
+/// `Authorization: Basic` the service does not use itself for a password
+/// prompt. So a refusal of credentials that were sent reads differently
+/// ("did not accept the service token") from a gateway nobody gave any, the
+/// day a connection starts sending them, with nothing here to change.
+///
+/// Carries no sentence of its own ([HasFailureDetail]): its words name the
+/// service, which only the surface knows, so they come from the
+/// classification with this passed in (`failureHeadline(…, gateway:)`).
+class AccessGatewayAnswer implements Exception, HasFailureReason {
+  const AccessGatewayAnswer({
+    required this.kind,
+    required this.credentialsSent,
+    required this.gatewayHost,
+    required this.serviceHost,
+  });
+
+  final AccessGatewayKind kind;
+
+  /// Whether the request carried the credential this gateway asks for.
+  final bool credentialsSent;
+
+  /// The host that answered for the gateway: the Access team domain
+  /// (`myteam.cloudflareaccess.com`), the sign-in host, or the service's own
+  /// host when the gateway answered there.
+  final String gatewayHost;
+
+  /// The configured host the request was sent to, as the UI prints one
+  /// (`radarr.example.com`, `nas.home.arpa:7878`).
+  final String serviceHost;
+
+  @override
+  ServiceFailureReason get reason => ServiceFailureReason.accessGateway;
+
+  @override
+  String toString() =>
+      'AccessGatewayAnswer(${kind.name}, credentialsSent: $credentialsSent)';
+}
+
+/// The [AccessGatewayAnswer] [error] carries, or null: directly, inside the
+/// [DioException] an interceptor rejected with, kept by a [ClassifiedFailure],
+/// or under a client's own exception ([HasFailureCause]).
+AccessGatewayAnswer? accessGatewayOf(Object? error) {
+  Object? current = unwrapFailure(error);
+  for (var depth = 0; depth < 4 && current != null; depth++) {
+    switch (current) {
+      case final AccessGatewayAnswer gateway:
+        return gateway;
+      case final ClassifiedFailure classified:
+        return classified.gateway;
+      case final DioException dio:
+        current = dio.error;
+      case final HasFailureCause wrapper:
+        current = wrapper.failureCause;
+      default:
+        return null;
+    }
+  }
+  return null;
 }
 
 /// The verbatim explanation [error] carries, or null when it has none — which
@@ -415,9 +520,15 @@ const String kRefusedSignIn = 'sign-in';
 /// One vocabulary for every surface. The settings rows, the Dashboard's cells
 /// and a service's header all read this, so a refused key cannot be "API key
 /// rejected" on one screen and "Unreachable" on the next.
+///
+/// [gateway] is what answered for an [ServiceFailureReason.accessGateway]
+/// ([accessGatewayOf] the failure), which names it; without one the words say
+/// only that something in front asks for access. Every other reason ignores
+/// it.
 String failureLabel(
   ServiceFailureReason reason, {
   String credential = kRefusedCredential,
+  AccessGatewayAnswer? gateway,
 }) => switch (reason) {
   ServiceFailureReason.unreachable => StateWord.didNotAnswer.label,
   ServiceFailureReason.unauthorized => 'Refused the $credential',
@@ -425,6 +536,19 @@ String failureLabel(
   ServiceFailureReason.tls => 'Certificate not trusted',
   ServiceFailureReason.notFound => 'API not at this address',
   ServiceFailureReason.redirected => 'Redirected elsewhere',
+  ServiceFailureReason.accessGateway => switch (gateway) {
+    null => 'Asks for access',
+    AccessGatewayAnswer(kind: AccessGatewayKind.cloudflareAccess) =>
+      gateway.credentialsSent
+          ? 'Service token not accepted'
+          : 'Behind Cloudflare Access',
+    AccessGatewayAnswer(kind: AccessGatewayKind.signInPage) =>
+      'Behind a sign-in page',
+    AccessGatewayAnswer(kind: AccessGatewayKind.passwordPrompt) =>
+      gateway.credentialsSent
+          ? 'Password not accepted'
+          : 'Behind a password prompt',
+  },
   ServiceFailureReason.serverError => 'Answered with an error',
   ServiceFailureReason.invalidResponse => 'Unreadable answer',
   ServiceFailureReason.insecureTransport => 'Needs https://',
@@ -438,11 +562,13 @@ String failureLabel(
 /// [subject] is who: a service's name, or a connection's (`Radarr 4K`). This
 /// is the first part of the fault sentence; the *why* is
 /// [connectionFailureSentence] (or `connectionFailureMessage`, which can name
-/// the service), and the remedy is [failureRemedy].
+/// the service), and the remedy is [failureRemedy]. [gateway] as for
+/// [failureLabel].
 String failureHeadline(
   ServiceFailureReason reason, {
   required String subject,
   String credential = kRefusedCredential,
+  AccessGatewayAnswer? gateway,
 }) => switch (reason) {
   ServiceFailureReason.unreachable => '$subject did not answer',
   ServiceFailureReason.unauthorized =>
@@ -454,6 +580,19 @@ String failureHeadline(
   ServiceFailureReason.notFound => '$subject is not at this address',
   ServiceFailureReason.redirected =>
     '$subject answered with a redirect Cupola will not follow',
+  ServiceFailureReason.accessGateway => switch (gateway) {
+    null => 'Something in front of $subject answered instead of it',
+    AccessGatewayAnswer(kind: AccessGatewayKind.cloudflareAccess) =>
+      gateway.credentialsSent
+          ? 'Cloudflare Access did not accept the service token'
+          : 'Cloudflare Access answered instead of $subject',
+    AccessGatewayAnswer(kind: AccessGatewayKind.signInPage) =>
+      'A sign-in page answered instead of $subject',
+    AccessGatewayAnswer(kind: AccessGatewayKind.passwordPrompt) =>
+      gateway.credentialsSent
+          ? 'The proxy did not accept the password'
+          : 'A password prompt answered instead of $subject',
+  },
   ServiceFailureReason.serverError => '$subject answered with an error',
   ServiceFailureReason.invalidResponse =>
     '$subject answered with something Cupola cannot read',
@@ -470,10 +609,12 @@ String failureHeadline(
 /// own that the next request may not repeat.
 ///
 /// Each of these leads to the connection's own form, which is where the key,
-/// the address and the certificate live.
+/// the address, the certificate and a gateway's access live. [gateway] as for
+/// [failureLabel].
 String? failureRemedy(
   ServiceFailureReason reason, {
   String credential = kRefusedCredential,
+  AccessGatewayAnswer? gateway,
 }) => switch (reason) {
   ServiceFailureReason.unauthorized =>
     credential == kRefusedSignIn
@@ -481,6 +622,14 @@ String? failureRemedy(
         : 'Paste the $credential again',
   ServiceFailureReason.notFound ||
   ServiceFailureReason.redirected => 'Check the address',
+  ServiceFailureReason.accessGateway => switch (gateway) {
+    null => 'Add access',
+    AccessGatewayAnswer(kind: AccessGatewayKind.cloudflareAccess) =>
+      gateway.credentialsSent ? 'Check the token' : 'Add a service token',
+    AccessGatewayAnswer(kind: AccessGatewayKind.signInPage) => 'Add access',
+    AccessGatewayAnswer(kind: AccessGatewayKind.passwordPrompt) =>
+      gateway.credentialsSent ? 'Check the password' : 'Add the password',
+  },
   ServiceFailureReason.tls => 'Check the certificate',
   ServiceFailureReason.insecureTransport => 'Change the address',
   ServiceFailureReason.unreachable ||
@@ -494,9 +643,10 @@ String? failureRemedy(
 /// Whether sending the same request again can still change the answer, so
 /// `Retry` stays beside a remedy instead of giving way to it.
 ///
-/// False for the two causes the next request is bound to repeat: a refused
-/// key, which the same key gets again, and an address the device will not
-/// dial, where nothing is sent at all. Every other cause can clear while the
+/// False for the causes the next request is bound to repeat: a refused key,
+/// which the same key gets again, an address the device will not dial, where
+/// nothing is sent at all, and a gateway in front of the service, which asks
+/// the same request for the same access again. Every other cause can clear while the
 /// page is open: a reverse proxy that comes back, a certificate renewed at the
 /// server, a service that finishes restarting. A refused **sign-in** is one of
 /// them ([credential] is [kRefusedSignIn]): a ban for too many attempts runs
@@ -507,7 +657,8 @@ bool failureRetryHelps(
   String credential = kRefusedCredential,
 }) => switch (reason) {
   ServiceFailureReason.unauthorized => credential == kRefusedSignIn,
-  ServiceFailureReason.insecureTransport => false,
+  ServiceFailureReason.insecureTransport ||
+  ServiceFailureReason.accessGateway => false,
   ServiceFailureReason.unreachable ||
   ServiceFailureReason.timeout ||
   ServiceFailureReason.tls ||
@@ -528,7 +679,7 @@ bool failureRetryHelps(
 /// one of its own) across without inventing an exception type per client.
 class ClassifiedFailure
     implements Exception, HasFailureReason, HasFailureDetail {
-  const ClassifiedFailure(this.reason, {this.detail});
+  const ClassifiedFailure(this.reason, {this.detail, this.gateway});
 
   /// Classifies [error] once and keeps what the words need.
   factory ClassifiedFailure.of(Object? error) => error is ClassifiedFailure
@@ -536,6 +687,7 @@ class ClassifiedFailure
       : ClassifiedFailure(
           classifyConnectionFailure(error),
           detail: connectionFailureDetail(error),
+          gateway: accessGatewayOf(error),
         );
 
   @override
@@ -543,6 +695,10 @@ class ClassifiedFailure
 
   /// The failure's own sentence, when it carried one ([HasFailureDetail]).
   final String? detail;
+
+  /// What answered in front of the service, for an
+  /// [ServiceFailureReason.accessGateway]: the words name it.
+  final AccessGatewayAnswer? gateway;
 
   @override
   String get failureDetail => detail ?? '';
@@ -600,7 +756,14 @@ String? failureServiceMessage(Object? error) {
 /// [remedyBeside] is for a surface that draws the remedy as a button right
 /// under the sentence: there "Check them in Settings." would repeat the
 /// button in words, so the sentence stops at the fact.
-String connectionFailureSentence(Object? error, {bool remedyBeside = false}) {
+///
+/// [subject] names the service where a sentence names one (a gateway's: `Radarr
+/// is behind Cloudflare Access.`); without it the sentence names the address.
+String connectionFailureSentence(
+  Object? error, {
+  bool remedyBeside = false,
+  String? subject,
+}) {
   final detail = connectionFailureDetail(error);
   if (detail != null && detail.trim().isNotEmpty) return detail;
   return switch (classifyConnectionFailure(error)) {
@@ -621,6 +784,10 @@ String connectionFailureSentence(Object? error, {bool remedyBeside = false}) {
       'Something answered, but the API is not at this address.',
     ServiceFailureReason.redirected =>
       'The server answered with a redirect Cupola will not follow.',
+    ServiceFailureReason.accessGateway => accessGatewaySentence(
+      accessGatewayOf(error),
+      subject: subject,
+    ),
     ServiceFailureReason.serverError =>
       'The server answered with an error of its own. Its logs will say why.',
     ServiceFailureReason.invalidResponse =>
@@ -632,5 +799,38 @@ String connectionFailureSentence(Object? error, {bool remedyBeside = false}) {
     ServiceFailureReason.localNetworkBlocked =>
       'This device is blocking Cupola from reaching the local network.',
     ServiceFailureReason.unknown => 'The request did not complete.',
+  };
+}
+
+/// Why a gateway answered instead of the service, and what it wants: the
+/// sentence under [failureHeadline] for an [ServiceFailureReason.accessGateway].
+///
+/// [subject] names the service (`Radarr`); without one the sentence names the
+/// address the request went to, or says "the service". The host a refused
+/// service token wants a policy on is the configured one, never the Access
+/// team's.
+String accessGatewaySentence(AccessGatewayAnswer? gateway, {String? subject}) {
+  final host = gateway?.serviceHost ?? '';
+  final who = subject ?? (host.isEmpty ? 'the service' : host);
+  // A name or an address opens the sentence as it is spelled; only the
+  // fallback takes a capital.
+  final opening = who == 'the service' ? 'The service' : who;
+  return switch (gateway) {
+    null => 'Something in front of $who answered in its place.',
+    AccessGatewayAnswer(kind: AccessGatewayKind.cloudflareAccess) =>
+      gateway.credentialsSent
+          ? 'Add a Service Auth policy for it on '
+                '${host.isEmpty ? 'the application' : host}, or make a new '
+                'token if it expired.'
+          : '$opening is behind Cloudflare Access. Cupola needs a service '
+                'token to reach it.',
+    AccessGatewayAnswer(kind: AccessGatewayKind.signInPage) =>
+      'Something in front of $who asks for a sign-in that Cupola cannot '
+          'complete.',
+    AccessGatewayAnswer(kind: AccessGatewayKind.passwordPrompt) =>
+      gateway.credentialsSent
+          ? 'Something in front of $who asked for a username and password, '
+                'and refused the ones Cupola sent.'
+          : 'Something in front of $who asks for a username and password.',
   };
 }

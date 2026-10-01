@@ -68,6 +68,9 @@ test's description.
 |---|---|
 | `answers` | Canned world data. |
 | `servesHtmlPage` | Every HTTP request, public routes included, gets `200` with a web server's default page (`text/html`). An address missing its base path, a proxy with nothing routed. WebSocket upgrades are untouched. |
+| `behindCloudflareAccess(mode:, team:, serviceToken:, tokenHasPolicy:)` | Cloudflare Access in front of every HTTP request, public routes included (`gatewayReply` in `profile_network.dart`, before any service fake). `redirect` (the default) answers `302` to `https://<team>.cloudflareaccess.com/cdn-cgi/access/login/<host>`; `unauthorized` answers `401` with Cloudflare's page, `Server: cloudflare` and a `CF-Ray`. A request carrying `serviceToken` as `CF-Access-Client-Id`/`-Secret` reaches the service when `tokenHasPolicy` (the default); a token without a policy is turned away like none. Nothing in lib sends one yet. |
+| `behindSignInPage(mode:)` | `redirect` (the default) answers `302` to `https://auth.example.net/login?rd=…`; `sameHostForm` answers `200` with a page holding a password field. Nothing gets through. |
+| `behindPasswordPrompt(credentials:)` | `401` with `WWW-Authenticate: Basic realm="Restricted"` and nginx's page. A request whose `Authorization: Basic` carries `credentials` gets through. |
 | `answersAsOtherService(service)` | The other service's fake answers every request at this address, upgrades included: a wrong port. `answersAsOtherService(ServiceKey.sonarr)` on Radarr's connection answers `/api/v3/system/status` with `appName: Sonarr`. |
 | `didNotAnswer` | `SocketException('Connection refused')` at dial time. The attempt is logged with `dialRefused`. |
 | `timesOut` | `SocketException('Connection timed out')`, which Dio reports as `connectionTimeout`. It is raised at once, and the app reads it as did not answer: the connection never completed. |

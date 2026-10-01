@@ -108,6 +108,85 @@ class NetworkReply {
   final Map<String, List<String>> headers;
 }
 
+/// What a gateway in front of [server] answers [request] with, or null when
+/// there is none or it lets the request through.
+NetworkReply? gatewayReply(NetworkRequest request, ProfileServer server) {
+  final target = Uri.encodeQueryComponent(request.uri.toString());
+  switch (server.behaviour) {
+    case final BehindCloudflareAccess access:
+      if (access.admits(request.headers)) return null;
+      return switch (access.mode) {
+        CloudflareAccessMode.redirect => NetworkReply(
+          302,
+          contentType: 'text/html',
+          headers: {
+            'location': [
+              'https://${access.teamDomain}/cdn-cgi/access/login/'
+                  '${request.uri.host}?kid=4f1c&redirect_url=$target',
+            ],
+            'server': ['cloudflare'],
+            'cf-ray': ['8c1f2e3d4b5a6978-MXP'],
+          },
+        ),
+        CloudflareAccessMode.unauthorized => NetworkReply.html(
+          cloudflareAccessPage,
+          status: 401,
+          headers: {
+            'server': ['cloudflare'],
+            'cf-ray': ['8c1f2e3d4b5a6978-MXP'],
+          },
+        ),
+      };
+    case BehindSignInPage(:final mode):
+      return switch (mode) {
+        SignInPageMode.redirect => NetworkReply(
+          302,
+          contentType: 'text/html',
+          headers: {
+            'location': ['https://auth.example.net/login?rd=$target'],
+          },
+        ),
+        SignInPageMode.sameHostForm => NetworkReply.html(signInPage),
+      };
+    case BehindPasswordPrompt(:final credentials):
+      if (credentials != null) {
+        final token = base64Encode(
+          utf8.encode('${credentials.username}:${credentials.password}'),
+        );
+        if (request.headers['authorization'] == 'Basic $token') return null;
+      }
+      return NetworkReply.html(
+        passwordPromptPage,
+        status: 401,
+        headers: {
+          'www-authenticate': ['Basic realm="Restricted"'],
+          'server': ['nginx'],
+        },
+      );
+    default:
+      return null;
+  }
+}
+
+/// Cloudflare's page for a request Access turned away.
+const cloudflareAccessPage =
+    '<!DOCTYPE html><html><head><title>Forbidden · Cloudflare Access</title>'
+    '</head><body><h1>Forbidden</h1><p>You don\'t have permission to view '
+    'this application.</p></body></html>';
+
+/// A sign-in page served where the API should be.
+const signInPage =
+    '<!DOCTYPE html><html><head><title>Sign in</title></head><body>'
+    '<form method="post" action="/login"><input type="text" name="username">'
+    '<input type="password" name="password"><button>Sign in</button></form>'
+    '</body></html>';
+
+/// nginx's page for a request its `auth_basic` turned away.
+const passwordPromptPage =
+    '<html><head><title>401 Authorization Required</title></head><body>'
+    '<center><h1>401 Authorization Required</h1></center><hr>'
+    '<center>nginx</center></body></html>';
+
 /// The page a reverse proxy serves when nothing is routed to the path asked
 /// for: what answers an address missing its base path.
 const proxyDefaultPage =
@@ -357,6 +436,10 @@ class ProfileNetwork {
       }
       return _FakeResponse.upgrade(webSocketAccept(key), WebSocketLink(peer));
     }
+
+    // In front of the service, so before anything the service would say.
+    final gateway = gatewayReply(request, server);
+    if (gateway != null) return _FakeResponse.fromReply(gateway);
 
     final gated = fake.gate(request, context);
     if (gated != null) return _FakeResponse.fromReply(gated);

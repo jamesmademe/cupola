@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
+
 /// An exception that knows whether it was a **permission refusal on an
 /// authenticated call** — the credential worked and the service declined this
 /// particular change — as opposed to a bad password or a dead token.
@@ -18,6 +20,9 @@ abstract interface class HasPermissionRefusal {
 /// itself. Every capability-aware action runner asks this in its `catch`.
 bool isPermissionRefusal(Object error) => switch (error) {
   HasPermissionRefusal(:final isPermissionRefusal) => isPermissionRefusal,
+  // A 403 from something in front of the service is not the service saying
+  // anything about this credential: the request never reached it.
+  DioException(error: AccessGatewayAnswer()) => false,
   // Any `ApiClient` write rides a raw Dio and surfaces its exception as is.
   DioException(response: Response(statusCode: 403)) => true,
   _ => false,

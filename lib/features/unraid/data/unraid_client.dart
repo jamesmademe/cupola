@@ -12,12 +12,25 @@ import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 /// Error thrown by [UnraidClient]. Carries the [reason] so a caller verifying
 /// the connection can tell an unreachable host from a rejected API key.
 class UnraidException
-    implements Exception, HasFailureReason, HasPermissionRefusal {
+    implements
+        Exception,
+        HasFailureReason,
+        HasPermissionRefusal,
+        HasFailureCause {
   const UnraidException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
     this.forbidden = false,
+    this.cause,
   });
+
+  /// The failure this wraps, when it wraps one: what it knew (which gateway
+  /// answered, for one) survives the wrapping.
+  final Object? cause;
+
+  @override
+  Object? get failureCause => cause;
+
   final String message;
   @override
   final ServiceFailureReason reason;
@@ -158,6 +171,7 @@ class UnraidClient {
       throw UnraidException(
         e.message ?? 'Unraid request failed',
         reason: classifyConnectionFailure(e),
+        cause: e,
       );
     }
   }

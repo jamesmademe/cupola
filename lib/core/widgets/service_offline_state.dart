@@ -178,13 +178,21 @@ class ServiceOfflineState extends StatelessWidget {
     }
 
     final reason = classifyConnectionFailure(_error);
-    final presentation = describeFailure(service, reason, subject: serviceName);
+    // What answered in front of the service, when a gateway did: it is named
+    // in the title, the sentence and the remedy.
+    final gateway = accessGatewayOf(_error);
+    final presentation = describeFailure(
+      service,
+      reason,
+      subject: serviceName,
+      gateway: gateway,
+    );
     final span = since == null ? null : formatElapsedSpan(since!);
     final silent = presentation.didNotAnswer;
     final message =
         connectionFailureDetail(_error) ??
-        connectionFailureMessage(service, reason);
-    final remedy = FailureRemedy.forReason(service, reason);
+        connectionFailureMessage(service, reason, gateway: gateway);
+    final remedy = FailureRemedy.forReason(service, reason, gateway: gateway);
 
     return Consumer(
       builder: (context, ref, _) {

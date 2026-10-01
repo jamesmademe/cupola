@@ -15,12 +15,24 @@ import 'package:cupola/features/npm/domain/models/npm_models.dart';
 /// `throw NpmException('Login failed: ${response.data}')` would put a working
 /// credential on screen. [redactJwt] is the belt to that braces.
 class NpmException
-    implements Exception, HasFailureReason, HasPermissionRefusal {
+    implements
+        Exception,
+        HasFailureReason,
+        HasPermissionRefusal,
+        HasFailureCause {
   const NpmException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
     this.forbidden = false,
+    this.cause,
   });
+
+  /// The failure this wraps, when it wraps one: what it knew (which gateway
+  /// answered, for one) survives the wrapping.
+  final Object? cause;
+
+  @override
+  Object? get failureCause => cause;
 
   final String message;
 
@@ -604,6 +616,15 @@ class NpmClient {
   /// Maps NPM's unusual status ladder onto a sentence and a reason.
   NpmException _describe(DioException e, {bool isLogin = false}) {
     final status = e.response?.statusCode;
+    // Something in front of NPM answered: none of its own statuses applies,
+    // and a refused login here is not a refused password.
+    if (e.error is AccessGatewayAnswer) {
+      return NpmException(
+        redactJwt(e.message ?? 'Nginx Proxy Manager request failed'),
+        reason: ServiceFailureReason.accessGateway,
+        cause: e,
+      );
+    }
     switch (status) {
       case 400:
         if (isLogin) {
@@ -650,6 +671,7 @@ class NpmClient {
         return NpmException(
           redactJwt(e.message ?? 'Nginx Proxy Manager request failed'),
           reason: classifyConnectionFailure(e),
+          cause: e,
         );
     }
   }

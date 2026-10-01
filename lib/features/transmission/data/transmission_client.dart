@@ -16,12 +16,21 @@ import 'package:cupola/features/transmission/domain/models/transmission_models.d
 /// interpolated `DioException`, request URI or credential. That is the contract
 /// that keeps a password out of `AppErrorState`, which renders `toString()`
 /// verbatim.
-class TransmissionException implements Exception, HasFailureReason {
+class TransmissionException
+    implements Exception, HasFailureReason, HasFailureCause {
   const TransmissionException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
     this.rejectedByDaemon = false,
+    this.cause,
   });
+
+  /// The failure this wraps, when it wraps one: what it knew (which gateway
+  /// answered, for one) survives the wrapping.
+  final Object? cause;
+
+  @override
+  Object? get failureCause => cause;
 
   final String message;
 
@@ -120,6 +129,8 @@ class TransmissionClient {
       baseUrl: _originOf(baseUrl),
       injected: dio,
       certFingerprint: certFingerprint,
+      // It signs in with Basic itself: a Basic 401 is its own refusal.
+      nativeBasicAuth: true,
     );
   }
 
@@ -305,6 +316,15 @@ class TransmissionClient {
   /// collapsing them into "could not connect" sends people to re-type a
   /// password that was never the problem.
   TransmissionException _describe(DioException e, int? status) {
+    // Something in front of the daemon answered, whatever its status: the
+    // daemon never saw the request, so none of its own sentences applies.
+    if (e.error is AccessGatewayAnswer) {
+      return TransmissionException(
+        e.message ?? 'Transmission request failed',
+        reason: ServiceFailureReason.accessGateway,
+        cause: e,
+      );
+    }
     switch (status) {
       case 401:
         // Terminal, and it must stay terminal — see [_credentialsRejected].
@@ -360,6 +380,7 @@ class TransmissionClient {
         return TransmissionException(
           e.message ?? 'Transmission request failed',
           reason: classifyConnectionFailure(e),
+          cause: e,
         );
     }
   }

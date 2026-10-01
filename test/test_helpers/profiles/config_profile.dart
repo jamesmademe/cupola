@@ -73,8 +73,111 @@ sealed class ConnectionBehaviour {
   const factory ConnectionBehaviour.answersAsOtherService(ServiceKey service) =
       AnswersAsOtherService;
 
+  /// Cloudflare Access is in front of the service. See
+  /// [BehindCloudflareAccess].
+  const factory ConnectionBehaviour.behindCloudflareAccess({
+    CloudflareAccessMode mode,
+    String team,
+    ({String id, String secret})? serviceToken,
+    bool tokenHasPolicy,
+  }) = BehindCloudflareAccess;
+
+  /// A sign-in page is in front of the service. See [BehindSignInPage].
+  const factory ConnectionBehaviour.behindSignInPage({SignInPageMode mode}) =
+      BehindSignInPage;
+
+  /// A proxy's password prompt is in front of the service. See
+  /// [BehindPasswordPrompt].
+  const factory ConnectionBehaviour.behindPasswordPrompt({
+    ({String username, String password})? credentials,
+  }) = BehindPasswordPrompt;
+
   /// A short name for a test's description.
   String get label;
+}
+
+/// How Cloudflare Access turns away a request it does not let through.
+enum CloudflareAccessMode {
+  /// A `302` to the team's login (`TEAM.cloudflareaccess.com/cdn-cgi/
+  /// access/login/…`), which is what a browser gets.
+  redirect,
+
+  /// A `401` with Cloudflare's page (`Server: cloudflare`, a `CF-Ray`).
+  unauthorized,
+}
+
+/// Cloudflare Access in front of every HTTP request to this connection,
+/// public routes included. WebSocket upgrades are not affected.
+///
+/// A request carrying [serviceToken] (`CF-Access-Client-Id` and
+/// `CF-Access-Client-Secret`) is let through to the service when
+/// [tokenHasPolicy]; without a Service Auth policy the token is turned away
+/// like no token at all, which is Access's own behaviour.
+final class BehindCloudflareAccess extends ConnectionBehaviour {
+  const BehindCloudflareAccess({
+    this.mode = CloudflareAccessMode.redirect,
+    this.team = 'cupola-home',
+    this.serviceToken,
+    this.tokenHasPolicy = true,
+  });
+
+  final CloudflareAccessMode mode;
+
+  /// The Access team, whose domain is [teamDomain].
+  final String team;
+
+  /// The service token Access knows, or null for none.
+  final ({String id, String secret})? serviceToken;
+
+  /// Whether a Service Auth policy admits [serviceToken].
+  final bool tokenHasPolicy;
+
+  String get teamDomain => '$team.cloudflareaccess.com';
+
+  /// Whether [headers] (lower-cased names) carry a token Access lets through.
+  bool admits(Map<String, String> headers) {
+    final token = serviceToken;
+    return token != null &&
+        tokenHasPolicy &&
+        headers['cf-access-client-id'] == token.id &&
+        headers['cf-access-client-secret'] == token.secret;
+  }
+
+  @override
+  String get label => 'behind Cloudflare Access (${mode.name})';
+}
+
+/// Where a sign-in page answers.
+enum SignInPageMode {
+  /// A `302` to another host's login: `auth.example.net/login`.
+  redirect,
+
+  /// A `200` page with a password field, on the service's own host.
+  sameHostForm,
+}
+
+/// A sign-in page (Authelia, Authentik, a proxy's login) in front of every
+/// HTTP request to this connection. Nothing gets through: Cupola cannot sign
+/// in to it.
+final class BehindSignInPage extends ConnectionBehaviour {
+  const BehindSignInPage({this.mode = SignInPageMode.redirect});
+
+  final SignInPageMode mode;
+
+  @override
+  String get label => 'behind a sign-in page (${mode.name})';
+}
+
+/// A proxy's password prompt (`401`, `WWW-Authenticate: Basic`) in front of
+/// every HTTP request to this connection. A request whose `Authorization`
+/// carries [credentials] is let through.
+final class BehindPasswordPrompt extends ConnectionBehaviour {
+  const BehindPasswordPrompt({this.credentials});
+
+  final ({String username, String password})? credentials;
+
+  @override
+  String get label => 'behind a password prompt';
 }
 
 /// Another service of the stack answers at this connection's address, from

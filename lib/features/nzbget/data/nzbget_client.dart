@@ -9,14 +9,22 @@ import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 
 /// Error thrown by [NzbgetClient]. Carries the [reason] so a caller verifying
 /// the connection can tell an unreachable host from rejected credentials.
-class NzbgetException implements Exception, HasFailureReason {
+class NzbgetException implements Exception, HasFailureReason, HasFailureCause {
   const NzbgetException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
+    this.cause,
   });
   final String message;
   @override
   final ServiceFailureReason reason;
+
+  /// The failure this wraps, when it wraps one: what it knew (which gateway
+  /// answered, for one) survives the wrapping.
+  final Object? cause;
+
+  @override
+  Object? get failureCause => cause;
   @override
   String toString() => 'NzbgetException: $message';
 }
@@ -50,6 +58,8 @@ class NzbgetClient {
       baseUrl: baseUrl,
       injected: dio,
       certFingerprint: certFingerprint,
+      // It signs in with Basic itself: a Basic 401 is its own refusal.
+      nativeBasicAuth: true,
     );
   }
 
@@ -123,6 +133,7 @@ class NzbgetClient {
       throw NzbgetException(
         e.message ?? 'NZBGet request failed',
         reason: classifyConnectionFailure(e),
+        cause: e,
       );
     }
   }

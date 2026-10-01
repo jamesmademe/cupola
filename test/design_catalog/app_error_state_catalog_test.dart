@@ -14,6 +14,13 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'catalog.dart';
 
+const _access = AccessGatewayAnswer(
+  kind: AccessGatewayKind.cloudflareAccess,
+  credentialsSent: false,
+  gatewayHost: 'cupola-home.cloudflareaccess.com',
+  serviceHost: 'radarr.example.com',
+);
+
 void main() {
   catalogCard(
     'AppErrorState',
@@ -80,6 +87,21 @@ void main() {
               requestOptions: RequestOptions(path: '/api/v2/torrents/info'),
               statusCode: 403,
             ),
+          ),
+          onRetry: () {},
+        ),
+        width: 320,
+      ),
+      CatalogScene(
+        'AppErrorState(service:) · Cloudflare Access answered in Radarr\'s '
+        'place: the gateway named, Add a service token leads in the amber '
+        'fill, and no Retry: the same request meets the same gateway',
+        (_) => AppErrorState(
+          service: ServiceKey.radarr,
+          error: DioException(
+            requestOptions: RequestOptions(path: '/api/v3/movie'),
+            type: DioExceptionType.badResponse,
+            error: _access,
           ),
           onRetry: () {},
         ),

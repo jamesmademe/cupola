@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/settings/domain/probe_identity.dart';
@@ -196,7 +197,12 @@ class JellyfinClient implements StreamServerClient {
       requireProbeIdentity(ServiceKey.jellyfin, response.data, url: _baseUrl);
       return _versionOf(response.data);
     } on DioException catch (error, stack) {
-      if (error.response?.statusCode == 403) return probeVersion();
+      // A 403 from Jellyfin itself is a narrower token; one from something
+      // in front of it is not Jellyfin's answer at all.
+      if (error.response?.statusCode == 403 &&
+          error.error is! AccessGatewayAnswer) {
+        return probeVersion();
+      }
       Error.throwWithStackTrace(
         probeFailureOf(ServiceKey.jellyfin, error, url: _baseUrl),
         stack,

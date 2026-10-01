@@ -157,6 +157,7 @@ class AsyncValueWidget<T> extends StatelessWidget {
                 FaultBand.fault(
                   serviceName: serviceName,
                   reason: reason,
+                  gateway: accessGatewayOf(e),
                   onRetry: onRetry ?? () {},
                 ),
               // Full ink, unchanged. This is the whole point of the branch.

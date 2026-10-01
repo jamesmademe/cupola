@@ -76,13 +76,26 @@ class RedirectRefused implements Exception, HasFailureReason, HasFailureDetail {
 /// legitimate case and keep working; cross-origin ones fail with an explanatory
 /// error rather than leaking the credential.
 ///
+/// A redirect an access gateway sent (Cloudflare Access's login, a sign-in
+/// page on another host) is refused the same way and named for what it is,
+/// [AccessGatewayAnswer], rather than as a redirect: Cloudflare Access is
+/// named even when it redirects to a path on the service's own host, because
+/// following it only reaches its login page.
+///
 /// Requires the owning [Dio] to be configured with `followRedirects: false` and
 /// [allowRedirectStatus] as its `validateStatus`.
 class SameOriginRedirectInterceptor extends Interceptor {
-  SameOriginRedirectInterceptor(this._dio, {this.maxRedirects = 5});
+  SameOriginRedirectInterceptor(
+    this._dio, {
+    this.maxRedirects = 5,
+    this.nativeBasicAuth = false,
+  });
 
   final Dio _dio;
   final int maxRedirects;
+
+  /// See [AnswerGuardInterceptor.nativeBasicAuth].
+  final bool nativeBasicAuth;
 
   /// Redirect depth so far, threaded through `RequestOptions.extra`.
   static const _depthKey = 'cupola.redirectDepth';
@@ -116,6 +129,23 @@ class SameOriginRedirectInterceptor extends Interceptor {
     }
 
     final target = request.uri.resolve(location);
+    final gateway = gatewayRedirectOf(
+      request,
+      target,
+      nativeBasicAuth: nativeBasicAuth,
+    );
+    if (gateway != null) {
+      handler.reject(
+        DioException(
+          requestOptions: request,
+          response: response,
+          type: DioExceptionType.badResponse,
+          error: gateway,
+          message: 'Something in front of the service answered.',
+        ),
+      );
+      return;
+    }
     if (!_isSameOrigin(request.uri, target)) {
       handler.reject(
         DioException(
@@ -219,6 +249,10 @@ class SameOriginRedirectInterceptor extends Interceptor {
 /// to a request that asked for JSON is JSON, or a classified failure: a web
 /// page answering with a 200 is not the service answering.
 ///
+/// [nativeBasicAuth] is for the two services that sign in with
+/// `Authorization: Basic` themselves (NZBGet, Transmission), so their own
+/// refusal is never read as a proxy's password prompt.
+///
 /// [injected] is returned untouched. A caller supplying its own transport — a
 /// test stub, in practice — owns redirect handling and TLS along with it, and
 /// installing a pinned adapter over it would replace the very thing it was
@@ -236,6 +270,7 @@ Dio guardedDio({
   String? certFingerprint,
   Duration? sendTimeout,
   Map<String, dynamic>? headers,
+  bool nativeBasicAuth = false,
 }) {
   if (injected != null) return injected;
 
@@ -251,8 +286,8 @@ Dio guardedDio({
     ),
   );
   dio.interceptors
-    ..add(SameOriginRedirectInterceptor(dio))
-    ..add(AnswerGuardInterceptor());
+    ..add(SameOriginRedirectInterceptor(dio, nativeBasicAuth: nativeBasicAuth))
+    ..add(AnswerGuardInterceptor(nativeBasicAuth: nativeBasicAuth));
   final adapter = pinnedHttpClientAdapterFor(
     baseUrl,
     pinnedFingerprint: certFingerprint,

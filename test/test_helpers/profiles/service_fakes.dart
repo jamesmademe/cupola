@@ -80,6 +80,11 @@ abstract class ServiceFake {
         return NetworkReply.html(proxyDefaultPage);
       // Answered by the other service's fake, which is the whole behaviour.
       case AnswersAsOtherService():
+      // The network answers for a gateway before any service is asked
+      // (`gatewayReply`); a request it lets through reaches the service.
+      case BehindCloudflareAccess():
+      case BehindSignInPage():
+      case BehindPasswordPrompt():
       case PlainBehaviour.answers:
       case PlainBehaviour.didNotAnswer:
       case PlainBehaviour.timesOut:

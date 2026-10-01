@@ -44,7 +44,8 @@ class ServiceDiagnosis {
     this.reason,
     this.certificateProbe,
     this.detail,
-  ]) : serverVersion = null;
+  ]) : serverVersion = null,
+       gateway = null;
 
   /// The full form, for the places that set a field the positional list cannot
   /// reach — Dart allows optional positionals or optional named, not both, and
@@ -55,6 +56,7 @@ class ServiceDiagnosis {
     this.certificateProbe,
     this.detail,
     this.serverVersion,
+    this.gateway,
   });
 
   const ServiceDiagnosis.connected() : this(ServiceConnectionStatus.connected);
@@ -95,11 +97,11 @@ class ServiceDiagnosis {
   ServiceDiagnosis.failed(
     Object error, {
     ServiceFailureReason fallback = ServiceFailureReason.unknown,
-  }) : this(
-         ServiceConnectionStatus.disconnected,
-         classifyConnectionFailure(error, fallback: fallback),
-         null,
-         connectionFailureDetail(error),
+  }) : this._all(
+         status: ServiceConnectionStatus.disconnected,
+         reason: classifyConnectionFailure(error, fallback: fallback),
+         detail: connectionFailureDetail(error),
+         gateway: accessGatewayOf(error),
        );
 
   final ServiceConnectionStatus status;
@@ -130,6 +132,10 @@ class ServiceDiagnosis {
   /// job, so both surfaces that report a test say the same thing about it.
   final String? serverVersion;
 
+  /// What answered in front of the service, when the test met a gateway
+  /// ([ServiceFailureReason.accessGateway]): the words name it, as Home's do.
+  final AccessGatewayAnswer? gateway;
+
   /// What the UI should actually say about this outcome.
   ///
   /// One accessor rather than `detail ?? connectionFailureMessage(...)` repeated
@@ -137,7 +143,7 @@ class ServiceDiagnosis {
   /// the same test, and them disagreeing is exactly the drift this codebase
   /// keeps paying for elsewhere.
   String messageFor(ServiceKey service) =>
-      detail ?? connectionFailureMessage(service, reason);
+      detail ?? connectionFailureMessage(service, reason, gateway: gateway);
 
   bool get isConnected => status == ServiceConnectionStatus.connected;
 
@@ -152,6 +158,7 @@ class ServiceDiagnosis {
         certificateProbe: probe,
         detail: detail,
         serverVersion: serverVersion,
+        gateway: gateway,
       );
 }
 
@@ -615,6 +622,7 @@ bool localNetworkCouldExplain(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
   ServiceFailureReason.notFound ||
   ServiceFailureReason.redirected ||
+  ServiceFailureReason.accessGateway ||
   ServiceFailureReason.serverError ||
   ServiceFailureReason.invalidResponse ||
   ServiceFailureReason.tls ||
@@ -679,6 +687,7 @@ bool certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
   ServiceFailureReason.notFound ||
   ServiceFailureReason.redirected ||
+  ServiceFailureReason.accessGateway ||
   ServiceFailureReason.serverError ||
   ServiceFailureReason.invalidResponse ||
   // Nothing left the device, so there is no handshake to inspect: the probe
@@ -717,10 +726,14 @@ Future<ServiceDiagnosis> diagnoseInstanceWithCertProbe(
 
 /// User-facing copy for a failed verification. Each cause names the thing the
 /// user can actually change.
+///
+/// [gateway] is what answered in front of the service for an
+/// [ServiceFailureReason.accessGateway] ([accessGatewayOf] the failure).
 String connectionFailureMessage(
   ServiceKey service,
-  ServiceFailureReason? reason,
-) {
+  ServiceFailureReason? reason, {
+  AccessGatewayAnswer? gateway,
+}) {
   switch (reason) {
     case ServiceFailureReason.unreachable:
       return 'Nothing answered at this address. Check the address and port, '
@@ -759,6 +772,8 @@ String connectionFailureMessage(
           'will not follow. A reverse proxy in front of ${service.title} is '
           'the usual cause, point Cupola at the address the proxy sends '
           'the request to, or stop it redirecting the API.';
+    case ServiceFailureReason.accessGateway:
+      return accessGatewaySentence(gateway, subject: service.title);
     case ServiceFailureReason.serverError:
       return '${service.title} answered with a server error. Check the '
           'instance and its logs.';

@@ -68,6 +68,11 @@ class QbittorrentClient {
   /// at the top of every login, which is what made it stop nothing.
   _LoginRefusal? _refusal;
 
+  /// The gateway that answered the last sign-in in qBittorrent's place, if
+  /// one did. Not a refusal: qBittorrent never saw the attempt, and the
+  /// gateway's answer is what the caller should read.
+  DioException? _gatewayAtLogin;
+
   /// [certFingerprint], when non-empty, is a self-signed certificate the user
   /// explicitly trusted for this origin (trust-on-first-use, ADR-6). Ignored
   /// when [dio] is injected — a caller supplying its own transport owns its
@@ -104,14 +109,23 @@ class QbittorrentClient {
           handler.next(options);
         },
         onError: (error, handler) async {
-          final isAuthFailure = error.response?.statusCode == 403;
+          // qBittorrent's own 403 is an expired session; one from something
+          // in front of it is not, and signing in again cannot clear it.
+          final isAuthFailure =
+              error.response?.statusCode == 403 &&
+              error.error is! AccessGatewayAnswer;
           final alreadyRetried =
               error.requestOptions.extra['skipAuthRetry'] == true;
           if (!isAuthFailure || !hasCredentials || alreadyRetried) {
             handler.next(error);
             return;
           }
-          final ok = await authenticate();
+          bool ok;
+          try {
+            ok = await authenticate();
+          } catch (_) {
+            ok = false;
+          }
           if (!ok) {
             handler.next(error);
             return;
@@ -159,6 +173,7 @@ class QbittorrentClient {
   }
 
   Future<bool> _doAuthenticate() async {
+    _gatewayAtLogin = null;
     try {
       final response = await _dio.post(
         '/api/v2/auth/login',
@@ -172,6 +187,10 @@ class QbittorrentClient {
       _refusal = _refusalFrom(response.statusCode, response.data);
     } on DioException catch (e) {
       _authenticated = false;
+      if (e.error is AccessGatewayAnswer) {
+        _gatewayAtLogin = e;
+        return false;
+      }
       // A 401 or 403 arrives as an error rather than a response, so read it
       // here too. A transport failure (no response at all) is not a refusal:
       // the WebUI never saw the attempt, so it counted nothing.
@@ -250,6 +269,8 @@ class QbittorrentClient {
     if (held != null) throw _refusalException(held);
     if (_authenticated) return;
     await authenticate();
+    final gateway = _gatewayAtLogin;
+    if (!_authenticated && gateway != null) throw gateway;
     final refusal = _refusal;
     if (!_authenticated && refusal != null) throw _refusalException(refusal);
   }
