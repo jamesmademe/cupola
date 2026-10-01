@@ -58,17 +58,20 @@ MediaStatusInfo sonarrSeasonStatus(
 }
 
 MediaAvailability sonarrSeasonAvailability(SonarrSeason season) {
+  // Both figures or neither, as at series level: a count Sonarr did not send
+  // read as `0` made a season "Missing" from no data.
+  final aired = season.episodeCount;
+  final files = season.episodeFileCount;
+  if (aired == null || files == null) return MediaAvailability.unknown;
+
   // Nothing has aired yet: an announced season is not a missing one.
-  if (season.episodeCount <= 0) {
-    return season.episodeFileCount > 0
+  if (aired <= 0) {
+    return files > 0
         ? MediaAvailability.available
         : MediaAvailability.unavailable;
   }
 
-  return availabilityFromCounts(
-    fileCount: season.episodeFileCount,
-    totalCount: season.episodeCount,
-  );
+  return availabilityFromCounts(fileCount: files, totalCount: aired);
 }
 
 /// The season's manifest gap in words: `8 of 10 episodes`.
@@ -78,16 +81,26 @@ MediaAvailability sonarrSeasonAvailability(SonarrSeason season) {
 /// (`episodeFileCount`) — so it is stated rather than left to a bar. When more
 /// episodes are still to air the total is named too, because `8 of 8 episodes`
 /// on a season that will end up with twelve is true and misleading at once.
+///
+/// A count Sonarr did not send is left out, never written as `0`: with the
+/// files unknown the line says how many episodes there are (`10 episodes`)
+/// and states no gap, and with the aired count unknown it can say neither
+/// what is missing nor what is still to come.
 String? sonarrSeasonSummary(SonarrSeason season) {
-  if (season.episodeCount <= 0) {
-    return season.totalEpisodeCount > 0
-        ? '${season.totalEpisodeCount} episodes announced'
-        : null;
+  final expected = season.episodeCount;
+  final total = season.totalEpisodeCount;
+  if (expected == null) {
+    return total != null && total > 0 ? '$total episodes' : null;
   }
 
-  final aired = '${season.episodeFileCount} of ${season.episodeCount}';
+  if (expected <= 0) {
+    return total != null && total > 0 ? '$total episodes announced' : null;
+  }
+
+  final onDisk = season.episodeFileCount;
+  final aired = onDisk == null ? '$expected' : '$onDisk of $expected';
   if (season.hasUnairedEpisodes) {
-    return '$aired aired · ${season.totalEpisodeCount} total';
+    return '$aired aired · $total total';
   }
 
   return '$aired episodes';

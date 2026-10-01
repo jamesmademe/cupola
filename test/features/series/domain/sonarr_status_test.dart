@@ -242,6 +242,50 @@ void main() {
         isNull,
       );
     });
+
+    group('a count Sonarr did not send', () {
+      SonarrSeason parsed(Map<String, dynamic> statistics) =>
+          SonarrSeason.fromJson({'seasonNumber': 1, 'statistics': statistics});
+
+      test('with no file count, says how many and states no gap', () {
+        // It read "0 of 10 episodes", a whole season missing, from nothing.
+        expect(
+          sonarrSeasonSummary(parsed({'episodeCount': 10})),
+          '10 episodes',
+        );
+        expect(
+          sonarrSeasonSummary(
+            parsed({'episodeCount': 10, 'totalEpisodeCount': 12}),
+          ),
+          '10 aired · 12 total',
+        );
+      });
+
+      test('with no aired count, claims nothing about what aired', () {
+        expect(
+          sonarrSeasonSummary(
+            parsed({'totalEpisodeCount': 12, 'episodeFileCount': 4}),
+          ),
+          '12 episodes',
+        );
+        expect(sonarrSeasonSummary(parsed({'episodeFileCount': 4})), isNull);
+      });
+
+      test('reads as unknown, never Missing', () {
+        expect(
+          sonarrSeasonAvailability(parsed({'episodeCount': 10})),
+          MediaAvailability.unknown,
+        );
+        expect(
+          sonarrSeasonAvailability(parsed({'episodeFileCount': 0})),
+          MediaAvailability.unknown,
+        );
+        expect(
+          sonarrSeasonStatus(parsed({'episodeCount': 10})).label,
+          isNot('Missing'),
+        );
+      });
+    });
   });
 
   group('sonarrEpisodeStatus', () {

@@ -26,15 +26,29 @@ void main() {
       expect(season.shortLabel, 'S3');
     });
 
-    test('falls back safely when statistics are missing', () {
+    test('a count Sonarr did not send is unknown, never 0', () {
       final season = SonarrSeason.fromJson(const <String, dynamic>{});
 
       expect(season.seasonNumber, 0);
       expect(season.monitored, isFalse);
-      expect(season.episodeCount, 0);
-      expect(season.episodeFileCount, 0);
-      // Nothing expected yet, so there is no completion to draw.
+      // "0 of 10 on disk" from no data was the worst gap a season can have.
+      expect(season.episodeCount, isNull);
+      expect(season.totalEpisodeCount, isNull);
+      expect(season.episodeFileCount, isNull);
       expect(season.completionPercent, isNull);
+      expect(season.hasUnairedEpisodes, isFalse);
+    });
+
+    test('one missing count leaves no completion to draw', () {
+      final season = SonarrSeason.fromJson(const {
+        'seasonNumber': 2,
+        'statistics': {'episodeCount': 10, 'totalEpisodeCount': 12},
+      });
+
+      expect(season.episodeCount, 10);
+      expect(season.episodeFileCount, isNull);
+      expect(season.completionPercent, isNull);
+      expect(season.hasUnairedEpisodes, isTrue);
     });
 
     test('season zero is Specials, not Season 0', () {

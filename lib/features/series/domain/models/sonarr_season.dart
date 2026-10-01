@@ -15,12 +15,18 @@ class SonarrSeason {
   /// Deliberately not [totalEpisodeCount], which counts unaired episodes and
   /// would leave any currently-airing season permanently `partial` — the same
   /// distinction `SonarrSeries.episodeCount` documents at series level.
-  final int episodeCount;
+  ///
+  /// The three counts are null when Sonarr did not send them, never 0. Each
+  /// used to fall back to `0`, so a season whose statistics were missing read
+  /// "0 of 10 episodes" and painted as missing: the worst gap a season can
+  /// have, from no data. `SeriesDetailViewModel.diskCounts` keeps the same
+  /// rule for the whole series.
+  final int? episodeCount;
 
   /// Every known episode of the season, including unaired ones.
-  final int totalEpisodeCount;
+  final int? totalEpisodeCount;
 
-  final int episodeFileCount;
+  final int? episodeFileCount;
 
   const SonarrSeason({
     required this.seasonNumber,
@@ -40,30 +46,39 @@ class SonarrSeason {
   String get shortLabel => isSpecials ? 'Sp' : 'S$seasonNumber';
 
   /// Share of the expected episodes that are on disk, or null when nothing is
-  /// expected yet (an announced season that has not started airing).
+  /// expected yet (an announced season that has not started airing) or when
+  /// Sonarr did not send both counts.
   double? get completionPercent {
-    if (episodeCount <= 0) return null;
-    return (episodeFileCount / episodeCount).clamp(0.0, 1.0);
+    final expected = episodeCount;
+    final onDisk = episodeFileCount;
+    if (expected == null || onDisk == null || expected <= 0) return null;
+    return (onDisk / expected).clamp(0.0, 1.0);
   }
 
-  /// True while more episodes of this season are still expected to air.
-  bool get hasUnairedEpisodes => totalEpisodeCount > episodeCount;
+  /// True while more episodes of this season are still expected to air, and
+  /// false when Sonarr did not say.
+  bool get hasUnairedEpisodes {
+    final total = totalEpisodeCount;
+    final aired = episodeCount;
+    return total != null && aired != null && total > aired;
+  }
 
   factory SonarrSeason.fromJson(Map<String, dynamic> json) {
     final rawStatistics = json['statistics'];
     final statistics = rawStatistics is Map<String, dynamic>
         ? rawStatistics
         : const <String, dynamic>{};
+    final aired = (statistics['episodeCount'] as num?)?.toInt();
 
     return SonarrSeason(
       seasonNumber: (json['seasonNumber'] as num?)?.toInt() ?? 0,
       monitored: json['monitored'] as bool? ?? false,
-      episodeCount: (statistics['episodeCount'] as num?)?.toInt() ?? 0,
+      episodeCount: aired,
+      // No total means no unaired episode Sonarr told us about, so the aired
+      // count stands in; neither stands in for a count that never came.
       totalEpisodeCount:
-          (statistics['totalEpisodeCount'] as num?)?.toInt() ??
-          (statistics['episodeCount'] as num?)?.toInt() ??
-          0,
-      episodeFileCount: (statistics['episodeFileCount'] as num?)?.toInt() ?? 0,
+          (statistics['totalEpisodeCount'] as num?)?.toInt() ?? aired,
+      episodeFileCount: (statistics['episodeFileCount'] as num?)?.toInt(),
     );
   }
 
