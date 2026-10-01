@@ -128,6 +128,7 @@ final streamAvailabilityProvider = FutureProvider.autoDispose
           failed ??= StreamAvailability.failed(
             service,
             classifyConnectionFailure(error),
+            gateway: accessGatewayOf(error),
           );
         }
       }

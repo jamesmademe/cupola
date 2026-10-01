@@ -122,6 +122,40 @@ void main() {
     });
   });
 
+  group('a Radarr behind Cloudflare Access', () {
+    testWidgets('a preloaded film stays, under an amber band that names '
+        'Access and the token it wants', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1.withBehaviour(
+          WorldIds.radarr,
+          const ConnectionBehaviour.behindCloudflareAccess(
+            mode: CloudflareAccessMode.unauthorized,
+          ),
+        ),
+        MovieDetailScreen(
+          movieId: 1,
+          heroTag: 'movie-1',
+          initialMovie: _preload,
+        ),
+      );
+
+      expect(find.text('Sprite Fright'), findsWidgets);
+      final band = tester.widget<FaultBand>(find.byType(FaultBand));
+      expect(band.tone, StatusTone.warning);
+      expect(
+        band.message,
+        'Cloudflare Access answered instead of Radarr. Everything below is '
+        'what it said last.',
+      );
+      expect(band.primaryAction.label, 'Add a service token');
+      // The same request meets the same gateway.
+      expect(band.secondaryAction, isNull);
+
+      await harness.unmount(tester);
+    });
+  });
+
   group('a Radarr that does not answer', () {
     testWidgets('a preloaded film stays, under a red band that says so', (
       tester,

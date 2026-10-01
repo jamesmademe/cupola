@@ -86,6 +86,7 @@ class SourceCoverage {
     this.failed = const <CoverageSource, ServiceFailureReason>{},
     this.pending = const <CoverageSource>{},
     this.cutShort = const <CoverageSource>{},
+    this.gateways = const <CoverageSource, AccessGatewayAnswer>{},
   });
 
   /// No source at all: nothing configured feeds the merge.
@@ -119,6 +120,10 @@ class SourceCoverage {
            CoverageSource(service, instanceId: instanceId, name: name):
                classifyConnectionFailure(error),
          },
+         gateways: {
+           CoverageSource(service, instanceId: instanceId, name: name):
+               ?accessGatewayOf(error),
+         },
        );
 
   /// [services] have been asked and have not said anything yet.
@@ -137,8 +142,10 @@ class SourceCoverage {
     final pending = <CoverageSource>{};
     final answered = <CoverageSource>{};
     final cutShort = <CoverageSource>{};
+    final gateways = <CoverageSource, AccessGatewayAnswer>{};
     for (final part in parts) {
       failed.addAll(part.failed);
+      gateways.addAll(part.gateways);
       pending.addAll(part.pending);
       answered.addAll(part.answered);
       cutShort.addAll(part.cutShort);
@@ -153,6 +160,10 @@ class SourceCoverage {
       failed: failed,
       pending: pending,
       cutShort: cutShort,
+      gateways: {
+        for (final MapEntry(:key, :value) in gateways.entries)
+          if (failed[key] == ServiceFailureReason.accessGateway) key: value,
+      },
     );
   }
 
@@ -172,6 +183,10 @@ class SourceCoverage {
 
   /// Each source whose read failed, with why.
   final Map<CoverageSource, ServiceFailureReason> failed;
+
+  /// What answered in front of each failed source a gateway answered for, so
+  /// its words name it.
+  final Map<CoverageSource, AccessGatewayAnswer> gateways;
 
   /// Sources still being asked: neither a figure nor a failure yet.
   final Set<CoverageSource> pending;
@@ -265,7 +280,11 @@ String? coverageNote(SourceCoverage coverage) {
       silent.add(source.title);
       continue;
     }
-    final label = describeFailure(source.service, reason).label;
+    final label = describeFailure(
+      source.service,
+      reason,
+      gateway: coverage.gateways[source],
+    ).label;
     (groups[label] ??= []).add(source.title);
   }
   final named = <String>[];
@@ -303,6 +322,7 @@ String coverageFailureSentence(SourceCoverage coverage) {
         source.service,
         reason,
         subject: source.title,
+        gateway: coverage.gateways[source],
       ).headline;
       faults.add('$headline.');
     }

@@ -1531,9 +1531,9 @@ class _StackHealthStrip extends StatelessWidget {
     final single = failed.length == 1 ? failed.single : null;
     final presentation = single == null
         ? null
-        : describeFailure(
+        : describeFailureOf(
             single.service,
-            single.failureReason ?? ServiceFailureReason.unknown,
+            single.error,
             subject: single.title,
           );
     // The remedy, when the form holds it (`Paste the key again`), leads to that

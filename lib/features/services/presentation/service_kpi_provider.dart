@@ -451,7 +451,7 @@ Object _titleKey(Object title, Object? key) =>
 /// that failed without saying why is `Did not complete`, not silence.
 String _notAnswering(ServiceKey service, Object? error) =>
     '${service.title} · '
-    '${failureLabel(classifyConnectionFailure(error), credential: refusedCredentialOf(service))}';
+    '${failureLabel(classifyConnectionFailure(error), credential: refusedCredentialOf(service), gateway: accessGatewayOf(error))}';
 
 /// The shared KPI set for a media server, identical for Jellyfin and Plex.
 ///
@@ -678,7 +678,7 @@ List<ServiceKpi> _radarrKpisFrom(
 /// Why a queue figure reads an em dash when the queue is its own fetch:
 /// `Queue · Did not answer`.
 String _queueNote(ServiceKey service, Object? error) =>
-    'Queue · ${failureLabel(classifyConnectionFailure(error), credential: refusedCredentialOf(service))}';
+    'Queue · ${failureLabel(classifyConnectionFailure(error), credential: refusedCredentialOf(service), gateway: accessGatewayOf(error))}';
 
 Future<List<ServiceKpi>> _sonarrKpis(Ref ref) async {
   try {

@@ -50,7 +50,7 @@ String mapImportError(Object error, ServiceKey service) {
   }
   if (isTransportFailure(error)) {
     final reason = classifyConnectionFailure(error);
-    final headline = describeFailure(service, reason).headline;
+    final headline = describeFailureOf(service, error).headline;
     if (failureDidNotAnswer(reason)) {
       return '$headline. Check that it is running and reachable from this '
           'device.';
@@ -60,6 +60,7 @@ String mapImportError(Object error, ServiceKey service) {
     final remedy = failureRemedy(
       reason,
       credential: refusedCredentialOf(service),
+      gateway: accessGatewayOf(error),
     );
     return [
       '$headline.',

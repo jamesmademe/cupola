@@ -103,7 +103,7 @@ List<MediaDetailSlot> streamAvailabilitySlots(
       final service = availability.services.first;
       final reason = availability.failure ?? ServiceFailureReason.unknown;
       final sentence =
-          '${describeFailure(service, reason).headline}, so Cupola cannot say '
+          '${describeFailure(service, reason, gateway: availability.gateway).headline}, so Cupola cannot say '
           'whether it has this.';
       return [
         MediaDetailSlot.box(

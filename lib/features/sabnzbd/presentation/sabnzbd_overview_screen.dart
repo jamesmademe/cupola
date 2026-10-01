@@ -141,6 +141,7 @@ String _failureWord(Object? error) => Lexicon.inline(
   failureLabel(
     classifyConnectionFailure(error),
     credential: refusedCredentialOf(ServiceKey.sabnzbd),
+    gateway: accessGatewayOf(error),
   ),
 );
 

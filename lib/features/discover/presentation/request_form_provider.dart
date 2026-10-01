@@ -220,7 +220,7 @@ class RequestFormState {
 /// A failed read of the request sheet's lists, as the sheet says it: the
 /// classified headline, never the exception.
 String _loadFailure(Object error) =>
-    '${failureHeadline(classifyConnectionFailure(error), subject: ServiceKey.seerr.title, credential: refusedCredentialOf(ServiceKey.seerr))}. '
+    '${describeFailureOf(ServiceKey.seerr, error).headline}. '
     'The request cannot be sent until it does.';
 
 final requestFormProvider = NotifierProvider.autoDispose

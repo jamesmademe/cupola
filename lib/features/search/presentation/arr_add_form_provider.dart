@@ -236,7 +236,7 @@ class ArrAddFormNotifier extends Notifier<ArrAddFormState> {
         state.copyWith(
           isLoading: false,
           error:
-              '${describeFailure(arg.service, reason, subject: connectionName).headline}.',
+              '${describeFailureOf(arg.service, error, subject: connectionName).headline}.',
           errorDetail: failureDiagnostic(error),
           errorReason: reason,
         ),

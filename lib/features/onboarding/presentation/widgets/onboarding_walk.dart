@@ -218,6 +218,7 @@ class OnboardingWalk extends StatefulWidget {
     required this.passwordController,
     required this.status,
     required this.reason,
+    this.gateway,
     required this.failureDetail,
     required this.serverVersion,
     required this.verifying,
@@ -241,6 +242,10 @@ class OnboardingWalk extends StatefulWidget {
   final TextEditingController passwordController;
   final ServiceConnectionStatus? status;
   final ServiceFailureReason? reason;
+
+  /// What answered in the service's place, when the test met a gateway: the
+  /// state word names it.
+  final AccessGatewayAnswer? gateway;
 
   /// The verbatim sentence the failure carried, when it carried one — see
   /// `ServiceDiagnosis.detail`. Null for almost every failure, where the
@@ -472,6 +477,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           service: service,
           status: status,
           reason: widget.reason,
+          gateway: widget.gateway,
           failureDetail: widget.failureDetail,
           serverVersion: widget.serverVersion,
         ),
@@ -577,6 +583,7 @@ class _Outcome extends StatelessWidget {
     required this.service,
     required this.status,
     required this.reason,
+    this.gateway,
     required this.failureDetail,
     required this.serverVersion,
   });
@@ -584,6 +591,7 @@ class _Outcome extends StatelessWidget {
   final ServiceKey service;
   final ServiceConnectionStatus status;
   final ServiceFailureReason? reason;
+  final AccessGatewayAnswer? gateway;
   final String? failureDetail;
   final String? serverVersion;
 
@@ -595,6 +603,7 @@ class _Outcome extends StatelessWidget {
       service,
       status: status,
       reason: reason,
+      gateway: gateway,
     );
     final tone = statusToneColor(scheme, presentation.tone);
     final sentence = switch (status) {
@@ -609,7 +618,9 @@ class _Outcome extends StatelessWidget {
       // otherwise — the same rule `ServiceDiagnosis.messageFor` applies on the
       // settings screen, so the two surfaces cannot describe one test
       // differently.
-      _ => failureDetail ?? connectionFailureMessage(service, reason),
+      _ =>
+        failureDetail ??
+            connectionFailureMessage(service, reason, gateway: gateway),
     };
     return Container(
       width: double.infinity,

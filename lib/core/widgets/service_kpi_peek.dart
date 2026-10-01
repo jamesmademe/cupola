@@ -97,7 +97,10 @@ class ServiceKpiPeek extends StatelessWidget {
               kpi: ServiceKpi.unavailable(
                 label: 'Figures',
                 icon: Icons.remove_rounded,
-                note: failureLabel(classifyConnectionFailure(error)),
+                note: failureLabel(
+                  classifyConnectionFailure(error),
+                  gateway: accessGatewayOf(error),
+                ),
               ),
               fallbackAccent: accent,
             ),

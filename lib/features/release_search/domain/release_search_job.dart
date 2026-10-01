@@ -446,7 +446,8 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
   }
   return ReleaseSearchFailure(
     kind: ReleaseSearchFailureKind.unknown,
-    headline: '${failureHeadline(reason, subject: 'The service')}.',
+    headline:
+        '${failureHeadline(reason, subject: 'The service', gateway: accessGatewayOf(error))}.',
     diagnosis: connectionFailureSentence(error),
     detail: status == null ? error.type.name : 'HTTP $status',
     gateway: gateway,

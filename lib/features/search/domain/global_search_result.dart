@@ -172,11 +172,16 @@ class GlobalSearchServiceResults {
   /// nothing to attribute them with.
   final ServiceFailureReason? reason;
 
+  /// What answered in the lane's server's place, when [reason] is a
+  /// gateway's: its word names it.
+  final AccessGatewayAnswer? gateway;
+
   const GlobalSearchServiceResults({
     required this.leg,
     this.results = const [],
     this.state = SearchLaneState.answered,
     this.reason,
+    this.gateway,
   });
 
   /// A lane that stopped, with its tone resolved from the failure rather than
@@ -211,6 +216,7 @@ class GlobalSearchServiceResults {
         _ => SearchLaneState.failed,
       },
       reason: reason,
+      gateway: accessGatewayOf(error),
     );
   }
 
@@ -278,6 +284,7 @@ class GlobalSearchServiceResults {
     final reason => failureLabel(
       reason,
       credential: refusedCredentialOf(service),
+      gateway: gateway,
     ),
   };
 }

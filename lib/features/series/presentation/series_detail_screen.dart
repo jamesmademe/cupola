@@ -246,7 +246,12 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
     final reason = classifyConnectionFailure(failure);
     return failureDidNotAnswer(reason)
         ? FaultBand.unreachable(serviceName: name, onRetry: onRetry)
-        : FaultBand.fault(serviceName: name, reason: reason, onRetry: onRetry);
+        : FaultBand.fault(
+            serviceName: name,
+            reason: reason,
+            gateway: accessGatewayOf(failure),
+            onRetry: onRetry,
+          );
   }
 
   /// A quiet line when the queue could not be read and the badge may be

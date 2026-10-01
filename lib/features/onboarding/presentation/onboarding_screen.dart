@@ -79,6 +79,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   final Map<ServiceKey, ServiceConnectionStatus?> _status = {};
   final Map<ServiceKey, ServiceFailureReason?> _reason = {};
 
+  /// What answered in a service's place, when its last test met a gateway.
+  final Map<ServiceKey, AccessGatewayAnswer?> _gateway = {};
+
   /// The verbatim sentence a failure carried, for the few that carry one — see
   /// `ServiceDiagnosis.detail`. Kept beside [_reason] rather than folded into it
   /// so the walk renders the same words the settings screen does.
@@ -378,6 +381,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     setState(() {
       _status[service] = result.status;
       _reason[service] = result.reason;
+      _gateway[service] = result.gateway;
       // The test's own sentence, from the failure: a gateway or a web page
       // names what answered, which the reason alone cannot.
       _failureDetail[service] = result.isDisconnected
@@ -582,6 +586,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       _skipped.add(service);
       _status.remove(service);
       _reason.remove(service);
+      _gateway.remove(service);
       _failureDetail.remove(service);
       _serverVersion.remove(service);
       _pendingCert.remove(service);
@@ -874,6 +879,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                       if (_picked.remove(service)) {
                                         _status.remove(service);
                                         _reason.remove(service);
+                                        _gateway.remove(service);
                                         _serverVersion.remove(service);
                                         _pendingCert.remove(service);
                                       } else {
@@ -895,6 +901,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                           _passwordCtrl[walk[i]]!,
                                       status: _status[walk[i]],
                                       reason: _reason[walk[i]],
+                                      gateway: _gateway[walk[i]],
                                       failureDetail: _failureDetail[walk[i]],
                                       serverVersion: _serverVersion[walk[i]],
                                       verifying: _verifying[walk[i]] ?? false,

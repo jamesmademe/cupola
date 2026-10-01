@@ -47,6 +47,7 @@ class StreamAvailability {
     this.match,
     this.services = const [],
     this.failure,
+    this.gateway,
   });
 
   const StreamAvailability.found(StreamMatch match)
@@ -55,13 +56,18 @@ class StreamAvailability {
   const StreamAvailability.notSetUp()
     : this._(StreamAvailabilityState.notSetUp);
 
-  /// [service] failed with [failure].
-  StreamAvailability.failed(ServiceKey service, ServiceFailureReason failure)
-    : this._(
-        StreamAvailabilityState.failed,
-        services: [service],
-        failure: failure,
-      );
+  /// [service] failed with [failure]; [gateway] is what answered in its
+  /// place when that is the failure.
+  StreamAvailability.failed(
+    ServiceKey service,
+    ServiceFailureReason failure, {
+    AccessGatewayAnswer? gateway,
+  }) : this._(
+         StreamAvailabilityState.failed,
+         services: [service],
+         failure: failure,
+         gateway: gateway,
+       );
 
   /// Every one of [services] answered "not here".
   const StreamAvailability.notInLibrary(List<ServiceKey> services)
@@ -82,4 +88,7 @@ class StreamAvailability {
 
   /// Why the lookup failed, on [StreamAvailabilityState.failed].
   final ServiceFailureReason? failure;
+
+  /// What answered in the server's place, when [failure] is a gateway's.
+  final AccessGatewayAnswer? gateway;
 }

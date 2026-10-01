@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/models/media_preview.dart';
-import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
@@ -67,11 +66,10 @@ class DiscoverCarousel extends StatelessWidget {
         if (error.toString().contains('not configured')) {
           return const SizedBox.shrink();
         }
-        final reason = classifyConnectionFailure(error);
         return _shell(
           child: InlineErrorRetry(
             message:
-                '${failureHeadline(reason, subject: ServiceKey.seerr.title, credential: refusedCredentialOf(ServiceKey.seerr))}, '
+                '${describeFailureOf(ServiceKey.seerr, error).headline}, '
                 'so this row is missing.',
             error: error,
             service: ServiceKey.seerr,
