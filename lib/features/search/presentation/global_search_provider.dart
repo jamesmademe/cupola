@@ -128,7 +128,9 @@ final globalSearchLegsProvider = Provider.autoDispose<List<SearchLeg>>((ref) {
           // kept the old name after a rename would be naming nothing.
           parts.add(
             '${instance.id}|${instance.url}|${instance.credential}'
-            '|${s.pinForUrl(instance.url)}|${s.connectionName(instance.id)}',
+            '|${s.pinForUrl(instance.url)}|${s.connectionName(instance.id)}'
+            // The access by its hash, so the stamp never holds a secret.
+            '|${instance.access.hashCode}',
           );
         }
       }

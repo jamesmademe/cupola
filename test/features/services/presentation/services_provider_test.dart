@@ -1220,6 +1220,7 @@ ProviderContainer _container({
                 required String baseUrl,
                 required String apiKey,
                 String? pinnedCertFingerprint,
+                Map<String, String> accessHeaders = const {},
               }) => statusClient,
         ),
       radarrServiceProvider.overrideWith(
@@ -1334,6 +1335,7 @@ ProviderContainer _mutableSettingsContainer({
                 required String baseUrl,
                 required String apiKey,
                 String? pinnedCertFingerprint,
+                Map<String, String> accessHeaders = const {},
               }) => statusClient,
         ),
       radarrServiceProvider.overrideWith(

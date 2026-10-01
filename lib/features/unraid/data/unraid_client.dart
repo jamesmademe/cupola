@@ -108,6 +108,7 @@ class UnraidClient {
     required String apiKey,
     Dio? dio,
     String? certFingerprint,
+    Map<String, String> accessHeaders = const {},
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        _apiKey = apiKey.trim() {
     // Redirects are followed manually so `x-api-key` is never replayed to an
@@ -116,6 +117,7 @@ class UnraidClient {
       baseUrl: baseUrl,
       injected: dio,
       certFingerprint: certFingerprint,
+      accessHeaders: accessHeaders,
     );
   }
 

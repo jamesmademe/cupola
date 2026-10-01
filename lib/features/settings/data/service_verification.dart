@@ -17,6 +17,7 @@ import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_status_probe.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/probe_identity.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -184,6 +185,9 @@ class ServiceDiagnosis {
 /// ignored by every other service. It is read from settings rather than minted
 /// here because Plex registers a new device row against the user's server for
 /// each distinct value it sees.
+///
+/// [access] is what the connection presents to a gateway in front of the
+/// service, sent on every request of the test as it is on every other.
 Future<ServiceDiagnosis> diagnoseCredentials(
   ServiceKey service, {
   required String url,
@@ -192,7 +196,9 @@ Future<ServiceDiagnosis> diagnoseCredentials(
   String password = '',
   String certFingerprint = '',
   String clientIdentifier = '',
+  ConnectionAccess access = const NoAccess(),
 }) async {
+  final accessHeaders = access.headers();
   final pin = certFingerprint.trim().isEmpty ? null : certFingerprint.trim();
   final user = username.trim().isEmpty ? null : username.trim();
   final pass = password.isEmpty ? null : password;
@@ -205,6 +211,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       username: user,
       password: pass,
       certFingerprint: pin,
+      accessHeaders: accessHeaders,
     );
     try {
       final ok = await client.ping().timeout(const Duration(seconds: 8));
@@ -229,6 +236,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       username: user,
       password: pass,
       certFingerprint: pin,
+      accessHeaders: accessHeaders,
     );
     return _probe(
       client.testConnection,
@@ -244,6 +252,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       identity: user,
       secret: pass,
       certFingerprint: pin,
+      accessHeaders: accessHeaders,
     );
     // Checks both halves: `GET /api/` proves an NPM is there, and the login
     // proves the credential. Only the first would go green for a wrong
@@ -263,6 +272,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       username: user,
       password: pass,
       certFingerprint: pin,
+      accessHeaders: accessHeaders,
     );
     // `session-get` in one round trip forces the CSRF handshake, validates
     // the Basic credentials, and proves the rpc/host whitelists admit this
@@ -289,6 +299,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       username: user,
       password: pass,
       certFingerprint: pin,
+      accessHeaders: accessHeaders,
     );
     // Two round trips (login + version), so allow more than a single hop.
     return _probe(
@@ -307,6 +318,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       baseUrl: urlTrimmed,
       apiKey: apiKey.trim(),
       pinnedCertFingerprint: pin,
+      accessHeaders: accessHeaders,
     );
     try {
       await SeerrService(
@@ -327,6 +339,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       url: urlTrimmed,
       apiKey: apiKey.trim(),
       certFingerprint: pin,
+      accessHeaders: accessHeaders,
     );
     return _probe(
       client.testConnection,
@@ -340,6 +353,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       url: urlTrimmed,
       apiKey: apiKey.trim(),
       certFingerprint: pin,
+      accessHeaders: accessHeaders,
     );
     return _probe(
       client.testConnection,
@@ -353,6 +367,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       baseUrl: urlTrimmed,
       apiKey: apiKey.trim(),
       certFingerprint: pin,
+      accessHeaders: accessHeaders,
     );
     try {
       // `core.ping` stays the verdict: it is the cheapest call that proves the
@@ -394,6 +409,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       baseUrl: urlTrimmed,
       apiKey: apiKey.trim(),
       pinnedCertFingerprint: pin,
+      accessHeaders: accessHeaders,
     );
     bool accepted;
     try {
@@ -409,7 +425,12 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       client.close();
     }
     if (accepted) return const ServiceDiagnosis.connected();
-    return _explainCredentialRefusal(service, url: urlTrimmed, pin: pin);
+    return _explainCredentialRefusal(
+      service,
+      url: urlTrimmed,
+      pin: pin,
+      accessHeaders: accessHeaders,
+    );
   }
 
   if (service == ServiceKey.plex) {
@@ -418,6 +439,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       token: apiKey.trim(),
       clientIdentifier: clientIdentifier.trim(),
       pinnedCertFingerprint: pin,
+      accessHeaders: accessHeaders,
     );
     try {
       // Unlike Jellyfin's, this one already separates the two questions: it
@@ -446,6 +468,7 @@ Future<ServiceDiagnosis> diagnoseCredentials(
     url: urlTrimmed,
     apiKey: apiKey,
     pin: pin,
+    accessHeaders: accessHeaders,
   );
 }
 
@@ -486,6 +509,7 @@ Future<ServiceDiagnosis> _diagnoseOverApiClient(
   required String url,
   required String apiKey,
   required String? pin,
+  Map<String, String> accessHeaders = const {},
 }) async {
   // Fails closed on a routing bug. An empty entry in
   // [ServiceKey.statusEndpoint] means "this service is verified through its own
@@ -509,6 +533,7 @@ Future<ServiceDiagnosis> _diagnoseOverApiClient(
     baseUrl: url,
     apiKey: apiKey.trim(),
     pinnedCertFingerprint: pin,
+    accessHeaders: accessHeaders,
   );
   try {
     // The Dashboard probe's own reading: the status route, and who answered
@@ -534,12 +559,14 @@ Future<ServiceDiagnosis> _explainCredentialRefusal(
   ServiceKey service, {
   required String url,
   required String? pin,
+  Map<String, String> accessHeaders = const {},
 }) async {
   final reachability = await _diagnoseOverApiClient(
     service,
     url: url,
     apiKey: '',
     pin: pin,
+    accessHeaders: accessHeaders,
   );
   if (!reachability.isConnected) return reachability;
   return const ServiceDiagnosis(
@@ -622,6 +649,7 @@ Future<ServiceDiagnosis> diagnoseInstance(
     password: service.usesApiKey ? '' : instance.credential,
     certFingerprint: settings.pinForUrl(instance.url) ?? '',
     clientIdentifier: settings.plexClientId,
+    access: instance.access,
   );
 }
 

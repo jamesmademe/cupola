@@ -84,6 +84,7 @@ class QbittorrentClient {
     Dio? dio,
     CookieJar? cookieJar,
     String? certFingerprint,
+    Map<String, String> accessHeaders = const {},
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        _cookieJar = cookieJar ?? CookieJar() {
     // Redirects are followed by hand so the SID cookie — which is full account
@@ -95,6 +96,7 @@ class QbittorrentClient {
       baseUrl: baseUrl,
       injected: dio,
       certFingerprint: certFingerprint,
+      accessHeaders: accessHeaders,
       sendTimeout: const Duration(seconds: 10),
     );
 

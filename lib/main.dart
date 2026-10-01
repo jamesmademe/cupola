@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/core/network/connection_access_registry.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/platform/desktop_window.dart';
 import 'package:cupola/core/router.dart';
@@ -125,6 +126,15 @@ class CupolaApp extends ConsumerWidget {
     ref.listen(
       currentSettingsProvider.select((s) => s.trustedCertificates),
       (previous, next) => CertTrustRegistry.update(next),
+    );
+    // The same bridge for each connection's access, which an arr's artwork
+    // needs as much as its API calls: see `ConnectionAccessRegistry`.
+    ConnectionAccessRegistry.update(
+      ref.read(currentSettingsProvider).accessHeadersByAddress,
+    );
+    ref.listen(
+      currentSettingsProvider.select((s) => s.accessHeadersByAddress),
+      (previous, next) => ConnectionAccessRegistry.update(next),
     );
 
     // No DynamicColorBuilder: the palette is fixed on purpose so per-service

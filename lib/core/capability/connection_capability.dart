@@ -73,6 +73,7 @@ final connectionCapabilityProvider =
                   credential: instance.credential,
                   username: instance.username,
                   pin: settings.pinForUrl(instance.url),
+                  access: instance.access,
                 );
               }),
             )

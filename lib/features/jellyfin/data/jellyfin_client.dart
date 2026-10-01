@@ -90,7 +90,9 @@ class JellyfinClient implements StreamServerClient {
     String? deviceId,
     String appVersion = kJellyfinClientVersion,
     String? pinnedCertFingerprint,
+    Map<String, String> accessHeaders = const {},
   }) : _baseUrl = UrlUtils.normalizeBaseUrl(baseUrl),
+       _accessHeaders = accessHeaders,
        _userId = userId.trim(),
        _authHeader = buildJellyfinAuthorizationHeader(
          token: apiKey.trim(),
@@ -106,12 +108,20 @@ class JellyfinClient implements StreamServerClient {
     // the user never configured.
     _api = ApiClient.authenticatedBy(
       baseUrl: _baseUrl,
-      headers: {'Authorization': _authHeader},
+      headers: _serviceHeaders,
       pinnedCertFingerprint: pinnedCertFingerprint,
+      accessHeaders: accessHeaders,
     );
   }
 
   final String _baseUrl;
+
+  /// What the connection presents to a gateway in front of Jellyfin, on every
+  /// request and every poster.
+  final Map<String, String> _accessHeaders;
+
+  /// The headers that sign this client in to Jellyfin.
+  Map<String, String> get _serviceHeaders => {'Authorization': _authHeader};
   final String _userId;
   final String _authHeader;
   late final ApiClient _api;
@@ -900,7 +910,7 @@ class JellyfinClient implements StreamServerClient {
       url: uri
           .replace(queryParameters: query.isEmpty ? null : query)
           .toString(),
-      headers: {'Authorization': _authHeader},
+      headers: {..._accessHeaders, ..._serviceHeaders},
     );
   }
 

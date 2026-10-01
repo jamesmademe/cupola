@@ -57,6 +57,7 @@ NzbgetClient _nzbgetClient(Ref ref, {required String? instanceId}) {
     username: transport.username.isEmpty ? null : transport.username,
     password: transport.apiKey.isEmpty ? null : transport.apiKey,
     certFingerprint: transport.pin,
+    accessHeaders: transport.access.headers(),
   );
   ref.onDispose(client.close);
   return client;

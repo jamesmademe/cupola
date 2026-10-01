@@ -57,6 +57,7 @@ import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/service_status_probe.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -214,6 +215,7 @@ typedef _ServiceConnection = ({
   String apiKey,
   String username,
   String? certFingerprint,
+  ConnectionAccess access,
 });
 
 /// The connection key for whichever instance of [service] is currently being
@@ -285,6 +287,7 @@ _ServiceConnection _connectionOfInstance(
       apiKey: '',
       username: '',
       certFingerprint: null,
+      access: const NoAccess(),
     );
   }
   return (
@@ -293,6 +296,7 @@ _ServiceConnection _connectionOfInstance(
     apiKey: instance.credential,
     username: instance.username,
     certFingerprint: settings.pinForUrl(instance.url),
+    access: instance.access,
   );
 }
 
@@ -301,6 +305,7 @@ typedef ServiceStatusClientFactory =
       required String baseUrl,
       required String apiKey,
       String? pinnedCertFingerprint,
+      Map<String, String> accessHeaders,
     });
 
 final serviceStatusClientFactoryProvider = Provider<ServiceStatusClientFactory>(
@@ -309,10 +314,12 @@ final serviceStatusClientFactoryProvider = Provider<ServiceStatusClientFactory>(
         required String baseUrl,
         required String apiKey,
         String? pinnedCertFingerprint,
+        Map<String, String> accessHeaders = const {},
       }) => ApiClient(
         baseUrl: baseUrl,
         apiKey: apiKey,
         pinnedCertFingerprint: pinnedCertFingerprint,
+        accessHeaders: accessHeaders,
       ),
 );
 
@@ -366,6 +373,7 @@ Future<String?> _loadVersion(
       username: instance.username.isNotEmpty ? instance.username : null,
       password: instance.credential.isNotEmpty ? instance.credential : null,
       certFingerprint: settings.pinForUrl(instance.url),
+      accessHeaders: instance.access.headers(),
     );
     // Login-then-version is two hops on a cold client, so this gets the same
     // headroom as Transmission's 409 handshake pair.
@@ -389,6 +397,7 @@ Future<String?> _loadVersion(
       baseUrl: instance.url,
       apiKey: instance.credential,
       certFingerprint: settings.pinForUrl(instance.url),
+      accessHeaders: instance.access.headers(),
     );
     return _versionOrNull(
       () async => (await TrueNasService(client).getSystemInfo()).version ?? '',
@@ -403,6 +412,7 @@ Future<String?> _loadVersion(
       username: instance.username.isEmpty ? null : instance.username,
       password: instance.credential.isEmpty ? null : instance.credential,
       certFingerprint: settings.pinForUrl(instance.url),
+      accessHeaders: instance.access.headers(),
     );
     return _versionOrNull(
       () async => await DockgeService(client).fetchVersion() ?? '',
@@ -416,6 +426,7 @@ Future<String?> _loadVersion(
       url: instance.url,
       apiKey: instance.credential,
       certFingerprint: settings.pinForUrl(instance.url),
+      accessHeaders: instance.access.headers(),
     );
     // Keyed, not `mode=version`: that one needs no key, and a probe that
     // cannot see a wrong key paints it as answering. Two hops, hence the room.
@@ -434,6 +445,7 @@ Future<String?> _loadVersion(
       baseUrl: instance.url,
       apiKey: instance.credential,
       pinnedCertFingerprint: settings.pinForUrl(instance.url),
+      accessHeaders: instance.access.headers(),
     );
     return _versionOrNull(
       () async => await client.checkCredentialAndVersion() ?? '',
@@ -448,6 +460,7 @@ Future<String?> _loadVersion(
       token: instance.credential,
       clientIdentifier: settings.plexClientId,
       pinnedCertFingerprint: settings.pinForUrl(instance.url),
+      accessHeaders: instance.access.headers(),
     );
     return _versionOrNull(
       () async => await client.checkCredentialAndVersion() ?? '',
@@ -462,6 +475,7 @@ Future<String?> _loadVersion(
       username: instance.username.isEmpty ? null : instance.username,
       password: instance.credential.isEmpty ? null : instance.credential,
       certFingerprint: settings.pinForUrl(instance.url),
+      accessHeaders: instance.access.headers(),
     );
     return _versionOrNull(
       client.version,
@@ -476,6 +490,7 @@ Future<String?> _loadVersion(
       username: instance.username.isEmpty ? null : instance.username,
       password: instance.credential.isEmpty ? null : instance.credential,
       certFingerprint: settings.pinForUrl(instance.url),
+      accessHeaders: instance.access.headers(),
     );
     // Two hops on a cold client — the 409 handshake, then the real call — so
     // this gets the same headroom as qBittorrent's login-then-version pair.
@@ -492,6 +507,7 @@ Future<String?> _loadVersion(
       identity: instance.username.isEmpty ? null : instance.username,
       secret: instance.credential.isEmpty ? null : instance.credential,
       certFingerprint: settings.pinForUrl(instance.url),
+      accessHeaders: instance.access.headers(),
     );
     // `GET /api/` is unauthenticated, so on its own it read a wrong password
     // as answering. The token exchange is what proves the account, and it is
@@ -510,6 +526,7 @@ Future<String?> _loadVersion(
       url: instance.url,
       apiKey: instance.credential,
       certFingerprint: settings.pinForUrl(instance.url),
+      accessHeaders: instance.access.headers(),
     );
     return _versionOrNull(
       client.version,
@@ -524,6 +541,7 @@ Future<String?> _loadVersion(
     baseUrl: url,
     apiKey: instance.credential,
     pinnedCertFingerprint: settings.pinForUrl(url),
+    accessHeaders: instance.access.headers(),
   );
 
   try {

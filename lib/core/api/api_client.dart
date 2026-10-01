@@ -41,14 +41,19 @@ class ApiClient {
   /// user explicitly trusted for this origin (trust-on-first-use, ADR-6) — see
   /// [SettingsModel.pinForUrl]. Null or empty leaves this client on the
   /// platform trust store only, exactly as before ADR-6.
+  ///
+  /// [accessHeaders] is what the connection presents to a gateway in front of
+  /// the service, sent on every request: see `guardedDio`.
   ApiClient({
     required String baseUrl,
     required String apiKey,
     String? pinnedCertFingerprint,
+    Map<String, String> accessHeaders = const {},
   }) : this._(
          baseUrl: baseUrl,
          authHeaders: {'X-Api-Key': apiKey},
          pinnedCertFingerprint: pinnedCertFingerprint,
+         accessHeaders: accessHeaders,
        );
 
   /// For a service whose credential does not travel as `X-Api-Key`.
@@ -68,16 +73,19 @@ class ApiClient {
     required String baseUrl,
     required Map<String, String> headers,
     String? pinnedCertFingerprint,
+    Map<String, String> accessHeaders = const {},
   }) : this._(
          baseUrl: baseUrl,
          authHeaders: headers,
          pinnedCertFingerprint: pinnedCertFingerprint,
+         accessHeaders: accessHeaders,
        );
 
   ApiClient._({
     required String baseUrl,
     required Map<String, String> authHeaders,
     String? pinnedCertFingerprint,
+    Map<String, String> accessHeaders = const {},
   }) : _dio = guardedDio(
          // Redirects are followed by SameOriginRedirectInterceptor instead, so
          // the credential header can never be replayed to an unconfigured host.
@@ -86,6 +94,7 @@ class ApiClient {
          // [authenticatedBy] path — is copied to *any* redirect target.
          baseUrl: UrlUtils.normalizeBaseUrl(baseUrl),
          certFingerprint: pinnedCertFingerprint,
+         accessHeaders: accessHeaders,
          headers: {
            ...authHeaders,
            'Content-Type': 'application/json',
@@ -107,7 +116,8 @@ class ApiClient {
   /// convenience, so anything bypassing this client owes the same refusal.
   String get baseUrl => _dio.options.baseUrl;
 
-  /// The headers this client sends, auth included.
+  /// The headers this client sends, auth and access included: the background
+  /// release search sends these, so a gateway in front lets it through too.
   Map<String, String> get headers => {
     for (final entry in _dio.options.headers.entries)
       entry.key: '${entry.value}',

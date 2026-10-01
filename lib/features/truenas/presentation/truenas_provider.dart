@@ -54,6 +54,7 @@ final truenasClientProvider = Provider<TrueNasWsClient>((ref) {
     baseUrl: transport.url,
     apiKey: transport.apiKey,
     certFingerprint: transport.pin,
+    accessHeaders: transport.access.headers(),
   );
   ref.onDispose(client.close);
   return client;
@@ -89,6 +90,7 @@ TrueNasWsClient _truenasClient(Ref ref, {required String? instanceId}) {
     baseUrl: transport.url,
     apiKey: transport.apiKey,
     certFingerprint: transport.pin,
+    accessHeaders: transport.access.headers(),
   );
   ref.onDispose(client.close);
   return client;

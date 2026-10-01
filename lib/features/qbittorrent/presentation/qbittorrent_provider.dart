@@ -29,6 +29,7 @@ final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
     username: transport.username.isNotEmpty ? transport.username : null,
     password: transport.apiKey.isNotEmpty ? transport.apiKey : null,
     certFingerprint: transport.pin,
+    accessHeaders: transport.access.headers(),
   );
   // The outgoing client owns a Dio and a cookie jar; close it so neither leaks.
   ref.onDispose(() => client.close());
@@ -65,6 +66,7 @@ final qbittorrentServiceForProvider =
         username: transport.username.isNotEmpty ? transport.username : null,
         password: transport.apiKey.isNotEmpty ? transport.apiKey : null,
         certFingerprint: transport.pin,
+        accessHeaders: transport.access.headers(),
       );
       ref.onDispose(client.close);
       return QbittorrentService(client);

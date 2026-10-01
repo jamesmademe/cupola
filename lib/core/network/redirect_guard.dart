@@ -264,16 +264,37 @@ class SameOriginRedirectInterceptor extends Interceptor {
 /// unpinned service byte-identical to its pre-ADR-6 behaviour. A followed
 /// same-origin redirect goes back out over this same Dio, so it inherits the pin
 /// with no extra wiring.
+///
+/// [accessHeaders] is what the connection presents to a gateway in front of
+/// the service (a Cloudflare Access service token, a proxy's password, custom
+/// headers), sent on **every** request this Dio makes: they sit in the base
+/// options, so a client that sets its own headers per request keeps them too.
+/// The service's own headers win a clash ([headers], and whatever a request
+/// sets), so an access header can never take the service's credential away.
+/// Their names travel as the request extra [kAccessHeaderNamesExtra], which is
+/// how a gateway's answer tells whether it was sent anything. A redirect is
+/// followed only on the same origin, so they never leave the configured host.
+/// This is the sixth obligation of a client, beside ADR-6's five: every
+/// construction passes the connection's access
+/// (`test/core/network/access_headers_guard_test.dart`).
 Dio guardedDio({
   required String baseUrl,
   Dio? injected,
   String? certFingerprint,
   Duration? sendTimeout,
   Map<String, dynamic>? headers,
+  Map<String, String> accessHeaders = const {},
   bool nativeBasicAuth = false,
 }) {
   if (injected != null) return injected;
 
+  final serviceNames = {
+    for (final name in headers?.keys ?? const <String>[]) name.toLowerCase(),
+  };
+  final access = {
+    for (final MapEntry(:key, :value) in accessHeaders.entries)
+      if (!serviceNames.contains(key.toLowerCase())) key: value,
+  };
   final dio = Dio(
     BaseOptions(
       baseUrl: baseUrl,
@@ -282,7 +303,10 @@ Dio guardedDio({
       sendTimeout: sendTimeout,
       followRedirects: false,
       validateStatus: allowRedirectStatus,
-      headers: headers,
+      headers: {...access, ...?headers},
+      extra: access.isEmpty
+          ? null
+          : {kAccessHeaderNamesExtra: access.keys.toList(growable: false)},
     ),
   );
   dio.interceptors

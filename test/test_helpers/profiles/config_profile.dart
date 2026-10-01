@@ -1,4 +1,5 @@
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -129,7 +130,7 @@ enum CloudflareAccessMode {
 }
 
 /// Cloudflare Access in front of every HTTP request to this connection,
-/// public routes included. WebSocket upgrades are not affected.
+/// public routes and WebSocket upgrades included.
 ///
 /// A request carrying [serviceToken] (`CF-Access-Client-Id` and
 /// `CF-Access-Client-Secret`) is let through to the service when
@@ -179,8 +180,8 @@ enum SignInPageMode {
 }
 
 /// A sign-in page (Authelia, Authentik, a proxy's login) in front of every
-/// HTTP request to this connection. Nothing gets through: Cupola cannot sign
-/// in to it.
+/// HTTP request to this connection, WebSocket upgrades included. Nothing gets
+/// through: Cupola cannot sign in to it.
 final class BehindSignInPage extends ConnectionBehaviour {
   const BehindSignInPage({this.mode = SignInPageMode.redirect});
 
@@ -191,8 +192,8 @@ final class BehindSignInPage extends ConnectionBehaviour {
 }
 
 /// A proxy's password prompt (`401`, `WWW-Authenticate: Basic`) in front of
-/// every HTTP request to this connection. A request whose `Authorization`
-/// carries [credentials] is let through.
+/// every HTTP request to this connection, WebSocket upgrades included. A
+/// request whose `Authorization` carries [credentials] is let through.
 final class BehindPasswordPrompt extends ConnectionBehaviour {
   const BehindPasswordPrompt({this.credentials});
 
@@ -425,7 +426,12 @@ class ProfileConnection {
   ProfileConnection withSeerrMediaServer(SeerrMediaServer mediaServer) =>
       _copy(seerrMediaServer: mediaServer);
 
+  /// A copy whose connection presents [access] to the gateway in front.
+  ProfileConnection withAccess(ConnectionAccess access) =>
+      _copy(instance: instance.copyWith(access: access));
+
   ProfileConnection _copy({
+    ServiceInstance? instance,
     ConnectionBehaviour? behaviour,
     bool? homeOnly,
     Duration? latency,
@@ -433,7 +439,7 @@ class ProfileConnection {
     SeerrRelease? seerrRelease,
     SeerrMediaServer? seerrMediaServer,
   }) => ProfileConnection(
-    instance,
+    instance ?? this.instance,
     behaviour: behaviour ?? this.behaviour,
     homeOnly: homeOnly ?? this.homeOnly,
     latency: latency ?? this.latency,

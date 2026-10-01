@@ -541,6 +541,11 @@ class ProfileNetwork {
     final fake = serviceFakeFor(server.answeringService);
     final context = ServerContext(network: this, server: server);
 
+    // In front of the service, so before anything the service would say, a
+    // WebSocket upgrade included: a gateway answers the upgrade too.
+    final gateway = gatewayReply(request, server);
+    if (gateway != null) return _FakeResponse.fromReply(gateway);
+
     if (request.isUpgrade) {
       final peer = fake.upgrade(request, context);
       final key = raw.headers.value('sec-websocket-key');
@@ -549,10 +554,6 @@ class ProfileNetwork {
       }
       return _FakeResponse.upgrade(webSocketAccept(key), WebSocketLink(peer));
     }
-
-    // In front of the service, so before anything the service would say.
-    final gateway = gatewayReply(request, server);
-    if (gateway != null) return _FakeResponse.fromReply(gateway);
 
     _FakeResponse send(NetworkReply reply) =>
         _FakeResponse.fromReply(fake.finish(request, context, reply));
@@ -850,9 +851,11 @@ class _FakeResponse extends Stream<List<int>> implements HttpClientResponse {
   HttpClientResponseCompressionState get compressionState =>
       HttpClientResponseCompressionState.notCompressed;
 
+  /// The upgraded socket, or, for an upgrade something else answered (a
+  /// gateway's redirect or page), a socket with nothing on it: `dart:io`
+  /// detaches the answer to destroy it before it reports the refusal.
   @override
-  Future<Socket> detachSocket() async =>
-      _socket ?? (throw const SocketException('Nothing to detach'));
+  Future<Socket> detachSocket() async => _socket ?? _AnsweredSocket();
 
   @override
   StreamSubscription<List<int>> listen(
@@ -869,6 +872,16 @@ class _FakeResponse extends Stream<List<int>> implements HttpClientResponse {
         onDone: onDone,
         cancelOnError: cancelOnError,
       );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// What `detachSocket` hands back for an answer that was not an upgrade: the
+/// one thing `dart:io` does with it is destroy it.
+class _AnsweredSocket implements Socket {
+  @override
+  void destroy() {}
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

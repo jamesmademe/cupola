@@ -237,6 +237,7 @@ Future<void> _pump(
                 required String baseUrl,
                 required String apiKey,
                 String? pinnedCertFingerprint,
+                Map<String, String> accessHeaders = const {},
               }) => _StatusClient(version),
         ),
       ],

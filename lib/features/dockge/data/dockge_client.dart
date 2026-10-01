@@ -7,6 +7,7 @@ import 'package:web_socket/web_socket.dart' as ws;
 
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/upgrade_gateway.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
@@ -16,14 +17,24 @@ import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
 /// Error surfaced by the Dockge client. Carries the [reason] so a caller
 /// verifying the connection can tell an unreachable host from a rejected
 /// login.
-class DockgeException implements Exception, HasFailureReason {
+class DockgeException implements Exception, HasFailureReason, HasFailureCause {
   final String message;
   @override
   final ServiceFailureReason reason;
+
+  /// What caused it, when that knew more than [reason]: the gateway that
+  /// answered a refused upgrade.
+  final Object? cause;
+
   const DockgeException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
+    this.cause,
   });
+
+  @override
+  Object? get failureCause => cause;
+
   @override
   String toString() => 'DockgeException: $message';
 }
@@ -56,6 +67,14 @@ class DockgeClient {
   /// SHA-256 fingerprint of a self-signed certificate the user chose to trust.
   final String? certFingerprint;
 
+  /// What the connection presents to a gateway in front of Dockge, on the
+  /// upgrade (and on the one HTTP request that names a gateway refusing it).
+  final Map<String, String> accessHeaders;
+
+  /// The gateway that answered the last refused upgrade, read by the connect
+  /// error that follows it.
+  AccessGatewayAnswer? _gatewayAtUpgrade;
+
   /// The agent every command is addressed to. Instance state, not a constant:
   /// this is what the app-bar lens moves.
   String _endpoint = '';
@@ -86,6 +105,7 @@ class DockgeClient {
     this.username,
     this.password,
     this.certFingerprint,
+    this.accessHeaders = const {},
   });
 
   /// The most recent parsed stack list (empty until the first push).
@@ -173,13 +193,31 @@ class DockgeClient {
       pinnedHost: endpoint.host,
       pinnedPort: endpoint.port,
     );
-    final socket = await io.WebSocket.connect(
-      uri.toString(),
-      protocols: protocols,
-      headers: headers,
-      customClient: httpClient,
-    );
-    return IOWebSocket.fromWebSocket(socket);
+    try {
+      final socket = await io.WebSocket.connect(
+        uri.toString(),
+        protocols: protocols,
+        headers: {...?headers, ...accessHeaders},
+        customClient: httpClient,
+      );
+      return IOWebSocket.fromWebSocket(socket);
+    } on io.WebSocketException catch (e) {
+      // Something answered the upgrade: when it was a gateway in front of
+      // Dockge, the connect error names it the way every other service does.
+      if (e.httpStatusCode != null) {
+        _gatewayAtUpgrade = await gatewayAtUpgrade(
+          Uri(
+            scheme: endpoint.scheme,
+            host: endpoint.host,
+            port: endpoint.port,
+            path: uri.path,
+          ),
+          certFingerprint: certFingerprint,
+          accessHeaders: accessHeaders,
+        );
+      }
+      rethrow;
+    }
   }
 
   Future<void> ensureConnected() {
@@ -210,8 +248,10 @@ class DockgeClient {
         .disableAutoConnect()
         .enableForceNew()
         .setReconnectionAttempts(3)
+        .setExtraHeaders(accessHeaders)
         .setWebSocketConnector(_pinnedConnector)
         .build();
+    _gatewayAtUpgrade = null;
 
     // Dispose any previous socket before replacing it: a reconnection through
     // `ensureConnected` would otherwise leak the old socket (double streams +
@@ -299,6 +339,17 @@ class DockgeClient {
     socket.on('agentStatus', _handleAgentStatus);
 
     socket.onConnectError((dynamic e) {
+      final gateway = _gatewayAtUpgrade;
+      if (gateway != null && !authCompleter.isCompleted) {
+        authCompleter.completeError(
+          DockgeException(
+            'Something in front of Dockge answered the upgrade.',
+            reason: ServiceFailureReason.accessGateway,
+            cause: gateway,
+          ),
+        );
+        return;
+      }
       if (!authCompleter.isCompleted) {
         authCompleter.completeError(
           DockgeException(

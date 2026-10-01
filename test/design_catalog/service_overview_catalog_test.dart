@@ -333,6 +333,7 @@ Widget _radarr(
       required String baseUrl,
       required String apiKey,
       String? pinnedCertFingerprint,
+      Map<String, String> accessHeaders = const {},
     }) => _StatusClient(version),
   ),
 ], child);

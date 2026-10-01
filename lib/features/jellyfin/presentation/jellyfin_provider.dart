@@ -89,6 +89,7 @@ JellyfinClient _jellyfinClient(Ref ref, {required String? instanceId}) {
     apiKey: transport.apiKey,
     userId: viewerId,
     pinnedCertFingerprint: transport.pin,
+    accessHeaders: transport.access.headers(),
   );
   ref.onDispose(client.close);
   return client;

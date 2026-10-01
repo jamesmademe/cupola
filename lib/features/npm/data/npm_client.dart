@@ -112,6 +112,7 @@ class NpmClient {
     this.secret,
     Dio? dio,
     String? certFingerprint,
+    Map<String, String> accessHeaders = const {},
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url) {
     // Redirects are followed by hand so the bearer token — which *is* the
     // account, with no scoping and no revocation — is never replayed to a host
@@ -128,6 +129,7 @@ class NpmClient {
       baseUrl: baseUrl,
       injected: dio,
       certFingerprint: certFingerprint,
+      accessHeaders: accessHeaders,
     );
   }
 

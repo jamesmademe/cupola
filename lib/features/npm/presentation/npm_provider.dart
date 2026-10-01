@@ -53,6 +53,7 @@ NpmClient _npmClient(Ref ref, {required String? instanceId}) {
     identity: transport.username.isEmpty ? null : transport.username,
     secret: transport.apiKey.isEmpty ? null : transport.apiKey,
     certFingerprint: transport.pin,
+    accessHeaders: transport.access.headers(),
   );
   ref.onDispose(() => client.close());
   return client;

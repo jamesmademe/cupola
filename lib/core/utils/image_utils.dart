@@ -1,3 +1,4 @@
+import 'package:cupola/core/network/connection_access_registry.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 
 typedef ImageSource = ({String url, Map<String, String>? headers});
@@ -48,12 +49,18 @@ class ImageUtils {
       return (url: remoteUrl, headers: null);
     }
 
-    // Fall back to building a local URL authenticated via headers
+    // Fall back to building a local URL authenticated via headers: the key,
+    // and whatever the connection presents to a gateway in front of it, since
+    // the artwork crosses that gateway like every other request. Only for the
+    // connection's own address; a remote URL above goes out with neither.
     final path = remoteUrl ?? localUrl;
     if (path != null && baseUrl.isNotEmpty && apiKey.isNotEmpty) {
       return (
         url: UrlUtils.buildUrl(baseUrl, path),
-        headers: {'X-Api-Key': apiKey},
+        headers: {
+          ...ConnectionAccessRegistry.headersFor(baseUrl),
+          'X-Api-Key': apiKey,
+        },
       );
     }
 

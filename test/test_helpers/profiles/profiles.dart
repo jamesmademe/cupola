@@ -1,5 +1,5 @@
 /// The configuration profiles of the config inventory (P1–P7, P9 and the P2
-/// variants), as values a test can pump.
+/// variants), and P8 behind Cloudflare Access, as values a test can pump.
 ///
 /// ```dart
 /// await pumpWithProfile(tester, Profiles.p6, child: const DashboardScreen());
@@ -10,6 +10,7 @@ library;
 
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -558,6 +559,59 @@ abstract final class Profiles {
     trustedCertificates: _worldPins,
   );
 
+  /// P8 — Behind Cloudflare Access: P1 away from home, with Radarr, Sonarr
+  /// and Seerr behind one Access team (`cupola-home`). Radarr presents a
+  /// service token Access lets through; Sonarr presents none; Seerr presents
+  /// one Access knows and no Service Auth policy admits.
+  ///
+  /// The addresses stay P1's: a connection has one address, so the one it is
+  /// reached at away from home is the one Access stands in front of.
+  static final p8 = ConfigProfile(
+    id: 'P8',
+    title: 'Behind Cloudflare Access',
+    summary:
+        'P1 away from home. Radarr, Sonarr and Seerr are behind Cloudflare '
+        'Access: Radarr with a token Access lets through, Sonarr with none, '
+        'Seerr with a token no Service Auth policy admits.',
+    cases: const {
+      ConfigCase.notAllowed,
+      ConfigCase.severalInstances,
+      ConfigCase.notSetUp,
+    },
+    place: NetworkPlace.away,
+    connections: [
+      for (final c in p1.connections)
+        switch (c.id) {
+          WorldIds.radarr =>
+            c
+                .withAccess(WorldTokens.radarr.access)
+                .withBehaviour(
+                  const ConnectionBehaviour.behindCloudflareAccess(
+                    serviceToken: WorldTokens.radarr,
+                  ),
+                ),
+          WorldIds.sonarr => c.withBehaviour(
+            const ConnectionBehaviour.behindCloudflareAccess(
+              serviceToken: WorldTokens.sonarr,
+            ),
+          ),
+          WorldIds.seerr =>
+            c
+                .withAccess(WorldTokens.seerr.access)
+                .withBehaviour(
+                  const ConnectionBehaviour.behindCloudflareAccess(
+                    serviceToken: WorldTokens.seerr,
+                    tokenHasPolicy: false,
+                  ),
+                ),
+          _ => c,
+        },
+    ],
+    seerrKnows: p1.seerrKnows,
+    unverifiedMatches: p1.unverifiedMatches,
+    trustedCertificates: _worldPins,
+  );
+
   /// P9 — Operator with a friend's Seerr: P1, plus Sara's Seerr, where the
   /// operator signs in with an account of his own that may only request.
   /// The household's Seerr answers his key; Sara's answers his account.
@@ -590,6 +644,31 @@ abstract final class Profiles {
     p5,
     p6,
     p7,
+    p8,
     p9,
   ];
+}
+
+/// The Cloudflare Access service tokens of the world's Access team. P8's
+/// Radarr and Seerr are configured with theirs; Sonarr's exists in Access and
+/// is configured nowhere, the token a user has yet to paste.
+abstract final class WorldTokens {
+  static const radarr = (
+    id: 'world-radarr.access',
+    secret: 'world-radarr-cf-secret',
+  );
+  static const sonarr = (
+    id: 'world-sonarr.access',
+    secret: 'world-sonarr-cf-secret',
+  );
+  static const seerr = (
+    id: 'world-seerr.access',
+    secret: 'world-seerr-cf-secret',
+  );
+}
+
+/// A world token as the connection presents it.
+extension WorldTokenAccess on ({String id, String secret}) {
+  CloudflareServiceToken get access =>
+      CloudflareServiceToken(clientId: id, clientSecret: secret);
 }

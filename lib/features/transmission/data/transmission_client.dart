@@ -113,6 +113,7 @@ class TransmissionClient {
     this.password,
     Dio? dio,
     String? certFingerprint,
+    Map<String, String> accessHeaders = const {},
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
        rpcPath = resolveRpcPath(url),
        rpcUrl = resolveRpcUrl(url) {
@@ -129,6 +130,7 @@ class TransmissionClient {
       baseUrl: _originOf(baseUrl),
       injected: dio,
       certFingerprint: certFingerprint,
+      accessHeaders: accessHeaders,
       // It signs in with Basic itself: a Basic 401 is its own refusal.
       nativeBasicAuth: true,
     );

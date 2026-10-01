@@ -47,6 +47,7 @@ class NzbgetClient {
     this.password,
     Dio? dio,
     String? certFingerprint,
+    Map<String, String> accessHeaders = const {},
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url) {
     // Redirects are followed by hand so the Basic credential is never replayed
     // to a host the user did not configure. `dart:io` is not enough on its own:
@@ -58,6 +59,7 @@ class NzbgetClient {
       baseUrl: baseUrl,
       injected: dio,
       certFingerprint: certFingerprint,
+      accessHeaders: accessHeaders,
       // It signs in with Basic itself: a Basic 401 is its own refusal.
       nativeBasicAuth: true,
     );

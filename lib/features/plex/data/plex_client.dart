@@ -163,7 +163,9 @@ class PlexClient implements StreamServerClient {
     String? platform,
     String deviceName = kPlexDeviceName,
     String? pinnedCertFingerprint,
+    Map<String, String> accessHeaders = const {},
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
+       _accessHeaders = accessHeaders,
        _token = token.trim(),
        _clientIdentifier = clientIdentifier.trim(),
        _product = product,
@@ -174,10 +176,15 @@ class PlexClient implements StreamServerClient {
       baseUrl: baseUrl,
       headers: _headers(),
       pinnedCertFingerprint: pinnedCertFingerprint,
+      accessHeaders: accessHeaders,
     );
   }
 
   final String baseUrl;
+
+  /// What the connection presents to a gateway in front of Plex, on every
+  /// request and every poster.
+  final Map<String, String> _accessHeaders;
   final String _token;
   final String _clientIdentifier;
   final String _product;
@@ -229,6 +236,7 @@ class PlexClient implements StreamServerClient {
   /// written to the on-disk cache index and invalidate every cached poster the
   /// day the user rotates it.
   Map<String, String> get _imageHeaders => {
+    ..._accessHeaders,
     if (_token.isNotEmpty) 'X-Plex-Token': _asciiHeader(_token),
     'X-Plex-Client-Identifier': _asciiHeader(_clientIdentifier),
   };

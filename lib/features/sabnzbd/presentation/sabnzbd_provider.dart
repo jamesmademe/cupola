@@ -56,6 +56,7 @@ SabnzbdClient _sabnzbdClient(Ref ref, {required String? instanceId}) {
     url: transport.url,
     apiKey: transport.apiKey,
     certFingerprint: transport.pin,
+    accessHeaders: transport.access.headers(),
   );
   ref.onDispose(client.close);
   return client;

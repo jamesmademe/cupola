@@ -252,6 +252,7 @@ class _WindowState extends State<_Window> {
           required String baseUrl,
           required String apiKey,
           String? pinnedCertFingerprint,
+          Map<String, String> accessHeaders = const {},
         }) => _StatusClient(),
       ),
       globalNowItemsProvider.overrideWith((ref) async => _queue),

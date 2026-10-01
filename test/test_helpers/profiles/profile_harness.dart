@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_access_registry.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
@@ -29,6 +30,9 @@ class ProfileHarness {
     DateTime? now,
   }) async {
     final network = ProfileNetwork(profile, now: now)..install();
+    // What `CupolaApp` hands the artwork widgets, from the same settings.
+    ConnectionAccessRegistry.update(profile.settings.accessHeadersByAddress);
+    addTearDown(ConnectionAccessRegistry.reset);
     return ProfileHarness._(profile, network, [
       ...await settingsScopeOverrides(customize: (_) => profile.settings),
       initialActiveInstancesProvider.overrideWithValue(profile.lens),

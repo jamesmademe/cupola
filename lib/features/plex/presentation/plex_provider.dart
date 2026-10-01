@@ -73,6 +73,7 @@ PlexClient _plexClient(Ref ref, {required String? instanceId}) {
     token: transport.apiKey,
     clientIdentifier: clientId,
     pinnedCertFingerprint: transport.pin,
+    accessHeaders: transport.access.headers(),
   );
   ref.onDispose(client.close);
   return client;

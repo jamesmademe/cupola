@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:cupola/core/capability/permission_refusal.dart';
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/upgrade_gateway.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 
@@ -14,7 +15,11 @@ import 'package:cupola/core/utils/url_utils.dart';
 /// caller verifying the connection can tell an unreachable host from a
 /// rejected API key.
 class TrueNasException
-    implements Exception, HasFailureReason, HasPermissionRefusal {
+    implements
+        Exception,
+        HasFailureReason,
+        HasPermissionRefusal,
+        HasFailureCause {
   final String message;
   @override
   final ServiceFailureReason reason;
@@ -24,14 +29,22 @@ class TrueNasException
   /// an expired session, which shares the errno and means something else.
   final bool forbidden;
 
+  /// What caused it, when that knew more than [reason]: the gateway that
+  /// answered a refused upgrade.
+  final Object? cause;
+
   const TrueNasException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
     this.forbidden = false,
+    this.cause,
   });
 
   @override
   bool get isPermissionRefusal => forbidden;
+
+  @override
+  Object? get failureCause => cause;
 
   @override
   String toString() => 'TrueNasException: $message';
@@ -191,6 +204,10 @@ class TrueNasWsClient {
   /// transport failure. Injectable so tests need not wait it out.
   final Duration callTimeout;
 
+  /// What the connection presents to a gateway in front of TrueNAS, on the
+  /// upgrade (and on the one HTTP request that names a gateway refusing it).
+  final Map<String, String> accessHeaders;
+
   WebSocket? _socket;
   HttpClient? _httpClient;
   bool _authed = false;
@@ -207,6 +224,7 @@ class TrueNasWsClient {
     required this.apiKey,
     this.certFingerprint,
     this.callTimeout = const Duration(seconds: 15),
+    this.accessHeaders = const {},
   });
 
   /// Derives the `wss://host:port/api/current` endpoint from the base URL.
@@ -243,6 +261,7 @@ class TrueNasWsClient {
   @visibleForTesting
   Future<WebSocket> dial(Uri endpoint, HttpClient client) => WebSocket.connect(
     endpoint.toString(),
+    headers: accessHeaders,
     customClient: _NoRedirectUpgradeClient(client),
   );
 
@@ -316,6 +335,22 @@ class TrueNasWsClient {
       // `/api/current`, a 502 from the proxy in front. The server answered, so
       // "unknown" (drawn as unreachable) was the wrong verdict for all three.
       final status = e is WebSocketException ? e.httpStatusCode : null;
+      // Something answered the upgrade: when it was a gateway in front of
+      // TrueNAS, name it the way every other service does.
+      final gateway = status == null
+          ? null
+          : await gatewayAtUpgrade(
+              endpoint,
+              certFingerprint: certFingerprint,
+              accessHeaders: accessHeaders,
+            );
+      if (gateway != null) {
+        throw TrueNasException(
+          'Something in front of TrueNAS answered the upgrade.',
+          reason: ServiceFailureReason.accessGateway,
+          cause: gateway,
+        );
+      }
       throw TrueNasException(
         'Could not connect: $e',
         reason: status != null

@@ -396,6 +396,16 @@ class SettingsModel {
     return (instance?.url ?? '', instance?.credential ?? '');
   }
 
+  /// Each connection that has access to send, with its address and the
+  /// headers it sends: what `ConnectionAccessRegistry` holds for the artwork
+  /// built from an address and a key.
+  List<({String url, Map<String, String> headers})>
+  get accessHeadersByAddress => [
+    for (final instance in instances)
+      if (!instance.access.isEmpty)
+        (url: instance.url, headers: instance.access.headers()),
+  ];
+
   /// Whether any instance of [service] is set up enough to talk to.
   bool isServiceConfigured(ServiceKey service) =>
       instancesOf(service).any((instance) => instance.isConfigured);

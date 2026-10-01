@@ -4,8 +4,10 @@ Every household configures Cupola differently. Some services are missing.
 Some are known only through another service. Some do not answer. Some
 accounts are read-only, and some households run two instances of one
 service. Some household members sign in to Seerr with an account of their
-own. This folder holds the profiles of the config inventory, so that a fix
-can be tested against the same small set of configurations.
+own. This folder holds the profiles of the config inventory, P8 behind
+Cloudflare Access among them, so that a fix can be tested against the same
+small set of configurations.
+
 
 A profile is a value (`ConfigProfile`). It describes which connections
 exist, how each one behaves, where the instance lens rests and what Seerr
@@ -87,9 +89,9 @@ test's description. Seerr's own states are `SeerrBehaviour`s
 |---|---|
 | `answers` | Canned world data. |
 | `servesHtmlPage` | Every HTTP request, public routes included, gets `200` with a web server's default page (`text/html`). An address missing its base path, a proxy with nothing routed. WebSocket upgrades are untouched. |
-| `behindCloudflareAccess(mode:, team:, serviceToken:, tokenHasPolicy:)` | Cloudflare Access in front of every HTTP request, public routes included (`gatewayReply` in `profile_network.dart`, before any service fake). `redirect` (the default) answers `302` to `https://<team>.cloudflareaccess.com/cdn-cgi/access/login/<host>`; `unauthorized` answers `401` with Cloudflare's page, `Server: cloudflare` and a `CF-Ray`. A request carrying `serviceToken` as `CF-Access-Client-Id`/`-Secret` reaches the service when `tokenHasPolicy` (the default); a token without a policy is turned away like none. Nothing in lib sends one yet. |
-| `behindSignInPage(mode:)` | `redirect` (the default) answers `302` to `https://auth.example.net/login?rd=…`; `sameHostForm` answers `200` with a page holding a password field. Nothing gets through. |
-| `behindPasswordPrompt(credentials:)` | `401` with `WWW-Authenticate: Basic realm="Restricted"` and nginx's page. A request whose `Authorization: Basic` carries `credentials` gets through. |
+| `behindCloudflareAccess(mode:, team:, serviceToken:, tokenHasPolicy:)` | Cloudflare Access in front of every HTTP request, public routes and WebSocket upgrades included (`gatewayReply` in `profile_network.dart`, before any service fake). `redirect` (the default) answers `302` to `https://<team>.cloudflareaccess.com/cdn-cgi/access/login/<host>`; `unauthorized` answers `401` with Cloudflare's page, `Server: cloudflare` and a `CF-Ray`. A request carrying `serviceToken` as `CF-Access-Client-Id`/`-Secret` reaches the service when `tokenHasPolicy` (the default); a token without a policy is turned away like none. A connection sends one when its instance carries the token (`ProfileConnection.withAccess`, `WorldTokens`). |
+| `behindSignInPage(mode:)` | `redirect` (the default) answers `302` to `https://auth.example.net/login?rd=…`; `sameHostForm` answers `200` with a page holding a password field. Nothing gets through, upgrades included. |
+| `behindPasswordPrompt(credentials:)` | `401` with `WWW-Authenticate: Basic realm="Restricted"` and nginx's page, upgrades included. A request whose `Authorization: Basic` carries `credentials` gets through. |
 | `answersAsOtherService(service)` | The other service's fake answers every request at this address, upgrades included: a wrong port. `answersAsOtherService(ServiceKey.sonarr)` on Radarr's connection answers `/api/v3/system/status` with `appName: Sonarr`. |
 | `didNotAnswer` | `SocketException('Connection refused')` at dial time. The attempt is logged with `dialRefused`. |
 | `timesOut` | `SocketException('Connection timed out')`, which Dio reports as `connectionTimeout`. It is raised at once, and the app reads it as did not answer: the connection never completed. |
@@ -117,6 +119,7 @@ test's description. Seerr's own states are `SeerrBehaviour`s
 | `p5` Arrs via Seerr | Seerr, Jellyfin. Seerr's settings list a Radarr and a Sonarr. | b | Approve and Media rows that are known only from Seerr, and setup from Seerr. The Seerr-known servers answer at their addresses. |
 | `p6` Two of a kind | Radarr ×2, Sonarr ×2, Seerr with default and 4K servers, Bazarr following Radarr only, Plex with a non-owner token, qBittorrent, SABnzbd | e, f, d | Actions that must name their instance. |
 | `p7` Degraded and away | P1, away from home. Jellyfin and Bazarr do not answer. Lidarr, Prowlarr, SABnzbd, TrueNAS and Dockge are home-only. qBittorrent refuses the sign-in. TrueNAS is read-only. | c, d | Red versus amber, and totals over the sources that answered. |
+| `p8` Behind Cloudflare Access | P1 away, with Radarr, Sonarr and Seerr behind one Access team: Radarr presents a token Access lets through, Sonarr none, Seerr a token no Service Auth policy admits. | d | A connection's access on every request (Home, the libraries, the artwork, the connection test), and the gateway's words with and without a token. |
 | `p9` Operator with a friend's Seerr | P1 plus Sara's Seerr (`seerrFriend`, `https://seerr.example.net`, labelled `Sara`), where the operator has his own account with REQUEST only (user 4) | e, d, a, f | The operator's app with one Seerr he runs and one he only requests from. |
 
 `WorldConnections` also holds connections no profile configures, for a

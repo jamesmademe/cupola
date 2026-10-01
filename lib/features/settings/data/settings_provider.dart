@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -41,8 +42,8 @@ final themeModeProvider = Provider<ThemeMode>((ref) {
   return ref.watch(currentSettingsProvider).resolvedThemeMode;
 });
 
-/// The three settings fields that decide which server an [ApiClient] talks to
-/// and how it authenticates. A record so it compares structurally, which is
+/// The settings fields that decide which server an [ApiClient] talks to and
+/// how it authenticates, to the service and to whatever stands in front of it. A record so it compares structurally, which is
 /// what makes it usable as a `select` key.
 typedef ServiceTransport = ({
   bool configured,
@@ -53,6 +54,10 @@ typedef ServiceTransport = ({
   /// Empty for the API-key services, which have none.
   String username,
   String? pin,
+
+  /// What the connection presents to a gateway in front of the service, on
+  /// every request. Part of the key, so a client rebuilds when it changes.
+  ConnectionAccess access,
 
   /// Which connection this transport describes. Not used to reach the server —
   /// it is here so a client rebuilds when the lens moves to a *different*
@@ -156,6 +161,7 @@ ServiceTransport watchTransport(
           apiKey: '',
           username: '',
           pin: null,
+          access: const NoAccess(),
           instanceId: '',
         );
       }
@@ -165,6 +171,7 @@ ServiceTransport watchTransport(
         apiKey: instance.credential,
         username: instance.username,
         pin: s.pinForUrl(instance.url),
+        access: instance.access,
         instanceId: instance.id,
       );
     }),
@@ -287,6 +294,7 @@ ApiClient watchApiClient(Ref ref, ServiceKey service, {String? instanceId}) {
     baseUrl: transport.url,
     apiKey: transport.apiKey,
     pinnedCertFingerprint: transport.pin,
+    accessHeaders: transport.access.headers(),
   );
   // Rebuilt whenever the transport identity changes; close the outgoing Dio so
   // its connections are not leaked.
