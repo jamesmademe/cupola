@@ -411,6 +411,15 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
                   ),
               searchingSeasons: _searchingSeasons,
               searchingEpisodes: _searchingEpisodes,
+              // The episodes alone, on the key the page watches them under:
+              // the series above them answered, so asking for it again would
+              // only repaint what is already right.
+              onRetryEpisodes: () => ref.invalidate(
+                seriesEpisodesForProvider((
+                  instanceId: _instanceId,
+                  id: widget.seriesId,
+                )),
+              ),
             ),
           ),
           if (viewModel.hasFiles && viewModel.path != null)

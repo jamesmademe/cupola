@@ -48,7 +48,10 @@ class SeriesSeasonsList extends StatelessWidget {
 
   /// Retries the episode fetch. Without it a failed load is a dead end on the
   /// one section that is the reason to open a series.
-  final VoidCallback? onRetryEpisodes;
+  ///
+  /// Required: it used to be optional, the one caller never passed it, and the
+  /// failure it exists for was drawn with no way out of it.
+  final VoidCallback onRetryEpisodes;
 
   const SeriesSeasonsList({
     super.key,
@@ -62,7 +65,7 @@ class SeriesSeasonsList extends StatelessWidget {
     required this.onInteractiveSearchEpisode,
     required this.searchingSeasons,
     required this.searchingEpisodes,
-    this.onRetryEpisodes,
+    required this.onRetryEpisodes,
   });
 
   @override
