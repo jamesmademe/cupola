@@ -89,7 +89,7 @@ class ActivityServiceResult {
   /// **Null means unanswered, never none.** A caller that gets null must print
   /// a figure it can defend — "20 shown" — or no figure at all; falling back to
   /// `items.length` reinstates the defect one layer up. The service tiles read
-  /// this through `activityServiceCount`, and print `—` for null.
+  /// this through [activityCount], and print `—` for null.
   final int? total;
 
   /// Non-null when the service was configured but did not answer.
@@ -209,6 +209,66 @@ class ActivityFeed {
 /// which is why these words are the same for both.
 String notCountedClause(Iterable<ActivityServiceResult> missing) =>
     '${Lexicon.names(missing.map((r) => r.name))} not counted';
+
+/// How many records some connections hold, **as their servers reported it**,
+/// and which connections that figure leaves out.
+class ActivityCount {
+  const ActivityCount({required this.total, required this.notCounted});
+
+  /// The sum of the totals the answering connections reported, or null when
+  /// none answered, or when one that answered did not say how many it has: a
+  /// sum with an unknown term is unknown.
+  final int? total;
+
+  /// The connections that were asked and failed. [total] is short by
+  /// whatever they hold.
+  final List<ActivityServiceResult> notCounted;
+
+  /// [total] is true of the connections that answered and short of the whole:
+  /// a floor, never to be printed as the total.
+  bool get isFloor => total != null && notCounted.isNotEmpty;
+}
+
+/// How many records [service] has in a bucket across its connections, or
+/// every service when [service] is null.
+///
+/// Summed from [ActivityServiceResult.total], never from `items.length`.
+/// History and Wanted load fifty rows per connection and then page, so a count
+/// of the loaded rows said "Sonarr 50" over a backlog of 2 369, and "100" after
+/// one Show more: a number that moved while the data did not.
+///
+/// A connection that failed adds nothing to the sum and is listed in
+/// [ActivityCount.notCounted], so a caller can say the figure is a floor and
+/// name what it is missing. It used to be left out without a word, which made
+/// one Sonarr's queue read as the queue of every Sonarr.
+ActivityCount activityCount(
+  Iterable<ActivityServiceResult> results, {
+  ServiceKey? service,
+}) {
+  var total = 0;
+  var any = false;
+  var unknown = false;
+  final notCounted = <ActivityServiceResult>[];
+  for (final result in results) {
+    if (service != null && result.service != service) continue;
+    if (result.failed) {
+      notCounted.add(result);
+      continue;
+    }
+    if (!result.reached) continue;
+    final count = result.total;
+    if (count == null) {
+      unknown = true;
+      continue;
+    }
+    any = true;
+    total += count;
+  }
+  return ActivityCount(
+    total: any && !unknown ? total : null,
+    notCounted: notCounted,
+  );
+}
 
 class GlobalActivityItem {
   final GlobalActivityKind kind;
@@ -1182,11 +1242,13 @@ Future<ActivityServiceResult> _loadArrConnection(
 /// same response.
 ///
 /// Two kinds have no envelope to read and need none: [getQueue] and
-/// [getBlocklist] walk every page before they return, so what they fetched *is*
-/// the size of the set and their total is a fact rather than a guess. Every
-/// other total may still be null — a server that did not send `totalRecords`
-/// has told us nothing, and `records.length` would be the old lie with a fresh
-/// coat on it.
+/// [getBlocklist] walk every page the envelope's total names before they
+/// return, so what they fetched is the size of the set. Two ends of that walk
+/// prove nothing, and they belong to the walker, which drops the envelope: a
+/// server that sends no `totalRecords` stops it after one page of 200, and it
+/// gives up after fifty pages. Every other total may still be null — a server
+/// that did not send `totalRecords` has told us nothing, and `records.length`
+/// would be the old lie with a fresh coat on it.
 Future<ArrRecordPage> _loadPage(
   ArrActivityMixin service,
   GlobalActivityKind kind, {

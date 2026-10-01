@@ -171,4 +171,65 @@ void main() {
       await harness.unmount(tester);
     });
   });
+
+  group('the service tiles', () {
+    test('a failed connection makes the count a floor and is named', () {
+      final count = activityCount([
+        _answered(ServiceKey.sonarr, [_queued(ServiceKey.sonarr, 'A')]),
+        _silent(ServiceKey.sonarr, instanceId: 'anime', label: 'Anime'),
+        _answered(ServiceKey.radarr, const []),
+      ], service: ServiceKey.sonarr);
+
+      expect(count.total, 1);
+      expect(count.isFloor, isTrue);
+      expect(notCountedClause(count.notCounted), 'Sonarr Anime not counted');
+    });
+
+    test('every connection answering is a total, not a floor', () {
+      final count = activityCount([
+        _answered(ServiceKey.sonarr, [_queued(ServiceKey.sonarr, 'A')]),
+        _answered(ServiceKey.radarr, [_queued(ServiceKey.radarr, 'B')]),
+      ]);
+
+      expect(count.total, 2);
+      expect(count.isFloor, isFalse);
+    });
+
+    testWidgets(
+      'P6: Sonarr Anime does not answer, so Sonarr reads as a floor',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final harness = await pumpWithProfile(
+          tester,
+          Profiles.p6.withBehaviour(
+            WorldIds.sonarrAnime,
+            ConnectionBehaviour.didNotAnswer,
+          ),
+          child: const GlobalActivityScreen(),
+        );
+
+        // The other Sonarr answered, so the tile keeps its number — marked as
+        // the floor it is, with the missing connection named to the ear.
+        expect(
+          find.bySemanticsLabel(
+            RegExp(r'^Sonarr, \d+ items?, Sonarr Anime not counted$'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(RegExp(r'^All, .*Sonarr Anime not counted$')),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(RegExp(r'^Sonarr, \d+ items?$')),
+          findsNothing,
+        );
+        // And the eye gets the mark, on the Sonarr tile and on All.
+        expect(find.textContaining(RegExp(r'^\d+\+$')), findsNWidgets(2));
+
+        handle.dispose();
+        await harness.unmount(tester);
+      },
+    );
+  });
 }

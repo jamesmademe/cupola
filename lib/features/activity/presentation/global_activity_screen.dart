@@ -1591,7 +1591,7 @@ class _ServiceStrip extends StatelessWidget {
             accent: Theme.of(context).colorScheme.primary,
             // The sum of the totals, not the loaded rows — the same rule as
             // each service's tile below.
-            count: activityServiceCount(results),
+            count: activityCount(results),
             selected: selected == null,
             onTap: () => onSelected(null),
           ),
@@ -1604,13 +1604,14 @@ class _ServiceStrip extends StatelessWidget {
               // service — which connection a row came off is what the row says
               // — so this figure has to be the whole of what that service is
               // doing, not whichever connection was merged last.
-              count: activityServiceCount(results, service: service),
+              count: activityCount(results, service: service),
               // A service that did not answer shows that instead of a count, so
               // the number 0 never stands in for "no idea". Only when *nothing*
               // of it was reached: with one connection down and another
               // answering, the number is short but it is still a number, and
-              // saying "no idea" would hide the rows already on screen. The
-              // health strip is what reports the shortfall, by connection.
+              // saying "no idea" would hide the rows already on screen. It is
+              // drawn as a floor (`12+`) and its spoken label names the
+              // connection it leaves out; the health strip says why.
               failed: _allFailedFor(results, service),
               silent: _allSilentFor(results, service),
               selected: selected == service,
@@ -1620,39 +1621,6 @@ class _ServiceStrip extends StatelessWidget {
       ),
     );
   }
-}
-
-/// How many records [service] has in this bucket across its connections — or
-/// across every service when [service] is null — **as the servers reported
-/// it**, or null when that is not known.
-///
-/// Summed from [ActivityServiceResult.total], never from `items.length`. History
-/// and Wanted load fifty rows per connection and then page, so a count of the
-/// loaded rows said "Sonarr 50" over a backlog of 2 369, and "100" after one
-/// Show more — a number that moved while the data did not.
-///
-/// Null — drawn `—`, spoken as unavailable — until a connection has answered,
-/// and whenever one that answered did not say how many it has: a sum with an
-/// unknown term is unknown, and printing the known part as the whole is the
-/// defect this replaces. A connection that did not answer at all is left out,
-/// as before: with one of two down the figure is short but still a figure, and
-/// the health strip is what names the shortfall.
-@visibleForTesting
-int? activityServiceCount(
-  List<ActivityServiceResult> results, {
-  ServiceKey? service,
-}) {
-  var total = 0;
-  var any = false;
-  for (final result in results) {
-    if (service != null && result.service != service) continue;
-    if (!result.reached) continue;
-    final count = result.total;
-    if (count == null) return null;
-    any = true;
-    total += count;
-  }
-  return any ? total : null;
 }
 
 /// Whether every configured connection of [service] failed.
@@ -1682,7 +1650,7 @@ class _ServiceTile extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color accent;
-  final int? count;
+  final ActivityCount count;
   final bool failed;
 
   /// With [failed]: every failure was silence. False when at least one
@@ -1730,13 +1698,23 @@ class _ServiceTile extends StatelessWidget {
     // An em dash for "no figure", the same mark every other surface prints —
     // and to the ear it is "unavailable", never "0 items": a count nobody
     // could take is not zero.
-    final count = this.count;
-    final countLabel = failed || count == null ? '—' : '$count';
+    //
+    // A floor carries a `+`, the mark the SABnzbd history header already uses
+    // for a count it cannot stand behind as the whole: the chip has no room to
+    // name what is missing, so the ear gets the name and the eye gets the
+    // mark, and the health strip above the list says why.
+    final total = count.total;
+    final countLabel = failed || total == null
+        ? Lexicon.noFigure
+        : '$total${count.isFloor ? '+' : ''}';
     final spoken = failed
         ? (silent ? '$label, did not answer' : '$label, answered with a fault')
-        : count == null
+        : total == null
         ? '$label, count unavailable'
-        : '$label, $count ${count == 1 ? 'item' : 'items'}';
+        : [
+            '$label, $total ${total == 1 ? 'item' : 'items'}',
+            if (count.isFloor) notCountedClause(count.notCounted),
+          ].join(', ');
 
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
