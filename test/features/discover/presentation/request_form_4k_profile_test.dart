@@ -17,6 +17,16 @@ void main() {
     copies: SeerrRequestCopies.both,
   ); // Sintel
 
+  /// Until the sheet has its servers and profiles. The fake network answers
+  /// at once, but each request takes a few turns of the event loop through
+  /// the client's interceptors, so a fixed count of turns is a guess.
+  Future<void> settle(ProviderContainer container) async {
+    for (var i = 0; i < 500; i++) {
+      await Future<void>.delayed(Duration.zero);
+      if (!container.read(requestFormProvider(args)).isLoading) return;
+    }
+  }
+
   Future<(ProfileHarness, ProviderContainer)> open() async {
     final harness = await ProfileHarness.start(Profiles.p6);
     final container = harness.container(retry: (_, _) => null);
@@ -26,9 +36,7 @@ void main() {
       fireImmediately: true,
     );
     addTearDown(subscription.close);
-    for (var i = 0; i < 20; i++) {
-      await Future<void>.delayed(Duration.zero);
-    }
+    await settle(container);
     return (harness, container);
   }
 
@@ -63,9 +71,8 @@ void main() {
     final notifier = container.read(requestFormProvider(args).notifier);
 
     notifier.selectServer(1);
-    for (var i = 0; i < 20; i++) {
-      await Future<void>.delayed(Duration.zero);
-    }
+    await Future<void>.delayed(Duration.zero);
+    await settle(container);
     expect(await notifier.submitRequest(), isNull);
 
     // It was filed on the 4K server without `is4k`: a standard request that

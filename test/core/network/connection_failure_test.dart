@@ -382,6 +382,24 @@ void main() {
     });
   });
 
+  group('a CSRF token Seerr refused twice', () {
+    test('is an amber fault that Retry may still clear', () {
+      const reason = ServiceFailureReason.csrfRefused;
+      expect(failureTone(reason), StatusTone.warning);
+      expect(
+        failureHeadline(reason, subject: 'Seerr'),
+        "Seerr refused the request's security token",
+      );
+      expect(failureLabel(reason), 'Security token refused');
+      expect(failureRemedy(reason), isNull);
+      expect(failureRetryHelps(reason), isTrue);
+      expect(
+        connectionFailureSentence(const ClassifiedFailure(reason)),
+        'Nothing changed. Retry in a moment.',
+      );
+    });
+  });
+
   group('the failure words', () {
     test('"Did not answer" is the only red label, and never contracted', () {
       expect(failureLabel(ServiceFailureReason.unreachable), 'Did not answer');

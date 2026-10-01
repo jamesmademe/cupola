@@ -45,6 +45,7 @@ One word per state, the same on every screen. The tone follows the tone rule bel
 | `Stopped` | neutral | Someone stopped it on purpose. Not a fault, never "stuck". |
 | `Missing` · `Wanted` · `Cutoff unmet` · `Not aired` · `Not out yet` | neutral | The backlog: released and not on disk, still looked for, below its profile, not yet out. |
 | `Waiting for approval` | blue | A request nobody has approved yet. |
+| `Seerr refused the request's security token` | amber | Seerr's CSRF protection refused a write twice, the second time with the token it had just handed out (the first refusal is answered by fetching a token and sending the write once more, unseen). `Nothing changed. Retry in a moment.` The state word is `Security token refused`. |
 | `Coming up` | — | The next dated things. Films carry a date only; episodes a date and a time. |
 | `in cinemas` · `on digital` · `on disc` | — | A film's three dated events, the same on the calendar and in Coming up: `Sprite Fright · on digital`. Not `digital release`, not `physical release`. |
 | `Checked 2 h ago` · `Since you opened this` · `As of 20:53` | — | When a background check ran; a history that starts when the screen opened; a widget's snapshot. |

@@ -23,6 +23,7 @@ import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
@@ -535,8 +536,28 @@ Future<String?> _loadVersion(
     );
   }
 
-  final createClient = ref.watch(serviceStatusClientFactoryProvider);
   final url = instance.url;
+  if (service == ServiceKey.seerr) {
+    // Seerr's own client, which answers its CSRF guard: never the generic
+    // one below.
+    final client = ref.watch(seerrClientFactoryProvider)(
+      instance,
+      pinnedCertFingerprint: settings.pinForUrl(url),
+    );
+    try {
+      // Seerr's status endpoint is public. Probe one authenticated request
+      // first, otherwise a wrong API key paints the dashboard green while
+      // Activity and Overview fail with 403 later.
+      await SeerrService(
+        client,
+      ).testConnection().timeout(const Duration(seconds: 5));
+      return await readServiceStatus(client, service, url: url);
+    } finally {
+      client.close();
+    }
+  }
+
+  final createClient = ref.watch(serviceStatusClientFactoryProvider);
   final client = createClient(
     baseUrl: url,
     apiKey: instance.credential,
@@ -545,14 +566,6 @@ Future<String?> _loadVersion(
   );
 
   try {
-    if (service == ServiceKey.seerr) {
-      // Seerr's status endpoint is public. Probe one authenticated request
-      // first, otherwise a wrong API key paints the dashboard green while
-      // Activity and Overview fail with 403 later.
-      await SeerrService(
-        client,
-      ).testConnection().timeout(const Duration(seconds: 5));
-    }
     // Who answered, not only that something did: the reading the connection
     // test shares, so Home and Settings name the same answer.
     return await readServiceStatus(client, service, url: url);

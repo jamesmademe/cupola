@@ -4,6 +4,10 @@ import 'package:cupola/core/network/answer_guard.dart';
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 
+/// A service's own interceptors, built over the [Dio] they are installed on:
+/// see `guardedDio`.
+typedef DioInterceptors = List<Interceptor> Function(Dio dio);
+
 /// Status codes that carry a `Location` header we are expected to follow.
 const _redirectStatuses = {301, 302, 303, 307, 308};
 
@@ -277,6 +281,12 @@ class SameOriginRedirectInterceptor extends Interceptor {
 /// This is the sixth obligation of a client, beside ADR-6's five: every
 /// construction passes the connection's access
 /// (`test/core/network/access_headers_guard_test.dart`).
+///
+/// [interceptors] are a service's own, built over this Dio (so one can send a
+/// request again through it) and installed **ahead** of the two guards: they
+/// see every answer first, a redirect's and a refusal's included, and a
+/// request they send again passes both guards like any other. Seerr's session
+/// and CSRF interceptors are the ones (`seerr_session.dart`).
 Dio guardedDio({
   required String baseUrl,
   Dio? injected,
@@ -285,6 +295,7 @@ Dio guardedDio({
   Map<String, dynamic>? headers,
   Map<String, String> accessHeaders = const {},
   bool nativeBasicAuth = false,
+  DioInterceptors? interceptors,
 }) {
   if (injected != null) return injected;
 
@@ -310,6 +321,7 @@ Dio guardedDio({
     ),
   );
   dio.interceptors
+    ..addAll(interceptors?.call(dio) ?? const [])
     ..add(SameOriginRedirectInterceptor(dio, nativeBasicAuth: nativeBasicAuth))
     ..add(AnswerGuardInterceptor(nativeBasicAuth: nativeBasicAuth));
   final adapter = pinnedHttpClientAdapterFor(

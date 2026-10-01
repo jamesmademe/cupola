@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/movies/domain/radarr_status.dart';
@@ -1223,6 +1224,12 @@ ProviderContainer _container({
                 Map<String, String> accessHeaders = const {},
               }) => statusClient,
         ),
+      // Seerr's probe builds its client through its own constructor.
+      if (statusClient != null)
+        seerrClientFactoryProvider.overrideWith(
+          (ref) =>
+              (instance, {String? pinnedCertFingerprint}) => statusClient,
+        ),
       radarrServiceProvider.overrideWith(
         (ref) => radarrService ?? FakeRadarrService(),
       ),
@@ -1337,6 +1344,12 @@ ProviderContainer _mutableSettingsContainer({
                 String? pinnedCertFingerprint,
                 Map<String, String> accessHeaders = const {},
               }) => statusClient,
+        ),
+      // Seerr's probe builds its client through its own constructor.
+      if (statusClient != null)
+        seerrClientFactoryProvider.overrideWith(
+          (ref) =>
+              (instance, {String? pinnedCertFingerprint}) => statusClient,
         ),
       radarrServiceProvider.overrideWith(
         (ref) => radarrService ?? FakeRadarrService(),

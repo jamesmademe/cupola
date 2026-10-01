@@ -44,16 +44,21 @@ class ApiClient {
   ///
   /// [accessHeaders] is what the connection presents to a gateway in front of
   /// the service, sent on every request: see `guardedDio`.
+  ///
+  /// [interceptors] are the service's own, ahead of the redirect and answer
+  /// guards: Seerr's CSRF token, and its session for an account.
   ApiClient({
     required String baseUrl,
     required String apiKey,
     String? pinnedCertFingerprint,
     Map<String, String> accessHeaders = const {},
+    DioInterceptors? interceptors,
   }) : this._(
          baseUrl: baseUrl,
          authHeaders: {'X-Api-Key': apiKey},
          pinnedCertFingerprint: pinnedCertFingerprint,
          accessHeaders: accessHeaders,
+         interceptors: interceptors,
        );
 
   /// For a service whose credential does not travel as `X-Api-Key`.
@@ -74,11 +79,13 @@ class ApiClient {
     required Map<String, String> headers,
     String? pinnedCertFingerprint,
     Map<String, String> accessHeaders = const {},
+    DioInterceptors? interceptors,
   }) : this._(
          baseUrl: baseUrl,
          authHeaders: headers,
          pinnedCertFingerprint: pinnedCertFingerprint,
          accessHeaders: accessHeaders,
+         interceptors: interceptors,
        );
 
   ApiClient._({
@@ -86,6 +93,7 @@ class ApiClient {
     required Map<String, String> authHeaders,
     String? pinnedCertFingerprint,
     Map<String, String> accessHeaders = const {},
+    DioInterceptors? interceptors,
   }) : _dio = guardedDio(
          // Redirects are followed by SameOriginRedirectInterceptor instead, so
          // the credential header can never be replayed to an unconfigured host.
@@ -95,6 +103,7 @@ class ApiClient {
          baseUrl: UrlUtils.normalizeBaseUrl(baseUrl),
          certFingerprint: pinnedCertFingerprint,
          accessHeaders: accessHeaders,
+         interceptors: interceptors,
          headers: {
            ...authHeaders,
            'Content-Type': 'application/json',

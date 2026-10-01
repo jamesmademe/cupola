@@ -40,6 +40,14 @@ enum ServiceFailureReason {
   /// Reached the service, which rejected the credentials or the API key.
   unauthorized,
 
+  /// Seerr's CSRF protection refused a write twice: once without a token,
+  /// and again with the token the server had just handed out. A fault of the
+  /// server's, amber, and the same write may still pass.
+  ///
+  /// A refusal the first time is not this: the transport fetches a token and
+  /// sends the write again (`SeerrCsrfInterceptor`).
+  csrfRefused,
+
   /// Reached a server, but the API is not at this URL — typically a base URL
   /// pointing at the wrong app, or a missing reverse-proxy subpath.
   notFound,
@@ -567,6 +575,7 @@ String failureLabel(
 }) => switch (reason) {
   ServiceFailureReason.unreachable => StateWord.didNotAnswer.label,
   ServiceFailureReason.unauthorized => 'Refused the $credential',
+  ServiceFailureReason.csrfRefused => 'Security token refused',
   ServiceFailureReason.timeout => 'Timed out',
   ServiceFailureReason.tls => 'Certificate not trusted',
   ServiceFailureReason.notFound => 'API not at this address',
@@ -608,6 +617,8 @@ String failureHeadline(
   ServiceFailureReason.unreachable => '$subject did not answer',
   ServiceFailureReason.unauthorized =>
     '$subject answered but refused the $credential',
+  ServiceFailureReason.csrfRefused =>
+    "$subject refused the request's security token",
   ServiceFailureReason.timeout =>
     '$subject was reached but did not reply in time',
   ServiceFailureReason.tls =>
@@ -669,6 +680,7 @@ String? failureRemedy(
   ServiceFailureReason.insecureTransport => 'Change the address',
   ServiceFailureReason.unreachable ||
   ServiceFailureReason.timeout ||
+  ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.serverError ||
   ServiceFailureReason.invalidResponse ||
   ServiceFailureReason.localNetworkBlocked ||
@@ -694,6 +706,7 @@ bool failureRetryHelps(
   ServiceFailureReason.unauthorized => credential == kRefusedSignIn,
   ServiceFailureReason.insecureTransport ||
   ServiceFailureReason.accessGateway => false,
+  ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.unreachable ||
   ServiceFailureReason.timeout ||
   ServiceFailureReason.tls ||
@@ -832,6 +845,7 @@ String connectionFailureSentence(
           ? 'The server answered and refused the saved credentials.'
           : 'The server answered and refused the saved credentials. Check '
                 'them in Settings.',
+    ServiceFailureReason.csrfRefused => 'Nothing changed. Retry in a moment.',
     ServiceFailureReason.notFound =>
       'Something answered, but the API is not at this address.',
     ServiceFailureReason.redirected =>

@@ -10,9 +10,9 @@ import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -207,14 +207,10 @@ Future<void> _pump(
               : const SettingsModel(),
         ),
         seerrServiceProvider.overrideWith((ref) => service),
-        serviceStatusClientFactoryProvider.overrideWith(
+        seerrClientFactoryProvider.overrideWith(
           (ref) =>
-              ({
-                required String baseUrl,
-                required String apiKey,
-                String? pinnedCertFingerprint,
-                Map<String, String> accessHeaders = const {},
-              }) => _StatusClient(version),
+              (instance, {String? pinnedCertFingerprint}) =>
+                  _StatusClient(version),
         ),
       ],
       child: MaterialApp(

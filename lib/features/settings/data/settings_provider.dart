@@ -262,7 +262,8 @@ final hasMultipleInstancesProvider = Provider.family<bool, ServiceKey>((
 /// Watches only [service]'s transport identity and returns an [ApiClient] bound
 /// to it, closed when the provider is disposed.
 ///
-/// The one place the seven `X-Api-Key` services turn settings into a client.
+/// The one place the `X-Api-Key` services turn settings into a client, Seerr
+/// excepted: its client is `seerrClientFor`'s.
 /// Each of them used to spell out the same twelve lines with its own field
 /// names substituted, which is three chances per service to disagree with the
 /// registry: whether "configured" means url-and-key, which URL the certificate
@@ -286,6 +287,9 @@ final hasMultipleInstancesProvider = Provider.family<bool, ServiceKey>((
 /// are providers, and a second provider layer would add a rebuild edge without
 /// adding an answer.
 ApiClient watchApiClient(Ref ref, ServiceKey service, {String? instanceId}) {
+  // Seerr signs in two ways and guards its writes with a CSRF token: its
+  // client is `watchSeerrClient`'s, never this one.
+  assert(service != ServiceKey.seerr, 'Seerr clients come from seerrClientFor');
   final transport = watchTransport(ref, service, instanceId: instanceId);
   if (!transport.configured) {
     throw Exception('${service.title} not configured');

@@ -15,6 +15,7 @@ import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_status_probe.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -315,11 +316,15 @@ Future<ServiceDiagnosis> diagnoseCredentials(
   }
 
   if (service == ServiceKey.seerr) {
-    final client = ApiClient(
-      baseUrl: urlTrimmed,
-      apiKey: apiKey.trim(),
+    final client = seerrClientFor(
+      ServiceInstance(
+        id: '',
+        service: service,
+        url: urlTrimmed,
+        credential: apiKey.trim(),
+        access: access,
+      ),
       pinnedCertFingerprint: pin,
-      accessHeaders: accessHeaders,
     );
     try {
       await SeerrService(
@@ -522,6 +527,8 @@ Future<ServiceDiagnosis> _diagnoseOverApiClient(
   // Jellyfin and Plex. Reporting the service as unreachable is wrong too, but
   // it is wrong in the direction that gets noticed and cannot mislead anyone
   // into thinking a bad credential works.
+  // Seerr has a branch of its own above, with its own client.
+  assert(service != ServiceKey.seerr, 'Seerr is verified by seerrClientFor');
   final endpoint = service.statusEndpoint;
   if (endpoint.isEmpty) {
     return const ServiceDiagnosis(
@@ -701,6 +708,7 @@ Future<ServiceDiagnosis> diagnoseSavedInstance(
 /// is exactly how a permission the user has not granted looks from the socket.
 bool localNetworkCouldExplain(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
+  ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.notFound ||
   ServiceFailureReason.redirected ||
   ServiceFailureReason.accessGateway ||
@@ -766,6 +774,7 @@ Future<ServiceDiagnosis> diagnoseThroughLocalNetworkGate(
 /// trip to learn nothing.
 bool certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
+  ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.notFound ||
   ServiceFailureReason.redirected ||
   ServiceFailureReason.accessGateway ||
@@ -861,6 +870,9 @@ String connectionFailureMessage(
                 "${service.title}'s own settings."
           : '${service.title} answered, and does not accept this username and '
                 'password.';
+    case ServiceFailureReason.csrfRefused:
+      return '${service.title} refused the security token it had just handed '
+          'out. Nothing changed. Retry in a moment.';
     case ServiceFailureReason.notFound:
       return 'Reached the server, but the ${service.title} API is not at this '
           'address. Check for a missing or wrong base path.';

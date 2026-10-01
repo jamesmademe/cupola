@@ -2,6 +2,7 @@ import 'dart:collection';
 import 'dart:isolate';
 import 'package:dio/dio.dart';
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/discover/domain/models/person_credits.dart';
@@ -15,15 +16,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Thrown when a request has already been acted on somewhere else.
 ///
-/// Worth a type of its own because it is the *only* way the request write
-/// actions realistically fail, and it is not an error on our side. Cupola
-/// authenticates to Seerr with the instance API key, which Seerr treats as
-/// admin — so approve and decline are never refused for lack of permission,
-/// there is no per-user permission bitfield to read first, and no 403 to design
-/// around. What does happen is a race: the same request approved from the web UI
-/// a moment earlier, or deleted outright. Seerr answers 404 or 409, and the
-/// honest response is to say the state moved and reload — not to report a
-/// transport failure for something that already succeeded, by someone else.
+/// Worth a type of its own because it is not an error on our side: the same
+/// request approved from the web UI a moment earlier, or deleted outright.
+/// Seerr answers 404 or 409, and the honest response is to say the state moved
+/// and reload — not to report a transport failure for something that already
+/// succeeded, by someone else.
+///
+/// It is not the only way a write fails: with Seerr's CSRF protection on, a
+/// write without the token is refused with a 403 the key did not earn. The
+/// transport answers it by itself (`SeerrCsrfInterceptor`).
 class SeerrRequestConflict implements Exception {
   final String message;
 
@@ -109,7 +110,7 @@ Future<List<MediaPreview>> _mapPreviews(
 }
 
 final seerrServiceProvider = Provider<SeerrService>((ref) {
-  return SeerrService(watchApiClient(ref, ServiceKey.seerr));
+  return SeerrService(watchSeerrClient(ref));
 });
 
 /// Seerr bound to one named connection, whatever the lens is pointing at.
@@ -132,6 +133,8 @@ final seerrServiceProvider = Provider<SeerrService>((ref) {
 /// would cut a request already in flight. The cost is that an entry minted
 /// before the lens landed on its id keeps a client of its own until disposal.
 ///
+/// The client is [watchSeerrClient]'s, which answers Seerr's CSRF guard.
+///
 /// Not `autoDispose`: a caller reads this, awaits on it, and a disposal
 /// scheduled at the end of the read would close the `Dio` under the request.
 final seerrServiceForProvider = Provider.family<SeerrService, String>((
@@ -142,9 +145,7 @@ final seerrServiceForProvider = Provider.family<SeerrService, String>((
   if (instanceId.isEmpty || instanceId == lens) {
     return ref.watch(seerrServiceProvider);
   }
-  return SeerrService(
-    watchApiClient(ref, ServiceKey.seerr, instanceId: instanceId),
-  );
+  return SeerrService(watchSeerrClient(ref, instanceId: instanceId));
 });
 
 class SeerrService {
