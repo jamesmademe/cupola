@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
@@ -25,6 +26,7 @@ import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/presentation/service_settings_screen.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
 
@@ -226,6 +228,101 @@ void main() {
         await _probe(container);
         expect(_signIns(harness), 2);
       });
+    });
+  });
+
+  group('a passing Test in the connection form', () {
+    // The form tests with a client of its own. It read `Answering` while the
+    // Dashboard kept its client's refusal until a Retry somewhere else.
+    Future<(ProfileHarness, ProviderContainer, void Function())> pumpForm(
+      WidgetTester tester, {
+      String password = '',
+    }) async {
+      var fixed = false;
+      final profile = Profiles.p1;
+      final harness = await pumpWithProfile(
+        tester,
+        profile,
+        child: ServiceSettingsScreen(
+          service: ServiceKey.qbittorrent,
+          instanceId: WorldIds.qbittorrent,
+          certificateProber: (_, {pinnedFingerprint = ''}) async => null,
+          localNetworkProbe: (_, {timeout = Duration.zero}) async =>
+              LocalNetworkAccess.unrestricted,
+        ),
+        surfaceSize: const Size(430, 2400),
+        settle: false,
+      );
+      // The password is wrong at the server until the person fixes it there.
+      harness.network.on(
+        WorldIds.qbittorrent,
+        'POST',
+        _loginPath,
+        (_) => fixed ? null : NetworkReply.text('Fails.'),
+      );
+      await harness.settle(tester);
+      if (password.isNotEmpty) {
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Password'),
+          password,
+        );
+      }
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ServiceSettingsScreen)),
+      );
+      return (harness, container, () => fixed = true);
+    }
+
+    testWidgets('with the saved sign-in lets the Dashboard sign in again', (
+      tester,
+    ) async {
+      final (harness, container, fixAtServer) = await pumpForm(tester);
+
+      await tester.runAsync(() async {
+        expect((await _probe(container)).isFault, isTrue);
+      });
+      final refused = _signIns(harness);
+      fixAtServer();
+      await tester.runAsync(() async {
+        container.invalidate(instanceSummaryProvider);
+        expect((await _probe(container)).isFault, isTrue);
+      });
+      expect(_signIns(harness), refused, reason: 'a refresh is held');
+
+      await tester.tap(find.text('Test connection'));
+      await harness.settle(tester);
+      expect(_signIns(harness), refused + 1, reason: "the form's own test");
+
+      await tester.runAsync(() async {
+        container.invalidate(instanceSummaryProvider);
+        expect((await _probe(container)).isOnline, isTrue);
+      });
+      expect(_signIns(harness), refused + 2);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('with values not saved leaves the saved hold alone', (
+      tester,
+    ) async {
+      final (harness, container, fixAtServer) = await pumpForm(
+        tester,
+        password: 'typed-not-saved',
+      );
+      await tester.runAsync(() async => _probe(container));
+      fixAtServer();
+
+      await tester.tap(find.text('Test connection'));
+      await harness.settle(tester);
+      final afterTest = _signIns(harness);
+
+      await tester.runAsync(() async {
+        container.invalidate(instanceSummaryProvider);
+        expect((await _probe(container)).isFault, isTrue);
+      });
+      expect(_signIns(harness), afterTest);
+
+      await harness.unmount(tester);
     });
   });
 }

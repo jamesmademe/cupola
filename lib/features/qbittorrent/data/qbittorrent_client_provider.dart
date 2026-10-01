@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderFamily;
 
+import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_refusal_store.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The one qBittorrent client of each connection, keyed by the connection's id.
@@ -89,3 +91,32 @@ void liftQbittorrentRefusals(WidgetRef ref, Iterable<String> connectionIds) {
     ref.read(qbittorrentClientForProvider(id)).clearLoginRefusal();
   }
 }
+
+/// After a person's connection test of [tested] passed: lets the saved
+/// connection's own client sign in again, when the test sent exactly what that
+/// client sends.
+///
+/// The test signs in with a client of its own, so without this a form read
+/// `Answering` while the Dashboard kept the refusal its client was holding
+/// until a Retry. Only a pass, and only with the saved address, credentials
+/// and access: a test that failed changes nothing, and one that passed with
+/// values not saved yet says nothing about the saved ones (saving them builds
+/// a new client, which asks on its own).
+void liftQbittorrentRefusalAfterPassingTest(
+  WidgetRef ref,
+  ServiceInstance tested,
+) {
+  if (tested.service != ServiceKey.qbittorrent) return;
+  final saved = ref.read(currentSettingsProvider).instanceById(tested.id);
+  if (saved == null || !saved.isConfigured) return;
+  if (_markOf(saved) != _markOf(tested)) return;
+  ref.read(qbittorrentClientForProvider(saved.id)).clearLoginRefusal();
+}
+
+/// What a client built from [instance] would present at the login.
+String _markOf(ServiceInstance instance) => qbittorrentCredentialMark(
+  baseUrl: UrlUtils.normalizeBaseUrl(instance.url),
+  username: instance.username.isNotEmpty ? instance.username : null,
+  password: instance.credential.isNotEmpty ? instance.credential : null,
+  accessHeaders: instance.access.headers(),
+);

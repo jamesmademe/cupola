@@ -21,6 +21,7 @@ import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/release_search/presentation/widgets/search_headroom_card.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
@@ -377,6 +378,11 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       }
 
       if (!mounted) return;
+      // A pass with the saved sign-in is the person asking at this
+      // connection: its client sends the login once more on the next read.
+      if (result.isConnected) {
+        liftQbittorrentRefusalAfterPassingTest(ref, candidateInstance);
+      }
       HapticFeedback.lightImpact();
       final shareable = result.isConnected
           ? _sameTeamConnections(shareTeam, _testedAccess)
