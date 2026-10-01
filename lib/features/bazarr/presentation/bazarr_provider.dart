@@ -122,6 +122,12 @@ final bazarrHistoryPageProvider = FutureProvider.autoDispose
 ///
 /// Bazarr does not expose a `/api/series/:id` endpoint, so this provider walks
 /// the paged list and returns the first match.
+///
+/// `noProviderRetry`, like the three lookups below it and the Radarr and Sonarr
+/// detail reads: these back the two detail pages and nothing else, both offer
+/// Retry and pull-to-refresh, and under the default policy a page opened cold
+/// on a Bazarr that did not answer sat on its skeleton for the better part of
+/// a minute before it said so.
 final bazarrSeriesByIdProvider = FutureProvider.family<BazarrSeries?, int>((
   ref,
   sonarrSeriesId,
@@ -137,9 +143,10 @@ final bazarrSeriesByIdProvider = FutureProvider.family<BazarrSeries?, int>((
     if (!page.hasMore) return null;
     start += page.data.length;
   }
-});
+}, retry: noProviderRetry);
 
-/// Fetch a single [BazarrMovie] by Radarr id.
+/// Fetch a single [BazarrMovie] by Radarr id. See [bazarrSeriesByIdProvider]
+/// for the retry policy.
 final bazarrMovieByIdProvider = FutureProvider.family<BazarrMovie?, int>((
   ref,
   radarrId,
@@ -155,7 +162,7 @@ final bazarrMovieByIdProvider = FutureProvider.family<BazarrMovie?, int>((
     if (!page.hasMore) return null;
     start += page.data.length;
   }
-});
+}, retry: noProviderRetry);
 
 /// Fetch all wanted items of a series (or empty if not in wanted list).
 final bazarrWantedEpisodesForSeriesProvider =
@@ -179,7 +186,7 @@ final bazarrWantedEpisodesForSeriesProvider =
         start += page.data.length;
       }
       return result;
-    });
+    }, retry: noProviderRetry);
 
 /// Fetch the wanted movie entry for a Radarr id (or empty if not wanted).
 final bazarrWantedMovieByIdProvider =
@@ -198,4 +205,4 @@ final bazarrWantedMovieByIdProvider =
         if (!page.hasMore) return null;
         start += page.data.length;
       }
-    });
+    }, retry: noProviderRetry);

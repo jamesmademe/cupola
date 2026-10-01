@@ -151,6 +151,39 @@ void main() {
       await harness.unmount(tester);
     });
   });
+
+  group('a Bazarr page opened cold on a Bazarr that does not answer', () {
+    testWidgets('a movie says so at once, after one walk of the list', (
+      tester,
+    ) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p7,
+        const BazarrMovieDetailScreen(radarrId: 5),
+      );
+
+      // It used to sit on its skeleton through a minute of backoff first.
+      expect(find.text('Bazarr did not answer'), findsOneWidget);
+      expect(_reads(harness, '/api/movies'), 1);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a series says so at once, after one walk of the list', (
+      tester,
+    ) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p7,
+        const BazarrSeriesDetailScreen(sonarrSeriesId: 1),
+      );
+
+      expect(find.text('Bazarr did not answer'), findsOneWidget);
+      expect(_reads(harness, '/api/series'), 1);
+
+      await harness.unmount(tester);
+    });
+  });
 }
 
 /// The line's one glyph carries the tone, walked for the ground it is on.
