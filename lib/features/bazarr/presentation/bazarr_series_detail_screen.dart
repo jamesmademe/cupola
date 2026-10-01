@@ -10,6 +10,7 @@ import 'package:cupola/features/bazarr/presentation/bazarr_movie_detail_screen.d
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/bazarr/presentation/widgets/bazarr_detail_sections.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Bazarr series subtitle detail, on the shared media-detail scaffold.
@@ -69,6 +70,11 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
 
     final viewModel = BazarrDetailViewModel.forSeries(series, initialWanted);
     final accent = ServiceKey.bazarr.accent;
+    // The lookup failed and the page stands on the wanted episode it was
+    // opened from: see the movie screen.
+    final lookupFailure = series == null && seriesAsync.hasError
+        ? seriesAsync.error
+        : null;
     final wantedItems = wantedAsync.asData?.value ?? const <BazarrWantedItem>[];
 
     final refreshAction = IconButton(
@@ -110,6 +116,18 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
         ),
       ),
       body: MediaDetailBody(
+        // See the movie screen for why the readout region carries it.
+        readout: lookupFailure == null
+            ? null
+            : InlineErrorRetry(
+                message: sectionFailureMessage(
+                  ServiceKey.bazarr,
+                  lookupFailure,
+                  consequence: 'the series record is missing from this page',
+                ),
+                error: lookupFailure,
+                onRetry: refresh,
+              ),
         // Bazarr's column, one region short of the drawn one. The board gives
         // the wide track an episode x language chip table and demotes this
         // wanted list to the 380 column beside it; the table needs

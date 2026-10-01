@@ -7,6 +7,7 @@ import 'package:cupola/features/bazarr/presentation/bazarr_detail_view_model.dar
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/bazarr/presentation/widgets/bazarr_detail_sections.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Bazarr movie subtitle detail, on the shared media-detail scaffold.
@@ -64,6 +65,13 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
 
     final viewModel = BazarrDetailViewModel.forMovie(movie, initialWanted);
     final accent = ServiceKey.bazarr.accent;
+    // The lookup failed and the page stands on the wanted item it was opened
+    // from. That item names the languages, not the record: the figure, the
+    // subtitles on disk and the details are Bazarr's, and they read as
+    // unknown. Said, so a dash is not the only trace of a failure.
+    final lookupFailure = movie == null && movieAsync.hasError
+        ? movieAsync.error
+        : null;
 
     return MediaDetailView(
       accent: accent,
@@ -97,6 +105,20 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
         ),
       ),
       body: MediaDetailBody(
+        // The top of the body on a page with no deck, and the region whose
+        // padding a line of this kind is drawn for: its first glyph lands on
+        // the column edge.
+        readout: lookupFailure == null
+            ? null
+            : InlineErrorRetry(
+                message: sectionFailureMessage(
+                  ServiceKey.bazarr,
+                  lookupFailure,
+                  consequence: 'the movie record is missing from this page',
+                ),
+                error: lookupFailure,
+                onRetry: refresh,
+              ),
         // The board's wide track is the per-language subtitle table and the file
         // Radarr reports; both need Bazarr write and read endpoints this client
         // has none of, so the missing-subtitle list holds it. Details and Tags
