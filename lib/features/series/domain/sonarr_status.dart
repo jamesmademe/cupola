@@ -4,14 +4,19 @@ import 'package:cupola/features/series/domain/models/sonarr_season.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 
 /// Resolves the badge status for a Sonarr series.
+///
+/// [queueUnknown] as in `radarrMovieStatus`: `!snapshot.isWhole`, so a series
+/// whose queue could not be read never reads `Missing` for want of an entry.
 MediaStatusInfo sonarrSeriesStatus(
   SonarrSeries series, {
   ArrQueueEntry? queueEntry,
+  bool queueUnknown = false,
 }) {
   return mediaStatusFromQueue(
     availability: sonarrSeriesAvailability(series),
     monitored: series.monitored,
     queueEntry: queueEntry,
+    queueUnknown: queueUnknown,
   );
 }
 

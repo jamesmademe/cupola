@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/features/movies/domain/radarr_status.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
@@ -1054,6 +1057,81 @@ void main() {
       },
     );
   });
+
+  group('a queue snapshot says what it could not read', () {
+    test('a Radarr queue that failed leaves a film with no file unknown, '
+        'never Missing', () async {
+      final container = _container(radarrService: _ThrowingRadarrService());
+
+      final snapshot = await container.read(radarrQueueSnapshotProvider.future);
+
+      // It used to degrade to the empty snapshot, an answer that says nothing
+      // is downloading, and every film being downloaded read "Missing".
+      expect(snapshot.answered, isFalse);
+      expect(snapshot.isWhole, isFalse);
+      expect(snapshot.error, isNotNull);
+      final status = radarrMovieStatus(
+        buildMovie(id: 7, hasFile: false),
+        queueEntry: snapshot.entryFor(7),
+        queueUnknown: !snapshot.isWhole,
+      );
+      expect(status.label, 'Unknown');
+    });
+
+    test('a Radarr queue walk that stopped short keeps what it read and '
+        'proves no absence', () async {
+      final container = _container(
+        radarrService: _PageRadarrService(
+          const ArrRecordPage(
+            records: [
+              {'movieId': 10, 'status': 'downloading'},
+            ],
+            total: null,
+            cutShort: true,
+          ),
+        ),
+      );
+
+      final snapshot = await container.read(radarrQueueSnapshotProvider.future);
+
+      expect(snapshot.entryFor(10)?.pipeline, MediaPipeline.downloading);
+      expect(snapshot.cutShort, isTrue);
+      expect(snapshot.isWhole, isFalse);
+    });
+
+    test('a Sonarr queue that failed is unknown, not empty', () async {
+      final container = _container(sonarrService: _ThrowingSonarrService());
+
+      final snapshot = await container.read(sonarrQueueSnapshotProvider.future);
+
+      expect(snapshot.answered, isFalse);
+    });
+
+    test('a Lidarr queue that failed is unknown both ways', () async {
+      final container = _container(lidarrService: _ThrowingLidarrService());
+
+      final snapshots = await container.read(
+        lidarrQueueSnapshotsProvider.future,
+      );
+
+      expect(snapshots.byArtist.answered, isFalse);
+      expect(snapshots.byAlbum.answered, isFalse);
+    });
+
+    test('a queue that answered empty is still an answer', () async {
+      final container = _container(radarrService: _QueueRadarrService([]));
+
+      final snapshot = await container.read(radarrQueueSnapshotProvider.future);
+
+      expect(snapshot.isWhole, isTrue);
+      final status = radarrMovieStatus(
+        buildMovie(id: 7, hasFile: false),
+        queueEntry: snapshot.entryFor(7),
+        queueUnknown: !snapshot.isWhole,
+      );
+      expect(status.label, 'Missing');
+    });
+  });
 }
 
 /// The decisions once every source has answered. The region merges them as
@@ -1277,6 +1355,32 @@ class _ThrowingRadarrService extends FakeRadarrService {
   Future<List<dynamic>> getQueue({
     Map<String, dynamic>? queryParameters,
   }) async => throw Exception('Radarr failed');
+}
+
+/// A queue walk with its own envelope: the total and whether it stopped short.
+class _PageRadarrService extends FakeRadarrService {
+  _PageRadarrService(this.page);
+
+  final ArrRecordPage page;
+
+  @override
+  Future<ArrRecordPage> getQueuePage({
+    Map<String, dynamic>? queryParameters,
+  }) async => page;
+}
+
+class _ThrowingSonarrService extends FakeSonarrService {
+  @override
+  Future<List<dynamic>> getQueue({
+    Map<String, dynamic>? queryParameters,
+  }) async => throw Exception('Sonarr failed');
+}
+
+class _ThrowingLidarrService extends FakeLidarrService {
+  @override
+  Future<List<dynamic>> getQueue({
+    Map<String, dynamic>? queryParameters,
+  }) async => throw Exception('Lidarr failed');
 }
 
 class _QueueSonarrService extends FakeSonarrService {

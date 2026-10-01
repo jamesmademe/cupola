@@ -455,4 +455,93 @@ void main() {
       expect(ArrQueueSnapshot.empty.ageAt(DateTime(2026)), isNull);
     });
   });
+
+  group('a snapshot says what it could not read', () {
+    test('a queue that answered and was read to the end is whole', () {
+      final snapshot = ArrQueueSnapshot.fromQueueItems(const [
+        {'status': 'downloading', 'movieId': 1},
+      ], idsFor: (item) => [item['movieId'] as int]);
+
+      expect(snapshot.answered, isTrue);
+      expect(snapshot.cutShort, isFalse);
+      expect(snapshot.isWhole, isTrue);
+      expect(ArrQueueSnapshot.empty.isWhole, isTrue);
+    });
+
+    test('a walk that stopped short keeps its entries and proves no '
+        'absence', () {
+      final snapshot = ArrQueueSnapshot.fromQueueItems(
+        const [
+          {'status': 'downloading', 'movieId': 1},
+        ],
+        idsFor: (item) => [item['movieId'] as int],
+        cutShort: true,
+      );
+
+      expect(snapshot.entryFor(1)?.pipeline, MediaPipeline.downloading);
+      expect(snapshot.answered, isTrue);
+      expect(snapshot.isWhole, isFalse);
+    });
+
+    test('a failed read answered nothing, and keeps why', () {
+      final error = Exception('Radarr failed');
+      final snapshot = ArrQueueSnapshot.failed(error);
+
+      expect(snapshot.answered, isFalse);
+      expect(snapshot.isWhole, isFalse);
+      expect(snapshot.isEmpty, isTrue);
+      expect(snapshot.error, same(error));
+      expect(snapshot.sampledAt, isNull);
+      expect(ArrQueueSnapshot.unknown.answered, isFalse);
+    });
+  });
+
+  group('mediaStatusFromQueue over a queue it could not read', () {
+    test('nothing on disk reads unknown, never Missing', () {
+      final status = mediaStatusFromQueue(
+        availability: MediaAvailability.missing,
+        monitored: true,
+        queueUnknown: true,
+      );
+
+      expect(status.availability, MediaAvailability.unknown);
+      expect(status.label, 'Unknown');
+    });
+
+    test('what the library says on its own stands', () {
+      for (final availability in [
+        MediaAvailability.available,
+        MediaAvailability.partial,
+        MediaAvailability.unavailable,
+        MediaAvailability.deleted,
+      ]) {
+        final status = mediaStatusFromQueue(
+          availability: availability,
+          monitored: true,
+          queueUnknown: true,
+        );
+        expect(status.availability, availability, reason: '$availability');
+      }
+    });
+
+    test('an entry it did read still wins', () {
+      final status = mediaStatusFromQueue(
+        availability: MediaAvailability.missing,
+        monitored: true,
+        queueEntry: const ArrQueueEntry(pipeline: MediaPipeline.downloading),
+        queueUnknown: true,
+      );
+
+      expect(status.label, 'Downloading');
+    });
+
+    test('a whole queue with no entry still says Missing', () {
+      final status = mediaStatusFromQueue(
+        availability: MediaAvailability.missing,
+        monitored: true,
+      );
+
+      expect(status.label, 'Missing');
+    });
+  });
 }

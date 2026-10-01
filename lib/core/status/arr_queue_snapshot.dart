@@ -213,13 +213,26 @@ ArrQueueEntry? mergeArrQueueEntries(Iterable<ArrQueueEntry> entries) {
 /// The single place where "what is on disk" meets "what is in flight", so every
 /// \*arr resolver produces the same shape and an item in the queue can never
 /// come out as `Missing`.
+///
+/// [queueUnknown] is the queue's half of that promise: no entry proves nothing
+/// when the queue could not be read whole ([ArrQueueSnapshot.isWhole] false).
+/// A title with nothing on disk may be downloading right now, so it reads
+/// [MediaAvailability.unknown] rather than `Missing`; every other availability
+/// is the library's own word and stands. Pass it as `!snapshot.isWhole`, and
+/// as true while there is no snapshot at all.
 MediaStatusInfo mediaStatusFromQueue({
   required MediaAvailability availability,
   required bool monitored,
   ArrQueueEntry? queueEntry,
+  bool queueUnknown = false,
 }) {
   return MediaStatusInfo(
-    availability: availability,
+    availability:
+        queueEntry == null &&
+            queueUnknown &&
+            availability == MediaAvailability.missing
+        ? MediaAvailability.unknown
+        : availability,
     pipeline: queueEntry?.pipeline,
     progress: queueEntry?.progress,
     unmonitored: !monitored,
@@ -231,13 +244,54 @@ MediaStatusInfo mediaStatusFromQueue({
 }
 
 /// An \*arr download queue indexed by media id, and when it was taken.
+///
+/// Three readings, and a screen has to tell them apart: the queue answered and
+/// was read to the end ([isWhole]), so a title with no entry is not in it; the
+/// queue answered but the walk stopped short ([cutShort]), so the entries are
+/// true and an absence proves nothing; or the queue did not answer
+/// ([answered] false, [ArrQueueSnapshot.failed]), so nothing is known about
+/// what is in flight.
+///
+/// The last two used to read as the first. A failed read degraded to [empty],
+/// and every title that was downloading read `Missing` on its detail page,
+/// because "no entry" was taken as "not in the queue".
 class ArrQueueSnapshot {
+  /// A queue that answered with nothing in it.
   static const ArrQueueSnapshot empty = ArrQueueSnapshot._(
     <int, ArrQueueEntry>{},
     null,
   );
 
+  /// A queue nobody could read, for a caller with no error to keep: a screen
+  /// with no snapshot yet reads this rather than [empty].
+  static const ArrQueueSnapshot unknown = ArrQueueSnapshot.failed(null);
+
+  /// A queue read that failed with [error]: no entries, and none of them can
+  /// be taken as an answer.
+  const ArrQueueSnapshot.failed(this.error)
+    : entriesById = const <int, ArrQueueEntry>{},
+      sampledAt = null,
+      answered = false,
+      cutShort = false;
+
   final Map<int, ArrQueueEntry> entriesById;
+
+  /// The queue answered. False only on [ArrQueueSnapshot.failed].
+  final bool answered;
+
+  /// Why the queue could not be read, when it could not and the reader kept
+  /// the reason. Null on every snapshot that [answered].
+  final Object? error;
+
+  /// The walk across the queue's pages stopped before the end of it
+  /// (`ArrRecordPage.cutShort`): every entry here is true, and a title with
+  /// none may still be in the part that was not read. A figure taken from
+  /// [entriesById] is then a floor, `200+`.
+  final bool cutShort;
+
+  /// The queue answered and every record of it was read, so a title with no
+  /// entry is not in the queue.
+  bool get isWhole => answered && !cutShort;
 
   /// When the records in this snapshot were read from the service.
   ///
@@ -250,10 +304,16 @@ class ArrQueueSnapshot {
   /// trade the time-left for this age and the page raises
   /// `FaultBand.stale` once it is older than its own poll interval.
   ///
-  /// `null` only on [empty], which is a constant with nothing to be old.
+  /// `null` only on [empty] and on a failed read, which have nothing to be
+  /// old.
   final DateTime? sampledAt;
 
-  const ArrQueueSnapshot._(this.entriesById, this.sampledAt);
+  const ArrQueueSnapshot._(
+    this.entriesById,
+    this.sampledAt, {
+    this.cutShort = false,
+  }) : answered = true,
+       error = null;
 
   bool get isEmpty => entriesById.isEmpty;
   bool get isNotEmpty => entriesById.isNotEmpty;
@@ -276,10 +336,12 @@ class ArrQueueSnapshot {
   /// several. Records whose ids cannot be resolved are dropped.
   /// [sampledAt] defaults to now, which is true for every live fetch and is why
   /// no caller has to remember it. A test that wants to state an age passes one.
+  /// [cutShort] is the walk's own word that [items] are not the whole queue.
   factory ArrQueueSnapshot.fromQueueItems(
     Iterable<dynamic> items, {
     required Iterable<int> Function(Map<String, dynamic> item) idsFor,
     DateTime? sampledAt,
+    bool cutShort = false,
   }) {
     final accumulators = <int, _EntryAccumulator>{};
 
@@ -296,9 +358,11 @@ class ArrQueueSnapshot {
       }
     }
 
-    return ArrQueueSnapshot._({
-      for (final acc in accumulators.entries) acc.key: acc.value.freeze(),
-    }, sampledAt ?? DateTime.now());
+    return ArrQueueSnapshot._(
+      {for (final acc in accumulators.entries) acc.key: acc.value.freeze()},
+      sampledAt ?? DateTime.now(),
+      cutShort: cutShort,
+    );
   }
 }
 

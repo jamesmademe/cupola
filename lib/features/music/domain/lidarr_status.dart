@@ -4,14 +4,18 @@ import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/music/domain/models/lidarr_track.dart';
 
 /// Resolves the badge status for a Lidarr artist.
+///
+/// [queueUnknown] as in `radarrMovieStatus`: `!snapshot.isWhole`.
 MediaStatusInfo lidarrArtistStatus(
   LidarrArtist artist, {
   ArrQueueEntry? queueEntry,
+  bool queueUnknown = false,
 }) {
   return mediaStatusFromQueue(
     availability: lidarrArtistAvailability(artist),
     monitored: artist.monitored,
     queueEntry: queueEntry,
+    queueUnknown: queueUnknown,
   );
 }
 
@@ -38,11 +42,13 @@ MediaAvailability lidarrArtistAvailability(LidarrArtist artist) {
 MediaStatusInfo lidarrAlbumStatus(
   LidarrAlbum album, {
   ArrQueueEntry? queueEntry,
+  bool queueUnknown = false,
 }) {
   return mediaStatusFromQueue(
     availability: lidarrAlbumAvailability(album),
     monitored: album.monitored,
     queueEntry: queueEntry,
+    queueUnknown: queueUnknown,
   );
 }
 

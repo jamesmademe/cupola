@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
@@ -546,7 +547,7 @@ final radarrQueueSnapshotForProvider =
           ? ref.watch(radarrServiceProvider)
           : ref.watch(radarrServiceForProvider(instanceId));
       return _loadArrQueueSnapshot(
-        service.getQueue,
+        service.getQueuePage,
         (item) => [
           intOrNull(mapOrNull(item['movie'])?['id'] ?? item['movieId']),
         ],
@@ -556,7 +557,11 @@ final radarrQueueSnapshotForProvider =
 /// The Radarr queue indexed by movie id.
 ///
 /// Every surface that badges a movie — grid, poster rail, detail page — reads
-/// this one snapshot, so they cannot disagree about what is downloading.
+/// this one snapshot, so they cannot disagree about what is downloading. A
+/// queue that did not answer is a failed snapshot, never an empty one, and a
+/// badge reads it through `queueUnknown: !snapshot.isWhole`
+/// (`radarrMovieStatus`), so a film being downloaded never reads `Missing`
+/// because its queue could not be asked.
 /// Delegates to the connection the lens points at, so the surfaces that never
 /// name one keep the shape they always had.
 final radarrQueueSnapshotProvider = FutureProvider<ArrQueueSnapshot>((
@@ -574,7 +579,7 @@ final sonarrQueueSnapshotForProvider =
           ? ref.watch(sonarrServiceProvider)
           : ref.watch(sonarrServiceForProvider(instanceId));
       return _loadArrQueueSnapshot(
-        service.getQueue,
+        service.getQueuePage,
         (item) => [
           intOrNull(mapOrNull(item['series'])?['id'] ?? item['seriesId']),
         ],
@@ -618,11 +623,12 @@ final lidarrQueueSnapshotsProvider = FutureProvider<LidarrQueueSnapshots>((
       intOrNull(mapOrNull(item['album'])?['id'] ?? item['albumId']);
 
   try {
-    final queueItems = (await service.getQueue())
+    final page = await service.getQueuePage();
+    final queueItems = page.records
         .whereType<Map>()
         .map(stringKeyMap)
         .toList(growable: false);
-    if (queueItems.isEmpty) {
+    if (queueItems.isEmpty && !page.cutShort) {
       return LidarrQueueSnapshots.empty;
     }
 
@@ -683,6 +689,7 @@ final lidarrQueueSnapshotsProvider = FutureProvider<LidarrQueueSnapshots>((
     return LidarrQueueSnapshots(
       byArtist: ArrQueueSnapshot.fromQueueItems(
         queueItems,
+        cutShort: page.cutShort,
         idsFor: (item) {
           final direct = directArtistId(item);
           if (direct != null && direct > 0) return [direct];
@@ -694,14 +701,16 @@ final lidarrQueueSnapshotsProvider = FutureProvider<LidarrQueueSnapshots>((
       ),
       byAlbum: ArrQueueSnapshot.fromQueueItems(
         queueItems,
+        cutShort: page.cutShort,
         idsFor: (item) {
           final albumId = albumIdOf(item);
           return albumId == null ? const <int>[] : [albumId];
         },
       ),
     );
-  } catch (_) {
-    return LidarrQueueSnapshots.empty;
+  } catch (error) {
+    // Failed, not empty: see [_loadArrQueueSnapshot].
+    return LidarrQueueSnapshots.failed(error);
   }
 });
 
@@ -1562,19 +1571,28 @@ int? parseClockDuration(String? value) {
   return hours * 3600 + minutes * 60 + seconds;
 }
 
-/// Fetches a `/queue` and indexes it, degrading to an empty snapshot on failure
-/// so a badge never blocks on an unreachable service.
+/// Walks a `/queue` and indexes it, degrading on failure so a badge never
+/// blocks on an unreachable service.
+///
+/// Degrading to a **failed** snapshot, not to [ArrQueueSnapshot.empty]. The
+/// empty one is an answer, a queue with nothing in it, and every detail page
+/// read it as one: with the queue endpoint down, each film that was
+/// downloading read `Missing`. A walk that stopped short says so too
+/// ([ArrQueueSnapshot.cutShort]), for the same reason: an id missing from the
+/// rows it read may be in the rows it did not.
 Future<ArrQueueSnapshot> _loadArrQueueSnapshot(
-  Future<List<dynamic>> Function() loadItems,
+  Future<ArrRecordPage> Function() loadPage,
   Iterable<int?> Function(Map<String, dynamic> item) idsFor,
 ) async {
   try {
+    final page = await loadPage();
     return ArrQueueSnapshot.fromQueueItems(
-      await loadItems(),
+      page.records,
       idsFor: (item) => idsFor(item).whereType<int>(),
+      cutShort: page.cutShort,
     );
-  } catch (_) {
-    return ArrQueueSnapshot.empty;
+  } catch (error) {
+    return ArrQueueSnapshot.failed(error);
   }
 }
 

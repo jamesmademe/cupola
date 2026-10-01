@@ -11,8 +11,21 @@ class LidarrQueueSnapshots {
 
   const LidarrQueueSnapshots({required this.byArtist, required this.byAlbum});
 
+  /// A queue that answered with nothing in it.
   static const LidarrQueueSnapshots empty = LidarrQueueSnapshots(
     byArtist: ArrQueueSnapshot.empty,
     byAlbum: ArrQueueSnapshot.empty,
+  );
+
+  /// A queue nobody could read, both ways: see [ArrQueueSnapshot.unknown].
+  static const LidarrQueueSnapshots unknown = LidarrQueueSnapshots(
+    byArtist: ArrQueueSnapshot.unknown,
+    byAlbum: ArrQueueSnapshot.unknown,
+  );
+
+  /// A queue read that failed with [error], both ways.
+  factory LidarrQueueSnapshots.failed(Object? error) => LidarrQueueSnapshots(
+    byArtist: ArrQueueSnapshot.failed(error),
+    byAlbum: ArrQueueSnapshot.failed(error),
   );
 }
