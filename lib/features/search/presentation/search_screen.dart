@@ -1140,31 +1140,20 @@ class _SearchEmptyState extends ConsumerWidget {
         ),
         if (!hasAny) ...[
           const SizedBox(height: AppSpacing.lg),
-          // One `Set up X` per searchable service, each to its own setup form,
-          // as Activity's and Streaming's empty states do. "Open Settings"
-          // landed on the Settings root and left the user to find the service.
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              for (final (index, service) in notSetUp.indexed)
-                // `go`, not `push`: a push keeps the *origin* branch's
-                // navigator, so the form would render inside the Search tab
-                // while the bar stayed lit on Search. `go` switches to the
-                // Settings branch, where the form lives.
-                index == 0
-                    ? FilledButton(
-                        onPressed: () =>
-                            context.go(ServiceRoutes.setUp(service)),
-                        child: Text(Lexicon.setUp(service.title)),
-                      )
-                    : OutlinedButton(
-                        onPressed: () =>
-                            context.go(ServiceRoutes.setUp(service)),
-                        child: Text(Lexicon.setUp(service.title)),
-                      ),
-            ],
+          // One way in, as Home has with nothing set up: Connections, where
+          // every service's form hangs off. Not a `Set up X`, because nothing
+          // is chosen yet, and not one per service either: seven buttons are a
+          // wall where one sentence already names them. "Open Settings"
+          // landed on the Settings root and left the user to find the list.
+          Center(
+            child: FilledButton(
+              // `go`, not `push`: a push keeps the *origin* branch's
+              // navigator, so Connections would render inside the Search tab
+              // while the bar stayed lit on Search. `go` switches to the
+              // Settings branch, where it lives.
+              onPressed: () => context.go(ServiceRoutes.settingsConnections),
+              child: const Text('Set up a service'),
+            ),
           ),
         ],
         if (recents.isNotEmpty) ...[
