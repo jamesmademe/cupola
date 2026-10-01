@@ -287,11 +287,22 @@ class SeerrDecisionButton extends ConsumerWidget {
         ? colorScheme.onSurface
         : colorScheme.onSurfaceVariant;
 
+    final glyph = Icon(
+      _isApprove ? Icons.check_rounded : Icons.close_rounded,
+      size: 20,
+    );
     return IconButton(
-      icon: Icon(
-        _isApprove ? Icons.check_rounded : Icons.close_rounded,
-        size: 20,
-      ),
+      // Busy at once while the approval reads where it goes and is sent: the
+      // ring takes the glyph's place and size, so the 44pt target does not
+      // move, and a second tap meanwhile does nothing.
+      icon: _isApprove
+          ? SeerrApprovalGlyph(
+              instanceId: instanceId,
+              requestId: request.id,
+              size: 20,
+              idle: glyph,
+            )
+          : glyph,
       style: IconButton.styleFrom(
         foregroundColor: foreground,
         backgroundColor: _isApprove ? CupolaRoom.of(context).fillStrong : null,

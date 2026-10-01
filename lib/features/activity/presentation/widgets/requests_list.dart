@@ -222,9 +222,16 @@ class _RequestCard extends ConsumerWidget {
                 children: [
                   FilledButton.icon(
                     onPressed: () => _approve(context, ref),
-                    icon: const Icon(
-                      Icons.check_circle_outline_rounded,
+                    // Busy at once, in the glyph's place, while the approval
+                    // reads where it goes and is sent.
+                    icon: SeerrApprovalGlyph(
+                      instanceId: instanceId,
+                      requestId: request.id,
                       size: 18,
+                      idle: const Icon(
+                        Icons.check_circle_outline_rounded,
+                        size: 18,
+                      ),
                     ),
                     label: const Text('Approve'),
                   ),

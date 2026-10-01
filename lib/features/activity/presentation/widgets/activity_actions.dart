@@ -202,75 +202,80 @@ class ActivityActions {
     required String title,
     SeerrRequest? request,
   }) async {
-    final message = await _approveConfirmation(
-      context,
-      ref,
-      instanceId: instanceId,
-      requestId: requestId,
-      title: title,
-      request: request,
-    );
-    if (message == null || !context.mounted) return;
+    // Captured before any wait: the approval outlives the control that
+    // started it, and the notifier is the container's, not the widget's.
+    final approvals = ref.read(seerrApprovalsInFlightProvider.notifier);
+    final key = (instanceId: instanceId, requestId: requestId);
+    // A second tap while the first is still being read or sent does nothing.
+    var owned = approvals.begin(key, SeerrApprovalPhase.checking);
+    if (!owned) return;
+    try {
+      final message = await _approveConfirmation(
+        ref,
+        instanceId: instanceId,
+        requestId: requestId,
+        title: title,
+        request: request,
+      );
+      // Idle behind the dialog, which is modal: the control is not busy
+      // while a person decides.
+      approvals.end(key);
+      owned = false;
+      if (!context.mounted) return;
 
-    final result = await showAppConfirmDialog(
-      context: context,
-      title: 'Approve this request?',
-      message: message,
-      icon: Icons.check_circle_outline_rounded,
-      confirmLabel: 'Approve request',
-    );
+      final result = await showAppConfirmDialog(
+        context: context,
+        title: 'Approve this request?',
+        message: message,
+        icon: Icons.check_circle_outline_rounded,
+        confirmLabel: 'Approve request',
+      );
 
-    if (!result.confirmed) return;
-    if (!context.mounted) return;
+      if (!result.confirmed) return;
+      if (!context.mounted) return;
+      owned = approvals.begin(key, SeerrApprovalPhase.approving);
+      if (!owned) return;
 
-    await _run(
-      context,
-      ref,
-      service: ServiceKey.seerr,
-      action: () => ref
-          .read(seerrServiceForProvider(instanceId))
-          .approveRequest(requestId),
-      successMessage: 'Request approved',
-      failureMessage: 'Could not approve this request',
-      invalidateRequests: true,
-    );
+      await _run(
+        context,
+        ref,
+        service: ServiceKey.seerr,
+        action: () => ref
+            .read(seerrServiceForProvider(instanceId))
+            .approveRequest(requestId),
+        successMessage: 'Request approved',
+        failureMessage: 'Could not approve this request',
+        invalidateRequests: true,
+      );
+    } finally {
+      // Only an approval this call still holds: never another tap's.
+      if (owned) approvals.end(key);
+    }
   }
 
-  /// What the approve confirmation says, or null when the caller went away
-  /// while it was being read.
-  static Future<String?> _approveConfirmation(
-    BuildContext context,
+  /// What the approve confirmation says, read within one
+  /// [seerrTargetReadLimit] ([readSeerrApproveTarget]).
+  static Future<String> _approveConfirmation(
     WidgetRef ref, {
     required String instanceId,
     required int requestId,
     required String title,
     required SeerrRequest? request,
   }) async {
-    var known = request;
-    if (known == null) {
-      final service = ref.read(seerrServiceForProvider(instanceId));
-      try {
-        known = await service
-            .getRequest(requestId)
-            .timeout(seerrTargetReadLimit);
-      } catch (_) {
-        known = null;
-      }
-      if (!context.mounted) return null;
-    }
-    if (known == null) {
+    final settings = ref.read(currentSettingsProvider);
+    final read = await readSeerrApproveTarget(
+      ref,
+      instanceId: instanceId,
+      requestId: requestId,
+      request: request,
+    );
+    final target = read.target;
+    if (target == null) {
       // Not even its kind is known: the approval still goes where Seerr
       // sends it, and that is all that can be said.
       return '$title goes to the server Seerr sends it to and starts '
           'downloading.';
     }
-
-    final settings = ref.read(currentSettingsProvider);
-    final target = await readSeerrApproveTarget(
-      ref,
-      instanceId: instanceId,
-      request: known,
-    );
     return target.confirmation(
       title,
       connectionTitle: (connection) =>
@@ -359,5 +364,100 @@ class ActivityActions {
       ref.invalidate(requestsForProvider);
     }
     ref.read(activityRefreshVersionProvider.notifier).state++;
+  }
+}
+
+/// One approval, named by the Seerr it is sent to and the request's id there.
+typedef SeerrApprovalKey = ({String instanceId, int requestId});
+
+/// Where an approval is between its tap and its answer.
+enum SeerrApprovalPhase {
+  /// Reading where the request goes, before the confirmation opens.
+  checking('Checking where it goes'),
+
+  /// The approval itself, sent and not yet answered.
+  approving('Approving');
+
+  const SeerrApprovalPhase(this.spoken);
+
+  /// What a screen reader hears of the busy control.
+  final String spoken;
+}
+
+/// The approvals in flight, and how far each has got.
+///
+/// What makes the tapped control busy at once, and a second tap a no-op: an
+/// approval used to read for up to eight seconds with nothing on screen, and
+/// every tap meanwhile started another read and, in the end, another
+/// confirmation.
+class SeerrApprovalsInFlight
+    extends Notifier<Map<SeerrApprovalKey, SeerrApprovalPhase>> {
+  @override
+  Map<SeerrApprovalKey, SeerrApprovalPhase> build() => const {};
+
+  /// Marks [key] as at [phase]. False, and nothing changes, when it is
+  /// already in flight.
+  bool begin(SeerrApprovalKey key, SeerrApprovalPhase phase) {
+    if (state.containsKey(key)) return false;
+    state = {...state, key: phase};
+    return true;
+  }
+
+  /// Marks [key] as done. Safe to call when it is not in flight.
+  void end(SeerrApprovalKey key) {
+    if (!state.containsKey(key)) return;
+    state = {...state}..remove(key);
+  }
+}
+
+final seerrApprovalsInFlightProvider =
+    NotifierProvider<
+      SeerrApprovalsInFlight,
+      Map<SeerrApprovalKey, SeerrApprovalPhase>
+    >(SeerrApprovalsInFlight.new);
+
+/// An Approve control's glyph: [idle], or while the approval of
+/// [requestId] on [instanceId] is in flight, a ring in the same ink and at
+/// the same [size], so the control keeps its target and its place.
+///
+/// The ring carries the phase as the control's value, `Checking where it
+/// goes` or `Approving`: annotated here, inside the button, because a
+/// `Semantics` wrapped around a button lands on a node the screen reader
+/// never focuses.
+class SeerrApprovalGlyph extends ConsumerWidget {
+  const SeerrApprovalGlyph({
+    super.key,
+    required this.instanceId,
+    required this.requestId,
+    required this.size,
+    required this.idle,
+  });
+
+  final String instanceId;
+  final int requestId;
+  final double size;
+  final Widget idle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final phase = ref.watch(
+      seerrApprovalsInFlightProvider.select(
+        (inFlight) => inFlight[(instanceId: instanceId, requestId: requestId)],
+      ),
+    );
+    if (phase == null) return idle;
+    return Semantics(
+      value: phase.spoken,
+      child: SizedBox.square(
+        dimension: size,
+        child: Padding(
+          padding: EdgeInsets.all(size / 8),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: IconTheme.of(context).color,
+          ),
+        ),
+      ),
+    );
   }
 }
