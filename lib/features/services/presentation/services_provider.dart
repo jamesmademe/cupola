@@ -1787,24 +1787,48 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
           ref.watch(nzbgetClientForProvider(source.instanceId)).status(),
         ).wait;
   const megabyte = 1024 * 1024;
+  final free = status.writingDiskFreeMb;
+  final stoppedByDisk = usenetQueueStoppedByDisk(
+    paused: status.paused,
+    timedPause: status.isDeliberateStop,
+    freeBytes: free == null ? null : free * megabyte,
+    remainingBytes: [
+      for (final group in groups)
+        if (group.status.toUpperCase() != 'PAUSED' &&
+            nzbgetIsFetching(group.status))
+          switch (group.remainingSizeMb) {
+            final int left => left * megabyte,
+            null => null,
+          },
+    ],
+  );
 
   return groups
       .map(
-        (group) => ServiceQueueItem(
+        (group) => (
+          group: group,
+          reading: nzbgetGroupInFlight(group, stoppedByDisk: stoppedByDisk),
+        ),
+      )
+      .map(
+        (row) => ServiceQueueItem(
           service: ServiceKey.nzbget,
           // The key an \*arr row names this job by — its `drone` parameter,
           // else the NZBID — so [joinQueueSources] can meet the two.
-          id: group.downloadId,
-          title: group.name,
-          progress: group.progress,
+          id: row.group.downloadId,
+          title: row.group.name,
+          progress: row.group.progress,
           // Both sizes are nullable now — NZBGet reporting neither the `*MB`
           // key nor the `*Hi`/`*Lo` pair used to read as zero megabytes, which
           // made an unmeasured job render as a finished one.
-          doneBytes: switch ((group.fileSizeMb, group.remainingSizeMb)) {
+          doneBytes: switch ((
+            row.group.fileSizeMb,
+            row.group.remainingSizeMb,
+          )) {
             (final int total, final int left) => (total - left) * megabyte,
             _ => null,
           },
-          totalBytes: switch (group.fileSizeMb) {
+          totalBytes: switch (row.group.fileSizeMb) {
             final int total => total * megabyte,
             _ => null,
           },
@@ -1820,6 +1844,8 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
           instanceId: source.instanceId,
           clientInstanceId: source.instanceId,
           clientRateBytesPerSecond: status.downloadRateBytes,
+          fault: row.reading.fault,
+          warning: row.reading.reason,
           route: ServiceRoutes.forService(ServiceKey.nzbget),
         ),
       )

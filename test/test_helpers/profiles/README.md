@@ -57,7 +57,8 @@ Profiles can be varied:
   by that arr's queue.
 - `withFullDisk(id)` fills a download client's disk. SABnzbd answers its
   queue paused, as it pauses itself on a full disk, with 0.42 GB free in its
-  download folder and every slot reporting its job's own status.
+  download folder and every slot reporting its job's own status. NZBGet
+  answers `DownloadPaused` with 180 MB free and its groups `QUEUED`.
 
 A test can answer ahead of the world with
 `harness.network.on(id, 'GET', path, (request) => NetworkReply.json(…))`,
@@ -241,4 +242,6 @@ four-column user of the local sign-in.
   `error` and a Transmission local error (`error: 3`, the daemon's own
   words), `missingFiles` is qBittorrent's `missingFiles`, and `heldByClient`
   is a SABnzbd slot `Paused` with an `ENCRYPTED` label (its arr says
-  paused).
+  paused). On NZBGet, `failed` and `heldByClient` are a group whose `Health`
+  is below its `CriticalHealth`, the second one `PAUSED` by the health
+  check.

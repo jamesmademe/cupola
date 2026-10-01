@@ -83,6 +83,16 @@ const _sabEncrypted = WorldDownload(
   size: _gb,
 );
 
+/// An NZB somebody added to NZBGet by hand that lost too many articles.
+const _nzbgetBroken = WorldDownload(
+  id: 'nzbget-hand-0001',
+  release: 'Spring.2019.1080p.WEB',
+  client: 'nzbget',
+  state: DownloadState.failed,
+  progress: 0.2,
+  size: _gb,
+);
+
 Future<ProviderContainer> _start(ConfigProfile profile) async {
   final harness = await ProfileHarness.start(profile);
   return harness.container(retry: (_, _) => null);
@@ -253,6 +263,52 @@ void main() {
   });
 
   group('NZBGet', () {
+    test('P4 + NZBGet, its disk full: the paused queue is a stall on the '
+        'arr row it moves, in the disk\'s words', () async {
+      final container = await _start(
+        Profiles.p4
+            .withConnection(WorldConnections.nzbget)
+            .withDownloads([_nzbgetGrab])
+            .withFullDisk(WorldConnections.nzbget.id),
+      );
+      final inFlight = await container.read(servicesInFlightProvider.future);
+
+      final grab = inFlight.faults.singleWhere(
+        (item) => item.downloadId == _nzbgetGrab.id,
+      );
+      expect(grab.service, ServiceKey.sonarr);
+      expect(grab.clientService, ServiceKey.nzbget);
+      expect(grab.fault, InFlightFault.stalled);
+      expect(grab.warning, 'Disk full');
+    });
+
+    test('P4 + NZBGet: a job below its critical health is a failure, '
+        'opened in NZBGet', () async {
+      final container = await _start(
+        Profiles.p4.withConnection(WorldConnections.nzbget).withDownloads([
+          _nzbgetBroken,
+        ]),
+      );
+      final inFlight = await container.read(servicesInFlightProvider.future);
+
+      final broken = inFlight.faults.singleWhere(
+        (item) => item.title == _nzbgetBroken.release,
+      );
+      expect(broken.service, ServiceKey.nzbget);
+      expect(broken.fault, InFlightFault.failed);
+      expect(broken.warning, 'Damaged beyond repair');
+
+      final decisions = await container.read(
+        dashboardDecisionSourceProvider(DecisionSource.queue).future,
+      );
+      expect(
+        decisions.decisions
+            .singleWhere((d) => d.title == _nzbgetBroken.release)
+            .actionTarget,
+        ServiceKey.nzbget,
+      );
+    });
+
     test('P4 + NZBGet: its rate enters the sum, once, keyed on the '
         'client', () async {
       final container = await _start(

@@ -10,6 +10,7 @@
 /// Pure and top-level, so each mapping is testable without a container.
 library;
 
+import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
@@ -162,6 +163,82 @@ InFlightReading sabnzbdSlotInFlight(
           );
   }
   if (stoppedByDisk) {
+    return const InFlightReading.fault(
+      InFlightFault.stalled,
+      reason: diskFullReason,
+    );
+  }
+  return const InFlightReading.moving();
+}
+
+/// Whether an NZBGet `listgroups` status is one in which the group is still
+/// fetching: the ones a stopped download queue holds up. The rest are
+/// post-processing, which a download pause does not stop.
+bool nzbgetIsFetching(String status) => switch (status.toUpperCase()) {
+  'QUEUED' || 'PAUSED' || 'DOWNLOADING' || 'FETCHING' => true,
+  _ => false,
+};
+
+/// What a group that cannot be repaired says.
+const String nzbgetBeyondRepair = 'Damaged beyond repair';
+
+/// What a group whose par repair failed says.
+const String nzbgetRepairFailed = 'Repair failed';
+
+/// What a group whose unpack failed says.
+const String nzbgetUnpackFailed = 'Unpack failed';
+
+/// What a group whose unpack wants a password says.
+const String nzbgetPasswordNeeded = 'Password needed';
+
+/// An NZBGet group (`listgroups`), read. Every group is in flight: the queue
+/// holds only jobs NZBGet has not moved to its history.
+///
+/// * `Health` below `CriticalHealth` is a download that cannot be repaired,
+///   whatever its `Status` (NZBGet's health check may also have paused it).
+/// * `ParStatus` `FAILURE`, and `UnpackStatus` `FAILURE`, `SPACE` or
+///   `PASSWORD`, are a post-processing run that failed.
+/// * A `PAUSED` group otherwise is somebody's pause and stays a transfer.
+/// * [stoppedByDisk] ([usenetQueueStoppedByDisk]) stalls every other group
+///   still fetching.
+InFlightReading nzbgetGroupInFlight(
+  NzbgetGroup group, {
+  required bool stoppedByDisk,
+}) {
+  final health = group.health;
+  final critical = group.criticalHealth;
+  if (health != null && critical != null && health < critical) {
+    return const InFlightReading.fault(
+      InFlightFault.failed,
+      reason: nzbgetBeyondRepair,
+    );
+  }
+  if (group.parStatus == 'FAILURE') {
+    return const InFlightReading.fault(
+      InFlightFault.failed,
+      reason: nzbgetRepairFailed,
+    );
+  }
+  switch (group.unpackStatus) {
+    case 'FAILURE':
+      return const InFlightReading.fault(
+        InFlightFault.failed,
+        reason: nzbgetUnpackFailed,
+      );
+    case 'SPACE':
+      return const InFlightReading.fault(
+        InFlightFault.failed,
+        reason: diskFullReason,
+      );
+    case 'PASSWORD':
+      return const InFlightReading.fault(
+        InFlightFault.failed,
+        reason: nzbgetPasswordNeeded,
+      );
+  }
+  final status = group.status.toUpperCase();
+  if (status == 'PAUSED') return const InFlightReading.moving();
+  if (stoppedByDisk && nzbgetIsFetching(status)) {
     return const InFlightReading.fault(
       InFlightFault.stalled,
       reason: diskFullReason,

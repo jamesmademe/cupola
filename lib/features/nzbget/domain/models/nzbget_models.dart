@@ -41,6 +41,10 @@ class NzbgetStatus {
     required this.downloadRateBytes,
     required this.remainingSizeMb,
     required this.paused,
+    this.freeDiskSpaceMb,
+    this.freeInterDiskSpaceMb,
+    this.resumeTime,
+    this.quotaReached = false,
   });
 
   /// Current download rate in bytes per second.
@@ -49,7 +53,33 @@ class NzbgetStatus {
   /// Megabytes remaining across the queue.
   final int remainingSizeMb;
 
+  /// `DownloadPaused`: the download queue is paused. NZBGet sets the same
+  /// register for a user's pause and for its own when disk space runs low.
   final bool paused;
+
+  /// `FreeDiskSpaceMB` (or the Hi/Lo pair): free space on `DestDir`, or null
+  /// when the reply carried neither.
+  final int? freeDiskSpaceMb;
+
+  /// `FreeInterDiskSpaceMB` (NZBGet 24.3 and later): free space on
+  /// `InterDir`, where a download is written while it runs. Null on older
+  /// daemons.
+  final int? freeInterDiskSpaceMb;
+
+  /// `ResumeTime`: when a pause set with `scheduleresume` ends, or null when
+  /// none is set.
+  final int? resumeTime;
+
+  /// `QuotaReached`: the download quota the user configured is spent.
+  final bool quotaReached;
+
+  /// Free space where the queue is being written: `InterDir` when the daemon
+  /// reports it, `DestDir` otherwise.
+  int? get writingDiskFreeMb => freeInterDiskSpaceMb ?? freeDiskSpaceMb;
+
+  /// A pause somebody set to end, or one the configured quota took: both are
+  /// decisions, never a stop.
+  bool get isDeliberateStop => (resumeTime ?? 0) > 0 || quotaReached;
 
   String get rateLabel => formatBytesPerSecond(downloadRateBytes);
   String get remainingLabel => formatMegabytes(remainingSizeMb);
@@ -64,6 +94,10 @@ class NzbgetStatus {
       downloadRateBytes: _downloadRate(json),
       remainingSizeMb: remainingMb,
       paused: boolOrFalse(json['DownloadPaused']),
+      freeDiskSpaceMb: megabytesOrNull(json, 'FreeDiskSpace'),
+      freeInterDiskSpaceMb: megabytesOrNull(json, 'FreeInterDiskSpace'),
+      resumeTime: intOrNull(json['ResumeTime']),
+      quotaReached: boolOrFalse(json['QuotaReached']),
     );
   }
 }
@@ -94,6 +128,10 @@ class NzbgetGroup {
     required this.fileSizeMb,
     required this.remainingSizeMb,
     this.droneId,
+    this.health,
+    this.criticalHealth,
+    this.parStatus,
+    this.unpackStatus,
   });
 
   final int nzbId;
@@ -129,6 +167,16 @@ class NzbgetGroup {
   /// stays available for what it actually means: a job with nothing left.
   final int? remainingSizeMb;
 
+  /// `Health` and `CriticalHealth`, in permille. Below its critical health a
+  /// download cannot be repaired. Null when the record carried none.
+  final int? health;
+  final int? criticalHealth;
+
+  /// `ParStatus` and `UnpackStatus` of a group being post-processed (`NONE`,
+  /// `SUCCESS`, `FAILURE`, and for unpacking `SPACE` and `PASSWORD`).
+  final String? parStatus;
+  final String? unpackStatus;
+
   /// 0..1, or **null** when either size is missing and there is therefore
   /// nothing to divide.
   double? get progress {
@@ -158,6 +206,10 @@ class NzbgetGroup {
       fileSizeMb: megabytesOrNull(json, 'FileSize'),
       remainingSizeMb: megabytesOrNull(json, 'RemainingSize'),
       droneId: _droneParameter(json['Parameters']),
+      health: intOrNull(json['Health']),
+      criticalHealth: intOrNull(json['CriticalHealth']),
+      parStatus: stringOrNull(json['ParStatus'])?.toUpperCase(),
+      unpackStatus: stringOrNull(json['UnpackStatus'])?.toUpperCase(),
     );
   }
 

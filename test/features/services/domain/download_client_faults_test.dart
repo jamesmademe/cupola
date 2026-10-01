@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/services/domain/download_client_faults.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
@@ -269,6 +270,128 @@ void main() {
       }
       expect(
         sabnzbdSlotInFlight(slot(), stoppedByDisk: false),
+        const InFlightReading.moving(),
+      );
+    });
+  });
+
+  group('NZBGet', () {
+    NzbgetGroup group({
+      String status = 'DOWNLOADING',
+      int health = 1000,
+      String? par,
+      String? unpack,
+    }) => NzbgetGroup.fromJson({
+      'NZBID': 7,
+      'NZBName': 'Night.Shift.S02E03.1080p.WEB',
+      'Status': status,
+      'Health': health,
+      'CriticalHealth': 898,
+      'ParStatus': ?par,
+      'UnpackStatus': ?unpack,
+    });
+
+    test('the status reads its pause, its free space and what makes a stop '
+        'deliberate', () {
+      final status = NzbgetStatus.fromJson({
+        'DownloadPaused': true,
+        'FreeDiskSpaceMB': 9000,
+        'FreeInterDiskSpaceMB': 180,
+        'ResumeTime': 0,
+        'QuotaReached': false,
+      });
+      expect(status.paused, isTrue);
+      expect(status.writingDiskFreeMb, 180);
+      expect(status.isDeliberateStop, isFalse);
+
+      // An older daemon: no InterDir figure, so DestDir's.
+      expect(
+        NzbgetStatus.fromJson({'FreeDiskSpaceMB': 9000}).writingDiskFreeMb,
+        9000,
+      );
+      expect(NzbgetStatus.fromJson(const {}).writingDiskFreeMb, isNull);
+      expect(
+        NzbgetStatus.fromJson({'ResumeTime': 1700000000}).isDeliberateStop,
+        isTrue,
+      );
+      expect(
+        NzbgetStatus.fromJson({'QuotaReached': true}).isDeliberateStop,
+        isTrue,
+      );
+    });
+
+    test('a group below its critical health cannot be repaired, paused or '
+        'not', () {
+      for (final status in ['DOWNLOADING', 'PAUSED']) {
+        expect(
+          nzbgetGroupInFlight(
+            group(status: status, health: 640),
+            stoppedByDisk: false,
+          ),
+          const InFlightReading.fault(
+            InFlightFault.failed,
+            reason: nzbgetBeyondRepair,
+          ),
+          reason: status,
+        );
+      }
+    });
+
+    test('a failed repair or unpack is a failure, by its cause', () {
+      InFlightReading? read({String? par, String? unpack}) =>
+          nzbgetGroupInFlight(
+            group(status: 'UNPACKING', par: par, unpack: unpack),
+            stoppedByDisk: false,
+          );
+      expect(
+        read(par: 'FAILURE'),
+        const InFlightReading.fault(
+          InFlightFault.failed,
+          reason: nzbgetRepairFailed,
+        ),
+      );
+      expect(
+        read(unpack: 'FAILURE'),
+        const InFlightReading.fault(
+          InFlightFault.failed,
+          reason: nzbgetUnpackFailed,
+        ),
+      );
+      expect(
+        read(unpack: 'SPACE'),
+        const InFlightReading.fault(
+          InFlightFault.failed,
+          reason: diskFullReason,
+        ),
+      );
+      expect(
+        read(unpack: 'PASSWORD'),
+        const InFlightReading.fault(
+          InFlightFault.failed,
+          reason: nzbgetPasswordNeeded,
+        ),
+      );
+      expect(
+        read(par: 'SUCCESS', unpack: 'NONE'),
+        const InFlightReading.moving(),
+      );
+    });
+
+    test('a full disk stalls the groups still fetching, not a paused one or '
+        'one post-processing', () {
+      expect(
+        nzbgetGroupInFlight(group(status: 'QUEUED'), stoppedByDisk: true),
+        const InFlightReading.fault(
+          InFlightFault.stalled,
+          reason: diskFullReason,
+        ),
+      );
+      expect(
+        nzbgetGroupInFlight(group(status: 'PAUSED'), stoppedByDisk: true),
+        const InFlightReading.moving(),
+      );
+      expect(
+        nzbgetGroupInFlight(group(status: 'UNPACKING'), stoppedByDisk: true),
         const InFlightReading.moving(),
       );
     });

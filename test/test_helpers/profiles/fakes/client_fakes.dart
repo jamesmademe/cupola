@@ -507,13 +507,15 @@ class NzbgetFake extends ServiceFake {
     NetworkReply result(Object? value) =>
         NetworkReply.json({'version': '1.1', 'id': id, 'result': value});
     final rows = _rowsOf(c, 'nzbget');
+    final diskFull = c.profile.fullDisks.contains(c.server.id);
     return switch (_method(r)) {
       'version' => result(
         jsonFixture('nzbget/version.json')['result'] ?? '24.3',
       ),
-      'status' => result(status(rows)),
+      'status' => result(status(rows, diskFull: diskFull)),
       'listgroups' => result([
-        for (final (i, d) in rows.indexed) group(d, nzbId: i + 1),
+        for (final (i, d) in rows.indexed)
+          group(d, nzbId: i + 1, diskFull: diskFull),
       ]),
       'history' => result(const <Object?>[]),
       _ => result(true),
@@ -522,16 +524,25 @@ class NzbgetFake extends ServiceFake {
 
   /// `status`, with the rate summed over the world's NZBGet jobs. With none,
   /// the fixture as it was.
-  static JsonMap status(List<WorldDownload> rows) {
-    final fixture = jsonFixtureMap('nzbget/status.json')['result'] as Map;
-    if (rows.isEmpty) return fixture.cast<String, Object?>();
-    final rate = rows.fold<int>(0, (sum, d) => sum + d.speed);
+  ///
+  /// A full disk pauses the download queue, as NZBGet does below its
+  /// `DiskSpace` threshold, with 180 MB left on both directories.
+  static JsonMap status(List<WorldDownload> rows, {bool diskFull = false}) {
+    final fixture = (jsonFixtureMap('nzbget/status.json')['result'] as Map)
+        .cast<String, Object?>();
+    if (rows.isEmpty && !diskFull) return fixture;
+    final rate = diskFull ? 0 : rows.fold<int>(0, (sum, d) => sum + d.speed);
     return {
-      ...fixture.cast<String, Object?>(),
+      ...fixture,
       'DownloadRate': rate,
       'DownloadRateLo': rate,
       'DownloadRateHi': 0,
       'RemainingSizeMB': rows.fold<int>(0, (s, d) => s + d.sizeLeft ~/ _mib),
+      'DownloadPaused': diskFull,
+      'FreeDiskSpaceMB': diskFull ? 180 : 3200000,
+      'FreeInterDiskSpaceMB': diskFull ? 180 : 3200000,
+      'ResumeTime': 0,
+      'QuotaReached': false,
     };
   }
 
@@ -539,14 +550,29 @@ class NzbgetFake extends ServiceFake {
 
   /// One `listgroups` entry. An arr tags the NZB it sends with `drone=<id>`
   /// and records that id as its queue row's `downloadId`.
-  static JsonMap group(WorldDownload d, {required int nzbId}) => {
+  ///
+  /// A job in [DownloadState.failed] has lost more articles than its pars
+  /// can repair; one in [DownloadState.heldByClient] is the same, paused by
+  /// NZBGet's health check. Under a paused queue a group reports `QUEUED`.
+  static JsonMap group(
+    WorldDownload d, {
+    required int nzbId,
+    bool diskFull = false,
+  }) => {
     'NZBID': nzbId,
     'NZBName': d.release,
-    'Status': d.state == DownloadState.queued ? 'QUEUED' : 'DOWNLOADING',
+    'Status': switch (d.state) {
+      DownloadState.heldByClient => 'PAUSED',
+      DownloadState.queued => 'QUEUED',
+      _ => diskFull ? 'QUEUED' : 'DOWNLOADING',
+    },
     'Category': d.arr == null ? '' : 'tv',
     'FileSizeMB': d.size ~/ _mib,
     'RemainingSizeMB': d.sizeLeft ~/ _mib,
-    'Health': 1000,
+    'Health': switch (d.state) {
+      DownloadState.failed || DownloadState.heldByClient => 640,
+      _ => 1000,
+    },
     'CriticalHealth': 898,
     'Parameters': [
       if (d.arr != null) {'Name': 'drone', 'Value': d.id},
