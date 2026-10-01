@@ -141,7 +141,8 @@ void main() {
       expect(band.tone, StatusTone.error);
       expect(
         band.message,
-        'Radarr did not answer. Everything below is what it said last.',
+        // Two Radarr, and this one nobody named: it is called by its place.
+        'Radarr 1 did not answer. Everything below is what it said last.',
       );
       // Over the page, not inside the deck: the glyph on the leading edge of
       // the actions it qualifies, where the deck's gutter used to push it 16pt
@@ -210,7 +211,7 @@ void main() {
       expect(band.tone, StatusTone.warning);
       expect(
         band.message,
-        'Radarr answered with an error. Everything below is what it said '
+        'Radarr 1 answered with an error. Everything below is what it said '
         'last.',
       );
 
@@ -319,7 +320,7 @@ void main() {
       expect(find.byType(FaultBand), findsNothing);
       expect(
         find.text(
-          "Radarr's queue answered with an error, so this page cannot tell "
+          "Radarr 1's queue answered with an error, so this page cannot tell "
           'whether the movie is downloading.',
         ),
         findsOneWidget,

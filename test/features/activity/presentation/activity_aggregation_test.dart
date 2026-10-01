@@ -134,9 +134,10 @@ void main() {
       (item) => item.service == ServiceKey.sonarr,
     );
 
-    // The first Sonarr has no label of its own, so it falls back to its id —
-    // the same rule the search sections and the lens sheet follow.
-    expect(sonarrRow.instanceLabel, 'sonarr');
+    // The first Sonarr has no label of its own, so it is called by its place
+    // — the app's one rule, which the search sections and the lens sheet
+    // follow too. Never its id.
+    expect(sonarrRow.instanceLabel, 'Sonarr 1');
   });
 
   test('a lone connection grows no label', () async {
@@ -191,7 +192,7 @@ void main() {
     final failed = feed.failures.single;
     expect(failed.service, ServiceKey.sonarr);
     expect(failed.instanceId, 'sonarr');
-    expect(failed.title, 'Sonarr · sonarr');
+    expect(failed.title, 'Sonarr 1');
 
     // The sibling is reported separately and is *reached*, which is the whole
     // distinction: empty is not the same fact as unreachable.

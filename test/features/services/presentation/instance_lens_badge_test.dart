@@ -114,6 +114,25 @@ void main() {
     expect(find.text('4K'), findsOneWidget);
   });
 
+  testWidgets('a connection nobody named reads by its place, never its id', (
+    tester,
+  ) async {
+    const unnamed = ServiceInstance(
+      id: 'radarr-hd11111',
+      service: ServiceKey.radarr,
+      url: 'https://hd.lan:7879',
+      credential: 'k',
+    );
+    await _pump(
+      tester,
+      settings: const SettingsModel(instances: [_fourK, unnamed]),
+      lenses: {ServiceKey.radarr: 'radarr-hd11111'},
+    );
+
+    expect(find.text('Radarr 2'), findsOneWidget);
+    expect(find.text('radarr-hd11111'), findsNothing);
+  });
+
   testWidgets('shows the lens, not the first, when one is set', (tester) async {
     await _pump(
       tester,

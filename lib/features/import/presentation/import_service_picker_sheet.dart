@@ -10,6 +10,7 @@ import 'package:cupola/features/import/presentation/manual_import_widgets.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 Future<void> showImportServicePickerSheet(BuildContext context) {
   return AppBottomSheet.show<void>(
@@ -49,6 +50,7 @@ class _ImportServicePickerSheet extends ConsumerWidget {
         ])
           ..._rowsFor(
             context,
+            settings,
             service,
             settings.configuredInstancesOf(service),
           ),
@@ -58,6 +60,7 @@ class _ImportServicePickerSheet extends ConsumerWidget {
 
   List<Widget> _rowsFor(
     BuildContext context,
+    SettingsModel settings,
     ServiceKey service,
     List<ServiceInstance> instances,
   ) {
@@ -85,8 +88,10 @@ class _ImportServicePickerSheet extends ConsumerWidget {
           context,
           service: service,
           // The glyph is the service, the label is the connection — the same
-          // division every multi-connection surface in the app uses.
-          subtitle: instance.label,
+          // division every multi-connection surface in the app uses. Named by
+          // the app's one rule, so a connection the user never named reads
+          // `Radarr 2` rather than a blank line under a second "Radarr".
+          subtitle: settings.connectionName(instance.id) ?? service.title,
           instanceId: instance.id,
         ),
     ];

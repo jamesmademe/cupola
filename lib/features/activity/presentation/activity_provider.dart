@@ -137,14 +137,13 @@ class ActivityServiceResult {
       cutShort = false;
 
   /// How this result names itself: the service alone when it is the only
-  /// connection, `Sonarr · 2` when it is not.
-  String get title =>
-      label.isEmpty ? service.title : '${service.title} · $label';
+  /// connection, `Sonarr · Anime` or `Sonarr 2` when it is not.
+  String get title => serviceWithConnection(service, label);
 
   /// The same name for inside a line whose clauses are already joined with
   /// ` · `: `Sonarr Anime`, never `Sonarr · Anime`, which would read as two
   /// clauses of the line it sits in.
-  String get name => label.isEmpty ? service.title : '${service.title} $label';
+  String get name => serviceWithConnection(service, label, joiner: ' ');
 
   /// Configured, asked, and answered.
   bool get reached => configured && error == null;
@@ -479,14 +478,11 @@ List<ActivityConnection> _connectionsOf(
           serviceType: serviceType,
           service: instance.service,
           instanceId: instance.id,
-          // Named only when there is something to tell apart, which is the rule
-          // `ServiceConnectionRow` and `ServiceMatrixCell` already follow: a
-          // stack with one Radarr must not grow a badge naming the only Radarr
-          // there is. The id is the fallback for a connection the user never
-          // named — the first one usually has no label.
-          label: settings.hasMultipleInstances(instance.service)
-              ? (instance.label.isEmpty ? instance.id : instance.label)
-              : '',
+          // Named only when there is something to tell apart: a stack with one
+          // Radarr must not grow a badge naming the only Radarr there is. The
+          // name is the app's one rule for it, so a connection the user never
+          // named reads `Radarr 2` here as everywhere, never its id.
+          label: settings.connectionName(instance.id) ?? '',
         ),
   ];
 }

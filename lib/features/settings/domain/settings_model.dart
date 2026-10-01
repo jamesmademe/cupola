@@ -323,21 +323,53 @@ class SettingsModel {
     return _upsertPrimary(service, viewerId: viewerId);
   }
 
-  /// What to call the connection [id] in a sentence.
+  /// What to call the connection [id] in a sentence: `Radarr`, `Radarr · 4K`,
+  /// or `Radarr 2` for a connection the user never named.
   ///
-  /// The one home for the rule every surface follows: a connection is named
-  /// **only when there is more than one of its service to tell apart**. With a
-  /// single Radarr this is "Radarr" whatever label the instance happens to be
-  /// carrying — and it very often is carrying one, because a label derived when
-  /// a second connection was added outlives that connection's removal.
+  /// The sentence form of [connectionName], which holds the rule every surface
+  /// follows: a connection is named **only when there is more than one of its
+  /// service to tell apart**. With a single Radarr this is "Radarr" whatever
+  /// label the instance happens to be carrying — and it very often is carrying
+  /// one, because a label derived when a second connection was added outlives
+  /// that connection's removal.
   ///
   /// [fallback] names the service for an id that matches nothing, which is what
   /// a link or a queued job from a connection since removed still holds.
   String connectionTitle(String id, ServiceKey fallback) {
     final instance = instanceById(id);
     if (instance == null) return fallback.title;
-    if (!hasMultipleInstances(instance.service)) return instance.service.title;
-    return instance.displayTitle;
+    return serviceWithConnection(instance.service, connectionName(id));
+  }
+
+  /// What tells the connection [id] apart from the other connections of its
+  /// service, or null when nothing needs telling apart.
+  ///
+  /// The one rule for naming a connection, which every badge, chip, lane and
+  /// sentence reads: with one configured connection of a service, nothing at
+  /// all; with two or more, the name the user gave it, else `Radarr 2` from its
+  /// place among that service's connections. Never the raw id, never a blank,
+  /// and never the bare service name, which is what the two of them would
+  /// otherwise both be called.
+  ///
+  /// By place rather than by host because two connections of one service
+  /// usually share a host, so the host alone would name both the same; and a
+  /// place is stable for as long as the user's own order is. A name is
+  /// normally there: the settings form derives one for the first connection
+  /// when a second is added. This is for every way of arriving at two without
+  /// one: a restored backup, a label cleared by hand, a connection whose
+  /// sibling was added on a version that did not ask.
+  ///
+  /// Null for an id that matches nothing, which is what a link or a queued job
+  /// from a connection since removed still holds.
+  String? connectionName(String id) {
+    final instance = instanceById(id);
+    if (instance == null) return null;
+    if (!hasMultipleInstances(instance.service)) return null;
+    final label = instance.label.trim();
+    if (label.isNotEmpty) return label;
+    final siblings = instancesOf(instance.service);
+    final place = siblings.indexWhere((sibling) => sibling.id == id) + 1;
+    return '${instance.service.title} $place';
   }
 
   /// Whether any instance of [service] is set up enough to talk to.
@@ -543,4 +575,25 @@ class SettingsModel {
   /// the product's first principle. A pasted token is validated by the user's
   /// own server.
   String get plexToken => apiKeyFor(ServiceKey.plex);
+}
+
+/// [service] and the connection [name] as one phrase: `Radarr · 4K`, the
+/// service alone when [name] is null or empty, and the name alone when it
+/// already starts with the service (`Radarr 2`, a derived name, or a label the
+/// user typed as `Radarr Old`), which would otherwise read `Radarr · Radarr 2`.
+///
+/// [joiner] is ` · ` for a phrase that stands on its own and a space for one
+/// set inside a line whose clauses are already joined with ` · ` (`Sonarr
+/// Anime`), where a second dot would read as a second clause.
+String serviceWithConnection(
+  ServiceKey service,
+  String? name, {
+  String joiner = ' · ',
+}) {
+  final trimmed = name?.trim() ?? '';
+  if (trimmed.isEmpty) return service.title;
+  if (trimmed.toLowerCase().startsWith('${service.title.toLowerCase()} ')) {
+    return trimmed;
+  }
+  return '${service.title}$joiner$trimmed';
 }

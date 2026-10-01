@@ -101,6 +101,20 @@ void main() {
     await harness.unmount(tester);
   });
 
+  // P1 has two Radarr: the first unnamed, the second called 4K.
+  testWidgets('P1: each connection is named, the unnamed one by its place', (
+    tester,
+  ) async {
+    final harness = await pumpPicker(tester, Profiles.p1);
+
+    // One row per connection, and neither is a blank line under "Radarr".
+    expect(find.text('Radarr 1'), findsOneWidget);
+    expect(find.text('4K'), findsOneWidget);
+    expect(find.text(WorldIds.radarr), findsNothing);
+
+    await harness.unmount(tester);
+  });
+
   // P4 has Radarr, Sonarr and Lidarr, and nothing to dim.
   testWidgets('P4: a service that is set up starts its import', (tester) async {
     final harness = await pumpPicker(tester, Profiles.p4);

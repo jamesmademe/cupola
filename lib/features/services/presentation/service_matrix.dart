@@ -741,13 +741,14 @@ class ServiceMatrixCell extends ConsumerWidget {
           ? null
           : settings.configuredInstancesOf(service).length,
       // A picker cell is named for the connection; the service is already said
-      // by the glyph and the accent beside it. An unlabelled connection falls
-      // back to the service's own name rather than to its host — the host is on
-      // the line below it, and a cell whose *title* is an address reads as a
-      // different kind of object from its neighbours.
-      displayName: instance == null || instance.label.isEmpty
+      // by the glyph and the accent beside it. Named by the app's one rule, so
+      // a connection the user never named reads `Radarr 2` beside its sibling
+      // rather than a second bare "Radarr", and never its host — the host is
+      // on the line below it, and a cell whose *title* is an address reads as
+      // a different kind of object from its neighbours.
+      displayName: instance == null
           ? service.title
-          : instance.label,
+          : settings.connectionName(instance.id) ?? service.title,
     );
   }
 }

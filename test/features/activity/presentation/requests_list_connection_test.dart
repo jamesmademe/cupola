@@ -142,8 +142,8 @@ void main() {
     await _pump(tester, container: container, instanceId: 'seerr-deleted');
 
     // The header names the lens — the first Seerr, which carries no label, so
-    // the suffix falls to its id.
-    expect(find.text('Requests · seerr'), findsOneWidget);
+    // it is called by its place, never by its id.
+    expect(find.text('Requests · Seerr 1'), findsOneWidget);
     // …and the list under it is that same server's, rather than an error state
     // about a connection nothing on this screen mentions.
     expect(find.text('From the first'), findsOneWidget);

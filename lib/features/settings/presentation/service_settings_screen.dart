@@ -1035,7 +1035,15 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
             for (final sibling in siblings)
               SettingsCard.grouped(
                 leading: Icon(service.icon),
-                title: sibling.label.isEmpty ? sibling.id : sibling.label,
+                // The app's one rule for naming a connection, never its id.
+                // A sibling that is the only other one set up has nothing to
+                // be told apart from yet, and goes by its own label or the
+                // service.
+                title:
+                    settings.connectionName(sibling.id) ??
+                    (sibling.label.trim().isEmpty
+                        ? service.title
+                        : sibling.label.trim()),
                 subtitle: service.extractHost(sibling.url) ?? 'No address yet',
                 accentColor: service.accent,
                 semanticHint: 'edits that ${service.title} connection',

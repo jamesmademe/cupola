@@ -43,7 +43,9 @@ class InstanceLensBadge extends ConsumerWidget {
     final active = ref.watch(activeInstanceProvider(service));
     if (active == null) return const SizedBox.shrink();
 
-    final label = active.label.isEmpty ? active.id : active.label;
+    // The app's one rule for naming a connection: a connection the user never
+    // named reads `Radarr 2`, never its id.
+    final label = ref.watch(connectionNameProvider(active.id)) ?? service.title;
     // The label is the accent on its own tint, so it is walked against the
     // composite it lands on — the pill over the lit header band on a desktop
     // window, over the plain surface on a phone. Raw Radarr amber on its tint
@@ -154,7 +156,8 @@ class _LensOptions extends ConsumerWidget {
             leading: Icon(service.icon),
             // The label is the identity; the service name is already the
             // sheet's title and repeating it in every row says nothing.
-            title: instance.label.isEmpty ? instance.id : instance.label,
+            title:
+                ref.watch(connectionNameProvider(instance.id)) ?? service.title,
             // Deliberately the address rather than a reachability pip: health
             // is answered per *service* today, so a dot here would be a colour
             // this screen cannot actually stand behind.

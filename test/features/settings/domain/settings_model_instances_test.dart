@@ -393,6 +393,70 @@ void main() {
       );
     });
 
+    group('connectionName: the one rule for what a connection is called', () {
+      test('one connection is called nothing, whatever label it kept', () {
+        final lone = SettingsModel(
+          instances: [
+            _radarr('radarr', label: '7878', url: 'https://nas:7878'),
+          ],
+        );
+        expect(lone.connectionName('radarr'), isNull);
+      });
+
+      test('two connections are called by their names', () {
+        final pair = SettingsModel(
+          instances: [
+            _radarr('radarr', label: 'HD', url: 'https://nas:7878'),
+            _radarr('radarr-4k11111', label: ' 4K ', url: 'https://nas:7879'),
+          ],
+        );
+        expect(pair.connectionName('radarr'), 'HD');
+        expect(pair.connectionName('radarr-4k11111'), '4K');
+        expect(
+          pair.connectionTitle('radarr-4k11111', ServiceKey.radarr),
+          'Radarr \u00b7 4K',
+        );
+      });
+
+      test('a connection nobody named is called by its place, never by its '
+          'id, a blank or the bare service', () {
+        final pair = SettingsModel(
+          instances: [
+            _radarr('radarr', url: 'https://nas:7878'),
+            _radarr('radarr-4k11111', label: '4K', url: 'https://nas:7879'),
+            _radarr('radarr-3rd1111', url: 'https://tower:7878'),
+          ],
+        );
+        expect(pair.connectionName('radarr'), 'Radarr 1');
+        expect(pair.connectionName('radarr-3rd1111'), 'Radarr 3');
+        // The derived name already says the service, so the sentence form is
+        // the name itself rather than `Radarr · Radarr 1`.
+        expect(pair.connectionTitle('radarr', ServiceKey.radarr), 'Radarr 1');
+      });
+
+      test('an id that names nothing is called nothing', () {
+        final pair = SettingsModel(
+          instances: [
+            _radarr('radarr', url: 'https://nas:7878'),
+            _radarr('radarr-4k11111', label: '4K', url: 'https://nas:7879'),
+          ],
+        );
+        expect(pair.connectionName('radarr-gone11'), isNull);
+      });
+
+      test('a slot with no address yet does not make a second one', () {
+        // Counting slots lit every label the moment the user started adding a
+        // second connection, before it could be read.
+        final adding = SettingsModel(
+          instances: [
+            _radarr('radarr', label: 'HD', url: 'https://nas:7878'),
+            _radarr('radarr-new1111'),
+          ],
+        );
+        expect(adding.connectionName('radarr'), isNull);
+      });
+    });
+
     test('servicesSharingOriginOf names the service once, not twice', () {
       // The sentence version: "forgetting this also affects Radarr, Radarr"
       // is how a per-instance list reads to someone who thinks in servers.

@@ -214,6 +214,12 @@ String effectiveInstanceId(WidgetRef ref, ServiceKey service, String? named) {
   return ref.watch(activeInstanceProvider(service))?.id ?? '';
 }
 
+/// What the connection [id] is called beside its siblings, or null when its
+/// service has only the one: [SettingsModel.connectionName], watched narrowly.
+final connectionNameProvider = Provider.family<String?, String>((ref, id) {
+  return ref.watch(currentSettingsProvider.select((s) => s.connectionName(id)));
+});
+
 /// Whether [service] has more than one connection — the question every surface
 /// asks before it decides to show a label at all.
 final hasMultipleInstancesProvider = Provider.family<bool, ServiceKey>((

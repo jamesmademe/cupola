@@ -365,7 +365,11 @@ class ServiceOverviewIdentity extends ConsumerWidget {
     final version = summaryData != null && summaryData.isOnline
         ? summaryData.versionLabel
         : null;
-    final lens = hasLens ? instance?.label.trim() : null;
+    // The app's one rule for naming a connection: with two, a connection the
+    // user never named still reads `Radarr 2` rather than nothing at all.
+    final lens = hasLens && instance != null
+        ? ref.watch(connectionNameProvider(instance.id))
+        : null;
 
     final facts = <String>[
       host == null || host.isEmpty ? '—' : host,

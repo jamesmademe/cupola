@@ -109,9 +109,10 @@ void main() {
         for (final item in feed.items) item.title: item.instanceLabel,
       };
 
-      // The first Seerr has no label of its own, so it falls back to its id — the
-      // same rule the \*arr rows and the lens sheet follow.
-      expect(byTitle['From the first'], 'seerr');
+      // The first Seerr has no label of its own, so it is called by its place
+      // among the Seerrs — the app's one rule, which the \*arr rows and the
+      // lens sheet follow too. Never its id.
+      expect(byTitle['From the first'], 'Seerr 1');
       expect(byTitle['From the second'], 'Anime');
     },
   );
@@ -149,7 +150,7 @@ void main() {
     final failed = feed.failures.single;
     expect(failed.service, ServiceKey.seerr);
     expect(failed.instanceId, 'seerr');
-    expect(failed.title, 'Seerr · seerr');
+    expect(failed.title, 'Seerr 1');
 
     final reached = feed
         .resultsFor(ServiceKey.seerr)

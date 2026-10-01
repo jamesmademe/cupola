@@ -63,9 +63,10 @@ class ActivityScreen extends ConsumerWidget {
     final connection = multiple
         ? (named ?? ref.watch(activeInstanceProvider(serviceType.service)))
         : null;
-    final suffix = connection == null
-        ? ''
-        : ' · ${connection.label.isEmpty ? connection.id : connection.label}';
+    final name = connection == null
+        ? null
+        : ref.watch(connectionNameProvider(connection.id));
+    final suffix = name == null ? '' : ' · $name';
 
     if (!serviceType.supportsArrActivity) {
       return AmbientScaffold(
