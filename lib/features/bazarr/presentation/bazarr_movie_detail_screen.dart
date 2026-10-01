@@ -117,6 +117,7 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
                   consequence: 'the movie record is missing from this page',
                 ),
                 error: lookupFailure,
+                service: ServiceKey.bazarr,
                 onRetry: refresh,
               ),
         // The board's wide track is the per-language subtitle table and the file

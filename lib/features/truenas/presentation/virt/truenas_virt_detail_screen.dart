@@ -160,6 +160,7 @@ class _DetailBody extends ConsumerWidget {
               consequence: 'the devices are not shown',
             ),
             error: error,
+            service: ServiceKey.truenas,
             onRetry: () =>
                 ref.invalidate(truenasVirtDevicesProvider(instance.id)),
           ),

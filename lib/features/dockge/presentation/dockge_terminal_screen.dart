@@ -114,6 +114,7 @@ class _StackPicker extends ConsumerWidget {
         consequence: 'the stacks are not shown',
       ),
       error: error,
+      service: ServiceKey.dockge,
       onRetry: () => ref.invalidate(dockgeStackListProvider),
     ),
   );
@@ -176,6 +177,7 @@ class DockgeTerminalPane extends ConsumerWidget {
                 consequence: 'the terminal stopped',
               ),
               error: error,
+              service: ServiceKey.dockge,
               onRetry: () =>
                   ref.invalidate(dockgeTerminalTextProvider(stackName)),
             ),

@@ -277,6 +277,8 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
         consequence: 'this page cannot tell whether any of it is downloading',
       ),
       error: queue.error,
+      service: ServiceKey.sonarr,
+      instanceId: instanceId,
       onRetry: () => ref.invalidate(sonarrQueueSnapshotForProvider(instanceId)),
     );
   }
@@ -493,6 +495,8 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
                       consequence: 'these are the episodes it listed last',
                     ),
                     error: episodesAsync.error,
+                    service: ServiceKey.sonarr,
+                    instanceId: _instanceId,
                     onRetry: retryEpisodes,
                   ),
               ],

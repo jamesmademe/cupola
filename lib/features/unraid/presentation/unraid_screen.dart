@@ -321,6 +321,7 @@ class _VmList extends ConsumerWidget {
         consequence: 'its virtual machines are not shown',
       ),
       error: error,
+      service: ServiceKey.unraid,
       onRetry: () => ref.invalidate(unraidVmsProvider),
     ),
   );
@@ -482,6 +483,7 @@ class _NotificationList extends ConsumerWidget {
         consequence: 'its notifications are not shown',
       ),
       error: error,
+      service: ServiceKey.unraid,
       onRetry: () => ref.invalidate(unraidNotificationsProvider),
     ),
   );
@@ -586,6 +588,7 @@ class _ShareList extends ConsumerWidget {
         consequence: 'its shares are not shown',
       ),
       error: error,
+      service: ServiceKey.unraid,
       onRetry: () => ref.invalidate(unraidSharesProvider),
     ),
   );
@@ -678,6 +681,7 @@ class _DiskList extends ConsumerWidget {
           consequence: 'the array is not shown',
         ),
         error: error,
+        service: ServiceKey.unraid,
         onRetry: () => ref.invalidate(unraidArrayProvider),
       ),
     );
@@ -839,6 +843,7 @@ class _DockerList extends ConsumerWidget {
           consequence: 'its containers are not shown',
         ),
         error: error,
+        service: ServiceKey.unraid,
         onRetry: () => ref.invalidate(unraidDockerProvider),
       ),
     );

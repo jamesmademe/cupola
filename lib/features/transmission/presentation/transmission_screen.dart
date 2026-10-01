@@ -223,6 +223,7 @@ Widget _torrentRows(
           consequence: 'its torrents are not shown',
         ),
         error: error,
+        service: ServiceKey.transmission,
         onRetry: () => ref.invalidate(transmissionTorrentsProvider),
       ),
     ),

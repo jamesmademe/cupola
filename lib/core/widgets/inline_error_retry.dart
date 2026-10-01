@@ -67,11 +67,16 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 /// so it keeps its width.
 ///
 /// Whose form the remedy opens is [service], and [instanceId] when the caller
-/// knows which connection the read went to (the lens's otherwise). A caller
-/// that passes neither still gets the remedy through a fallback: the service
-/// the message starts by naming, which `sectionFailureMessage` always does.
-/// That is a reading of words, kept for the callers that do not pass a
-/// service yet; a message that names none keeps Retry.
+/// knows which connection the read went to (the lens's otherwise). Every
+/// caller in `lib/` passes [service], and `failure_service_guard_test.dart`
+/// holds it there: the words cannot name a connection the user renamed, nor
+/// tell two Radarrs apart.
+///
+/// Without one the notice falls back to the service the message starts by
+/// naming, which `sectionFailureMessage` always does. That fallback is a
+/// reading of words, kept so a notice drawn without a service still offers
+/// the fix; nothing in the app relies on it, and a message that names no
+/// service keeps Retry.
 class InlineErrorRetry extends StatelessWidget {
   const InlineErrorRetry({
     super.key,
@@ -104,7 +109,8 @@ class InlineErrorRetry extends StatelessWidget {
   final Object? error;
 
   /// Whose failure this is, for the remedy's form. Wins over the service the
-  /// message names; see *The remedy leads*.
+  /// message names; see *The remedy leads*. Optional only for that fallback:
+  /// every call in `lib/` passes it.
   final ServiceKey? service;
 
   /// The connection the failed read went to, when the caller knows it: the

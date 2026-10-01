@@ -271,6 +271,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen>
         consequence: 'this page cannot tell whether the movie is downloading',
       ),
       error: queue.error,
+      service: ServiceKey.radarr,
+      instanceId: instanceId,
       onRetry: () => ref.invalidate(radarrQueueSnapshotForProvider(instanceId)),
     );
   }

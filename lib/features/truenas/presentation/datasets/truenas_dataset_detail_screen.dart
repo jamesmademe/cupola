@@ -234,6 +234,7 @@ class _DetailBody extends ConsumerWidget {
               consequence: 'the snapshots are not shown',
             ),
             error: error,
+            service: ServiceKey.truenas,
             onRetry: () => ref.invalidate(truenasSnapshotsProvider(dataset.id)),
           ),
           data: (list) => list.isEmpty

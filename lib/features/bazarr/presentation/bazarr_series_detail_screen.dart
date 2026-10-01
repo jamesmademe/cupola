@@ -126,6 +126,7 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
                   consequence: 'the series record is missing from this page',
                 ),
                 error: lookupFailure,
+                service: ServiceKey.bazarr,
                 onRetry: refresh,
               ),
         // Bazarr's column, one region short of the drawn one. The board gives

@@ -98,6 +98,7 @@ class _FeedsSection extends ConsumerWidget {
           consequence: 'the RSS feeds are not shown',
         ),
         error: error,
+        service: ServiceKey.qbittorrent,
         onRetry: () {
           clearQbittorrentLoginRefusal(ref);
           ref.invalidate(qbittorrentRssFeedsProvider);
@@ -140,6 +141,7 @@ class _RulesSection extends ConsumerWidget {
           consequence: 'the RSS rules are not shown',
         ),
         error: error,
+        service: ServiceKey.qbittorrent,
         onRetry: () {
           clearQbittorrentLoginRefusal(ref);
           ref.invalidate(qbittorrentRssRulesProvider);

@@ -390,6 +390,7 @@ class _AccessListList extends ConsumerWidget {
         consequence: 'the access lists are not shown',
       ),
       error: error,
+      service: ServiceKey.nginxProxyManager,
       onRetry: () => ref.invalidate(npmAccessListsProvider),
     ),
   );
@@ -428,6 +429,7 @@ class _AuditLogList extends ConsumerWidget {
         consequence: 'the audit log is not shown',
       ),
       error: error,
+      service: ServiceKey.nginxProxyManager,
       onRetry: () => ref.invalidate(npmAuditLogProvider),
     ),
   );
@@ -583,6 +585,7 @@ class _ProxyHostList extends ConsumerWidget {
           consequence: 'the proxy hosts are not shown',
         ),
         error: error,
+        service: ServiceKey.nginxProxyManager,
         onRetry: () => ref.invalidate(npmProxyHostsProvider),
       ),
     );
@@ -880,6 +883,7 @@ class _CertificateList extends ConsumerWidget {
           consequence: 'the certificates are not shown',
         ),
         error: error,
+        service: ServiceKey.nginxProxyManager,
         onRetry: () => ref.invalidate(npmCertificatesProvider),
       ),
     );
@@ -1046,6 +1050,7 @@ class _SimpleHostList extends ConsumerWidget {
           consequence: 'the other hosts are not shown',
         ),
         error: error,
+        service: ServiceKey.nginxProxyManager,
         onRetry: () => ref.invalidate(npmOtherHostsProvider),
       ),
     );

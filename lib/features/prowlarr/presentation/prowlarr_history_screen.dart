@@ -223,6 +223,7 @@ class _ProwlarrHistoryScreenState extends ConsumerState<ProwlarrHistoryScreen> {
                 consequence: 'the older history is not shown',
               ),
               error: _error,
+              service: ServiceKey.prowlarr,
               onRetry: _loadMore,
             ),
           ] else if (_hasMore) ...[

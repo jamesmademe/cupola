@@ -162,6 +162,7 @@ Widget _queueRows(WidgetRef ref, AsyncValue<SabnzbdQueue> queueAsync) {
           consequence: 'the queue is not shown',
         ),
         error: error,
+        service: ServiceKey.sabnzbd,
         onRetry: () => ref.invalidate(sabnzbdQueueProvider),
       ),
     ),

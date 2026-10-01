@@ -60,6 +60,7 @@ class SeerrDecisionsSection extends ConsumerWidget {
             consequence: 'the requests waiting for approval are unknown',
           ),
           error: error,
+          service: ServiceKey.seerr,
           // The section owns no fetch of its own; dropping the list it derives
           // from is what re-runs it.
           onRetry: () => ref.invalidate(requestsProvider),

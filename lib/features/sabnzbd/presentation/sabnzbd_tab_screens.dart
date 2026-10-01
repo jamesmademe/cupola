@@ -336,6 +336,7 @@ class _StatsSection extends StatelessWidget {
         consequence: 'the transfer volume is not shown',
       ),
       error: error,
+      service: ServiceKey.sabnzbd,
       onRetry: onRetry,
     ),
     data: (stats) => Padding(
@@ -493,6 +494,7 @@ class _ServerConfigSection extends StatelessWidget {
         consequence: 'its news servers are not shown',
       ),
       error: error,
+      service: ServiceKey.sabnzbd,
       onRetry: onRetry,
     ),
     data: (servers) => Padding(

@@ -128,6 +128,7 @@ class _TransmissionLabelsScreenState
                         'and editing them is off',
                   ),
                   error: session.error,
+                  service: ServiceKey.transmission,
                   onRetry: () => ref.invalidate(transmissionSessionProvider),
                 )
               else if (rpcVersion != null && rpcVersion < _labelsRpcVersion)

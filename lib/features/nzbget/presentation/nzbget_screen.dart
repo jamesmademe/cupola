@@ -152,6 +152,7 @@ Widget _queueRows(WidgetRef ref, AsyncValue<List<NzbgetGroup>> queueAsync) {
           consequence: 'the queue is not shown',
         ),
         error: error,
+        service: ServiceKey.nzbget,
         onRetry: () => ref.invalidate(nzbgetQueueProvider),
       ),
     ),

@@ -527,6 +527,7 @@ class _IndexerHistory extends ConsumerWidget {
           consequence: 'its activity is not shown',
         ),
         error: error,
+        service: ServiceKey.prowlarr,
         onRetry: () =>
             ref.invalidate(prowlarrIndexerHistoryProvider(indexerId)),
       ),

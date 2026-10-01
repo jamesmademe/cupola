@@ -74,6 +74,7 @@ class DiscoverCarousel extends StatelessWidget {
                 '${failureHeadline(reason, subject: ServiceKey.seerr.title, credential: refusedCredentialOf(ServiceKey.seerr))}, '
                 'so this row is missing.',
             error: error,
+            service: ServiceKey.seerr,
             onRetry: onRetry ?? () {},
           ),
           // The skeleton's height is the rail's; the line is not a rail, and
