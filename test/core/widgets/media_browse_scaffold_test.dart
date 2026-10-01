@@ -12,6 +12,7 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 final testSearchQueryProvider = StateProvider<String>((ref) => '');
@@ -1040,7 +1041,7 @@ Future<void> _pumpLargeWall(
               imagesExtractor: (_) => null,
               idExtractor: (item) => item.hashCode,
               settingsSelector: (settings) =>
-                  (settings.radarrUrl, settings.radarrApiKey),
+                  (settings.radarrUrl, settings.radarrApiKey, const NoAccess()),
               onItemTap: (_, item, heroTag) => onTap?.call('$item|$heroTag'),
               sorts: [
                 MediaBrowseSort<String>(
@@ -1082,7 +1083,8 @@ Widget _buildTestScaffold() {
     subtitleExtractor: (_) => '',
     imagesExtractor: (_) => null,
     idExtractor: (item) => item.hashCode,
-    settingsSelector: (settings) => (settings.radarrUrl, settings.radarrApiKey),
+    settingsSelector: (settings) =>
+        (settings.radarrUrl, settings.radarrApiKey, const NoAccess()),
     onItemTap: (_, _, _) {},
   );
 }
@@ -1121,7 +1123,7 @@ Widget _buildCustomTestApp({
         idExtractor: (item) => item.hashCode,
         statusExtractor: statusExtractor,
         settingsSelector: (settings) =>
-            (settings.radarrUrl, settings.radarrApiKey),
+            (settings.radarrUrl, settings.radarrApiKey, const NoAccess()),
         onItemTap: onItemTap ?? (_, _, _) {},
         sorts: sorts,
         cutoffUnmetIds: cutoffUnmetIds,

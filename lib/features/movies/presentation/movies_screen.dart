@@ -97,7 +97,7 @@ class MoviesScreen extends ConsumerWidget {
       // keyed on the first Radarr drew its movies' artwork from the other
       // server, under that server's ids. Editing the lens's connection re-keys
       // the grid, and editing another does not.
-      settingsSelector: (settings) => settings.addressAndCredentialOf(lens),
+      settingsSelector: (settings) => settings.artworkKeyOf(lens),
       onItemTap: (context, movie, heroTag) {
         context.push(
           ServiceRoutes.radarrMovie(movie.id, heroTag: heroTag),

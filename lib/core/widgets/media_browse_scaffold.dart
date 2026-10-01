@@ -26,10 +26,15 @@ import 'package:cupola/core/widgets/search_bar_header.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
-typedef SettingsSelector = (String, String) Function(SettingsModel settings);
+/// What the grid keys its artwork on: the connection's address, its
+/// credential and its access ([SettingsModel.artworkKeyOf]). The access is in
+/// the key so a changed token rebuilds the posters with it at once.
+typedef SettingsSelector =
+    (String, String, ConnectionAccess) Function(SettingsModel settings);
 typedef MediaBrowseItemTap<T> =
     void Function(BuildContext context, T item, String heroTag);
 typedef MediaBrowseTextExtractor<T> = String Function(T item);
@@ -519,7 +524,7 @@ class _MediaBrowseScaffoldState<T>
 
   Widget _buildLibraryContent(BuildContext context) {
     final libraryAsync = ref.watch(widget.libraryProvider);
-    final (url, apiKey) = ref.watch(
+    final (url, apiKey, _) = ref.watch(
       currentSettingsProvider.select(widget.settingsSelector),
     );
 
@@ -582,7 +587,7 @@ class _MediaBrowseScaffoldState<T>
 
   Widget _buildSearchResults(BuildContext context) {
     final searchResultsAsync = ref.watch(widget.searchResultsProvider);
-    final (url, apiKey) = ref.watch(
+    final (url, apiKey, _) = ref.watch(
       currentSettingsProvider.select(widget.settingsSelector),
     );
 

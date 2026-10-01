@@ -4,7 +4,8 @@
 /// poster off an address and a key. They took both from the first connection,
 /// so with the lens on the 4K Radarr the grid drew its movies' artwork from
 /// the HD server, under the HD's ids, and editing the 4K's address did not
-/// re-key the grid while editing the HD's did.
+/// re-key the grid while editing the HD's did. A connection's access is part
+/// of the key, so a pasted token re-keys its posters at once.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +15,7 @@ import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/presentation/series_screen.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
@@ -41,6 +43,7 @@ void main() {
     expect(select(settings), (
       WorldHosts.radarr4k,
       worldKey(WorldIds.radarr4k),
+      const NoAccess(),
     ));
     // The HD moved: the grid it does not show stays keyed as it was.
     expect(
@@ -54,6 +57,17 @@ void main() {
       ).$1,
       'https://tower.home.arpa:7879',
     );
+    // A token pasted for the 4K re-keys it too: its posters cross the
+    // gateway with the new access at once, not at the next library read.
+    const token = CloudflareServiceToken(
+      clientId: 'id.access',
+      clientSecret: 'secret',
+    );
+    final withToken = settings.copyWithInstance(
+      settings.instanceById(WorldIds.radarr4k)!.copyWith(access: token),
+    );
+    expect(select(withToken), isNot(select(settings)));
+    expect(select(withToken).$3, token);
 
     await harness.unmount(tester);
   });
@@ -73,6 +87,7 @@ void main() {
     expect(select(Profiles.p1.settings), (
       WorldHosts.radarr,
       worldKey(WorldIds.radarr),
+      const NoAccess(),
     ));
 
     await harness.unmount(tester);
@@ -99,6 +114,7 @@ void main() {
     expect(select(profile.settings), (
       WorldHosts.sonarrAnime,
       worldKey(WorldIds.sonarrAnime),
+      const NoAccess(),
     ));
 
     await harness.unmount(tester);

@@ -84,7 +84,7 @@ class SeriesScreen extends ConsumerWidget {
         ref.invalidate(sonarrKpiLibraryProvider);
       },
       // The lens's connection, never the first one's: see `movies_screen.dart`.
-      settingsSelector: (settings) => settings.addressAndCredentialOf(lens),
+      settingsSelector: (settings) => settings.artworkKeyOf(lens),
       onItemTap: (context, series, heroTag) {
         context.push(
           ServiceRoutes.sonarrSeries(series.id, heroTag: heroTag),

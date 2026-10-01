@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show ThemeMode;
 
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -384,16 +385,22 @@ class SettingsModel {
     return '${instance.service.title} $place';
   }
 
-  /// The address and the credential of the connection [id], or two empty
-  /// strings when it names none.
+  /// The address, the credential and the access of the connection [id], or
+  /// two empty strings and no access when it names none.
   ///
-  /// What a screen showing one connection's library keys itself on: its
-  /// artwork is that server's, at that server's address under that server's
-  /// key. As a record, so a `select` over it settles: editing another
-  /// connection changes nothing here.
-  (String, String) addressAndCredentialOf(String id) {
+  /// What a screen showing one connection's library keys its artwork on: it
+  /// is that server's, at that server's address under that server's key, and
+  /// across the gateway in front of it with that connection's access, so a
+  /// pasted token re-keys the posters at once rather than at the next read.
+  /// As a record, so a `select` over it settles: editing another connection
+  /// changes nothing here.
+  (String, String, ConnectionAccess) artworkKeyOf(String id) {
     final instance = instanceById(id);
-    return (instance?.url ?? '', instance?.credential ?? '');
+    return (
+      instance?.url ?? '',
+      instance?.credential ?? '',
+      instance?.access ?? const NoAccess(),
+    );
   }
 
   /// Each connection that has access to send, with its address and the

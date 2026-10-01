@@ -17,6 +17,7 @@ import 'package:cupola/core/widgets/media_browse_scaffold.dart';
 import 'package:cupola/core/widgets/service_kpi_peek.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../test_helpers/settings_scope.dart';
@@ -234,7 +235,7 @@ Widget _scaffold(
           ],
     idExtractor: (film) => film.id,
     statusExtractor: (film) => film.status,
-    settingsSelector: (_) => ('', ''),
+    settingsSelector: (_) => ('', '', const NoAccess()),
     onItemTap: (_, _, _) {},
     tileShape: shape,
     cutoffUnmetIds: cutoff,

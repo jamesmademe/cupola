@@ -118,7 +118,7 @@ class MusicScreen extends ConsumerWidget {
         ref.invalidate(lidarrKpiLibraryProvider);
       },
       // The lens's connection, never the first one's: see `movies_screen.dart`.
-      settingsSelector: (settings) => settings.addressAndCredentialOf(lens),
+      settingsSelector: (settings) => settings.artworkKeyOf(lens),
       onItemTap: (context, artist, heroTag) {
         context.push(
           ServiceRoutes.lidarrArtist(artist.id, heroTag: heroTag),
