@@ -70,6 +70,7 @@ export 'rating_chip.dart';
 export 'rating_chips_row.dart';
 export 'release_list_widgets.dart';
 export 'file_info_section.dart';
+export 'machine_name.dart';
 
 // Async handling
 export 'async_value_widget.dart';
