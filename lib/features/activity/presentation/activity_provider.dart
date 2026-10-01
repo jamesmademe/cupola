@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
@@ -120,6 +121,11 @@ class ActivityServiceResult {
   String get title =>
       label.isEmpty ? service.title : '${service.title} · $label';
 
+  /// The same name for inside a line whose clauses are already joined with
+  /// ` · `: `Sonarr Anime`, never `Sonarr · Anime`, which would read as two
+  /// clauses of the line it sits in.
+  String get name => label.isEmpty ? service.title : '${service.title} $label';
+
   /// Configured, asked, and answered.
   bool get reached => configured && error == null;
 
@@ -166,6 +172,20 @@ class ActivityFeed {
 
   bool get hasConfiguredService => configured.isNotEmpty;
 
+  /// The configured \*arr connections: the ones a queue, a history or a
+  /// wanted list comes from.
+  ///
+  /// Seerr is left out because its rows are requests. A Seerr that did not
+  /// answer makes the request list short, and leaves every queue figure
+  /// exactly as true as it was.
+  Iterable<ActivityServiceResult> get arrConnections =>
+      configured.where((r) => r.service != ServiceKey.seerr);
+
+  /// Every configured \*arr connection was asked and none of them answered,
+  /// so nothing on this load can say how much is in the queue.
+  bool get noArrAnswered =>
+      arrConnections.isNotEmpty && arrConnections.every((r) => r.failed);
+
   /// Nothing was actually reached — every configured service errored.
   ///
   /// This is the case that must surface as an error with a retry rather than as
@@ -179,6 +199,16 @@ class ActivityFeed {
   /// The first error, for the whole-feed error state.
   Object? get firstError => failures.isEmpty ? null : failures.first.error;
 }
+
+/// The clause that keeps a figure honest about what it leaves out:
+/// `Sonarr Anime not counted`, `Radarr 4K and Lidarr not counted`.
+///
+/// The brand book's rule for a total across sources is that it covers only the
+/// sources that answered and names the ones missing. Why each one is missing,
+/// silence or a refusal, is the health strip's sentence and not this one's,
+/// which is why these words are the same for both.
+String notCountedClause(Iterable<ActivityServiceResult> missing) =>
+    '${Lexicon.names(missing.map((r) => r.name))} not counted';
 
 class GlobalActivityItem {
   final GlobalActivityKind kind;

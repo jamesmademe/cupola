@@ -205,6 +205,34 @@ void main() {
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
+        'InspectorPane · nothing downloading from what answered · the note '
+        'names the connection it could not count',
+        (_) => _Pane(
+          queue: () async => const ActivityFeed(
+            items: [],
+            results: [
+              ActivityServiceResult(
+                service: ServiceKey.radarr,
+                items: [],
+                total: 0,
+                configured: true,
+              ),
+              ActivityServiceResult(
+                service: ServiceKey.sonarr,
+                instanceId: 'anime',
+                label: 'Anime',
+                items: [],
+                configured: true,
+                error: 'refused',
+              ),
+            ],
+          ),
+        ),
+        width: width,
+        height: 130,
+        platform: CatalogPlatform.desktop,
+      ),
+      CatalogScene(
         'InspectorPane · loading · Reading the queue…; finished today waits '
         'until the history feed has something',
         (_) => _Pane(queue: () => Completer<ActivityFeed>().future),
@@ -213,9 +241,27 @@ void main() {
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
-        'InspectorPane · the queue could not be read · the note sends you to '
-        'Activity, which owns the retry',
-        (_) => _Pane(queue: () async => throw Exception('queue failed')),
+        'InspectorPane · the queue could not be read · no *arr answered; the '
+        'note sends you to Activity, which owns the retry',
+        (_) => _Pane(
+          queue: () async => const ActivityFeed(
+            items: [],
+            results: [
+              ActivityServiceResult(
+                service: ServiceKey.radarr,
+                items: [],
+                configured: true,
+                error: 'silent',
+              ),
+              ActivityServiceResult(
+                service: ServiceKey.sonarr,
+                items: [],
+                configured: true,
+                error: 'silent',
+              ),
+            ],
+          ),
+        ),
         width: width,
         height: 130,
         platform: CatalogPlatform.desktop,

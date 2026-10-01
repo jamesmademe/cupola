@@ -12,7 +12,7 @@ Rendered from `lib/features/shell/presentation/desktop/inspector_pane.dart` (`In
 - Finished today (up to 6, only once the history feed has something from today): padding 14 at the sides and bottom; the section label, then 30-tall rows of a 7px dot in the event's walked tone (imported green, a failed import amber, grabbed neutral), `space-sm`, and the title in `chrome` 11 / 500 `dim-text`.
 - Section labels: the micro role (`AppTheme.chrome`, 11 / 600 / 14, the role's own tracking), in sentence case (*Finished today*), in `dim-text`, `space-sm` above and below.
 
-States: loading *Reading the queue…*, empty *Nothing downloading right now.*, failed *The queue could not be read. Open Activity to retry.* — each a `chrome` 12 note in `dim-text`, padding `space-lg`. The did-not-answer line and Finished today follow the note in every state.
+States: loading *Reading the queue…*; empty *Nothing downloading right now.*, which names what it could not count when an \*arr connection failed (*Nothing downloading right now. Sonarr Anime not counted.*); failed *The queue could not be read. Open Activity to retry.* whenever no \*arr connection answered, not only when the load itself threw, and ahead of any request rows that did arrive — each a `chrome` 12 note in `dim-text`, padding `space-lg`. The did-not-answer line and Finished today follow the note in every state.
 
 The consumer provides nothing: the pane reads the Activity providers (`globalNowItemsProvider`, `unreachableServicesProvider`, `globalHistoryFeedProvider`). Everything in it also exists on `/activity` (the pane is an accelerator, never the only home of a feature). Toggle ⌥I; ⌥⏎ in the command deck opens it.
 

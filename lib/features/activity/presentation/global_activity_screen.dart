@@ -435,7 +435,7 @@ class _ActivityTitle extends ConsumerWidget {
     return Semantics(
       container: true,
       header: true,
-      label: 'Activity, $readout',
+      label: 'Activity, ${readout.spoken}',
       child: ExcludeSemantics(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -443,7 +443,7 @@ class _ActivityTitle extends ConsumerWidget {
           children: [
             title,
             Text(
-              readout,
+              readout.text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall?.copyWith(
@@ -466,12 +466,30 @@ class _ActivityTitle extends ConsumerWidget {
 /// each reading "Import blocked" in amber sat under "18 importing": the one
 /// figure the user came for, stated as good news. It has its own clause now,
 /// named by its remedy — the verb on the row — and it leads.
+///
+/// The figure covers the connections that answered and **names the ones that
+/// did not**: `12 in the queue · Sonarr Anime not counted`. It used to count
+/// the survivors with no qualifier, so a Sonarr that did not answer took its
+/// downloads out of the number without a word, and when every \*arr failed the
+/// bar said "Nothing in the queue" over a page that could not know. With
+/// nothing answering there is no figure at all, and the bar says so with the
+/// em dash. The qualifier sits straight after the count it qualifies, so a
+/// phone's ellipsis takes the clauses after it before it takes this one.
 @visibleForTesting
-String nowReadout(ActivityFeed feed) {
+({String text, String spoken}) nowReadout(ActivityFeed feed) {
+  if (feed.noArrAnswered) {
+    return (
+      text: '${Lexicon.noFigure} in the queue',
+      spoken: 'queue count unavailable',
+    );
+  }
+  final notCounted = feed.arrConnections
+      .where((r) => r.failed)
+      .toList(growable: false);
+
   final queued = feed.items
       .where((i) => i.kind == GlobalActivityKind.queue)
       .toList(growable: false);
-  if (queued.isEmpty) return 'Nothing in the queue';
 
   var needsImport = 0;
   var stalled = 0;
@@ -496,12 +514,14 @@ String nowReadout(ActivityFeed feed) {
     }
   }
 
-  return [
-    '${queued.length} in the queue',
+  final text = [
+    queued.isEmpty ? 'Nothing in the queue' : '${queued.length} in the queue',
+    if (notCounted.isNotEmpty) notCountedClause(notCounted),
     if (needsImport > 0) needsManualImportClause(needsImport),
     if (stalled > 0) '$stalled ${StateWord.stuck.inline}',
     if (importing > 0) '$importing importing',
   ].join(' · ');
+  return (text: text, spoken: text);
 }
 
 /// One bucket's contents: its record-type pills, the service strip, and the feed.

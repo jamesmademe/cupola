@@ -55,18 +55,20 @@ class InspectorPane extends ConsumerWidget {
               padding: EdgeInsets.zero,
               children: [
                 ...switch (queue) {
-                  AsyncData(:final value) when value.items.isEmpty => const [
-                    _InspectorNote('Nothing downloading right now.'),
-                  ],
+                  // The feed carries each connection's failure rather than
+                  // throwing, so "could not be read" is decided here, from the
+                  // connections, and not only by an `AsyncError` that a load
+                  // with per-connection errors never produces. Without this,
+                  // three \*arrs that all failed read "Nothing downloading".
                   AsyncData(:final value) => [
+                    if (value.noArrAnswered)
+                      const _InspectorNote(_queueUnreadNote)
+                    else if (value.items.isEmpty)
+                      _InspectorNote(_emptyQueueNote(value)),
                     for (final item in value.items.take(8))
                       _QueueRow(item: item),
                   ],
-                  AsyncError() => const [
-                    _InspectorNote(
-                      'The queue could not be read. Open Activity to retry.',
-                    ),
-                  ],
+                  AsyncError() => const [_InspectorNote(_queueUnreadNote)],
                   _ => const [_InspectorNote('Reading the queue…')],
                 },
                 if (offline.isNotEmpty) _UnreachableCard(services: offline),
@@ -78,6 +80,21 @@ class InspectorPane extends ConsumerWidget {
       ),
     );
   }
+}
+
+const _queueUnreadNote = 'The queue could not be read. Open Activity to retry.';
+
+/// The empty queue's note, and the connections it could not hear from.
+///
+/// "Nothing downloading" is a claim about every \*arr, so with one of them
+/// silent or refusing it is only true of the others, and the note names the
+/// ones it leaves out, the way Activity's own readout does.
+String _emptyQueueNote(ActivityFeed feed) {
+  final notCounted = feed.arrConnections
+      .where((r) => r.failed)
+      .toList(growable: false);
+  if (notCounted.isEmpty) return 'Nothing downloading right now.';
+  return 'Nothing downloading right now. ${notCountedClause(notCounted)}.';
 }
 
 /// The ground every tone and accent in this pane is measured against.
