@@ -5,6 +5,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_walk.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/presentation/widgets/connection_access_fields.dart';
 import 'package:cupola/features/truenas/domain/truenas_version.dart';
 
 void main() {
@@ -76,6 +77,9 @@ Future<void> _pumpWalk(
           apiKeyController: TextEditingController(text: 'key'),
           usernameController: TextEditingController(),
           passwordController: TextEditingController(),
+          accessController: ConnectionAccessController(ServiceKey.truenas),
+          accessFormKey: GlobalKey<FormState>(),
+          onShowAccess: (_) {},
           status: status,
           reason: null,
           failureDetail: null,

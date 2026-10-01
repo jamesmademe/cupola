@@ -39,9 +39,9 @@ class UrlUtils {
 
   /// Strips any `user:password@` from an address.
   ///
-  /// [validateServiceHost] already rejects embedded credentials in onboarding,
-  /// and the connection form takes them off the address before it saves
-  /// ([credentialsInAddress]), so nothing reaches storage with them today. This is
+  /// The connection form and the first-run walk both take embedded
+  /// credentials off the address before they save ([credentialsInAddress]),
+  /// so nothing reaches storage with them today. This is
   /// the belt to that braces, and it belongs here rather than only in the
   /// validator because *this* is the function whose output becomes
   /// `BaseOptions.baseUrl` — a credential that ever slipped past the form would

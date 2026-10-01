@@ -11,15 +11,19 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/reel_command_button.dart';
 import 'package:cupola/core/widgets/reel_line.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/connection_access_rules.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
+import 'package:cupola/features/settings/presentation/widgets/connection_access_fields.dart';
 
 // ── Beat 3: the walk ────────────────────────────────────────────────────────
 
@@ -216,6 +220,11 @@ class OnboardingWalk extends StatefulWidget {
     required this.apiKeyController,
     required this.usernameController,
     required this.passwordController,
+    required this.accessController,
+    required this.accessFormKey,
+    this.showAccess = false,
+    this.testedAccess,
+    required this.onShowAccess,
     required this.status,
     required this.reason,
     this.gateway,
@@ -240,6 +249,21 @@ class OnboardingWalk extends StatefulWidget {
   final TextEditingController apiKeyController;
   final TextEditingController usernameController;
   final TextEditingController passwordController;
+
+  /// The step's Access row, the connection form's own: shown when
+  /// [showAccess], which is once access is set, an address carried a
+  /// password, or a gateway's remedy was taken ([onShowAccess]).
+  final ConnectionAccessController accessController;
+  final GlobalKey<FormState> accessFormKey;
+  final bool showAccess;
+
+  /// The access the last test sent, which decides how its outcome is said.
+  final ConnectionAccess? testedAccess;
+
+  /// Takes a gateway's remedy in the step: shows the Access row with the
+  /// choice the gateway wants.
+  final ValueChanged<AccessKind> onShowAccess;
+
   final ServiceConnectionStatus? status;
   final ServiceFailureReason? reason;
 
@@ -288,6 +312,19 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
   final _address = FocusNode(debugLabel: 'onboarding address');
   final _credential = FocusNode(debugLabel: 'onboarding credential');
   final _password = FocusNode(debugLabel: 'onboarding password');
+
+  /// Where the Access row sits, so a remedy can bring it into view.
+  final _accessRow = GlobalKey();
+
+  /// A gateway's remedy, answered here: the Access row, with the choice the
+  /// gateway wants, scrolled into view under the outcome that asked for it.
+  void _addAccess(AccessKind kind) {
+    widget.onShowAccess(kind);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final row = _accessRow.currentContext;
+      if (row != null && row.mounted) Scrollable.ensureVisible(row);
+    });
+  }
 
   @override
   void dispose() {
@@ -444,6 +481,21 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
               'require a login.',
         ),
       ],
+      if (widget.showAccess) ...[
+        const SizedBox(height: AppSpacing.xl),
+        Form(
+          key: widget.accessFormKey,
+          child: KeyedSubtree(
+            key: _accessRow,
+            child: ConnectionAccessFields(
+              controller: widget.accessController,
+              onMoveToCredential: (value) {
+                if (value.isNotEmpty) widget.apiKeyController.text = value;
+              },
+            ),
+          ),
+        ),
+      ],
       // Per-service facts worth saying at the moment they matter — registry
       // data, so Settings and the walk cannot drift apart on which services
       // have something to say.
@@ -480,6 +532,9 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
           gateway: widget.gateway,
           failureDetail: widget.failureDetail,
           serverVersion: widget.serverVersion,
+          testedAccess: widget.testedAccess,
+          // Until the row is on screen, the remedy is the way to it.
+          onAddAccess: widget.showAccess ? null : _addAccess,
         ),
       ],
       if (widget.trustedFingerprint != null &&
@@ -586,6 +641,8 @@ class _Outcome extends StatelessWidget {
     this.gateway,
     required this.failureDetail,
     required this.serverVersion,
+    this.testedAccess,
+    this.onAddAccess,
   });
 
   final ServiceKey service;
@@ -594,6 +651,14 @@ class _Outcome extends StatelessWidget {
   final AccessGatewayAnswer? gateway;
   final String? failureDetail;
   final String? serverVersion;
+
+  /// The access the test sent: a Cloudflare service token's test says what
+  /// Access did with it, in the connection form's words.
+  final ConnectionAccess? testedAccess;
+
+  /// Takes a gateway's remedy in the step, or null when there is none to
+  /// offer (no gateway, or its Access row already on screen).
+  final ValueChanged<AccessKind>? onAddAccess;
 
   @override
   Widget build(BuildContext context) {
@@ -622,6 +687,24 @@ class _Outcome extends StatelessWidget {
         failureDetail ??
             connectionFailureMessage(service, reason, gateway: gateway),
     };
+    final tokenOutcome = testedAccess is CloudflareServiceToken
+        ? cloudflareTokenTestOutcome(
+            service,
+            answered: status == ServiceConnectionStatus.connected,
+            reason: reason,
+            gateway: gateway,
+          )
+        : null;
+    // A gateway in front of the service: its remedy, the same verb Home and
+    // the connection form offer, opens the Access row right here.
+    final remedy =
+        reason == ServiceFailureReason.accessGateway && onAddAccess != null
+        ? failureRemedy(
+            ServiceFailureReason.accessGateway,
+            credential: refusedCredentialOf(service),
+            gateway: gateway,
+          )
+        : null;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -647,11 +730,24 @@ class _Outcome extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  sentence,
+                  tokenOutcome ?? sentence,
                   style: theme.textTheme.bodyMedium!.copyWith(
                     color: scheme.onSurface,
                   ),
                 ),
+                if (remedy != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: FilledButton(
+                      // An amber fault's remedy is its one amber fill.
+                      style: remedyFillStyle(context, compact: true),
+                      onPressed: () =>
+                          onAddAccess!(accessKindForGateway(service, gateway)),
+                      child: Text(remedy),
+                    ),
+                  ),
+                ],
                 // What the server said it is running. Amber when the version
                 // itself is the problem: "answered" is true and still not the
                 // whole answer on a release Cupola cannot drive.

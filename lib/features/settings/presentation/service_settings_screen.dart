@@ -29,7 +29,6 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/stream/presentation/widgets/jellyfin_viewer_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cupola/core/widgets/section_header.dart';
-import 'package:cupola/core/widgets/selection_pills.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/connection_access_rules.dart';
@@ -38,7 +37,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_dialog.dart';
-import 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart';
+import 'package:cupola/features/settings/presentation/widgets/connection_access_fields.dart';
 
 /// One service's address and credentials, and the state of that connection.
 ///
@@ -96,15 +95,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   late final TextEditingController _passwordController;
   late final TextEditingController _labelController;
 
-  // The Access row: what this connection presents to a gateway in front of
-  // the service. One controller per field of every choice, so switching
-  // choices and back keeps what was typed.
-  late AccessKind _accessKind;
-  late final TextEditingController _cloudflareIdController;
-  late final TextEditingController _cloudflareSecretController;
-  late final TextEditingController _proxyUsernameController;
-  late final TextEditingController _proxyPasswordController;
-  final List<_HeaderFields> _headers = [];
+  /// The Access row: what this connection presents to a gateway in front of
+  /// the service. The same controller and row the first-run walk uses.
+  late final ConnectionAccessController _access;
   late final ConnectionAccess _initialAccess;
   final _accessKey = GlobalKey();
 
@@ -175,36 +168,13 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     );
     _labelController = TextEditingController(text: _target.label);
 
-    final access = _target.access;
-    _initialAccess = access;
-    _cloudflareIdController = TextEditingController(
-      text: access is CloudflareServiceToken ? access.clientId : '',
-    );
-    _cloudflareSecretController = TextEditingController(
-      text: access is CloudflareServiceToken ? access.clientSecret : '',
-    );
-    _proxyUsernameController = TextEditingController(
-      text: access is ProxyPassword ? access.username : '',
-    );
-    _proxyPasswordController = TextEditingController(
-      text: access is ProxyPassword ? access.password : '',
-    );
-    if (access is CustomHeaders) {
-      for (final entry in access.entries) {
-        _headers.add(_HeaderFields(entry.name, entry.value, _onFieldChanged));
-      }
-    }
-    final asked = widget.initialAccess;
-    _accessKind =
-        access is NoAccess &&
-            asked != null &&
-            accessKindsFor(service).contains(asked)
-        ? asked
-        : access.kind;
-    if (_accessKind == AccessKind.custom && _headers.isEmpty) {
-      _headers.add(_HeaderFields('', '', _onFieldChanged));
-    }
-    if (asked != null) {
+    _initialAccess = _target.access;
+    _access = ConnectionAccessController(
+      service,
+      initial: _target.access,
+      preselect: widget.initialAccess,
+    )..addListener(_onFieldChanged);
+    if (widget.initialAccess != null) {
       // Opened by a gateway's remedy: the fix is on the Access row.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final row = _accessKey.currentContext;
@@ -226,48 +196,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     'username': _usernameController,
     'password': _passwordController,
     'label': _labelController,
-    'cloudflareId': _cloudflareIdController,
-    'cloudflareSecret': _cloudflareSecretController,
-    'proxyUsername': _proxyUsernameController,
-    'proxyPassword': _proxyPasswordController,
   };
 
-  /// Whether any field differs from what was loaded.
-  bool get _isDirty => _accessFromFields() != _initialAccess
-      ? true
-      : _controllers.entries.any(
-          (entry) =>
-              !entry.key.startsWith('cloudflare') &&
-              !entry.key.startsWith('proxy') &&
-              entry.value.text != _initialValues[entry.key],
-        );
-
-  /// The access the Access row describes, as it would be saved: a choice
-  /// whose fields are all empty is no access at all, so a form opened on
-  /// Cloudflare Access by a remedy and left alone saves nothing new.
-  ConnectionAccess _accessFromFields() {
-    switch (_accessKind) {
-      case AccessKind.none:
-        return const NoAccess();
-      case AccessKind.cloudflare:
-        final id = _cloudflareIdController.text.trim();
-        final secret = _cloudflareSecretController.text.trim();
-        if (id.isEmpty && secret.isEmpty) return const NoAccess();
-        return CloudflareServiceToken(clientId: id, clientSecret: secret);
-      case AccessKind.password:
-        final username = _proxyUsernameController.text.trim();
-        final password = _proxyPasswordController.text;
-        if (username.isEmpty && password.isEmpty) return const NoAccess();
-        return ProxyPassword(username: username, password: password);
-      case AccessKind.custom:
-        final entries = [
-          for (final header in _headers)
-            if (!header.isBlank)
-              (name: header.name.text.trim(), value: header.value.text),
-        ];
-        return entries.isEmpty ? const NoAccess() : CustomHeaders(entries);
-    }
-  }
+  /// Whether any field differs from what was loaded, the Access row's
+  /// included: a choice whose fields are all empty is no access at all, so a
+  /// form opened on Cloudflare Access by a remedy and left alone is not dirty.
+  bool get _isDirty =>
+      _access.access != _initialAccess ||
+      _controllers.entries.any(
+        (entry) => entry.value.text != _initialValues[entry.key],
+      );
 
   /// Takes on a name this connection was given somewhere other than here.
   ///
@@ -321,17 +259,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     _labelController.dispose();
-    for (final controller in [
-      _cloudflareIdController,
-      _cloudflareSecretController,
-      _proxyUsernameController,
-      _proxyPasswordController,
-    ]) {
-      controller.dispose();
-    }
-    for (final header in _headers) {
-      header.dispose();
-    }
+    _access
+      ..removeListener(_onFieldChanged)
+      ..dispose();
     super.dispose();
   }
 
@@ -448,23 +378,12 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   }
 
   /// Takes an address's `user:password@` off it and puts it where it
-  /// belongs: the proxy password on the Access row, or, for a service that
-  /// signs in with Authorization itself (NZBGet, Transmission, Nginx Proxy
-  /// Manager), its own username and password. The address is left clean, so
-  /// no credential is ever stored in it or sent in a request's URL.
-  void _liftCredentialsFromAddress() {
-    final credentials = UrlUtils.credentialsInAddress(_urlController.text);
-    if (credentials == null) return;
-    _urlController.text = UrlUtils.withoutCredentials(_urlController.text);
-    if (service.offersProxyPassword) {
-      _proxyUsernameController.text = credentials.username;
-      _proxyPasswordController.text = credentials.password;
-      setState(() => _accessKind = AccessKind.password);
-    } else {
-      _usernameController.text = credentials.username;
-      _passwordController.text = credentials.password;
-    }
-  }
+  /// belongs: see [ConnectionAccessController.liftCredentialsFrom].
+  void _liftCredentialsFromAddress() => _access.liftCredentialsFrom(
+    _urlController,
+    username: _usernameController,
+    password: _passwordController,
+  );
 
   /// Confirms before dropping unsaved edits.
   Future<bool> _confirmDiscard() async {
@@ -607,7 +526,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         credential: usesCredentials ? password : apiKey,
         username: usesCredentials ? username : '',
         label: label,
-        access: _accessFromFields(),
+        access: _access.access,
       ),
     );
   }
@@ -745,7 +664,15 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               _buildPasswordField(),
             ],
             const SizedBox(height: AppSpacing.xl),
-            _buildAccessSection(context),
+            KeyedSubtree(
+              key: _accessKey,
+              child: ConnectionAccessFields(
+                controller: _access,
+                onMoveToCredential: (value) {
+                  if (value.isNotEmpty) _apiKeyController.text = value;
+                },
+              ),
+            ),
             const SizedBox(height: AppSpacing.xl),
             _buildTestConnectionRow(context),
             if (_testResult != null) ...[
@@ -863,291 +790,6 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   }
 
   // === Access ==============================================================
-
-  /// What this connection presents to a gateway in front of the service, on
-  /// every request: None, a Cloudflare Access service token, a proxy's
-  /// password, or custom headers. Today's form, with the row added under the
-  /// credential; nothing here is sent until the form is tested or saved.
-  Widget _buildAccessSection(BuildContext context) {
-    final kinds = accessKindsFor(service);
-    return KeyedSubtree(
-      key: _accessKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SettingsSectionLabel('Access'),
-          const SizedBox(height: AppSpacing.sm),
-          SelectionPills<AccessKind>(
-            values: kinds,
-            selected: _accessKind,
-            labelBuilder: (kind) => kind.label,
-            onSelected: _selectAccess,
-            padding: SelectionPills.flush,
-          ),
-          if (service.proxyPasswordUnavailable case final why?)
-            _buildAccessNote(context, why),
-          ...switch (_accessKind) {
-            AccessKind.none => const <Widget>[],
-            AccessKind.cloudflare => _buildCloudflareFields(context),
-            AccessKind.password => _buildProxyPasswordFields(),
-            AccessKind.custom => _buildCustomHeaderFields(context),
-          },
-        ],
-      ),
-    );
-  }
-
-  void _selectAccess(AccessKind kind) {
-    if (kind == _accessKind) return;
-    setState(() {
-      _accessKind = kind;
-      if (kind == AccessKind.custom && _headers.isEmpty) {
-        _headers.add(_HeaderFields('', '', _onFieldChanged));
-      }
-    });
-    _onFieldChanged();
-  }
-
-  /// A line of explanation under the Access row, in the page's quiet voice.
-  Widget _buildAccessNote(BuildContext context, String text) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.xs),
-      child: Text(
-        text,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildCloudflareFields(BuildContext context) {
-    bool started() =>
-        _cloudflareIdController.text.trim().isNotEmpty ||
-        _cloudflareSecretController.text.trim().isNotEmpty;
-    return [
-      const SizedBox(height: AppSpacing.md),
-      TextFormField(
-        controller: _cloudflareIdController,
-        decoration: const InputDecoration(labelText: 'Client ID'),
-        autocorrect: false,
-        enableSuggestions: false,
-        textInputAction: TextInputAction.next,
-        // A choice left empty saves no access at all; once one half is in,
-        // the other is needed.
-        validator: (value) => started() && (value ?? '').trim().isEmpty
-            ? 'Add the client ID'
-            : null,
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      _buildSecretField(
-        controller: _cloudflareSecretController,
-        label: 'Client secret',
-        validator: (value) => started() && (value ?? '').trim().isEmpty
-            ? 'Add the client secret'
-            : null,
-      ),
-      _buildAccessNote(
-        context,
-        'On Cloudflare: create a service token, then add a Service Auth '
-        'policy for it to this application.',
-      ),
-    ];
-  }
-
-  List<Widget> _buildProxyPasswordFields() {
-    bool started() =>
-        _proxyUsernameController.text.trim().isNotEmpty ||
-        _proxyPasswordController.text.isNotEmpty;
-    return [
-      const SizedBox(height: AppSpacing.md),
-      // "Proxy" in both labels: a service that signs in with a username and
-      // a password of its own shows that pair above these.
-      TextFormField(
-        controller: _proxyUsernameController,
-        decoration: const InputDecoration(labelText: 'Proxy username'),
-        autocorrect: false,
-        enableSuggestions: false,
-        textInputAction: TextInputAction.next,
-        validator: (value) =>
-            started() ? proxyUsernameProblem((value ?? '').trim()) : null,
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      _buildSecretField(
-        controller: _proxyPasswordController,
-        label: 'Proxy password',
-      ),
-    ];
-  }
-
-  List<Widget> _buildCustomHeaderFields(BuildContext context) {
-    return [
-      for (final (index, header) in _headers.indexed) ...[
-        const SizedBox(height: AppSpacing.md),
-        _buildHeaderRow(context, index, header),
-      ],
-      const SizedBox(height: AppSpacing.sm),
-      Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: TextButton.icon(
-          onPressed: _addHeader,
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Add a header'),
-        ),
-      ),
-    ];
-  }
-
-  Widget _buildHeaderRow(
-    BuildContext context,
-    int index,
-    _HeaderFields header,
-  ) {
-    List<AccessHeader> entries() => [
-      for (final other in _headers)
-        if (!other.isBlank)
-          (name: other.name.text.trim(), value: other.value.text),
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: header.name,
-                decoration: const InputDecoration(labelText: 'Header name'),
-                autocorrect: false,
-                enableSuggestions: false,
-                textInputAction: TextInputAction.next,
-                validator: (value) {
-                  if (header.isBlank) return null;
-                  final name = (value ?? '').trim();
-                  // Not saved while it stands: Cupola's own header would win
-                  // and this one would never be sent.
-                  if (duplicatesCredentialHeader(service, name)) {
-                    return credentialHeaderClash(service);
-                  }
-                  return customHeaderNameProblem(
-                    service,
-                    name,
-                    earlier: [
-                      for (final other in _headers.take(index))
-                        if (!other.isBlank) other.name.text,
-                    ],
-                  );
-                },
-              ),
-            ),
-            IconButton(
-              onPressed: () => _removeHeader(index),
-              icon: const Icon(Icons.remove_circle_outline_rounded),
-              tooltip: 'Remove header',
-            ),
-          ],
-        ),
-        ValueListenableBuilder<TextEditingValue>(
-          valueListenable: header.name,
-          builder: (context, name, _) {
-            if (!duplicatesCredentialHeader(service, name.text)) {
-              return const SizedBox.shrink();
-            }
-            return Row(
-              children: [
-                Expanded(
-                  child: _buildAccessNote(
-                    context,
-                    credentialHeaderClash(service),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => _moveToCredential(index),
-                  child: const Text('Move it'),
-                ),
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _buildSecretField(
-          controller: header.value,
-          label: 'Header value',
-          validator: (value) {
-            if (header.isBlank) return null;
-            final problem = customHeaderValueProblem(value ?? '');
-            if (problem != null) return problem;
-            // Said once, under the last value, for the list as a whole.
-            final isLast = index == _headers.length - 1;
-            return isLast && exceedsAccessHeadersLimit(entries())
-                ? kAccessHeadersTooLarge
-                : null;
-          },
-        ),
-      ],
-    );
-  }
-
-  /// A secret of the Access row: hidden, with Paste beside it, since a token
-  /// or a password is copied from somewhere else rather than typed.
-  Widget _buildSecretField({
-    required TextEditingController controller,
-    required String label,
-    FormFieldValidator<String>? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        suffixIcon: IconButton(
-          onPressed: () => _paste(controller),
-          icon: const Icon(Icons.content_paste_rounded),
-          tooltip: 'Paste',
-        ),
-      ),
-      obscureText: true,
-      autocorrect: false,
-      enableSuggestions: false,
-      keyboardType: TextInputType.visiblePassword,
-      textInputAction: TextInputAction.next,
-      validator: validator,
-    );
-  }
-
-  Future<void> _paste(TextEditingController controller) async {
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    final text = data?.text?.trim() ?? '';
-    if (text.isEmpty || !mounted) return;
-    controller.text = text;
-  }
-
-  void _addHeader() {
-    setState(() => _headers.add(_HeaderFields('', '', _onFieldChanged)));
-    _onFieldChanged();
-  }
-
-  void _removeHeader(int index) {
-    final removed = _headers[index];
-    setState(() {
-      _headers.removeAt(index);
-      if (_headers.isEmpty) {
-        _headers.add(_HeaderFields('', '', _onFieldChanged));
-      }
-    });
-    _onFieldChanged();
-    // After the frame: the row's fields still hold these controllers until
-    // the rebuild above lands.
-    WidgetsBinding.instance.addPostFrameCallback((_) => removed.dispose());
-  }
-
-  /// Resolves a custom header that duplicates the service's credential: its
-  /// value goes to the credential field, and the header goes.
-  void _moveToCredential(int index) {
-    final value = _headers[index].value.text.trim();
-    if (value.isNotEmpty) _apiKeyController.text = value;
-    _removeHeader(index);
-  }
 
   /// The Cloudflare Access team this connection's last failure named, from
   /// the form's own last test or from Home's probe, or null.
@@ -2116,26 +1758,5 @@ class _HeaderStatus extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-/// One custom header's two fields on the Access row.
-class _HeaderFields {
-  _HeaderFields(String name, String value, VoidCallback onChanged)
-    : name = TextEditingController(text: name),
-      value = TextEditingController(text: value) {
-    this.name.addListener(onChanged);
-    this.value.addListener(onChanged);
-  }
-
-  final TextEditingController name;
-  final TextEditingController value;
-
-  /// A row nobody has typed into, which is neither saved nor checked.
-  bool get isBlank => name.text.trim().isEmpty && value.text.isEmpty;
-
-  void dispose() {
-    name.dispose();
-    value.dispose();
   }
 }

@@ -1043,7 +1043,12 @@ class _OnboardingFieldState extends State<OnboardingField> {
     // An untouched field is not scolded. A cleartext address outside the local
     // network is a warning rather than an error: it is a supported choice, just
     // one worth naming — along with the routes that avoid it.
-    final error = raw.trim().isEmpty ? null : UrlUtils.validateServiceHost(raw);
+    // A `user:password@` is accepted: the test takes it off the address and
+    // puts it where the connection form does (the Access row's password, or
+    // the service's own sign-in).
+    final error = raw.trim().isEmpty
+        ? null
+        : UrlUtils.validateServiceHost(raw, allowCredentials: true);
     // The service's own reason about the scheme wins over the general one: a
     // TrueNAS address over http:// is refused, not merely risky.
     final warning = error == null

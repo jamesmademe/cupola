@@ -19,7 +19,9 @@ import 'package:cupola/features/onboarding/presentation/widgets/onboarding_walk.
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/presentation/widgets/connection_access_fields.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 
 /// First run, in four beats: the claim, the choice, one service at a time, and
@@ -75,6 +77,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   final Map<ServiceKey, TextEditingController> _passwordCtrl = {
     for (final k in ServiceKey.values) k: TextEditingController(),
   };
+
+  /// Each service's Access row: what it presents to a gateway in front of
+  /// it. The same controller and row the connection form uses, so a gateway
+  /// met on the first run is answered in the step rather than in a form for a
+  /// connection that does not exist yet.
+  final Map<ServiceKey, ConnectionAccessController> _accessCtrl = {};
+
+  /// The form each Access row validates in, before its test runs.
+  final Map<ServiceKey, GlobalKey<FormState>> _accessForm = {
+    for (final k in ServiceKey.values) k: GlobalKey<FormState>(),
+  };
+
+  /// The services whose step shows its Access row: one with access already
+  /// set, one whose address carried a password, or one whose gateway remedy
+  /// was taken. Everyone else's first run is the form it always was.
+  final Set<ServiceKey> _accessShown = {};
+
+  /// The access each service's last test sent, which decides how its outcome
+  /// is said.
+  final Map<ServiceKey, ConnectionAccess> _testedAccess = {};
 
   final Map<ServiceKey, ServiceConnectionStatus?> _status = {};
   final Map<ServiceKey, ServiceFailureReason?> _reason = {};
@@ -137,6 +159,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // configuration.
     final settings = ref.read(currentSettingsProvider);
     for (final k in ServiceKey.values) {
+      final saved = settings.primaryOf(k)?.access ?? const NoAccess();
+      _accessCtrl[k] = ConnectionAccessController(k, initial: saved);
+      if (!saved.isEmpty) _accessShown.add(k);
+    }
+    for (final k in ServiceKey.values) {
       final url = settings.urlFor(k);
       if (url.isEmpty) continue;
       _picked.add(k);
@@ -182,6 +209,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       c.dispose();
     }
     for (final c in _passwordCtrl.values) {
+      c.dispose();
+    }
+    for (final c in _accessCtrl.values) {
       c.dispose();
     }
     super.dispose();
@@ -242,6 +272,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     _usernameCtrl[k]!.text.trim(),
     _passwordCtrl[k]!.text,
     _pinFor(k) ?? '',
+    // By its hash, so the fingerprint never holds a secret.
+    '${_accessCtrl[k]!.access.hashCode}',
   ].join(' ');
 
   bool _needsCheck(ServiceKey k) =>
@@ -314,7 +346,35 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   // ── Verification ──────────────────────────────────────────────────────────
 
+  /// Takes an address's `user:password@` off it and puts it where the
+  /// connection form puts it, showing the Access row when the password went
+  /// there.
+  void _liftCredentials(ServiceKey service) {
+    final access = _accessCtrl[service]!;
+    final lifted = access.liftCredentialsFrom(
+      _urlCtrl[service]!,
+      username: _usernameCtrl[service]!,
+      password: _passwordCtrl[service]!,
+    );
+    if (lifted && access.kind == AccessKind.password) {
+      _accessShown.add(service);
+    }
+  }
+
+  /// Shows [service]'s Access row with [kind] chosen: a gateway's remedy,
+  /// answered in the step.
+  void _showAccess(ServiceKey service, AccessKind kind) {
+    setState(() {
+      _accessShown.add(service);
+      _accessCtrl[service]!.select(kind);
+    });
+  }
+
   Future<void> _test(ServiceKey service) async {
+    // An Access row with half a token says so under its field, and nothing is
+    // sent until it is whole.
+    if (_accessForm[service]!.currentState?.validate() == false) return;
+    setState(() => _liftCredentials(service));
     // The test's outcome is a sentence under the form, and the button rolls to
     // `Next service` when it succeeds — both of them behind the keyboard while
     // it is up. Dismissed here rather than in each caller, so the button, the
@@ -342,9 +402,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // gate means the alert is *waited on* rather than raced — allow it and the
     // test simply runs again, deny it and the step says so instead of blaming
     // the address the user just typed.
+    final access = _accessCtrl[service]!.access;
     final result = await diagnoseThroughLocalNetworkGate(
       () => diagnoseCredentials(
         service,
+        access: access,
         url: _urlCtrl[service]!.text,
         apiKey: _apiKeyCtrl[service]!.text,
         username: _usernameCtrl[service]!.text,
@@ -388,6 +450,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           ? result.messageFor(service)
           : result.detail;
       _serverVersion[service] = result.serverVersion;
+      _testedAccess[service] = access;
       _verifiedAgainst[service] = _fingerprintOf(service);
       if (certProbe != null) _pendingCert[service] = certProbe;
     });
@@ -446,6 +509,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
     for (final k in ServiceKey.values) {
       if (!_isReady(k)) continue;
+      _liftCredentials(k);
       // Store the scheme the client will actually use: saving the bare host
       // the user typed left the settings form showing a value its own
       // stricter validator rejects.
@@ -464,6 +528,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               username: _usernameCtrl[k]!.text.trim(),
               password: _passwordCtrl[k]!.text,
             );
+      // The access goes with the connection the walk just wrote, as the
+      // connection form saves it.
+      final written = updated.primaryOf(k);
+      if (written != null) {
+        updated = updated.copyWithInstance(
+          written.copyWith(access: _accessCtrl[k]!.access),
+        );
+      }
     }
 
     // Trust-map bookkeeping runs as its own pass, once every service's final
@@ -584,6 +656,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   void _skip(ServiceKey service) {
     setState(() {
       _skipped.add(service);
+      _testedAccess.remove(service);
       _status.remove(service);
       _reason.remove(service);
       _gateway.remove(service);
@@ -899,6 +972,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                           _usernameCtrl[walk[i]]!,
                                       passwordController:
                                           _passwordCtrl[walk[i]]!,
+                                      accessController: _accessCtrl[walk[i]]!,
+                                      accessFormKey: _accessForm[walk[i]]!,
+                                      showAccess: _accessShown.contains(
+                                        walk[i],
+                                      ),
+                                      testedAccess: _testedAccess[walk[i]],
+                                      onShowAccess: (kind) =>
+                                          _showAccess(walk[i], kind),
                                       status: _status[walk[i]],
                                       reason: _reason[walk[i]],
                                       gateway: _gateway[walk[i]],
