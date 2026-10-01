@@ -1,6 +1,7 @@
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_status.dart';
 
 /// Which side of the camera a [PersonCredit] is on.
@@ -42,10 +43,14 @@ class PersonCredit {
       status.availability == MediaAvailability.partial;
 
   /// Null for a row that is not a film or a series, or has no id.
+  ///
+  /// [numbering] is the numbering of the Seerr that sent [json], for the
+  /// title's status: see `seerrMediaStatus`.
   static PersonCredit? fromJson(
     Map<String, dynamic> json,
-    PersonCreditRole role,
-  ) {
+    PersonCreditRole role, {
+    SeerrNumbering? numbering,
+  }) {
     final mediaType = json['mediaType'] ?? json['media_type'];
     if (mediaType != 'movie' && mediaType != 'tv') return null;
     final id = intOrNull(json['id']);
@@ -56,6 +61,7 @@ class PersonCredit {
       role: role,
       status: seerrMediaStatus(
         mediaInfo is Map ? mediaInfo.cast<String, dynamic>() : null,
+        numbering: numbering,
       ),
       character: role == PersonCreditRole.cast
           ? stringOrNull(json['character'])
@@ -78,12 +84,19 @@ class PersonCombinedCredits {
 
   static const empty = PersonCombinedCredits();
 
-  factory PersonCombinedCredits.fromJson(Map<String, dynamic> json) {
+  factory PersonCombinedCredits.fromJson(
+    Map<String, dynamic> json, {
+    SeerrNumbering? numbering,
+  }) {
     List<PersonCredit> parse(Object? raw, PersonCreditRole role) => [
       if (raw is List)
         for (final entry in raw)
           if (entry is Map)
-            ?PersonCredit.fromJson(entry.cast<String, dynamic>(), role),
+            ?PersonCredit.fromJson(
+              entry.cast<String, dynamic>(),
+              role,
+              numbering: numbering,
+            ),
     ];
     return PersonCombinedCredits(
       cast: parse(json['cast'], PersonCreditRole.cast),

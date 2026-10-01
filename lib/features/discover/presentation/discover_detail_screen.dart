@@ -83,6 +83,10 @@ class DiscoverDetailScreen extends ConsumerWidget {
           details,
           initialPosterUrl: initialPosterUrl,
         );
+        // The server's own numbering for its codes: Seerr's 6 is a barred
+        // title and Overseerr's a deleted one. Until it has said, a 6 reads
+        // as neither.
+        final numbering = ref.watch(seerrNumberingProvider).value;
         final isMovie = normalizedMediaType == 'movie';
         final extrasAsync = ref.watch(
           discoverDetailExtrasProvider((
@@ -134,7 +138,7 @@ class DiscoverDetailScreen extends ConsumerWidget {
           title: viewModel.title,
           posterRow: MediaDetailPosterRow(
             statusBadge: StatusBadge.animated(
-              info: seerrMediaStatus(viewModel.mediaInfo),
+              info: seerrMediaStatus(viewModel.mediaInfo, numbering: numbering),
             ),
             title: viewModel.title,
             metadataItems: metadataItems,
@@ -172,6 +176,7 @@ class DiscoverDetailScreen extends ConsumerWidget {
                 viewModel.mediaInfo,
                 isMovie: isMovie,
                 seasons: viewModel.seasons,
+                numbering: numbering,
               ),
               tvdbId: viewModel.tvdbId,
               mediaInfo: viewModel.mediaInfo,
@@ -195,6 +200,7 @@ class DiscoverDetailScreen extends ConsumerWidget {
                     seasonStatuses: seerrSeasonStatuses(
                       viewModel.mediaInfo,
                       viewModel.seasons,
+                      numbering: numbering,
                     ),
                   ),
                 ),

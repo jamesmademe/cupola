@@ -8,6 +8,7 @@ import 'package:cupola/features/discover/domain/models/discover_detail_model.dar
 import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_action_buttons.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
 import '../../../../test_helpers/settings_scope.dart';
 
@@ -108,25 +109,40 @@ void main() {
     group('Request follows what Seerr would take', () {
       // Any media row used to read as "Requested · Radarr is already tracking
       // this.", whatever the row said.
-      for (final MapEntry(key: name, value: mediaInfo) in {
-        'a row Seerr knows nothing on': {'id': 1, 'status': 1},
-        'a film whose files were deleted (Seerr)': {'id': 1, 'status': 7},
-        'a film whose files were deleted (Overseerr)': {'id': 1, 'status': 6},
-        'a film whose request was declined': {
-          'id': 1,
-          'status': 1,
-          'requests': [
-            {'id': 9, 'status': 3, 'is4k': false},
-          ],
-        },
-        'a film with only a 4K request': {
-          'id': 1,
-          'status': 1,
-          'status4k': 2,
-          'requests': [
-            {'id': 9, 'status': 1, 'is4k': true},
-          ],
-        },
+      for (final MapEntry(key: name, value: (mediaInfo, numbering)) in {
+        'a row Seerr knows nothing on': (
+          {'id': 1, 'status': 1},
+          SeerrNumbering.seerr,
+        ),
+        'a film whose files were deleted (Seerr)': (
+          {'id': 1, 'status': 7},
+          SeerrNumbering.seerr,
+        ),
+        'a film whose files were deleted (Overseerr)': (
+          {'id': 1, 'status': 6},
+          SeerrNumbering.overseerr,
+        ),
+        'a film whose request was declined': (
+          {
+            'id': 1,
+            'status': 1,
+            'requests': [
+              {'id': 9, 'status': 3, 'is4k': false},
+            ],
+          },
+          SeerrNumbering.seerr,
+        ),
+        'a film with only a 4K request': (
+          {
+            'id': 1,
+            'status': 1,
+            'status4k': 2,
+            'requests': [
+              {'id': 9, 'status': 1, 'is4k': true},
+            ],
+          },
+          SeerrNumbering.seerr,
+        ),
       }.entries) {
         testWidgets('$name can be requested', (tester) async {
           await _pumpButtons(
@@ -136,6 +152,7 @@ void main() {
             isInService: null,
             configured: const [ServiceKey.seerr],
             mediaInfo: mediaInfo,
+            numbering: numbering,
           );
 
           expect(find.text('Request'), findsOneWidget);
@@ -170,6 +187,26 @@ void main() {
           find.text('Seasons 3 and 4 are not requested yet.'),
           findsOneWidget,
         );
+      });
+
+      testWidgets('a film the operator blocklisted in Seerr says so, '
+          'and offers no Request', (tester) async {
+        await _pumpButtons(
+          tester,
+          hasManageableMedia: true,
+          isInService: null,
+          configured: const [ServiceKey.seerr],
+          mediaInfo: const {'id': 1, 'status': 6},
+          numbering: SeerrNumbering.seerr,
+        );
+
+        expect(find.text('Blocklisted'), findsOneWidget);
+        expect(find.text('Request'), findsNothing);
+        expect(
+          find.text('Blocklisted in Seerr, which takes no request for it.'),
+          findsOneWidget,
+        );
+        expect(tester.widget<FilledButton>(_request).onPressed, isNull);
       });
 
       testWidgets('a film waiting for approval says so', (tester) async {
@@ -397,6 +434,7 @@ Future<void> _pumpButtons(
   Map<String, dynamic>? mediaInfo,
   double textScale = 1.0,
   List<ServiceKey> configured = const [ServiceKey.radarr, ServiceKey.sonarr],
+  SeerrNumbering numbering = SeerrNumbering.seerr,
 }) async {
   // The Open jump is a cross-service control and reads whether its arr is set
   // up; both are by default, as they are wherever this row can offer Open.
@@ -421,6 +459,7 @@ Future<void> _pumpButtons(
               mediaInfo,
               isMovie: mediaType == 'movie',
               seasons: seasons,
+              numbering: numbering,
             ),
             tvdbId: mediaType == 'tv' ? tvdbId : null,
             mediaInfo: mediaInfo,

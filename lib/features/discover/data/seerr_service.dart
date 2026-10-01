@@ -185,7 +185,46 @@ class SeerrService {
   final Map<int, ({String? title, String? year, String? posterPath})>
   _mediaCache = {};
 
-  SeerrService(this._client);
+  /// [numbering] when the caller already knows what the server follows, as
+  /// a test does; otherwise [numbering()] asks the server the first time a
+  /// code needs decoding.
+  SeerrService(this._client, {SeerrNumbering? numbering})
+    : _numbering = numbering;
+
+  /// Which numbering this server's media codes follow, once it has said.
+  SeerrNumbering? _numbering;
+  Future<SeerrNumbering?>? _numberingRead;
+
+  /// The numbering of this server's media codes, from the version
+  /// `/api/v1/status` reports (`SeerrNumbering.fromVersion`).
+  ///
+  /// Read once per connection and kept for as long as this client lives: a
+  /// service is built per connection, so the answer belongs to the server it
+  /// came from, and a changed address builds a new one. Never kept in the
+  /// settings, which hold what the user typed, not what a server says.
+  ///
+  /// Null, and asked again next time, when the server did not answer or said
+  /// no version: a code it sends is then decoded without guessing.
+  /// `/api/v1/status` is public on Seerr, so this costs no key and fails only
+  /// where everything else would.
+  Future<SeerrNumbering?> numbering() {
+    final known = _numbering;
+    if (known != null) return Future.value(known);
+    return _numberingRead ??= _readNumbering();
+  }
+
+  Future<SeerrNumbering?> _readNumbering() async {
+    try {
+      final response = await _client.get('/api/v1/status');
+      final data = response.data;
+      final version = data is Map ? data['version']?.toString() : null;
+      return _numbering = SeerrNumbering.fromVersion(version);
+    } catch (_) {
+      return null;
+    } finally {
+      _numberingRead = null;
+    }
+  }
 
   /// Proves that Seerr accepts the configured API key.
   ///
@@ -342,7 +381,10 @@ class SeerrService {
   /// plain list so that the fakes overriding this, and the providers typed on
   /// it, stay as they are.
   Future<List<SeerrRequest>> getRequests() async {
-    final first = await _requestPage(0);
+    // Asked beside the pages rather than before them: a page waits for it
+    // only to decode its rows, never to be sent.
+    final numberingRead = numbering();
+    final first = await _requestPage(0, numbering: numberingRead);
     final total = first.total;
     final all = <SeerrRequest>[...first.items];
     var isPartial = false;
@@ -357,7 +399,7 @@ class SeerrService {
           skip < total;
           skip += _requestPageSize
         )
-          _requestPageSafely(skip),
+          _requestPageSafely(skip, numbering: numberingRead),
       ]);
       for (final page in pages) {
         if (page == null) {
@@ -376,8 +418,9 @@ class SeerrService {
   }
 
   Future<({List<SeerrRequest> items, int? total})> _requestPage(
-    int skip,
-  ) async {
+    int skip, {
+    required Future<SeerrNumbering?> numbering,
+  }) async {
     final response = await _client.get(
       '/api/v1/request',
       queryParameters: {
@@ -393,10 +436,11 @@ class SeerrService {
     // Null when the server did not say, never 0: a zero here used to end the
     // walk after the first page and stand in for a count nobody gave.
     final total = pageInfo is Map ? _asInt(pageInfo['results']) : null;
+    final decodeWith = await numbering;
     final items = results
         .map((e) {
           try {
-            return SeerrRequest.fromJson(e);
+            return SeerrRequest.fromJson(e, numbering: decodeWith);
           } catch (e) {
             return null;
           }
@@ -411,10 +455,11 @@ class SeerrService {
   /// did not, so the caller can say the list is short; it used to come back
   /// as an empty page, which nothing could tell from the end of the list.
   Future<({List<SeerrRequest> items, int? total})?> _requestPageSafely(
-    int skip,
-  ) async {
+    int skip, {
+    required Future<SeerrNumbering?> numbering,
+  }) async {
     try {
-      return await _requestPage(skip);
+      return await _requestPage(skip, numbering: numbering);
     } catch (_) {
       return null;
     }
@@ -713,12 +758,16 @@ class SeerrService {
   /// Seerr answers with a 404, so every Person page drew an empty filmography.
   Future<PersonCombinedCredits> getPersonCredits(int personId) async {
     try {
+      final numberingRead = numbering();
       final response = await _client.get(
         '/api/v1/person/$personId/combined_credits',
       );
       final data = response.data;
       if (data is! Map) return PersonCombinedCredits.empty;
-      return PersonCombinedCredits.fromJson(data.cast<String, dynamic>());
+      return PersonCombinedCredits.fromJson(
+        data.cast<String, dynamic>(),
+        numbering: await numberingRead,
+      );
     } catch (error) {
       if (_isNotFound(error)) return PersonCombinedCredits.empty;
       rethrow;

@@ -158,6 +158,7 @@ SeerrOverviewSection seerrProcessingSection(
       case SeerrRequestDisplayKind.completed:
       case SeerrRequestDisplayKind.declined:
       case SeerrRequestDisplayKind.failed:
+      case SeerrRequestDisplayKind.blocklisted:
       case SeerrRequestDisplayKind.deleted:
       case SeerrRequestDisplayKind.unknown:
         break;

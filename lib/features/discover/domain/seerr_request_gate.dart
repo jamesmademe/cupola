@@ -1,5 +1,6 @@
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
 /// Why the detail page's Request does or does not act.
 enum SeerrRequestState {
@@ -18,6 +19,10 @@ enum SeerrRequestState {
   /// The last request for it failed, and Seerr will not take another until
   /// that one is dealt with.
   failed,
+
+  /// The operator put it on Seerr's blocklist, and Seerr takes no request for
+  /// it. A choice someone made, not a fault: nothing to fix from here.
+  blocklisted,
 }
 
 /// What Request can do for one title, read from Seerr's own record of it.
@@ -41,11 +46,12 @@ typedef SeerrRequestGate = ({
 /// Only the standard request: the sheet sends no 4K request, so `status4k`
 /// and the 4K requests are not this gate's to read.
 ///
-/// Seerr's media codes are UNKNOWN 1, PENDING 2, PROCESSING 3, PARTIALLY
-/// AVAILABLE 4 and AVAILABLE 5. Overseerr calls 6 DELETED; Seerr calls 6
-/// BLOCKLISTED and 7 DELETED. The app reads 6 as Deleted everywhere it draws
-/// a status, so 6 and 7 both count as deleted here: the badge and the button
-/// cannot disagree about the same title.
+/// The codes are decoded with [numbering], the server's own
+/// ([SeerrMediaAvailability.fromCode]), as the badge decodes them, so the
+/// badge and the button cannot disagree about the same title. A deleted
+/// title is requestable again; a blocklisted one is not. While the numbering
+/// is unknown a 6 is neither, and Request stays open: Seerr itself refuses a
+/// barred title.
 ///
 /// A request's own status is read, never the `displayStatus` that lets the
 /// media's availability stand in for it — the trap every Seerr list in this
@@ -54,20 +60,33 @@ SeerrRequestGate seerrRequestGate(
   Map<String, dynamic>? mediaInfo, {
   required bool isMovie,
   List<TvSeason> seasons = const [],
+  SeerrNumbering? numbering,
 }) {
-  final code = intOrNull(mediaInfo?['status']);
+  SeerrMediaAvailability? decode(Object? code) => code == null
+      ? null
+      : SeerrMediaAvailability.fromCode(code, numbering: numbering);
+
+  final media = decode(intOrNull(mediaInfo?['status']));
   final requests = _activeRequests(mediaInfo);
 
+  // Seerr refuses any request for a barred title, by season or whole.
+  if (media == SeerrMediaAvailability.blocklisted) {
+    return _gate(SeerrRequestState.blocklisted);
+  }
+
   if (isMovie) {
-    if (code == _available || code == _partiallyAvailable) {
+    if (media == SeerrMediaAvailability.available ||
+        media == SeerrMediaAvailability.partiallyAvailable) {
       return _gate(SeerrRequestState.available);
     }
     // An active request is what Seerr refuses a second movie request over.
     final active = requests.firstOrNull;
     if (active != null) return _gate(_stateOf(active.status));
-    return switch (code) {
-      _pending => _gate(SeerrRequestState.waitingForApproval),
-      _processing => _gate(SeerrRequestState.onItsWay),
+    return switch (media) {
+      SeerrMediaAvailability.pending => _gate(
+        SeerrRequestState.waitingForApproval,
+      ),
+      SeerrMediaAvailability.processing => _gate(SeerrRequestState.onItsWay),
       _ => _gate(SeerrRequestState.open),
     };
   }
@@ -81,14 +100,21 @@ SeerrRequestGate seerrRequestGate(
   ];
   if (requestable.isEmpty) {
     // No season list to count against: the title's own code is all there is.
-    return switch (code) {
+    return switch (media) {
       null ||
-      _unknown ||
-      _deletedOverseerr ||
-      _deleted => _gate(SeerrRequestState.open),
-      _available || _partiallyAvailable => _gate(SeerrRequestState.available),
-      _pending => _gate(SeerrRequestState.waitingForApproval),
-      _ => _gate(SeerrRequestState.onItsWay),
+      SeerrMediaAvailability.unknown ||
+      SeerrMediaAvailability.deleted => _gate(SeerrRequestState.open),
+      SeerrMediaAvailability.available ||
+      SeerrMediaAvailability.partiallyAvailable => _gate(
+        SeerrRequestState.available,
+      ),
+      SeerrMediaAvailability.pending => _gate(
+        SeerrRequestState.waitingForApproval,
+      ),
+      SeerrMediaAvailability.processing => _gate(SeerrRequestState.onItsWay),
+      SeerrMediaAvailability.blocklisted => _gate(
+        SeerrRequestState.blocklisted,
+      ),
     };
   }
 
@@ -96,13 +122,13 @@ SeerrRequestGate seerrRequestGate(
     for (final request in requests)
       for (final season in request.seasons) season: request.status,
   };
-  final held = <int, int>{};
+  final held = <int, SeerrMediaAvailability>{};
   final rawSeasons = mediaInfo?['seasons'];
   if (rawSeasons is List) {
     for (final raw in rawSeasons) {
       final entry = mapOrNull(raw);
       final number = intOrNull(entry?['seasonNumber']);
-      final status = intOrNull(entry?['status']);
+      final status = decode(intOrNull(entry?['status']));
       if (number == null || status == null || _isUnheld(status)) continue;
       held[number] = status;
     }
@@ -120,7 +146,9 @@ SeerrRequestGate seerrRequestGate(
     );
   }
 
-  if (requestable.every((season) => held[season] == _available)) {
+  if (requestable.every(
+    (season) => held[season] == SeerrMediaAvailability.available,
+  )) {
     return _gate(SeerrRequestState.available);
   }
   if (asked.values.contains(_requestPending)) {
@@ -137,15 +165,6 @@ SeerrRequestGate seerrRequestGate(
 SeerrRequestGate _gate(SeerrRequestState state) =>
     (state: state, missingSeasons: const <int>[]);
 
-// Media codes, Seerr's `MediaStatus`.
-const _unknown = 1;
-const _pending = 2;
-const _processing = 3;
-const _partiallyAvailable = 4;
-const _available = 5;
-const _deletedOverseerr = 6;
-const _deleted = 7;
-
 // Request codes, Seerr's `MediaRequestStatus`.
 const _requestPending = 1;
 const _requestDeclined = 3;
@@ -153,8 +172,9 @@ const _requestFailed = 4;
 const _requestCompleted = 5;
 
 /// A season Seerr counts as not held: never seen, or deleted.
-bool _isUnheld(int status) =>
-    status == _unknown || status == _deletedOverseerr || status == _deleted;
+bool _isUnheld(SeerrMediaAvailability status) =>
+    status == SeerrMediaAvailability.unknown ||
+    status == SeerrMediaAvailability.deleted;
 
 /// An active request's own status, as the gate says it. Approved, and any
 /// code this app does not know, is on its way.

@@ -107,6 +107,12 @@ class DiscoverActionButtons extends ConsumerWidget {
         requestIcon = Icons.error_outline_rounded;
         disabledReason =
             'Seerr could not send the last request to $serviceName.';
+      case SeerrRequestState.blocklisted:
+        // The operator's own choice, made in Seerr: neutral, and nothing to
+        // fix from here. Seerr refuses any request for it.
+        requestLabel = StateWord.blocklisted.label;
+        requestIcon = Icons.block_rounded;
+        disabledReason = 'Blocklisted in Seerr, which takes no request for it.';
       case SeerrRequestState.open:
         requestLabel = 'Request';
         requestIcon = Icons.add_circle_outline_rounded;

@@ -20,6 +20,8 @@ void main() {
     // Stopped on purpose, and the backlog: neutral, never amber.
     for (final word in [
       StateWord.stopped,
+      // Barred by the operator on purpose: a choice, not a fault.
+      StateWord.blocklisted,
       StateWord.missing,
       StateWord.wanted,
       StateWord.cutoffUnmet,

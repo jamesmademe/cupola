@@ -368,11 +368,12 @@ MediaStatusInfo resolveRequestStatus(SeerrRequest request) {
     SeerrRequestDisplayKind.partiallyAvailable ||
     SeerrRequestDisplayKind.approved ||
     SeerrRequestDisplayKind.pending => StatusTone.info,
-    // Seerr answered; it just answered no. A declined or deleted request is a
-    // closed decision, and a failed one is a fault the service reported —
-    // neither is a connection that did not answer.
+    // Seerr answered; it just answered no. A declined, blocklisted or
+    // deleted request is a closed decision, and a failed one is a fault the
+    // service reported — neither is a connection that did not answer.
     SeerrRequestDisplayKind.failed => StatusTone.warning,
     SeerrRequestDisplayKind.declined ||
+    SeerrRequestDisplayKind.blocklisted ||
     SeerrRequestDisplayKind.deleted => StatusTone.neutral,
     SeerrRequestDisplayKind.unknown => StatusTone.neutral,
   };

@@ -2,6 +2,7 @@ import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
 /// Resolves the badge status for a Seerr media entry.
 ///
@@ -9,9 +10,16 @@ import 'package:cupola/features/discover/domain/models/discover_detail_model.dar
 /// actually moving: that lives in `mediaInfo.downloadStatus`, an array of live
 /// records forwarded from the connected \*arr instances. Reading it turns a
 /// static "Processing" into a real "Downloading 42%".
+///
+/// [numbering] is the numbering of the Seerr that sent [mediaInfo]: the code
+/// is decoded by [SeerrMediaAvailability.fromCode], the one decoder every
+/// Seerr surface shares. A Seerr 7 reads "Deleted", which is what "Remove
+/// from Radarr" leaves behind, and a Seerr 6 reads "Blocklisted" in the
+/// neutral tone, an operator's choice rather than a fault.
 MediaStatusInfo seerrMediaStatus(
   Map<String, dynamic>? mediaInfo, {
   bool is4k = false,
+  SeerrNumbering? numbering,
 }) {
   final code = intOrNull(mediaInfo?[is4k ? 'status4k' : 'status']);
   final entry = seerrDownloadEntry(
@@ -26,19 +34,33 @@ MediaStatusInfo seerrMediaStatus(
     );
   }
 
-  final availability = switch (code) {
-    4 => MediaAvailability.partial,
-    5 => MediaAvailability.available,
-    6 => MediaAvailability.deleted,
-    2 || 3 => MediaAvailability.missing,
-    _ => MediaAvailability.unknown,
+  final media = SeerrMediaAvailability.fromCode(code, numbering: numbering);
+
+  // Nothing is downloading for a title the operator barred, and nothing is
+  // wrong with it either: the word and its glyph, in the backlog's tone.
+  if (media == SeerrMediaAvailability.blocklisted) {
+    return MediaStatusInfo(
+      labelOverride: StateWord.blocklisted.label,
+      toneOverride: StatusTone.neutral,
+      glyph: StatusGlyph.blocked,
+    );
+  }
+
+  final availability = switch (media) {
+    SeerrMediaAvailability.partiallyAvailable => MediaAvailability.partial,
+    SeerrMediaAvailability.available => MediaAvailability.available,
+    SeerrMediaAvailability.deleted => MediaAvailability.deleted,
+    SeerrMediaAvailability.pending ||
+    SeerrMediaAvailability.processing => MediaAvailability.missing,
+    SeerrMediaAvailability.blocklisted ||
+    SeerrMediaAvailability.unknown => MediaAvailability.unknown,
   };
 
   // Seerr's own coarse pipeline states, superseded by the live download record
   // whenever one is present.
-  final fallbackPipeline = switch (code) {
-    2 => MediaPipeline.queued,
-    3 => MediaPipeline.downloading,
+  final fallbackPipeline = switch (media) {
+    SeerrMediaAvailability.pending => MediaPipeline.queued,
+    SeerrMediaAvailability.processing => MediaPipeline.downloading,
     _ => null,
   };
 
@@ -52,11 +74,11 @@ MediaStatusInfo seerrMediaStatus(
     // report.
     labelOverride: entry != null
         ? entry.label
-        : switch (code) {
-            2 => StateWord.waitingForApproval.label,
-            3 => 'Processing',
-            4 => 'Partially available',
-            6 => 'Deleted',
+        : switch (media) {
+            SeerrMediaAvailability.pending ||
+            SeerrMediaAvailability.processing ||
+            SeerrMediaAvailability.partiallyAvailable ||
+            SeerrMediaAvailability.deleted => media.label,
             _ => null,
           },
   );
@@ -80,8 +102,9 @@ MediaStatusInfo seerrMediaStatus(
 /// doing, restating this exact `notTracked` decision inside a widget.
 Map<int, MediaStatusInfo> seerrSeasonStatuses(
   Map<String, dynamic>? mediaInfo,
-  List<TvSeason> seasons,
-) {
+  List<TvSeason> seasons, {
+  SeerrNumbering? numbering,
+}) {
   final byNumber = <int, MediaStatusInfo>{};
 
   final rawSeasons = mediaInfo?['seasons'];
@@ -95,7 +118,7 @@ Map<int, MediaStatusInfo> seerrSeasonStatuses(
 
       byNumber[seasonNumber] = seerrMediaStatus(<String, dynamic>{
         'status': entry['status'],
-      });
+      }, numbering: numbering);
     }
   }
 

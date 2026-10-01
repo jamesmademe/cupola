@@ -1,4 +1,7 @@
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/features/discover/domain/seerr_numbering.dart';
+
+export 'package:cupola/features/discover/domain/seerr_numbering.dart';
 
 enum RequestStatus {
   pendingApproval,
@@ -33,38 +36,57 @@ enum RequestStatus {
   }
 }
 
+/// What Seerr holds of a title: its `MediaStatus`, decoded.
+///
+/// The one place a Seerr media code becomes a state. Every badge, every
+/// request row and the Request gate read it through [fromCode], so a title
+/// cannot read "Deleted" on one surface and "Blocklisted" on another.
 enum SeerrMediaAvailability {
   unknown,
   pending,
   processing,
   partiallyAvailable,
   available,
+
+  /// On Seerr's blocklist: the operator barred it, and Seerr takes no request
+  /// for it. Seerr's and Jellyseerr's 6; Overseerr has no such code.
+  blocklisted,
+
+  /// Its files were removed: requestable again. Overseerr's 6, Seerr's 7.
   deleted;
 
-  static SeerrMediaAvailability fromCode(dynamic value) {
-    int? intValue;
-    if (value is int) {
-      intValue = value;
-    } else if (value is String) {
-      intValue = int.tryParse(value);
-    }
+  /// Decodes [value], a code from a server with [numbering]
+  /// (`SeerrNumbering.fromVersion`).
+  ///
+  /// With [numbering] null, the server has not said which it follows yet: a 6
+  /// is either barred or deleted, and reads [unknown] rather than either
+  /// guess. A 7 is deleted whatever the numbering, since only Seerr sends it.
+  static SeerrMediaAvailability fromCode(
+    Object? value, {
+    required SeerrNumbering? numbering,
+  }) {
+    final code = value is int
+        ? value
+        : value is num
+        ? value.toInt()
+        : value is String
+        ? int.tryParse(value)
+        : null;
 
-    switch (intValue) {
-      case 1:
-        return SeerrMediaAvailability.unknown;
-      case 2:
-        return SeerrMediaAvailability.pending;
-      case 3:
-        return SeerrMediaAvailability.processing;
-      case 4:
-        return SeerrMediaAvailability.partiallyAvailable;
-      case 5:
-        return SeerrMediaAvailability.available;
-      case 6:
-        return SeerrMediaAvailability.deleted;
-      default:
-        return SeerrMediaAvailability.unknown;
-    }
+    return switch (code) {
+      1 => SeerrMediaAvailability.unknown,
+      2 => SeerrMediaAvailability.pending,
+      3 => SeerrMediaAvailability.processing,
+      4 => SeerrMediaAvailability.partiallyAvailable,
+      5 => SeerrMediaAvailability.available,
+      6 => switch (numbering) {
+        SeerrNumbering.overseerr => SeerrMediaAvailability.deleted,
+        SeerrNumbering.seerr => SeerrMediaAvailability.blocklisted,
+        null => SeerrMediaAvailability.unknown,
+      },
+      7 => SeerrMediaAvailability.deleted,
+      _ => SeerrMediaAvailability.unknown,
+    };
   }
 
   String get label {
@@ -79,6 +101,8 @@ enum SeerrMediaAvailability {
         return 'Partially available';
       case SeerrMediaAvailability.available:
         return 'Available';
+      case SeerrMediaAvailability.blocklisted:
+        return StateWord.blocklisted.label;
       case SeerrMediaAvailability.deleted:
         return 'Deleted';
     }
@@ -114,12 +138,17 @@ class SeerrRequest {
     this.requestedBy,
   });
 
-  factory SeerrRequest.fromJson(Map<String, dynamic> json) {
+  /// [numbering] is the numbering of the server that sent [json], for its
+  /// media's code: see [SeerrMediaAvailability.fromCode].
+  factory SeerrRequest.fromJson(
+    Map<String, dynamic> json, {
+    SeerrNumbering? numbering,
+  }) {
     return SeerrRequest(
       id: json['id'] ?? 0,
       status: RequestStatus.fromCode(json['status']),
       media: json['media'] != null
-          ? RequestMedia.fromJson(json['media'])
+          ? RequestMedia.fromJson(json['media'], numbering: numbering)
           : null,
       createdAt: json['createdAt'] ?? '',
       profileId: json['profileId'],
@@ -168,6 +197,7 @@ enum SeerrRequestDisplayKind {
   available,
   partiallyAvailable,
   processing,
+  blocklisted,
   deleted,
   declined,
   failed,
@@ -197,6 +227,11 @@ extension SeerrRequestDisplayStatusX on SeerrRequest {
           return (
             label: 'Processing',
             kind: SeerrRequestDisplayKind.processing,
+          );
+        case SeerrMediaAvailability.blocklisted:
+          return (
+            label: StateWord.blocklisted.label,
+            kind: SeerrRequestDisplayKind.blocklisted,
           );
         case SeerrMediaAvailability.deleted:
           return (label: 'Deleted', kind: SeerrRequestDisplayKind.deleted);
@@ -255,12 +290,18 @@ class RequestMedia {
     this.posterPath,
   });
 
-  factory RequestMedia.fromJson(Map<String, dynamic> json) {
+  factory RequestMedia.fromJson(
+    Map<String, dynamic> json, {
+    SeerrNumbering? numbering,
+  }) {
     // Basic fields
     final id = json['id'] as int?;
     final tmdbId = json['tmdbId'];
     final tvdbId = json['tvdbId'];
-    final status = SeerrMediaAvailability.fromCode(json['status']);
+    final status = SeerrMediaAvailability.fromCode(
+      json['status'],
+      numbering: numbering,
+    );
     final slug = json['externalServiceSlug']?.toString();
     final externalServiceId = json['externalServiceId'] as int?;
     final mediaType = json['mediaType']?.toString();

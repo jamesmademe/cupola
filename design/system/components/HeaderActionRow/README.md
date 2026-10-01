@@ -34,7 +34,7 @@ A disc in a 72pt column (`captionMeasure`, the 48 square plus `AppSpacing.xl`), 
 - **Trailers** only when Seerr sent something to play. With nothing to play there is no button, never a disabled one.
 - **Manage** when Seerr holds a row for the title; otherwise **Open** (*Open in Radarr*, *Open in Sonarr*), the cross-service jump. Never both. Open is dimmed but tappable when that service is not set up here, and absent when it answered that it does not hold the title, or for a series Seerr sent without a TVDB id.
 
-The primary says what Seerr would do with a request (`seerrRequestGate`, read from Seerr's record alone), with one `bodySmall` line under it when it does not act:
+The primary says what Seerr would do with a request (`seerrRequestGate`, read from Seerr's record alone, its codes decoded in the server's own numbering: Seerr's 6 is a blocklisted title, Overseerr's 6 and Seerr's 7 a deleted one, which can be requested again), with one `bodySmall` line under it when it does not act:
 
 | State | Label | Line under it |
 |---|---|---|
@@ -43,6 +43,7 @@ The primary says what Seerr would do with a request (`seerrRequestGate`, read fr
 | A request is waiting on somebody | **Requested** | *Waiting for approval in Seerr.* |
 | Approved, or already in the arr | **Requested** | *Radarr is already tracking this.* |
 | The last request failed | **Request failed** | *Seerr could not send the last request to Radarr.* |
+| The operator blocklisted it in Seerr | **Blocklisted** | *Blocklisted in Seerr, which takes no request for it.* |
 
 A state that does not act keeps its label legible: the secondary ink on the room's strong fill, not Material's 38% grey.
 

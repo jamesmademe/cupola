@@ -35,6 +35,11 @@ enum StateWord {
   /// Someone stopped it on purpose. Not a fault, never "stuck".
   stopped('Stopped', StatusTone.neutral),
 
+  /// The operator put the title on Seerr's blocklist, so Seerr takes no
+  /// request for it. A deliberate choice, not a fault. The state, never the
+  /// action: the arrs' "blocklist and search" verb stays banned.
+  blocklisted('Blocklisted', StatusTone.neutral),
+
   /// The backlog: released and not on disk.
   missing('Missing', StatusTone.neutral),
 

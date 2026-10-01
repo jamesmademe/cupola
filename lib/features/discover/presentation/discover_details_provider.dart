@@ -5,6 +5,7 @@ import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/collection_detail.dart';
 import 'package:cupola/features/discover/domain/models/person_detail.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
 /// A title's Seerr record for the detail page.
 ///
@@ -21,6 +22,18 @@ final discoverDetailProvider = FutureProvider.autoDispose
         return service.getTv(arg.id);
       }
     }, retry: noProviderRetry);
+
+/// Which numbering the lens's Seerr follows for its media codes
+/// (`SeerrService.numbering`), so the detail page decodes them as the server
+/// that sent them means them. Null until the server has said.
+///
+/// Kept on the connection's service, so a page opened twice asks once. It
+/// never throws for a server that did not answer, and `noProviderRetry` for
+/// the one throw left, a Seerr that is not set up, which no waiting changes.
+final seerrNumberingProvider = FutureProvider.autoDispose<SeerrNumbering?>(
+  (ref) => ref.watch(seerrServiceProvider).numbering(),
+  retry: noProviderRetry,
+);
 
 /// Person (cast/crew) details for the Person page.
 ///

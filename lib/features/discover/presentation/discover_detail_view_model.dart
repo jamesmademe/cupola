@@ -1,4 +1,3 @@
-import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
@@ -22,10 +21,12 @@ class DiscoverDetailViewModel {
   final String overview;
   final String posterUrl;
   final String? backdropUrl;
-  final String seerrStatus;
-  final bool isAvailable;
-  final bool isPartiallyAvailable;
-  final int? statusCode;
+
+  /// Seerr's record of the title, raw. Its codes are decoded only with the
+  /// numbering of the server that sent it, by `seerrMediaStatus` and
+  /// `seerrRequestGate`, never here: this model used to read every 6 as
+  /// Overseerr's DELETED, which on Seerr is a title the operator barred, and
+  /// knew no 7, which on Seerr is the deleted one.
   final Map<String, dynamic>? mediaInfo;
   final String genres;
   final List<String> genresList;
@@ -58,10 +59,6 @@ class DiscoverDetailViewModel {
     required this.overview,
     required this.posterUrl,
     required this.backdropUrl,
-    required this.seerrStatus,
-    required this.isAvailable,
-    required this.isPartiallyAvailable,
-    required this.statusCode,
     required this.mediaInfo,
     required this.genres,
     required this.genresList,
@@ -186,7 +183,6 @@ class DiscoverDetailViewModel {
   }) {
     final mediaInfo = _asMap(details['mediaInfo']);
     final externalIds = _asMap(details['externalIds']);
-    final statusCode = (mediaInfo?['status'] as num?)?.toInt();
     final releaseDate =
         details['releaseDate'] ??
         details['release_date'] ??
@@ -235,10 +231,6 @@ class DiscoverDetailViewModel {
           ? initialPosterUrl
           : ImageUtils.buildTmdbPosterUrl(posterPath, size: 'w500'),
       backdropUrl: ImageUtils.buildTmdbPosterUrl(backdropPath, size: 'w1280'),
-      seerrStatus: mapSeerrStatus(statusCode),
-      isAvailable: statusCode == 5,
-      isPartiallyAvailable: statusCode == 4,
-      statusCode: statusCode,
       mediaInfo: mediaInfo,
       genres: _joinNamedValues(details['genres']),
       genresList: genresList,
@@ -281,27 +273,6 @@ class DiscoverDetailViewModel {
       movieReleases: releases,
       contentRatings: contentRatings,
     );
-  }
-
-  static String mapSeerrStatus(int? status) {
-    if (status == null) return 'Available to request';
-
-    switch (status) {
-      case 1:
-        return 'Unknown';
-      case 2:
-        return StateWord.waitingForApproval.label;
-      case 3:
-        return 'Processing';
-      case 4:
-        return 'Partially available';
-      case 5:
-        return 'Available';
-      case 6:
-        return 'Deleted';
-      default:
-        return 'Unknown';
-    }
   }
 }
 

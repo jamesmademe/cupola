@@ -36,13 +36,15 @@ enum SeerrRequestFilter {
             kind == SeerrRequestDisplayKind.available ||
             kind == SeerrRequestDisplayKind.partiallyAvailable ||
             kind == SeerrRequestDisplayKind.completed,
-      // `failed` and `deleted` belong here rather than in their own bucket:
-      // both mean the request will not deliver, which is what someone looking
-      // for declined requests wants to see. `unknown` is deliberately in no
-      // bucket but `all`, so an unparsed status never hides behind a wrong one.
+      // `failed`, `blocklisted` and `deleted` belong here rather than in
+      // their own bucket: each means the request will not deliver, which is
+      // what someone looking for declined requests wants to see. `unknown` is
+      // deliberately in no bucket but `all`, so an unparsed status never hides
+      // behind a wrong one.
       SeerrRequestFilter.declined =>
         kind == SeerrRequestDisplayKind.declined ||
             kind == SeerrRequestDisplayKind.failed ||
+            kind == SeerrRequestDisplayKind.blocklisted ||
             kind == SeerrRequestDisplayKind.deleted,
     };
   }

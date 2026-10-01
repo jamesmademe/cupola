@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 
 TvSeason _season(int number, {int episodes = 8}) => TvSeason(
@@ -24,8 +25,10 @@ Map<String, dynamic> _request(
     ],
 };
 
-SeerrRequestState _movie(Map<String, dynamic>? mediaInfo) =>
-    seerrRequestGate(mediaInfo, isMovie: true).state;
+SeerrRequestState _movie(
+  Map<String, dynamic>? mediaInfo, {
+  SeerrNumbering? numbering = SeerrNumbering.seerr,
+}) => seerrRequestGate(mediaInfo, isMovie: true, numbering: numbering).state;
 
 void main() {
   group('a film', () {
@@ -40,8 +43,33 @@ void main() {
 
     test('deleted, in either numbering: open', () {
       // Overseerr's DELETED is 6; Seerr's is 7, with 6 for BLOCKLISTED.
-      expect(_movie({'id': 1, 'status': 6}), SeerrRequestState.open);
+      expect(
+        _movie({'id': 1, 'status': 6}, numbering: SeerrNumbering.overseerr),
+        SeerrRequestState.open,
+      );
       expect(_movie({'id': 1, 'status': 7}), SeerrRequestState.open);
+    });
+
+    test('blocklisted in Seerr: not requestable, whatever was asked', () {
+      expect(_movie({'id': 1, 'status': 6}), SeerrRequestState.blocklisted);
+      // Seerr refuses the title, not the request: an old one changes nothing.
+      expect(
+        _movie({
+          'id': 1,
+          'status': 6,
+          'requests': [_request(4)],
+        }),
+        SeerrRequestState.blocklisted,
+      );
+    });
+
+    test('before the server has said, a 6 leaves Request open', () {
+      // Barred or deleted: Seerr itself refuses a barred title, and a
+      // deleted one is the user's to ask for again.
+      expect(
+        _movie({'id': 1, 'status': 6}, numbering: null),
+        SeerrRequestState.open,
+      );
     });
 
     test('available: not requestable', () {
@@ -123,8 +151,41 @@ void main() {
   group('a series', () {
     final seasons = [_season(1), _season(2), _season(3)];
 
-    SeerrRequestGate gate(Map<String, dynamic>? mediaInfo) =>
-        seerrRequestGate(mediaInfo, isMovie: false, seasons: seasons);
+    SeerrRequestGate gate(
+      Map<String, dynamic>? mediaInfo, {
+      SeerrNumbering numbering = SeerrNumbering.seerr,
+    }) => seerrRequestGate(
+      mediaInfo,
+      isMovie: false,
+      seasons: seasons,
+      numbering: numbering,
+    );
+
+    test('blocklisted in Seerr: no season can be asked for', () {
+      final result = gate({
+        'id': 1,
+        'status': 6,
+        'seasons': [
+          {'seasonNumber': 1, 'status': 6},
+        ],
+      });
+      expect(result.state, SeerrRequestState.blocklisted);
+      expect(result.missingSeasons, isEmpty);
+    });
+
+    test('an Overseerr season deleted as 6 can be asked for again', () {
+      final result = gate({
+        'id': 1,
+        'status': 4,
+        'seasons': [
+          {'seasonNumber': 1, 'status': 5},
+          {'seasonNumber': 2, 'status': 5},
+          {'seasonNumber': 3, 'status': 6},
+        ],
+      }, numbering: SeerrNumbering.overseerr);
+      expect(result.state, SeerrRequestState.open);
+      expect(result.missingSeasons, [3]);
+    });
 
     test('nothing held: open, with no seasons to name', () {
       final result = gate(null);

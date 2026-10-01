@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/seerr_status.dart';
 
 void main() {
   group('DiscoverDetailViewModel', () {
@@ -52,9 +54,15 @@ void main() {
       expect(viewModel.title, 'Test Movie');
       expect(viewModel.overview, 'A movie overview.');
       expect(viewModel.posterUrl, 'https://image.tmdb.org/t/p/w500/poster.jpg');
-      expect(viewModel.seerrStatus, 'Partially available');
-      expect(viewModel.isAvailable, isFalse);
-      expect(viewModel.isPartiallyAvailable, isTrue);
+      // The record stays raw: its code is the badge's to decode, with the
+      // server's numbering.
+      expect(
+        seerrMediaStatus(
+          viewModel.mediaInfo,
+          numbering: SeerrNumbering.seerr,
+        ).label,
+        'Partially available',
+      );
       expect(viewModel.genres, 'Action, Drama');
       expect(viewModel.genresList, ['Action', 'Drama']);
       expect(viewModel.year, '2024');
@@ -106,7 +114,13 @@ void main() {
 
       expect(viewModel.title, 'Test Show');
       expect(viewModel.posterUrl, 'https://cdn.example.com/poster.jpg');
-      expect(viewModel.seerrStatus, 'Waiting for approval');
+      expect(
+        seerrMediaStatus(
+          viewModel.mediaInfo,
+          numbering: SeerrNumbering.seerr,
+        ).label,
+        'Waiting for approval',
+      );
       expect(viewModel.year, '2021');
       expect(viewModel.numberOfSeasons, 3);
       expect(viewModel.networks, 'HBO, Max');
@@ -124,8 +138,11 @@ void main() {
       expect(viewModel.title, 'Unknown');
       expect(viewModel.overview, isEmpty);
       expect(viewModel.posterUrl, isEmpty);
-      expect(viewModel.seerrStatus, 'Available to request');
-      expect(viewModel.isAvailable, isFalse);
+      expect(viewModel.mediaInfo, isNull);
+      expect(
+        seerrMediaStatus(viewModel.mediaInfo).label,
+        'Available to request',
+      );
       expect(viewModel.genres, isEmpty);
       expect(viewModel.genresList, isEmpty);
       expect(viewModel.year, isEmpty);
@@ -143,20 +160,6 @@ void main() {
       expect(viewModel.metadataLine, isEmpty);
       expect(viewModel.hasManageableMedia, isFalse);
       expect(viewModel.servicePath, isNull);
-    });
-
-    test('maps seerr status codes consistently', () {
-      expect(
-        DiscoverDetailViewModel.mapSeerrStatus(null),
-        'Available to request',
-      );
-      expect(DiscoverDetailViewModel.mapSeerrStatus(1), 'Unknown');
-      expect(DiscoverDetailViewModel.mapSeerrStatus(2), 'Waiting for approval');
-      expect(DiscoverDetailViewModel.mapSeerrStatus(3), 'Processing');
-      expect(DiscoverDetailViewModel.mapSeerrStatus(4), 'Partially available');
-      expect(DiscoverDetailViewModel.mapSeerrStatus(5), 'Available');
-      expect(DiscoverDetailViewModel.mapSeerrStatus(6), 'Deleted');
-      expect(DiscoverDetailViewModel.mapSeerrStatus(99), 'Unknown');
     });
 
     test('parses runtime from string episode runtimes without crashing', () {

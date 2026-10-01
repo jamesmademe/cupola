@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_status.dart';
 
 void main() {
@@ -13,23 +14,87 @@ void main() {
       expect(status.tone, StatusTone.primary);
     });
 
+    // The codes both numberings share.
     final codeLabels = <int, String>{
       1: 'Unknown',
       2: 'Waiting for approval',
       3: 'Processing',
       4: 'Partially available',
       5: 'Available',
-      6: 'Deleted',
     };
 
-    codeLabels.forEach((code, label) {
-      test('status $code reads "$label"', () {
-        expect(seerrMediaStatus({'status': code}).label, label);
+    for (final numbering in [...SeerrNumbering.values, null]) {
+      codeLabels.forEach((code, label) {
+        test(
+          'status $code reads "$label" (${numbering?.name ?? 'unread'})',
+          () {
+            expect(
+              seerrMediaStatus({'status': code}, numbering: numbering).label,
+              label,
+            );
+          },
+        );
       });
-    });
+    }
 
     test('an unknown status code degrades to Unknown', () {
-      expect(seerrMediaStatus({'status': 999}).label, 'Unknown');
+      expect(
+        seerrMediaStatus({
+          'status': 999,
+        }, numbering: SeerrNumbering.seerr).label,
+        'Unknown',
+      );
+    });
+
+    group('the codes the numberings part on', () {
+      test('Seerr: 6 is Blocklisted, neutral, under the block glyph', () {
+        final status = seerrMediaStatus({
+          'status': 6,
+        }, numbering: SeerrNumbering.seerr);
+        expect(status.label, 'Blocklisted');
+        // An operator's choice, not a fault: never amber.
+        expect(status.tone, StatusTone.neutral);
+        expect(status.glyph, StatusGlyph.blocked);
+        expect(status.pipeline, isNull);
+      });
+
+      test('Seerr: 7 is Deleted, what "Remove from Radarr" leaves', () {
+        final status = seerrMediaStatus({
+          'status': 7,
+        }, numbering: SeerrNumbering.seerr);
+        expect(status.label, 'Deleted');
+        expect(status.availability, MediaAvailability.deleted);
+        expect(status.tone, StatusTone.neutral);
+      });
+
+      test('Overseerr: 6 is Deleted', () {
+        final status = seerrMediaStatus({
+          'status': 6,
+        }, numbering: SeerrNumbering.overseerr);
+        expect(status.label, 'Deleted');
+        expect(status.availability, MediaAvailability.deleted);
+      });
+
+      test('before the server has said: 6 is neither guess, 7 is Deleted', () {
+        expect(seerrMediaStatus({'status': 6}).label, 'Unknown');
+        expect(seerrMediaStatus({'status': 7}).label, 'Deleted');
+      });
+
+      test('a season reads its code in the same numbering', () {
+        final statuses = seerrSeasonStatuses(
+          {
+            'status': 4,
+            'seasons': [
+              {'seasonNumber': 1, 'status': 7},
+              {'seasonNumber': 2, 'status': 6},
+            ],
+          },
+          const [],
+          numbering: SeerrNumbering.seerr,
+        );
+        expect(statuses[1]!.label, 'Deleted');
+        expect(statuses[2]!.label, 'Blocklisted');
+      });
     });
 
     test('downloadStatus turns a static Processing into a live download', () {

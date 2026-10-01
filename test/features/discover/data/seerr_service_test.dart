@@ -5,6 +5,7 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/person_credits.dart';
 import 'package:cupola/features/discover/domain/models/seerr_admin_models.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
 import '../../../test_helpers/fixtures.dart';
@@ -15,7 +16,9 @@ void main() {
 
   setUp(() {
     client = FakeApiClient();
-    service = SeerrService(client);
+    // Known up front, so the scripted GETs below answer the reads they are
+    // written for; the read of `/api/v1/status` has its own group.
+    service = SeerrService(client, numbering: SeerrNumbering.seerr);
   });
 
   group('createRequest', () {

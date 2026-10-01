@@ -12,6 +12,7 @@ import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_action_buttons.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
 import '../test_helpers/settings_scope.dart';
 import 'catalog.dart';
@@ -207,6 +208,7 @@ Widget _seerrDeck({
   bool? isInService,
   List<TvSeason> seasons = const [],
   List<RelatedVideo> videos = const [_trailer],
+  SeerrNumbering numbering = SeerrNumbering.seerr,
 }) => DiscoverActionButtons(
   mediaId: 603,
   mediaType: mediaType,
@@ -216,6 +218,7 @@ Widget _seerrDeck({
     mediaInfo,
     isMovie: mediaType == 'movie',
     seasons: seasons,
+    numbering: numbering,
   ),
   tvdbId: mediaType == 'tv' ? 81189 : null,
   mediaInfo: mediaInfo,
@@ -393,6 +396,17 @@ List<CatalogScene> _bands(CatalogPlatform platform, double width) => [
         ],
       },
       isInService: false,
+    ),
+    width: width,
+    platform: platform,
+  ),
+  CatalogScene(
+    'Seerr deck · Blocklisted · the operator barred the title in Seerr, which '
+    'takes no request for it; neutral, a choice and not a fault',
+    (_) => _seerrDeck(
+      mediaInfo: const {'id': 1, 'status': 6},
+      isInService: false,
+      videos: const [],
     ),
     width: width,
     platform: platform,

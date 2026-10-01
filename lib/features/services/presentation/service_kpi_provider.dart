@@ -809,6 +809,7 @@ List<ServiceKpi> _seerrKpisFrom(List<SeerrRequest> requests) {
       case SeerrRequestDisplayKind.pending:
       case SeerrRequestDisplayKind.declined:
       case SeerrRequestDisplayKind.failed:
+      case SeerrRequestDisplayKind.blocklisted:
       case SeerrRequestDisplayKind.deleted:
       case SeerrRequestDisplayKind.unknown:
         break;
