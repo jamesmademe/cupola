@@ -272,12 +272,17 @@ StatusTone releaseSearchTone(ReleaseSearchJob job) {
 /// never takes this branch at all — its transport runs on through suspension,
 /// so a failure there keeps its own identity (a gateway's status, a timeout)
 /// instead of being blamed on the user having left.
+///
+/// [subject] names the service the search asked (`Radarr`), which a gateway
+/// that answered in its place is named against: "Cloudflare Access answered
+/// instead of Radarr". Without one the words say "the service".
 ReleaseSearchFailure classifyReleaseSearchFailure(
   Object error, {
   required Duration elapsed,
   required Duration configuredTimeout,
   bool wasBackgrounded = false,
   ReleaseSearchReach reach = ReleaseSearchReach.beyondTheApp,
+  String? subject,
 }) {
   if (error is DioException && CancelToken.isCancel(error)) {
     return const ReleaseSearchFailure(
@@ -313,13 +318,15 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
   if (access != null) {
     final headline = failureHeadline(
       ServiceFailureReason.accessGateway,
-      subject: 'the service',
+      subject: subject ?? 'the service',
       gateway: access,
     );
     return ReleaseSearchFailure(
       kind: ReleaseSearchFailureKind.refused,
       headline: '${headline[0].toUpperCase()}${headline.substring(1)}.',
-      diagnosis: '${accessGatewaySentence(access)} Nothing was searched.',
+      diagnosis:
+          '${accessGatewaySentence(access, subject: subject)} Nothing was '
+          'searched.',
       detail: status == null ? error.type.name : 'HTTP $status',
       gateway: gateway,
     );

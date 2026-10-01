@@ -106,6 +106,30 @@ void main() {
     );
   });
 
+  test('the search names the service a gateway answered for', () {
+    final failure = classifyReleaseSearchFailure(
+      _refusal(
+        401,
+        error: const AccessGatewayAnswer(
+          kind: AccessGatewayKind.cloudflareAccess,
+          credentialsSent: false,
+          gatewayHost: 'cupola-home.cloudflareaccess.com',
+          serviceHost: 'radarr.example.com',
+        ),
+      ),
+      elapsed: const Duration(seconds: 2),
+      configuredTimeout: const Duration(minutes: 5),
+      subject: 'Radarr',
+    );
+
+    expect(failure.headline, 'Cloudflare Access answered instead of Radarr.');
+    expect(
+      failure.diagnosis,
+      'Radarr is behind Cloudflare Access. Cupola needs a service token to '
+      'reach it. Nothing was searched.',
+    );
+  });
+
   test('a 401 from the service itself is still a refused key', () {
     final failure = _classify(_refusal(401));
 

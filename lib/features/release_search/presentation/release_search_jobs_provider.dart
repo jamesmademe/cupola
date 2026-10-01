@@ -441,6 +441,9 @@ class ReleaseSearchJobsNotifier extends Notifier<List<ReleaseSearchJob>> {
             configuredTimeout: _timeout,
             wasBackgrounded: current.wasBackgrounded,
             reach: _reachFor(current.target),
+            // The service the job asked, which a gateway in front of it is
+            // named against.
+            subject: current.target.service.title,
           ),
         );
         _replace(finished);

@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/release_search/domain/release_search_job.dart';
 import 'package:cupola/features/release_search/domain/release_search_reach.dart';
@@ -347,6 +348,33 @@ void main() {
       final stopped = notifier().jobById(job.id)!;
       expect(stopped.status, ReleaseSearchJobStatus.failed);
       expect(stopped.failure!.kind, ReleaseSearchFailureKind.cancelled);
+    });
+
+    test('a gateway that turned the search away is named against the '
+        'service the job asked', () async {
+      final completers = wireManualRunner();
+      final job = notifier().start(movie);
+
+      final request = RequestOptions(baseUrl: 'https://radarr.example.com');
+      completers[movie]!.completeError(
+        DioException(
+          requestOptions: request,
+          type: DioExceptionType.badResponse,
+          response: Response<dynamic>(requestOptions: request, statusCode: 302),
+          error: const AccessGatewayAnswer(
+            kind: AccessGatewayKind.cloudflareAccess,
+            credentialsSent: false,
+            gatewayHost: 'cupola-home.cloudflareaccess.com',
+            serviceHost: 'radarr.example.com',
+          ),
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(
+        notifier().jobById(job.id)!.failure!.headline,
+        'Cloudflare Access answered instead of Radarr.',
+      );
     });
 
     test('a later error does not overwrite the cancellation verdict', () async {
