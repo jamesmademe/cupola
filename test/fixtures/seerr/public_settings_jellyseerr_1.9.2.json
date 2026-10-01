@@ -1,0 +1,23 @@
+{
+  "initialized": true,
+  "applicationTitle": "Jellyseerr",
+  "applicationUrl": "",
+  "hideAvailable": false,
+  "localLogin": true,
+  "jellyfinForgotPasswordUrl": "",
+  "movie4kEnabled": false,
+  "series4kEnabled": false,
+  "region": "",
+  "originalLanguage": "",
+  "mediaServerType": 2,
+  "jellyfinHost": "http://jellyfin.home.arpa:8096",
+  "jellyfinExternalHost": "",
+  "partialRequestsEnabled": true,
+  "cacheImages": false,
+  "vapidPublic": "BCupolaFixtureVapidPublic0000000000000000000000000000000000000000000000000000000000",
+  "enablePushRegistration": false,
+  "locale": "en",
+  "emailEnabled": false,
+  "userEmailRequired": false,
+  "newPlexLogin": true
+}

@@ -1,0 +1,18 @@
+{
+  "initialized": true,
+  "applicationTitle": "Overseerr",
+  "applicationUrl": "",
+  "hideAvailable": false,
+  "localLogin": true,
+  "movie4kEnabled": false,
+  "series4kEnabled": false,
+  "region": "",
+  "originalLanguage": "",
+  "partialRequestsEnabled": true,
+  "cacheImages": false,
+  "vapidPublic": "BCupolaFixtureVapidPublic0000000000000000000000000000000000000000000000000000000000",
+  "enablePushRegistration": false,
+  "locale": "en",
+  "emailEnabled": false,
+  "newPlexLogin": true
+}
