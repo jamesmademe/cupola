@@ -141,4 +141,41 @@ void main() {
       expect(hydrated.media!.status4k, SeerrMediaAvailability.pending);
     });
   });
+
+  group('where a request goes', () {
+    test('reads its server, profile, folder, language profile and tags', () {
+      final request = SeerrRequest.fromJson({
+        'id': 4,
+        'status': 1,
+        'type': 'tv',
+        'createdAt': '2026-09-30T10:00:00Z',
+        'serverId': 1,
+        'profileId': 6,
+        'rootFolder': '/series/anime',
+        'languageProfileId': 2,
+        'tags': [3, 5],
+      });
+
+      expect(request.serverId, 1);
+      expect(request.profileId, 6);
+      expect(request.rootFolder, '/series/anime');
+      expect(request.languageProfileId, 2);
+      expect(request.tags, [3, 5]);
+      expect(request.copyWith().tags, [3, 5]);
+    });
+
+    test('a request that names none of them reads none', () {
+      final request = SeerrRequest.fromJson({
+        'id': 4,
+        'status': 1,
+        'type': 'movie',
+        'createdAt': '2026-09-30T10:00:00Z',
+      });
+
+      expect(request.serverId, isNull);
+      expect(request.rootFolder, isNull);
+      expect(request.languageProfileId, isNull);
+      expect(request.tags, isNull);
+    });
+  });
 }

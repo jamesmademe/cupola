@@ -126,6 +126,12 @@ class SeerrRequest {
 
   /// The folder the request is sent with, or null for the server's own.
   final String? rootFolder;
+
+  /// Sonarr's language profile for a series request, when it names one.
+  final int? languageProfileId;
+
+  /// The arr tag ids the request is sent with, when Seerr listed them.
+  final List<int>? tags;
   final bool canRemove;
   final RequestedBy? requestedBy;
 
@@ -141,6 +147,8 @@ class SeerrRequest {
     this.is4k = false,
     this.serverId,
     this.rootFolder,
+    this.languageProfileId,
+    this.tags,
     this.canRemove = false,
     this.requestedBy,
   });
@@ -167,6 +175,15 @@ class SeerrRequest {
       is4k: _parseBool(json['is4k']),
       serverId: json['serverId'],
       rootFolder: json['rootFolder']?.toString(),
+      languageProfileId: json['languageProfileId'] is num
+          ? (json['languageProfileId'] as num).toInt()
+          : null,
+      tags: json['tags'] is List
+          ? [
+              for (final tag in json['tags'] as List)
+                if (tag is num) tag.toInt(),
+            ]
+          : null,
       canRemove: _parseBool(json['canRemove']),
       requestedBy: json['requestedBy'] != null
           ? RequestedBy.fromJson(json['requestedBy'])
@@ -188,6 +205,8 @@ class SeerrRequest {
       is4k: is4k,
       serverId: serverId,
       rootFolder: rootFolder,
+      languageProfileId: languageProfileId,
+      tags: tags,
       canRemove: canRemove,
       requestedBy: requestedBy,
     );

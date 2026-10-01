@@ -577,6 +577,43 @@ class SeerrFake extends ServiceFake {
         return NetworkReply.json(_discoverPage(const []));
       }
     }
+    // An edit before an approval, as Seerr's route takes it: only a request
+    // still waiting, `mediaType` required, and a series with its seasons.
+    final edit = RegExp(r'^/api/v1/request/(\d+)$').firstMatch(path);
+    if (r.method == 'PUT' && edit != null) {
+      final id = int.parse(edit.group(1)!);
+      final row = _requests.where((q) => q.$1 == id).firstOrNull;
+      if (row == null) {
+        return NetworkReply.json({
+          'message': 'Request not found.',
+        }, status: 404);
+      }
+      if (row.$4 != 1) {
+        return NetworkReply.json({
+          'message': 'Only pending requests can be modified.',
+        }, status: 409);
+      }
+      final body = r.json;
+      if (body is! Map || body['mediaType'] == null) {
+        return NetworkReply.json({
+          'message': "request/body must have required property 'mediaType'",
+        }, status: 400);
+      }
+      final seasons = body['seasons'];
+      if (body['mediaType'] == 'tv' && (seasons is! List || seasons.isEmpty)) {
+        return NetworkReply.json({
+          'message':
+              'Missing seasons. If you want to cancel a series request, use '
+              'the DELETE method.',
+        }, status: 500);
+      }
+      return NetworkReply.json({
+        ..._request(c, row),
+        'serverId': body['serverId'],
+        'profileId': body['profileId'],
+        'rootFolder': body['rootFolder'],
+      });
+    }
     if (r.method == 'POST' &&
         RegExp(r'^/api/v1/request/\d+/(approve|decline)$').hasMatch(path)) {
       final id = int.parse(path.split('/')[4]);
