@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
-import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/async_value_widget.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -40,7 +39,8 @@ import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 ///    but only in its generic form, which lands the user on `/settings` and
 ///    leaves them to find the service.
 ///  * **an `http://` address** ([TrueNasInsecureTransportException]) → a well
-///    that says TrueNAS needs https:// and opens its settings. Amber: it is a
+///    that says TrueNAS needs an https:// address and offers the remedy,
+///    `Change the address`, which opens its connection form. Amber: it is a
 ///    fault with one fix, in the form. It has no Retry, because retrying the
 ///    same address can only be refused again — the client never dials it.
 ///  * **the host did not answer** ([ServiceFailureReason.unreachable],
@@ -183,26 +183,30 @@ enum _TrueNasWell { notConfigured, needsHttps, offline }
 /// The address is `http://`, and the client refused to send the API key over
 /// it (see [TrueNasInsecureTransportException]).
 ///
-/// The one action is the fix: TrueNAS's own settings page, where the address
-/// is edited and the connection test offers to trust a self-signed certificate.
+/// The one action is the fix, in the remedy's own words (`Change the
+/// address`, from the same [FailureRemedy] every failure state offers): it
+/// opens TrueNAS's connection form, where the address is edited and the
+/// connection test offers to trust a self-signed certificate. It used to say
+/// "Open Settings", which named a place rather than the thing to do there.
 class _NeedsHttps extends StatelessWidget {
   const _NeedsHttps();
+
+  static const _reason = ServiceFailureReason.insecureTransport;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final remedy = FailureRemedy.forReason(ServiceKey.truenas, _reason)!;
     return AppEmptyState(
       icon: Icons.no_encryption_outlined,
       // A fault the user can fix, so the tone rule's amber — never red, which
       // is kept for a host that did not answer; this one was never asked.
-      accentColor: statusToneColor(colorScheme, StatusTone.warning),
-      title: 'TrueNAS needs https://',
+      accentColor: statusToneColor(colorScheme, failureTone(_reason)),
+      title: failureHeadline(_reason, subject: ServiceKey.truenas.title),
       message: TrueNasInsecureTransportException.explanation,
-      action: FilledButton.tonalIcon(
-        onPressed: () =>
-            context.go(ServiceRoutes.settingsFor(ServiceKey.truenas)),
-        icon: const Icon(Icons.settings_outlined, size: 18),
-        label: const Text('Open Settings'),
+      action: FilledButton(
+        onPressed: () => remedy.open(context),
+        child: Text(remedy.label),
       ),
     );
   }

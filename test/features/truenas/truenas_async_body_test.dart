@@ -12,7 +12,11 @@ import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
+import 'package:cupola/features/truenas/presentation/reporting/truenas_reporting_screen.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_async_body.dart';
+
+import '../../test_helpers/profiles/profiles.dart';
+import '../../test_helpers/settings_scope.dart';
 
 Future<void> _pump(WidgetTester tester, AsyncValue<String> value) {
   return tester.pumpWidget(
@@ -117,12 +121,12 @@ void main() {
       expect(find.byType(ServiceOfflineState), findsNothing);
     });
 
-    testWidgets('an http:// address asks for https, and offers no Retry', (
-      tester,
-    ) async {
+    testWidgets('an http:// address asks for https, and offers its remedy, not '
+        'Retry', (tester) async {
       // The client refused to send the key, so a Retry could only be refused
-      // again: the one action is the settings page where the address lives.
-      String? landedOn;
+      // again: the one action is the remedy, into the form where the address
+      // lives.
+      Uri? landedOn;
       final router = GoRouter(
         routes: [
           GoRoute(
@@ -141,7 +145,7 @@ void main() {
           GoRoute(
             path: '/settings/service/:service',
             builder: (_, state) {
-              landedOn = state.uri.path;
+              landedOn = state.uri;
               return const SizedBox.shrink();
             },
           ),
@@ -149,11 +153,16 @@ void main() {
       );
       addTearDown(router.dispose);
       await tester.pumpWidget(
-        ProviderScope(child: MaterialApp.router(routerConfig: router)),
+        ProviderScope(
+          overrides: await settingsScopeOverrides(
+            configured: const [ServiceKey.truenas],
+          ),
+          child: MaterialApp.router(routerConfig: router),
+        ),
       );
       await tester.pump();
 
-      expect(find.text('TrueNAS needs https://'), findsOneWidget);
+      expect(find.text('TrueNAS needs an https:// address'), findsOneWidget);
       expect(
         find.text(TrueNasInsecureTransportException.explanation),
         findsOneWidget,
@@ -163,9 +172,16 @@ void main() {
       expect(find.byType(ServiceOfflineState), findsNothing);
       expect(find.byType(NotConfiguredPlaceholder), findsNothing);
 
-      await tester.tap(find.text('Open Settings'));
+      expect(find.text('Open Settings'), findsNothing);
+      expect(
+        find.widgetWithText(FilledButton, 'Change the address'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Change the address'));
       await tester.pumpAndSettle();
-      expect(landedOn, ServiceRoutes.settingsFor(ServiceKey.truenas));
+      // The connection the lens rests on, inside TrueNAS's own form.
+      expect(landedOn?.path, ServiceRoutes.settingsFor(ServiceKey.truenas));
+      expect(landedOn?.queryParameters['i'], isNotEmpty);
     });
 
     testWidgets('a TLS refusal is the same fact as an unreachable host', (
@@ -256,6 +272,29 @@ void main() {
 
       expect(find.byType(RefreshIndicator), findsNothing);
       expect(find.text('tank'), findsOneWidget);
+    });
+
+    testWidgets('P1 with an http:// TrueNAS: the reporting page offers to '
+        'change the address, and no Retry', (tester) async {
+      // The app's own TrueNAS client refuses the address before it dials.
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p1.withConnection(
+          ProfileConnection(
+            WorldConnections.truenas.instance.copyWith(
+              url: 'http://nas.home.arpa',
+            ),
+          ),
+        ),
+        child: const TrueNasReportingScreen(),
+      );
+
+      expect(find.text('TrueNAS needs an https:// address'), findsOneWidget);
+      expect(find.text('Change the address'), findsOneWidget);
+      expect(find.text('Open Settings'), findsNothing);
+      expect(find.text('Retry'), findsNothing);
+
+      await harness.unmount(tester);
     });
   });
 }
