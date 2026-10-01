@@ -353,7 +353,8 @@ void main() {
 
     test('a Seerr leg reports the size of its set', () async {
       final container = createContainer(
-        requests: const [
+        // Seerr said 120, and two arrived: one page of its history did not.
+        requests: SeerrRequestList(isPartial: true, total: 120, const [
           SeerrRequest(
             id: 1,
             status: RequestStatus.pendingApproval,
@@ -368,6 +369,33 @@ void main() {
             createdAt: '2026-04-02T09:05:00Z',
             type: 'movie',
           ),
+        ]),
+      );
+
+      final feed = await container.read(globalNowItemsProvider.future);
+      final seerr = feed.results.singleWhere(
+        (result) => result.service == ServiceKey.seerr,
+      );
+
+      // Seerr's own count, not the rows that arrived, and the rows are marked
+      // as short of it.
+      expect(seerr.total, 120);
+      expect(seerr.items, hasLength(2));
+      expect(seerr.incomplete, isTrue);
+    });
+
+    // A list from anywhere but `getRequests` carries no count from Seerr, and
+    // its length is the rows, not the history.
+    test('a request list with no count from Seerr names no total', () async {
+      final container = createContainer(
+        requests: const [
+          SeerrRequest(
+            id: 1,
+            status: RequestStatus.approved,
+            media: RequestMedia(title: 'Dune'),
+            createdAt: '2026-04-02T09:05:00Z',
+            type: 'movie',
+          ),
         ],
       );
 
@@ -376,8 +404,8 @@ void main() {
         (result) => result.service == ServiceKey.seerr,
       );
 
-      // `getRequests` walks every page, so what arrived is the set.
-      expect(seerr.total, 2);
+      expect(seerr.total, isNull);
+      expect(seerr.incomplete, isFalse);
     });
 
     test('history loads a window and reports hasMore on a full page', () async {

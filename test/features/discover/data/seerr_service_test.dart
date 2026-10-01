@@ -252,6 +252,13 @@ void main() {
       expect(requests, hasLength(60));
       expect(requests.first.id, 1);
       expect(requests.last.id, 60);
+      // Seerr's own count travels with the rows, and every page arrived.
+      expect(
+        requests,
+        isA<SeerrRequestList>()
+            .having((list) => list.total, 'total', 60)
+            .having((list) => list.isPartial, 'isPartial', isFalse),
+      );
     });
 
     test('a failing later page keeps the pages that did arrive', () async {
@@ -286,6 +293,30 @@ void main() {
       // The second page answered nothing, but the first page's requests are
       // still reported — truncation beats blanking the whole list.
       expect(requests, hasLength(50));
+      // And the list says so. The total is still the server's 60, not the 50
+      // that arrived: a count taken from the length was short by the lost
+      // page and read as the whole history.
+      expect(
+        requests,
+        isA<SeerrRequestList>()
+            .having((list) => list.total, 'total', 60)
+            .having((list) => list.isPartial, 'isPartial', isTrue),
+      );
+    });
+
+    test('an answer with no page info names no total', () async {
+      client.getResponseQueue.addAll([
+        {'results': const []},
+      ]);
+
+      final requests = await service.getRequests();
+
+      // Not 0: the server did not say, and a zero here would be a count
+      // nobody gave.
+      expect(
+        requests,
+        isA<SeerrRequestList>().having((list) => list.total, 'total', isNull),
+      );
     });
 
     test('hydration results are cached across refreshes', () async {

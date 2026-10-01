@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:isolate';
 import 'package:dio/dio.dart';
 import 'package:cupola/core/api/api_client.dart';
@@ -32,6 +33,47 @@ class SeerrRequestConflict implements Exception {
 
 int? _asInt(Object? value) =>
     value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
+
+/// A Seerr request history, carrying what Seerr said about its size.
+///
+/// A list, so every reader of [SeerrService.getRequests] goes on reading rows
+/// exactly as before. What it adds is the two facts a figure needs and a bare
+/// list threw away: how many requests the server holds, from its own
+/// `pageInfo.results`, and whether a page of them did not arrive. A count taken
+/// from the list's length was the rows that came back, and a later page that
+/// failed shortened it without a word.
+class SeerrRequestList extends ListBase<SeerrRequest> {
+  SeerrRequestList(
+    Iterable<SeerrRequest> rows, {
+    this.total,
+    this.isPartial = false,
+  }) : _rows = List.of(rows, growable: false);
+
+  final List<SeerrRequest> _rows;
+
+  /// How many requests the server says it holds, or null when its answer did
+  /// not say. Not [length]: a row Seerr sent in a shape this app cannot read is
+  /// still a request, and a page that did not arrive still holds its rows.
+  final int? total;
+
+  /// A page after the first did not arrive. The rows are short of [total],
+  /// and nothing more will be fetched until the list is read again.
+  final bool isPartial;
+
+  @override
+  int get length => _rows.length;
+
+  // Fixed length, as the list this replaced was: rows can be replaced in
+  // place, and adding one throws.
+  @override
+  set length(int value) => _rows.length = value;
+
+  @override
+  SeerrRequest operator [](int index) => _rows[index];
+
+  @override
+  void operator []=(int index, SeerrRequest value) => _rows[index] = value;
+}
 
 /// Row count above which a discover page is mapped off the main isolate.
 ///
@@ -293,30 +335,49 @@ class SeerrService {
   /// and has to say which of them did not answer. A *later* page failing is
   /// still absorbed by [_requestPageSafely]: the pages that arrived are real,
   /// and blanking them would be the same lie in the other direction.
+  ///
+  /// The list returned is a [SeerrRequestList]: it says how many requests the
+  /// server holds and whether a later page went missing, so a count can be
+  /// Seerr's own rather than the length of whatever arrived. Declared as a
+  /// plain list so that the fakes overriding this, and the providers typed on
+  /// it, stay as they are.
   Future<List<SeerrRequest>> getRequests() async {
     final first = await _requestPage(0);
+    final total = first.total;
     final all = <SeerrRequest>[...first.items];
+    var isPartial = false;
 
     // The server reports the true count on the first page, so the remaining
-    // pages can all be asked for in parallel.
-    if (all.length < first.total) {
+    // pages can all be asked for in parallel. With no count there is nothing
+    // to page towards, and the first page is all that can be claimed.
+    if (total != null) {
       final pages = await Future.wait([
         for (
           var skip = _requestPageSize;
-          skip < first.total;
+          skip < total;
           skip += _requestPageSize
         )
           _requestPageSafely(skip),
       ]);
       for (final page in pages) {
+        if (page == null) {
+          isPartial = true;
+          continue;
+        }
         all.addAll(page.items);
       }
     }
 
-    return _hydrateRequests(all);
+    return SeerrRequestList(
+      await _hydrateRequests(all),
+      total: total,
+      isPartial: isPartial,
+    );
   }
 
-  Future<({List<SeerrRequest> items, int total})> _requestPage(int skip) async {
+  Future<({List<SeerrRequest> items, int? total})> _requestPage(
+    int skip,
+  ) async {
     final response = await _client.get(
       '/api/v1/request',
       queryParameters: {
@@ -329,9 +390,9 @@ class SeerrService {
     final data = response.data as Map<String, dynamic>;
     final results = data['results'] as List<dynamic>? ?? const [];
     final pageInfo = data['pageInfo'];
-    final total = pageInfo is Map<String, dynamic>
-        ? (pageInfo['results'] as num?)?.toInt() ?? 0
-        : 0;
+    // Null when the server did not say, never 0: a zero here used to end the
+    // walk after the first page and stand in for a count nobody gave.
+    final total = pageInfo is Map ? _asInt(pageInfo['results']) : null;
     final items = results
         .map((e) {
           try {
@@ -346,14 +407,16 @@ class SeerrService {
   }
 
   /// A later page failing must not blank the requests that did arrive — the
-  /// caller gets the pages that answered and moves on.
-  Future<({List<SeerrRequest> items, int total})> _requestPageSafely(
+  /// caller gets the pages that answered and moves on. Null for a page that
+  /// did not, so the caller can say the list is short; it used to come back
+  /// as an empty page, which nothing could tell from the end of the list.
+  Future<({List<SeerrRequest> items, int? total})?> _requestPageSafely(
     int skip,
   ) async {
     try {
       return await _requestPage(skip);
     } catch (_) {
-      return (items: const <SeerrRequest>[], total: 0);
+      return null;
     }
   }
 

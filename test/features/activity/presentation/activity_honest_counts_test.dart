@@ -8,9 +8,12 @@ library;
 
 import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/global_activity_screen.dart';
@@ -310,6 +313,62 @@ void main() {
           RegExp(r'^Radarr, \d+ items?, Radarr 4K not counted$'),
         ),
         findsNWidgets(2),
+      );
+
+      handle.dispose();
+      await harness.unmount(tester);
+    });
+  });
+
+  group('Seerr', () {
+    testWidgets('P2: a lost page keeps Seerr\'s count and says what came', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final harness = await ProfileHarness.start(Profiles.p2);
+      // 120 requests in pages of 50; the second page fails.
+      harness.network.on(WorldIds.seerr, 'GET', '/api/v1/request', (request) {
+        final skip = int.tryParse(request.query['skip'] ?? '') ?? 0;
+        if (skip == 50) {
+          return NetworkReply.json({'message': 'boom'}, status: 500);
+        }
+        final rows = skip == 0 ? 50 : 20;
+        return NetworkReply.json({
+          'pageInfo': {'pages': 3, 'pageSize': 50, 'results': 120},
+          'results': [
+            for (var i = 0; i < rows; i++)
+              {
+                'id': skip + i + 1,
+                'status': 2,
+                'createdAt': '2026-09-01T10:00:00.000Z',
+                'type': 'movie',
+                'media': {
+                  'id': skip + i + 1,
+                  'status': 3,
+                  'mediaType': 'movie',
+                  'title': 'Request ${skip + i + 1}',
+                },
+              },
+          ],
+        });
+      });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: harness.overrides,
+          child: MaterialApp(
+            theme: AppTheme.darkTheme(),
+            home: const GlobalActivityScreen(),
+          ),
+        ),
+      );
+      await harness.settle(tester);
+
+      // The total is Seerr's; the rows under it are not all of them, and
+      // there is no Show more to fetch the rest, so the header says so.
+      expect(find.text('120 · 70 shown'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Seerr, 120 items, 70 shown'),
+        findsOneWidget,
       );
 
       handle.dispose();

@@ -13,6 +13,8 @@ import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
     show activitySecondaryLine, formatActivityDuration, formatActivitySize;
+import 'package:cupola/features/discover/data/seerr_service.dart'
+    show SeerrRequestList;
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
@@ -98,6 +100,14 @@ class ActivityServiceResult {
   /// False when the user has not set this service up at all.
   final bool configured;
 
+  /// Answered, but a page of it did not arrive, and nothing will fetch it
+  /// until the next load: [items] is short of [total] with no Show more to
+  /// close the gap.
+  ///
+  /// [total] still stands, because it is the server's own count. What this
+  /// flag forbids is reading the rows as all of them.
+  final bool incomplete;
+
   const ActivityServiceResult({
     required this.service,
     required this.items,
@@ -106,6 +116,7 @@ class ActivityServiceResult {
     this.label = '',
     this.total,
     this.error,
+    this.incomplete = false,
   });
 
   const ActivityServiceResult.unconfigured(this.service)
@@ -114,7 +125,8 @@ class ActivityServiceResult {
       error = null,
       configured = false,
       instanceId = '',
-      label = '';
+      label = '',
+      incomplete = false;
 
   /// How this result names itself: the service alone when it is the only
   /// connection, `Sonarr · 2` when it is not.
@@ -213,7 +225,11 @@ String notCountedClause(Iterable<ActivityServiceResult> missing) =>
 /// How many records some connections hold, **as their servers reported it**,
 /// and which connections that figure leaves out.
 class ActivityCount {
-  const ActivityCount({required this.total, required this.notCounted});
+  const ActivityCount({
+    required this.total,
+    required this.notCounted,
+    this.incomplete = false,
+  });
 
   /// The sum of the totals the answering connections reported, or null when
   /// none answered, or when one that answered did not say how many it has: a
@@ -223,6 +239,10 @@ class ActivityCount {
   /// The connections that were asked and failed. [total] is short by
   /// whatever they hold.
   final List<ActivityServiceResult> notCounted;
+
+  /// A connection that answered is missing a page of its rows: [total] is
+  /// right, and the rows under it are not all of them.
+  final bool incomplete;
 
   /// [total] is true of the connections that answered and short of the whole:
   /// a floor, never to be printed as the total.
@@ -248,6 +268,7 @@ ActivityCount activityCount(
   var total = 0;
   var any = false;
   var unknown = false;
+  var incomplete = false;
   final notCounted = <ActivityServiceResult>[];
   for (final result in results) {
     if (service != null && result.service != service) continue;
@@ -256,6 +277,7 @@ ActivityCount activityCount(
       continue;
     }
     if (!result.reached) continue;
+    incomplete = incomplete || result.incomplete;
     final count = result.total;
     if (count == null) {
       unknown = true;
@@ -267,6 +289,7 @@ ActivityCount activityCount(
   return ActivityCount(
     total: any && !unknown ? total : null,
     notCounted: notCounted,
+    incomplete: incomplete,
   );
 }
 
@@ -1090,6 +1113,7 @@ ActivityFeed _merge(List<ActivityServiceResult> results) {
       configured: existing.configured || result.configured,
       // Either half failing means the list for this connection is incomplete.
       error: existing.error ?? result.error,
+      incomplete: existing.incomplete || result.incomplete,
     );
   }
 
@@ -1141,6 +1165,15 @@ Future<ActivityServiceResult> _loadRequestConnection(
     final requests = await ref.read(
       requestsForProvider(connection.instanceId).future,
     );
+    // Seerr's own count, from `pageInfo.results`, and never the length of
+    // what arrived. `getRequests` absorbs a later page that fails, so the
+    // length used to be short by that page's rows while reading as the whole
+    // history. A list that carries no count from Seerr has told us nothing
+    // about the total, and says so.
+    final (total, incomplete) = switch (requests) {
+      SeerrRequestList(:final total, :final isPartial) => (total, isPartial),
+      _ => (null, false),
+    };
     return ActivityServiceResult(
       service: ServiceKey.seerr,
       instanceId: connection.instanceId,
@@ -1148,9 +1181,8 @@ Future<ActivityServiceResult> _loadRequestConnection(
       items: requests
           .map((request) => _requestItem(request, connection))
           .toList(growable: false),
-      // `getRequests` walks every page the server's own count names before it
-      // returns, so what arrived is the set — the same footing as the queue's.
-      total: requests.length,
+      total: total,
+      incomplete: incomplete,
       configured: true,
     );
   } catch (error) {

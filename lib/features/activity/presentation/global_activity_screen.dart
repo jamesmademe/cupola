@@ -1279,7 +1279,9 @@ class _FeedFooter extends StatelessWidget {
 /// that said 2369, and 100 after Show more. When no total was given it says
 /// how many rows are on screen (`50 shown`) rather than passing them off as
 /// the whole, and a connection that failed is named after the figure
-/// (`12 · Sonarr Anime not counted`), since the figure leaves it out.
+/// (`12 · Sonarr Anime not counted`), since the figure leaves it out. A Seerr
+/// that lost a page of its requests keeps its total and says how many rows
+/// came (`120 · 70 shown`).
 class _ServiceGroupHeader extends StatelessWidget {
   final ServiceKey service;
   final ActivityCount count;
@@ -1304,12 +1306,21 @@ class _ServiceGroupHeader extends StatelessWidget {
     final missing = count.notCounted.isEmpty
         ? null
         : notCountedClause(count.notCounted);
-    final figure = [total == null ? '$shown shown' : '$total', ?missing];
+    // A connection that lost a page has the right total over rows that are
+    // not all of it, and no Show more to fetch the rest, so the header says
+    // how many it is drawing: `120 · 70 shown`.
+    final drawn = total != null && count.incomplete ? '$shown shown' : null;
+    final figure = [
+      total == null ? '$shown shown' : '$total',
+      ?drawn,
+      ?missing,
+    ];
     final spoken = [
       service.title,
       total == null
           ? '$shown shown'
           : '$total ${total == 1 ? 'item' : 'items'}',
+      ?drawn,
       ?missing,
     ];
 
