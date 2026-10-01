@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -85,9 +86,14 @@ Future<void> _tap(
   await harness.settle(tester);
 }
 
-Finder _field(String label) => find.byWidgetPredicate(
-  (widget) => widget is TextField && widget.decoration?.labelText == label,
+/// The step's own field labelled [label]: the walk's style, label above.
+Finder _stepField(String label) => find.byWidgetPredicate(
+  (widget) => widget is OnboardingField && widget.label == label,
 );
+
+/// The text input inside [_stepField].
+Finder _field(String label) =>
+    find.descendant(of: _stepField(label), matching: find.byType(TextField));
 
 bool _selected(WidgetTester tester, String choice) =>
     tester
@@ -147,6 +153,23 @@ void main() {
     expect(find.byType(ServiceSettingsScreen), findsNothing);
     expect(find.text('Where does Radarr live?'), findsWidgets);
     expect(_selected(tester, 'Cloudflare Access'), isTrue);
+    // In the step's own style, as its address and key are, never the
+    // connection form's outlined field with a floating label.
+    expect(_stepField('Client ID'), findsOneWidget);
+    expect(_stepField('Client secret'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.labelText != null,
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: _stepField('Client secret'),
+        matching: find.byTooltip('Paste'),
+      ),
+      findsOneWidget,
+    );
 
     await tester.enterText(_field('Client ID'), WorldTokens.radarr.id);
     await tester.enterText(_field('Client secret'), WorldTokens.radarr.secret);
@@ -163,6 +186,28 @@ void main() {
     expect(radarr?.url, WorldHosts.radarr);
     expect(radarr?.credential, worldKey(WorldIds.radarr));
     expect(radarr?.access, WorldTokens.radarr.access);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('a half-filled token in the step is caught under its field, '
+      'in the step\'s style, and nothing is sent', (tester) async {
+    final (harness, _) = await _firstRunAtRadarr(tester, Profiles.p8);
+    await _tap(tester, harness, 'Test connection');
+    await _tap(tester, harness, 'Add a service token');
+    final asked = harness.network.requestsTo(WorldIds.radarr).length;
+
+    await tester.enterText(_field('Client ID'), WorldTokens.radarr.id);
+    await _tap(tester, harness, 'Test connection');
+
+    expect(
+      find.descendant(
+        of: _stepField('Client secret'),
+        matching: find.text('Add the client secret'),
+      ),
+      findsOneWidget,
+    );
+    expect(harness.network.requestsTo(WorldIds.radarr), hasLength(asked));
 
     await harness.unmount(tester);
   });

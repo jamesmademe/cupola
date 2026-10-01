@@ -494,6 +494,18 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
               onMoveToCredential: (value) {
                 if (value.isNotEmpty) widget.apiKeyController.text = value;
               },
+              // The step's own field, as its address and key are drawn: the
+              // label above, a filled well, the reveal toggle on a secret.
+              fieldBuilder: (context, field) => OnboardingField(
+                label: field.label,
+                controller: field.controller,
+                isSecret: field.secret,
+                action: TextInputAction.next,
+                validator: field.validator,
+                trailing: field.onPaste == null
+                    ? null
+                    : _PasteButton(onPaste: field.onPaste!),
+              ),
             ),
           ),
         ),
@@ -892,6 +904,27 @@ class _CertificateCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Paste, beside a secret of the step's Access row.
+class _PasteButton extends StatelessWidget {
+  const _PasteButton({required this.onPaste});
+
+  final VoidCallback onPaste;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    onPressed: onPaste,
+    icon: Icon(
+      Icons.content_paste_rounded,
+      size: 18,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    ),
+    // The reveal toggle's target, beside which it sits.
+    constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+    padding: EdgeInsets.zero,
+    tooltip: 'Paste',
+  );
 }
 
 class _PortChip extends StatelessWidget {

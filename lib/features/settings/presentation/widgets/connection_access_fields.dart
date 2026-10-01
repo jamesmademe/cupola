@@ -192,13 +192,42 @@ class AccessHeaderFields {
   }
 }
 
+/// One field of the Access row, as the row hands it to its host to draw.
+///
+/// [secret] fields are hidden, and [onPaste] fills them from the clipboard:
+/// a token or a password is copied from somewhere else rather than typed.
+/// [validator] runs under the host's `Form`.
+@immutable
+class AccessField {
+  const AccessField({
+    required this.label,
+    required this.controller,
+    this.secret = false,
+    this.validator,
+    this.onPaste,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final bool secret;
+  final FormFieldValidator<String>? validator;
+  final VoidCallback? onPaste;
+}
+
+/// How a host draws the Access row's fields in its own style.
+typedef AccessFieldBuilder =
+    Widget Function(BuildContext context, AccessField field);
+
 /// The Access row: what a connection presents to a gateway in front of its
 /// service, on every request. None, a Cloudflare Access service token, a
 /// proxy's password, or custom headers, with labelled fields and the secrets
 /// hidden behind Paste.
 ///
-/// The same row in the connection form and in the first-run walk. Its fields
-/// validate as `TextFormField`s, so the host wraps it in a `Form`.
+/// The same row in the connection form and in the first-run walk, its fields
+/// drawn in the host's style: the form's outlined fields by default, and
+/// whatever [fieldBuilder] draws otherwise (the walk's filled fields with
+/// their label above). The fields validate as form fields, so the host wraps
+/// the row in a `Form`.
 ///
 /// [onMoveToCredential] receives the value of a custom header that duplicates
 /// the service's own credential header, for the host to put in the
@@ -208,10 +237,15 @@ class ConnectionAccessFields extends StatefulWidget {
     super.key,
     required this.controller,
     required this.onMoveToCredential,
+    this.fieldBuilder,
   });
 
   final ConnectionAccessController controller;
   final ValueChanged<String> onMoveToCredential;
+
+  /// Draws one field in the host's style. Null draws the connection form's
+  /// outlined field.
+  final AccessFieldBuilder? fieldBuilder;
 
   @override
   State<ConnectionAccessFields> createState() => _ConnectionAccessFieldsState();
@@ -243,7 +277,7 @@ class _ConnectionAccessFieldsState extends State<ConnectionAccessFields> {
           ...switch (_access.kind) {
             AccessKind.none => const <Widget>[],
             AccessKind.cloudflare => _cloudflareFields(context),
-            AccessKind.password => _proxyPasswordFields(),
+            AccessKind.password => _proxyPasswordFields(context),
             AccessKind.custom => _customHeaderFields(context),
           },
         ],
@@ -271,20 +305,21 @@ class _ConnectionAccessFieldsState extends State<ConnectionAccessFields> {
         _access.cloudflareSecret.text.trim().isNotEmpty;
     return [
       const SizedBox(height: AppSpacing.md),
-      TextFormField(
-        controller: _access.cloudflareId,
-        decoration: const InputDecoration(labelText: 'Client ID'),
-        autocorrect: false,
-        enableSuggestions: false,
-        textInputAction: TextInputAction.next,
-        // A choice left empty saves no access at all; once one half is in,
-        // the other is needed.
-        validator: (value) => started() && (value ?? '').trim().isEmpty
-            ? 'Add the client ID'
-            : null,
+      _field(
+        context,
+        AccessField(
+          label: 'Client ID',
+          controller: _access.cloudflareId,
+          // A choice left empty saves no access at all; once one half is in,
+          // the other is needed.
+          validator: (value) => started() && (value ?? '').trim().isEmpty
+              ? 'Add the client ID'
+              : null,
+        ),
       ),
       const SizedBox(height: AppSpacing.lg),
       _secretField(
+        context,
         controller: _access.cloudflareSecret,
         label: 'Client secret',
         validator: (value) => started() && (value ?? '').trim().isEmpty
@@ -299,7 +334,7 @@ class _ConnectionAccessFieldsState extends State<ConnectionAccessFields> {
     ];
   }
 
-  List<Widget> _proxyPasswordFields() {
+  List<Widget> _proxyPasswordFields(BuildContext context) {
     bool started() =>
         _access.proxyUsername.text.trim().isNotEmpty ||
         _access.proxyPassword.text.isNotEmpty;
@@ -307,17 +342,21 @@ class _ConnectionAccessFieldsState extends State<ConnectionAccessFields> {
       const SizedBox(height: AppSpacing.md),
       // "Proxy" in both labels: a service that signs in with a username and
       // a password of its own shows that pair above these.
-      TextFormField(
-        controller: _access.proxyUsername,
-        decoration: const InputDecoration(labelText: 'Proxy username'),
-        autocorrect: false,
-        enableSuggestions: false,
-        textInputAction: TextInputAction.next,
-        validator: (value) =>
-            started() ? proxyUsernameProblem((value ?? '').trim()) : null,
+      _field(
+        context,
+        AccessField(
+          label: 'Proxy username',
+          controller: _access.proxyUsername,
+          validator: (value) =>
+              started() ? proxyUsernameProblem((value ?? '').trim()) : null,
+        ),
       ),
       const SizedBox(height: AppSpacing.lg),
-      _secretField(controller: _access.proxyPassword, label: 'Proxy password'),
+      _secretField(
+        context,
+        controller: _access.proxyPassword,
+        label: 'Proxy password',
+      ),
     ];
   }
 
@@ -359,29 +398,29 @@ class _ConnectionAccessFieldsState extends State<ConnectionAccessFields> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: TextFormField(
-                controller: header.name,
-                decoration: const InputDecoration(labelText: 'Header name'),
-                autocorrect: false,
-                enableSuggestions: false,
-                textInputAction: TextInputAction.next,
-                validator: (value) {
-                  if (header.isBlank) return null;
-                  final name = (value ?? '').trim();
-                  // Not saved while it stands: Cupola's own header would win
-                  // and this one would never be sent.
-                  if (duplicatesCredentialHeader(_service, name)) {
-                    return credentialHeaderClash(_service);
-                  }
-                  return customHeaderNameProblem(
-                    _service,
-                    name,
-                    earlier: [
-                      for (final other in headers.take(index))
-                        if (!other.isBlank) other.name.text,
-                    ],
-                  );
-                },
+              child: _field(
+                context,
+                AccessField(
+                  label: 'Header name',
+                  controller: header.name,
+                  validator: (value) {
+                    if (header.isBlank) return null;
+                    final name = (value ?? '').trim();
+                    // Not saved while it stands: Cupola's own header would win
+                    // and this one would never be sent.
+                    if (duplicatesCredentialHeader(_service, name)) {
+                      return credentialHeaderClash(_service);
+                    }
+                    return customHeaderNameProblem(
+                      _service,
+                      name,
+                      earlier: [
+                        for (final other in headers.take(index))
+                          if (!other.isBlank) other.name.text,
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
             IconButton(
@@ -404,6 +443,7 @@ class _ConnectionAccessFieldsState extends State<ConnectionAccessFields> {
           ),
         const SizedBox(height: AppSpacing.sm),
         _secretField(
+          context,
           controller: header.value,
           label: 'Header value',
           validator: (value) {
@@ -423,29 +463,46 @@ class _ConnectionAccessFieldsState extends State<ConnectionAccessFields> {
 
   /// A secret of the row: hidden, with Paste beside it, since a token or a
   /// password is copied from somewhere else rather than typed.
-  Widget _secretField({
+  Widget _secretField(
+    BuildContext context, {
     required TextEditingController controller,
     required String label,
     FormFieldValidator<String>? validator,
-  }) {
-    return TextFormField(
+  }) => _field(
+    context,
+    AccessField(
+      label: label,
       controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        suffixIcon: IconButton(
-          onPressed: () => _paste(controller),
-          icon: const Icon(Icons.content_paste_rounded),
-          tooltip: 'Paste',
-        ),
-      ),
-      obscureText: true,
-      autocorrect: false,
-      enableSuggestions: false,
-      keyboardType: TextInputType.visiblePassword,
-      textInputAction: TextInputAction.next,
+      secret: true,
       validator: validator,
-    );
-  }
+      onPaste: () => _paste(controller),
+    ),
+  );
+
+  /// [field] in the host's style, or the connection form's.
+  Widget _field(BuildContext context, AccessField field) =>
+      widget.fieldBuilder?.call(context, field) ?? _formField(field);
+
+  /// The connection form's field: outlined, its label floating in the frame.
+  Widget _formField(AccessField field) => TextFormField(
+    controller: field.controller,
+    decoration: InputDecoration(
+      labelText: field.label,
+      suffixIcon: field.onPaste == null
+          ? null
+          : IconButton(
+              onPressed: field.onPaste,
+              icon: const Icon(Icons.content_paste_rounded),
+              tooltip: 'Paste',
+            ),
+    ),
+    obscureText: field.secret,
+    autocorrect: false,
+    enableSuggestions: false,
+    keyboardType: field.secret ? TextInputType.visiblePassword : null,
+    textInputAction: TextInputAction.next,
+    validator: field.validator,
+  );
 
   Future<void> _paste(TextEditingController controller) async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);

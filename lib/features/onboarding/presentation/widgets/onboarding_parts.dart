@@ -956,6 +956,7 @@ class OnboardingField extends StatefulWidget {
     this.focusNode,
     this.action,
     this.onSubmitted,
+    this.validator,
   });
 
   final String label;
@@ -999,6 +1000,11 @@ class OnboardingField extends StatefulWidget {
 
   /// A live, non-blocking check on the typed value.
   final String? Function(String value)? warningFor;
+
+  /// A blocking check, run when the `Form` around the field validates: its
+  /// message takes the note slot under the field, in the error tone, as an
+  /// address that cannot be sent does.
+  final FormFieldValidator<String>? validator;
 
   @override
   State<OnboardingField> createState() => _OnboardingFieldState();
@@ -1063,9 +1069,18 @@ class _OnboardingFieldState extends State<OnboardingField> {
 
   @override
   Widget build(BuildContext context) {
+    final validator = widget.validator;
+    if (validator == null) return _build(context, _error);
+    return FormField<String>(
+      validator: (_) => validator(widget.controller.text),
+      builder: (field) => _build(context, field.errorText ?? _error),
+    );
+  }
+
+  Widget _build(BuildContext context, String? error) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final note = _error ?? _warning;
+    final note = error ?? _warning;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1106,7 +1121,7 @@ class _OnboardingFieldState extends State<OnboardingField> {
           decoration: BoxDecoration(
             color: scheme.surfaceContainerHighest,
             borderRadius: AppRadius.borderRadiusMd,
-            border: _error == null
+            border: error == null
                 ? null
                 : Border.all(color: scheme.error.withValues(alpha: 0.6)),
           ),
@@ -1211,7 +1226,7 @@ class _OnboardingFieldState extends State<OnboardingField> {
                 // anything else.
                 color: statusToneColor(
                   scheme,
-                  _error != null ? StatusTone.error : StatusTone.warning,
+                  error != null ? StatusTone.error : StatusTone.warning,
                 ),
               ),
             ),
