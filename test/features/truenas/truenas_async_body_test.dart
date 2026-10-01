@@ -4,8 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
+import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -86,6 +88,33 @@ void main() {
 
       expect(find.byType(ServiceOfflineState), findsOneWidget);
       expect(find.byType(AppErrorState), findsNothing);
+    });
+
+    testWidgets('a NAS that went quiet keeps its last readout under a band', (
+      tester,
+    ) async {
+      // The state Riverpod holds when a provider that had answered fails on a
+      // later poll. The offline well used to replace the pool with "did not
+      // answer" the moment one poll failed.
+      final quiet = AsyncValue<String>.error(
+        const TrueNasException(
+          'connection refused',
+          reason: ServiceFailureReason.unreachable,
+        ),
+        StackTrace.empty,
+        // ignore: invalid_use_of_internal_member
+      ).copyWithPrevious(const AsyncValue.data('tank DEGRADED'));
+
+      await _pump(tester, quiet);
+      await tester.pump();
+
+      expect(find.text('tank DEGRADED'), findsOneWidget);
+      expect(find.byType(FaultBand), findsOneWidget);
+      expect(
+        tester.widget<FaultBand>(find.byType(FaultBand)).tone,
+        StatusTone.error,
+      );
+      expect(find.byType(ServiceOfflineState), findsNothing);
     });
 
     testWidgets('an http:// address asks for https, and offers no Retry', (

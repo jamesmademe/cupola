@@ -47,7 +47,8 @@ import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 ///    [ServiceFailureReason.timeout], [ServiceFailureReason.tls],
 ///    [ServiceFailureReason.localNetworkBlocked]) → [ServiceOfflineState]. Red
 ///    belongs to a connection that did not answer and to nothing else, and this
-///    is the only branch that has earned it.
+///    is the only branch that has earned it. Only with nothing retained: over
+///    a last readout, [AsyncValueWidget] keeps it under its red fault band.
 ///  * anything else — a rejected API key, a method this SCALE build does not
 ///    have, a malformed payload — is a real error with a retry that can work,
 ///    so it goes to [AsyncValueWidget] and its [AppErrorState].
@@ -102,7 +103,13 @@ class TrueNasAsyncBody<T> extends StatelessWidget {
       well = NotConfiguredPlaceholder.forService(ServiceKey.truenas);
     } else if (failure == _TrueNasWell.needsHttps) {
       well = const _NeedsHttps();
-    } else if (failure == _TrueNasWell.offline) {
+    } else if (failure == _TrueNasWell.offline && !value.hasValue) {
+      // Only on a cold open. A NAS that answered a minute ago and then went
+      // quiet still has its last readout, which is the most useful thing on
+      // the screen: a pool that was already degraded stays visible under the
+      // fault band [AsyncValueWidget] draws over it. This well used to win
+      // over a retained value too, and the pool vanished for a "did not
+      // answer" page the moment one poll failed.
       well = ServiceOfflineState(
         serviceName: ServiceKey.truenas.title,
         accent: ServiceKey.truenas.accent,
