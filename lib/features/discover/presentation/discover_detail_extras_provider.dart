@@ -5,6 +5,7 @@ import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 typedef DiscoverDetailExtras = ({
   bool? isInLibrary,
@@ -17,12 +18,21 @@ final discoverDetailExtrasProvider = FutureProvider.autoDispose
       DiscoverDetailExtras,
       ({int mediaId, String mediaType, int? tvdbId, double? voteAverage})
     >((ref, arg) async {
-      final settings = ref.watch(currentSettingsProvider);
       final mediaType = arg.mediaType == 'movie' ? 'movie' : 'tv';
-      final isRadarrConfigured =
-          settings.radarrUrl.isNotEmpty && settings.radarrApiKey.isNotEmpty;
-      final isSonarrConfigured =
-          settings.sonarrUrl.isNotEmpty && settings.sonarrApiKey.isNotEmpty;
+      // The connection the lookups below go to, which is the lens. This used
+      // to read the flat `radarrUrl`/`radarrApiKey`, which are the first
+      // connection's: with two Radarrs and the lens on the second, the gate
+      // asked about one server and the lookup asked another.
+      final isRadarrConfigured = ref.watch(
+        activeInstanceProvider(
+          ServiceKey.radarr,
+        ).select((instance) => instance?.isConfigured ?? false),
+      );
+      final isSonarrConfigured = ref.watch(
+        activeInstanceProvider(
+          ServiceKey.sonarr,
+        ).select((instance) => instance?.isConfigured ?? false),
+      );
 
       bool? isInLibrary;
       List<DiscoverDetailRating>? lookupRatings;

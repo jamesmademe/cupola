@@ -11,6 +11,8 @@ import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart'
     as sonarr;
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/fake_services.dart' as shared;
@@ -376,6 +378,68 @@ void main() {
       expect(sonarrService.getSeriesByTvdbIdCallCount, 1);
       expect(sonarrService.lookupSeriesCallCount, 1);
     });
+
+    group(
+      'with two Radarrs, the check asks about the one the lookup reads',
+      () {
+        // The first connection has no key yet; the lens is on the second,
+        // which is set up. The gate used to read the flat first-connection
+        // fields and skip a lookup that would have gone to the second.
+        const settings = SettingsModel(
+          instances: [
+            ServiceInstance(
+              id: 'radarr',
+              service: ServiceKey.radarr,
+              url: 'https://radarr.example.com',
+            ),
+            ServiceInstance(
+              id: 'radarr-4k00001',
+              service: ServiceKey.radarr,
+              label: '4K',
+              url: 'https://radarr-4k.example.com',
+              credential: 'key-4k',
+            ),
+          ],
+        );
+
+        Future<DiscoverDetailExtras> read(String lens, _FakeRadarr radarr) {
+          final container = ProviderContainer(
+            overrides: [
+              currentSettingsProvider.overrideWith((ref) => settings),
+              initialActiveInstancesProvider.overrideWithValue({
+                ServiceKey.radarr: lens,
+              }),
+              radarrServiceProvider.overrideWith((ref) => radarr),
+            ],
+          );
+          addTearDown(container.dispose);
+          return container.read(
+            discoverDetailExtrasProvider((
+              mediaId: 123,
+              mediaType: 'movie',
+              tvdbId: null,
+              voteAverage: 7.2,
+            )).future,
+          );
+        }
+
+        test('lens on the set-up one: asked', () async {
+          final radarr = _FakeRadarr(movieByTmdbId: buildMovie(tmdbId: 123));
+          final result = await read('radarr-4k00001', radarr);
+
+          expect(result.libraryCheckDone, isTrue);
+          expect(result.isInLibrary, isTrue);
+        });
+
+        test('lens on the one with no key: not asked', () async {
+          final radarr = _FakeRadarr(movieByTmdbId: buildMovie(tmdbId: 123));
+          final result = await read('radarr', radarr);
+
+          expect(result.libraryCheckDone, isFalse);
+          expect(result.isInLibrary, isNull);
+        });
+      },
+    );
   });
 }
 
