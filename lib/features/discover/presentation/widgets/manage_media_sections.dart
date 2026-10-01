@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/core/widgets/cross_service_action.dart';
@@ -275,32 +278,61 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
+/// One copy of the title in the Media section: the server that holds it, as
+/// the controls name it, and what Open can do about it.
+class MediaCopyControls {
+  const MediaCopyControls({
+    required this.serverName,
+    required this.open,
+    required this.onOpen,
+    required this.onRemove,
+  });
+
+  /// `Radarr`, `Radarr · 4K`, or Seerr's own name for a server Cupola has no
+  /// connection to.
+  final String serverName;
+  final MediaCopyOpen open;
+  final VoidCallback onOpen;
+  final VoidCallback onRemove;
+}
+
+/// How Open is gated for one copy.
+enum MediaCopyOpen {
+  /// The copy is on a connection Cupola has: Open goes straight to it.
+  connection,
+
+  /// Which server holds the copy is not known here (Seerr's servers were not
+  /// read): Open is the jump into Cupola's own Radarr, gated on one being set
+  /// up, as it always was.
+  service,
+
+  /// The copy is on a server Seerr knows and Cupola does not: Open is dimmed
+  /// but tappable, and its toast says why and leads to the setup.
+  knownOnlyToSeerr,
+}
+
 /// The title as Radarr or Sonarr holds it: a jump into Cupola's own, and a
-/// removal Seerr performs on its own.
+/// removal Seerr performs on its own, for every copy Seerr's record names.
 ///
-/// Drawn only when Seerr's record names the arr row it filed the title under,
-/// so both controls always have something to act on.
+/// A title on disk in HD and in 4K is two copies on two servers, and each has
+/// its own pair: "Remove from Radarr" used to remove the standard copy
+/// whichever the person meant, and a title only in 4K had no section at all.
 class MediaSection extends StatelessWidget {
   final bool isMovie;
   final bool isDeleting;
-  final VoidCallback? onOpen;
-  final VoidCallback? onRemove;
+  final List<MediaCopyControls> copies;
 
   const MediaSection({
     super.key,
     required this.isMovie,
     required this.isDeleting,
-    this.onOpen,
-    this.onRemove,
+    required this.copies,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final serviceName = isMovie ? 'Radarr' : 'Sonarr';
-    final target = isMovie ? ServiceKey.radarr : ServiceKey.sonarr;
-    final noun = isMovie ? 'movie' : 'series';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,45 +341,10 @@ class MediaSection extends StatelessWidget {
           'Media',
           style: theme.textTheme.titleMedium?.weight(FontWeight.w600),
         ),
-        const SizedBox(height: AppSpacing.md),
-        // The jump is into Cupola's own Radarr, so it is a cross-service
-        // cell: dimmed but tappable when that Radarr is not set up here, and
-        // its toast opens the setup.
-        SizedBox(
-          width: double.infinity,
-          child: CrossServiceAction.builder(
-            target: target,
-            blockedMessage: '${Lexicon.setUp(serviceName)} to open this $noun',
-            onTap: onOpen ?? () {},
-            builder: (context, onPressed, annotate) => OutlinedButton.icon(
-              onPressed: onPressed,
-              icon: annotate(const Icon(Icons.open_in_new)),
-              label: annotate(Text('Open in $serviceName')),
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        // The removal is not. Seerr performs it, on the Radarr it sends
-        // requests to, and this section is drawn only when Seerr says that
-        // Radarr holds the title. It used to be gated on a Radarr set up in
-        // Cupola, which this write never touches, so a stack that knew its
-        // Radarr only through Seerr got "Set up Radarr" for something Seerr
-        // could already do.
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            // Null only while the removal is in flight.
-            onPressed: isDeleting ? null : onRemove,
-            icon: isDeleting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.delete_outline),
-            label: Text('Remove from $serviceName'),
-          ),
-        ),
+        for (final copy in copies) ...[
+          const SizedBox(height: AppSpacing.md),
+          _CopyControls(isMovie: isMovie, isDeleting: isDeleting, copy: copy),
+        ],
         const SizedBox(height: AppSpacing.sm),
         Text(
           '* ${removalSentence(isMovie: isMovie)}',
@@ -361,12 +358,100 @@ class MediaSection extends StatelessWidget {
 
   /// What *Remove from Radarr* does, said once for the note under it and for
   /// the confirmation that asks before it: Seerr does the removing, on its own
-  /// Radarr, and the files go with it.
-  static String removalSentence({required bool isMovie}) {
+  /// Radarr, and the files go with it. [server] names the server when the
+  /// copy's is known.
+  static String removalSentence({required bool isMovie, String? server}) {
     final service = isMovie ? 'Radarr' : 'Sonarr';
     final noun = isMovie ? 'movie' : 'series';
-    return 'Seerr removes this $noun from its $service server and deletes '
-        'its files. This cannot be undone.';
+    final from = server ?? 'its $service server';
+    return 'Seerr removes this $noun from $from and deletes its files. This '
+        'cannot be undone.';
+  }
+}
+
+class _CopyControls extends StatelessWidget {
+  const _CopyControls({
+    required this.isMovie,
+    required this.isDeleting,
+    required this.copy,
+  });
+
+  final bool isMovie;
+  final bool isDeleting;
+  final MediaCopyControls copy;
+
+  @override
+  Widget build(BuildContext context) {
+    final target = isMovie ? ServiceKey.radarr : ServiceKey.sonarr;
+    final noun = isMovie ? 'movie' : 'series';
+    final name = copy.serverName;
+
+    Widget openButton(
+      VoidCallback onPressed,
+      Widget Function(Widget content) annotate,
+    ) => OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: annotate(const Icon(Icons.open_in_new)),
+      label: annotate(Text('Open in $name')),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // The jump is into Cupola's own Radarr, so it is a cross-service
+        // cell: dimmed but tappable when that Radarr is not set up here, and
+        // its toast opens the setup.
+        SizedBox(
+          width: double.infinity,
+          child: switch (copy.open) {
+            MediaCopyOpen.knownOnlyToSeerr => GatedAffordance.builder(
+              enabled: false,
+              hint: 'requires a connection to $name',
+              onTap: copy.onOpen,
+              onBlocked: () => SnackBarHelper.withAction(
+                context,
+                '$name is known only to Seerr. Set it up to open this $noun.',
+                actionLabel: Lexicon.setUp(target.title),
+                onAction: () => context.go(ServiceRoutes.setUp(target)),
+              ),
+              builder: (context, onPressed, annotate) =>
+                  openButton(onPressed, annotate),
+            ),
+            MediaCopyOpen.connection ||
+            MediaCopyOpen.service => CrossServiceAction.builder(
+              target: target,
+              blockedMessage:
+                  '${Lexicon.setUp(target.title)} to open this $noun',
+              onTap: copy.onOpen,
+              builder: (context, onPressed, annotate) =>
+                  openButton(onPressed, annotate),
+            ),
+          },
+        ),
+        const SizedBox(height: AppSpacing.md),
+        // The removal is not. Seerr performs it, on the server that holds the
+        // copy, and this pair is drawn only when Seerr says that server holds
+        // the title. It used to be gated on a Radarr set up in Cupola, which
+        // this write never touches, so a stack that knew its Radarr only
+        // through Seerr got "Set up Radarr" for something Seerr could already
+        // do.
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            // Null only while the removal is in flight.
+            onPressed: isDeleting ? null : copy.onRemove,
+            icon: isDeleting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.delete_outline),
+            label: Text('Remove from $name'),
+          ),
+        ),
+      ],
+    );
   }
 }
 

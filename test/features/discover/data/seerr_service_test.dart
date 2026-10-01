@@ -533,6 +533,13 @@ void main() {
     test('deleteMediaFile hits /api/v1/media/:id/file', () async {
       await service.deleteMediaFile(456);
       expect(client.lastDeletePath, '/api/v1/media/456/file');
+      expect(client.lastDeleteQueryParameters, {'is4k': 'false'});
+    });
+
+    test('deleteMediaFile names the 4K copy when asked for it', () async {
+      // Seerr reads `is4k` off the query; without it the standard copy goes.
+      await service.deleteMediaFile(456, is4k: true);
+      expect(client.lastDeleteQueryParameters, {'is4k': 'true'});
     });
 
     test('deleteRequest hits /api/v1/request/:id', () async {

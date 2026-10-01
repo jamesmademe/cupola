@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/domain/seerr_media_copy.dart';
 import 'package:cupola/features/discover/presentation/discover_navigation_utils.dart';
 import 'package:cupola/features/discover/presentation/manage_media_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/manage_media_sections.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// Bottom sheet for managing media requests and files via Seerr.
 ///
@@ -81,10 +85,14 @@ class ManageMediaSheet extends ConsumerWidget {
           MediaSection(
             isMovie: isMovie,
             isDeleting: state.isDeleting,
-            onOpen: () => _openInService(context, ref),
-            onRemove: () {
-              _removeFromService(context, ref, args);
-            },
+            copies: [
+              for (final copy in notifier.boundCopies(
+                // Unknown while loading or after a failure: each copy then
+                // acts as Manage always did, and is never bound to a guess.
+                ref.watch(manageMediaServersProvider(notifier.arr)).value,
+              ))
+                _controlsFor(context, ref, args, copy),
+            ],
           ),
         ],
         const SizedBox(height: AppSpacing.xl),
@@ -134,25 +142,64 @@ class ManageMediaSheet extends ConsumerWidget {
     SnackBarHelper.error(context, error);
   }
 
-  Future<void> _removeFromService(
+  /// One copy's pair of controls, named for the server that holds it.
+  MediaCopyControls _controlsFor(
     BuildContext context,
     WidgetRef ref,
     ManageMediaArgs args,
-  ) async {
+    SeerrBoundCopy copy,
+  ) {
+    final settings = ref.watch(currentSettingsProvider);
+    final name = copy.serverName(
+      connectionTitle: (connection) =>
+          settings.connectionTitle(connection.id, connection.service),
+    );
+    return MediaCopyControls(
+      serverName: name,
+      open: copy.connection != null
+          ? MediaCopyOpen.connection
+          : copy.isKnownOnlyToSeerr
+          ? MediaCopyOpen.knownOnlyToSeerr
+          : MediaCopyOpen.service,
+      onOpen: () => _openCopy(context, ref, copy),
+      onRemove: () {
+        _removeFromService(
+          context,
+          ref,
+          args,
+          copy: copy,
+          name: name,
+          // The sentence names the server only when it is known which.
+          knownServer: copy.server != null,
+        );
+      },
+    );
+  }
+
+  Future<void> _removeFromService(
+    BuildContext context,
+    WidgetRef ref,
+    ManageMediaArgs args, {
+    required SeerrBoundCopy copy,
+    required String name,
+    required bool knownServer,
+  }) async {
     final notifier = ref.read(manageMediaProvider(args).notifier);
     if (notifier.seerrMediaId == null) {
       return;
     }
 
     final isMovie = mediaType == 'movie';
-    final service = isMovie ? 'Radarr' : 'Sonarr';
     // Neutral: the verb says the whole of it — the files go too — and the
     // sentence says who does it and that it cannot be undone. Red means
     // unreachable and nothing else.
     final result = await showAppConfirmDialog(
       context: context,
-      title: 'Remove from $service?',
-      message: MediaSection.removalSentence(isMovie: isMovie),
+      title: 'Remove from $name?',
+      message: MediaSection.removalSentence(
+        isMovie: isMovie,
+        server: knownServer ? name : null,
+      ),
       confirmLabel: 'Remove and delete files',
     );
 
@@ -160,7 +207,9 @@ class ManageMediaSheet extends ConsumerWidget {
       return;
     }
 
-    final error = await notifier.removeFromService();
+    // The copy's own resolution: Seerr removes the standard copy unless it
+    // is told otherwise.
+    final error = await notifier.removeFromService(is4k: copy.copy.is4k);
     if (!context.mounted) {
       return;
     }
@@ -169,7 +218,7 @@ class ManageMediaSheet extends ConsumerWidget {
       // Named: "removed from service" did not say which one.
       SnackBarHelper.success(
         context,
-        '${isMovie ? 'Movie' : 'Series'} removed from $service',
+        '${isMovie ? 'Movie' : 'Series'} removed from $name',
       );
       Navigator.pop(context);
       onDataChanged();
@@ -216,6 +265,34 @@ class ManageMediaSheet extends ConsumerWidget {
     }
 
     SnackBarHelper.error(context, error);
+  }
+
+  /// Opens the copy on the connection that holds it, by its id there. With no
+  /// connection known it is the old jump: the title looked up in Cupola's own
+  /// Radarr by its TMDB id.
+  Future<void> _openCopy(
+    BuildContext context,
+    WidgetRef ref,
+    SeerrBoundCopy copy,
+  ) async {
+    final connection = copy.connection;
+    if (connection == null) {
+      await _openInService(context, ref);
+      return;
+    }
+    final router = GoRouter.of(context);
+    Navigator.pop(context);
+    router.push(
+      mediaType == 'movie'
+          ? ServiceRoutes.radarrMovie(
+              copy.copy.externalId,
+              instanceId: connection.id,
+            )
+          : ServiceRoutes.sonarrSeries(
+              copy.copy.externalId,
+              instanceId: connection.id,
+            ),
+    );
   }
 
   Future<void> _openInService(BuildContext context, WidgetRef ref) async {

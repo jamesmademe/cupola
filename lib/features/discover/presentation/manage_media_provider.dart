@@ -1,10 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
+
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
+import 'package:cupola/features/discover/domain/seerr_media_copy.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
 typedef ManageMediaArgs = ({
@@ -42,6 +46,15 @@ class ManageMediaState {
     );
   }
 }
+
+/// The servers the lens's Seerr keeps [ServiceKey.radarr] or
+/// [ServiceKey.sonarr] titles on, for the Manage sheet to bind each copy to
+/// its server. Loading or failed reads as unknown, and the sheet then acts as
+/// it did before it knew: never on a server it guessed.
+final manageMediaServersProvider = FutureProvider.autoDispose
+    .family<List<SeerrArrServer>, ServiceKey>((ref, arr) {
+      return ref.watch(seerrServiceProvider).getArrServers(arr);
+    }, retry: noProviderRetry);
 
 final manageMediaProvider = NotifierProvider.autoDispose
     .family<ManageMediaNotifier, ManageMediaState, ManageMediaArgs>(
@@ -93,7 +106,35 @@ class ManageMediaNotifier extends Notifier<ManageMediaState> {
 
   int? get externalServiceId => arg.mediaInfo['externalServiceId'] as int?;
 
-  bool get hasExternalService => externalServiceId != null;
+  /// The arr this title's copies live in.
+  ServiceKey get arr =>
+      arg.mediaType == 'movie' ? ServiceKey.radarr : ServiceKey.sonarr;
+
+  /// Every copy an arr holds for Seerr, the standard one first: read from
+  /// `externalServiceId`/`serviceId` and `externalServiceId4k`/`serviceId4k`.
+  /// It read `externalServiceId` alone, so a title only in 4K had no Media
+  /// section, and a removal could only ever reach the standard copy.
+  List<SeerrMediaCopy> get copies =>
+      SeerrMediaCopy.fromMediaInfo(arg.mediaInfo);
+
+  bool get hasExternalService => copies.isNotEmpty;
+
+  /// [copies] bound to the servers Seerr keeps them on ([servers], null when
+  /// they were not read) and to Cupola's connections to those servers.
+  List<SeerrBoundCopy> boundCopies(List<SeerrArrServer>? servers) {
+    final connections = ref
+        .read(currentSettingsProvider)
+        .configuredInstancesOf(arr);
+    return [
+      for (final copy in copies)
+        SeerrBoundCopy.of(
+          copy,
+          arr: arr,
+          servers: servers,
+          connections: connections,
+        ),
+    ];
+  }
 
   /// Whether the arr this item lives in is set up — through the registry's own
   /// check, not the flat first-instance projections (`radarrUrl`,
@@ -128,7 +169,9 @@ class ManageMediaNotifier extends Notifier<ManageMediaState> {
     }
   }
 
-  Future<String?> removeFromService() async {
+  /// Has Seerr remove one copy, the 4K one when [is4k]: from the server that
+  /// holds it, with its files.
+  Future<String?> removeFromService({bool is4k = false}) async {
     final mediaId = seerrMediaId;
     if (mediaId == null) {
       return _noMediaId;
@@ -137,7 +180,7 @@ class ManageMediaNotifier extends Notifier<ManageMediaState> {
     state = state.copyWith(isDeleting: true);
     try {
       final service = ref.read(seerrServiceProvider);
-      await service.deleteMediaFile(mediaId);
+      await service.deleteMediaFile(mediaId, is4k: is4k);
       return null;
     } catch (error) {
       return 'Could not remove this title. '

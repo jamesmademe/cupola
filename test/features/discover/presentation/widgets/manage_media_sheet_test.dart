@@ -239,8 +239,14 @@ class _RecordingSeerr extends FakeSeerrService {
   @override
   Future<void> deleteRequest(int requestId) async => deleted.add(requestId);
 
+  /// Which copy each removal asked for, in step with [filesRemoved].
+  final filesRemoved4k = <bool>[];
+
   @override
-  Future<void> deleteMediaFile(int mediaId) async => filesRemoved.add(mediaId);
+  Future<void> deleteMediaFile(int mediaId, {bool is4k = false}) async {
+    filesRemoved.add(mediaId);
+    filesRemoved4k.add(is4k);
+  }
 }
 
 Future<void> _pumpSheet(

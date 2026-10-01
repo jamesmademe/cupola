@@ -967,7 +967,14 @@ class SeerrService {
   /// Deletes the media files from Radarr/Sonarr via Seerr.
   /// This removes the actual files from the media server.
   /// [mediaId] is the Seerr internal media ID (not TMDB ID).
-  Future<void> deleteMediaFile(int mediaId) async {
-    await _client.delete('/api/v1/media/$mediaId/file');
+  ///
+  /// [is4k] says which copy: Seerr removes the one it keeps on the 4K server
+  /// only when asked to (`?is4k=true`), and the standard one otherwise. This
+  /// used to send neither, so removing a 4K copy removed the standard one.
+  Future<void> deleteMediaFile(int mediaId, {bool is4k = false}) async {
+    await _client.delete(
+      '/api/v1/media/$mediaId/file',
+      queryParameters: {'is4k': is4k ? 'true' : 'false'},
+    );
   }
 }

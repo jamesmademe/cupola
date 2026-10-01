@@ -267,6 +267,38 @@ void main() {
       expect(container.read(manageMediaProvider(args)).isDeleting, isFalse);
     });
 
+    test('removeFromService removes the copy it is asked for', () async {
+      final service = _FakeSeerr();
+      final args = _buildArgs(mediaInfo: {'id': 44, 'requests': const []});
+      final container = createContainer(args: args, service: service);
+      final notifier = container.read(manageMediaProvider(args).notifier);
+
+      await notifier.removeFromService(is4k: true);
+      await notifier.removeFromService();
+
+      // Seerr removes the standard copy unless told otherwise: the 4K one
+      // was out of reach.
+      expect(service.deletedMediaFileIs4k, [true, false]);
+    });
+
+    test('a title only in 4K has its copy, and a Media section', () {
+      final args = _buildArgs(
+        mediaInfo: {
+          'id': 44,
+          'externalServiceId4k': 3,
+          'serviceId4k': 1,
+          'requests': const [],
+        },
+      );
+      final notifier = createContainer(
+        args: args,
+      ).read(manageMediaProvider(args).notifier);
+
+      expect(notifier.copies.single.is4k, isTrue);
+      expect(notifier.hasExternalService, isTrue);
+      expect(notifier.showMediaSection, isTrue);
+    });
+
     test('removeFromService returns error when service throws', () async {
       final service = _FakeSeerr(throwOnDeleteMediaFile: true);
       final args = _buildArgs(mediaInfo: {'id': 44, 'requests': const []});
@@ -363,10 +395,14 @@ class _FakeSeerr extends shared.FakeSeerrService {
     deletedRequestIds.add(requestId);
   }
 
+  /// Which copy each removal asked for, in step with [deletedMediaFileIds].
+  final List<bool> deletedMediaFileIs4k = <bool>[];
+
   @override
-  Future<void> deleteMediaFile(int mediaId) async {
+  Future<void> deleteMediaFile(int mediaId, {bool is4k = false}) async {
     if (throwOnDeleteMediaFile) throw Exception('delete media file failed');
     deletedMediaFileIds.add(mediaId);
+    deletedMediaFileIs4k.add(is4k);
   }
 
   @override
