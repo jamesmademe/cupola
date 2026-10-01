@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:cupola/core/network/answer_guard.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/release_search/domain/release_search_reach.dart';
@@ -61,8 +62,9 @@ enum ReleaseSearchFailureKind {
   /// The service itself answered with an error, typically an indexer throwing.
   serverError,
 
-  /// The service answered and refused the key (401/403). Nothing was searched;
-  /// the fix is the key in the form, not the network.
+  /// The service answered and refused the key (401/403), or something in front
+  /// of it refused the request in its place. Nothing was searched; the fix is
+  /// in the connection's form, not the network.
   refused,
 
   /// The app was sent to the background while the search was in flight, and the
@@ -299,6 +301,29 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
   final response = error.response;
   final status = response?.statusCode;
   final gateway = _gatewayFrom(response);
+
+  // Something in front of the service answered in its place (Cloudflare
+  // Access, a sign-in page, a proxy's password prompt): nothing was searched,
+  // and the fix is the access the gateway asks for, never the key. Read off
+  // the in-app transport's verdict, or off the answer the background task
+  // kept, which carries its headers but not its body.
+  final access =
+      accessGatewayOf(error) ??
+      (response == null ? null : gatewayRefusalOf(response));
+  if (access != null) {
+    final headline = failureHeadline(
+      ServiceFailureReason.accessGateway,
+      subject: 'the service',
+      gateway: access,
+    );
+    return ReleaseSearchFailure(
+      kind: ReleaseSearchFailureKind.refused,
+      headline: '${headline[0].toUpperCase()}${headline.substring(1)}.',
+      diagnosis: '${accessGatewaySentence(access)} Nothing was searched.',
+      detail: status == null ? error.type.name : 'HTTP $status',
+      gateway: gateway,
+    );
+  }
 
   // A gateway that closes the connection answers with its own status or its own
   // HTML, never the service's JSON.
