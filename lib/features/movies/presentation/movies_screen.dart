@@ -79,7 +79,11 @@ class MoviesScreen extends ConsumerWidget {
         queue,
       ),
       onRefresh: (ref) {
-        ref.invalidate(radarrQueueSnapshotProvider);
+        // The family behind the snapshot, not the lens wrapper alone: that
+        // one only resolves the lens and re-watches its family member, which
+        // keeps the answer it already had, so a pull redrew every badge over
+        // the queue from before it.
+        ref.invalidate(radarrQueueSnapshotForProvider);
         // The rail above this grid reads its own non-swallowing copy of the
         // library, so that a dark Radarr prints "—" and not "Movies 0". The
         // scaffold invalidates `libraryProvider` for the grid; without this
