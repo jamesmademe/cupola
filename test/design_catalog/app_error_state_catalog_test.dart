@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'catalog.dart';
 
@@ -120,7 +121,8 @@ void main() {
         width: 360,
       ),
       CatalogScene(
-        'InlineErrorRetry · a certificate Cupola does not trust: both verbs, '
+        'InlineErrorRetry(service:) · a certificate Cupola does not trust: both '
+        'verbs, '
         'the amber remedy first, Retry in ink, on their own row under the '
         'sentence',
         (_) => InlineErrorRetry(
@@ -128,6 +130,7 @@ void main() {
               'Unraid has a certificate Cupola does not trust, so its shares '
               'are not shown.',
           error: const ClassifiedFailure(ServiceFailureReason.tls),
+          service: ServiceKey.unraid,
           onRetry: () {},
         ),
         width: 360,

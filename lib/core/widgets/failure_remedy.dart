@@ -25,22 +25,40 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// cannot open.
 @immutable
 class FailureRemedy {
-  const FailureRemedy._(this.service, this.reason, this.label);
+  const FailureRemedy._(
+    this.service,
+    this.reason,
+    this.label, {
+    this.instanceId,
+  });
 
   /// The remedy for [error] on [service], or null. See the class comment.
-  static FailureRemedy? of(ServiceKey? service, Object? error) =>
-      service == null
+  ///
+  /// [instanceId] names the connection the failed read went to, when the
+  /// caller knows it; without one the remedy opens the lens's.
+  static FailureRemedy? of(
+    ServiceKey? service,
+    Object? error, {
+    String? instanceId,
+  }) => service == null
       ? null
-      : forReason(service, classifyConnectionFailure(error));
+      : forReason(
+          service,
+          classifyConnectionFailure(error),
+          instanceId: instanceId,
+        );
 
   /// The remedy for a failure already classified as [reason], or null when
   /// `Retry` is the remedy.
   static FailureRemedy? forReason(
     ServiceKey service,
-    ServiceFailureReason reason,
-  ) {
+    ServiceFailureReason reason, {
+    String? instanceId,
+  }) {
     final label = describeFailure(service, reason).remedy;
-    return label == null ? null : FailureRemedy._(service, reason, label);
+    return label == null
+        ? null
+        : FailureRemedy._(service, reason, label, instanceId: instanceId);
   }
 
   /// The service [text] starts by naming, or null.
@@ -81,6 +99,9 @@ class FailureRemedy {
   final ServiceKey service;
   final ServiceFailureReason reason;
 
+  /// The connection whose form holds the fix, or null for the lens's.
+  final String? instanceId;
+
   /// The remedy's verb, which is the action's label: `Paste the key again`.
   final String label;
 
@@ -90,8 +111,16 @@ class FailureRemedy {
   bool get retryHelps =>
       failureRetryHelps(reason, credential: refusedCredentialOf(service));
 
-  /// Applies the remedy: opens the connection form where the fix lives.
-  void open(BuildContext context) => openConnectionForm(context, service);
+  /// Applies the remedy: opens the connection form where the fix lives, the
+  /// named connection's when there is one and the lens's otherwise.
+  void open(BuildContext context) {
+    final named = instanceId;
+    if (named == null || named.isEmpty) {
+      openConnectionForm(context, service);
+    } else {
+      context.push(ServiceRoutes.settingsForConnection(service, named));
+    }
+  }
 }
 
 /// The one fill a fault gets: the remedy of an **amber** fault, in

@@ -465,6 +465,46 @@ void main() {
       expect(find.text('Form radarr'), findsOneWidget);
     });
 
+    testWidgets('InlineErrorRetry: an explicit service and connection win '
+        'over the words', (tester) async {
+      // The message names no service at all, and the caller says whose read
+      // it was and which connection it went to.
+      await _pump(
+        tester,
+        InlineErrorRetry(
+          message: 'The queue is not shown.',
+          error: _status(401),
+          service: ServiceKey.radarr,
+          instanceId: 'radarr-second',
+          onRetry: () {},
+        ),
+      );
+
+      await tester.tap(find.text('Paste the key again'));
+      await tester.pumpAndSettle();
+      expect(_landedOn?.path, '/settings/service/radarr');
+      expect(_landedOn?.queryParameters['i'], 'radarr-second');
+    });
+
+    testWidgets('InlineErrorRetry: the explicit service wins over the one the '
+        'message starts with', (tester) async {
+      await _pump(
+        tester,
+        InlineErrorRetry(
+          message:
+              'Seerr answered but refused the key, so this row is '
+              'missing.',
+          error: _status(403),
+          service: ServiceKey.qbittorrent,
+          onRetry: () {},
+        ),
+      );
+
+      // qBittorrent takes a sign-in, so its remedy is not the key's.
+      expect(_filled('Sign in again'), findsOneWidget);
+      expect(find.text('Paste the key again'), findsNothing);
+    });
+
     testWidgets('InlineErrorRetry: a certificate keeps both verbs, the remedy '
         'first, under the sentence', (tester) async {
       const error = ClassifiedFailure(ServiceFailureReason.tls);

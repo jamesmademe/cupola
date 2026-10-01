@@ -5,6 +5,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 
 /// Inline failure notice with a retry action, so a failed section reads as a
@@ -63,15 +64,22 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 /// left out because the same key can only be refused again. Where the same
 /// request can still succeed (a refused sign-in whose ban runs out, a
 /// certificate or an address the server may yet fix) both stay, the remedy first, on a row of their own under the sentence
-/// so it keeps its width. The service is the one [message] starts by naming,
-/// which the classification's sentence always does; a message that names none
-/// keeps Retry.
+/// so it keeps its width.
+///
+/// Whose form the remedy opens is [service], and [instanceId] when the caller
+/// knows which connection the read went to (the lens's otherwise). A caller
+/// that passes neither still gets the remedy through a fallback: the service
+/// the message starts by naming, which `sectionFailureMessage` always does.
+/// That is a reading of words, kept for the callers that do not pass a
+/// service yet; a message that names none keeps Retry.
 class InlineErrorRetry extends StatelessWidget {
   const InlineErrorRetry({
     super.key,
     required this.message,
     required this.onRetry,
     required this.error,
+    this.service,
+    this.instanceId,
   }) : _height = null;
 
   /// A notice locked to [_fixedHeight], for slots whose height must not change
@@ -81,6 +89,8 @@ class InlineErrorRetry extends StatelessWidget {
     required this.message,
     required this.onRetry,
     required this.error,
+    this.service,
+    this.instanceId,
   }) : _height = _fixedHeight;
 
   /// Height of the [InlineErrorRetry.fixedHeight] variant.
@@ -92,6 +102,14 @@ class InlineErrorRetry extends StatelessWidget {
   /// What failed, classified for the glyph's tone. See the class comment. A
   /// null is a failure nobody can attribute: amber, never read as silence.
   final Object? error;
+
+  /// Whose failure this is, for the remedy's form. Wins over the service the
+  /// message names; see *The remedy leads*.
+  final ServiceKey? service;
+
+  /// The connection the failed read went to, when the caller knows it: the
+  /// remedy opens that connection's form rather than the lens's.
+  final String? instanceId;
 
   /// `null` for the self-sizing default; [_fixedHeight] for the fixed variant.
   final double? _height;
@@ -113,8 +131,9 @@ class InlineErrorRetry extends StatelessWidget {
     );
     final glyph = failureIcon(reason);
     final remedy = FailureRemedy.of(
-      FailureRemedy.serviceNamedBy(message),
+      service ?? FailureRemedy.serviceNamedBy(message),
       error,
+      instanceId: instanceId,
     );
     // The remedy of a fault, the form's fix or Retry when retrying is the
     // fix, wears the amber fill: the Presence Rule gives the line exactly one
