@@ -280,6 +280,7 @@ class ServicesInFlightSection extends ConsumerWidget {
                 // that did not answer.
                 label: inFlightEmptyLabel(
                   faults: value.faults.length,
+                  held: value.held,
                   whole: value.coverage.isWhole,
                 ),
               );

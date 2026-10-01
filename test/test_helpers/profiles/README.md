@@ -55,6 +55,9 @@ Profiles can be varied:
 - `withDownloads([download])` adds downloads to the world: a torrent in
   error, say. Each is drawn by its client's fake and, when it names an arr,
   by that arr's queue.
+- `withPausedQueue(id)` has somebody pause a usenet client's download
+  queue, with plenty of room left: SABnzbd answers `paused` and NZBGet
+  `DownloadPaused`.
 - `withFullDisk(id)` fills a download client's disk. SABnzbd answers its
   queue paused, as it pauses itself on a full disk, with 0.42 GB free in its
   download folder and every slot reporting its job's own status. NZBGet
@@ -249,4 +252,5 @@ four-column user of the local sign-in.
   is a SABnzbd slot `Paused` with an `ENCRYPTED` label (its arr says
   paused). On NZBGet, `failed` and `heldByClient` are a group whose `Health`
   is below its `CriticalHealth`, the second one `PAUSED` by the health
-  check.
+  check. `paused` is a download somebody paused, on whichever client holds
+  it.

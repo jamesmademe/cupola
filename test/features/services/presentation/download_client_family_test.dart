@@ -478,4 +478,77 @@ void main() {
       await harness.unmount(tester);
     });
   });
+
+  group('paused on purpose', () {
+    /// A Radarr grab somebody paused in qBittorrent: Radarr says paused.
+    const pausedGrab = WorldDownload(
+      id: 'a1f0c3d4e5f60718293a4b5c6d7e8f9012345614',
+      release: 'Coffee.Run.2020.1080p.WEB',
+      client: 'qbittorrent',
+      state: DownloadState.paused,
+      progress: 0.3,
+      size: _gb,
+      arr: WorldIds.radarr,
+      title: WorldTitles.coffeeRun,
+    );
+
+    test('P1: a torrent paused on purpose is backlog, neither in flight nor '
+        'a decision, on the arr\'s row too', () async {
+      final container = await _start(Profiles.p1.withDownloads([pausedGrab]));
+      final inFlight = await container.read(servicesInFlightProvider.future);
+
+      expect(
+        inFlight.preview.map((item) => item.downloadId?.toLowerCase()),
+        isNot(contains(pausedGrab.id)),
+      );
+      expect(
+        inFlight.faults.map((item) => item.downloadId?.toLowerCase()),
+        isNot(contains(pausedGrab.id)),
+      );
+      expect(inFlight.held, 1);
+      // Sprite Fright, Cosmos E4 and E5, Elephants Dream and Sintel on the
+      // 4K: what was moving before the pause, and nothing more.
+      expect(inFlight.activeCount, 5);
+    });
+
+    test('P1, SABnzbd paused on purpose: its jobs are held, as a paused '
+        'torrent is', () async {
+      final container = await _start(
+        Profiles.p1.withPausedQueue(WorldIds.sabnzbd),
+      );
+      final inFlight = await container.read(servicesInFlightProvider.future);
+
+      for (final download in [
+        WorldDownloads.elephantsDream4k,
+        WorldDownloads.sintel4k,
+      ]) {
+        expect(
+          inFlight.preview.where((item) => item.downloadId == download.id),
+          isEmpty,
+        );
+        expect(
+          inFlight.faults.where((item) => item.downloadId == download.id),
+          isEmpty,
+        );
+      }
+      expect(inFlight.held, 2);
+      expect(inFlight.activeCount, 3);
+    });
+
+    test('P4 + NZBGet paused on purpose: its job is held', () async {
+      final container = await _start(
+        Profiles.p4
+            .withConnection(WorldConnections.nzbget)
+            .withDownloads([_nzbgetGrab])
+            .withPausedQueue(WorldConnections.nzbget.id),
+      );
+      final inFlight = await container.read(servicesInFlightProvider.future);
+
+      expect(
+        inFlight.preview.where((item) => item.downloadId == _nzbgetGrab.id),
+        isEmpty,
+      );
+      expect(inFlight.held, 1);
+    });
+  });
 }

@@ -208,6 +208,8 @@ void main() {
       expect(inFlightEmptyLabel(faults: 18), 'Nothing moving');
       // SABnzbd's queue is not empty because SABnzbd did not answer.
       expect(inFlightEmptyLabel(faults: 0, whole: false), 'Nothing moving');
+      // A paused queue is not an empty one.
+      expect(inFlightEmptyLabel(faults: 0, held: 3), 'Nothing moving');
     });
   });
 

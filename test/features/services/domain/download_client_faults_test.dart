@@ -32,7 +32,7 @@ void main() {
       }
     });
 
-    test('a seeding or stopped torrent is not in flight', () {
+    test('a seeding or a finished stopped torrent is not in flight', () {
       for (final status in [6, 5, 0]) {
         expect(
           transmissionInFlight(_torrent(status: status)),
@@ -40,6 +40,20 @@ void main() {
           reason: 'status $status',
         );
       }
+    });
+
+    test('a stopped torrent with bytes still to come is held', () {
+      expect(
+        transmissionInFlight(
+          TransmissionTorrent.fromJson({
+            'hashString': 'abc',
+            'name': 'Night.Shift.S02E04.1080p.WEB',
+            'status': 0,
+            'leftUntilDone': 1024,
+          }),
+        ),
+        const InFlightReading.held(),
+      );
     });
 
     test('a stalled download is a stall', () {
@@ -122,21 +136,30 @@ void main() {
       );
     });
 
-    test('seeding, paused, stopped and checking torrents are not in '
+    test('seeding, checking and finished stopped torrents are not in '
         'flight', () {
       for (final state in [
         'uploading',
         'stalledUP',
         'forcedUP',
         'queuedUP',
-        'pausedDL',
-        'stoppedDL',
+        'pausedUP',
         'stoppedUP',
         'checkingDL',
         'checkingUP',
         'something-new',
       ]) {
         expect(qbittorrentInFlight(state), isNull, reason: state);
+      }
+    });
+
+    test('a download paused or stopped on purpose is held', () {
+      for (final state in ['pausedDL', 'stoppedDL']) {
+        expect(
+          qbittorrentInFlight(state),
+          const InFlightReading.held(),
+          reason: state,
+        );
       }
     });
   });
@@ -277,20 +300,48 @@ void main() {
       expect(sabnzbdLabelReason('VERSCHLÜSSELT'), 'VERSCHLÜSSELT');
     });
 
-    test('a job paused only to wait out propagation stays a transfer', () {
+    test('a job waiting out propagation is a transfer waiting its turn; a '
+        'wait label on a paused job is no fault', () {
+      expect(
+        sabnzbdSlotInFlight(
+          slot(status: 'Propagating', labels: ['PROPAGATING 5 min']),
+          stoppedByDisk: false,
+        ),
+        const InFlightReading.moving(),
+      );
       expect(
         sabnzbdSlotInFlight(
           slot(status: 'Paused', labels: ['PROPAGATING 5 min']),
           stoppedByDisk: false,
         ),
-        const InFlightReading.moving(),
+        const InFlightReading.held(),
       );
     });
 
-    test('a job somebody paused stays a transfer, even on a full disk', () {
+    test('a job somebody paused is held, even on a full disk', () {
       expect(
         sabnzbdSlotInFlight(slot(status: 'Paused'), stoppedByDisk: true),
-        const InFlightReading.moving(),
+        const InFlightReading.held(),
+      );
+    });
+
+    test('a queue somebody paused holds its jobs, and still stalls the ones '
+        'SABnzbd held', () {
+      expect(
+        sabnzbdSlotInFlight(
+          slot(status: 'Queued'),
+          stoppedByDisk: false,
+          pausedOnPurpose: true,
+        ),
+        const InFlightReading.held(),
+      );
+      expect(
+        sabnzbdSlotInFlight(
+          slot(status: 'Paused', labels: ['ENCRYPTED']),
+          stoppedByDisk: false,
+          pausedOnPurpose: true,
+        ).fault,
+        InFlightFault.stalled,
       );
     });
 
@@ -425,10 +476,34 @@ void main() {
       );
       expect(
         nzbgetGroupInFlight(group(status: 'PAUSED'), stoppedByDisk: true),
-        const InFlightReading.moving(),
+        const InFlightReading.held(),
       );
       expect(
         nzbgetGroupInFlight(group(status: 'UNPACKING'), stoppedByDisk: true),
+        const InFlightReading.moving(),
+      );
+    });
+
+    test('a group somebody paused, or a queue paused on purpose, is held; '
+        'post-processing goes on', () {
+      expect(
+        nzbgetGroupInFlight(group(status: 'PAUSED'), stoppedByDisk: false),
+        const InFlightReading.held(),
+      );
+      expect(
+        nzbgetGroupInFlight(
+          group(status: 'QUEUED'),
+          stoppedByDisk: false,
+          pausedOnPurpose: true,
+        ),
+        const InFlightReading.held(),
+      );
+      expect(
+        nzbgetGroupInFlight(
+          group(status: 'UNPACKING'),
+          stoppedByDisk: false,
+          pausedOnPurpose: true,
+        ),
         const InFlightReading.moving(),
       );
     });

@@ -1209,6 +1209,7 @@ class ServiceQueueItem {
     this.mediaId,
     this.outputPath,
     this.category,
+    this.held = false,
     MediaNames? names,
   }) : _names = names;
 
@@ -1346,11 +1347,18 @@ class ServiceQueueItem {
     mediaId: mediaId,
     outputPath: outputPath,
     category: category,
+    held: held,
     names: names,
   );
 
+  /// A download somebody stopped on purpose, with bytes still to come:
+  /// backlog, not in flight and not a fault, on every client alike. An \*arr
+  /// row is held while its record says paused, or while the client row it
+  /// joined is held.
+  final bool held;
+
   /// Whether this transfer is genuinely moving, or waiting to.
-  bool get isActive => fault == null;
+  bool get isActive => fault == null && !held;
 }
 
 /// Everything currently transferring, across every configured source.
@@ -1665,7 +1673,7 @@ Future<List<ServiceQueueItem>> _nameClientRows(
       '${row.service.name}|${row.clientInstanceId}|${row.id}';
   final unnamed = [
     for (final row in rows)
-      if (row.clientService == row.service && row.names.isRaw)
+      if (row.clientService == row.service && row.names.isRaw && !row.held)
         (id: key(row), name: row.title, category: row.category),
   ];
   if (unnamed.isEmpty) return rows;
@@ -1802,6 +1810,7 @@ typedef ServicesInFlight = ({
   List<ServiceQueueItem> preview,
   int activeCount,
   List<ServiceQueueItem> faults,
+  int held,
   int? rateBytesPerSecond,
   int clients,
   SourceCoverage coverage,
@@ -1811,7 +1820,12 @@ final servicesInFlightProvider = FutureProvider<ServicesInFlight>((ref) async {
   final queue = await ref.watch(servicesQueueProvider.future);
   final items = queue.items;
   final active = items.where((item) => item.isActive).toList(growable: false);
-  final faults = items.where((item) => !item.isActive).toList(growable: false);
+  final faults = items
+      .where((item) => item.fault != null)
+      .toList(growable: false);
+  // Paused on purpose: neither moving nor a decision, and counted only so the
+  // region does not call a paused queue an empty one.
+  final held = items.where((item) => item.fault == null && item.held).length;
 
   // Summed once per client, never once per row — see
   // [ServiceQueueItem.clientRateBytesPerSecond]. Keyed on the client rather
@@ -1833,6 +1847,7 @@ final servicesInFlightProvider = FutureProvider<ServicesInFlight>((ref) async {
     preview: active.take(servicesQueuePreviewLimit).toList(growable: false),
     activeCount: active.length,
     faults: faults,
+    held: held,
     rateBytesPerSecond: rates.isEmpty
         ? null
         : rates.values.fold(0, (sum, rate) => sum + rate),
@@ -1905,6 +1920,8 @@ ServiceQueueItem _joinedQueueItem(
     clientInstanceId: client.clientInstanceId,
     mediaId: arr.mediaId,
     outputPath: arr.outputPath,
+    // The client's word on a pause, which is fresher than the arr's.
+    held: fault == null && client.held,
     // The arr's names, and the release the client is moving when the arr's
     // record did not carry one: a matched row never loses its release name.
     names: arr.names.withMachineName(client.title, MachineNameKind.release),
@@ -1967,6 +1984,7 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(
         // decision now, each by its own fault.
         fault: reading.fault,
         warning: reading.reason,
+        held: reading.held,
         stalledSince: reading.fault == null
             ? null
             : _epochSeconds(torrent.lastActivity),
@@ -2036,6 +2054,7 @@ Future<List<ServiceQueueItem>> _loadTransmissionQueueItems(
         clientRateBytesPerSecond: clientRate,
         fault: reading.fault,
         warning: reading.reason,
+        held: reading.held,
         stalledSince: reading.fault == null
             ? null
             : _epochSeconds(torrent.activityDate),
@@ -2087,11 +2106,18 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(
     ],
   );
 
+  // A queue somebody paused holds every job in it; one its disk stopped
+  // stalls them.
+  final pausedOnPurpose = queue.paused && !stoppedByDisk;
   final read = [
     for (final slot in queue.slots)
       (
         slot: slot,
-        reading: sabnzbdSlotInFlight(slot, stoppedByDisk: stoppedByDisk),
+        reading: sabnzbdSlotInFlight(
+          slot,
+          stoppedByDisk: stoppedByDisk,
+          pausedOnPurpose: pausedOnPurpose,
+        ),
       ),
   ];
 
@@ -2125,11 +2151,12 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(
         clientInstanceId: source.instanceId,
         clientRateBytesPerSecond: rate,
         fault: reading.fault,
-        // A queue paused on purpose is stopped *on purpose*, which the tone
-        // rule files under neutral: not a fault, and not a decision. A queue
-        // its disk stopped is a fault, and says so.
-        warning:
-            reading.reason ?? (queue.paused ? StateWord.stopped.label : null),
+        // A job or a queue paused on purpose is stopped *on purpose*, which
+        // the tone rule files under neutral: held, not a fault, not a
+        // decision, and not in flight. A queue its disk stopped is a fault,
+        // and says so.
+        held: reading.held,
+        warning: reading.reason,
         route: ServiceRoutes.forService(ServiceKey.sabnzbd),
         category: slot.category,
       ),
@@ -2174,7 +2201,11 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
       .map(
         (group) => (
           group: group,
-          reading: nzbgetGroupInFlight(group, stoppedByDisk: stoppedByDisk),
+          reading: nzbgetGroupInFlight(
+            group,
+            stoppedByDisk: stoppedByDisk,
+            pausedOnPurpose: status.paused && !stoppedByDisk,
+          ),
         ),
       )
       .map(
@@ -2213,6 +2244,7 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
           clientRateBytesPerSecond: status.downloadRateBytes,
           fault: row.reading.fault,
           warning: row.reading.reason,
+          held: row.reading.held,
           route: ServiceRoutes.forService(ServiceKey.nzbget),
           category: row.group.category,
         ),
@@ -2441,6 +2473,12 @@ ServiceQueueItem _queueItemFromRecords(
     mediaId: mediaId,
     outputPath: stringOrNull(typedItem['outputPath']),
     names: names,
+    // The arr's own record of a pause, standing until a client row says
+    // otherwise.
+    held:
+        fault == null &&
+        ArrQueueEntry.fromQueueItem(typedItem)?.pipeline ==
+            MediaPipeline.paused,
     // With the connection: a queue record's ids are its server's, and the
     // same film id names a different film on the other Radarr.
     route: switch (service) {

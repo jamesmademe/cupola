@@ -713,6 +713,7 @@ class ConfigProfile {
     this.bazarrFollows = const {ServiceKey.radarr, ServiceKey.sonarr},
     this.extraDownloads = const [],
     this.fullDisks = const {},
+    this.pausedQueues = const {},
   });
 
   /// `P1` … `P9`, as the inventory numbers them.
@@ -771,6 +772,10 @@ class ConfigProfile {
   /// switch a user's pause flips: its fake answers paused, with almost no
   /// free space. See [withFullDisk].
   final Set<String> fullDisks;
+
+  /// The usenet clients (connection ids) whose download queue somebody
+  /// paused, with plenty of room left. See [withPausedQueue].
+  final Set<String> pausedQueues;
 
   /// Every download of this profile's world.
   List<WorldDownload> get downloads => [
@@ -869,6 +874,12 @@ class ConfigProfile {
     return _copy(fullDisks: {...fullDisks, instanceId});
   }
 
+  /// A copy where somebody paused [instanceId]'s download queue.
+  ConfigProfile withPausedQueue(String instanceId) {
+    connection(instanceId);
+    return _copy(pausedQueues: {...pausedQueues, instanceId});
+  }
+
   /// A copy with the device at [place].
   ConfigProfile at(NetworkPlace place) => _copy(place: place);
 
@@ -926,6 +937,7 @@ class ConfigProfile {
     WorldSeerrUser? seerrRequester,
     List<WorldDownload>? extraDownloads,
     Set<String>? fullDisks,
+    Set<String>? pausedQueues,
   }) => ConfigProfile(
     id: id,
     title: title,
@@ -941,6 +953,7 @@ class ConfigProfile {
     bazarrFollows: bazarrFollows,
     extraDownloads: extraDownloads ?? this.extraDownloads,
     fullDisks: fullDisks ?? this.fullDisks,
+    pausedQueues: pausedQueues ?? this.pausedQueues,
   );
 
   @override

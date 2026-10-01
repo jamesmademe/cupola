@@ -247,11 +247,16 @@ String spokenFaultFootnote(String footnote) => footnote
 ///
 /// "The queue is empty" only when it is. With eighteen blocked imports and
 /// nothing downloading, the queue holds eighteen records, and the region used to
-/// say it held none directly above a footnote counting them. And not when a
-/// source is missing from the read ([whole] false): SABnzbd's queue is not
-/// empty because SABnzbd did not answer.
-String inFlightEmptyLabel({required int faults, bool whole = true}) =>
-    faults > 0 || !whole ? 'Nothing moving' : 'The queue is empty';
+/// say it held none directly above a footnote counting them. Nor over
+/// downloads somebody paused ([held]): a paused queue is not an empty one. And
+/// not when a source is missing from the read ([whole] false): SABnzbd's queue
+/// is not empty because SABnzbd did not answer.
+String inFlightEmptyLabel({
+  required int faults,
+  int held = 0,
+  bool whole = true,
+}) =>
+    faults > 0 || held > 0 || !whole ? 'Nothing moving' : 'The queue is empty';
 
 /// What one in-flight row announces after its title.
 ///

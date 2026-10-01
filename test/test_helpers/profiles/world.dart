@@ -246,6 +246,12 @@ enum DownloadState {
   /// `Paused` with an `ENCRYPTED` label, an NZBGet group paused by its health
   /// check. The arr's queue calls it paused. Added the same way as [failed].
   heldByClient,
+
+  /// Somebody paused the download, with bytes still to come: qBittorrent's
+  /// `stoppedDL`, a stopped Transmission torrent, a SABnzbd slot `Paused`
+  /// with no label, an NZBGet group `PAUSED`. The arr's queue calls it
+  /// paused. Added the same way as [failed].
+  paused,
 }
 
 /// One download of the world, as both the arr's queue and the client see it.

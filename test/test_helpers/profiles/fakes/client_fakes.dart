@@ -47,7 +47,7 @@ class QbittorrentFake extends ServiceFake {
     DownloadState.stopped => 'stoppedUP',
     DownloadState.failed => 'error',
     DownloadState.missingFiles => 'missingFiles',
-    DownloadState.heldByClient => 'stoppedDL',
+    DownloadState.heldByClient || DownloadState.paused => 'stoppedDL',
   };
 
   static JsonMap torrent(ServerContext c, WorldDownload d) {
@@ -209,7 +209,8 @@ class TransmissionFake extends ServiceFake {
     DownloadState.stopped ||
     DownloadState.failed ||
     DownloadState.missingFiles ||
-    DownloadState.heldByClient => 0,
+    DownloadState.heldByClient ||
+    DownloadState.paused => 0,
   };
 
   static bool _localError(WorldDownload d) =>
@@ -362,7 +363,8 @@ class SabnzbdFake extends ServiceFake {
     final mbLeft = rows.fold<double>(0, (s, d) => s + d.sizeLeft / 1048576);
     // A full disk stops the queue as a pause does, and nothing moves.
     final diskFull = c.profile.fullDisks.contains(c.server.id);
-    final speed = diskFull ? 0 : rows.fold<int>(0, (s, d) => s + d.speed);
+    final paused = diskFull || c.profile.pausedQueues.contains(c.server.id);
+    final speed = paused ? 0 : rows.fold<int>(0, (s, d) => s + d.speed);
     switch (_mode(r)) {
       case 'version':
         return NetworkReply.json({'version': '4.3.3'});
@@ -372,8 +374,8 @@ class SabnzbdFake extends ServiceFake {
         }
         return NetworkReply.json({
           'queue': {
-            'paused': diskFull,
-            'status': diskFull ? 'Paused' : 'Downloading',
+            'paused': paused,
+            'status': paused ? 'Paused' : 'Downloading',
             'pause_int': '0',
             'kbpersec': (speed / 1024).toStringAsFixed(1),
             'speed': '${(speed / 1048576).toStringAsFixed(1)} M',
@@ -394,10 +396,11 @@ class SabnzbdFake extends ServiceFake {
                   'filename': d.release,
                   'status': switch (d.state) {
                     DownloadState.queued => 'Queued',
-                    DownloadState.heldByClient => 'Paused',
+                    DownloadState.heldByClient ||
+                    DownloadState.paused => 'Paused',
                     // With the downloader paused, a slot reports its job's
                     // own status (`api.py`, `build_queue`): queued.
-                    _ => diskFull ? 'Queued' : 'Downloading',
+                    _ => paused ? 'Queued' : 'Downloading',
                   },
                   'labels': [
                     if (d.state == DownloadState.heldByClient) 'ENCRYPTED',
@@ -509,14 +512,15 @@ class NzbgetFake extends ServiceFake {
         NetworkReply.json({'version': '1.1', 'id': id, 'result': value});
     final rows = _rowsOf(c, 'nzbget');
     final diskFull = c.profile.fullDisks.contains(c.server.id);
+    final paused = diskFull || c.profile.pausedQueues.contains(c.server.id);
     return switch (_method(r)) {
       'version' => result(
         jsonFixture('nzbget/version.json')['result'] ?? '24.3',
       ),
-      'status' => result(status(rows, diskFull: diskFull)),
+      'status' => result(status(rows, diskFull: diskFull, paused: paused)),
       'listgroups' => result([
         for (final (i, d) in rows.indexed)
-          group(d, nzbId: i + 1, diskFull: diskFull),
+          group(d, nzbId: i + 1, paused: paused),
       ]),
       'history' => result(const <Object?>[]),
       _ => result(true),
@@ -528,18 +532,22 @@ class NzbgetFake extends ServiceFake {
   ///
   /// A full disk pauses the download queue, as NZBGet does below its
   /// `DiskSpace` threshold, with 180 MB left on both directories.
-  static JsonMap status(List<WorldDownload> rows, {bool diskFull = false}) {
+  static JsonMap status(
+    List<WorldDownload> rows, {
+    bool diskFull = false,
+    bool paused = false,
+  }) {
     final fixture = (jsonFixtureMap('nzbget/status.json')['result'] as Map)
         .cast<String, Object?>();
-    if (rows.isEmpty && !diskFull) return fixture;
-    final rate = diskFull ? 0 : rows.fold<int>(0, (sum, d) => sum + d.speed);
+    if (rows.isEmpty && !paused) return fixture;
+    final rate = paused ? 0 : rows.fold<int>(0, (sum, d) => sum + d.speed);
     return {
       ...fixture,
       'DownloadRate': rate,
       'DownloadRateLo': rate,
       'DownloadRateHi': 0,
       'RemainingSizeMB': rows.fold<int>(0, (s, d) => s + d.sizeLeft ~/ _mib),
-      'DownloadPaused': diskFull,
+      'DownloadPaused': paused,
       'FreeDiskSpaceMB': diskFull ? 180 : 3200000,
       'FreeInterDiskSpaceMB': diskFull ? 180 : 3200000,
       'ResumeTime': 0,
@@ -558,14 +566,14 @@ class NzbgetFake extends ServiceFake {
   static JsonMap group(
     WorldDownload d, {
     required int nzbId,
-    bool diskFull = false,
+    bool paused = false,
   }) => {
     'NZBID': nzbId,
     'NZBName': d.release,
     'Status': switch (d.state) {
-      DownloadState.heldByClient => 'PAUSED',
+      DownloadState.heldByClient || DownloadState.paused => 'PAUSED',
       DownloadState.queued => 'QUEUED',
-      _ => diskFull ? 'QUEUED' : 'DOWNLOADING',
+      _ => paused ? 'QUEUED' : 'DOWNLOADING',
     },
     'Category': d.arr == null ? '' : 'tv',
     'FileSizeMB': d.size ~/ _mib,

@@ -16,14 +16,20 @@ import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 
-/// One client row, read: a transfer ([fault] null) or a fault, with the
-/// client's own words for it when it gave any.
+/// One client row, read: a transfer, a download held on purpose, or a fault,
+/// with the client's own words for the fault when it gave any.
 class InFlightReading {
   /// Bytes are moving, or waiting their turn to.
-  const InFlightReading.moving() : fault = null, reason = null;
+  const InFlightReading.moving() : fault = null, reason = null, held = false;
+
+  /// A download somebody stopped on purpose, with bytes still to come: the
+  /// backlog, which the tone rule files under neutral. Not in flight and not
+  /// a fault, the same on every client.
+  const InFlightReading.held() : fault = null, reason = null, held = true;
 
   /// The row stopped being a transfer, for [reason] when the client said why.
-  const InFlightReading.fault(InFlightFault this.fault, {this.reason});
+  const InFlightReading.fault(InFlightFault this.fault, {this.reason})
+    : held = false;
 
   final InFlightFault? fault;
 
@@ -31,18 +37,22 @@ class InFlightReading {
   /// fault's own word stands.
   final String? reason;
 
+  /// Stopped on purpose: see [InFlightReading.held].
+  final bool held;
+
   @override
   bool operator ==(Object other) =>
       other is InFlightReading &&
       other.fault == fault &&
-      other.reason == reason;
+      other.reason == reason &&
+      other.held == held;
 
   @override
-  int get hashCode => Object.hash(fault, reason);
+  int get hashCode => Object.hash(fault, reason, held);
 
   @override
   String toString() =>
-      'InFlightReading(${fault?.name ?? 'moving'}'
+      'InFlightReading(${fault?.name ?? (held ? 'held' : 'moving')}'
       '${reason == null ? '' : ', $reason'})';
 }
 
@@ -54,8 +64,9 @@ class InFlightReading {
 ///   (the disk is gone, full or read-only). It stops the torrent whatever it
 ///   was doing, so it is a fault on any row, a seeding one included.
 /// * Otherwise only the incoming states are in flight: `download`,
-///   `downloadWait`, `check`, `checkWait`. A stopped torrent was stopped on
-///   purpose, and a seeding one has nothing left to fetch.
+///   `downloadWait`, `check`, `checkWait`. A stopped torrent with bytes still
+///   to come (`leftUntilDone`) was stopped on purpose and is held; a stopped
+///   or seeding one with nothing left to fetch is not in flight at all.
 /// * `error` 2, a tracker error, on an incoming torrent is a failure: the
 ///   model's [TransmissionErrorKind.isBlocking] rule. A tracker *warning* is
 ///   announce noise and stays a transfer.
@@ -63,6 +74,10 @@ class InFlightReading {
 InFlightReading? transmissionInFlight(TransmissionTorrent torrent) {
   if (torrent.errorKind == TransmissionErrorKind.localError) {
     return InFlightReading.fault(InFlightFault.failed, reason: torrent.warning);
+  }
+  if (torrent.status == TransmissionStatus.stopped &&
+      torrent.leftUntilDone > 0) {
+    return const InFlightReading.held();
   }
   if (!torrent.status.isIncoming) return null;
   if (torrent.errorKind == TransmissionErrorKind.trackerError) {
@@ -81,9 +96,14 @@ InFlightReading? transmissionInFlight(TransmissionTorrent torrent) {
 /// row, a finished one included: qBittorrent stops a torrent it cannot read
 /// or write, and dropping it with the seeding library made a broken download
 /// vanish from Home with nothing saying so. `missingFiles` says why; a bare
-/// `error` does not, and the API carries no message for it. Paused, stopped,
-/// seeding and checking rows are not in flight.
+/// `error` does not, and the API carries no message for it. A download paused
+/// or stopped on purpose (`pausedDL`, `stoppedDL`) is held. Seeding, checking
+/// and a finished torrent stopped (`pausedUP`, `stoppedUP`) are not in
+/// flight.
 InFlightReading? qbittorrentInFlight(String? state) {
+  if (state == 'pausedDL' || state == 'stoppedDL') {
+    return const InFlightReading.held();
+  }
   if (state == 'missingFiles') {
     return const InFlightReading.fault(
       InFlightFault.failed,
@@ -186,18 +206,20 @@ String? sabnzbdLabelReason(String label) {
 /// * A slot `status` of `Paused` carrying a label SABnzbd pauses for
 ///   ([sabnzbdLabelReason]) is a job SABnzbd held itself, waiting on a
 ///   person: a stall, in the house words. A paused slot with no such label is
-///   somebody's pause and stays a transfer.
+///   somebody's pause, and is held.
 /// * [stoppedByDisk] ([usenetQueueStoppedByDisk]) stalls every other job.
+/// * [pausedOnPurpose], a queue somebody paused, holds every other job.
 InFlightReading sabnzbdSlotInFlight(
   SabnzbdQueueSlot slot, {
   required bool stoppedByDisk,
+  bool pausedOnPurpose = false,
 }) {
   if (slot.status.toLowerCase() == 'paused') {
     final reasons = [
       for (final label in slot.labels) ?sabnzbdLabelReason(label),
     ];
     return reasons.isEmpty
-        ? const InFlightReading.moving()
+        ? const InFlightReading.held()
         : InFlightReading.fault(
             InFlightFault.stalled,
             reason: reasons.toSet().join(' · '),
@@ -209,6 +231,7 @@ InFlightReading sabnzbdSlotInFlight(
       reason: diskFullReason,
     );
   }
+  if (pausedOnPurpose) return const InFlightReading.held();
   return const InFlightReading.moving();
 }
 
@@ -255,12 +278,15 @@ const String unwantedFileReason = 'Unwanted file type';
 ///   whatever its `Status` (NZBGet's health check may also have paused it).
 /// * `ParStatus` `FAILURE`, and `UnpackStatus` `FAILURE`, `SPACE` or
 ///   `PASSWORD`, are a post-processing run that failed.
-/// * A `PAUSED` group otherwise is somebody's pause and stays a transfer.
+/// * A `PAUSED` group otherwise is somebody's pause, and is held.
 /// * [stoppedByDisk] ([usenetQueueStoppedByDisk]) stalls every other group
-///   still fetching.
+///   still fetching, and [pausedOnPurpose], a download queue somebody
+///   paused, holds them. A pause of the download queue does not stop
+///   post-processing, so a group being unpacked stays in flight.
 InFlightReading nzbgetGroupInFlight(
   NzbgetGroup group, {
   required bool stoppedByDisk,
+  bool pausedOnPurpose = false,
 }) {
   final health = group.health;
   final critical = group.criticalHealth;
@@ -294,12 +320,15 @@ InFlightReading nzbgetGroupInFlight(
       );
   }
   final status = group.status.toUpperCase();
-  if (status == 'PAUSED') return const InFlightReading.moving();
+  if (status == 'PAUSED') return const InFlightReading.held();
   if (stoppedByDisk && nzbgetIsFetching(status)) {
     return const InFlightReading.fault(
       InFlightFault.stalled,
       reason: diskFullReason,
     );
+  }
+  if (pausedOnPurpose && nzbgetIsFetching(status)) {
+    return const InFlightReading.held();
   }
   return const InFlightReading.moving();
 }
