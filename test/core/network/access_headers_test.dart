@@ -130,6 +130,31 @@ void main() {
       expect(_header(followed, 'CF-Access-Client-Secret'), 'secret');
     });
 
+    test('count as sent when a sign-in page answers anyway', () async {
+      final adapter = ScriptedHttpAdapter([
+        const ScriptedReply(
+          body:
+              '<!DOCTYPE html><html><body><form><input type="password">'
+              '</form></body></html>',
+          headers: {
+            'content-type': ['text/html'],
+          },
+        ),
+      ]);
+      final dio = _dio(adapter, access: const {'X-Proxy-Key': 'k'});
+
+      Object? failure;
+      try {
+        await dio.get('/api/v3/movie');
+      } catch (error) {
+        failure = error;
+      }
+
+      final gateway = accessGatewayOf(failure);
+      expect(gateway?.kind, AccessGatewayKind.signInPage);
+      expect(gateway?.credentialsSent, isTrue);
+    });
+
     test('never appear in what a failure says', () async {
       const sentinel = 'sentinel-5c1d';
       final adapter = ScriptedHttpAdapter([
