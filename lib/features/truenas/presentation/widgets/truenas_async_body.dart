@@ -212,8 +212,10 @@ class _NeedsHttps extends StatelessWidget {
       accentColor: statusToneColor(colorScheme, failureTone(_reason)),
       title: failureHeadline(_reason, subject: ServiceKey.truenas.title),
       message: TrueNasInsecureTransportException.explanation,
+      // The fault's one amber fill, as on every other fault's remedy.
       action: FilledButton(
         onPressed: () => remedy.open(context),
+        style: remedyFillStyle(context),
         child: Text(remedy.label),
       ),
     );

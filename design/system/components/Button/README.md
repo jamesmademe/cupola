@@ -2,7 +2,7 @@
 
 The three Material buttons as Cupola's theme restyles them: filled for the one primary action on a surface, outlined for a secondary action, text for a recovery verb or a cross-service link.
 
-Rendered from `lib/core/theme.dart` (`filledButtonTheme`, `outlinedButtonTheme`, `textButtonTheme`, `floatingActionButtonTheme`) and, for the gated state, `lib/core/widgets/cross_service_action.dart`, by `test/design_catalog/button_catalog_test.dart`.
+Rendered from `lib/core/theme.dart` (`filledButtonTheme`, `outlinedButtonTheme`, `textButtonTheme`, `floatingActionButtonTheme`), `lib/core/widgets/failure_remedy.dart` (`remedyFillStyle`) and, for the gated state, `lib/core/widgets/cross_service_action.dart`, by `test/design_catalog/button_catalog_test.dart`.
 
 ## Variants
 
@@ -10,6 +10,7 @@ Rendered from `lib/core/theme.dart` (`filledButtonTheme`, `outlinedButtonTheme`,
 - **Outlined** — the ghost button: `fill-control` (white at 8% dark, ink at 8% light) with a 1px `line-edge` side, `on-surface` label, same radius, padding and label. Secondary actions beside a filled one.
 - **Floating** — `FloatingActionButton` and `.extended` take the ink button's colours from the theme: `primary` fill, `on-primary` glyph and label, Material's own shape and size. A screen's one floating action is its primary, so it is never filled with a service's colour (the TrueNAS consoles used to fill theirs with TrueNAS blue).
 - **Text** — `primary` label in `label-large` 600, no container. Recovery verbs (*Retry*, *Refresh*) and cross-service links (*Open in qBittorrent*).
+- **Remedy** — the one fill a fault gets: an amber fault's remedy (*Paste the key again*, *Check the address*, or *Retry* where retrying is the fix) in `tone.amber-fill` under `tone.amber-ink` (`remedyFillStyle` in `lib/core/widgets/failure_remedy.dart`), the theme's radius and label, 44 high at standard density. `compact: true` is the fault line's control: 56 wide at minimum, padding `space-md`. Retry beside a red line is never this: it is the ghost (outlined) in a centred state and text in ink on a line. `test/core/widgets/failure_remedy_test.dart` measures the ink on the fill in both rooms.
 - **Gated** — any of the three handed through `CrossServiceAction.builder` or `CapabilityGatedAction.builder`: the label and glyph drain to 38%, the container, border and target stay at full strength, and the button stays pressable. A tap raises the toast whose action is the fix.
 
 ## Size
@@ -36,4 +37,5 @@ Material's button node. A gated button keeps `enabled: true` and adds a hint (*r
 - Don't paint a recovery verb in `error`.
 - Don't use a full-radius pill for a button: controls take the 14dp radius.
 - Don't put a second filled button on the same surface.
+- Don't give anything but a fault's remedy the amber fill, and never fill a Retry that sits beside silence.
 - Don't pass `onPressed: null` to express "not available here" — gate it instead.

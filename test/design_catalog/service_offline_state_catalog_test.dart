@@ -33,7 +33,7 @@ void main() {
     scenes: [
       CatalogScene(
         'ServiceOfflineState(since:, onOpenSettings:) · did not answer: the '
-        'red glyph, a known first-failure age, Retry and Settings',
+        'red glyph, a known first-failure age, Retry as a ghost and Settings',
         (_) => ServiceOfflineState(
           serviceName: 'SABnzbd',
           accent: ServiceKey.sabnzbd.accent,
@@ -68,7 +68,8 @@ void main() {
       ),
       CatalogScene(
         'ServiceOfflineState.failure · 401: it answered, so an amber fault, '
-        'never "did not answer", and its remedy leads with no Retry',
+        'never "did not answer", and its remedy leads in the amber fill with '
+        'no Retry',
         (_) => ServiceOfflineState.failure(
           service: ServiceKey.radarr,
           error: _status(401),
@@ -78,7 +79,7 @@ void main() {
       ),
       CatalogScene(
         'ServiceOfflineState.failure · a certificate Cupola does not trust: '
-        'Check the certificate leads, Retry follows',
+        'Check the certificate leads in the amber fill, Retry follows in ink',
         (_) => ServiceOfflineState.failure(
           service: ServiceKey.radarr,
           error: const ClassifiedFailure(ServiceFailureReason.tls),
@@ -87,7 +88,8 @@ void main() {
         width: 320,
       ),
       CatalogScene(
-        'ServiceOfflineState.failure · 500: amber, the service spoke',
+        'ServiceOfflineState.failure · 500: amber, the service spoke, and '
+        'Retry is its remedy in the amber fill',
         (_) => ServiceOfflineState.failure(
           service: ServiceKey.radarr,
           error: _status(500),

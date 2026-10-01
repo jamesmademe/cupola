@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/cross_service_action.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 
 import 'catalog.dart';
 
@@ -90,6 +91,33 @@ List<CatalogScene> _scenes(CatalogPlatform platform) => [
             child: annotate(const Text('Renew')),
           ),
         ),
+      ],
+    ),
+    platform: platform,
+  ),
+  CatalogScene(
+    'remedyFillStyle · an amber fault\'s remedy, the one fill a fault gets: '
+    'regular and compact (the line\'s control), beside Retry in ink',
+    (_) => Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Builder(
+          builder: (context) => FilledButton(
+            onPressed: () {},
+            style: remedyFillStyle(context),
+            child: const Text('Paste the key again'),
+          ),
+        ),
+        Builder(
+          builder: (context) => FilledButton(
+            onPressed: () {},
+            style: remedyFillStyle(context, compact: true),
+            child: const Text('Check the address'),
+          ),
+        ),
+        TextButton(onPressed: () {}, child: const Text('Retry')),
       ],
     ),
     platform: platform,

@@ -58,11 +58,13 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// When the fault names a fix that lives in the connection's form
 /// ([FailureRemedy]), the fix leads: `Paste the key again`, `Change the
-/// address`, `Check the certificate` is the filled button, and Retry follows
+/// address`, `Check the certificate` is the button in the fault's one amber
+/// fill ([remedyFillStyle]), and Retry follows
 /// as the text action only where the same request can still succeed. A
 /// refused key or an address nothing was sent to has no Retry at all. Every
 /// other cause keeps Retry first and `Settings` after it, because there the
-/// next request may well answer.
+/// next request may well answer: Retry in the amber fill for a fault, and a
+/// ghost button in ink beside silence, never filled.
 
 class ServiceOfflineState extends StatelessWidget {
   const ServiceOfflineState({
@@ -175,6 +177,7 @@ class ServiceOfflineState extends StatelessWidget {
             : 'It has not answered for $span. Anything it holds is missing '
                   'from this page.',
         primary: _LeafAction.retry(onRetry),
+        fault: false,
         secondary: onOpenSettings == null
             ? null
             : _LeafAction('Settings', onOpenSettings!),
@@ -221,6 +224,7 @@ class ServiceOfflineState extends StatelessWidget {
           primary: remedy == null
               ? _LeafAction.retry(onRetry)
               : _LeafAction(remedy.label, openForm),
+          fault: !silent,
           secondary: remedy == null
               ? _LeafAction('Settings', openForm)
               : remedy.retryHelps
@@ -254,6 +258,7 @@ class _OfflineLeaf extends StatelessWidget {
     required this.title,
     required this.body,
     required this.primary,
+    required this.fault,
     this.secondary,
     this.address,
   });
@@ -271,6 +276,10 @@ class _OfflineLeaf extends StatelessWidget {
 
   /// The text action after it: `Settings`, or Retry beside a remedy.
   final _LeafAction? secondary;
+
+  /// Whether this is a fault (amber) rather than silence (red), which decides
+  /// whether the first action is the amber fill or a ghost.
+  final bool fault;
 
   @override
   Widget build(BuildContext context) {
@@ -333,15 +342,26 @@ class _OfflineLeaf extends StatelessWidget {
                 spacing: AppSpacing.sm,
                 runSpacing: AppSpacing.sm,
                 children: [
-                  if (primary.isRetry)
-                    FilledButton.tonalIcon(
+                  // The remedy of a fault, the form's fix or Retry when retrying
+                  // is the fix, is the fault's one amber fill. Retry beside
+                  // silence is a ghost in ink: never filled, never red.
+                  if (primary.isRetry && !fault)
+                    OutlinedButton.icon(
                       onPressed: primary.onPressed,
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: Text(primary.label),
+                    )
+                  else if (primary.isRetry)
+                    FilledButton.icon(
+                      onPressed: primary.onPressed,
+                      style: remedyFillStyle(context),
                       icon: const Icon(Icons.refresh_rounded, size: 18),
                       label: Text(primary.label),
                     )
                   else
                     FilledButton(
                       onPressed: primary.onPressed,
+                      style: remedyFillStyle(context),
                       child: Text(primary.label),
                     ),
                   if (secondary case final secondary?)

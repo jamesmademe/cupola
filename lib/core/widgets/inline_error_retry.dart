@@ -35,7 +35,9 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 ///  1. presence is the signal — no fill, no border, the error tone on the glyph
 ///     and nowhere else;
 ///  2. the recovery verb is never painted in the error tone — a red Retry makes
-///     the cure look like the disease, so it is the primary ink;
+///     the cure look like the disease, so beside silence it is the primary
+///     ink. An amber fault's remedy is the one fill a fault gets: the amber
+///     fill ([remedyFillStyle]), as a compact control on the line;
 ///  3. nothing is dimmed for being unreachable, because dimming means *not
 ///     configured* everywhere else on this canvas.
 ///
@@ -114,14 +116,26 @@ class InlineErrorRetry extends StatelessWidget {
       FailureRemedy.serviceNamedBy(message),
       error,
     );
+    // The remedy of a fault, the form's fix or Retry when retrying is the
+    // fix, wears the amber fill: the Presence Rule gives the line exactly one
+    // fill and puts it there, and amber words on the verb would spend the tone
+    // the rule keeps for the glyph. Retry beside a remedy, and Retry beside
+    // silence, stay text in ink.
+    final fault = failureIsFault(reason);
     final verbs = [
       if (remedy != null)
-        TextButton(
+        FilledButton(
           onPressed: () => remedy.open(context),
-          style: _verbStyle(colorScheme),
+          style: remedyFillStyle(context, compact: true),
           child: Text(remedy.label),
         ),
-      if (remedy == null || remedy.retryHelps)
+      if (remedy == null && fault)
+        FilledButton(
+          onPressed: onRetry,
+          style: remedyFillStyle(context, compact: true),
+          child: const Text(Lexicon.retry),
+        )
+      else if (remedy == null || remedy.retryHelps)
         TextButton(
           onPressed: onRetry,
           style: _verbStyle(colorScheme),

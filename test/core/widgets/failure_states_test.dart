@@ -455,7 +455,7 @@ void main() {
         ),
       );
 
-      expect(_text('Paste the key again'), findsOneWidget);
+      expect(_filled('Paste the key again'), findsOneWidget);
       expect(find.text('Retry'), findsNothing);
       await tester.tap(find.text('Paste the key again'));
       await tester.pumpAndSettle();
@@ -478,7 +478,7 @@ void main() {
         ),
       );
 
-      expect(_text('Check the certificate'), findsOneWidget);
+      expect(_filled('Check the certificate'), findsOneWidget);
       expect(_text('Retry'), findsOneWidget);
       final sentence = tester.getBottomLeft(
         find.textContaining('Radarr has a certificate'),
@@ -492,8 +492,8 @@ void main() {
         lessThan(tester.getTopLeft(find.text('Retry')).dx),
       );
       // Each verb keeps the touch floor.
-      for (final label in ['Check the certificate', 'Retry']) {
-        expect(tester.getSize(_text(label)).height, greaterThanOrEqualTo(44));
+      for (final verb in [_filled('Check the certificate'), _text('Retry')]) {
+        expect(tester.getSize(verb).height, greaterThanOrEqualTo(44));
       }
     });
 
@@ -526,7 +526,7 @@ void main() {
       final two = await slotFor(
         const ClassifiedFailure(ServiceFailureReason.notFound),
       );
-      expect(_text('Check the address'), findsOneWidget);
+      expect(_filled('Check the address'), findsOneWidget);
       expect(_text('Retry'), findsOneWidget);
       // A carousel row that fails does not jump for having two verbs.
       expect(two, one);
@@ -582,10 +582,135 @@ void main() {
       );
 
       expect(find.byType(InlineErrorRetry), findsNWidgets(2));
-      expect(_text('Sign in again'), findsNWidgets(2));
+      expect(_filled('Sign in again'), findsNWidgets(2));
       expect(_text('Retry'), findsNWidgets(2));
 
       await harness.unmount(tester);
+    });
+  });
+
+  group('one fill per fault, on its remedy', () {
+    Color? fillOf(WidgetTester tester, Finder button) => tester
+        .widget<ButtonStyleButton>(button)
+        .style
+        ?.backgroundColor
+        ?.resolve({});
+
+    final room = CupolaRoom.dark;
+
+    testWidgets('AppErrorState: the remedy is the amber fill', (tester) async {
+      await _pump(
+        tester,
+        AppErrorState(
+          serviceName: 'Radarr',
+          error: _status(401),
+          onRetry: () {},
+        ),
+      );
+      expect(
+        fillOf(tester, _filled('Paste the key again')),
+        room.toneAmberFill,
+      );
+    });
+
+    testWidgets(
+      'AppErrorState: Retry beside silence is a ghost, never filled',
+      (tester) async {
+        await _pump(
+          tester,
+          AppErrorState(
+            serviceName: 'Radarr',
+            error: _refused(),
+            onRetry: () {},
+          ),
+        );
+        expect(
+          find.ancestor(
+            of: find.text('Retry'),
+            matching: find.byWidgetPredicate((w) => w is OutlinedButton),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.ancestor(
+            of: find.text('Retry'),
+            matching: find.byWidgetPredicate((w) => w is FilledButton),
+          ),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets('AppErrorState: Retry that is a fault\'s remedy is the amber '
+        'fill', (tester) async {
+      await _pump(
+        tester,
+        AppErrorState(
+          serviceName: 'Radarr',
+          error: _status(500),
+          onRetry: () {},
+        ),
+      );
+      final retry = find.ancestor(
+        of: find.text('Retry'),
+        matching: find.byWidgetPredicate((w) => w is FilledButton),
+      );
+      expect(fillOf(tester, retry), room.toneAmberFill);
+    });
+
+    testWidgets('ServiceOfflineState: silence gets a ghost Retry, a refused '
+        'key the amber remedy', (tester) async {
+      await _pump(
+        tester,
+        ServiceOfflineState.failure(
+          service: ServiceKey.radarr,
+          error: _refused(),
+          onRetry: () {},
+        ),
+      );
+      expect(
+        find.ancestor(
+          of: find.text('Retry'),
+          matching: find.byWidgetPredicate((w) => w is OutlinedButton),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await _pump(
+        tester,
+        ServiceOfflineState.failure(
+          service: ServiceKey.radarr,
+          error: _status(401),
+          onRetry: () {},
+        ),
+      );
+      expect(
+        fillOf(tester, _filled('Paste the key again')),
+        room.toneAmberFill,
+      );
+    });
+
+    testWidgets('InlineErrorRetry: the remedy is the compact amber fill, '
+        'Retry stays text in ink', (tester) async {
+      const error = ClassifiedFailure(ServiceFailureReason.tls);
+      await _pump(
+        tester,
+        InlineErrorRetry(
+          message: sectionFailureMessage(
+            ServiceKey.radarr,
+            error,
+            consequence: 'its queue is not shown',
+          ),
+          error: error,
+          onRetry: () {},
+        ),
+      );
+      expect(
+        fillOf(tester, _filled('Check the certificate')),
+        room.toneAmberFill,
+      );
+      expect(fillOf(tester, _text('Retry')), isNull);
     });
   });
 }

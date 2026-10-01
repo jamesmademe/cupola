@@ -1,8 +1,11 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
@@ -89,4 +92,32 @@ class FailureRemedy {
 
   /// Applies the remedy: opens the connection form where the fix lives.
   void open(BuildContext context) => openConnectionForm(context, service);
+}
+
+/// The one fill a fault gets: the remedy of an **amber** fault, in
+/// `tone.amber-fill` under `tone.amber-ink` (the brand book's Presence Rule).
+///
+/// The remedy is the form's fix when there is one (`Paste the key again`) and
+/// Retry when retrying is the fix (a 5xx, a timeout). Nothing else wears it:
+/// Retry beside a red line is a ghost in ink, the other verbs stay text in
+/// ink, and the ink button is for ordinary primaries. The ink is the token
+/// drawn for this fill, so it does not need measuring at runtime;
+/// `failure_remedy_test.dart` measures it in both rooms.
+///
+/// [compact] is the line's control (`InlineErrorRetry`, `FaultBand`): the
+/// same 44pt floor with the line's narrower padding, so it sits in a row of
+/// body text without crowding it.
+ButtonStyle remedyFillStyle(BuildContext context, {bool compact = false}) {
+  final room = CupolaRoom.of(context);
+  return FilledButton.styleFrom(
+    backgroundColor: room.toneAmberFill,
+    foregroundColor: room.toneAmberInk,
+    // Pinned: the desktop's compact density silently takes 8 off
+    // `minimumSize`, and 44 declared measured 40.
+    visualDensity: VisualDensity.standard,
+    minimumSize: Size(compact ? 56 : 64, DesignTokens.sizeButtonM),
+    padding: compact
+        ? const EdgeInsets.symmetric(horizontal: AppSpacing.md)
+        : null,
+  );
 }

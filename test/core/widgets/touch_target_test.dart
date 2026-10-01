@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -45,18 +47,36 @@ Finder _textButton(String label) =>
 
 void main() {
   testWidgets(
-    'InlineErrorRetry: Retry is reachable',
+    'InlineErrorRetry: Retry is reachable, as text beside silence and as the '
+    'amber fill of a fault',
     (tester) async {
       await _pump(
         tester,
         InlineErrorRetry(
           message: 'Radarr did not answer, so the queue is not shown.',
+          error: const SocketException('Connection refused'),
+          onRetry: () {},
+        ),
+      );
+      _expectReachable(tester, _textButton('Retry'));
+
+      await _pump(
+        tester,
+        InlineErrorRetry(
+          message:
+              'The request to Radarr did not complete, so the queue is '
+              'not shown.',
           error: null,
           onRetry: () {},
         ),
       );
-
-      _expectReachable(tester, _textButton('Retry'));
+      _expectReachable(
+        tester,
+        find.ancestor(
+          of: find.text('Retry'),
+          matching: find.byType(FilledButton),
+        ),
+      );
     },
     variant: TargetPlatformVariant.mobile(),
   );

@@ -56,7 +56,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// When the failure names a fix that lives in the connection's form, and
 /// [serviceName] says whose connection it is, that fix is the primary action
-/// ([FailureRemedy]): `Paste the key again` for a refused key, `Change the
+/// ([FailureRemedy]), in the fault's one amber fill ([remedyFillStyle]): `Paste the key again` for a refused key, `Change the
 /// address` for an `http://` address the device would not dial, `Check the
 /// address` or `Check the certificate` when the server answered from the wrong
 /// place or with a certificate Cupola does not trust. It opens the form. Retry
@@ -66,6 +66,9 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// many attempts runs out. Every caller gets this from the error and the name
 /// it already passes. A state that cannot name the service keeps Retry,
 /// and nothing else, because it cannot say whose form to open.
+///
+/// Retry alone is the remedy too: in the amber fill for a fault (a 5xx, a
+/// timeout), and a ghost button in ink beside silence, never filled.
 class AppErrorState extends StatelessWidget {
   final Object error;
   final VoidCallback? onRetry;
@@ -161,7 +164,7 @@ class AppErrorState extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-            if (_actions(context, FailureRemedy.of(_service, error))
+            if (_actions(context, reason, FailureRemedy.of(_service, error))
                 case final actions?) ...[
               const SizedBox(height: AppSpacing.xl),
               actions,
@@ -172,17 +175,29 @@ class AppErrorState extends StatelessWidget {
     );
   }
 
-  /// The remedy as the ink button and Retry as the text action beside it, or
+  /// The remedy in the amber fill and Retry as the text action beside it, or
   /// Retry alone when there is no remedy. See *The remedy leads*.
-  Widget? _actions(BuildContext context, FailureRemedy? remedy) {
+  Widget? _actions(
+    BuildContext context,
+    ServiceFailureReason reason,
+    FailureRemedy? remedy,
+  ) {
     final retry = onRetry;
     if (remedy == null) {
       if (retry == null) return null;
-      return FilledButton.tonalIcon(
-        onPressed: retry,
-        icon: const Icon(Icons.refresh_rounded, size: 18),
-        label: const Text(Lexicon.retry),
-      );
+      const glyph = Icon(Icons.refresh_rounded, size: 18);
+      const label = Text(Lexicon.retry);
+      // Retry is the remedy here. Of a fault it takes the fault's one amber
+      // fill; beside silence it is a ghost in ink, never filled and never red,
+      // because a red cure looks like the disease.
+      return failureIsFault(reason)
+          ? FilledButton.icon(
+              onPressed: retry,
+              style: remedyFillStyle(context),
+              icon: glyph,
+              label: label,
+            )
+          : OutlinedButton.icon(onPressed: retry, icon: glyph, label: label);
     }
     return Wrap(
       alignment: WrapAlignment.center,
@@ -192,10 +207,11 @@ class AppErrorState extends StatelessWidget {
       children: [
         FilledButton(
           onPressed: () => remedy.open(context),
+          style: remedyFillStyle(context),
           child: Text(remedy.label),
         ),
-        // In ink, never the fault's tone: a coloured cure looks like the
-        // disease. The theme's text button keeps the 44pt floor.
+        // Text in ink: the fault has one fill, and it is on the remedy. The
+        // theme's text button keeps the 44pt floor.
         if (retry != null && remedy.retryHelps)
           TextButton(onPressed: retry, child: const Text(Lexicon.retry)),
       ],

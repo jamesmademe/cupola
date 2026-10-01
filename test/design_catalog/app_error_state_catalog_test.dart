@@ -19,7 +19,8 @@ void main() {
     scenes: [
       CatalogScene(
         'AppErrorState(serviceName:, onRetry:) · cold open, nothing answered: '
-        'red, and the detail is the classified sentence, never the exception',
+        'red, the detail is the classified sentence, never the exception, '
+        'and Retry is a ghost in ink',
         (_) => AppErrorState(
           serviceName: 'Radarr',
           error: DioException.connectionError(
@@ -32,8 +33,8 @@ void main() {
       ),
       CatalogScene(
         'AppErrorState · a server that answered with 401: an amber fault whose '
-        'remedy leads, Paste the key again, and no Retry: the same key can '
-        'only be refused again',
+        'remedy leads in the amber fill, Paste the key again, and no Retry: '
+        'the same key can only be refused again',
         (_) => AppErrorState(
           serviceName: 'Radarr',
           error: DioException(
@@ -50,7 +51,7 @@ void main() {
       ),
       CatalogScene(
         'AppErrorState · 404, the API is not at this address: Check the '
-        'address leads, Retry follows as the text action',
+        'address leads in the amber fill, Retry follows as text in ink',
         (_) => AppErrorState(
           serviceName: 'Radarr',
           error: DioException(
@@ -67,7 +68,8 @@ void main() {
       ),
       CatalogScene(
         'AppErrorState · 401 with no service named: Retry only, because it '
-        'cannot say whose form to open',
+        'cannot say whose form to open, in the amber fill as the fault\'s '
+        'remedy',
         (_) => AppErrorState(
           error: DioException(
             requestOptions: RequestOptions(path: '/api/v3/movie'),
@@ -101,7 +103,7 @@ void main() {
       CatalogScene(
         'InlineErrorRetry(error:) · a Discover rail Seerr refused: the glyph '
         'takes the classification, amber, and the remedy takes the place of '
-        'Retry',
+        'Retry as the compact amber fill',
         (_) => InlineErrorRetry(
           message:
               'Seerr answered but refused the key, so this row is missing.',
@@ -119,7 +121,8 @@ void main() {
       ),
       CatalogScene(
         'InlineErrorRetry · a certificate Cupola does not trust: both verbs, '
-        'the remedy first, on their own row under the sentence',
+        'the amber remedy first, Retry in ink, on their own row under the '
+        'sentence',
         (_) => InlineErrorRetry(
           message:
               'Unraid has a certificate Cupola does not trust, so its shares '
