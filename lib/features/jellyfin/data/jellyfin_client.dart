@@ -93,6 +93,7 @@ class JellyfinClient implements StreamServerClient {
     Map<String, String> accessHeaders = const {},
   }) : _baseUrl = UrlUtils.normalizeBaseUrl(baseUrl),
        _accessHeaders = accessHeaders,
+       _token = apiKey.trim(),
        _userId = userId.trim(),
        _authHeader = buildJellyfinAuthorizationHeader(
          token: apiKey.trim(),
@@ -120,8 +121,24 @@ class JellyfinClient implements StreamServerClient {
   /// request and every poster.
   final Map<String, String> _accessHeaders;
 
+  final String _token;
+
   /// The headers that sign this client in to Jellyfin.
-  Map<String, String> get _serviceHeaders => {'Authorization': _authHeader};
+  ///
+  /// `Authorization: MediaBrowser …` as a rule. When the connection's access
+  /// holds `Authorization` for a proxy in front (its password), the token
+  /// travels in `X-Emby-Token` instead, which Jellyfin reads as the same
+  /// credential, and `Authorization` is left to the proxy. Automatic: the
+  /// user never sees a clash.
+  Map<String, String> get _serviceHeaders {
+    final proxyHoldsAuthorization = _accessHeaders.keys.any(
+      (name) => name.toLowerCase() == 'authorization',
+    );
+    return proxyHoldsAuthorization
+        ? {'X-Emby-Token': _token}
+        : {'Authorization': _authHeader};
+  }
+
   final String _userId;
   final String _authHeader;
   late final ApiClient _api;

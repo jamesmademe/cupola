@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
+import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
 import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/movies/presentation/movies_screen.dart';
 import 'package:cupola/features/series/presentation/series_screen.dart';
@@ -20,6 +21,7 @@ import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/dashboard_screen.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
@@ -242,5 +244,75 @@ void main() {
         expect(diagnosis.reason, ServiceFailureReason.accessGateway);
       });
     }
+  });
+
+  group('a proxy password in front of Jellyfin', () {
+    const password = ProxyPassword(username: 'matt', password: 'proxy-pw');
+    final behind = Profiles.p1.withBehaviour(
+      WorldIds.jellyfin,
+      const ConnectionBehaviour.behindPasswordPrompt(
+        credentials: (username: 'matt', password: 'proxy-pw'),
+      ),
+    );
+    final configured = behind.withConnection(
+      behind.connection(WorldIds.jellyfin).withAccess(password),
+    );
+
+    test(
+      'takes Authorization, and Jellyfin\'s token moves to X-Emby-Token',
+      () async {
+        final harness = await ProfileHarness.start(configured);
+        final summary = await harness
+            .container(retry: (_, _) => null)
+            .read(
+              instanceSummaryProvider((
+                service: ServiceKey.jellyfin,
+                instanceId: WorldIds.jellyfin,
+              )).future,
+            );
+
+        expect(summary.isOnline, isTrue, reason: '${summary.failureReason}');
+        final requests = harness.network.requestsTo(WorldIds.jellyfin);
+        expect(requests, isNotEmpty);
+        for (final request in requests) {
+          expect(
+            request.headers['authorization'],
+            password.headers()['Authorization'],
+            reason: '$request',
+          );
+          expect(
+            request.headers['x-emby-token'],
+            worldKey(WorldIds.jellyfin),
+            reason: '$request',
+          );
+        }
+      },
+    );
+
+    test('and its artwork goes the same way', () {
+      final client = JellyfinClient(
+        baseUrl: WorldHosts.jellyfin,
+        apiKey: 'token',
+        accessHeaders: password.headers(),
+      );
+      addTearDown(client.close);
+
+      expect(client.imageFor('/Items/1/Images/Primary')?.headers, {
+        ...password.headers(),
+        'X-Emby-Token': 'token',
+      });
+    });
+
+    test('without a proxy, Jellyfin keeps Authorization', () {
+      final client = JellyfinClient(
+        baseUrl: WorldHosts.jellyfin,
+        apiKey: 'token',
+      );
+      addTearDown(client.close);
+
+      final headers = client.imageFor('/Items/1/Images/Primary')?.headers;
+      expect(headers?['Authorization'], startsWith('MediaBrowser '));
+      expect(headers?.containsKey('X-Emby-Token'), isFalse);
+    });
   });
 }

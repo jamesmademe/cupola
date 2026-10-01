@@ -280,6 +280,76 @@ extension ServiceKeyExtension on ServiceKey {
   String get credentialLabel =>
       this == ServiceKey.plex ? 'Plex token' : 'API key';
 
+  /// The header this service's own client carries the credential in, when it
+  /// carries it in one: the header a custom access header of the same name
+  /// duplicates, which the Access row offers to move into the credential
+  /// field. Null for a service whose credential travels another way (a query
+  /// string, a login, a WebSocket call) or is a sign-in pair.
+  ///
+  /// Jellyfin's is `X-Emby-Token`: its client sends the token there whenever
+  /// the connection's access holds `Authorization` for a proxy.
+  ///
+  /// Exhaustive, like [usesApiKey], so a new service has to answer.
+  String? get credentialHeader => switch (this) {
+    ServiceKey.seerr ||
+    ServiceKey.radarr ||
+    ServiceKey.sonarr ||
+    ServiceKey.lidarr ||
+    ServiceKey.bazarr ||
+    ServiceKey.prowlarr ||
+    ServiceKey.readarr ||
+    ServiceKey.unraid => 'X-Api-Key',
+    ServiceKey.plex => 'X-Plex-Token',
+    ServiceKey.jellyfin => 'X-Emby-Token',
+    ServiceKey.sabnzbd ||
+    ServiceKey.truenas ||
+    ServiceKey.dockge ||
+    ServiceKey.qbittorrent ||
+    ServiceKey.transmission ||
+    ServiceKey.nzbget ||
+    ServiceKey.nginxProxyManager => null,
+  };
+
+  /// Every header this service's own client sets, lower-cased: its
+  /// credential's ([credentialHeader]) and the ones its protocol needs. An
+  /// access header by one of these names would never be sent, because the
+  /// service's own header wins (`guardedDio`), so the Access row refuses it.
+  ///
+  /// `Authorization` is here for the three services that sign in with it
+  /// (NZBGet and Transmission with Basic, Nginx Proxy Manager with a bearer
+  /// token) and not for Jellyfin, whose token moves to `X-Emby-Token` and
+  /// leaves `Authorization` to the proxy.
+  Set<String> get ownHeaders => switch (this) {
+    ServiceKey.plex => const {
+      'x-plex-token',
+      'x-plex-client-identifier',
+      'x-plex-product',
+      'x-plex-version',
+      'x-plex-platform',
+      'x-plex-device-name',
+    },
+    ServiceKey.transmission => const {
+      'authorization',
+      'x-transmission-session-id',
+    },
+    ServiceKey.nzbget ||
+    ServiceKey.nginxProxyManager => const {'authorization'},
+    ServiceKey.qbittorrent => const {'referer', 'origin'},
+    _ => {?credentialHeader?.toLowerCase()},
+  };
+
+  /// Whether the Access row offers a proxy's password for this service: not
+  /// for the services that sign in with `Authorization` themselves, where a
+  /// proxy's Basic password has nowhere to travel.
+  bool get offersProxyPassword => !ownHeaders.contains('authorization');
+
+  /// Why the Access row has no Password for this service, in one line, or
+  /// null when it has one.
+  String? get proxyPasswordUnavailable => offersProxyPassword
+      ? null
+      : "$title signs in with its own Authorization header, so a proxy "
+            "password cannot travel with it.";
+
   /// Whether one saved credential of this service can carry a narrower scope
   /// than the service's own writes in Cupola need — the services that get a
   /// capability probe, a banner and dimmed writes.
