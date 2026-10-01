@@ -238,6 +238,65 @@ void main() {
       expect(client.getCallCount, 2);
     });
 
+    group('a walk says how far it got', () {
+      List<Map<String, dynamic>> rows(int count) => [
+        for (var id = 0; id < count; id++) {'id': id},
+      ];
+
+      test('a walk that reaches the count carries it', () async {
+        client.getResponseQueue.addAll([
+          {'records': rows(200), 'totalRecords': 250},
+          {'records': rows(50), 'totalRecords': 250},
+        ]);
+
+        final page = await service.getQueuePage();
+
+        expect(page.records, hasLength(250));
+        expect(page.total, 250);
+        expect(page.cutShort, isFalse);
+      });
+
+      test('a full page with no count is a floor, not a total', () async {
+        // The server gave no reason to ask for a second page, and no reason
+        // to believe there is none: 200 is "at least 200".
+        client.getResponseData = {'records': rows(200)};
+
+        final page = await service.getQueuePage();
+
+        expect(client.getCallCount, 1);
+        expect(page.records, hasLength(200));
+        expect(page.total, isNull);
+        expect(page.cutShort, isTrue);
+      });
+
+      test('a short page with no count ends the set and counts it', () async {
+        client.getResponseData = {'records': rows(12)};
+
+        final page = await service.getBlocklistPage();
+
+        expect(page.total, 12);
+        expect(page.cutShort, isFalse);
+      });
+
+      test('out of pages, the count stands and the rows are short', () async {
+        client.getResponseData = {'records': rows(200), 'totalRecords': 12000};
+
+        final page = await service.getQueuePage();
+
+        // Fifty pages of two hundred, and the server still names more.
+        expect(client.getCallCount, 50);
+        expect(page.records, hasLength(10000));
+        expect(page.total, 12000);
+        expect(page.cutShort, isTrue);
+      });
+
+      test('the record-only getters still answer with the rows', () async {
+        client.getResponseData = {'records': rows(200)};
+
+        expect(await service.getQueue(), hasLength(200));
+      });
+    });
+
     test('getHistory forwards optional query parameters', () async {
       client.getResponseData = {
         'records': [

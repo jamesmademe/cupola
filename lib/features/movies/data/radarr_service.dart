@@ -63,9 +63,11 @@ class RadarrService with ArrActivityMixin {
 
   RadarrService(this.client);
 
+  /// On the queue's **page** primitive, which `getQueue` delegates to, so the
+  /// figure and the rows come off one request that carries the movie.
   @override
-  Future<List<dynamic>> getQueue({Map<String, dynamic>? queryParameters}) {
-    return super.getQueue(
+  Future<ArrRecordPage> getQueuePage({Map<String, dynamic>? queryParameters}) {
+    return super.getQueuePage(
       queryParameters: {'includeMovie': true, ...?queryParameters},
     );
   }

@@ -66,9 +66,11 @@ class SonarrService with ArrActivityMixin {
 
   SonarrService(this.client);
 
+  /// On the queue's **page** primitive, which `getQueue` delegates to, so the
+  /// figure and the rows come off one request that carries the series.
   @override
-  Future<List<dynamic>> getQueue({Map<String, dynamic>? queryParameters}) {
-    return super.getQueue(
+  Future<ArrRecordPage> getQueuePage({Map<String, dynamic>? queryParameters}) {
+    return super.getQueuePage(
       queryParameters: {
         'includeSeries': true,
         'includeEpisode': true,

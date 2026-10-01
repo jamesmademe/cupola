@@ -105,8 +105,14 @@ class ActivityServiceResult {
   /// close the gap.
   ///
   /// [total] still stands, because it is the server's own count. What this
-  /// flag forbids is reading the rows as all of them.
+  /// flag forbids is reading the rows as all of them. A queue walk that ran
+  /// out of pages with the count still naming more is the same case.
   final bool incomplete;
+
+  /// [total] is only how many rows arrived: the queue walk got a full page
+  /// and no count to say whether another followed, so there are at least
+  /// that many. A floor, drawn `200+`, never the total.
+  final bool cutShort;
 
   const ActivityServiceResult({
     required this.service,
@@ -117,6 +123,7 @@ class ActivityServiceResult {
     this.total,
     this.error,
     this.incomplete = false,
+    this.cutShort = false,
   });
 
   const ActivityServiceResult.unconfigured(this.service)
@@ -126,7 +133,8 @@ class ActivityServiceResult {
       configured = false,
       instanceId = '',
       label = '',
-      incomplete = false;
+      incomplete = false,
+      cutShort = false;
 
   /// How this result names itself: the service alone when it is the only
   /// connection, `Sonarr · 2` when it is not.
@@ -229,6 +237,7 @@ class ActivityCount {
     required this.total,
     required this.notCounted,
     this.incomplete = false,
+    this.cutShort = false,
   });
 
   /// The sum of the totals the answering connections reported, or null when
@@ -244,9 +253,15 @@ class ActivityCount {
   /// right, and the rows under it are not all of them.
   final bool incomplete;
 
-  /// [total] is true of the connections that answered and short of the whole:
-  /// a floor, never to be printed as the total.
-  bool get isFloor => total != null && notCounted.isNotEmpty;
+  /// A connection that answered could only say how many rows reached us, not
+  /// how many it has ([ActivityServiceResult.cutShort]), so its share of
+  /// [total] is a floor. Nothing is missing to name: the mark says it alone.
+  final bool cutShort;
+
+  /// [total] is true of the connections that answered and short of the whole,
+  /// or holds a share that is itself a floor: never to be printed as the
+  /// total.
+  bool get isFloor => total != null && (notCounted.isNotEmpty || cutShort);
 }
 
 /// How many records [service] has in a bucket across its connections, or
@@ -269,6 +284,7 @@ ActivityCount activityCount(
   var any = false;
   var unknown = false;
   var incomplete = false;
+  var cutShort = false;
   final notCounted = <ActivityServiceResult>[];
   for (final result in results) {
     if (service != null && result.service != service) continue;
@@ -278,6 +294,7 @@ ActivityCount activityCount(
     }
     if (!result.reached) continue;
     incomplete = incomplete || result.incomplete;
+    cutShort = cutShort || result.cutShort;
     final count = result.total;
     if (count == null) {
       unknown = true;
@@ -290,6 +307,7 @@ ActivityCount activityCount(
     total: any && !unknown ? total : null,
     notCounted: notCounted,
     incomplete: incomplete,
+    cutShort: cutShort,
   );
 }
 
@@ -564,7 +582,7 @@ final globalNowItemsProvider = FutureProvider<ActivityFeed>((ref) async {
   );
 });
 
-/// Blocklist, complete: `getBlocklist` now pages every record, so a one-shot
+/// Blocklist, complete: `getBlocklistPage` pages every record, so a one-shot
 /// provider is all this bucket needs — blocklists are small enough that
 /// fetching them whole is one request, unlike History or Wanted.
 final globalBlocklistItemsProvider = FutureProvider<ActivityFeed>((ref) async {
@@ -1188,6 +1206,7 @@ ActivityFeed _merge(List<ActivityServiceResult> results) {
       // Either half failing means the list for this connection is incomplete.
       error: existing.error ?? result.error,
       incomplete: existing.incomplete || result.incomplete,
+      cutShort: existing.cutShort || result.cutShort,
     );
   }
 
@@ -1314,6 +1333,10 @@ Future<ActivityServiceResult> _loadArrConnection(
       )),
     );
     final page = await _loadPage(arrService, kind);
+    // A walk cut short with the count in hand keeps the count and says the
+    // rows are not all of it; one cut short without a count has only its rows
+    // to go on, and they are a floor.
+    final floor = page.cutShort && page.total == null;
     return ActivityServiceResult(
       service: connection.service,
       instanceId: connection.instanceId,
@@ -1322,7 +1345,9 @@ Future<ActivityServiceResult> _loadArrConnection(
           .whereType<Map>()
           .map((item) => _arrItem(kind, connection, stringKeyMap(item)))
           .toList(growable: false),
-      total: page.total,
+      total: floor ? page.records.length : page.total,
+      incomplete: page.cutShort && !floor,
+      cutShort: floor,
       configured: true,
     );
   } catch (error) {
@@ -1347,14 +1372,14 @@ Future<ActivityServiceResult> _loadArrConnection(
 /// the envelope's `totalRecords`, so the count and the rows now come from the
 /// same response.
 ///
-/// Two kinds have no envelope to read and need none: [getQueue] and
-/// [getBlocklist] walk every page the envelope's total names before they
-/// return, so what they fetched is the size of the set. Two ends of that walk
-/// prove nothing, and they belong to the walker, which drops the envelope: a
-/// server that sends no `totalRecords` stops it after one page of 200, and it
-/// gives up after fifty pages. Every other total may still be null — a server
-/// that did not send `totalRecords` has told us nothing, and `records.length`
-/// would be the old lie with a fresh coat on it.
+/// The queue and the blocklist are walks rather than pages: [getQueuePage]
+/// and [getBlocklistPage] fetch every page the envelope's total names, and say
+/// when they could not. They used to hand back the bare rows, and this counted
+/// them — so the two ends where a walk proves nothing were stated as totals: a
+/// server that sends no `totalRecords` stops the walk after one full page of
+/// 200, and the walk gives up after fifty pages. Every other total may still
+/// be null — a server that did not send `totalRecords` has told us nothing,
+/// and `records.length` would be the old lie with a fresh coat on it.
 Future<ArrRecordPage> _loadPage(
   ArrActivityMixin service,
   GlobalActivityKind kind, {
@@ -1363,11 +1388,9 @@ Future<ArrRecordPage> _loadPage(
 }) async {
   switch (kind) {
     case GlobalActivityKind.queue:
-      final records = await service.getQueue();
-      return ArrRecordPage(records: records, total: records.length);
+      return service.getQueuePage();
     case GlobalActivityKind.blocklist:
-      final records = await service.getBlocklist();
-      return ArrRecordPage(records: records, total: records.length);
+      return service.getBlocklistPage();
     // The page variants, not the record-only ones — and on Radarr and Sonarr
     // that is now also what attaches `includeMovie` / `includeSeries` +
     // `includeEpisode`, since both services hang those off this primitive.

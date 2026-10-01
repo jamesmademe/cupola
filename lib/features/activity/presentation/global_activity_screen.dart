@@ -514,14 +514,29 @@ class _ActivityTitle extends ConsumerWidget {
     }
   }
 
-  final text = [
-    queued.isEmpty ? 'Nothing in the queue' : '${queued.length} in the queue',
+  // The rows are a floor when a queue walk stopped short of the end — a full
+  // page and no count, or out of pages — so the figure counted from them is
+  // too: `200+ in the queue`, never `200`.
+  final atLeast = feed.arrConnections.any(
+    (r) => r.reached && (r.cutShort || r.incomplete),
+  );
+  String clauses(String queue) => [
+    queue,
     if (notCounted.isNotEmpty) notCountedClause(notCounted),
     if (needsImport > 0) needsManualImportClause(needsImport),
     if (stalled > 0) '$stalled ${StateWord.stuck.inline}',
     if (importing > 0) '$importing importing',
   ].join(' · ');
-  return (text: text, spoken: text);
+  if (queued.isEmpty) {
+    final text = clauses('Nothing in the queue');
+    return (text: text, spoken: text);
+  }
+  return (
+    text: clauses('${queued.length}${atLeast ? '+' : ''} in the queue'),
+    spoken: clauses(
+      '${atLeast ? 'at least ' : ''}${queued.length} in the queue',
+    ),
+  );
 }
 
 /// One bucket's contents: its record-type pills, the service strip, and the feed.
@@ -1318,8 +1333,11 @@ class _ServiceGroupHeader extends StatelessWidget {
     // not all of it, and no Show more to fetch the rest, so the header says
     // how many it is drawing: `120 · 70 shown`.
     final drawn = total != null && count.incomplete ? '$shown shown' : null;
+    // A queue that sent a full page and no count has a floor and nothing to
+    // name, so the header marks it the way its tile does: `200+`.
+    final atLeast = count.cutShort;
     final figure = [
-      total == null ? '$shown shown' : '$total',
+      total == null ? '$shown shown' : '$total${atLeast ? '+' : ''}',
       ?drawn,
       ?missing,
     ];
@@ -1327,7 +1345,8 @@ class _ServiceGroupHeader extends StatelessWidget {
       service.title,
       total == null
           ? '$shown shown'
-          : '$total ${total == 1 ? 'item' : 'items'}',
+          : '${atLeast ? 'at least ' : ''}$total '
+                '${total == 1 ? 'item' : 'items'}',
       ?drawn,
       ?missing,
     ];
@@ -1750,7 +1769,9 @@ class _ServiceTile extends StatelessWidget {
     // A floor carries a `+`, the mark the SABnzbd history header already uses
     // for a count it cannot stand behind as the whole: the chip has no room to
     // name what is missing, so the ear gets the name and the eye gets the
-    // mark, and the health strip above the list says why.
+    // mark, and the health strip above the list says why. A queue that sent a
+    // full page and no count is a floor with nothing to name, and the ear
+    // hears "at least".
     final total = count.total;
     final countLabel = failed || total == null
         ? Lexicon.noFigure
@@ -1760,8 +1781,9 @@ class _ServiceTile extends StatelessWidget {
         : total == null
         ? '$label, count unavailable'
         : [
-            '$label, $total ${total == 1 ? 'item' : 'items'}',
-            if (count.isFloor) notCountedClause(count.notCounted),
+            '$label, ${count.cutShort ? 'at least ' : ''}$total '
+                '${total == 1 ? 'item' : 'items'}',
+            if (count.notCounted.isNotEmpty) notCountedClause(count.notCounted),
           ].join(', ');
 
     return Padding(

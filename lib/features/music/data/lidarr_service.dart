@@ -72,10 +72,12 @@ class LidarrService with ArrActivityMixin {
   /// `Cindy.Lee-Diamond.Jubilee-WEB-2024-XYZ`. The embeds are what turn that
   /// into `Import failed · Cindy Lee — Diamond Jubilee`, and they only ride
   /// along when the request asks for them, exactly as Radarr must ask for
-  /// `includeMovie` and Readarr for `includeBook`/`includeAuthor`.
+  /// `includeMovie` and Readarr for `includeBook`/`includeAuthor`. On the page
+  /// primitive, which `getQueue` delegates to, so a count and its rows both
+  /// carry them.
   @override
-  Future<List<dynamic>> getQueue({Map<String, dynamic>? queryParameters}) {
-    return super.getQueue(
+  Future<ArrRecordPage> getQueuePage({Map<String, dynamic>? queryParameters}) {
+    return super.getQueuePage(
       queryParameters: {
         'includeArtist': true,
         'includeAlbum': true,

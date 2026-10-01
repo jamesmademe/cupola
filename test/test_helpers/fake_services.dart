@@ -157,6 +157,23 @@ class FakeRadarrService extends RadarrService {
     records: await getCutoff(page: page, pageSize: pageSize),
     total: null,
   );
+
+  /// The walks, inverted the same way. A scripted queue is the whole queue —
+  /// the walk a fake stands in for reached its end — so its total is its
+  /// length, the figure Activity read before a walk could say how far it got.
+  @override
+  Future<ArrRecordPage> getQueuePage({
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final records = await getQueue(queryParameters: queryParameters);
+    return ArrRecordPage(records: records, total: records.length);
+  }
+
+  @override
+  Future<ArrRecordPage> getBlocklistPage() async {
+    final records = await getBlocklist();
+    return ArrRecordPage(records: records, total: records.length);
+  }
 }
 
 class FakeSonarrService extends SonarrService {
@@ -265,6 +282,23 @@ class FakeSonarrService extends SonarrService {
     records: await getCutoff(page: page, pageSize: pageSize),
     total: null,
   );
+
+  /// The walks, inverted the same way. A scripted queue is the whole queue —
+  /// the walk a fake stands in for reached its end — so its total is its
+  /// length, the figure Activity read before a walk could say how far it got.
+  @override
+  Future<ArrRecordPage> getQueuePage({
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final records = await getQueue(queryParameters: queryParameters);
+    return ArrRecordPage(records: records, total: records.length);
+  }
+
+  @override
+  Future<ArrRecordPage> getBlocklistPage() async {
+    final records = await getBlocklist();
+    return ArrRecordPage(records: records, total: records.length);
+  }
 }
 
 class FakeLidarrService extends LidarrService {
@@ -376,6 +410,23 @@ class FakeLidarrService extends LidarrService {
     records: await getCutoff(page: page, pageSize: pageSize),
     total: null,
   );
+
+  /// The walks, inverted the same way. A scripted queue is the whole queue —
+  /// the walk a fake stands in for reached its end — so its total is its
+  /// length, the figure Activity read before a walk could say how far it got.
+  @override
+  Future<ArrRecordPage> getQueuePage({
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final records = await getQueue(queryParameters: queryParameters);
+    return ArrRecordPage(records: records, total: records.length);
+  }
+
+  @override
+  Future<ArrRecordPage> getBlocklistPage() async {
+    final records = await getBlocklist();
+    return ArrRecordPage(records: records, total: records.length);
+  }
 }
 
 class FakeSeerrService extends SeerrService {

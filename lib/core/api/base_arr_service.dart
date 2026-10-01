@@ -104,14 +104,34 @@ Future<List<T>> _mapArrItems<T>(
 /// A caller that gets null must print a count it can defend — "20 shown" — or
 /// no count at all.
 class ArrRecordPage {
-  const ArrRecordPage({required this.records, required this.total});
+  const ArrRecordPage({
+    required this.records,
+    required this.total,
+    this.cutShort = false,
+  });
 
   /// The rows on this page — exactly what the old `List<dynamic>` return was.
   final List<dynamic> records;
 
   /// How many records the server says exist across every page, or null when it
   /// did not say.
+  ///
+  /// From a walk across pages ([ArrActivityMixin.getQueuePage],
+  /// [ArrActivityMixin.getBlocklistPage]) it can also be the walk's own count:
+  /// a server that sends no `totalRecords` still ends its set with a short
+  /// page, and the rows before it are then every row there is.
   final int? total;
+
+  /// A walk across pages stopped before the end of the set, so [records] is
+  /// not all of it.
+  ///
+  /// Two ends prove nothing, and both used to be returned as if they were the
+  /// whole set: the walk gives up after fifty pages, and a full page with no
+  /// `totalRecords` gives it no reason to ask for another. With [total] in
+  /// hand the count still stands and only the rows are short; without it the
+  /// rows are a floor, and a figure taken from them is `200+`, never `200`.
+  /// Always false for a single page, which is one window by definition.
+  final bool cutShort;
 
   /// Reads the envelope, tolerating the shapes the four \*arr forks answer with.
   ///
@@ -143,7 +163,8 @@ mixin ArrActivityMixin {
   /// The service configuration (API version, sort key).
   ArrServiceConfig get config;
 
-  /// Fetches the download queue, page by page.
+  /// Fetches the download queue, page by page, **with its total and whether
+  /// the walk reached the end**.
   ///
   /// The queue endpoint is paginated and defaults to a page size of 10, so a
   /// bare `/queue` call silently returns the first ten records — which is what
@@ -151,14 +172,25 @@ mixin ArrActivityMixin {
   /// queue was. Pages of 200 (the server-side cap) keep this to a single
   /// request in the common case, and only page on when a queue is genuinely
   /// enormous.
-  Future<List<dynamic>> getQueue({
-    Map<String, dynamic>? queryParameters,
-  }) async {
+  ///
+  /// The primitive, for the reason [getHistoryPage] is: anything that prints
+  /// a figure reads this one, and a service's own embeds (`includeMovie`,
+  /// `includeSeries`…) belong on an override of this method, which [getQueue]
+  /// inherits through its delegation.
+  Future<ArrRecordPage> getQueuePage({Map<String, dynamic>? queryParameters}) {
     return _fetchAllPages(
       'queue',
       extraParams: queryParameters ?? const {},
       pageSize: 200,
     );
+  }
+
+  /// The queue, records only. Delegates, so there is still one walk here.
+  Future<List<dynamic>> getQueue({
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final result = await getQueuePage(queryParameters: queryParameters);
+    return result.records;
   }
 
   /// Fetches calendar records for the requested local date range.
@@ -241,13 +273,21 @@ mixin ArrActivityMixin {
     return result.records;
   }
 
-  Future<List<dynamic>> _fetchAllPages(
+  /// Walks [endpoint] page by page, and says how far it got.
+  ///
+  /// It used to return the rows alone, which threw the envelope's total away
+  /// and hid both of the ends where a walk proves nothing: the last page it
+  /// allows itself with the count still naming more, and a full page from a
+  /// server that sends no count. A caller counting the rows stated either one
+  /// as the whole set; [ArrRecordPage.cutShort] now says which it was.
+  Future<ArrRecordPage> _fetchAllPages(
     String endpoint, {
     Map<String, dynamic> extraParams = const {},
     int pageSize = 250,
     int maxPages = 50,
   }) async {
     final records = <dynamic>[];
+    int? total;
 
     for (var page = 1; page <= maxPages; page++) {
       final response = await client.get(
@@ -261,29 +301,46 @@ mixin ArrActivityMixin {
       // where the other coerced it into a page-sized guess.
       final envelope = ArrRecordPage.fromEnvelope(response.data);
       records.addAll(envelope.records);
+      total = envelope.total;
+
+      // An empty page is the end of the set, whatever the count said.
+      if (envelope.records.isEmpty) {
+        return ArrRecordPage(records: records, total: total ?? records.length);
+      }
 
       // A null total means the server did not say how many there are, so this
       // page is the last thing we can honestly claim to know about: stop rather
-      // than walk on asking for pages we have no reason to believe exist. That
-      // is what the old `records.length + pageRecords.length` fallback did too,
-      // by arranging for the comparison below to be true — the intent is just
-      // legible now.
-      final total = envelope.total;
-      if (envelope.records.isEmpty ||
-          total == null ||
-          records.length >= total) {
-        break;
+      // than walk on asking for pages we have no reason to believe exist. A
+      // short page ended the set, so the walk has counted it; a full one may
+      // have another behind it, and its rows are only a floor.
+      if (total == null) {
+        final full = envelope.records.length >= pageSize;
+        return ArrRecordPage(
+          records: records,
+          total: full ? null : records.length,
+          cutShort: full,
+        );
+      }
+
+      if (records.length >= total) {
+        return ArrRecordPage(records: records, total: total);
       }
     }
 
-    return records;
+    // Out of pages with the count still naming more: the count stands, and
+    // the rows are short of it.
+    return ArrRecordPage(records: records, total: total, cutShort: true);
   }
 
   /// Fetches all history records across all pages.
   Future<List<dynamic>> getAllHistory({
     Map<String, dynamic>? queryParameters,
   }) async {
-    return _fetchAllPages('history', extraParams: queryParameters ?? const {});
+    final result = await _fetchAllPages(
+      'history',
+      extraParams: queryParameters ?? const {},
+    );
+    return result.records;
   }
 
   Map<String, dynamic> _wantedParams({bool includeCutoffParams = false}) {
@@ -295,12 +352,19 @@ mixin ArrActivityMixin {
     };
   }
 
-  /// Fetches the whole blocklist.
+  /// Fetches the whole blocklist, with its total and whether the walk reached
+  /// the end.
   ///
   /// Same pagination trap as the queue: no page size means the server answers
   /// with ten records and the rest of the blocklist never reaches the screen.
-  Future<List<dynamic>> getBlocklist() async {
+  Future<ArrRecordPage> getBlocklistPage() {
     return _fetchAllPages('blocklist', pageSize: 200);
+  }
+
+  /// The blocklist, records only.
+  Future<List<dynamic>> getBlocklist() async {
+    final result = await getBlocklistPage();
+    return result.records;
   }
 
   /// Fetches one page of missing items (wanted), **with the envelope's total**.
@@ -357,10 +421,11 @@ mixin ArrActivityMixin {
   Future<List<dynamic>> getAllMissing({
     Map<String, dynamic>? queryParameters,
   }) async {
-    return _fetchAllPages(
+    final result = await _fetchAllPages(
       'wanted/missing',
       extraParams: {..._wantedParams(), ...?queryParameters},
     );
+    return result.records;
   }
 
   /// Fetches one page of cutoff-unmet items, **with the envelope's total**.
@@ -413,13 +478,14 @@ mixin ArrActivityMixin {
     Map<String, dynamic>? queryParameters,
   }) async {
     try {
-      return await _fetchAllPages(
+      final result = await _fetchAllPages(
         'wanted/cutoff',
         extraParams: {
           ..._wantedParams(includeCutoffParams: true),
           ...?queryParameters,
         },
       );
+      return result.records;
     } catch (_) {
       return [];
     }

@@ -36,9 +36,11 @@ class ReadarrService with ArrActivityMixin {
   /// `Orbital.2023.RETAIL.EPUB-XYZ`. The embeds are what turn that back into
   /// `Import failed · Orbital`, and they only ride along when the request asks
   /// for them, exactly as Sonarr must ask for `includeSeries`/`includeEpisode`.
+  /// On the page primitive, which `getQueue` delegates to, so a count and its
+  /// rows both carry them.
   @override
-  Future<List<dynamic>> getQueue({Map<String, dynamic>? queryParameters}) {
-    return super.getQueue(
+  Future<ArrRecordPage> getQueuePage({Map<String, dynamic>? queryParameters}) {
+    return super.getQueuePage(
       queryParameters: {
         'includeBook': true,
         'includeAuthor': true,

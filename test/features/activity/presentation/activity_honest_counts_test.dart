@@ -236,6 +236,61 @@ void main() {
     );
   });
 
+  group('a queue walk cut short', () {
+    testWidgets('P3: a full page and no count reads 200+, never 200', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p3,
+        child: const GlobalActivityScreen(),
+        settle: false,
+      );
+      // A server behind a proxy that drops `totalRecords`: one full page of
+      // the queue, and nothing to say whether a second one follows.
+      harness.network.on(
+        WorldIds.radarr,
+        'GET',
+        '/api/v3/queue',
+        (_) => NetworkReply.json({
+          'page': 1,
+          'pageSize': 200,
+          'records': [
+            for (var i = 0; i < 200; i++)
+              {
+                'id': i + 1,
+                'title': 'Release.$i',
+                'status': 'downloading',
+                'size': 1000,
+                'sizeleft': 500,
+              },
+          ],
+        }),
+      );
+      await harness.settle(tester);
+
+      // The Radarr tile and Radarr's group header, both marked.
+      expect(find.text('200+'), findsNWidgets(2));
+      expect(find.text('200'), findsNothing);
+      expect(
+        find.bySemanticsLabel('Radarr, at least 200 items'),
+        findsNWidgets(2),
+      );
+      expect(
+        find.textContaining(RegExp(r'^\d+\+ in the queue')),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(RegExp(r'^Activity, at least \d+ in the queue')),
+        findsOneWidget,
+      );
+
+      handle.dispose();
+      await harness.unmount(tester);
+    });
+  });
+
   group('the group header', () {
     testWidgets('P3: the header states the server\'s total, not the page', (
       tester,
