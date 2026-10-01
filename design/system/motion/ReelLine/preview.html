@@ -140,7 +140,7 @@
   var reels = {};
   root.querySelectorAll('[data-reel]').forEach(function (el) { reels[el.dataset.reel] = new Reel(el); });
   /* figure */
-  var rates = ['12.4 MB/s', '12.9 MB/s', '9.87 MB/s', '10.1 MB/s', '38.2 MB/s', '4.06 MB/s'], ri = 0;
+  var rates = ['12.4 MB/s', '12.9 MB/s', '9.9 MB/s', '10.1 MB/s', '38.2 MB/s', '4.1 MB/s'], ri = 0;
   function poll() { ri = (ri + 1) % rates.length; reels.figure.set(rates[ri], P.figure); }
   root.querySelector('[data-poll]').addEventListener('click', poll);
   /* word */

@@ -73,7 +73,7 @@ void main() {
       expect(formatImportBytes(-1), 'Unknown size');
     });
 
-    test('renders every rung through the shared precise ladder', () {
+    test('renders every rung through the shared ladder', () {
       // The point of the test is the agreement, not the strings: manual import
       // used to carry its own ladder (`unit <= 1 ? 0 : 1` decimals, no rung
       // above TB), so a file that read "5.0 GB" while being imported read
@@ -86,12 +86,12 @@ void main() {
         5 * 1024 * 1024 * 1024,
         2199023255552,
       ]) {
-        expect(formatImportBytes(size), formatBytesPrecise(size));
+        expect(formatImportBytes(size), formatBytes(size));
       }
 
       expect(formatImportBytes(512), '512 B');
-      expect(formatImportBytes(5 * 1024 * 1024 * 1024), '5.00 GB');
-      expect(formatImportBytes(2199023255552), '2.00 TB');
+      expect(formatImportBytes(5 * 1024 * 1024 * 1024), '5.0 GB');
+      expect(formatImportBytes(2199023255552), '2.0 TB');
     });
   });
 
@@ -138,7 +138,7 @@ void main() {
         '4 of 7 selected',
         '1 re-import',
         '1 needs an identity',
-        '1.00 KB',
+        '1.0 KB',
       ]);
     });
 

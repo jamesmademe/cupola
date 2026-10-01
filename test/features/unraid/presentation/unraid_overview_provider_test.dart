@@ -105,7 +105,7 @@ void main() {
             total: 10 * 1024 * 1024 * 1024 * 1024,
           ),
         ),
-        '5.00 of 10.0 TB',
+        '5.0 of 10.0 TB',
       );
     });
 
@@ -192,7 +192,7 @@ void main() {
       // No "0 above 45 °C": a sentence about a problem where there is none is
       // the most expensive kind of noise on a page that exists to say what
       // needs a decision.
-      expect(digest.headline, 'started · 5.00 of 10.0 TB · 1 disk');
+      expect(digest.headline, 'started · 5.0 of 10.0 TB · 1 disk');
     });
 
     test('a drive that is both flagged and warm is named as flagged', () {

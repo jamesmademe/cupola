@@ -38,15 +38,60 @@ void main() {
       expect(formatDoneOfTotal(doneBytes: null, totalBytes: 100), isNot('0 B'));
     });
 
-    test('both sides carry one decimal, so the pair reads as one measure', () {
+    test(
+      'under 100 both sides carry one decimal, so the pair reads as one',
+      () {
+        const gib = 1024 * 1024 * 1024;
+        expect(
+          formatDoneOfTotal(doneBytes: gib, totalBytes: 4 * gib),
+          '1.0 of 4.0 GB',
+        );
+        expect(
+          formatDoneOfTotal(
+            doneBytes: 2 * gib,
+            totalBytes: (9.4 * gib).round(),
+          ),
+          '2.0 of 9.4 GB',
+        );
+      },
+    );
+
+    test('from 100 up in the total\'s unit both sides read whole', () {
       const gib = 1024 * 1024 * 1024;
       expect(
-        formatDoneOfTotal(doneBytes: gib, totalBytes: 4 * gib),
-        '1.0 of 4.0 GB',
+        formatDoneOfTotal(doneBytes: 120 * gib, totalBytes: 152 * gib),
+        '120 of 152 GB',
+      );
+      // Each half follows the shared rule on its own: the done figure still
+      // has its tenth while it is under 100, and loses it at 100.
+      expect(
+        formatDoneOfTotal(
+          doneBytes: (5.2 * gib).round(),
+          totalBytes: 152 * gib,
+        ),
+        '5.2 of 152 GB',
       );
       expect(
-        formatDoneOfTotal(doneBytes: 2 * gib, totalBytes: (9.4 * gib).round()),
-        '2.0 of 9.4 GB',
+        formatDoneOfTotal(
+          doneBytes: (99.96 * gib).round(),
+          totalBytes: 152 * gib,
+        ),
+        '100 of 152 GB',
+      );
+    });
+
+    test('a done figure under one unit reads a tenth, not 0', () {
+      const gib = 1024 * 1024 * 1024;
+      expect(
+        formatDoneOfTotal(doneBytes: (0.4 * gib).round(), totalBytes: 4 * gib),
+        '0.4 of 4.0 GB',
+      );
+    });
+
+    test('bytes stay whole', () {
+      expect(
+        formatDoneOfTotal(doneBytes: 300, totalBytes: 512),
+        '300 of 512 B',
       );
     });
 
@@ -109,7 +154,7 @@ void main() {
           rateBytesPerSecond: 16 * 1024 * 1024,
           clients: 2,
         ),
-        '2 downloading · 16 MB/s across 2 clients',
+        '2 downloading · 16.0 MB/s across 2 clients',
       );
     });
 

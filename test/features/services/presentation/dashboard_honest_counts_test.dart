@@ -37,7 +37,7 @@ void main() {
       surfaceSize: _tall,
     );
 
-    expect(find.text('5 downloading · 40 MB/s across 2 clients'), findsOne);
+    expect(find.text('5 downloading · 40.4 MB/s across 2 clients'), findsOne);
     // Both Radarr: the HD's four imports and the 4K's two, and Sonarr's one.
     expect(find.text('7 imported'), findsOne);
     expect(find.textContaining('Not in the total'), findsNothing);

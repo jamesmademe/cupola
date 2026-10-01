@@ -57,29 +57,29 @@ void main() {
     });
 
     test('formats kilobytes', () {
-      expect(formatSize(2048), '2.00 KB');
+      expect(formatSize(2048), '2.0 KB');
     });
 
     test('formats megabytes', () {
-      expect(formatSize(5 * 1024 * 1024), '5.00 MB');
+      expect(formatSize(5 * 1024 * 1024), '5.0 MB');
     });
 
     test('formats gigabytes', () {
-      expect(formatSize(2 * 1024 * 1024 * 1024), '2.00 GB');
+      expect(formatSize(2 * 1024 * 1024 * 1024), '2.0 GB');
     });
 
     test('formats terabytes', () {
-      expect(formatSize(1024 * 1024 * 1024 * 1024), '1.00 TB');
+      expect(formatSize(1024 * 1024 * 1024 * 1024), '1.0 TB');
     });
 
-    test('takes the precise ladder, keeping a tenth of a terabyte', () {
+    test('keeps a tenth of a terabyte', () {
       // TrueNAS pools go through this formatter too, and "46 TB" for a 45.5 TB
-      // pool loses the digit the storage screen exists to show.
+      // pool would lose the figure the storage screen exists to show.
       expect(formatSize((45.5 * 1024 * 1024 * 1024 * 1024).round()), '45.5 TB');
     });
 
     test('climbs past TB instead of stopping there', () {
-      expect(formatSize(1024 * 1024 * 1024 * 1024 * 1024), '1.00 PB');
+      expect(formatSize(1024 * 1024 * 1024 * 1024 * 1024), '1.0 PB');
     });
   });
 
@@ -93,10 +93,11 @@ void main() {
       expect(formatSpeed(2048), '2.0 KB/s');
     });
 
-    test('takes the compact ladder, matching the other services KPI cells', () {
-      // SABnzbd and NZBGet render their rates from the same compact ladder, and
-      // all three land in the same /services grid.
-      expect(formatSpeed(52 * 1024 * 1024), '52 MB/s');
+    test('reads the one ladder, matching the other services KPI cells', () {
+      // SABnzbd and NZBGet render their rates from the same ladder, and all
+      // three land in the same /services grid.
+      expect(formatSpeed(52 * 1024 * 1024), '52.0 MB/s');
+      expect(formatSpeed(120 * 1024 * 1024), '120 MB/s');
       expect(formatSpeed(512), '512 B/s');
     });
 

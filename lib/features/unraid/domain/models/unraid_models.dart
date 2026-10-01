@@ -317,7 +317,7 @@ class UnraidArray {
   ///
   /// Kept beside [usedFraction] rather than derived from it, because they
   /// cannot be: a fraction is unitless and the board's headline readout —
-  /// `31.2 of 40 TB` — is the pair of absolute figures. The query has always
+  /// `31.2 of 40.0 TB` — is the pair of absolute figures. The query has always
   /// asked for `capacity { kilobytes { free used total } }`; the mapper simply
   /// threw the numerator and denominator away after dividing them, so the
   /// Overview had a percentage and no way to say what it was a percentage of.

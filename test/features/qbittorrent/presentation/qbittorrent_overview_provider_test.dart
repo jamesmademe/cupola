@@ -301,7 +301,7 @@ void main() {
       ]);
 
       expect(rows.single.tone, StatusTone.success);
-      expect(rows.single.detail, 'movies · 9.00 GB · 240 KB/s up · ratio 3.20');
+      expect(rows.single.detail, 'movies · 9.0 GB · 240 KB/s up · ratio 3.20');
     });
 
     test('an unknowable ETA is left unsaid, never rendered as ∞', () {
@@ -413,7 +413,7 @@ void main() {
       final rows = qbittorrentCategoryRows([
         _torrent(category: 'movies', size: 1024 * 1024),
       ]);
-      expect(rows.single.spoken, 'movies, 1 torrent, 1.00 MB');
+      expect(rows.single.spoken, 'movies, 1 torrent, 1.0 MB');
     });
 
     test('the cap holds', () {
@@ -434,7 +434,7 @@ void main() {
     });
 
     test('a real limit renders as a rate', () {
-      expect(qbittorrentGlobalLimitLabel(20 * 1024 * 1024), '20 MB/s');
+      expect(qbittorrentGlobalLimitLabel(20 * 1024 * 1024), '20.0 MB/s');
     });
   });
 
@@ -475,8 +475,8 @@ void main() {
         'Alternative limits',
       ]);
       expect(facts.map((f) => f.value), [
-        '1.00 MB',
-        '2.00 MB',
+        '1.0 MB',
+        '2.0 MB',
         '2.00',
         // The global sentinel, not a throttle to nothing.
         'no limit',
@@ -497,7 +497,7 @@ void main() {
       // minutes ago has genuinely moved nothing, and `/transfer/info` answered
       // to say so.
       expect(qbittorrentSessionTotalLabel(0), '0 B');
-      expect(qbittorrentSessionTotalLabel(1024 * 1024), '1.00 MB');
+      expect(qbittorrentSessionTotalLabel(1024 * 1024), '1.0 MB');
       // Defensive only; no qB version is known to send one.
       expect(qbittorrentSessionTotalLabel(-1), '0 B');
 

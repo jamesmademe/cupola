@@ -102,7 +102,7 @@ void main() {
     await _pump(tester, freeSpace: 2 * 1024 * 1024 * 1024 * 1024);
 
     expect(
-      find.semantics.byLabel('Free space, 2.00 TB, /downloads'),
+      find.semantics.byLabel('Free space, 2.0 TB, /downloads'),
       findsOneWidget,
     );
   });
@@ -112,7 +112,7 @@ void main() {
 
     expect(
       find.semantics.byLabel(
-        RegExp(r'^Past\.Lives\.2023, 6\.00 GB, .+, seeding, ratio 1\.40$'),
+        RegExp(r'^Past\.Lives\.2023, 6\.0 GB, .+, seeding, ratio 1\.40$'),
       ),
       findsOneWidget,
     );

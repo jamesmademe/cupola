@@ -22,12 +22,12 @@ void main() {
       }
 
       expect(formatActivitySize(311385129), '297 MB');
-      expect(formatActivitySize(2199023255552), '2.00 TB');
+      expect(formatActivitySize(2199023255552), '2.0 TB');
     });
 
     test('parses the loosely typed shapes the arr JSON arrives in', () {
-      expect(formatActivitySize('8003897815'), '7.45 GB');
-      expect(formatActivitySize(8003897815.4), '7.45 GB');
+      expect(formatActivitySize('8003897815'), '7.5 GB');
+      expect(formatActivitySize(8003897815.4), '7.5 GB');
     });
 
     test('answers the em dash for anything that is not a size', () {

@@ -563,7 +563,7 @@ String qbittorrentGlobalLimitLabel(int bytesPerSecond) =>
 /// Negatives are folded to zero defensively; no qB version is known to send one
 /// on these fields, and a counter that went backwards is still not an em dash.
 String qbittorrentSessionTotalLabel(int bytes) =>
-    formatBytesPrecise(bytes < 0 ? 0 : bytes);
+    formatBytes(bytes < 0 ? 0 : bytes);
 
 /// `1.83`, or `—` when the ratio is not a number yet.
 ///

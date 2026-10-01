@@ -319,7 +319,7 @@ List<TransmissionSessionFact> transmissionSessionFacts(
       // Not `formatSize`, which answers `—` for anything at or below zero:
       // that folds a full disk back into silence, which is the whole defect.
       // A null here is the only silence, and it is decided upstream.
-      value: freeSpaceBytes == null ? '—' : formatBytesPrecise(freeSpaceBytes),
+      value: freeSpaceBytes == null ? '—' : formatBytes(freeSpaceBytes),
       // The path is the point, and it has to be the path that was *measured*.
       // Every path in this API belongs to the *daemon's* filesystem, so
       // `/downloads` in a container is not the user's `/downloads`; and when

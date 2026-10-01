@@ -238,7 +238,7 @@ void main() {
     // band, the note under In flight, and SABnzbd's own rows.
     expect(find.byKey(const ValueKey('services-alert-band')), findsNothing);
     expect(find.textContaining('Not in the total'), findsNothing);
-    expect(find.text('5 downloading · 40 MB/s across 2 clients'), findsOne);
+    expect(find.text('5 downloading · 40.4 MB/s across 2 clients'), findsOne);
 
     await harness.unmount(tester);
   });

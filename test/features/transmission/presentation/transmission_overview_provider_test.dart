@@ -336,7 +336,7 @@ void main() {
         freeSpaceBytes: 2 * 1024 * 1024 * 1024 * 1024,
       ).firstWhere((f) => f.label == 'Free space');
 
-      expect(free.value, '2.00 TB');
+      expect(free.value, '2.0 TB');
     });
 
     test('a daemon that named no download directory says so', () {
@@ -481,7 +481,7 @@ void main() {
         ),
       ], now: now);
 
-      expect(items.single.detail, '1.00 GB · 2 h ago · seeding');
+      expect(items.single.detail, '1.0 GB · 2 h ago · seeding');
     });
 
     test('a ratio Transmission did not report reads an em dash', () {
@@ -522,7 +522,7 @@ void main() {
 
       expect(
         item.spoken,
-        'Andor.S02E02.1080p.WEB-DL, 1.00 GB, 2 h ago, seeding, ratio 2.60',
+        'Andor.S02E02.1080p.WEB-DL, 1.0 GB, 2 h ago, seeding, ratio 2.60',
       );
       // `·` is decoration: iOS reads it as "middle dot" or drops it depending
       // on the user's punctuation verbosity, and neither is what the row meant.
@@ -563,7 +563,7 @@ void main() {
       final facts = await container.read(
         transmissionSessionFactsProvider.future,
       );
-      expect(facts.firstWhere((f) => f.label == 'Free space').value, '2.00 TB');
+      expect(facts.firstWhere((f) => f.label == 'Free space').value, '2.0 TB');
     });
 
     test('a daemon that named no directory is never asked', () async {

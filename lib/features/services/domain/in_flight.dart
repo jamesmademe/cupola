@@ -97,39 +97,19 @@ const String kAbsentFigure = '—';
 
 /// `14.0 of 15.2 GB` — two sizes on one unit, or `—` when either is unknown.
 ///
-/// Rendered on the **total's** unit deliberately. Formatted independently, a
-/// transfer 900 MB into a 15.2 GB file reads `900.0 MB of 15.2 GB`, which asks
-/// the reader to convert before they can see it is nowhere near done. One unit
+/// Rendered on the **total's** unit deliberately: formatted independently, a
+/// transfer 900 MB into a 15.2 GB file reads `900 MB of 15.2 GB`, which asks the
+/// reader to convert before they can see it is nowhere near done. One unit
 /// makes the pair comparable at a glance, which is the only reason both numbers
 /// are on the row.
+///
+/// The digits are the shared size rule's, through [formatBytesOfTotal]: one
+/// decimal on both halves (`1.0 of 4.0 GB`, `0.4 of 4.0 GB`, never
+/// `1.0 of 4.00 GB`), whole from 100 up (`120 of 152 GB`), bytes whole.
 String formatDoneOfTotal({int? doneBytes, int? totalBytes}) {
   if (totalBytes == null || totalBytes <= 0) return kAbsentFigure;
   if (doneBytes == null || doneBytes < 0) return kAbsentFigure;
-
-  final precise = formatBytesPrecise(totalBytes);
-  final unit = precise.split(' ').last;
-  final divisor = _divisorFor(unit);
-  if (divisor == null) return '$doneBytes of $precise';
-  if (unit == 'B') return '$doneBytes of $precise';
-
-  // One decimal on both sides, always: the done half is the one that moves,
-  // and a figure that changes its own width as it counts jitters even in
-  // tabular digits; the total takes the same decimal so the pair reads as one
-  // measure (`1.0 of 4.0 GB`, never `1.0 of 4.00 GB`). Bytes are whole things.
-  final done = (doneBytes / divisor).toStringAsFixed(1);
-  final total = (totalBytes / divisor).toStringAsFixed(1);
-  return '$done of $total $unit';
-}
-
-double? _divisorFor(String unit) {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-  final index = units.indexOf(unit);
-  if (index < 0) return null;
-  var divisor = 1.0;
-  for (var i = 0; i < index; i++) {
-    divisor *= 1024;
-  }
-  return divisor;
+  return formatBytesOfTotal(doneBytes, totalBytes);
 }
 
 /// `3 min left`, `2 h 10 min left`, `48 s left` — or `—` when nobody knows.

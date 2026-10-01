@@ -174,14 +174,14 @@ void main() {
         'bar drains to neutral at its last position',
         (_) => DownloadQueueTile(
           title: 'Nosferatu.1922.1080p.BluRay.x264-GROUP',
-          subtitle: '9 GB · 12m',
+          subtitle: '9.0 GB · 12m',
           progress: 0.63,
           percentage: 63,
           accent: ServiceKey.qbittorrent.accent,
           statusLabel: 'Downloading',
           statusTone: StatusTone.info,
           metrics: const [
-            DownloadQueueMetric(label: '↓ 25 MB/s', accented: true),
+            DownloadQueueMetric(label: '↓ 25.0 MB/s', accented: true),
           ],
           sampleAge: const Duration(minutes: 6),
           onTap: _noop,

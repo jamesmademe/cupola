@@ -168,28 +168,26 @@ final unraidOverviewSystemProvider =
 
 // ─── Array ──────────────────────────────────────────────────────────────────
 
-/// `5.59 of 9.31 TB`, or null when the array answered with no capacity block.
+/// `5.6 of 9.3 TB`, or null when the array answered with no capacity block.
 ///
 /// Null and never `0 B`: the percentage beside it on the readout rail is the
 /// figure a user acts on, and an array that reports no capacity is one we
 /// cannot say anything about — including that it is empty.
 ///
-/// [formatBytesPrecise] rather than the compact ladder, for the reason
-/// `byte_format.dart` states: two significant digits rounds a 31.2 TB array to
-/// `31 TB` and every array between 31 and 32 TB to the same string, and this is
-/// a figure the user watches grow.
+/// One decimal, from the shared ladder in `byte_format.dart`: a 31.2 TB array
+/// and a 31.9 TB one read apart, and this is a figure the user watches grow.
 ///
 /// The unit is printed once when both figures land on the same one, because
 /// that is how the board draws it and how a person reads it aloud. When they
-/// differ — 800 GB used of 9.31 TB — both units stay, since collapsing them
+/// differ — 800 GB used of 9.3 TB — both units stay, since collapsing them
 /// there would be off by a factor of a thousand.
 String? unraidCapacityLabel(UnraidArray array) {
   final used = array.usedBytes;
   final total = array.totalBytes;
   if (used == null || total == null || total <= 0) return null;
 
-  final usedLabel = formatBytesPrecise(used);
-  final totalLabel = formatBytesPrecise(total);
+  final usedLabel = formatBytes(used);
+  final totalLabel = formatBytes(total);
   final usedUnit = usedLabel.split(' ').last;
   final totalUnit = totalLabel.split(' ').last;
   if (usedUnit == totalUnit) {
@@ -227,7 +225,7 @@ class UnraidArrayDigest {
   /// `started`, or null when the array reported no state.
   final String? stateLabel;
 
-  /// `5.59 of 9.31 TB`, or null when it reported no capacity.
+  /// `5.6 of 9.3 TB`, or null when it reported no capacity.
   final String? capacityLabel;
 
   /// Every slot the array answered with — **not** the length of [preview], and
@@ -262,7 +260,7 @@ class UnraidArrayDigest {
 
   final List<UnraidDisk> preview;
 
-  /// `started · 5.59 of 9.31 TB · 8 disks · 1 above 45 °C`.
+  /// `started · 5.6 of 9.3 TB · 8 disks · 1 above 45 °C`.
   ///
   /// The used **percentage** is deliberately absent: the readout rail directly
   /// above this section already carries it, and a header repeating the cell an

@@ -225,7 +225,7 @@ void main() {
     final row = tester.widget<ServiceOverviewRow>(
       find.widgetWithText(ServiceOverviewRow, 'Downloaded this session'),
     );
-    expect(row.title, '1.00 MB');
+    expect(row.title, '1.0 MB');
     expect(row.detail, 'Downloaded this session');
     expect(row.trailing, isNull);
   });

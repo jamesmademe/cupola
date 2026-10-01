@@ -825,13 +825,13 @@ class _ImportModeMenu extends ConsumerWidget {
 /// A file size for the manual-import surfaces, or `Unknown size` when the
 /// service reported none.
 ///
-/// Only the sentinel is local: the ladder is the shared [formatBytesPrecise]
-/// one, the same the qBittorrent list and Interactive Search read from. This
-/// was a sixth private ladder with its own precision rule (`unit <= 1 ? 0 : 1`),
-/// so the same file read `5.0 GB` here and `5.00 GB` two screens away.
+/// Only the sentinel is local: the ladder is the shared [formatBytes] one, the
+/// same the qBittorrent list and Interactive Search read from. This was a sixth
+/// private ladder with its own precision rule (`unit <= 1 ? 0 : 1`), so the same
+/// file read `5.0 GB` here and `5.00 GB` two screens away.
 String formatImportBytes(int size) {
   if (size <= 0) return 'Unknown size';
-  return formatBytesPrecise(size);
+  return formatBytes(size);
 }
 
 List<String> _segmentsFor(String path) {

@@ -1265,7 +1265,7 @@ List<Widget> _buildWantedChips(
 /// than no header: the two used to be able to drift because only one of them
 /// existed.
 abstract final class _ActivityTableMetrics {
-  /// The figures cell — wide enough for `4.32 GB · 1h 12m left` in mono.
+  /// The figures cell — wide enough for `99.9 GB · 12h 12m left` in mono.
   static const double figures = 210;
 
   /// The relative-time cell.

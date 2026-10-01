@@ -76,6 +76,17 @@ void main() {
       expect(folded!.single.value, '2.5 MB/s');
     });
 
+    test('a rate printed whole from 100 up still adds', () {
+      // `120 MB/s` is how the ladder prints a rate from 100 up in a unit: no
+      // decimal, so the parser must not insist on one.
+      final folded = aggregateServiceKpis([
+        [kpi('Download', '12.4 MB/s')],
+        [kpi('Download', '120 MB/s')],
+      ]);
+
+      expect(folded!.single.value, '132 MB/s');
+    });
+
     test('one connection folds to itself', () {
       final lens = [kpi('Movies', '900')];
 

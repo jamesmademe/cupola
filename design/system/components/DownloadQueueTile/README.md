@@ -35,7 +35,7 @@ Across clients:
 
 ## Semantics
 
-The row is one container that speaks one sentence — *title, state, 63 per cent, second line, metrics* (a null percentage says *progress unavailable*; a metric's `spoken` text replaces the arrow: *downloading at 25 MB/s*) — reports selection as a state when it is interactive, and carries tap and long-press itself; `actions` is the only child left on the reader's path. Long-press starts selection and is never the menu.
+The row is one container that speaks one sentence — *title, state, 63 per cent, second line, metrics* (a null percentage says *progress unavailable*; a metric's `spoken` text replaces the arrow: *downloading at 25.0 MB/s*) — reports selection as a state when it is interactive, and carries tap and long-press itself; `actions` is the only child left on the reader's path. Long-press starts selection and is never the menu.
 
 ## Do / don't
 

@@ -335,7 +335,7 @@ void main() {
         complete: false,
       );
 
-      expect(entries.single.detail, startsWith('FLAC · 1.10 GB'));
+      expect(entries.single.detail, startsWith('FLAC · 1.1 GB'));
     });
 
     test('different events on one album stay different rows', () {

@@ -31,16 +31,11 @@ bool parseBool(dynamic v) {
 /// Size rendering for qBittorrent — and, through this file, for Transmission,
 /// NPM and the TrueNAS screens.
 ///
-/// The ladder itself is [formatBytesPrecise]; all this adds is qB's sentinel.
+/// The ladder itself is [formatBytes]; all this adds is qB's sentinel.
 /// `<= 0` means "not known yet" across these APIs (a magnet with no metadata
 /// reports size 0, several fields report -1), so it renders as `—` rather than
 /// claiming the thing is empty.
-///
-/// Takes the precise ladder because these are sizes the user compares or
-/// watches grow — a torrent against its remaining bytes, a pool against its
-/// free space — where the compact ladder's `46 TB` throws away the digit that
-/// carries the answer.
-String formatSize(int bytes) => bytes <= 0 ? '—' : formatBytesPrecise(bytes);
+String formatSize(int bytes) => bytes <= 0 ? '—' : formatBytes(bytes);
 
 /// Rate rendering for qBittorrent, Transmission and the /services KPI grid.
 ///
@@ -48,8 +43,8 @@ String formatSize(int bytes) => bytes <= 0 ? '—' : formatBytesPrecise(bytes);
 /// `0 B/s` for anything `<= 0` (qB reports 0 when idle and -1 for "no limit"
 /// on the fields that share this formatter).
 ///
-/// Takes the compact ladder on purpose: these rates land in the same KPI grid
-/// as SABnzbd's and NZBGet's, and two services' download speeds rendering to
+/// There is one ladder on purpose: these rates land in the same KPI grid as
+/// SABnzbd's and NZBGet's, and two services' download speeds rendering to
 /// different precision in adjacent cells is the exact defect the shared
 /// formatter exists to prevent.
 String formatSpeed(int bytesPerSecond) =>

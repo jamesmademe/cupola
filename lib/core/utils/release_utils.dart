@@ -181,17 +181,17 @@ Set<String> extractAvailableIndexers(List<dynamic> releases) {
 
 /// Formats a release's byte size for the interactive-search list.
 ///
-/// Delegates to the shared [formatBytesPrecise] ladder. This used to be its own
+/// Delegates to the shared [formatBytes] ladder. This used to be its own
 /// fifth copy of the byte formatter, with a per-rung precision (one decimal at
 /// KB and MB, two at GB) and no rung above GB — so a 2 TiB season pack printed
-/// as `2048.00 GB`.
+/// as `2048.00 GB`. One decimal, so two releases of 4.3 and 4.4 GB read apart.
 ///
 /// Examples:
 /// - 512 -> "512 B"
-/// - 1024 -> "1.00 KB"
-/// - 1073741824 -> "1.00 GB"
-/// - 2199023255552 -> "2.00 TB"
-String formatReleaseSize(int bytes) => formatBytesPrecise(bytes);
+/// - 1024 -> "1.0 KB"
+/// - 1073741824 -> "1.0 GB"
+/// - 2199023255552 -> "2.0 TB"
+String formatReleaseSize(int bytes) => formatBytes(bytes);
 
 /// Formats age in minutes into a human-readable string.
 ///

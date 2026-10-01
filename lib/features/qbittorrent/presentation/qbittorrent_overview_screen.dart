@@ -445,7 +445,7 @@ class _SessionRow extends StatelessWidget {
       // other three regions, and deliberately so. There the title is the
       // subject (a torrent, a category) and the trailing figure is secondary,
       // which is the shape `ServiceOverviewRow` was built for. Session has no
-      // subject: "Downloaded this session" is chrome and `1.24 TB` is the
+      // subject: "Downloaded this session" is chrome and `1.2 TB` is the
       // content, so putting the label in the primary slot would print six
       // captions at 13/w600 with their answers dimmed to 11pt at the right
       // margin — and capped at 132pt, where a long figure ellipsises. The board

@@ -604,7 +604,7 @@ void main() {
       final feed = await container.read(globalQueueItemsProvider.future);
       final item = feed.items.single;
 
-      expect(item.figures, contains('7.45 GB'));
+      expect(item.figures, contains('7.5 GB'));
       expect(item.figures, contains('left'));
       // The prose stays where prose belongs.
       expect(item.figures, isNot(contains('Dune.Part.Two')));
