@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/rating_display.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/domain/seerr_status.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_extras_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
@@ -167,7 +168,11 @@ class DiscoverDetailScreen extends ConsumerWidget {
               mediaType: normalizedMediaType,
               hasManageableMedia: viewModel.hasManageableMedia,
               isInService: isInService,
-              isAvailable: viewModel.isAvailable,
+              requestGate: seerrRequestGate(
+                viewModel.mediaInfo,
+                isMovie: isMovie,
+                seasons: viewModel.seasons,
+              ),
               tvdbId: viewModel.tvdbId,
               mediaInfo: viewModel.mediaInfo,
               title: viewModel.title,

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/header_action_row.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_action_buttons.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -43,8 +44,7 @@ void main() {
         tester,
         hasManageableMedia: true,
         isInService: true,
-        isAvailable: true,
-        mediaInfo: const {'id': 1},
+        mediaInfo: const {'id': 1, 'status': 5},
       );
 
       // "Requested" is the wrong word for a title that is already on disk, and
@@ -64,7 +64,8 @@ void main() {
         mediaType: 'movie',
         hasManageableMedia: true,
         isInService: false,
-        mediaInfo: const {'id': 1},
+        // Processing: Seerr sent it, and Radarr has it.
+        mediaInfo: const {'id': 1, 'status': 3},
       );
 
       expect(find.text('Requested'), findsOneWidget);
@@ -79,7 +80,7 @@ void main() {
         mediaType: 'tv',
         hasManageableMedia: true,
         isInService: false,
-        mediaInfo: const {'id': 1},
+        mediaInfo: const {'id': 1, 'status': 3},
       );
 
       expect(find.text('Requested'), findsOneWidget);
@@ -87,7 +88,9 @@ void main() {
       expect(find.text('Manage'), findsOneWidget);
     });
 
-    testWidgets('a title only in service offers Open', (tester) async {
+    testWidgets('a title only in service offers Open, and Request', (
+      tester,
+    ) async {
       await _pumpButtons(
         tester,
         mediaType: 'movie',
@@ -95,9 +98,122 @@ void main() {
         isInService: true,
       );
 
-      expect(find.text('Requested'), findsOneWidget);
+      // Seerr has no record of it, and Seerr is what would take the request.
+      expect(find.text('Request'), findsOneWidget);
+      expect(tester.widget<FilledButton>(_request).onPressed, isNotNull);
       expect(find.byIcon(Icons.open_in_new_rounded), findsOneWidget);
       expect(find.text('Open'), findsOneWidget);
+    });
+
+    group('Request follows what Seerr would take', () {
+      // Any media row used to read as "Requested · Radarr is already tracking
+      // this.", whatever the row said.
+      for (final MapEntry(key: name, value: mediaInfo) in {
+        'a row Seerr knows nothing on': {'id': 1, 'status': 1},
+        'a film whose files were deleted (Seerr)': {'id': 1, 'status': 7},
+        'a film whose files were deleted (Overseerr)': {'id': 1, 'status': 6},
+        'a film whose request was declined': {
+          'id': 1,
+          'status': 1,
+          'requests': [
+            {'id': 9, 'status': 3, 'is4k': false},
+          ],
+        },
+        'a film with only a 4K request': {
+          'id': 1,
+          'status': 1,
+          'status4k': 2,
+          'requests': [
+            {'id': 9, 'status': 1, 'is4k': true},
+          ],
+        },
+      }.entries) {
+        testWidgets('$name can be requested', (tester) async {
+          await _pumpButtons(
+            tester,
+            hasManageableMedia: true,
+            // A stack whose Radarr is known only through Seerr.
+            isInService: null,
+            configured: const [ServiceKey.seerr],
+            mediaInfo: mediaInfo,
+          );
+
+          expect(find.text('Request'), findsOneWidget);
+          expect(tester.widget<FilledButton>(_request).onPressed, isNotNull);
+          expect(find.textContaining('already tracking'), findsNothing);
+          // Manage stays: the row is still Seerr's to manage.
+          expect(find.text('Manage'), findsOneWidget);
+        });
+      }
+
+      testWidgets('a partly available series can request the rest, and says '
+          'which seasons that is', (tester) async {
+        await _pumpButtons(
+          tester,
+          mediaType: 'tv',
+          hasManageableMedia: true,
+          isInService: true,
+          mediaInfo: const {
+            'id': 1,
+            'status': 4,
+            'seasons': [
+              {'seasonNumber': 1, 'status': 5},
+              {'seasonNumber': 2, 'status': 5},
+            ],
+          },
+          seasons: [_season(1), _season(2), _season(3), _season(4)],
+        );
+
+        expect(find.text('Request'), findsOneWidget);
+        expect(tester.widget<FilledButton>(_request).onPressed, isNotNull);
+        expect(
+          find.text('Seasons 3 and 4 are not requested yet.'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('a film waiting for approval says so', (tester) async {
+        await _pumpButtons(
+          tester,
+          hasManageableMedia: true,
+          isInService: false,
+          mediaInfo: const {
+            'id': 1,
+            'status': 2,
+            'requests': [
+              {'id': 9, 'status': 1, 'is4k': false},
+            ],
+          },
+        );
+
+        expect(find.text('Requested'), findsOneWidget);
+        expect(find.text('Waiting for approval in Seerr.'), findsOneWidget);
+        expect(tester.widget<FilledButton>(_request).onPressed, isNull);
+      });
+
+      testWidgets('a film whose request failed says Seerr could not send it', (
+        tester,
+      ) async {
+        await _pumpButtons(
+          tester,
+          hasManageableMedia: true,
+          isInService: false,
+          mediaInfo: const {
+            'id': 1,
+            'status': 1,
+            'requests': [
+              {'id': 9, 'status': 4, 'is4k': false},
+            ],
+          },
+        );
+
+        expect(find.text('Request failed'), findsOneWidget);
+        expect(
+          find.text('Seerr could not send the last request to Radarr.'),
+          findsOneWidget,
+        );
+        expect(tester.widget<FilledButton>(_request).onPressed, isNull);
+      });
     });
 
     testWidgets('a title Radarr says it does not hold offers no Open', (
@@ -253,8 +369,8 @@ Future<void> _pumpButtons(
   String mediaType = 'movie',
   required bool hasManageableMedia,
   required bool? isInService,
-  bool isAvailable = false,
   int? tvdbId = 456,
+  List<TvSeason> seasons = const [],
   Map<String, dynamic>? mediaInfo,
   double textScale = 1.0,
   List<ServiceKey> configured = const [ServiceKey.radarr, ServiceKey.sonarr],
@@ -278,7 +394,11 @@ Future<void> _pumpButtons(
             mediaType: mediaType,
             hasManageableMedia: hasManageableMedia,
             isInService: isInService,
-            isAvailable: isAvailable,
+            requestGate: seerrRequestGate(
+              mediaInfo,
+              isMovie: mediaType == 'movie',
+              seasons: seasons,
+            ),
             tvdbId: mediaType == 'tv' ? tvdbId : null,
             mediaInfo: mediaInfo,
             title: 'Title',
@@ -292,3 +412,10 @@ Future<void> _pumpButtons(
 
   await tester.pumpAndSettle();
 }
+
+TvSeason _season(int number) => TvSeason(
+  id: number,
+  seasonNumber: number,
+  name: 'Season $number',
+  episodeCount: 8,
+);

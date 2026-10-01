@@ -9,6 +9,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
+import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_extras_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_navigation_utils.dart';
@@ -37,7 +38,10 @@ class DiscoverActionButtons extends ConsumerWidget {
   /// it, it does not, or null when Cupola could not say — that service is not
   /// set up here, the lookup is still out, or it failed.
   final bool? isInService;
-  final bool isAvailable;
+
+  /// Whether Seerr would take a request now, and why not when it would not.
+  /// Read from Seerr's record alone ([seerrRequestGate]).
+  final SeerrRequestGate requestGate;
   final int? tvdbId;
   final Map<String, dynamic>? mediaInfo;
   final String title;
@@ -52,7 +56,7 @@ class DiscoverActionButtons extends ConsumerWidget {
     required this.mediaType,
     required this.hasManageableMedia,
     required this.isInService,
-    required this.isAvailable,
+    required this.requestGate,
     required this.tvdbId,
     required this.mediaInfo,
     required this.title,
@@ -71,26 +75,50 @@ class DiscoverActionButtons extends ConsumerWidget {
     // request is not Seerr-coloured, it is the thing this page is for.
     final room = CupolaRoom.of(context);
 
-    final isRequested = (isInService ?? false) || hasManageableMedia;
     // "Requested" is the wrong word for a title that is already on disk, and a
     // disabled button with no explanation is a dead end. So the label states the
     // actual state and a single line underneath says why nothing is offered.
+    //
+    // Seerr's own state, and nothing else. Any media row used to read as
+    // "Requested · Radarr is already tracking this.", which disabled Request
+    // for a series with seasons still to ask for, for a title whose files
+    // were deleted, and on a stack whose Radarr is known only through Seerr.
     final String requestLabel;
     final IconData requestIcon;
     final String? disabledReason;
-    if (isAvailable) {
-      requestLabel = 'Available';
-      requestIcon = Icons.check_circle_outline_rounded;
-      disabledReason = 'Already in your library, nothing to request.';
-    } else if (isRequested) {
-      requestLabel = 'Requested';
-      requestIcon = Icons.check_circle_outline_rounded;
-      disabledReason = '$serviceName is already tracking this.';
-    } else {
-      requestLabel = 'Request';
-      requestIcon = Icons.add_circle_outline_rounded;
-      disabledReason = null;
+    switch (requestGate.state) {
+      case SeerrRequestState.available:
+        requestLabel = 'Available';
+        requestIcon = Icons.check_circle_outline_rounded;
+        disabledReason = 'Already in your library, nothing to request.';
+      case SeerrRequestState.waitingForApproval:
+        requestLabel = 'Requested';
+        requestIcon = Icons.check_circle_outline_rounded;
+        disabledReason = 'Waiting for approval in Seerr.';
+      case SeerrRequestState.onItsWay:
+        requestLabel = 'Requested';
+        requestIcon = Icons.check_circle_outline_rounded;
+        disabledReason = '$serviceName is already tracking this.';
+      case SeerrRequestState.failed:
+        // Seerr takes no second request while this one stands, and the row
+        // that can remove it is under Manage.
+        requestLabel = 'Request failed';
+        requestIcon = Icons.error_outline_rounded;
+        disabledReason =
+            'Seerr could not send the last request to $serviceName.';
+      case SeerrRequestState.open:
+        requestLabel = 'Request';
+        requestIcon = Icons.add_circle_outline_rounded;
+        disabledReason = null;
     }
+    // A series partly held already: which seasons a request would add, since
+    // the request asks for every season Seerr does not have yet.
+    final missing = requestGate.missingSeasons;
+    final requestNote = missing.isEmpty
+        ? null
+        : '${missing.length == 1 ? 'Season' : 'Seasons'} '
+              '${Lexicon.names(missing.map((season) => '$season'))} '
+              '${missing.length == 1 ? 'is' : 'are'} not requested yet.';
     final canRequest = disabledReason == null;
     final openAction = _openAction(context, ref);
 
@@ -132,10 +160,10 @@ class DiscoverActionButtons extends ConsumerWidget {
                   disabledForegroundColor: colorScheme.onSurfaceVariant,
                 ),
               ),
-              if (disabledReason != null) ...[
+              if ((disabledReason ?? requestNote) case final note?) ...[
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  disabledReason,
+                  note,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall!.copyWith(
