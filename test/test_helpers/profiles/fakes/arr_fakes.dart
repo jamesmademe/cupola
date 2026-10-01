@@ -312,7 +312,15 @@ class RadarrFake extends ArrFake {
           'date': c.ago(entry.$4),
           'quality': _quality(c.server.is4k ? 'Bluray-2160p' : 'Bluray-1080p'),
           'movie': _movie(c, entry),
-          'data': const <String, Object?>{},
+          // An import names the file it dropped and the one it became.
+          'data': {
+            'droppedPath':
+                '/mnt/tank/downloads/complete/'
+                '${entry.$2.title.replaceAll(' ', '.')}.${entry.$2.year}.mkv',
+            'importedPath':
+                '${rootFolder(c)}/${entry.$2.title} (${entry.$2.year})/'
+                '${entry.$2.title} (${entry.$2.year}).mkv',
+          },
         },
   ];
 

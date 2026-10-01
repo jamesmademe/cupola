@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/status/media_names.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
@@ -405,6 +406,13 @@ class GlobalActivityItem {
   /// kind, and for a record no client answered for.
   final ServiceQueueItem? download;
 
+  /// What the copy this row is about is, and which copy ([MediaNames]): the
+  /// arr's item and the release a queue or blocklist record names, or for an
+  /// import in the history the file it became. Null on the rows about a title
+  /// rather than a copy (wanted, cutoff unmet, requests). [title] and
+  /// [subtitle] are what the row draws today.
+  final MediaNames? names;
+
   const GlobalActivityItem({
     required this.kind,
     required this.service,
@@ -419,6 +427,7 @@ class GlobalActivityItem {
     this.raw,
     this.request,
     this.download,
+    this.names,
   });
 
   /// This record, joined to [client]: the client's row on it, and its status
@@ -445,6 +454,7 @@ class GlobalActivityItem {
       raw: raw,
       request: request,
       download: client,
+      names: names?.withMachineName(client.title, MachineNameKind.release),
     );
   }
 
@@ -1577,8 +1587,27 @@ GlobalActivityItem _arrItem(
     status: resolveActivityStatus(kind, item),
     sortDate: _sortDateFor(kind, item),
     raw: item,
+    names: _namesFor(kind, item),
   );
 }
+
+/// The names of a record about a copy, or null for one about a title.
+MediaNames? _namesFor(GlobalActivityKind kind, Map<String, dynamic> item) =>
+    switch (kind) {
+      GlobalActivityKind.queue => MediaNames.ofRecord(
+        item,
+        machineName: stringOrNull(item['title']),
+      ),
+      GlobalActivityKind.history => arrHistoryNames(item),
+      GlobalActivityKind.blocklist => MediaNames.ofRecord(
+        item,
+        machineName: stringOrNull(item['sourceTitle']),
+        fallback: 'Blocked release',
+      ),
+      GlobalActivityKind.missing ||
+      GlobalActivityKind.cutoff ||
+      GlobalActivityKind.request => null,
+    };
 
 /// Orders a feed so trouble surfaces first.
 ///

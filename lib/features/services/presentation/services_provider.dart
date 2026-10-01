@@ -8,6 +8,7 @@ import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/status/media_names.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/image_utils.dart';
@@ -1206,7 +1207,8 @@ class ServiceQueueItem {
     this.clientInstanceId = '',
     this.mediaId,
     this.outputPath,
-  });
+    MediaNames? names,
+  }) : _names = names;
 
   final ServiceKey service;
 
@@ -1302,6 +1304,15 @@ class ServiceQueueItem {
   /// Where the client is writing, as the \*arr reports it — what a manual
   /// import is seeded from.
   final String? outputPath;
+
+  final MediaNames? _names;
+
+  /// What the transfer is and which copy it is ([MediaNames]): on an \*arr
+  /// row, the arr's item and the release it grabbed, which a row joined to
+  /// its client keeps; on a client's own row that no arr claims, its raw
+  /// name, until something recognises it. [title] is what the row draws
+  /// today; these are what the row is.
+  MediaNames get names => _names ?? MediaNames.raw(title);
 
   /// Whether this transfer is genuinely moving, or waiting to.
   bool get isActive => fault == null;
@@ -1620,6 +1631,9 @@ ServiceQueueItem _joinedQueueItem(
     clientInstanceId: client.clientInstanceId,
     mediaId: arr.mediaId,
     outputPath: arr.outputPath,
+    // The arr's names, and the release the client is moving when the arr's
+    // record did not carry one: a matched row never loses its release name.
+    names: arr.names.withMachineName(client.title, MachineNameKind.release),
   );
 }
 
@@ -2087,6 +2101,11 @@ ServiceQueueItem _queueItemFromRecords(
       : _packTitle(service, records);
   final size = intOrNull(typedItem['size']);
   final left = intOrNull(typedItem['sizeleft']);
+  // The release the arr grabbed, the queue record's `title`, as it sent it.
+  final release = stringOrNull(typedItem['title']);
+  final names = records.length == 1
+      ? MediaNames.ofRecord(typedItem, machineName: release)
+      : _packNames(service, records, title: title, release: release);
 
   // The download's fault is its worst record's: one blocked episode is a
   // manual import for the pack.
@@ -2138,6 +2157,7 @@ ServiceQueueItem _queueItemFromRecords(
     connectionName: connectionName,
     mediaId: mediaId,
     outputPath: stringOrNull(typedItem['outputPath']),
+    names: names,
     // With the connection: a queue record's ids are its server's, and the
     // same film id names a different film on the other Radarr.
     route: switch (service) {
@@ -2197,6 +2217,31 @@ String _packTitle(ServiceKey service, List<Map<String, dynamic>> records) {
     name ?? arrReleaseTitle(first) ?? 'Unknown release',
     '${records.length} $unit',
   ]);
+}
+
+/// A pack's names: `The Boys · 8 episodes` and the pack's release, or the
+/// raw release when the records name no series, artist or author.
+MediaNames _packNames(
+  ServiceKey service,
+  List<Map<String, dynamic>> records, {
+  required String title,
+  required String? release,
+}) {
+  final first = records.first;
+  final named = switch (service) {
+    ServiceKey.sonarr => arrSeriesTitle(first),
+    ServiceKey.lidarr => arrArtistName(first) ?? arrAlbumTitle(first),
+    ServiceKey.readarr => arrAuthorName(first) ?? arrBookTitle(first),
+    _ => arrMovieTitle(first),
+  };
+  if (named == null || release == null || release.trim().isEmpty) {
+    return MediaNames.raw(title);
+  }
+  return MediaNames(
+    title: title,
+    machineName: release.trim(),
+    machineKind: MachineNameKind.release,
+  );
 }
 
 String? _queueTypeLabel(ServiceKey service) {
