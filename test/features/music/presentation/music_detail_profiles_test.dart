@@ -60,4 +60,39 @@ void main() {
       await harness.unmount(tester);
     });
   });
+
+  testWidgets('an artist opened on the second Lidarr reads that Lidarr\'s '
+      'queue, not the lens\'s', (tester) async {
+    // The ids in a queue are its server's: read off the lens, the page badged
+    // the vinyl Lidarr's artist 1 with the other server's artist 1.
+    final harness = await ProfileHarness.start(
+      Profiles.p1.withConnection(WorldConnections.lidarrVinyl),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: harness.overrides,
+        child: MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: const MusicDetailScreen(
+            artistId: 1,
+            heroTag: 'artist-1',
+            instanceId: WorldIds.lidarrVinyl,
+          ),
+        ),
+      ),
+    );
+    await harness.settle(tester);
+
+    bool asksQueue(NetworkRequest r) => r.uri.path == '/api/v1/queue';
+    expect(
+      harness.network.requestsTo(WorldIds.lidarrVinyl).where(asksQueue),
+      isNotEmpty,
+    );
+    expect(
+      harness.network.requestsTo(WorldIds.lidarr).where(asksQueue),
+      isEmpty,
+    );
+
+    await harness.unmount(tester);
+  });
 }

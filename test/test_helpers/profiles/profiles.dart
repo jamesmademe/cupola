@@ -159,6 +159,16 @@ abstract final class WorldConnections {
     label: 'Cabin',
   );
 
+  /// A second Lidarr, for the vinyl rips: in no profile, for a test that
+  /// adds it. It numbers its artists from one like the first, so the same id
+  /// names a different artist on each.
+  static final lidarrVinyl = _api(
+    WorldIds.lidarrVinyl,
+    ServiceKey.lidarr,
+    WorldHosts.lidarrVinyl,
+    label: 'Vinyl',
+  );
+
   // World B, on `tower`: in no profile, for a test that adds one with
   // `ConfigProfile.withConnection` — the NPM and Unraid read-only cases.
   static final readarr = _api(

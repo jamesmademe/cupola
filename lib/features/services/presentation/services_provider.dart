@@ -676,11 +676,38 @@ const int _lidarrAlbumLookupCap = 40;
 const int _lidarrAlbumLookupConcurrency = 4;
 
 /// The Lidarr queue indexed by artist *and* album id.
+///
+/// Delegates to the connection the lens points at, so the surfaces that never
+/// name one keep the shape they always had. See
+/// [lidarrQueueSnapshotsForProvider].
 final lidarrQueueSnapshotsProvider = FutureProvider<LidarrQueueSnapshots>((
   ref,
 ) async {
-  final service = ref.watch(lidarrServiceProvider);
+  final lens = ref.watch(activeInstanceProvider(ServiceKey.lidarr))?.id ?? '';
+  return ref.watch(lidarrQueueSnapshotsForProvider(lens).future);
+});
 
+/// The Lidarr queue of one named connection, indexed by artist and album id.
+///
+/// A queue is a property of a server, and the ids in it are that server's: an
+/// artist page opened on the second Lidarr that read the lens's queue badged
+/// its albums with the other server's downloads. Empty id means the lens,
+/// which is what [lidarrQueueSnapshotsProvider] passes. The Radarr and Sonarr
+/// pages read theirs the same way ([radarrQueueSnapshotForProvider]).
+final lidarrQueueSnapshotsForProvider =
+    FutureProvider.family<LidarrQueueSnapshots, String>((
+      ref,
+      instanceId,
+    ) async {
+      final service = instanceId.isEmpty
+          ? ref.watch(lidarrServiceProvider)
+          : ref.watch(lidarrServiceForProvider(instanceId));
+      return _loadLidarrQueueSnapshots(service);
+    });
+
+Future<LidarrQueueSnapshots> _loadLidarrQueueSnapshots(
+  LidarrService service,
+) async {
   int? directArtistId(Map<String, dynamic> item) => intOrNull(
     mapOrNull(item['artist'])?['id'] ??
         mapOrNull(item['album'])?['artistId'] ??
@@ -779,7 +806,7 @@ final lidarrQueueSnapshotsProvider = FutureProvider<LidarrQueueSnapshots>((
     // Failed, not empty: see [_loadArrQueueSnapshot].
     return LidarrQueueSnapshots.failed(error);
   }
-});
+}
 
 /// How many items the merged Recently Added rail shows.
 ///

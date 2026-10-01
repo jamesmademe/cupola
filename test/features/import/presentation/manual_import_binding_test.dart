@@ -187,8 +187,8 @@ void main() {
             }),
           ),
           musicAlbumsForProvider.overrideWith((ref, item) async => []),
-          lidarrQueueSnapshotsProvider.overrideWith(
-            (ref) async => LidarrQueueSnapshots.empty,
+          lidarrQueueSnapshotsForProvider.overrideWith(
+            (ref, instanceId) async => LidarrQueueSnapshots.empty,
           ),
         ],
       );

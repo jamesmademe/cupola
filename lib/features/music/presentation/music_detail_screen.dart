@@ -124,9 +124,10 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
 
     // One fetch feeds both the artist badge and the per-album badges below,
     // unknown until it answers: a queue nobody read cannot say an album with
-    // nothing on disk is not on its way.
+    // nothing on disk is not on its way. The page's own connection's queue,
+    // never the lens's: the ids in it are that server's.
     final queues = lidarrQueueSnapshotsOf(
-      ref.watch(lidarrQueueSnapshotsProvider),
+      ref.watch(lidarrQueueSnapshotsForProvider(instanceId)),
     );
     final status = lidarrArtistStatus(
       artist,
@@ -150,6 +151,7 @@ class _MusicDetailScreenState extends ConsumerState<MusicDetailScreen>
           ? () async {
               ref.invalidate(musicDetailForProvider(detailRef));
               ref.invalidate(musicAlbumsForProvider(detailRef));
+              ref.invalidate(lidarrQueueSnapshotsForProvider(instanceId));
             }
           : null,
       body: _buildBody(

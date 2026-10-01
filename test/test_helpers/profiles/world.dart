@@ -39,6 +39,10 @@ abstract final class WorldHosts {
   /// requests.
   static const seerrCabin = 'http://cabin.home.arpa:5055';
 
+  /// A second Lidarr beside the first, for the vinyl rips: in no profile, for
+  /// a test that adds it.
+  static const lidarrVinyl = 'http://nas.home.arpa:8687';
+
   // World B.
   static const readarr = 'http://tower.home.arpa:8787';
   static const nzbget = 'http://tower.home.arpa:6789';
@@ -67,6 +71,7 @@ abstract final class WorldIds {
   static const transmission = 'transmission';
   static const jellyfinCabin = 'jellyfin-cabin01';
   static const seerrCabin = 'seerr-cabin001';
+  static const lidarrVinyl = 'lidarr-vinyl01';
 }
 
 /// One film or series of the world, with the ids every service agrees on.

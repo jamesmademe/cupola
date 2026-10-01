@@ -108,7 +108,10 @@ class MusicScreen extends ConsumerWidget {
         queue,
       ),
       onRefresh: (ref) {
-        ref.invalidate(lidarrQueueSnapshotsProvider);
+        // The family behind the snapshot, not the lens wrapper alone: that
+        // one only resolves the lens and re-watches its family member, which
+        // keeps the answer it already had.
+        ref.invalidate(lidarrQueueSnapshotsForProvider);
         // The rail's own non-swallowing read. See `movies_screen.dart`.
         ref.invalidate(lidarrKpiLibraryProvider);
       },
