@@ -1,0 +1,281 @@
+import 'package:dio/dio.dart';
+
+import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+/// Who answered a probe: the service configured, another service of the
+/// stack, or something that is not the service at all.
+///
+/// A 2xx says that *something* answered at the address. Before this, that was
+/// the whole of what the probe asked, so a Sonarr reached on Radarr's port, or
+/// a proxy's page at an address missing its base path, read as Radarr
+/// answering. [identifyProbeAnswer] reads the body the probe already has.
+sealed class ProbeIdentity {
+  const ProbeIdentity();
+
+  /// The service configured answered.
+  static const matches = ProbeMatches._();
+
+  /// Something answered, and it is not the service configured, nor any other
+  /// service Cupola knows.
+  static const notThisService = ProbeNotThisService._();
+
+  /// Another service of the stack answered at this address: a wrong port.
+  const factory ProbeIdentity.otherService(ServiceKey service) =
+      ProbeOtherService;
+}
+
+/// See [ProbeIdentity.matches].
+final class ProbeMatches extends ProbeIdentity {
+  const ProbeMatches._();
+}
+
+/// See [ProbeIdentity.otherService].
+final class ProbeOtherService extends ProbeIdentity {
+  const ProbeOtherService(this.service);
+
+  /// The service that answered instead.
+  final ServiceKey service;
+}
+
+/// See [ProbeIdentity.notThisService].
+final class ProbeNotThisService extends ProbeIdentity {
+  const ProbeNotThisService._();
+}
+
+/// Who answered [service]'s probe, read from [body]: the decoded answer of
+/// its status route, or the text qBittorrent answers with.
+///
+/// **Never fail a genuine service.** Only a positive mismatch is flagged: an
+/// arr whose `appName` names another arr is that arr, a body that is not the
+/// service's shape at all is not the service. A field that is merely absent
+/// in a body that otherwise has the service's shape (an older version, a
+/// build that does not send it) gets the benefit of the doubt.
+///
+/// An exhaustive switch, so a new service declares how it is recognised.
+/// The fields are the ones the clients already parse:
+///
+///  * Radarr, Sonarr, Lidarr, Readarr, Prowlarr: `system/status` carries
+///    `appName` (`Radarr`, `Sonarr`, …) beside `version`.
+///  * Seerr: `/api/v1/status` carries `version` and `commitTag`.
+///  * Bazarr: `/api/system/status` nests everything under `data`, with
+///    `bazarr_version`.
+///  * Jellyfin: `/System/Info` and `/System/Info/Public` carry `ProductName`
+///    (`Jellyfin Server`), which is how an Emby on the port is told apart.
+///  * Plex: `/identity` and `/` are a `MediaContainer`.
+///  * SABnzbd: `mode=version` answers `{"version": …}`.
+///  * qBittorrent: `/api/v2/app/version` is text, `v` and a digit.
+///  * Nginx Proxy Manager: `GET /api/` answers `{"status": "OK", "version"}`.
+///  * NZBGet, Transmission, Unraid: the envelope is the proof (JSON-RPC's
+///    `result` or `error`, Transmission's `result`, GraphQL's `data` or
+///    `errors`); their clients already refuse any other envelope as the API
+///    not being at the address.
+///  * TrueNAS, Dockge: the WebSocket handshake and its framing are the proof,
+///    so whatever their clients accepted is them.
+ProbeIdentity identifyProbeAnswer(ServiceKey service, Object? body) {
+  // An arr answering at another service's address says so by name, whatever
+  // that service's own shape is.
+  final named = _stackServiceNamedIn(body);
+  if (named != null && named != service) {
+    return ProbeIdentity.otherService(named);
+  }
+  return switch (service) {
+    ServiceKey.radarr ||
+    ServiceKey.sonarr ||
+    ServiceKey.lidarr ||
+    ServiceKey.readarr ||
+    ServiceKey.prowlarr => _arr(service, body),
+    ServiceKey.seerr => _hasAny(body, const ['version', 'commitTag']),
+    ServiceKey.bazarr => _bazarr(body),
+    ServiceKey.jellyfin => _jellyfin(body),
+    ServiceKey.plex => _hasMap(body, 'MediaContainer'),
+    ServiceKey.sabnzbd => _hasAny(body, const ['version']),
+    ServiceKey.qbittorrent => _qbittorrent(body),
+    ServiceKey.nginxProxyManager => _hasAny(body, const ['status', 'version']),
+    ServiceKey.nzbget => _hasAny(body, const ['result', 'error']),
+    ServiceKey.transmission => _hasAny(body, const ['result']),
+    ServiceKey.unraid => _hasAny(body, const ['data', 'errors']),
+    ServiceKey.truenas || ServiceKey.dockge => ProbeIdentity.matches,
+  };
+}
+
+/// The path a service conventionally sits under behind a reverse proxy, for
+/// the hint under "it isn't Radarr", or null for one that is not put under a
+/// path (it has none to offer, or its address field takes another form).
+String? conventionalBasePath(ServiceKey service) => switch (service) {
+  ServiceKey.radarr => 'radarr',
+  ServiceKey.sonarr => 'sonarr',
+  ServiceKey.lidarr => 'lidarr',
+  ServiceKey.readarr => 'readarr',
+  ServiceKey.prowlarr => 'prowlarr',
+  ServiceKey.bazarr => 'bazarr',
+  ServiceKey.seerr => 'seerr',
+  ServiceKey.jellyfin => 'jellyfin',
+  ServiceKey.qbittorrent => 'qbittorrent',
+  ServiceKey.sabnzbd => 'sabnzbd',
+  ServiceKey.nzbget => 'nzbget',
+  // Plex and Nginx Proxy Manager do not run under a path; Transmission's
+  // address already takes its RPC path; the three consoles are reached at
+  // their own host.
+  ServiceKey.plex ||
+  ServiceKey.nginxProxyManager ||
+  ServiceKey.transmission ||
+  ServiceKey.truenas ||
+  ServiceKey.dockge ||
+  ServiceKey.unraid => null,
+};
+
+/// The probe of [service] at [url] reached something else: another service
+/// of the stack, or something that is not the service.
+///
+/// [ServiceFailureReason.notFound], which is what the vocabulary already
+/// calls a base URL pointing at the wrong app, so the headline, the tone and
+/// the remedy (`Check the address`) are the ones a wrong address always had,
+/// and the sentence ([failureDetail]) says who answered.
+class WrongServiceAnswer
+    implements Exception, HasFailureReason, HasFailureDetail {
+  /// [identity] is never [ProbeIdentity.matches].
+  WrongServiceAnswer(this.expected, ProbeIdentity identity, {required this.url})
+    : answered = switch (identity) {
+        ProbeOtherService(:final service) => service,
+        _ => null,
+      },
+      assert(identity is! ProbeMatches);
+
+  /// The service configured at [url].
+  final ServiceKey expected;
+
+  /// The service that answered instead, or null for something that is not a
+  /// service Cupola knows.
+  final ServiceKey? answered;
+
+  /// The configured address.
+  final String url;
+
+  @override
+  ServiceFailureReason get reason => ServiceFailureReason.notFound;
+
+  @override
+  String get failureDetail {
+    final host = expected.extractHost(url) ?? url;
+    final other = answered;
+    if (other != null) {
+      return '${other.title} answered at $host, not ${expected.title}.';
+    }
+    final sentence =
+        "Something answered at $host, but it isn't ${expected.title}.";
+    final hint = _basePathHint(expected, url);
+    return hint == null ? sentence : '$sentence\n$hint';
+  }
+
+  @override
+  String toString() =>
+      'WrongServiceAnswer(${expected.name}, '
+      '${answered?.name ?? 'notThisService'})';
+}
+
+/// Throws [WrongServiceAnswer] unless [body] is [service]'s own answer. See
+/// [identifyProbeAnswer].
+void requireProbeIdentity(
+  ServiceKey service,
+  Object? body, {
+  required String url,
+}) {
+  final identity = identifyProbeAnswer(service, body);
+  if (identity is ProbeMatches) return;
+  throw WrongServiceAnswer(service, identity, url: url);
+}
+
+/// [error] as a probe of [service] at [url] should report it: an answer that
+/// was not JSON where the status route answers JSON ([UnexpectedAnswer]) is
+/// something that is not the service, and anything else is left as it is.
+Object probeFailureOf(ServiceKey service, Object error, {required String url}) {
+  final cause = error is DioException ? error.error : error;
+  return cause is UnexpectedAnswer
+      ? WrongServiceAnswer(service, ProbeIdentity.notThisService, url: url)
+      : error;
+}
+
+/// "If Radarr sits under a path, add it: https://example.com/radarr", when
+/// the configured address has no path to be missing one.
+String? _basePathHint(ServiceKey service, String url) {
+  final slug = conventionalBasePath(service);
+  if (slug == null) return null;
+  final normalized = UrlUtils.normalizeBaseUrl(url);
+  final uri = Uri.tryParse(normalized);
+  if (uri == null || uri.host.isEmpty) return null;
+  if (uri.path.isNotEmpty && uri.path != '/') return null;
+  final origin = uri.hasPort
+      ? '${uri.scheme}://${uri.host}:${uri.port}'
+      : '${uri.scheme}://${uri.host}';
+  return 'If ${service.title} sits under a path, add it: $origin/$slug';
+}
+
+ProbeIdentity _arr(ServiceKey service, Object? body) {
+  if (body is! Map) return ProbeIdentity.notThisService;
+  final appName = body['appName'];
+  if (appName is String && appName.trim().isNotEmpty) {
+    // Named, and not a service of the stack (a Whisparr, a fork): not this.
+    return appName.trim().toLowerCase() == service.title.toLowerCase()
+        ? ProbeIdentity.matches
+        : ProbeIdentity.notThisService;
+  }
+  return _hasAny(body, const ['version']);
+}
+
+ProbeIdentity _bazarr(Object? body) {
+  if (body is! Map) return ProbeIdentity.notThisService;
+  return body['data'] is Map
+      ? ProbeIdentity.matches
+      : ProbeIdentity.notThisService;
+}
+
+ProbeIdentity _jellyfin(Object? body) {
+  if (body is! Map) return ProbeIdentity.notThisService;
+  final product = body['ProductName'];
+  if (product is String && product.trim().isNotEmpty) {
+    // Emby answers the same route as `Emby Server`.
+    return product.toLowerCase().contains('jellyfin')
+        ? ProbeIdentity.matches
+        : ProbeIdentity.notThisService;
+  }
+  return _hasAny(body, const ['Version', 'Id', 'ServerName']);
+}
+
+ProbeIdentity _qbittorrent(Object? body) {
+  if (body is! String) return ProbeIdentity.notThisService;
+  final text = body.trim();
+  if (text.isEmpty) return ProbeIdentity.matches;
+  return RegExp(r'^v?\d').hasMatch(text)
+      ? ProbeIdentity.matches
+      : ProbeIdentity.notThisService;
+}
+
+ProbeIdentity _hasAny(Object? body, List<String> keys) {
+  if (body is! Map) return ProbeIdentity.notThisService;
+  return keys.any(body.containsKey)
+      ? ProbeIdentity.matches
+      : ProbeIdentity.notThisService;
+}
+
+ProbeIdentity _hasMap(Object? body, String key) {
+  if (body is! Map) return ProbeIdentity.notThisService;
+  return body[key] is Map
+      ? ProbeIdentity.matches
+      : ProbeIdentity.notThisService;
+}
+
+/// The service of the stack a body names as its `appName`: the arrs' status
+/// routes do, and so a wrong port that lands on one says which.
+ServiceKey? _stackServiceNamedIn(Object? body) {
+  if (body is! Map) return null;
+  final appName = body['appName'];
+  if (appName is! String) return null;
+  final name = appName.trim().toLowerCase();
+  if (name.isEmpty) return null;
+  for (final service in ServiceKey.values) {
+    if (service.title.toLowerCase() == name) return service;
+  }
+  return null;
+}

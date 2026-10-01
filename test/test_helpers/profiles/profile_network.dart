@@ -148,6 +148,13 @@ class ProfileServer {
   /// See `ProfileConnection.latency`.
   final Duration latency;
 
+  /// The service whose fake answers here: [service], unless the behaviour
+  /// puts another one at this address.
+  ServiceKey get answeringService => switch (behaviour) {
+    AnswersAsOtherService(:final service) => service,
+    _ => service,
+  };
+
   Uri get uri => Uri.parse(url);
 
   String get origin => originOf(uri);
@@ -339,7 +346,7 @@ class ProfileNetwork {
       return _FakeResponse.fromReply(const NetworkReply(502));
     }
 
-    final fake = serviceFakeFor(server.service);
+    final fake = serviceFakeFor(server.answeringService);
     final context = ServerContext(network: this, server: server);
 
     if (request.isUpgrade) {

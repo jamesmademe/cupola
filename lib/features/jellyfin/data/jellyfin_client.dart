@@ -8,6 +8,8 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/settings/domain/probe_identity.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_item_mapper.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -185,13 +187,20 @@ class JellyfinClient implements StreamServerClient {
   /// administrator's reads — a narrower credential, not a fault — so it still
   /// answers, and the version comes from the public endpoint. A 401 throws:
   /// the server answered and refused the token.
+  ///
+  /// Who answered is checked on the way ([requireProbeIdentity]): an Emby on
+  /// the port, or a web page at the address, is not Jellyfin.
   Future<String?> checkCredentialAndVersion() async {
     try {
       final response = await _api.get('/System/Info');
+      requireProbeIdentity(ServiceKey.jellyfin, response.data, url: _baseUrl);
       return _versionOf(response.data);
-    } on DioException catch (error) {
+    } on DioException catch (error, stack) {
       if (error.response?.statusCode == 403) return probeVersion();
-      rethrow;
+      Error.throwWithStackTrace(
+        probeFailureOf(ServiceKey.jellyfin, error, url: _baseUrl),
+        stack,
+      );
     }
   }
 

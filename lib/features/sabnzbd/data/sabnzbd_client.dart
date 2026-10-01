@@ -3,6 +3,8 @@ import 'package:dio/dio.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/settings/domain/probe_identity.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 
@@ -127,9 +129,18 @@ class SabnzbdClient {
 
   /// Server version. Does not require the API key — which is exactly why it
   /// cannot be the reachability probe on its own: see [checkKeyAndVersion].
+  ///
+  /// Also the probe's proof of who answered: `{"version": …}`. A web page at
+  /// the address comes back as text, which is not SABnzbd
+  /// ([WrongServiceAnswer]) rather than a version.
   Future<String> getVersion() async {
     final data = await _call('version', withKey: false);
-    return (data['version'] ?? data['_raw'] ?? '').toString().trim();
+    requireProbeIdentity(
+      ServiceKey.sabnzbd,
+      data.containsKey('_raw') ? data['_raw'] : data,
+      url: baseUrl,
+    );
+    return (data['version'] ?? '').toString().trim();
   }
 
   /// The Dashboard's probe: proves the key, then names the version.
@@ -200,9 +211,12 @@ class SabnzbdClient {
   }
 
   /// Verifies the configured URL + key by fetching the queue (which requires
-  /// authentication). Returns true on success.
+  /// authentication), then that SABnzbd is what answered. Returns true on
+  /// success.
   Future<bool> testConnection() async {
-    await getQueue(limit: 1);
+    // The Dashboard's probe, so the connection test checks who answered the
+    // same way and says the same thing.
+    await checkKeyAndVersion();
     return true;
   }
 

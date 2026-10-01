@@ -191,6 +191,11 @@ void main() {
             200,
             body: '{"pageInfo":{"results":0},"results":[]}',
           ),
+          // Then who answered, as the Dashboard's probe reads it.
+          '/api/v1/status': _Reply(
+            200,
+            body: '{"version":"2.7.3","commitTag":"v2.7.3"}',
+          ),
         });
 
         final diagnosis = await server.run(

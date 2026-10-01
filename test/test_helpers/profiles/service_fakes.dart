@@ -78,6 +78,8 @@ abstract class ServiceFake {
       // at the address, whichever path was asked for.
       case PlainBehaviour.servesHtmlPage:
         return NetworkReply.html(proxyDefaultPage);
+      // Answered by the other service's fake, which is the whole behaviour.
+      case AnswersAsOtherService():
       case PlainBehaviour.answers:
       case PlainBehaviour.didNotAnswer:
       case PlainBehaviour.timesOut:

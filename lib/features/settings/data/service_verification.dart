@@ -15,7 +15,9 @@ import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/data/service_status_probe.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/probe_identity.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -288,9 +290,13 @@ Future<ServiceDiagnosis> diagnoseCredentials(
       await SeerrService(
         client,
       ).testConnection().timeout(const Duration(seconds: 5));
+      // Then who answered, read the way the Dashboard's probe reads it.
+      await readServiceStatus(client, service, url: urlTrimmed);
       return const ServiceDiagnosis.connected();
     } catch (e) {
-      return ServiceDiagnosis.failed(e);
+      return ServiceDiagnosis.failed(
+        probeFailureOf(service, e, url: urlTrimmed),
+      );
     } finally {
       client.close();
     }
@@ -485,15 +491,10 @@ Future<ServiceDiagnosis> _diagnoseOverApiClient(
     pinnedCertFingerprint: pin,
   );
   try {
-    final code =
-        (await client.get(endpoint).timeout(const Duration(seconds: 5)))
-            .statusCode ??
-        0;
-    if (code >= 200 && code < 300) return const ServiceDiagnosis.connected();
-    return ServiceDiagnosis(
-      ServiceConnectionStatus.disconnected,
-      reasonForStatusCode(code),
-    );
+    // The Dashboard probe's own reading: the status route, and who answered
+    // it. A 2xx from something that is not the service is not a pass.
+    await readServiceStatus(client, service, url: url);
+    return const ServiceDiagnosis.connected();
   } catch (e) {
     return ServiceDiagnosis.failed(e);
   } finally {

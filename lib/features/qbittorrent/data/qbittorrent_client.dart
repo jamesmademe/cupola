@@ -5,6 +5,8 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/settings/domain/probe_identity.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Error thrown by [QbittorrentClient], carrying the [reason] so a caller
 /// verifying the connection can tell rejected credentials from an unreachable
@@ -252,10 +254,15 @@ class QbittorrentClient {
     if (!_authenticated && refusal != null) throw _refusalException(refusal);
   }
 
+  /// The version, which is also the probe's proof of who answered: text, `v`
+  /// and a digit. A web page at the address, or another app's JSON, is not
+  /// qBittorrent ([WrongServiceAnswer]).
   Future<String> getVersion() async {
     await _ensureAuthenticated();
     final response = await _dio.get('/api/v2/app/version');
-    return response.data?.toString().trim() ?? '';
+    final data = response.data;
+    requireProbeIdentity(ServiceKey.qbittorrent, data, url: baseUrl);
+    return data?.toString().trim() ?? '';
   }
 
   Future<Response> get(

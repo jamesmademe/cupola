@@ -68,8 +68,26 @@ sealed class ConnectionBehaviour {
   /// A web page answers every request. See [PlainBehaviour.servesHtmlPage].
   static const servesHtmlPage = PlainBehaviour.servesHtmlPage;
 
+  /// [service] answers at this connection's address. See
+  /// [AnswersAsOtherService].
+  const factory ConnectionBehaviour.answersAsOtherService(ServiceKey service) =
+      AnswersAsOtherService;
+
   /// A short name for a test's description.
   String get label;
+}
+
+/// Another service of the stack answers at this connection's address, from
+/// its own canned data: a Sonarr reached on Radarr's port. Every request,
+/// WebSocket upgrades included, is answered by [service]'s fake.
+final class AnswersAsOtherService extends ConnectionBehaviour {
+  const AnswersAsOtherService(this.service);
+
+  /// Who answers instead.
+  final ServiceKey service;
+
+  @override
+  String get label => 'answers as ${service.title}';
 }
 
 /// The behaviours that take no value.
