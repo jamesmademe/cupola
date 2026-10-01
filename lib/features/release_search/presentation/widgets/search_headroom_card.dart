@@ -54,6 +54,7 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
             e,
             consequence: 'the path was not checked',
           ),
+          cause: e,
         );
       }
     } finally {

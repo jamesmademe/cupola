@@ -196,6 +196,7 @@ class StreamNowPlayingSection extends ConsumerWidget {
       SnackBarHelper.error(
         context,
         '$failed. ${writeFailureReason(ServiceKey.jellyfin, error)}',
+        cause: error,
       );
     }
   }
@@ -227,6 +228,7 @@ class StreamNowPlayingSection extends ConsumerWidget {
         context,
         'Could not send the message. '
         '${writeFailureReason(ServiceKey.jellyfin, error)}',
+        cause: error,
       );
     }
   }
@@ -269,6 +271,7 @@ class StreamNowPlayingSection extends ConsumerWidget {
       SnackBarHelper.error(
         context,
         'Could not stop playback. ${writeFailureReason(service, error)}',
+        cause: error,
       );
     }
   }

@@ -171,6 +171,7 @@ class StreamActivitySection extends ConsumerWidget {
       SnackBarHelper.error(
         context,
         'Could not stop playback. ${writeFailureReason(row.service, error)}',
+        cause: error,
       );
     }
   }

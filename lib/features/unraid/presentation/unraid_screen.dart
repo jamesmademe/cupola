@@ -429,6 +429,7 @@ class _VmTile extends ConsumerWidget {
         context,
         'Could not ${_actionVerb(action)} ${vm.name}. '
         '${writeFailureReason(ServiceKey.unraid, error)}',
+        cause: error,
       );
     }
   }
@@ -531,6 +532,7 @@ class _NotificationTile extends ConsumerWidget {
               context,
               'Could not archive this notification. '
               '${writeFailureReason(ServiceKey.unraid, error)}',
+              cause: error,
             );
           }
         },

@@ -387,6 +387,7 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
       SnackBarHelper.error(
         context,
         translateGrabError(e),
+        cause: e,
         duration: const Duration(seconds: 5),
       );
     }
