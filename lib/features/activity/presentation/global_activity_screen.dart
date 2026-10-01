@@ -475,8 +475,14 @@ class _ActivityTitle extends ConsumerWidget {
 /// nothing answering there is no figure at all, and the bar says so with the
 /// em dash. The qualifier sits straight after the count it qualifies, so a
 /// phone's ellipsis takes the clauses after it before it takes this one.
+///
+/// Null when no \*arr is set up, and the bar is the page's name alone. Every
+/// clause here is about a queue, and with only Seerr configured there is no
+/// queue to read: "Nothing in the queue" was a claim about something that
+/// does not exist. The body already says which services are not set up.
 @visibleForTesting
-({String text, String spoken}) nowReadout(ActivityFeed feed) {
+({String text, String spoken})? nowReadout(ActivityFeed feed) {
+  if (feed.arrConnections.isEmpty) return null;
   if (feed.noArrAnswered) {
     return (
       text: '${Lexicon.noFigure} in the queue',

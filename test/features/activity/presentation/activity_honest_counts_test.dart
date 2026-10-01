@@ -82,7 +82,7 @@ void main() {
         ],
       );
 
-      final readout = nowReadout(feed);
+      final readout = nowReadout(feed)!;
       expect(readout.text, '1 in the queue · Sonarr Anime not counted');
       expect(readout.spoken, readout.text);
     });
@@ -99,7 +99,7 @@ void main() {
       );
 
       expect(
-        nowReadout(feed).text,
+        nowReadout(feed)!.text,
         'Nothing in the queue · Lidarr not counted',
       );
     });
@@ -115,7 +115,7 @@ void main() {
         ],
       );
 
-      final readout = nowReadout(feed);
+      final readout = nowReadout(feed)!;
       expect(readout.text, '— in the queue');
       expect(readout.spoken, 'queue count unavailable');
     });
@@ -130,7 +130,36 @@ void main() {
         ],
       );
 
-      expect(nowReadout(feed).text, '1 in the queue');
+      expect(nowReadout(feed)!.text, '1 in the queue');
+    });
+
+    test('with no *arr set up there is no queue to speak of', () {
+      final feed = ActivityFeed(
+        items: const [],
+        results: [
+          const ActivityServiceResult.unconfigured(ServiceKey.radarr),
+          const ActivityServiceResult.unconfigured(ServiceKey.sonarr),
+          const ActivityServiceResult.unconfigured(ServiceKey.lidarr),
+          _answered(ServiceKey.seerr, const []),
+        ],
+      );
+
+      expect(nowReadout(feed), isNull);
+    });
+
+    testWidgets('P2: Seerr alone, and the bar claims nothing about a queue', (
+      tester,
+    ) async {
+      final harness = await pumpWithProfile(
+        tester,
+        Profiles.p2,
+        child: const GlobalActivityScreen(),
+      );
+
+      expect(find.text('Activity'), findsOneWidget);
+      expect(find.textContaining('in the queue'), findsNothing);
+
+      await harness.unmount(tester);
     });
 
     testWidgets('P7: Lidarr is away, and the bar says it is not counted', (
