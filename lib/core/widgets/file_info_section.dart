@@ -28,17 +28,31 @@ class FileInfoSection extends StatelessWidget {
 
   final _FileInfoShape _shape;
 
-  /// What the folder is called wherever it is drawn: the folder row's title,
+  /// What the folder is called wherever it is drawn: the titled folder row,
   /// the folder line's spoken label in [FileInfoSection.file], and the slot
-  /// label of a page whose section shows only the folder.
+  /// label over [FileInfoSection.folder].
   static const folderLabel = 'Library path';
 
-  /// The folder alone, titled *Library path*: what a page shows when the
-  /// service names no single file (a series keeps one per episode).
+  /// The folder under its own title, *Library path*, for a section whose
+  /// heading is about something else: the movie's *File* section when Radarr
+  /// reports a file and does not name it. The path is secondary under the
+  /// title, in mono and the tertiary ink.
   const FileInfoSection({super.key, this.path, this.accent})
     : fileName = null,
       releasedAs = null,
-      _shape = _FileInfoShape.folder;
+      _shape = _FileInfoShape.titledFolder;
+
+  /// The folder as the card's subject, under a slot labelled [folderLabel]
+  /// that already names it: the path alone, leading as a file name does, in
+  /// mono and the ink, whole. What a page shows when its service names no
+  /// single file (a series keeps one per episode).
+  const FileInfoSection.folder({
+    super.key,
+    required String this.path,
+    this.accent,
+  }) : fileName = null,
+       releasedAs = null,
+       _shape = _FileInfoShape.folder;
 
   /// The file on disk, then *Released as* and the release it came from when
   /// the service renamed it, then the folder.
@@ -117,6 +131,18 @@ class FileInfoSection extends StatelessWidget {
           colorScheme: colorScheme,
         );
       case _FileInfoShape.folder:
+        return _InfoRow(
+          // The slot above says *Library path*; a title saying it again was
+          // the same words twice. The path is the subject, so it leads.
+          title: path!,
+          titleStyle: AppType.mono.copyWith(color: colorScheme.onSurface),
+          titleMaxLines: null,
+          icon: Icons.storage_rounded,
+          iconColor: _glyphColor(colorScheme),
+          colorScheme: colorScheme,
+          theme: theme,
+        );
+      case _FileInfoShape.titledFolder:
         final folder = path;
         if (folder == null) return const SizedBox.shrink();
         return _InfoRow(
@@ -135,7 +161,7 @@ class FileInfoSection extends StatelessWidget {
   }
 }
 
-enum _FileInfoShape { folder, file, missing }
+enum _FileInfoShape { titledFolder, folder, file, missing }
 
 BoxDecoration _plate(ColorScheme colorScheme) => BoxDecoration(
   color: colorScheme.surfaceContainer,
@@ -235,6 +261,13 @@ class _InfoRow extends StatelessWidget {
   /// The subtitle's style, when it is not prose: the folder row's path.
   final TextStyle? subtitleStyle;
 
+  /// The title's style, when the title is not a name in the text face: the
+  /// path that leads [FileInfoSection.folder].
+  final TextStyle? titleStyle;
+
+  /// Null draws the title whole.
+  final int? titleMaxLines;
+
   const _InfoRow({
     required this.title,
     required this.icon,
@@ -244,6 +277,8 @@ class _InfoRow extends StatelessWidget {
     this.subtitle,
     this.subtitleMaxLines = 1,
     this.subtitleStyle,
+    this.titleStyle,
+    this.titleMaxLines = 1,
   });
 
   @override
@@ -267,11 +302,15 @@ class _InfoRow extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall!
-                          .weight(FontWeight.w600)
-                          .copyWith(color: colorScheme.onSurface),
+                      maxLines: titleMaxLines,
+                      overflow: titleMaxLines == null
+                          ? null
+                          : TextOverflow.ellipsis,
+                      style:
+                          titleStyle ??
+                          theme.textTheme.bodySmall!
+                              .weight(FontWeight.w600)
+                              .copyWith(color: colorScheme.onSurface),
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 2),

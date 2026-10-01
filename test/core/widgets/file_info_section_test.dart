@@ -93,8 +93,33 @@ void main() {
       expect(folder.maxLines, isNull);
     });
 
-    testWidgets('the folder alone keeps its title in the text face and draws '
-        'the path in mono, dim', (tester) async {
+    testWidgets('.folder draws the path alone, as the lead its slot names', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: const Scaffold(
+            body: FileInfoSection.folder(path: '/tv/Breaking Bad'),
+          ),
+        ),
+      );
+      final context = tester.element(find.byType(FileInfoSection));
+
+      // The slot above says Library path; the card does not say it again.
+      expect(find.text('Library path'), findsNothing);
+      final path = tester.widget<Text>(find.text('/tv/Breaking Bad'));
+      expect(path.style!.fontFamily, AppTheme.monoFontFamily);
+      expect(path.style!.color, Theme.of(context).colorScheme.onSurface);
+      expect(path.maxLines, isNull);
+      expect(find.byIcon(Icons.storage_rounded), findsOneWidget);
+      expect(find.semantics.byLabel('/tv/Breaking Bad'), findsOne);
+    });
+
+    testWidgets('the titled folder, under a heading about the file, keeps its '
+        'title in the text face and draws the path in mono, dim', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.darkTheme(),

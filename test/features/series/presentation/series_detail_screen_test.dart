@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
@@ -177,6 +178,14 @@ void main() {
       expect(labels, contains('Library path'));
       expect(find.byType(FileInfoSection), findsOneWidget);
       expect(find.byType(MachineName), findsNothing);
+
+      // Said once, by the heading: the card under it draws the path alone,
+      // and the path leads it, in mono and the ink.
+      expect(find.text('Library path'), findsOneWidget);
+      final path = tester.widget<Text>(find.text('/tv/Breaking Bad'));
+      expect(path.style!.fontFamily, AppTheme.monoFontFamily);
+      final context = tester.element(find.byType(FileInfoSection));
+      expect(path.style!.color, Theme.of(context).colorScheme.onSurface);
     });
 
     testWidgets('the canonical region order puts seasons above the catalogue', (

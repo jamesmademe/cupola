@@ -120,8 +120,10 @@ void main() {
       CatalogScene(
         'FileInfoSection.file · the file leads in the ink; Released as and '
         'the folder (a path, so mono) are secondary · a file that kept its '
-        'release name · .missing, the same footprint · the folder alone (a '
-        'series), its title in the text face, the path mono, no accent',
+        'release name · .missing, the same footprint · .folder, a series '
+        'under its Library path slot: the path alone, leading in the ink · '
+        'the titled folder, the movie fallback under its File slot, no '
+        'accent',
         (_) => SizedBox(
           width: 358,
           child: Column(
@@ -142,7 +144,14 @@ void main() {
               const SizedBox(height: 12),
               FileInfoSection.missing(accent: ServiceKey.radarr.accent),
               const SizedBox(height: 12),
-              const FileInfoSection(path: '/data/media/series/Sherlock'),
+              FileInfoSection.folder(
+                path: '/data/media/series/Sherlock',
+                accent: ServiceKey.sonarr.accent,
+              ),
+              const SizedBox(height: 12),
+              const FileInfoSection(
+                path: '/data/media/movies/Nosferatu (1922)',
+              ),
             ],
           ),
         ),

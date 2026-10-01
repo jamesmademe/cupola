@@ -577,11 +577,15 @@ class _SeriesDetailScreenState extends ConsumerState<SeriesDetailScreen>
           ),
           // The series' folder, labelled as the folder. Sonarr keeps one file
           // per episode and this page names none of them, so "Files" promised
-          // what the row never drew.
+          // what the row never drew. The heading names it, so the card draws
+          // the path alone, as its lead.
           if (viewModel.hasFiles && viewModel.path != null)
             MediaDetailSlot.box(
               label: FileInfoSection.folderLabel,
-              child: FileInfoSection(path: viewModel.path, accent: accent),
+              child: FileInfoSection.folder(
+                path: viewModel.path!,
+                accent: accent,
+              ),
             ),
         ],
       ],
