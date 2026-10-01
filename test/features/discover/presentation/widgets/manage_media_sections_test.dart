@@ -83,4 +83,68 @@ void main() {
       }
     });
   });
+
+  group('the 4K mark and the empty note', () {
+    for (final theme in [AppTheme.darkTheme(), AppTheme.lightTheme()]) {
+      final room = theme.brightness.name;
+
+      testWidgets('$room: the 4K mark is the blue tone walked against the '
+          'card', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: Scaffold(
+              body: RequestsSection(
+                requests: const [
+                  SeerrRequest(
+                    id: 1,
+                    status: RequestStatus.approved,
+                    createdAt: '2026-09-01T10:00:00Z',
+                    type: 'movie',
+                    is4k: true,
+                  ),
+                ],
+                onDeleteRequest: (_) {},
+              ),
+            ),
+          ),
+        );
+
+        final colorScheme = theme.colorScheme;
+        // It was `AppColors.info`, the raw byte, whatever room it landed in.
+        expect(
+          _badgeFill(tester, '4K'),
+          statusToneColor(
+            colorScheme,
+            StatusTone.info,
+            surface: colorScheme.surfaceContainer,
+          ),
+        );
+      });
+
+      testWidgets('$room: the empty note takes a theme role', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: Scaffold(
+              body: RequestsSection(
+                requests: const [],
+                onDeleteRequest: (_) {},
+              ),
+            ),
+          ),
+        );
+
+        final finder = find.text('No requests for this media');
+        final resolved = Theme.of(tester.element(finder));
+        // It was a bare `TextStyle(color:)`, which reaches no variable axis.
+        expect(
+          tester.widget<Text>(finder).style,
+          resolved.textTheme.bodyMedium?.copyWith(
+            color: resolved.colorScheme.onSurfaceVariant,
+          ),
+        );
+      });
+    }
+  });
 }

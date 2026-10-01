@@ -47,7 +47,9 @@ class RequestsSection extends StatelessWidget {
             child: Center(
               child: Text(
                 'No requests for this media',
-                style: TextStyle(color: colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           )
@@ -129,9 +131,17 @@ class _RequestCard extends StatelessWidget {
                   runSpacing: AppSpacing.xs,
                   children: [
                     // A fact about the request, so blue. Amber would call the
-                    // resolution a fault.
+                    // resolution a fault. Through the tone, walked against the
+                    // card it sits on: the raw byte was painted as it came.
                     if (request.is4k)
-                      const _Badge(text: '4K', color: AppColors.info),
+                      _Badge(
+                        text: '4K',
+                        color: statusToneColor(
+                          colorScheme,
+                          StatusTone.info,
+                          surface: colorScheme.surfaceContainer,
+                        ),
+                      ),
                     _StatusBadge(request: request),
                   ],
                 ),
