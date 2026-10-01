@@ -15,6 +15,7 @@ import 'package:cupola/core/reel_motion.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
@@ -1074,11 +1075,14 @@ class _NoResultsState extends StatelessWidget {
   }
 }
 
-/// "Radarr", "Radarr and Sonarr", "Seerr, Radarr and Sonarr".
-String _serviceList(List<ServiceKey> services) {
+/// "Radarr", "Radarr and Sonarr", "Seerr, Radarr and Sonarr"; with
+/// [conjunction] `or`, "Seerr, Radarr or Sonarr", for a list where any one will
+/// do.
+String _serviceList(List<ServiceKey> services, {String conjunction = 'and'}) {
   final titles = services.map((s) => s.title).toList(growable: false);
   if (titles.length == 1) return titles.single;
-  return '${titles.sublist(0, titles.length - 1).join(', ')} and ${titles.last}';
+  return '${titles.sublist(0, titles.length - 1).join(', ')} $conjunction '
+      '${titles.last}';
 }
 
 class _SearchEmptyState extends ConsumerWidget {
@@ -1097,6 +1101,9 @@ class _SearchEmptyState extends ConsumerWidget {
         .where(settings.isServiceConfigured)
         .toList(growable: false);
     final hasAny = searchable.isNotEmpty;
+    final notSetUp = globalSearchServices
+        .where((service) => !settings.isServiceConfigured(service))
+        .toList(growable: false);
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -1122,8 +1129,10 @@ class _SearchEmptyState extends ConsumerWidget {
           hasAny
               ? 'Enter a title, show, or artist to query '
                     '${_serviceList(searchable)}.'
-              : '${Lexicon.setUp(_serviceList(globalSearchServices))} to '
-                    'search your libraries from here.',
+              // "or": any one of them is enough to search from here. It said
+              // "and", which asked for the whole list before the first search.
+              : '${Lexicon.setUp(_serviceList(notSetUp, conjunction: 'or'))} '
+                    'to search your libraries from here.',
           textAlign: TextAlign.center,
           style: Theme.of(
             context,
@@ -1131,16 +1140,31 @@ class _SearchEmptyState extends ConsumerWidget {
         ),
         if (!hasAny) ...[
           const SizedBox(height: AppSpacing.lg),
-          Center(
-            child: FilledButton.icon(
-              // `go`, not `push`: a push keeps the *origin* branch's navigator,
-              // so Settings would render inside the Search tab while the bar
-              // stayed lit on Search. `go` switches to the Settings branch,
-              // which is what the button says it does.
-              onPressed: () => context.go('/settings'),
-              icon: const Icon(Icons.settings_rounded, size: 18),
-              label: const Text('Open Settings'),
-            ),
+          // One `Set up X` per searchable service, each to its own setup form,
+          // as Activity's and Streaming's empty states do. "Open Settings"
+          // landed on the Settings root and left the user to find the service.
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              for (final (index, service) in notSetUp.indexed)
+                // `go`, not `push`: a push keeps the *origin* branch's
+                // navigator, so the form would render inside the Search tab
+                // while the bar stayed lit on Search. `go` switches to the
+                // Settings branch, where the form lives.
+                index == 0
+                    ? FilledButton(
+                        onPressed: () =>
+                            context.go(ServiceRoutes.setUp(service)),
+                        child: Text(Lexicon.setUp(service.title)),
+                      )
+                    : OutlinedButton(
+                        onPressed: () =>
+                            context.go(ServiceRoutes.setUp(service)),
+                        child: Text(Lexicon.setUp(service.title)),
+                      ),
+            ],
           ),
         ],
         if (recents.isNotEmpty) ...[
