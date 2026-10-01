@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One configured connection to one server.
@@ -64,6 +65,16 @@ class ServiceInstance {
   /// per-viewer query to an id that does not exist there.
   final String viewerId;
 
+  /// What this connection presents to a gateway in front of the service, on
+  /// every request it makes. [NoAccess] unless the user set one.
+  ///
+  /// Per connection rather than per origin, unlike a trusted certificate: see
+  /// [ConnectionAccess]. Its non-secret half is stored beside the address
+  /// ([accessStorageKey]) and its secrets in secure storage under keys derived
+  /// from [id] ([accessSecretStorageKey], [accessHeaderStorageKey]), so
+  /// removing the connection removes them.
+  final ConnectionAccess access;
+
   const ServiceInstance({
     required this.id,
     required this.service,
@@ -72,6 +83,7 @@ class ServiceInstance {
     this.credential = '',
     this.username = '',
     this.viewerId = '',
+    this.access = const NoAccess(),
   });
 
   /// The id the first instance of [service] takes. See the class doc.
@@ -122,6 +134,20 @@ class ServiceInstance {
   String get credentialStorageKey =>
       'secure_${id}_${service.credentialStorageSuffix}';
 
+  /// Where the non-secret half of [access] lives in `SharedPreferences`: its
+  /// kind, the Cloudflare Client ID, the proxy's username, the custom header
+  /// names. Absent for [NoAccess], which is also what an install that predates
+  /// access reads, so there is nothing to migrate.
+  String get accessStorageKey => '${id}_access';
+
+  /// Where the secret of [access] lives in secure storage: the Cloudflare
+  /// Client Secret, or the proxy's password.
+  String get accessSecretStorageKey => 'secure_${id}_access_secret';
+
+  /// Where the value of custom header [index] lives in secure storage.
+  String accessHeaderStorageKey(int index) =>
+      'secure_${id}_access_header_$index';
+
   /// Whether this instance is set up enough to be worth talking to.
   ///
   /// A credential-authenticated service can legitimately run with no auth at
@@ -154,6 +180,7 @@ class ServiceInstance {
     String? credential,
     String? username,
     String? viewerId,
+    ConnectionAccess? access,
   }) {
     return ServiceInstance(
       id: id,
@@ -163,6 +190,7 @@ class ServiceInstance {
       credential: credential ?? this.credential,
       username: username ?? this.username,
       viewerId: viewerId ?? this.viewerId,
+      access: access ?? this.access,
     );
   }
 
@@ -175,14 +203,25 @@ class ServiceInstance {
         other.url == url &&
         other.credential == credential &&
         other.username == username &&
-        other.viewerId == viewerId;
+        other.viewerId == viewerId &&
+        other.access == access;
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, service, label, url, credential, username, viewerId);
+  int get hashCode => Object.hash(
+    id,
+    service,
+    label,
+    url,
+    credential,
+    username,
+    viewerId,
+    access,
+  );
 
+  /// The kind of access only, never its values.
   @override
   String toString() =>
-      'ServiceInstance($id, ${service.name}, label: "$label", url: "$url")';
+      'ServiceInstance($id, ${service.name}, label: "$label", url: "$url", '
+      'access: ${access.kind.name})';
 }

@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -328,6 +329,17 @@ class SettingsService {
     await _prefs.remove(_kInstanceRoster);
     await _prefs.remove(_kActiveInstances);
 
+    // A primary's access, for the install whose roster lost a write: the
+    // roster is what the loop above walked.
+    for (final service in ServiceKey.values) {
+      await _prefs.remove(
+        ServiceInstance(
+          id: ServiceInstance.primaryIdFor(service),
+          service: service,
+        ).accessStorageKey,
+      );
+    }
+
     for (final storageKeys in _serviceStorageKeys.values) {
       await _prefs.remove(storageKeys.url);
       await _prefs.remove(storageKeys.legacyApiKey);
@@ -415,8 +427,14 @@ class SettingsService {
 
     final roster = _readRoster();
     final extras = await _loadExtraInstances(roster);
+    final ordered = _ordered([...model.instances, ...extras], roster);
+    // Each connection's access, from the keys its id derives: one pass for the
+    // primaries and the extras alike, since neither path above knows of it.
     return model.copyWith(
-      instances: _ordered([...model.instances, ...extras], roster),
+      instances: List.unmodifiable([
+        for (final instance in ordered)
+          instance.copyWith(access: await _loadAccess(instance)),
+      ]),
     );
   }
 
@@ -814,6 +832,7 @@ class SettingsService {
       await _saveApiKey(instance.credentialStorageKey, instance.credential);
       await _writeOrRemove(instance.usernameStorageKey, instance.username);
       await _writeOrRemove(instance.viewerIdStorageKey, instance.viewerId);
+      await _saveAccess(instance);
     }
 
     final live = {for (final instance in settings.instances) instance.id};
@@ -866,6 +885,122 @@ class SettingsService {
     await _prefs.remove(instance.usernameStorageKey);
     await _prefs.remove(instance.viewerIdStorageKey);
     await _secureStore.delete(key: instance.credentialStorageKey);
+    await _saveAccess(instance.copyWith(access: const NoAccess()));
+  }
+
+  // === Access ==============================================================
+  //
+  // The non-secret half of a connection's access goes to `SharedPreferences`
+  // under `<id>_access`, as JSON: its kind, and the Cloudflare Client ID, the
+  // proxy's username or the custom header names. Every secret goes to secure
+  // storage under keys derived from the id, the way the credential does. An
+  // install that predates access has no `<id>_access` key and reads NoAccess,
+  // so there is no migration.
+
+  /// Writes [instance]'s access, removing whatever its previous access left
+  /// behind: a secret the new kind does not use, a header the list no longer
+  /// has.
+  Future<void> _saveAccess(ServiceInstance instance) async {
+    final previousHeaders = _storedAccessHeaderNames(instance).length;
+    final access = instance.access;
+
+    final Map<String, Object> public;
+    String? secret;
+    var headerValues = const <String>[];
+    switch (access) {
+      case NoAccess():
+        public = const {};
+      case CloudflareServiceToken(:final clientId, :final clientSecret):
+        public = {'kind': access.kind.name, 'clientId': clientId.trim()};
+        secret = clientSecret.trim();
+      case ProxyPassword(:final username, :final password):
+        public = {'kind': access.kind.name, 'username': username};
+        secret = password;
+      case CustomHeaders(:final entries):
+        public = {
+          'kind': access.kind.name,
+          'names': [for (final entry in entries) entry.name.trim()],
+        };
+        headerValues = [for (final entry in entries) entry.value];
+    }
+
+    if (public.isEmpty) {
+      await _prefs.remove(instance.accessStorageKey);
+    } else {
+      await _prefs.setString(instance.accessStorageKey, jsonEncode(public));
+    }
+    if (secret == null || secret.isEmpty) {
+      await _secureStore.delete(key: instance.accessSecretStorageKey);
+    } else {
+      await _secureStore.write(
+        key: instance.accessSecretStorageKey,
+        value: secret,
+      );
+    }
+    for (final (index, value) in headerValues.indexed) {
+      final key = instance.accessHeaderStorageKey(index);
+      if (value.isEmpty) {
+        await _secureStore.delete(key: key);
+      } else {
+        await _secureStore.write(key: key, value: value);
+      }
+    }
+    for (var index = headerValues.length; index < previousHeaders; index++) {
+      await _secureStore.delete(key: instance.accessHeaderStorageKey(index));
+    }
+  }
+
+  /// [instance]'s access as stored, [NoAccess] when there is none or it does
+  /// not parse: a value a later build wrote, or one edited by hand, costs the
+  /// access and never the connection.
+  Future<ConnectionAccess> _loadAccess(ServiceInstance instance) async {
+    final public = _storedAccess(instance);
+    if (public == null) return const NoAccess();
+    String text(Object? value) => value is String ? value : '';
+
+    switch (AccessKind.byName(text(public['kind']))) {
+      case AccessKind.cloudflare:
+        return CloudflareServiceToken(
+          clientId: text(public['clientId']),
+          clientSecret: await _loadApiKey(instance.accessSecretStorageKey),
+        );
+      case AccessKind.password:
+        return ProxyPassword(
+          username: text(public['username']),
+          password: await _loadApiKey(instance.accessSecretStorageKey),
+        );
+      case AccessKind.custom:
+        final names = _storedAccessHeaderNames(instance);
+        return CustomHeaders([
+          for (final (index, name) in names.indexed)
+            (
+              name: name,
+              value: await _loadApiKey(instance.accessHeaderStorageKey(index)),
+            ),
+        ]);
+      case AccessKind.none:
+      case null:
+        return const NoAccess();
+    }
+  }
+
+  Map<String, Object?>? _storedAccess(ServiceInstance instance) {
+    final raw = _prefs.getString(instance.accessStorageKey);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map ? decoded.cast<String, Object?>() : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// The custom header names stored for [instance], which is also how many
+  /// header values secure storage holds for it.
+  List<String> _storedAccessHeaderNames(ServiceInstance instance) {
+    final names = _storedAccess(instance)?['names'];
+    if (names is! List) return const [];
+    return [for (final name in names) name is String ? name : ''];
   }
 
   Future<void> _writeRoster(List<ServiceInstance> instances) async {

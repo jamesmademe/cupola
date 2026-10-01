@@ -8,6 +8,10 @@ class FakeSecureSettingsStore implements SecureSettingsStore {
   /// widget tests that need to exercise the error UI path.
   String? failureMessage;
 
+  /// Everything stored, for a test that asks what is in the store rather
+  /// than what one key holds.
+  Map<String, String> get entries => Map.unmodifiable(_storage);
+
   @override
   Future<void> delete({required String key}) async {
     final message = failureMessage;
