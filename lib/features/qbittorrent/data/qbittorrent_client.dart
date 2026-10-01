@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
@@ -5,6 +7,7 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_refusal_store.dart';
 import 'package:cupola/features/settings/domain/probe_identity.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -54,6 +57,15 @@ enum _LoginRefusal {
 /// locally with the same sentence. Only two things lift it — new credentials,
 /// which build a new client (the providers watch the transport), and
 /// [clearLoginRefusal], which a *user's* Retry calls. A poll tick never does.
+///
+/// ## Held per connection, not per client
+///
+/// A client that names its [connectionId] and a [QbittorrentRefusalStore]
+/// keeps the refusal there too, and reads it before its first sign-in. So a
+/// new client of the same connection (the app's next launch, a check run in
+/// the background) does not spend another attempt on credentials already
+/// refused: it holds the refusal while it would send the very same address,
+/// username, password and access, and a change to any of them lifts it.
 class QbittorrentClient {
   final String baseUrl;
   final String? username;
@@ -68,6 +80,24 @@ class QbittorrentClient {
   /// at the top of every login, which is what made it stop nothing.
   _LoginRefusal? _refusal;
 
+  /// The connection whose refusals [_store] keeps; empty for a client that
+  /// belongs to none (a form testing what is typed).
+  final String connectionId;
+  final QbittorrentRefusalStore? _store;
+
+  /// [qbittorrentCredentialMark] of what this client sends, when it keeps its
+  /// refusals in [_store].
+  final String _credentialMark;
+
+  /// Whether a refusal held in [_store] has been read into [_refusal], and
+  /// the one read in flight.
+  bool _storeRead = false;
+  Future<void>? _storeReading;
+
+  /// Bumped by [clearLoginRefusal], so a store read that started before a
+  /// person asked again cannot put the refusal they lifted back.
+  int _clears = 0;
+
   /// The gateway that answered the last sign-in in qBittorrent's place, if
   /// one did. Not a refusal: qBittorrent never saw the attempt, and the
   /// gateway's answer is what the caller should read.
@@ -77,6 +107,9 @@ class QbittorrentClient {
   /// explicitly trusted for this origin (trust-on-first-use, ADR-6). Ignored
   /// when [dio] is injected — a caller supplying its own transport owns its
   /// TLS behaviour too, the same rule the other per-service clients follow.
+  ///
+  /// [connectionId] and [refusalStore] together keep a refused sign-in for
+  /// the connection rather than for this client alone: see the class doc.
   QbittorrentClient({
     required String url,
     this.username,
@@ -85,8 +118,19 @@ class QbittorrentClient {
     CookieJar? cookieJar,
     String? certFingerprint,
     Map<String, String> accessHeaders = const {},
+    this.connectionId = '',
+    QbittorrentRefusalStore? refusalStore,
   }) : baseUrl = UrlUtils.normalizeBaseUrl(url),
-       _cookieJar = cookieJar ?? CookieJar() {
+       _cookieJar = cookieJar ?? CookieJar(),
+       _store = connectionId.isEmpty ? null : refusalStore,
+       _credentialMark = connectionId.isEmpty || refusalStore == null
+           ? ''
+           : qbittorrentCredentialMark(
+               baseUrl: UrlUtils.normalizeBaseUrl(url),
+               username: username,
+               password: password,
+               accessHeaders: accessHeaders,
+             ) {
     // Redirects are followed by hand so the SID cookie — which is full account
     // access to the torrent client — is never replayed to a host the user did
     // not configure. `dart:io` exempts a redirect to a *parent* domain from its
@@ -158,14 +202,44 @@ class QbittorrentClient {
   /// For a **user's** explicit Retry only: the person has fixed the password
   /// on the server, or waited out the ban, and asks once. Never from a timer —
   /// a poll that cleared this would be exactly the loop it exists to stop.
-  void clearLoginRefusal() => _refusal = null;
+  /// Forgets the connection's held refusal too, so every client of it asks.
+  void clearLoginRefusal() {
+    _refusal = null;
+    _clears++;
+    // Nothing left to read: what the store held is what is being forgotten.
+    _storeRead = true;
+    unawaited(_store?.clear(connectionId));
+  }
 
-  Future<bool> authenticate() {
-    if (!hasCredentials) return Future.value(true);
+  /// Reads the refusal held for this connection, once, before the first
+  /// sign-in this client would send.
+  Future<void> _readHeldRefusal() {
+    final store = _store;
+    if (store == null || _storeRead) return Future.value();
+    return _storeReading ??= () async {
+      final clears = _clears;
+      final held = await store.read(connectionId);
+      _storeRead = true;
+      _storeReading = null;
+      // A person asked again while this was being read.
+      if (clears != _clears || held == null) return;
+      final kind = _LoginRefusal.values.asNameMap()[held.kind];
+      if (kind != null && held.credentials == _credentialMark) {
+        _refusal ??= kind;
+      } else {
+        // Refused for other credentials, so not for these: they are asked.
+        await store.clear(connectionId);
+      }
+    }();
+  }
+
+  Future<bool> authenticate() async {
+    if (!hasCredentials) return true;
+    await _readHeldRefusal();
     // A refused sign-in is never re-sent on the client's own initiative: this
     // is also the path the 403 interceptor takes, so without the check an
     // expired session plus a changed password would log in on every request.
-    if (_refusal != null) return Future.value(false);
+    if (_refusal != null) return false;
     final inflight = _authInFlight;
     if (inflight != null) return inflight;
     final future = _doAuthenticate();
@@ -200,7 +274,25 @@ class QbittorrentClient {
     } catch (_) {
       _authenticated = false;
     }
+    await _keepOutcome();
     return _authenticated;
+  }
+
+  /// Keeps what the WebUI just said for the whole connection: a refusal for
+  /// every client of it, and a sign-in that worked as the end of any refusal
+  /// held before. A failure that never reached qBittorrent changes nothing.
+  Future<void> _keepOutcome() async {
+    final store = _store;
+    if (store == null) return;
+    final refusal = _refusal;
+    if (refusal != null) {
+      await store.write(connectionId, (
+        kind: refusal.name,
+        credentials: _credentialMark,
+      ));
+    } else if (_authenticated) {
+      await store.clear(connectionId);
+    }
   }
 
   /// qBittorrent <= 5.0 answers `200 Ok.` on success and `200 Fails.` on bad
@@ -267,6 +359,7 @@ class QbittorrentClient {
   /// already held fails before anything reaches the network.
   Future<void> _ensureAuthenticated() async {
     if (!hasCredentials) return;
+    await _readHeldRefusal();
     final held = _refusal;
     if (held != null) throw _refusalException(held);
     if (_authenticated) return;

@@ -12,6 +12,8 @@ import 'package:cupola/core/router.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_refusal_store.dart';
 import 'package:cupola/features/release_search/data/release_search_bootstrap.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
@@ -101,6 +103,11 @@ _buildProviderOverrides({
   return [
     sharedPreferencesProvider.overrideWithValue(prefs),
     secureSettingsStoreProvider.overrideWithValue(secureSettingsStore),
+    // A refused qBittorrent sign-in outlives the run, so a relaunch does not
+    // spend another of the five attempts its ban allows.
+    qbittorrentRefusalStoreProvider.overrideWithValue(
+      SecureQbittorrentRefusalStore(secureSettingsStore),
+    ),
     initialSettingsProvider.overrideWithValue(initialSettings),
     initialActiveInstancesProvider.overrideWithValue(activeInstances),
     initialOnboardingCompletedProvider.overrideWithValue(onboardingCompleted),
