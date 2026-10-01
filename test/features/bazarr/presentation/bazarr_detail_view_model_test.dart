@@ -59,7 +59,39 @@ void main() {
       );
       expect(fromFallback.missing, 2);
 
-      expect(BazarrDetailViewModel.forMovie(null, null).missing, 0);
+      expect(BazarrDetailViewModel.forMovie(null, null).missing, isNull);
+    });
+
+    test('a wanted fallback naming no languages is unknown, not zero', () {
+      // Bazarr filed it as wanted, so "All covered" would contradict the very
+      // list the user came from.
+      final vm = BazarrDetailViewModel.forMovie(
+        null,
+        const BazarrWantedItem(title: 'Sintel'),
+      );
+      expect(vm.missing, isNull);
+      expect(vm.missingChip, '— missing');
+      expect(vm.missingChipSpoken, 'Missing subtitles unknown');
+      expect(vm.missingFigure, '—');
+    });
+
+    test('says "All covered" only for a zero Bazarr sent', () {
+      final vm = BazarrDetailViewModel.forMovie(
+        const BazarrMovie(radarrId: 42, title: 'Dune', monitored: true),
+        null,
+      );
+      expect(vm.missing, 0);
+      expect(vm.missingChip, 'All covered');
+      expect(vm.missingFigure, '0');
+    });
+
+    test('asserts no monitoring state without the library record', () {
+      final vm = BazarrDetailViewModel.forMovie(
+        null,
+        const BazarrWantedItem(title: 'Sintel'),
+      );
+      expect(vm.status.label, 'Unknown');
+      expect(vm.facts.map((f) => f.label), isNot(contains('Monitored')));
     });
 
     test('carries the languages on disk, from either record', () {
@@ -124,7 +156,24 @@ void main() {
         const BazarrWantedItem(seriesTitle: 'Custom Series'),
       );
       expect(vm.title, 'Custom Series');
-      expect(vm.missing, 0);
+      // One wanted episode says at least one is missing, never how many; the
+      // `?? 0` this replaced read "0 Missing · All covered" over it.
+      expect(vm.missing, isNull);
+      expect(vm.missingChip, '— missing');
+      expect(vm.status.label, 'Unknown');
+    });
+
+    test('a series record without the figure is unknown, not zero', () {
+      final vm = BazarrDetailViewModel.forSeries(
+        const BazarrSeries(
+          sonarrSeriesId: 7,
+          title: 'Foundation',
+          monitored: true,
+        ),
+        null,
+      );
+      expect(vm.missing, isNull);
+      expect(vm.missingChip, isNot('All covered'));
     });
   });
 }

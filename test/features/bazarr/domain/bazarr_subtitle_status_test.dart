@@ -18,5 +18,12 @@ void main() {
       expect(status.tone, StatusTone.neutral);
       expect(status.unmonitored, isTrue);
     });
+
+    test('a record that never arrived is unknown, not unmonitored', () {
+      final status = bazarrSubtitleStatus(monitored: null);
+      expect(status.label, 'Unknown');
+      expect(status.tone, StatusTone.neutral);
+      expect(status.unmonitored, isFalse);
+    });
   });
 }

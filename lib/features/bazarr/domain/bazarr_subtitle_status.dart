@@ -9,7 +9,12 @@ import 'package:cupola/core/status/media_status.dart';
 /// carried separately by the "N missing" metadata item and the Missing
 /// Subtitles section, so a green badge never sits above a list of gaps
 /// claiming completeness it doesn't have.
-MediaStatusInfo bazarrSubtitleStatus({required bool monitored}) {
+///
+/// [monitored] is null when the record never arrived — a lookup that failed or
+/// is still running behind a wanted item — and that is "Unknown", never the
+/// "Unmonitored" a `?? false` used to put on a title Bazarr may well watch.
+MediaStatusInfo bazarrSubtitleStatus({required bool? monitored}) {
+  if (monitored == null) return const MediaStatusInfo.unknown();
   if (!monitored) {
     return const MediaStatusInfo(
       unmonitored: true,

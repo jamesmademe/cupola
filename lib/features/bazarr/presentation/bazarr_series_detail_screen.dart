@@ -70,7 +70,6 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
     final viewModel = BazarrDetailViewModel.forSeries(series, initialWanted);
     final accent = ServiceKey.bazarr.accent;
     final wantedItems = wantedAsync.asData?.value ?? const <BazarrWantedItem>[];
-    final missing = viewModel.missing;
 
     final refreshAction = IconButton(
       icon: const Icon(Icons.refresh_rounded, size: 20),
@@ -80,7 +79,7 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
     );
     const label = 'Missing subtitles';
     // How many episode rows follow — a different fact from the hero chip's
-    // "$missing missing", so the same sentence is not printed twice.
+    // "N missing", so the same sentence is not printed twice.
     final count = wantedItems.isEmpty
         ? null
         : '${wantedItems.length} '
@@ -98,13 +97,14 @@ class BazarrSeriesDetailScreen extends ConsumerWidget {
         title: viewModel.title,
         metadataItems: [if (series?.year != null) '${series!.year}'],
         tags: [
-          TagChip(
-            text: missing > 0 ? '$missing missing' : 'All covered',
-            color: accent,
+          Semantics(
+            label: viewModel.missingChipSpoken,
+            excludeSemantics: true,
+            child: TagChip(text: viewModel.missingChip, color: accent),
           ),
         ],
         posterCard: MediaDetailFigurePlate(
-          value: '$missing',
+          value: viewModel.missingFigure,
           label: 'Missing',
           accent: accent,
         ),

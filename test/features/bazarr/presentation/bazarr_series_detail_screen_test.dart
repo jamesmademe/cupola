@@ -87,6 +87,15 @@ class _CountingBazarrService extends FakeBazarrService {
   }
 }
 
+/// Bazarr's series lookup fails; its wanted list still answers.
+class _SeriesLookupFails extends FakeBazarrService {
+  @override
+  Future<BazarrPagedResult<BazarrSeries>> getSeries({
+    int start = 0,
+    int length = 50,
+  }) => Future.error(Exception('boom'));
+}
+
 void main() {
   testWidgets('renders the shared detail scaffold with series data', (
     tester,
@@ -134,6 +143,43 @@ void main() {
     );
 
     expect(find.text('Custom Series'), findsWidgets);
+  });
+
+  testWidgets('a failed series lookup never reads as "All covered"', (
+    tester,
+  ) async {
+    // Opened from the wanted list, with Bazarr's series lookup failing: the
+    // episode that brought the user here is itself a missing subtitle, and the
+    // page used to say "0 Missing" over "All covered" above it.
+    final fake = _SeriesLookupFails()
+      ..wantedEpisodesForSeriesResult = const [
+        BazarrWantedItem(
+          seriesTitle: 'Foundation',
+          episodeTitle: 'The Emperor',
+          episodeNumber: '1x01',
+          sonarrSeriesId: 7,
+          missingLanguages: [BazarrSubtitleLanguage(code2: 'en')],
+        ),
+      ];
+    await _pumpScreen(
+      tester,
+      fake: fake,
+      initialWanted: const BazarrWantedItem(
+        seriesTitle: 'Foundation',
+        episodeNumber: '1x01',
+        sonarrSeriesId: 7,
+      ),
+    );
+
+    expect(find.text('All covered'), findsNothing);
+    expect(find.text('0'), findsNothing);
+    expect(find.text('— missing'), findsOneWidget);
+    expect(
+      tester.getSemantics(find.text('— missing')),
+      matchesSemantics(label: 'Missing subtitles unknown'),
+    );
+    // Nor a monitoring state the failed record never stated.
+    expect(find.text('Unmonitored'), findsNothing);
   });
 
   testWidgets('shows the not-found empty state for an unknown id', (

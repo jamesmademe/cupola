@@ -64,7 +64,6 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
 
     final viewModel = BazarrDetailViewModel.forMovie(movie, initialWanted);
     final accent = ServiceKey.bazarr.accent;
-    final missing = viewModel.missing;
 
     return MediaDetailView(
       accent: accent,
@@ -83,15 +82,16 @@ class BazarrMovieDetailScreen extends ConsumerWidget {
         // so it is not also a third item in the metadata line.
         metadataItems: [if (movie?.year != null) '${movie!.year}'],
         tags: [
-          TagChip(
-            text: missing > 0 ? '$missing missing' : 'All covered',
-            color: accent,
+          Semantics(
+            label: viewModel.missingChipSpoken,
+            excludeSemantics: true,
+            child: TagChip(text: viewModel.missingChip, color: accent),
           ),
         ],
         // Bazarr has no poster *by definition*, so the 82x123 slot carried a
         // fake one rendering a film reel. It now carries the page's own figure.
         posterCard: MediaDetailFigurePlate(
-          value: '$missing',
+          value: viewModel.missingFigure,
           label: 'Missing',
           accent: accent,
         ),
